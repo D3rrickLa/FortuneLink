@@ -1,0 +1,121 @@
+erDiagram
+    %% Aggregate Roots
+    Goal {
+        GoalId goalId PK
+        UserId userId FK
+        string name
+        string description
+        Money targetAmount
+        DateTime targetDate "nullable"
+        bool isAchieved
+        ProgressStatus progressStatus
+    }
+    
+    FireProfile {
+        FireProfileId fireProfileId PK
+        UserId userId FK
+        Money desiredAnnualExpenses
+        Percentage safeWithdrawalRate
+        Percentage inflationRate
+    }
+    
+    %% Core Entities
+    Milestone {
+        MilestoneId milestoneId PK
+        GoalId goalId FK
+        string name
+        string description
+        TargetValue targetValue
+        DateTime targetDate "nullable"
+        bool isAchieved
+    }
+    
+    %% Value Objects
+    Money {
+        decimal amount
+        Currency currency
+    }
+    
+    Percentage {
+        decimal value
+    }
+    
+    Currency {
+        string code
+        string symbol
+    }
+    
+    TargetValue {
+        Money moneyValue "nullable"
+        Percentage percentageValue "nullable"
+        string valueType "Money|Percentage"
+    }
+    
+    ProjectionResult {
+        DateTime projectedDateAchieved
+        Money projectedAmount
+        Money requiredContribution
+    }
+    
+    ScenarioParameters {
+        Money annualContributionChange
+        Percentage investmentReturnChange
+        Money expenseChange
+    }
+    
+    ProgressStatus {
+        Percentage currentPercentage
+        int timeRemaining "months/years"
+        string timeUnit "months|years"
+    }
+    
+    %% External Context Reference
+    User {
+        UserId userId PK
+        string name "from User Management context"
+    }
+    
+    PortfolioSnapshot {
+        decimal totalValue "from Portfolio Management context"
+        DateTime snapshotDate
+    }
+    
+    %% Domain Services (represented as conceptual entities)
+    FinancialProjectionService {
+        string serviceName "Domain Service"
+    }
+    
+    %% Relationships
+    Goal ||--o{ Milestone : "has many"
+    User ||--o| FireProfile : "has one"
+    User ||--o{ Goal : "has many"
+    
+    %% Value Object Compositions
+    Goal ||--|| Money : "targetAmount"
+    Goal ||--|| ProgressStatus : "status"
+    
+    Milestone ||--|| TargetValue : "value"
+    
+    FireProfile ||--|| Money : "desiredAnnualExpenses"
+    FireProfile ||--|| Percentage : "safeWithdrawalRate"
+    FireProfile ||--|| Percentage : "inflationRate"
+    
+    TargetValue ||--o| Money : "may contain"
+    TargetValue ||--o| Percentage : "may contain"
+    
+    ProjectionResult ||--|| Money : "projectedAmount"
+    ProjectionResult ||--|| Money : "requiredContribution"
+    
+    ScenarioParameters ||--|| Money : "annualContributionChange"
+    ScenarioParameters ||--|| Percentage : "investmentReturnChange"
+    ScenarioParameters ||--|| Money : "expenseChange"
+    
+    ProgressStatus ||--|| Percentage : "currentPercentage"
+    
+    Money ||--|| Currency : "denominated in"
+    
+    %% Domain Service Relationships (conceptual)
+    FinancialProjectionService }|--|| Goal : "operates on"
+    FinancialProjectionService }|--|| PortfolioSnapshot : "uses data from"
+    FinancialProjectionService }|--|| ProjectionResult : "produces"
+    FinancialProjectionService }|--|| ScenarioParameters : "uses"

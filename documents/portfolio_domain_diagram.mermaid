@@ -1,0 +1,97 @@
+erDiagram
+    %% Aggregate Root
+    Portfolio {
+        PortfolioId portfolioId PK
+        UserId userId FK
+        string name
+        Currency currencyPreference
+    }
+    
+    %% Core Entities
+    AssetHolding {
+        AssetHoldingId assetHoldingId PK
+        PortfolioId portfolioId FK
+        AssetIdentifier assetIdentifier
+        decimal quantity
+        Money costBasis
+        date acquisitionDate
+        Money currentMarketPrice
+    }
+    
+    Liability {
+        LiabilityId liabilityId PK
+        PortfolioId portfolioId FK
+        string name
+        Money currentBalance
+        Percentage interestRate
+        date maturityDate
+    }
+    
+    Transaction {
+        TransactionId transactionId PK
+        PortfolioId portfolioId FK
+        TransactionType transactionType
+        Money amount
+        date date
+        string description
+        AssetHoldingId assetHoldingId FK "nullable"
+        LiabilityId liabilityId FK "nullable"
+    }
+    
+    %% Value Objects
+    Money {
+        decimal amount
+        Currency currency
+    }
+    
+    Percentage {
+        decimal value
+    }
+    
+    AssetIdentifier {
+        string tickerSymbol
+        string exchange
+        string cryptoSymbol
+        string assetCommonName
+    }
+    
+    TransactionType {
+        enum type "Buy|Sell|Deposit|Withdrawal|Dividend|Interest|Expense|Fee"
+    }
+    
+    NetWorthSummary {
+        Money totalAssets
+        Money totalLiabilities
+        Money netWorthValue
+    }
+    
+    Currency {
+        string code
+        string symbol
+    }
+    
+    %% Relationships
+    Portfolio ||--o{ AssetHolding : "has many"
+    Portfolio ||--o{ Liability : "has many"
+    Portfolio ||--o{ Transaction : "has many"
+    
+    AssetHolding ||--o| Transaction : "may relate to"
+    Liability ||--o| Transaction : "may relate to"
+    
+    %% Value Object Compositions
+    Portfolio ||--|| Currency : "uses"
+    AssetHolding ||--|| Money : "costBasis"
+    AssetHolding ||--|| Money : "currentMarketPrice"
+    AssetHolding ||--|| AssetIdentifier : "identifies asset"
+    
+    Liability ||--|| Money : "currentBalance"
+    Liability ||--|| Percentage : "interestRate"
+    
+    Transaction ||--|| Money : "amount"
+    Transaction ||--|| TransactionType : "type"
+    
+    NetWorthSummary ||--|| Money : "totalAssets"
+    NetWorthSummary ||--|| Money : "totalLiabilities"
+    NetWorthSummary ||--|| Money : "netWorthValue"
+    
+    Money ||--|| Currency : "denominated in"

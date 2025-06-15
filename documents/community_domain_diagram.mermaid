@@ -1,0 +1,113 @@
+erDiagram
+    %% Aggregate Roots
+    CommunityUser {
+        CommunityUserId communityUserId PK
+        UserId userId FK "links to User Management"
+        string displayName
+        string avatarUrl
+        string bio
+        DateTime joinDate
+        DateTime lastActiveDate
+        ReputationScore reputationScore
+        int postCount
+        int commentCount
+        ModerationStatus moderationStatus
+    }
+    
+    Post {
+        PostId postId PK
+        CommunityUserId communityUserId FK
+        ForumId forumId FK
+        string title
+        Content content
+        PostType postType
+        DateTime creationDate
+        int upvoteCount
+        int downvoteCount
+        int commentCount
+        string status "Active|Moderated"
+    }
+    
+    %% Core Entities
+    Comment {
+        CommentId commentId PK
+        PostId postId FK
+        CommentId parentCommentId FK "nullable"
+        CommunityUserId communityUserId FK
+        Content content
+        DateTime creationDate
+        int upvoteCount
+        int downvoteCount
+        string status "Active|Moderated"
+    }
+    
+    Forum {
+        ForumId forumId PK
+        string name
+        string description
+        string moderatorIds "List of CommunityUserIds"
+    }
+    
+    %% Value Objects
+    Content {
+        string text
+        string imageUrl
+        string linkUrl
+    }
+    
+    PostType {
+        enum type "Standard|GoalAchievement|PortfolioUpdate"
+    }
+    
+    ReactionType {
+        enum type "Upvote|Downvote|Like|Helpful"
+    }
+    
+    ReputationScore {
+        int value
+    }
+    
+    ModerationStatus {
+        enum status "Active|Pending|Suspended|Banned"
+        string reason
+        CommunityUserId moderatorId
+        DateTime timestamp
+    }
+    
+    FeedPreference {
+        string sortingOrder "Recent|Popular|Trending"
+        string filterByTopics "comma-separated list"
+    }
+    
+    %% External Context Reference
+    User {
+        UserId userId PK
+        string name "from User Management context"
+    }
+    
+    %% Relationships
+    CommunityUser ||--o{ Post : "creates many"
+    CommunityUser ||--o{ Comment : "creates many"
+    Forum ||--o{ Post : "contains many"
+    Post ||--o{ Comment : "has many"
+    Comment ||--o| Comment : "replies to (parent)"
+    
+    %% Moderation Relationships
+    Forum }|--o{ CommunityUser : "moderated by"
+    
+    %% External Context Relationships
+    User ||--|| CommunityUser : "has community profile"
+    
+    %% Value Object Compositions
+    CommunityUser ||--|| ReputationScore : "has score"
+    CommunityUser ||--|| ModerationStatus : "has status"
+    
+    Post ||--|| Content : "contains"
+    Post ||--|| PostType : "has type"
+    
+    Comment ||--|| Content : "contains"
+    
+    ModerationStatus ||--|| CommunityUser : "moderated by"
+    
+    %% User Preferences (conceptual)
+    CommunityUser ||--o| FeedPreference : "has preferences"

@@ -3,14 +3,14 @@
 
 *Author: D3rrickLa*
 
-*Version: 0.0.1*
+*Version: 0.0.2*
 
 
 ## Summary
 
-FortuneLink is a social and personal portfolio platform to both trackc your finance and interact with a community dedicated to the FIRE movement. Whether you are new to your journey or an experienced accountant, FortuneLink is here for anyone that wants to take their finances seriously. 
+FortuneLink is a social and personal portfolio platform to both trackc your finance and interact with a community dedicated to the FIRE movement. Whether you are new to your journey or an experienced DIY investor, FortuneLink is here for anyone that wants to take their finances seriously. 
 
-Our main target audience will be those between 18 - 45, as through own observation, that is the age range where people have disposable income, but might not have the knowledge on what to do with it. We are different from platforms like Reddit and Twitter (aka X), where too many bad or misinformed information is spread like gosspel. The community will how itself accountable self-moderating itself and ensuring that everyone can learn in a safe and informative way. We are here to make your financial journey the top priority through a more transparent and engaging alternative. While interacting with others, we also want you to see how you are doing and if you are on track to reach your goals. Our application stands out with a detailed portfolio breakdown and milestone system to not only track your progress, but also see how long and how much more you need to invest for financial freedom.
+Our main target audience will be those between 18 - 45, as through own observation, that is the age range where people have disposable income, but might not have the knowledge on what to do with it. We are different from platforms like Reddit and Twitter (aka X), where too many bad or misinformed information is spread like gosspel. The community will hold itself accountable self-moderating itself (in addition to common reporting tools and automated flagging) and ensuring that everyone can learn in a safe and informative way. We are here to make your financial journey the top priority through a more transparent and engaging alternative. While interacting with others, we also want you to see how you are doing and if you are on track to reach your goals. Our application stands out with a detailed portfolio breakdown and milestone system to not only track your progress, but also see how long and how much more you need to invest for financial freedom.
 
 What is financial freedom? That depends on the user, but from what we see, it resembles some variation of FIRE, (Financial Independence, Retire Early). Many might be shooting for the stars and want to have millions save while other just want to feel financially stable. The choice is yours, but no matter what, the community and application will make that dream a reality.
 
@@ -113,16 +113,155 @@ technically, these can changed based on the context: User can have many meaning 
 - Financial Freedom: The state where passive income covers living expenses, allowing for choice over work
 
 ## Domain Use Cases
+### Portfolio Management Bounded Context
+
+Record New Asset Purchase:
+
+- Description: A user buys a new financial asset (e.g., stock, crypto, bond) and records the transaction, quantity, price, and date in their portfolio.
+- Trigger: User inputs transaction details.
+
+Record Asset Sale:
+
+- Description: A user sells a portion or all of an existing asset holding, recording the sale price, quantity, and date. The system calculates realized gain/loss.
+- Trigger: User inputs transaction details.
+
+Record Deposit to Cash Account:
+
+- Description: A user adds cash to their portfolio.
+- Trigger: User inputs deposit details.
+
+Record Withdrawal from Cash Account:
+
+- Description: A user removes cash from their portfolio.
+- Trigger: User inputs withdrawal details.
+
+Record Income (Dividend/Interest):
+
+- Description: A user records passive income received from an asset holding (e.g., stock dividend, bond interest).
+- Trigger: User inputs income details.
+
+Add New Liability:
+
+- Description: A user records a new debt (e.g., mortgage, student loan) to track their overall financial obligations.
+- Trigger: User inputs liability details.
+
+Record Liability Payment:
+
+- Description: A user records a payment made towards a liability, reducing the outstanding balance.
+- Trigger: User inputs payment details.
+
+View Current Net Worth:
+
+- Description: The system calculates and displays the user's current net worth based on all recorded assets (at current market prices) and liabilities.
+- Trigger: User accesses dashboard/summary.
+
+View Portfolio Performance:
+
+- Description: The system displays performance metrics (e.g., total return, annualized return, realized/unrealized gain/loss) for the portfolio over a selected period.
+- Trigger: User selects performance report.
+
+Analyze Asset Allocation:
+
+- Description: The system visualizes the distribution of assets by type, sector, or geography within the portfolio.
+- Trigger: User accesses allocation view.
+
+### Goals & Financial Planning Bounded Context
+
+Define a New Financial Goal:
+
+- Description: A user creates a new goal, specifying its name, target amount, and optional target date.
+- Trigger: User initiates goal creation.
+
+Define FIRE Number & Assumptions:
+
+- Description: A user inputs their desired annual expenses and a safe withdrawal rate to calculate their personal FIRE number. They can also set inflation assumptions.
+- Trigger: User accesses the FIRE planning section.
+
+Add Milestone to a Goal:
+
+- Description: A user breaks down a larger goal into smaller, achievable milestones with specific target values or dates.
+- Trigger: User adds a milestone to an existing goal.
+
+View Goal Progress:
+
+- Description: The system displays the current progress of a goal or milestone, comparing current portfolio value (queried from Portfolio Management) against the target.
+- Trigger: User views a specific goal's details or a goal summary.
+
+Run Financial Projection:
+
+- Description: The system forecasts when a user might reach a goal or their FIRE number, based on current portfolio value, ongoing contributions, and investment assumptions.
+- Trigger: User initiates a projection.
+
+Run "What-If" Scenario:
+
+- Description: A user modifies assumptions (e.g., increased savings, different returns) to see how it impacts their goal achievement date or required contribution.
+- Trigger: User adjusts scenario parameters.
+
+Mark Milestone/Goal as Achieved:
+
+- Description: A user explicitly marks a milestone or goal as complete.
+- Trigger: User indicates achievement (or system automatically detects via integration with Portfolio data).
+
+Get Required Contribution for Goal:
+
+- Description: The system calculates the regular amount a user needs to save/invest to reach a specific goal by a target date.
+- Trigger: User requests contribution advice.
+
+### Community & Social Interaction Bounded Context
+
+Create New Post:
+
+- Description: A user writes and publishes a new post to a specific forum or topic. This can be a standard text post, an image, a link, or a special post triggered by achieving a financial milestone.
+- Trigger: User inputs post content.
+
+Add Comment to Post/Reply:
+
+- Description: A user responds to an existing post or another comment within a thread.
+- Trigger: User inputs comment content.
+
+React to Post/Comment:
+
+- Description: A user expresses sentiment towards a post or comment (e.g., upvote, downvote, like, mark as helpful).
+- Trigger: User clicks a reaction button.
+
+Report Inappropriate Content:
+
+- Description: A user flags a post or comment for moderation review due to violation of community rules.
+- Trigger: User initiates a report.
+
+View Feed:
+
+- Description: The system displays a personalized stream of posts based on user preferences, followed forums, or trending content.
+- Trigger: User navigates to their main feed or a specific forum.
+
+Manage User Profile (Social Aspect):
+
+- Description: A user updates their display name, avatar, bio, and other public-facing social information.
+- Trigger: User accesses their profile settings.
+
+Moderate Content/Users (for Moderators):
+
+- Description: A moderator reviews reported content, applies rules, and manages user statuses (e.g., suspension, ban).
+- Trigger: Moderator accesses moderation tools.
+
 
 ## Aggregate Design Diagram
+![alt text](PortfolioAggregate.png)
 
 ## Domain Model Diagrams
+![alt text]((portfolio_domain_diagram.mermaid))
+![alt text]((goals_domain_diagram.mermaid))
+![alt text]((community_domain_diagram.mermaid))
+
 
 ## Risk
 
 ### Cost
 
 In terms of cost, I really don't want to spend that much money, as in I don't want to end up as that one Vercel user with a 100k bill at the end of the month. We can mitigate this by using free tier solutions, hence the use of supabase for the DB (no idea for actual hosting), but if this does become popular, the project would need a way to generate income for the servers and other unforseen application cost. Additionally would need a domain promotion down the line, but I don't think that is necessary, at least at the time of writing this...
+
+
+Will probably consider AWS as I want to acutally learn the platform and get a AWS cert.
 
 ### Competition
 
@@ -181,7 +320,6 @@ Another feasibility that came to mind, algorithms for user content... How does I
 
 ### Tools
 
-- JIRA – Project tracking and issue management
 - Canva – System block diagrams and visuals
 - Figma – UI/UX design
 
@@ -192,6 +330,15 @@ Another feasibility that came to mind, algorithms for user content... How does I
 - Node.js – Runtime for Next.js and backend processing
 - Supabase – Cloud storage for images, authentication, and database management
 - Yahoo API / Other Financial Stock API – Market data for finance-related features
+
+
+## MVP - Minimum Viable Product
+
+a set of features you *must* have for your first deployable version
+1. portfolio tracking
+2. User Account settings
+
+social feature later on
 
 --- 
 This is the end of the Project Documentation.
