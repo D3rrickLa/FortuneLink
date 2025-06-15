@@ -3,7 +3,7 @@
 
 *Author: D3rrickLa*
 
-*Version: 0.0.2*
+*Version: 0.0.3*
 
 
 ## Summary
@@ -95,22 +95,81 @@ While they are all part of the same house, the rules and tools are distinct with
 
 technically, these can changed based on the context: User can have many meaning depending on if you are talking about Auth Users or Community & Social Users
 
-- User: An individual registered on FortuneLink
-- Portfolio: A collection of a User's financial assets and liabilities
-- Asset: Something a User owns that has value (e.g. stocks, bonds, real estate, cash, etc.)
-- Account: The name in which the Asset was owned in (non-registered, Tax-Free, Retirement, etc.)
-- Transaction: A financial event that alters a Portfolio (e.g. buy, sell, deposit, withdrawal, etc.)
-- Goal: A specific financial objective a User aims to achieve
-- Milestone: A significant interim achievement on the path to a Goal
-- Community: The social platform where User interact
-- Post: A piece of content shared by a User in the Community
-- Comment: A response to a Post
-- Fire Number: The specific financial target a User defined for Financial Independence
-- Investment Strategy: The approach a User takes to investing
-- Contribution: Funds added to a Portfolio, typically on a regular basis
-- Withdrawal: Funds removed from a Portfolio
-- Net Worth: Total Assets - Total Liabilities
-- Financial Freedom: The state where passive income covers living expenses, allowing for choice over work
+User (General / Authentication Context): An individual registered on FortuneLink, primarily defined by their authentication credentials (e.g., email, password) and basic profile information managed by the core platform. This is the overarching identity.
+
+- Note on Context: While the User represents the same individual across contexts, their attributes and behaviors are understood differently within specific Bounded Contexts. For example, a User in the Portfolio Management Context will have Assets and Goals, whereas in the Community & Social Context, they will have Posts and Comments.
+
+Portfolio: A collection of a User's financial assets and liabilities.
+
+- Context: Primarily used within the Portfolio Management Bounded Context.
+
+Asset: Something a User owns that has value (e.g., stocks, bonds, real estate, cash, etc.).
+
+- Context: Primarily used within the Portfolio Management Bounded Context.
+
+Account: The specific type or name in which an Asset is held or from which transactions occur (e.g., Non-Registered, Tax-Free Savings Account (TFSA), Registered Retirement Savings Plan (RRSP), Investment Account, Chequing Account).
+
+- Context: Primarily used within the Portfolio Management Bounded Context.
+
+Transaction: A financial event that alters a Portfolio's composition or value (e.g., buy, sell, deposit, withdrawal, dividend income, interest received, liability payment).
+
+- Context: Primarily used within the Portfolio Management Bounded Context.
+
+Liability: A debt or financial obligation a User owes (e.g., mortgage, student loan, credit card debt).
+
+- Context: Primarily used within the Portfolio Management Bounded Context.
+
+Goal: A specific financial objective a User aims to achieve (e.g., "Save for Down Payment," "Retire by 50").
+
+- Context: Primarily used within the Goals & Financial Planning Bounded Context.
+
+Milestone: A significant interim achievement or sub-target on the path to a larger Goal.
+
+- Context: Primarily used within the Goals & Financial Planning Bounded Context.
+
+FIRE Number: The specific financial target a User defines as sufficient for Financial Independence, typically calculated based on desired annual expenses and a safe withdrawal rate.
+
+- Context: Primarily used within the Goals & Financial Planning Bounded Context.
+
+Investment Strategy: The predefined approach or philosophy a User takes to investing their Portfolio (e.g., "Dividend Growth," "Index Fund Investing," "Value Investing").
+
+- Context: Primarily used within the Goals & Financial Planning Bounded Context (when planning) and Portfolio Management Bounded Context (when analyzing alignment).
+
+Contribution: Funds regularly or irregularly added by a User to their Portfolio or specific Accounts to increase their capital.
+
+- Context: Primarily used within the Portfolio Management Bounded Context and Goals & Financial Planning Bounded Context.
+
+Withdrawal: Funds removed by a User from their Portfolio or specific Accounts.
+
+- Context: Primarily used within the Portfolio Management Bounded Context and Goals & Financial Planning Bounded Context.
+
+Net Worth: The total value of a User's Assets minus their Total Liabilities.
+
+- Context: Primarily used within the Portfolio Management Bounded Context.
+
+Financial Freedom: The state where a User's passive income (or accumulated capital) covers their living expenses, allowing for choice over traditional work. This is the ultimate aspiration supported by the platform.
+
+- Context: Overarching concept, particularly central to the Goals & Financial Planning Bounded Context.
+
+Community (Platform): The social environment or platform where Users interact and share financial insights.
+
+- Context: Primarily used within the Community & Social Interaction Bounded Context.
+
+Member (Community & Social Context): A User who actively participates in the Community by posting, commenting, or reacting. This emphasizes their social identity within FortuneLink.
+
+- Context: Primarily used within the Community & Social Interaction Bounded Context.
+
+Post: A piece of content (text, image, link) shared by a Member in the Community.
+
+- Context: Primarily used within the Community & Social Interaction Bounded Context.
+
+Comment: A textual response made by a Member to a Post or another Comment within a discussion thread.
+
+- Context: Primarily used within the Community & Social Interaction Bounded Context.
+
+Reaction: An expression of sentiment by a Member towards a Post or Comment (e.g., upvote, downvote, helpful, like).
+
+- Context: Primarily used within the Community & Social Interaction Bounded Context.
 
 ## Domain Use Cases
 ### Portfolio Management Bounded Context
@@ -261,7 +320,7 @@ Moderate Content/Users (for Moderators):
 In terms of cost, I really don't want to spend that much money, as in I don't want to end up as that one Vercel user with a 100k bill at the end of the month. We can mitigate this by using free tier solutions, hence the use of supabase for the DB (no idea for actual hosting), but if this does become popular, the project would need a way to generate income for the servers and other unforseen application cost. Additionally would need a domain promotion down the line, but I don't think that is necessary, at least at the time of writing this...
 
 
-Will probably consider AWS as I want to acutally learn the platform and get a AWS cert.
+Will probably consider AWS as I want to acutally learn the platform and get a AWS cert. If it does become popular, ad hosting and optional subscription for premium features
 
 ### Competition
 
@@ -272,6 +331,12 @@ The Blossom application would be the main inspiration and I would like to expand
 ### Third Party Limitations
 
 A huge limitation I faced from my previous project was the APIs. TMDB does not have access to the streaming service links where said movie is located. This might happen with the APIs I would be using to get the stock data (haven't decided yet). These limitations could mean that in the rare case I can monitize this application - BIG IF, I would need to upgrade to their commerical API or swap it out entirely due to their TOS. We can mitigate this by building modular API services so we can swap out the data easily, or just find 1 good API we can use.
+
+
+I have found 3 APIs that have peaked my intrest and will do more research into them
+    1. Yahoo API
+    2. Alpha Vantage
+    3. FinnHub
 
 ### Scope/Feasibility
 
@@ -296,6 +361,7 @@ In addition to the portfolio tracker, we need to fourms thing. Look up how Bloss
 The feasibility of this project is also a concern/risk. The last project, had used lots of external tools (i.e. AI, but I really want to stick to my roots and look up tutorials and other resources for learning, I am actively seeing myself lower my intelligence because of AI...) Joke-ish aside, I would like to complete this project within a fast timeframe, maybe 3-4 months. the last project started a bit wonky because I had to return my laptop, so that took about a month off which should have been a 1 month job. I am going to mitigate teh risk on the feasibility by actually sticking to a TODO plan with JIRA and using the issues tab for tracking my progress, not like before where I just had a TODO file in the project which I never update. There is also Projects in GitHub? could be a good way to track issues without the need for JIRA
 
 Another feasibility that came to mind, algorithms for user content... How does Instagram know what I would like? My likes/saves/watch time. we would need metadata for each post.
+- we could just do a 'most liked'/'trending' in the last 24 hours and consider a more personalized algorithm in the future
 
 ## Technologies 
 
@@ -304,7 +370,7 @@ Another feasibility that came to mind, algorithms for user content... How does I
 - React / Next.js – Core framework for UI with server-side rendering support
 - Tailwind CSS – Utility-first CSS framework for styling
 
-### Backend
+### Backend 
 
 - PostgreSQL – Primary relational database
 - Redis – Used for caching community posts (image URLs stored externally)
@@ -330,6 +396,9 @@ Another feasibility that came to mind, algorithms for user content... How does I
 - Node.js – Runtime for Next.js and backend processing
 - Supabase – Cloud storage for images, authentication, and database management
 - Yahoo API / Other Financial Stock API – Market data for finance-related features
+    1. Yahoo API
+    2. Alpha Vantage
+    3. FinnHub
 
 
 ## MVP - Minimum Viable Product
