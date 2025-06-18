@@ -7,6 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifer;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Assetidentifier;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Percentage;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.PortfolioCurrency;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionType;
+
 // Aggregate Root
 public class Portfolio {
     private UUID portfolioId;
@@ -77,11 +85,11 @@ public class Portfolio {
     }
 
     // Asset Holding Management -> everything we can do with an asset
-    public AssetHolding recordAssetPurchase(UUID assetHoldingUuid, AssetIdentifer assetIdentifer, BigDecimal quantity, Money costBasisPerUnit, LocalDate acquirDate, Money currenyMarketPrice) {
+    public AssetHolding recordAssetPurchase(UUID portfolioUuid, AssetIdentifier assetIdentifer, BigDecimal quantity, Money costBasisPerUnit, LocalDate acquisitionDate, Money currenyMarketPrice) {
         return null;
     }
 
-    public void recordAssetSale(AssetIdentifer assetIdentifer, BigDecimal quantityToSell, Money salePricePerUnit) {
+    public void recordAssetSale(AssetIdentifier assetIdentifer, BigDecimal quantityToSell, Money salePricePerUnit) {
 
     }
 
@@ -90,7 +98,7 @@ public class Portfolio {
     }
 
     // Liability Management (i.e. Debt)
-    public Liability addLiability(UUID liabilityId, String name, Money initialAmount, Double interestRate, LocalDate maturityDate) {
+    public Liability addLiability(UUID liabilityId, String name, Money initialAmount, Percentage interestRate, LocalDate maturityDate) {
         return null;
     }
 

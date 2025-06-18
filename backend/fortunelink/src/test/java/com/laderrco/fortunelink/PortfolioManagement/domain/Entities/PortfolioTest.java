@@ -11,6 +11,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.PortfolioCurrency;
+
 public class PortfolioTest {
 
     // test the constructor method. it should generate a Portfolio class with the
