@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
 
-public class CurrencyPreference {
+import org.junit.jupiter.api.Test;
 
+public class PortfolioTest {
+   
 }
