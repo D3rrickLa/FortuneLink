@@ -10,7 +10,7 @@ public record Money(BigDecimal amount, PortfolioCurrency currencyCode) {
         Objects.requireNonNull(amount, "Amount cannot be null.");
         Objects.requireNonNull(currencyCode, "Currency code cannot be null.");
 
-        if (amount.scale() > 4) {
+        if (amount.scale() < 4) {
             amount = amount.setScale(4, RoundingMode.HALF_UP);
         }
 
@@ -36,7 +36,17 @@ public record Money(BigDecimal amount, PortfolioCurrency currencyCode) {
         return new Money(this.amount.subtract(other.amount), this.currencyCode);
     }
 
+    public Money multiply(BigDecimal multiplier) {
+        Objects.requireNonNull(multiplier, "Multiplier cannot be null.");
+        return new Money(this.amount.multiply(multiplier), this.currencyCode);
+    }
+
     public boolean isPostivie() {
         return this.amount.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public Money negate() {
+        amount.negate();
+        return this;
     }
 }

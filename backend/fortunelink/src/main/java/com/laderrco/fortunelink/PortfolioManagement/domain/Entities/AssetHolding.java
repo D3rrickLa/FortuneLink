@@ -17,13 +17,13 @@ public class AssetHolding {
     private BigDecimal quantity;
     private Money costBasis;
     private LocalDate acquisitionDate;
-    // private Money currentMarketPrice; //TODO: Remove this line, market price is
-    // too volatile
+
+    private Transaction transaction;
 
     private Instant createdAt;
     private Instant updatedAt;
 
-    public AssetHolding(UUID portfolioUuid, AssetIdentifier assetIdentifier,
+    public AssetHolding(UUID assetHoldingUuid, UUID portfolioUuid, AssetIdentifier assetIdentifier,
             BigDecimal initialQuantity, Money initialCostBasis, // This is total cost for initial purchase
             LocalDate acquisitionDate) {
 
@@ -31,7 +31,22 @@ public class AssetHolding {
         // quant must be greater than 0
         // cost base must be greater than 0
 
-        this.assetHoldingId = UUID.randomUUID(); // Generate ID here!
+        Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null.");
+        Objects.requireNonNull(assetIdentifier, "Asset Identifier cannot be null.");
+        Objects.requireNonNull(initialQuantity, "Initial quantity cannot be null.");
+        Objects.requireNonNull(initialCostBasis, "Initial cost basis cannot be null.");
+        Objects.requireNonNull(acquisitionDate, "Acquisition date cannot be null.");
+
+        if (initialQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Initial quantity must be positive.");
+        }
+        if (initialCostBasis.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            // This might need refinement based on business rules for free assets or grants.
+            // For now, assume a cost is always involved.
+            throw new IllegalArgumentException("Initial cost basis must be positive.");
+        }
+
+        this.assetHoldingId = assetHoldingUuid; // Generate ID here!
         this.portfolioId = portfolioUuid;
         this.assetIdentifier = assetIdentifier;
         this.quantity = initialQuantity;
@@ -41,8 +56,6 @@ public class AssetHolding {
         this.updatedAt = Instant.now();
 
     }
-    // we can an asset do?
-    // buy, sell, remove
 
     public void recordAdditionalPurchase(BigDecimal additionalQuantity, Money additionalCostTotal) {
         Objects.requireNonNull(additionalQuantity, "Additional quantity cannot be null.");
@@ -78,9 +91,13 @@ public class AssetHolding {
         if (quantitySold.compareTo(this.quantity) > 0) {
             throw new IllegalArgumentException("Cannot sell more than available quantity.");
         }
+        if (!this.costBasis.currencyCode().equals(salePricePerUnit.currencyCode())) {
+            throw new IllegalArgumentException("Currency mismatch for sale.");
+        }
 
         // Calculate the proportion of cost basis to remove
-        BigDecimal costPerUnit = this.costBasis.amount().divide(this.quantity, MathContext.DECIMAL128); // Average cost per unit
+        BigDecimal costPerUnit = this.costBasis.amount().divide(this.quantity, MathContext.DECIMAL128); // Average cost
+                                                                                                        // per unit
         BigDecimal costOfSoldQuantity = costPerUnit.multiply(quantitySold);
 
         this.quantity = this.quantity.subtract(quantitySold);
@@ -90,6 +107,10 @@ public class AssetHolding {
         // If quantity becomes zero, consider if the AssetHolding should be removed or
         // marked inactive later by Portfolio
         this.updatedAt = Instant.now();
+    }
+
+    private void adjustCostBasis(Money adjustmentAmount) {
+        throw new UnsupportedOperationException("This method is not implemented yet.");
     }
 
     @Override
@@ -105,5 +126,41 @@ public class AssetHolding {
     @Override
     public int hashCode() {
         return Objects.hash(assetHoldingId);
+    }
+
+    public UUID getAssetHoldingId() {
+        return assetHoldingId;
+    }
+
+    public UUID getPortfolioId() {
+        return portfolioId;
+    }
+
+    public AssetIdentifier getAssetIdentifier() {
+        return assetIdentifier;
+    }
+
+    public BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    public Money getCostBasis() {
+        return costBasis;
+    }
+
+    public LocalDate getAcquisitionDate() {
+        return acquisitionDate;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Transaction getTransaction() {
+        return transaction;
     }
 }
