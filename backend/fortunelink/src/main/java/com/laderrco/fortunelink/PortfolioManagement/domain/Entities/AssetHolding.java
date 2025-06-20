@@ -18,8 +18,6 @@ public class AssetHolding {
     private Money costBasis;
     private LocalDate acquisitionDate;
 
-    private Transaction transaction;
-
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -109,7 +107,7 @@ public class AssetHolding {
         this.updatedAt = Instant.now();
     }
 
-    private void adjustCostBasis(Money adjustmentAmount) {
+    public void adjustCostBasis(Money adjustmentAmount) {
         throw new UnsupportedOperationException("This method is not implemented yet.");
     }
 
@@ -158,9 +156,5 @@ public class AssetHolding {
 
     public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public Transaction getTransaction() {
-        return transaction;
     }
 }

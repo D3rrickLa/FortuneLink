@@ -21,6 +21,7 @@ public class Transaction {
     private TransactionStatus transactionStatus;
     private String voidReason;
 
+    // Transaction will only know about these, not the other classes
     private UUID assetHoldingId;
     private UUID liabilityId;
 
