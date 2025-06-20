@@ -33,20 +33,24 @@ public record Money(BigDecimal amount, PortfolioCurrency currencyCode) {
         if (!this.currencyCode.equals(other.currencyCode)) {
             throw new IllegalArgumentException("Cannot subtract money with different currencies.");
         }
+        // allowing negative numbers -> debt
         return new Money(this.amount.subtract(other.amount), this.currencyCode);
     }
 
     public Money multiply(BigDecimal multiplier) {
         Objects.requireNonNull(multiplier, "Multiplier cannot be null.");
-        return new Money(this.amount.multiply(multiplier), this.currencyCode);
+        BigDecimal resultAmount = this.amount.multiply(multiplier)
+                .setScale(4, RoundingMode.HALF_UP);
+        // negative numbers are allowed
+        return new Money(resultAmount, this.currencyCode);
     }
 
-    public boolean isPostivie() {
+    public boolean isPositive() {
         return this.amount.compareTo(BigDecimal.ZERO) > 0;
     }
 
     public Money negate() {
-        amount.negate();
-        return this;
+        return new Money(this.amount.negate(), this.currencyCode);
+
     }
 }

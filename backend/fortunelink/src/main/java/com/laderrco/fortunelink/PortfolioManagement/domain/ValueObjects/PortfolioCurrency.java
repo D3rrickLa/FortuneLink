@@ -6,5 +6,6 @@ import java.util.Objects;
 public record PortfolioCurrency(String code, String symbol) {
     public PortfolioCurrency {
         Objects.requireNonNull(code, "An exchange code must not be null.");
+        Objects.requireNonNull(symbol, "A currency symbol must not be null.");
     }
 }

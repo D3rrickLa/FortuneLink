@@ -207,39 +207,112 @@ public class Portfolio {
             LocalDate maturityDate) {
         Objects.requireNonNull(name, "Liability name cannot be null.");
         Objects.requireNonNull(initialAmount, "Initial amount owned cannot be null.");
-        Objects.requireNonNull(interestRate, "Interset rate cannot be null.");
+        Objects.requireNonNull(interestRate, "Interest rate cannot be null.");
         Objects.requireNonNull(maturityDate, "Date when liability is due cannot be null.");
 
-        if (interestRate.value().compareTo(BigDecimal.ZERO) <= 0) {
+        if (initialAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Initial amount for liability must be positive.");
+
+        }
+
+        if (interestRate.value().compareTo(BigDecimal.ZERO) < 0) { // some interest rates can be 0
             throw new IllegalArgumentException("Interest rate must be positive.");
         }
 
-        if (description.isBlank() || description.isEmpty()) {
-            description = "Liability for " + name;
-        }
+        // Handle description: Make it non-null explicitly, then check for blank
+        // Better to ensure 'description' is not null first if it's meant to be optional
+        // but non-null
+        String finalDescription = (description == null || description.isBlank()) ? "Liability for " + name
+                : description;
 
         Liability newLiability = new Liability(
-            UUID.randomUUID(),
-            this.portfolioId,
-            name,
-            description,
-            initialAmount,
-            interestRate,
-            maturityDate
-        );
+                UUID.randomUUID(),
+                this.portfolioId,
+                name,
+                finalDescription,
+                initialAmount,
+                interestRate,
+                maturityDate);
         this.liabilities.add(newLiability);
-        
-        
+
         this.updatedAt = Instant.now(); // Update the aggregate root's timestamp
         return newLiability;
     }
 
-    public void recordLiabilityPayment(UUID liabilityId, Money paymentAmount) {
+    // AI assisted
+    public void recordLiabilityPayment(UUID liabilityId, Money paymentAmount, Instant transactionDate) {
+        Objects.requireNonNull(liabilityId, "Liability ID cannot be null.");
+        Objects.requireNonNull(paymentAmount, "Payment amount cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
 
+        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive.");
+        }
+
+        // Ensure payment currency matches portfolio's preferred currency
+        if (!this.currencyPreference.code().equals(paymentAmount.currencyCode().code())) {
+            throw new IllegalArgumentException("Payment currency mismatch with portfolio currency preference.");
+        }
+
+        Optional<Liability> optionalLiability = this.liabilities.stream()
+                .filter(l -> l.getLiabilityId().equals(liabilityId))
+                .findFirst();
+
+        if (optionalLiability.isEmpty()) {
+            throw new IllegalArgumentException("Liability with ID " + liabilityId + " not found in portfolio.");
+        }
+
+        Liability liability = optionalLiability.get();
+
+        // 1. Delegate payment handling to the Liability entity
+        liability.makePayment(paymentAmount); // This will update liability.currentBalance
+
+        // 2. Create and record a Transaction for the payment
+        Transaction paymentTransaction = new Transaction(
+                UUID.randomUUID(),
+                this.portfolioId,
+                TransactionType.LOAN_PAYMENT, // Use a specific type for loan payments
+                paymentAmount,
+                transactionDate, // Use the provided transactionDate
+                "Payment for liability '" + liability.getName() + "' (ID: " + liability.getLiabilityId() + ")",
+                null,
+                null,
+                null, // No asset holding associated with this payment
+                liabilityId // This transaction is linked to this liability
+        );
+        this.transactions.add(paymentTransaction);
+
+        // 3. Update Portfolio's timestamp
+        this.updatedAt = Instant.now();
     }
 
+    // AI assisted
+    // NOTE: the reason we have this method and not a removeAsset is because
+    // we want to remove this once we paid off the liability. if we 'void' it, we are not
+    // getting closer to the goal
     public void removeLiability(UUID liabilityId) {
+        Objects.requireNonNull(liabilityId, "Liability ID cannot be null.");
 
+        Optional<Liability> optionalLiability = this.liabilities.stream()
+                .filter(l -> l.getLiabilityId().equals(liabilityId))
+                .findFirst();
+
+        if (optionalLiability.isEmpty()) {
+            throw new IllegalArgumentException("Liability with ID " + liabilityId + " not found in portfolio.");
+        }
+
+        Liability liabilityToRemove = optionalLiability.get();
+
+        // Prevent removal if there's an outstanding balance
+        if (liabilityToRemove.getCurrentBalance().amount().compareTo(BigDecimal.ZERO) != 0) {
+            throw new IllegalStateException("Cannot remove liability '" + liabilityToRemove.getName() + "' (ID: "
+                    + liabilityId + ") with an outstanding balance of " + liabilityToRemove.getCurrentBalance() + ".");
+        }
+
+        // Remove the liability from the collection
+        this.liabilities.remove(liabilityToRemove);
+
+        this.updatedAt = Instant.now(); // Update the aggregate root's timestamp
     }
 
     // Transaction Management (for non-asset/liability related, or voiding existing
@@ -250,7 +323,7 @@ public class Portfolio {
 
     // NOTE: for updating an asset, we can't have an update method, not good if you
     // could change your Robinhood transaction
-    // instead we 'VOID' the transaction by updating the status
+    // instead we 'VOID' the transaction by updating the status. So if we mis-input a 'buy', we void-sell it
     public void voidTransaction(UUID transactionId, String reason) {
         Objects.requireNonNull(transactionId, "Transaction ID to void cannot be null.");
         Objects.requireNonNull(reason, "Reason for voiding cannot be null.");

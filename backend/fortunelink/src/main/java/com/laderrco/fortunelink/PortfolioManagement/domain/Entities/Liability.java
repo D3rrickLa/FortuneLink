@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
@@ -13,19 +14,28 @@ public class Liability {
     private UUID portfolioId;
     private String name;
     private String description;
-    private Money currenctBalance; // how much is left to pay for the liability
+    private Money currentBalance; // how much is left to pay for the liability
     private Percentage interestRate;
     private LocalDate maturityDate;
 
-    public Liability(UUID liabilityId, UUID portfolioId, String name, String description, Money currenctBalance,
+    private Instant createdAt;
+    private Instant updatedAt;
+
+    public Liability(UUID liabilityId, UUID portfolioId, String name, String description, Money currentBalance,
             Percentage interestRate, LocalDate maturityDate) {
 
         Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
         Objects.requireNonNull(liabilityId, "Liability ID cannot be null.");
         Objects.requireNonNull(name, "Liability name cannot be null.");
-        Objects.requireNonNull(currenctBalance, "Current Balance cannot be null.");
+        Objects.requireNonNull(currentBalance, "Current Balance cannot be null.");
         Objects.requireNonNull(interestRate, "Interest rate cannot be null.");
         Objects.requireNonNull(maturityDate, "Maturity date cannot be null.");
+
+        // Add check for currentBalance being positive on creation (it's the initial
+        // amount)
+        if (currentBalance.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Initial balance for liability must be positive.");
+        }
 
         if (interestRate.value().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Interest rate must be positive.");
@@ -35,9 +45,38 @@ public class Liability {
         this.portfolioId = portfolioId;
         this.name = name;
         this.description = description;
-        this.currenctBalance = currenctBalance;
+        this.currentBalance = currentBalance;
         this.interestRate = interestRate;
         this.maturityDate = maturityDate;
+        this.createdAt = Instant.now(); // NOTE: we would want to fix this, because we could be creating liabilities from the past
+        this.updatedAt = Instant.now();
+    }
+
+    // AI assisted
+    public void makePayment(Money paymentAmount) {
+        Objects.requireNonNull(paymentAmount, "Payment amount cannot be null.");
+
+        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive.");
+        }
+        // Ensure payment currency matches liability's balance currency
+        if (!this.currentBalance.currencyCode().equals(paymentAmount.currencyCode())) {
+            throw new IllegalArgumentException("Payment currency mismatch with liability's balance currency.");
+        }
+
+        // Prevent overpayment beyond current balance (unless overpayment is a business
+        // rule)
+        if (paymentAmount.amount().compareTo(this.currentBalance.amount()) > 0) {
+            // Option 1: Throw an error (common for MVP)
+            throw new IllegalArgumentException("Payment amount " + paymentAmount + " exceeds current liability balance "
+                    + this.currentBalance + " for " + this.name + ".");
+            // Option 2: Adjust payment to just cover the remaining balance, and perhaps
+            // return change or record credit
+            // paymentAmount = this.currentBalance;
+        }
+
+        this.currentBalance = this.currentBalance.subtract(paymentAmount);
+        this.updatedAt = Instant.now();
     }
 
     @Override
@@ -71,8 +110,8 @@ public class Liability {
         return description;
     }
 
-    public Money getCurrenctBalance() {
-        return currenctBalance;
+    public Money getCurrentBalance() {
+        return currentBalance;
     }
 
     public Percentage getInterestRate() {
@@ -81,5 +120,13 @@ public class Liability {
 
     public LocalDate getMaturityDate() {
         return maturityDate;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }
