@@ -11,5 +11,7 @@ public enum TransactionType {
     INTEREST_INCOME,
     LOAN_PAYMENT,
     EXPENSE, // -- other
-    FEE
+    FEE,
+    TRANSFER_IN,
+    TRANSFER_OUT
 }

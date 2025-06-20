@@ -37,10 +37,6 @@ public class Liability {
             throw new IllegalArgumentException("Initial balance for liability must be positive.");
         }
 
-        if (interestRate.value().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Interest rate must be positive.");
-        }
-
         this.liabilityId = liabilityId;
         this.portfolioId = portfolioId;
         this.name = name;
@@ -56,7 +52,7 @@ public class Liability {
     public void makePayment(Money paymentAmount) {
         Objects.requireNonNull(paymentAmount, "Payment amount cannot be null.");
 
-        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) { // can't make a payment of 0 dollars or less
             throw new IllegalArgumentException("Payment amount must be positive.");
         }
         // Ensure payment currency matches liability's balance currency
