@@ -86,8 +86,8 @@ public class Transaction {
                         || transactionType == TransactionType.TRANSFER_OUT /* add relevant types */)) {
             // Adjust based on your specific transfer types or if you allow both for other
             // reasons
-            // throw new IllegalArgumentException("Transaction cannot be linked to both an
-            // Asset Holding and a Liability unless it's a transfer.");
+            throw new IllegalArgumentException(
+                    "Transaction cannot be linked to both an Asset Holding and a Liability unless it's a specific transfer type.");
         }
 
         // Validation for voidReason and voidedAt if status is VOIDED
@@ -97,7 +97,8 @@ public class Transaction {
                 throw new IllegalArgumentException("Void reason cannot be empty or blank if status is VOIDED.");
             }
             Objects.requireNonNull(voidedAt, "Voided timestamp must be provided if status is VOIDED.");
-        } else {
+        } 
+        else {
             // Ensure voidReason and voidedAt are null if not voided
             if (voidReason != null || voidedAt != null) {
                 throw new IllegalArgumentException("Void reason and timestamp must be null if status is not VOIDED.");
@@ -131,19 +132,6 @@ public class Transaction {
         // delegate the full constructor, providing default values for omitted params
         this(transactionId, portfolioId, transactionType, amount, transactionDate, description, quantity, pricePerUnit,
                 TransactionStatus.ACTIVE, null, null, assetHoldingId, liabilityId, TransactionSource.MANUAL_INPUT);
-
-        // this.transactionId = transiactionUuid;
-        // this.portfolioId = portfolioUuid;
-        // this.transactionType = transactionType;
-        // this.amount = amount;
-        // this.transactionDate = transactionDate;
-        // this.description = description;
-        // this.assetHoldingId = assetHoldingId;
-        // this.liabilityId = liabilityId;
-        // this.quantity = quantity; // Can be null for non-asset transactions
-        // this.pricePerUnit = pricePerUnit; // Can be null for non-asset transactions
-        // this.transactionStatus = TransactionStatus.ACTIVE;
-        // this.transactionSource = TransactionSource.MANUAL_INPUT;
 
     }
 

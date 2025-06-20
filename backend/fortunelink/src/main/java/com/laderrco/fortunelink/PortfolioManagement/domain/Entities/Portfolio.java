@@ -31,9 +31,13 @@ public class Portfolio {
     private Instant createdAt;
     private Instant updatedAt;
 
-    public Portfolio(UUID userUuid, String portfolioName, String portfolioDescription, PortfolioCurrency currencyPref,
+    public Portfolio(UUID portfolioId, UUID userId, String portfolioName, String portfolioDescription, PortfolioCurrency currencyPref,
             boolean isPrimary) {
-        if (userUuid == null) {
+        if (portfolioId == null) {
+            throw new IllegalArgumentException("Portfolio must have an ID assigned to it.");
+            
+        }
+        if (userId == null) {
             throw new IllegalArgumentException("Portfolio must have a User assigned to it.");
         }
 
@@ -41,18 +45,19 @@ public class Portfolio {
             throw new IllegalArgumentException("Portfolio must be given a name.");
         }
 
+        System.out.println(currencyPref);
         if (currencyPref == null) {
             throw new IllegalArgumentException("Portfolio must have a currency preference.");
         }
 
-        this.userId = userUuid;
+        this.userId = userId;
         this.name = portfolioName;
         this.description = portfolioDescription;
         this.currencyPreference = currencyPref;
 
         this.isPrimary = isPrimary;
 
-        this.portfolioId = UUID.randomUUID();
+        this.portfolioId = portfolioId;
 
         this.assetHoldings = new ArrayList<>();
         this.liabilities = new ArrayList<>();
@@ -288,7 +293,8 @@ public class Portfolio {
 
     // AI assisted
     // NOTE: the reason we have this method and not a removeAsset is because
-    // we want to remove this once we paid off the liability. if we 'void' it, we are not
+    // we want to remove this once we paid off the liability. if we 'void' it, we
+    // are not
     // getting closer to the goal
     public void removeLiability(UUID liabilityId) {
         Objects.requireNonNull(liabilityId, "Liability ID cannot be null.");
@@ -317,13 +323,46 @@ public class Portfolio {
 
     // Transaction Management (for non-asset/liability related, or voiding existing
     // ones)
-    public void recordCashTransaction(UUID transactionId, TransactionType type, Money amount, String description) {
+    public void recordCashTransaction(TransactionType type, Money amount, String description, Instant transactionDate) {
+        Objects.requireNonNull(type, "Transaction type for cannot be null.");
+        Objects.requireNonNull(amount, "Transfer amount cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+        
+        // Additional validation specific to this method's purpose:
+        // Ensure the provided type is actually a 'cash-only' type as per Transaction's rules.
+        boolean isCashOnlyType = (type == TransactionType.DEPOSIT ||
+                type == TransactionType.WITHDRAWAL ||
+                type == TransactionType.DIVIDEND ||
+                type == TransactionType.INTEREST_INCOME);
+
+        if (!isCashOnlyType) {
+            throw new IllegalArgumentException(
+                    "Invalid transaction type for cash transaction. Must be DEPOSIT, WITHDRAWAL, DIVIDEND, or INTEREST_INCOME.");
+        }
+
+        Transaction paymentTransaction = new Transaction(
+                UUID.randomUUID(),
+                this.portfolioId,
+                type, // Use a specific type for loan payments
+                amount,
+                transactionDate, // Use the provided transactionDate
+                description,
+                null,
+                null,
+                null, // No asset holding associated with this
+                null // No asset liability associated with this
+        );
+        this.transactions.add(paymentTransaction);
+
+        // 3. Update Portfolio's timestamp
+        this.updatedAt = Instant.now();
 
     }
 
     // NOTE: for updating an asset, we can't have an update method, not good if you
     // could change your Robinhood transaction
-    // instead we 'VOID' the transaction by updating the status. So if we mis-input a 'buy', we void-sell it
+    // instead we 'VOID' the transaction by updating the status. So if we mis-input
+    // a 'buy', we void-sell it
     public void voidTransaction(UUID transactionId, String reason) {
         Objects.requireNonNull(transactionId, "Transaction ID to void cannot be null.");
         Objects.requireNonNull(reason, "Reason for voiding cannot be null.");
@@ -431,7 +470,7 @@ public class Portfolio {
 
     @Override
     public int hashCode() {
-        return portfolioId != null ? portfolioId.hashCode() : 0;
+        return Objects.hash(portfolioId);
     }
 
     public UUID getPortfolioId() {
