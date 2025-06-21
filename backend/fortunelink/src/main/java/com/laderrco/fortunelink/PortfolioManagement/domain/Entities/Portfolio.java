@@ -31,11 +31,12 @@ public class Portfolio {
     private Instant createdAt;
     private Instant updatedAt;
 
-    public Portfolio(UUID portfolioId, UUID userId, String portfolioName, String portfolioDescription, PortfolioCurrency currencyPref,
+    public Portfolio(UUID portfolioId, UUID userId, String portfolioName, String portfolioDescription,
+            PortfolioCurrency currencyPref,
             boolean isPrimary) {
         if (portfolioId == null) {
             throw new IllegalArgumentException("Portfolio must have an ID assigned to it.");
-            
+
         }
         if (userId == null) {
             throw new IllegalArgumentException("Portfolio must have a User assigned to it.");
@@ -45,7 +46,6 @@ public class Portfolio {
             throw new IllegalArgumentException("Portfolio must be given a name.");
         }
 
-        System.out.println(currencyPref);
         if (currencyPref == null) {
             throw new IllegalArgumentException("Portfolio must have a currency preference.");
         }
@@ -151,6 +151,7 @@ public class Portfolio {
             throw new IllegalArgumentException("Quantity to sell can't be less than 0.");
         }
         // Ensure the sale currency matches the portfolio's preferred currency
+        // ACTION REQURIED - portoflio with diff currency??
         if (!this.currencyPreference.code().equals(salePricePerUnit.currencyCode().code())) {
             throw new IllegalArgumentException("Sale currency mismatch with portfolio currency preference.");
         }
@@ -243,7 +244,7 @@ public class Portfolio {
         this.updatedAt = Instant.now(); // Update the aggregate root's timestamp
         return newLiability;
     }
-
+    
     // AI assisted
     public void recordLiabilityPayment(UUID liabilityId, Money paymentAmount, Instant transactionDate) {
         Objects.requireNonNull(liabilityId, "Liability ID cannot be null.");
@@ -327,9 +328,14 @@ public class Portfolio {
         Objects.requireNonNull(type, "Transaction type for cannot be null.");
         Objects.requireNonNull(amount, "Transfer amount cannot be null.");
         Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
-        
+
+        if (!this.currencyPreference.code().equals(amount.currencyCode().code())) {
+            throw new IllegalArgumentException("Transaction currency mismatch with portfolio currency preference.");
+        }
+
         // Additional validation specific to this method's purpose:
-        // Ensure the provided type is actually a 'cash-only' type as per Transaction's rules.
+        // Ensure the provided type is actually a 'cash-only' type as per Transaction's
+        // rules.
         boolean isCashOnlyType = (type == TransactionType.DEPOSIT ||
                 type == TransactionType.WITHDRAWAL ||
                 type == TransactionType.DIVIDEND ||
@@ -372,8 +378,7 @@ public class Portfolio {
                 .findFirst();
 
         if (optionalTransaction.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Transaction with ID " + transactionId + " cannot be found in portfolio.");
+            throw new IllegalStateException("Transaction with ID " + transactionId + " cannot be found in portfolio.");
         }
 
         Transaction transactionToVoid = optionalTransaction.get();
@@ -452,6 +457,45 @@ public class Portfolio {
             this.transactions.add(compensatingTransaction);
         }
         // ... handle other types like WITHDRAWAL, LOAN_PAYMENT, DIVIDEND, etc.
+        // AI coded
+        else if (transactionToVoid.getTransactionType() == TransactionType.WITHDRAWAL) {
+            // Create a compensating DEPOSIT transaction
+            Money compensatingDeposit = transactionToVoid.getAmount(); // Original amount of withdrawal
+            Transaction compensatingTransaction = new Transaction(
+                    UUID.randomUUID(),
+                    this.portfolioId,
+                    TransactionType.VOID_WITHDRAWAL, // Use VOID_WITHDRAWAL type
+                    compensatingDeposit.negate(), // A negative withdrawal is a positive deposit
+                    Instant.now(),
+                    "VOID: Reversed withdrawal of " + transactionToVoid.getAmount() + ". Reason: " + reason,
+                    null, null, null, null);
+            this.transactions.add(compensatingTransaction);
+        } else if (transactionToVoid.getTransactionType() == TransactionType.LOAN_PAYMENT) {
+            // Revert the payment on the liability
+            Optional<Liability> optionalLiability = this.liabilities.stream()
+                    .filter(l -> l.getLiabilityId().equals(transactionToVoid.getLiabilityId()))
+                    .findFirst();
+
+            if (optionalLiability.isEmpty()) {
+                throw new IllegalStateException("Liability for voided LOAN_PAYMENT transaction not found.");
+            }
+            Liability liability = optionalLiability.get();
+            // Assuming Liability has a method to "reverse" a payment or increase balance
+            // For simplicity, we'll manually add back the amount for this mock
+            liability.increaseBalance(transactionToVoid.getAmount()); // Use the original positive payment amount
+
+            Transaction compensatingTransaction = new Transaction(
+                    UUID.randomUUID(),
+                    this.portfolioId,
+                    TransactionType.OTHER, // Or a specific VOID_LOAN_PAYMENT type
+                    transactionToVoid.getAmount().negate(), // Reversing a payment
+                    Instant.now(),
+                    "VOID: Reversed loan payment for liability '" + liability.getName() + "'. Reason: " + reason,
+                    null, null, null, liability.getLiabilityId());
+            this.transactions.add(compensatingTransaction);
+        }
+
+        // ---
 
         this.updatedAt = Instant.now(); // Update portfolio timestamp
     }

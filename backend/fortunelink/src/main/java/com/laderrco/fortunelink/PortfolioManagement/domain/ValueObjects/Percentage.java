@@ -10,6 +10,7 @@ public record Percentage(BigDecimal value) {
         if (value.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("The percentage cannot be less than 0.");
         }
+        
         if (value.scale() < 4) {
             value = value.setScale(4, RoundingMode.HALF_UP);
         }

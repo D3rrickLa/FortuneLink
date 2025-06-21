@@ -44,7 +44,8 @@ public class Liability {
         this.currentBalance = currentBalance;
         this.interestRate = interestRate;
         this.maturityDate = maturityDate;
-        this.createdAt = Instant.now(); // NOTE: we would want to fix this, because we could be creating liabilities from the past
+        this.createdAt = Instant.now(); // NOTE: we would want to fix this, because we could be creating liabilities
+                                        // from the past
         this.updatedAt = Instant.now();
     }
 
@@ -52,6 +53,7 @@ public class Liability {
     public void makePayment(Money paymentAmount) {
         Objects.requireNonNull(paymentAmount, "Payment amount cannot be null.");
 
+        // we could reverse a charge....
         if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) { // can't make a payment of 0 dollars or less
             throw new IllegalArgumentException("Payment amount must be positive.");
         }
@@ -73,6 +75,21 @@ public class Liability {
 
         this.currentBalance = this.currentBalance.subtract(paymentAmount);
         this.updatedAt = Instant.now();
+    }
+
+    // AI assisted
+    // for backpayment
+    public void increaseBalance(Money amountToIncrease) {
+        Objects.requireNonNull(amountToIncrease, "Amount to increase cannot be null.");
+        if (amountToIncrease.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount to increase must be positive.");
+        }
+        // Ensure currency matches (important for real scenarios)
+        if (!this.currentBalance.currencyCode().equals(amountToIncrease.currencyCode())) {
+            throw new IllegalArgumentException("Currency mismatch for balance increase.");
+        }
+        this.currentBalance = new Money(this.currentBalance.amount().add(amountToIncrease.amount()),
+                this.currentBalance.currencyCode());
     }
 
     @Override

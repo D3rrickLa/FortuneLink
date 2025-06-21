@@ -13,7 +13,8 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
         // for consistency
         if (cryptoSymbol != null && !cryptoSymbol.trim().isEmpty()) {
             cryptoSymbol = cryptoSymbol.trim().toUpperCase();
-        } else {
+        } 
+        else {
             cryptoSymbol = null; // Ensure it's truly null if empty/blank
         }
 
@@ -43,6 +44,7 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
         // 2. Now that we know ticker and exchange are either both present or both
         // absent,
         // we can correctly set isTraditionalAsset.
+        // NOTE: this will always be have green because of the if guards above
         boolean isTraditionalAsset = hasTraditionalTicker && hasTraditionalExchange;
 
         // 3. Next, enforce mutual exclusivity: cannot be both traditional AND crypto.
@@ -63,6 +65,8 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
     // Behaviours realted to its value
 
     public boolean isStockOrEtf() {
+        // this is also half green/red because tickerSymbol and exchange can only be false or true together
+        // there is never a scenario where it's false and true or vice versa due to the constructor
         return !tickerSymbol.isEmpty() && !exchange.isEmpty();
     }
 
@@ -73,13 +77,9 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
     public String toCanonicalString() {
         if (isStockOrEtf()) {
             return String.format("%s (%s)", tickerSymbol, exchange);
-        } else if (isCrypto()) {
+        } 
+        else { 
             return cryptoSymbol;
-        } else { // this can't run 
-            // fallback if something happens
-            // this should never happen because of our constructor validation, but just in
-            // case
-            return assetCommonName;
         }
     }
 

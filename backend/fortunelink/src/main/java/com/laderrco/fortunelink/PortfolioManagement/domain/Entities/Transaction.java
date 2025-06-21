@@ -72,6 +72,7 @@ public class Transaction {
         // unless it's a specific cash-only type.
         boolean isCashOnlyTransaction = (transactionType == TransactionType.DEPOSIT ||
                 transactionType == TransactionType.WITHDRAWAL ||
+                transactionType == TransactionType.VOID_WITHDRAWAL ||
                 transactionType == TransactionType.DIVIDEND ||
                 transactionType == TransactionType.INTEREST_INCOME);
 

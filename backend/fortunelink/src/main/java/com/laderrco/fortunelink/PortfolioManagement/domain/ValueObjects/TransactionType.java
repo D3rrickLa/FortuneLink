@@ -1,17 +1,19 @@
 package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
 
 public enum TransactionType {
-    BUY, // -- stocks and trading
-    VOID_BUY,
+    BUY,
+    DEPOSIT, 
     DIVIDEND,
-    SELL,
-    VOID_SELL,
-    DEPOSIT, // -- cash and regular
-    WITHDRAWAL,
+    EXPENSE, 
+    FEE,
     INTEREST_INCOME,
     LOAN_PAYMENT,
-    EXPENSE, // -- other
-    FEE,
+    OTHER,
+    SELL,
     TRANSFER_IN,
-    TRANSFER_OUT
+    TRANSFER_OUT,
+    VOID_BUY,
+    VOID_SELL,
+    VOID_WITHDRAWAL,
+    WITHDRAWAL,
 }

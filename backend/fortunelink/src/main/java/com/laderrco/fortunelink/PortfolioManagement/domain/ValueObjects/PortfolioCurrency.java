@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
 import java.util.Objects;
 
 // value object, make it a record
+// NOTE: we should probably change this to the Actual Currency class
 public record PortfolioCurrency(String code, String symbol) {
     public PortfolioCurrency {
         Objects.requireNonNull(code, "An exchange code must not be null.");

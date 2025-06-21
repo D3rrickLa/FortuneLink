@@ -102,7 +102,8 @@ public class LiabilityTest {
         // testing the overpayment clause
         Money payment4 = new Money(new BigDecimal(100000), new PortfolioCurrency("USD", "$"));
         Exception exception4 = assertThrows(IllegalArgumentException.class, () -> l1.makePayment(payment4));
-        assertTrue(exception4.getMessage().contains("Payment amount " + payment4 + " exceeds current liability balance "+ l1.getCurrentBalance() + " for " + "SOME LIABILITY" + "."));
+        assertTrue(exception4.getMessage().contains("Payment amount " + payment4 + " exceeds current liability balance "
+                + l1.getCurrentBalance() + " for " + "SOME LIABILITY" + "."));
     }
 
     @Test
@@ -123,5 +124,33 @@ public class LiabilityTest {
         assertEquals(LocalDate.now(), l1.getMaturityDate());
         assertEquals(ca, l1.getCreatedAt());
         assertEquals(ua, l1.getUpdatedAt());
+    }
+
+    @Test
+    void testIncreaseBalance() {
+        UUID lUuid = UUID.randomUUID();
+        UUID porUuid = UUID.randomUUID();
+        Money curBal = new Money(new BigDecimal(1000), new PortfolioCurrency("USD", "$"));
+        Percentage percentage = new Percentage(new BigDecimal(10));
+        Liability l1 = new Liability(lUuid, porUuid, "SOME LIABILITY", "EPIC", curBal, percentage, LocalDate.now());
+
+        l1.increaseBalance(curBal);
+        assertEquals(new Money(new BigDecimal(2000), new PortfolioCurrency("USD", "$")), l1.getCurrentBalance());
+    }
+
+    @Test
+    void testIncreaseBalanceBranches() {
+        UUID lUuid = UUID.randomUUID();
+        UUID porUuid = UUID.randomUUID();
+        Money curBal = new Money(new BigDecimal(1000), new PortfolioCurrency("USD", "$"));
+        Percentage percentage = new Percentage(new BigDecimal(10));
+        Liability l1 = new Liability(lUuid, porUuid, "SOME LIABILITY", "EPIC", curBal, percentage, LocalDate.now());
+        Money mt1 = new Money(new BigDecimal(-2000), new PortfolioCurrency("USD", "$"));
+        
+        // test if amount not positive
+        assertThrows(IllegalArgumentException.class, () ->l1.increaseBalance(mt1));
+
+        Money mt2 = new Money(new BigDecimal(2000), new PortfolioCurrency("USD", "$$"));
+        assertThrows(IllegalArgumentException.class, () ->l1.increaseBalance(mt2));
     }
 }
