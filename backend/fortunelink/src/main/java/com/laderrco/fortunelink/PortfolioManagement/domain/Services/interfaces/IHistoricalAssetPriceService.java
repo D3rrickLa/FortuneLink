@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIde
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.PortfolioCurrency;
 
+// infra layer
 public interface IHistoricalAssetPriceService {
     // Fetches the historical market price for a given asset identifier on a
     // specific date.

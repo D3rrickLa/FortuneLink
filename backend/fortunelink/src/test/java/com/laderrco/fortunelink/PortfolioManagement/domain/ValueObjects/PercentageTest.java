@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,5 +56,12 @@ public class PercentageTest {
     void testValueScalingGreaterThan4Decimals() {
         Percentage p1 = new Percentage(new BigDecimal("100.500001"));
         assertTrue(p1.value().scale() == 6);
+    }
+
+    @Test 
+    void testFromBigDecimal() {
+        BigDecimal decimal = new BigDecimal("100.0");
+        Percentage x = Percentage.fromBigDecimal(decimal);
+        assertEquals(1.000000D, x.value().doubleValue());
     }
 }
