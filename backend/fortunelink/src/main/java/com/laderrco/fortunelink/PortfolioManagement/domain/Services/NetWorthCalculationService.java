@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.AssetHolding;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Liability;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Portfolio;
+import com.laderrco.fortunelink.PortfolioManagement.domain.Services.interfaces.IAssetPriceService;
+import com.laderrco.fortunelink.PortfolioManagement.domain.Services.interfaces.INetWorthCalculationService;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.NetWorthSummary;

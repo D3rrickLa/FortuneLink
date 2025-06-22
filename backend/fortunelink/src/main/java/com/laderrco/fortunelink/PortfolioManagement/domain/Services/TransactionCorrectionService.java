@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.AssetHolding
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Liability;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Portfolio;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Transaction;
+import com.laderrco.fortunelink.PortfolioManagement.domain.Services.interfaces.ITransactionCorrectionService;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionType;
 

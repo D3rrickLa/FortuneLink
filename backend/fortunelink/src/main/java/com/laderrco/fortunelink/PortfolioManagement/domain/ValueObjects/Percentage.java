@@ -15,4 +15,9 @@ public record Percentage(BigDecimal value) {
             value = value.setScale(4, RoundingMode.HALF_UP);
         }
     }
+
+    public static Percentage fromBigDecimal(BigDecimal rawPercentageValue) {
+        BigDecimal decimalValue = rawPercentageValue.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP); // Scale for internal precision
+        return new Percentage(decimalValue);
+    }
 }

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Services;
+package com.laderrco.fortunelink.PortfolioManagement.domain.Services.interfaces;
 
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Portfolio;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Transaction;

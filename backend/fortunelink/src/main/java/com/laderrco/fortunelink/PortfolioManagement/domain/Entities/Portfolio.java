@@ -9,8 +9,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.Services.ITransactionCorrectionService;
 import com.laderrco.fortunelink.PortfolioManagement.domain.Services.TransactionCorrectionService;
+import com.laderrco.fortunelink.PortfolioManagement.domain.Services.interfaces.ITransactionCorrectionService;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Percentage;

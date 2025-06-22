@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Services;
+package com.laderrco.fortunelink.PortfolioManagement.domain.Services.interfaces;
 
 import java.util.Map;
 import java.util.Optional;
