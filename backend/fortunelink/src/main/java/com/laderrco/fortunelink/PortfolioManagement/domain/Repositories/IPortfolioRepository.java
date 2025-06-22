@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Portfolio;
 
-public interface PortfolioRepository {
+public interface IPortfolioRepository {
     Optional<Portfolio> findById(UUID id);
 
     Portfolio savePortfolio(Portfolio portfolio);
