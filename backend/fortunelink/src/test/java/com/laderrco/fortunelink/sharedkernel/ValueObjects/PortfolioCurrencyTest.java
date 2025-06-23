@@ -9,8 +9,6 @@ import java.util.Currency;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
-
 public class PortfolioCurrencyTest {
     private Currency javaCurrency;
     private PortfolioCurrency currency;

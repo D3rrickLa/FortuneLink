@@ -6,4 +6,15 @@ public enum TransactionType {
     INTEREST,
     DIVIDEND,
     OTHER,
+
+    BUY,
+    SELL,
+
+    PAYMENT,
+    EXPENSE,
+    FEE,
+
+    VOID_BUY,
+    VOID_SELL,
+    VOID_WITHDRAWAL,
 }

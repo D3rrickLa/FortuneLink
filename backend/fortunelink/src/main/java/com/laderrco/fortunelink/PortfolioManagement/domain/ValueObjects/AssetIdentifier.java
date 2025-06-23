@@ -8,14 +8,23 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
     public AssetIdentifier {
         Objects.requireNonNull(exchange, "Exchange platform cannot be null.");
         Objects.requireNonNull(assetCommonName, "Asset name cannot be null.");
+        String normalizedExchange = exchange.trim().toUpperCase();
+        String normalizedAssetName = assetCommonName.trim();
+        String normalizedTicker = tickerSymbol != null ? tickerSymbol.trim().toUpperCase() : null;
+        String normalizedCrypto = (cryptoSymbol != null && !cryptoSymbol.trim().isEmpty())
+                ? cryptoSymbol.trim().toUpperCase()
+                : null;
 
-        if (tickerSymbol == null && cryptoSymbol == null) {
-            throw new IllegalArgumentException(
-                    "AssetIdentifier must represent either a traditional asset (ticker/exchange) or a cryptocurrency (crypto symbol).");
-        }
-        if (tickerSymbol != null && cryptoSymbol != null) {
+        boolean hasTraditionalTicker = normalizedTicker != null && !normalizedTicker.isEmpty();
+        boolean isCrypto = normalizedCrypto != null;
+
+        if (hasTraditionalTicker && isCrypto) {
             throw new IllegalArgumentException(
                     "AssetIdentifier cannot represent both a traditional asset and a cryptocurrency.");
+        }
+        if (!hasTraditionalTicker && !isCrypto) {
+            throw new IllegalArgumentException(
+                    "AssetIdentifier must represent either a traditional asset (ticker/exchange) or a cryptocurrency (crypto symbol).");
         }
 
         // need to test two cases, when it's traditional stocks and when it's
@@ -25,9 +34,11 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
         } else {
             cryptoSymbol = cryptoSymbol.trim().toUpperCase();
         }
-        
-        exchange = exchange.trim().toUpperCase();
-        assetCommonName = assetCommonName.trim();
+
+        tickerSymbol = normalizedTicker;
+        cryptoSymbol = normalizedCrypto;
+        exchange = normalizedExchange;
+        assetCommonName = normalizedAssetName;
 
     }
 
@@ -35,10 +46,10 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
     // find if item is a stock or crypto
 
     public boolean isStockOrETF() {
-        return !this.tickerSymbol.isEmpty();
+        return this.tickerSymbol == null ? false : true;
     }
 
     public boolean isCrypto() {
-        return !this.cryptoSymbol.isEmpty();
+        return this.cryptoSymbol == null ? false: true;
     }
 }
