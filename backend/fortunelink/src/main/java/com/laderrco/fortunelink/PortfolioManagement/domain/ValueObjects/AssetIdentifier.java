@@ -50,6 +50,29 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
     }
 
     public boolean isCrypto() {
-        return this.cryptoSymbol == null ? false: true;
+        return this.cryptoSymbol == null ? false : true;
+    }
+
+    // for All Value Objects we compare everything but memory address
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        AssetIdentifier that = (AssetIdentifier) o;
+        return Objects.equals(this.tickerSymbol, that.tickerSymbol())
+                && Objects.equals(this.exchange, that.exchange())
+                && Objects.equals(this.cryptoSymbol, that.cryptoSymbol())
+                && Objects.equals(this.assetCommonName, that.assetCommonName());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.tickerSymbol, this.exchange, this.cryptoSymbol, this.assetCommonName);
     }
 }

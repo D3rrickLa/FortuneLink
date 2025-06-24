@@ -13,8 +13,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Percentage;
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
 public class LiabilityTest {

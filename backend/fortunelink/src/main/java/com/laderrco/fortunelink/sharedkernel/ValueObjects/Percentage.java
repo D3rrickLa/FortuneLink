@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.sharedkernel.ValueObjects;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

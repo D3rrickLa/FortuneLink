@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.UUID;
 
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Percentage;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionType;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionType;
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
 

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.sharedkernel.ValueObjects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -9,6 +9,8 @@ import java.math.RoundingMode;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 
 public class PercentageTest {
     private Percentage percentage;

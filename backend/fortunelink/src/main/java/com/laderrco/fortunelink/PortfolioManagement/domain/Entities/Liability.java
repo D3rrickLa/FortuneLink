@@ -5,8 +5,8 @@ import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Money;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Percentage;
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 
 public class Liability {
     private final UUID liabilityId;

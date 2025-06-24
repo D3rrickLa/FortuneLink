@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
 
 import java.util.Objects;
 
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
+
 public record NetWorthSummary(Money totalAssets, Money totalLiabilities) {
     public NetWorthSummary {
         Objects.requireNonNull(totalAssets, "Total amount of assets cannot be null.");

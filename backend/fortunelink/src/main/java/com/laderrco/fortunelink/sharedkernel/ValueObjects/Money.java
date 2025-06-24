@@ -1,10 +1,8 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.sharedkernel.ValueObjects;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
-
-import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
 public record Money(BigDecimal amount, PortfolioCurrency currency) {
     public Money {

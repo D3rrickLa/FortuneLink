@@ -7,6 +7,7 @@ import java.util.Currency;
 
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
 public class NetWorthSummaryTest {
