@@ -4,8 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
-
+// we are returning new because of immutability
 public record Money(BigDecimal amount, PortfolioCurrency currency) {
     public Money {
         Objects.requireNonNull(amount, "Amount cannot be null.");
@@ -32,10 +31,10 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
     }
 
     public Money multiply(Long multiplier) {
-        return mulitply(new BigDecimal(multiplier));
+        return multiply(new BigDecimal(multiplier));
     }
     
-    public Money mulitply(BigDecimal multiplier) {
+    public Money multiply(BigDecimal multiplier) {
         return new Money(amount.multiply(multiplier), this.currency);
     }
 
@@ -56,6 +55,10 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
             throw new IllegalArgumentException("Cannot compare Money with different currencies. Convert first: " + currency() + " vs " + other.currency());
         }
         return this.amount.compareTo(other.amount());
+    }
+
+    public Money setScale(int newScale, RoundingMode roundingMode) {
+        return new Money(this.amount.setScale(newScale, roundingMode), this.currency);
     }
 
     @Override

@@ -2,55 +2,68 @@ package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
 
 import java.util.Objects;
 
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
+
 // NOTE: you would really put this as an interface, because there are many assets besides crypto and stocks/etfs
 // think about holding actual metals or private companies... but that is out of scope for now
-public record AssetIdentifier(String tickerSymbol, String exchange, String cryptoSymbol, String assetCommonName) {
+public record AssetIdentifier(AssetType assetType, String primaryIdentifier, String assetCommonName, String secondaryIdentifier) {
     public AssetIdentifier {
-        Objects.requireNonNull(exchange, "Exchange platform cannot be null.");
+        Objects.requireNonNull(assetType, "Asset type cannot null.");
+        Objects.requireNonNull(primaryIdentifier, "Primary identifier cannot be null.");
         Objects.requireNonNull(assetCommonName, "Asset name cannot be null.");
-        String normalizedExchange = exchange.trim().toUpperCase();
-        String normalizedAssetName = assetCommonName.trim();
-        String normalizedTicker = tickerSymbol != null ? tickerSymbol.trim().toUpperCase() : null;
-        String normalizedCrypto = (cryptoSymbol != null && !cryptoSymbol.trim().isEmpty())
-                ? cryptoSymbol.trim().toUpperCase()
-                : null;
 
-        boolean hasTraditionalTicker = normalizedTicker != null && !normalizedTicker.isEmpty();
-        boolean isCrypto = normalizedCrypto != null;
+        primaryIdentifier = primaryIdentifier.trim().toUpperCase();
+        assetCommonName = assetCommonName.trim();
+        secondaryIdentifier = secondaryIdentifier != null ? secondaryIdentifier.trim().toUpperCase() : null;
 
-        if (hasTraditionalTicker && isCrypto) {
-            throw new IllegalArgumentException(
-                    "AssetIdentifier cannot represent both a traditional asset and a cryptocurrency.");
-        }
-        if (!hasTraditionalTicker && !isCrypto) {
-            throw new IllegalArgumentException(
-                    "AssetIdentifier must represent either a traditional asset (ticker/exchange) or a cryptocurrency (crypto symbol).");
+        if (assetCommonName.isBlank()) {
+            throw new IllegalArgumentException("Asset name cannot be blank.");
         }
 
-        // need to test two cases, when it's traditional stocks and when it's
-        // alternative (crypto)
-        if (tickerSymbol != null) {
-            tickerSymbol = tickerSymbol.trim().toUpperCase();
-        } else {
-            cryptoSymbol = cryptoSymbol.trim().toUpperCase();
+        switch (assetType) {
+            case STOCK, ETF:
+                if (primaryIdentifier.isEmpty()) {
+                    throw new IllegalArgumentException("Stock/ETF must have a ticker symbol as primary identifier.");
+                }
+                if (secondaryIdentifier == null || secondaryIdentifier.isEmpty()) {
+                    throw new IllegalArgumentException("Stock/ETF must have an exchange as secondary identifier.");
+                }
+                break;
+            case BOND:
+                if (primaryIdentifier.isEmpty()) {
+                    throw new IllegalArgumentException("Bond must have a CUSIP/ISIN or unique ID as primary identifier.");
+                }
+                break;
+            case CRYPTO:
+                if (primaryIdentifier.isEmpty()) {
+                    throw new IllegalArgumentException("Cryptocurrency must have a symbol as primary identifier.");
+                }
+                break;
+            case COMMODITY:
+                if (primaryIdentifier.isEmpty()) {
+                    throw new IllegalArgumentException("Commodity must have a symbol/code as primary identifier.");
+                }
+                break;
+            case FOREX_PAIR:
+                if (primaryIdentifier.isEmpty() || !primaryIdentifier.matches("[A-Z]{1,6}")) { // e.g., 6-letter pair. MUST BE 6 LEN LONG...
+                    throw new IllegalArgumentException("Forex pair must have a valid 6-letter symbol.");
+                }
+                break;
+
+            default:
+                throw new IllegalArgumentException("ERROR, unknown Asset Type given.");
         }
-
-        tickerSymbol = normalizedTicker;
-        cryptoSymbol = normalizedCrypto;
-        exchange = normalizedExchange;
-        assetCommonName = normalizedAssetName;
-
     }
 
     // What can the Asset Identifier do? - verbs
     // find if item is a stock or crypto
 
-    public boolean isStockOrETF() {
-        return this.tickerSymbol == null ? false : true;
+    public boolean isCrypto() {
+        return this.assetType == AssetType.CRYPTO;
     }
 
-    public boolean isCrypto() {
-        return this.cryptoSymbol == null ? false : true;
+    public boolean isStockOrETF() {
+        return this.assetType == AssetType.STOCK || this.assetType == AssetType.ETF;
     }
 
     // for All Value Objects we compare everything but memory address
@@ -65,14 +78,14 @@ public record AssetIdentifier(String tickerSymbol, String exchange, String crypt
         }
 
         AssetIdentifier that = (AssetIdentifier) o;
-        return Objects.equals(this.tickerSymbol, that.tickerSymbol())
-                && Objects.equals(this.exchange, that.exchange())
-                && Objects.equals(this.cryptoSymbol, that.cryptoSymbol())
+        return Objects.equals(this.assetType, that.assetType())
+                && Objects.equals(this.primaryIdentifier, that.primaryIdentifier())
+                && Objects.equals(this.secondaryIdentifier, that.secondaryIdentifier())
                 && Objects.equals(this.assetCommonName, that.assetCommonName());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.tickerSymbol, this.exchange, this.cryptoSymbol, this.assetCommonName);
+        return Objects.hash(this.assetType, this.primaryIdentifier, this.secondaryIdentifier, this.assetCommonName);
     }
 }

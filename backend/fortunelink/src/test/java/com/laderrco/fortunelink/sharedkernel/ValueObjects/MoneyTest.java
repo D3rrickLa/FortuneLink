@@ -114,7 +114,7 @@ public class MoneyTest {
     @Test
     void testMultiplyBigDecimal() {
         BigDecimal multiplier = new BigDecimal(2);
-        Money multiMoney = money.mulitply(multiplier);
+        Money multiMoney = money.multiply(multiplier);
         assertTrue(multiMoney.amount().doubleValue() == (2 * money.amount().doubleValue()));
 
     }

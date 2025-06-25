@@ -16,5 +16,8 @@ public enum DecimalPrecision {
     DecimalPrecision(int decimalPlaces) {
         this.decimalPlaces = decimalPlaces;
     }
-    public int getDecimalPlaces() { return decimalPlaces; }
+
+    public int getDecimalPlaces() {
+        return decimalPlaces;
+    }
 }

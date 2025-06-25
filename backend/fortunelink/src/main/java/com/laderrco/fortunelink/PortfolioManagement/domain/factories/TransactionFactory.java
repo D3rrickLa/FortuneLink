@@ -29,26 +29,28 @@ public class TransactionFactory {
 
         // problem, we need to know what we have bought, right now we only know if it's
         // a stock/etf or crypto through AssetIdentifer
-        // the IF statement right now seems to fix that issue, but say if the asset we bought were bonds, like acutal T-Bills
-        // and not ETFs of bonds, that will pose a problem + any other asset in the future we could think of.
-        // for now though I think we are sticking to use STOCKS - on the exchange and crypto
-        RoundingMode roundMode = RoundingMode.HALF_UP;
-        int cashDecimalPlaces;
-        
-        if (assetIdentifier.isStockOrETF()) {
-            cashDecimalPlaces = DecimalPrecision.STOCK.getDecimalPlaces();
-        } else {
-            cashDecimalPlaces = DecimalPrecision.CRYPTO.getDecimalPlaces();
-        }
+        // the IF statement right now seems to fix that issue, but say if the asset we
+        // bought were bonds, like acutal T-Bills
+        // and not ETFs of bonds, that will pose a problem + any other asset in the
+        // future we could think of.
+        // for now though I think we are sticking to use STOCKS - on the exchange and
+        // crypto
+        RoundingMode roundingMode = RoundingMode.HALF_UP;
+        int quantityDecimalPlaces = assetIdentifier.assetType().getDefaultQuantityPrecision().getDecimalPlaces();
+        int cashDecimalPlaces = DecimalPrecision.CASH.getDecimalPlaces();
 
-        Money costOfAssets = pricePerUnit.mulitply(quantity);
+
+        BigDecimal normalizedQuantity = quantity.setScale(quantityDecimalPlaces, roundingMode);
+        Money normalizedPricePerUnit = pricePerUnit.setScale(cashDecimalPlaces, roundingMode);
+        Money costOfAssets = normalizedPricePerUnit.multiply(normalizedQuantity).setScale(cashDecimalPlaces, roundingMode);
+
+
         Money totalFees = associatedFees != null
-                ? associatedFees.stream().map(Fee::amount).reduce(Money.ZERO(pricePerUnit.currency()), Money::add)
+                ? associatedFees.stream().map(Fee::amount).reduce(Money.ZERO(pricePerUnit.currency()), Money::add).setScale(cashDecimalPlaces, roundingMode)
                 : Money.ZERO(pricePerUnit.currency());
-        Money totalTransactionAmount = costOfAssets.add(totalFees);
+        Money totalTransactionAmount = costOfAssets.add(totalFees).setScale(cashDecimalPlaces, roundingMode);
 
-        AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, quantity,
-                pricePerUnit);
+        AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, normalizedQuantity,normalizedPricePerUnit);
 
         return new Transaction.Builder()
                 .transactionId(transactionId)

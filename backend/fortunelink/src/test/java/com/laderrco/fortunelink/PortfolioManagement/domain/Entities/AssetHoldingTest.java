@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
@@ -30,7 +31,7 @@ public class AssetHoldingTest {
     void init() {
         portfolioId = UUID.randomUUID();
         assetHoldingId = UUID.randomUUID();
-        assetIdentifier = new AssetIdentifier("APPL", "NASDAW", null, "APPLE");
+        assetIdentifier = new AssetIdentifier(AssetType.STOCK, "APPL",  "APPLE", "NASDAQ");
         initQuantity = new BigDecimal(20);
         initialSpentCost = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("USD")));
         dateTime = ZonedDateTime.now();
