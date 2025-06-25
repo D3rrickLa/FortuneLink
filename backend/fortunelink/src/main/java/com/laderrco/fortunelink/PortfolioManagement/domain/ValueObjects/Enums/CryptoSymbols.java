@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums;
 
 public enum CryptoSymbols {
     BTC, ETH, USDT, XRP, BNB, SOL, USDC, TRX, DOGE, ADA,

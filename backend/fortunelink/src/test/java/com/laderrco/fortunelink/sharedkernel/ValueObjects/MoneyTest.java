@@ -12,9 +12,6 @@ import java.util.Currency;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
-import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
-
 public class MoneyTest {
     private BigDecimal amount;
     private PortfolioCurrency currency;
@@ -77,14 +74,21 @@ public class MoneyTest {
 
     @Test
     void testEquals() {
+
+        assertTrue(money.equals(money));
+        assertFalse(money.equals(null));
+        assertFalse(money.equals(new Object()));
+        
         PortfolioCurrency currency2 = new PortfolioCurrency(Currency.getInstance("CAD"));
         Money money2 = new Money(amount, currency2);
-
-        assertNotEquals(money2, money);
+        
+        assertFalse(money2.equals(money));
+        assertFalse(money.equals(new Money(amount, currency2)));
+        assertFalse(money.equals(new Money(new BigDecimal(2), currency)));
 
         PortfolioCurrency currency3 = new PortfolioCurrency(Currency.getInstance("USD"));
         Money money3 = new Money(amount, currency3);
-        assertEquals(money3, money);
+        assertTrue(money.equals(money3));
     }
 
     @Test
@@ -119,13 +123,12 @@ public class MoneyTest {
     void testSubtract() {
         PortfolioCurrency currency2 = new PortfolioCurrency(Currency.getInstance("CAD"));
         Money money2 = new Money(amount, currency2);
-        
+
         // testing if money to subtract is null
-        assertThrows(NullPointerException.class, ()-> money.subtract(null));
-        
-        
+        assertThrows(NullPointerException.class, () -> money.subtract(null));
+
         // testing if mistmatch currency are throwing an error
-        assertThrows(IllegalArgumentException.class, ()-> money.subtract(money2));
+        assertThrows(IllegalArgumentException.class, () -> money.subtract(money2));
 
         PortfolioCurrency currency3 = new PortfolioCurrency(Currency.getInstance("USD"));
         Money money3 = new Money(amount, currency3);
@@ -138,4 +141,10 @@ public class MoneyTest {
     void testToString() {
         assertTrue(!money.toString().equals(null));
     }
+
+    @Test
+    void testZERO() {
+        assertTrue(new Money(BigDecimal.ZERO, currency).equals(Money.ZERO(currency)));
+    }
+
 }

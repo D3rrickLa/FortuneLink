@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
+
 public record Money(BigDecimal amount, PortfolioCurrency currency) {
     public Money {
         Objects.requireNonNull(amount, "Amount cannot be null.");
@@ -45,11 +47,34 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
         return new Money(amount.divide(divisor, this.currency.getDefaultScale(), RoundingMode.HALF_UP), this.currency);
     }
 
+    public static Money ZERO(PortfolioCurrency currency) {
+        return new Money(BigDecimal.ZERO, currency);
+    }
+
     public int compareTo(Money other) {
         if (!this.currency.equals(other.currency())) {
             throw new IllegalArgumentException("Cannot compare Money with different currencies. Convert first: " + currency() + " vs " + other.currency());
         }
         return this.amount.compareTo(other.amount());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Money that = (Money) o;
+        return Objects.equals(this.amount, that.amount)
+                && Objects.equals(this.currency, that.currency);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.currency, this.amount);
     }
 
 }

@@ -10,8 +10,6 @@ import java.math.RoundingMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
-
 public class PercentageTest {
     private Percentage percentage;
     @BeforeEach
@@ -32,7 +30,10 @@ public class PercentageTest {
     void testEquals() {
         Percentage p2 = new Percentage(new BigDecimal(25));
         assertTrue(percentage.equals(p2));
+        assertTrue(percentage.equals(percentage));
         assertTrue(!percentage.equals(null));
+        assertTrue(!percentage.equals(new Object()));
+        assertTrue(!percentage.equals(new Percentage(new BigDecimal(250))));
     }
 
     @Test

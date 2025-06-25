@@ -2,7 +2,7 @@ package com.laderrco.fortunelink.sharedkernel.ValueObjects;
 
 import java.util.Objects;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.CryptoSymbols;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.CryptoSymbols;
 
 /*
  * We are using the built in Java Currency class for the backbone of this custom Currency Value Object

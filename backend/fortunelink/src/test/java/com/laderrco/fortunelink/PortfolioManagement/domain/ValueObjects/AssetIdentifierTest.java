@@ -53,9 +53,21 @@ public class AssetIdentifierTest {
     
     @Test
     void testEquals() {
-        assertNotEquals(asset2, asset);
         AssetIdentifier ai1 = new AssetIdentifier("APPL", "NASDAQ", null, "APPLE");
-        assertEquals(ai1, asset);
+        assertTrue(ai1.equals(asset));
+        
+        assertFalse(asset2.equals(asset));
+        assertFalse(asset.equals(null));
+        assertFalse(asset.equals(new Object()));
+        
+        assertFalse(asset.equals(new AssetIdentifier("GOOGL", "NASDAQ", null, "APPLE")));
+        assertFalse(asset.equals(new AssetIdentifier("APPL", "TSX", null, "APPLE")));
+        assertFalse(asset.equals(new AssetIdentifier("APPL", "NASDAQ", null, "GOOGLE")));
+
+        AssetIdentifier ai2 = new AssetIdentifier(null, "NASDAQ", "BTC", "bitcoin");
+        assertFalse(ai2.equals(new AssetIdentifier(null, "TSX", "BTC", "bitcoin")));
+        assertFalse(ai2.equals(new AssetIdentifier(null, "NASDAQ", "XRP", "bitcoin")));
+        assertFalse(ai2.equals(new AssetIdentifier(null, "NASDAQ", "BTC", "RIPPLE CoIn   ")));
     }
 
     @Test
