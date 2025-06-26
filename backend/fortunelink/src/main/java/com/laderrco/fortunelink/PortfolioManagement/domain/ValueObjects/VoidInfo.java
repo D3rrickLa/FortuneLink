@@ -3,14 +3,10 @@ package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
 import java.util.Objects;
 import java.util.UUID;
 
-public record VoidInfo(UUID voidingTransactionId, String voidReason) {
+// voidingTransactionId = the new Id that would void the transaction assigned to this 'transaction prev'
+public record VoidInfo(UUID voidingTransactionId) {
     public VoidInfo {
         Objects.requireNonNull(voidingTransactionId);
-        Objects.requireNonNull(voidReason);
-
-        if (voidReason.trim().isBlank()) {
-            throw new IllegalArgumentException("A reason to void must be given.");
-        }
     }
 
     @Override
@@ -23,11 +19,11 @@ public record VoidInfo(UUID voidingTransactionId, String voidReason) {
         }
 
         VoidInfo that = (VoidInfo) o;
-        return Objects.equals(this.voidingTransactionId, that.voidingTransactionId) && Objects.equals(this.voidReason, that.voidReason);
+        return Objects.equals(this.voidingTransactionId, that.voidingTransactionId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.voidingTransactionId, this.voidReason);
+        return Objects.hash(this.voidingTransactionId);
     }
 }

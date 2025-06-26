@@ -21,7 +21,7 @@ public class Transaction {
     private final TransactionDetails transactionDetails;
 
     private final TransactionMetadata transactionMetadata;
-    private Optional<VoidInfo> voidInfo;
+    private Optional<VoidInfo> voidInfo; // different to VoidTransactionDetails. Who did the voiding? quick search compare to TransactionDetails
     public List<Fee> fees;
     // we need a new feild for fees
 
@@ -65,7 +65,7 @@ public class Transaction {
         // errors to handle: if status is active, if source is platform and if reason is
         // null
 
-        this.voidInfo = Optional.of(new VoidInfo(voidingTransactionId, reason));
+        this.voidInfo = Optional.of(new VoidInfo(voidingTransactionId));
     }
 
     public static class Builder {

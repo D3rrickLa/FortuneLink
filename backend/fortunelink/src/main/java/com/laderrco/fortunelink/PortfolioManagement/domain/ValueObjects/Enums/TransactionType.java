@@ -17,4 +17,10 @@ public enum TransactionType {
     VOID_BUY,
     VOID_SELL,
     VOID_WITHDRAWAL,
+
+    TRANSFER_IN,
+    TRANSFER_OUT,
+
+    STOCK_SPLIT,
+    CORPORATE_ACTION  // for things like splits or reverse splits, or other things
 }

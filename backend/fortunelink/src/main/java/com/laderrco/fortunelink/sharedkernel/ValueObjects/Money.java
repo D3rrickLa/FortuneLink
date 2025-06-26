@@ -61,6 +61,12 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
         return new Money(this.amount.setScale(newScale, roundingMode), this.currency);
     }
 
+    
+    public Money negate() {
+        return new Money(this.amount.negate(), this.currency);
+
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
