@@ -21,11 +21,13 @@ public class Transaction {
     private final TransactionDetails transactionDetails;
 
     private final TransactionMetadata transactionMetadata;
-    private Optional<VoidInfo> voidInfo; // different to VoidTransactionDetails. Who did the voiding? quick search compare to TransactionDetails
-    public List<Fee> fees;
-    // we need a new feild for fees
+    private Optional<VoidInfo> voidInfo; // different to VoidTransactionDetails. Who did the voiding? quick search
+                                         // compare to TransactionDetails
 
-    public Transaction(UUID transactionId, UUID portfolioId, TransactionType transactionType,
+    // we need a new feild for fees
+    public List<Fee> fees;
+
+    private Transaction(UUID transactionId, UUID portfolioId, TransactionType transactionType,
             Money totalTransactionAmount, Instant transactionDate, TransactionDetails transactionDetails,
             TransactionMetadata transactionMetadata, Optional<VoidInfo> voidInfo, List<Fee> fees) {
         this.transactionId = transactionId;
@@ -41,7 +43,8 @@ public class Transaction {
 
     public Transaction(Builder builder) {
         this(builder.transactionId, builder.portfolioId, builder.transactionType, builder.totalTransactionAmount,
-                builder.transactionDate, builder.transactionDetails, builder.transactionMetadata, builder.voidInfo, builder.fees);
+                builder.transactionDate, builder.transactionDetails, builder.transactionMetadata, builder.voidInfo,
+                builder.fees);
     }
 
     /*
@@ -66,6 +69,42 @@ public class Transaction {
         // null
 
         this.voidInfo = Optional.of(new VoidInfo(voidingTransactionId));
+    }
+
+    public UUID getTransactionId() {
+        return transactionId;
+    }
+
+    public UUID getPortfolioId() {
+        return portfolioId;
+    }
+
+    public TransactionType getTransactionType() {
+        return transactionType;
+    }
+
+    public Money getTotalTransactionAmount() {
+        return totalTransactionAmount;
+    }
+
+    public Instant getTransactionDate() {
+        return transactionDate;
+    }
+
+    public TransactionDetails getTransactionDetails() {
+        return transactionDetails;
+    }
+
+    public TransactionMetadata getTransactionMetadata() {
+        return transactionMetadata;
+    }
+
+    public Optional<VoidInfo> getVoidInfo() {
+        return voidInfo;
+    }
+
+    public List<Fee> getFees() {
+        return fees;
     }
 
     public static class Builder {
@@ -153,8 +192,9 @@ public class Transaction {
         public Builder voidInfo(Optional<VoidInfo> voidInfo) {
             this.voidInfo = voidInfo;
             return this;
-        
+
         }
+
         public Builder fees(List<Fee> fees) {
             this.fees = fees;
             return this;

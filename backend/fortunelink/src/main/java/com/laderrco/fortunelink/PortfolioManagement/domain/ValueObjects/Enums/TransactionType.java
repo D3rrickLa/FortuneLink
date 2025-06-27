@@ -22,5 +22,6 @@ public enum TransactionType {
     TRANSFER_OUT,
 
     STOCK_SPLIT,
-    CORPORATE_ACTION  // for things like splits or reverse splits, or other things
+    REVERSE_STOCK_SPLIT,
+    CORPORATE_ACTION  // for things other than splits
 }
