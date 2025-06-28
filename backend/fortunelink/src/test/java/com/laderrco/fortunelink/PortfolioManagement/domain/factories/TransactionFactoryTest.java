@@ -43,9 +43,9 @@ public class TransactionFactoryTest {
                 BigDecimal quantity = new BigDecimal(100);
                 Money pricePerUnit = new Money(new BigDecimal(35.32), new PortfolioCurrency(Currency.getInstance("USD")));
                 TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,
-                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,
-                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 List<Fee> fees = new ArrayList<>();
                 fees.add(new Fee(FeeType.COMMISSION,
                         new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("USD"))))); // money fee should
@@ -79,7 +79,7 @@ public class TransactionFactoryTest {
                         portfolioID, assetIdentifier, transactionDate, quantity, pricePerUnit, null, fees));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createBuyAssetTransaction(transactionID,
                         portfolioID, assetIdentifier, transactionDate, new BigDecimal(10), pricePerUnit, new TransactionMetadata(TransactionStatus.FAILED,
-                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION"),
+                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()),
                         null));
 
                 // quantity check
@@ -115,8 +115,8 @@ public class TransactionFactoryTest {
                 Instant transactionDate = Instant.now();
                 BigDecimal quantity = new BigDecimal(100);
                 Money pricePerUnit = new Money(new BigDecimal(35.32), new PortfolioCurrency(Currency.getInstance("USD")));
-                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
-                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
+                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 List<Fee> fees = new ArrayList<>();
                 fees.add(new Fee(FeeType.COMMISSION,
                         new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("USD"))))); // money fee should
@@ -151,7 +151,7 @@ public class TransactionFactoryTest {
                         
                 // quantity check
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createSellAssetTransaction(transactionID,
-                        portfolioID, assetIdentifier, transactionDate, quantity, pricePerUnit, new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION"), fees));
+                        portfolioID, assetIdentifier, transactionDate, quantity, pricePerUnit, new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createSellAssetTransaction(transactionID,
                         portfolioID, assetIdentifier, transactionDate, new BigDecimal(-6), pricePerUnit, transactionMetadata,
                         null));
@@ -184,8 +184,8 @@ public class TransactionFactoryTest {
                 TransactionType transactionType = TransactionType.DEPOSIT;
                 Instant transactionDate = Instant.now();
                 Money amount = new Money(new BigDecimal(350.32), new PortfolioCurrency(Currency.getInstance("USD")));
-                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
-                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
+                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
 
                 List<Fee> fees = new ArrayList<>();
                 fees.add(new Fee(FeeType.COMMISSION,
@@ -209,7 +209,7 @@ public class TransactionFactoryTest {
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, new Money(new BigDecimal(0),  new PortfolioCurrency(Currency.getInstance("USD"))), transactionMetadata, fees));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.VOID_BUY, transactionDate, amount, transactionMetadata, fees));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount, transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION"), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
 
                 assertNotEquals(transaction2, transaction3);
                 assertNotEquals(transaction1, transaction3);
@@ -227,16 +227,16 @@ public class TransactionFactoryTest {
             String reason = "SOME REASON TO VOID";
         
             TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,
-                    TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                    TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
         
             TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,
-                    TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                    TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
             
             Transaction transaction1 = TransactionFactory.createVoidTransaction(transactionID, portfolioID, originalTransactionID, transactionType, originalTransactionAmount, transactionDate, reason, transactionMetadata);
             Transaction transaction2 = TransactionFactory.createVoidTransaction(transactionID, portfolioID, originalTransactionID, transactionType, originalTransactionAmount, transactionDate, reason, transactionMetadata2);
         
             assertThrows(IllegalArgumentException.class, () ->  TransactionFactory.createVoidTransaction(transactionID, portfolioID, originalTransactionID, TransactionType.DEPOSIT, originalTransactionAmount, transactionDate, reason, transactionMetadata));
-            assertThrows(IllegalArgumentException.class, () ->  TransactionFactory.createVoidTransaction(transactionID, portfolioID, originalTransactionID, transactionType, originalTransactionAmount, transactionDate, reason, new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION")));
+            assertThrows(IllegalArgumentException.class, () ->  TransactionFactory.createVoidTransaction(transactionID, portfolioID, originalTransactionID, transactionType, originalTransactionAmount, transactionDate, reason, new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now())));
             assertNotEquals(transaction1, transaction2);
         }
 
@@ -251,9 +251,9 @@ public class TransactionFactoryTest {
                 BigDecimal quantity = new BigDecimal(100);
                 Money costBasisPerUnit = new Money(new BigDecimal(35.32), new PortfolioCurrency(Currency.getInstance("USD")));
                 TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,
-                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,
-                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                        TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 List<Fee> fees = new ArrayList<>();
                 fees.add(new Fee(FeeType.COMMISSION,
                         new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("USD"))))); // money fee should
@@ -271,7 +271,7 @@ public class TransactionFactoryTest {
 
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferInTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(-1), costBasisPerUnit, transactionMetadata, fees));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferInTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(0), costBasisPerUnit, transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferInTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(10), costBasisPerUnit,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION"), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferInTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(10), costBasisPerUnit,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
                 assertNotEquals(transaction1, transaction2);
         }
 
@@ -286,9 +286,9 @@ public class TransactionFactoryTest {
                 BigDecimal quantity = new BigDecimal(100);
                 Money costBasisPerUnit = new Money(new BigDecimal(35.32), new PortfolioCurrency(Currency.getInstance("USD")));
                 TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,
-                TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,
-                TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 List<Fee> fees = new ArrayList<>();
                 fees.add(new Fee(FeeType.COMMISSION,
                 new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("USD"))))); // money fee should
@@ -306,7 +306,7 @@ public class TransactionFactoryTest {
                 
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferOutTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(-1), costBasisPerUnit, transactionMetadata, fees));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferOutTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(0), costBasisPerUnit, transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferOutTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(10), costBasisPerUnit,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION"), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createAssetTransferOutTransaction(transactionID, destinationPortfolioID, sourcePortfolioID, assetIdentifier, portfolioCurrencyPref, transactionDate, new BigDecimal(10), costBasisPerUnit,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
                 assertNotEquals(transaction1, transaction2);
         
         }
@@ -321,8 +321,8 @@ public class TransactionFactoryTest {
                 AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "APPL", "APPLE", "NASDAQ");
                 BigDecimal splitRatio = new BigDecimal("2");
                 Instant transactionDate = Instant.now();
-                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
-                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION");
+                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
+                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING,TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
 
                 Transaction transaction1 = TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, transactionType, portfolioCurrencyPref, assetIdentifier, splitRatio, transactionDate, transactionMetadata);
                 Transaction transaction2 = TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, TransactionType.CORPORATE_ACTION, portfolioCurrencyPref, assetIdentifier, null, transactionDate, transactionMetadata2);
@@ -333,7 +333,7 @@ public class TransactionFactoryTest {
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, transactionType, portfolioCurrencyPref, assetIdentifier, new BigDecimal("0"), transactionDate, transactionMetadata));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, TransactionType.CORPORATE_ACTION, portfolioCurrencyPref, assetIdentifier, splitRatio, transactionDate, transactionMetadata));
                 assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, TransactionType.BUY, portfolioCurrencyPref, assetIdentifier, splitRatio, transactionDate, transactionMetadata));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, transactionType, portfolioCurrencyPref, assetIdentifier, splitRatio, transactionDate,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION")));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCorporateActionTransaction(transactionID, portfolioID, transactionType, portfolioCurrencyPref, assetIdentifier, splitRatio, transactionDate,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now())));
 
                 assertNotEquals(transaction1, transaction2);
         }
