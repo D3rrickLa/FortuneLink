@@ -24,9 +24,12 @@ import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.CashTran
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionMetadata;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
+import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.FeeType;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionSource;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
 import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionType;
+import com.laderrco.fortunelink.PortfolioManagement.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.PortfolioManagement.domain.services.SimpleExchangeRateService;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
@@ -41,6 +44,7 @@ public class PortfolioTest {
     private Money portfolioCashBalance;
     private Instant createdAt;
     private Instant updatedAt;
+    private ExchangeRateService exchangeRateService;
 
     @BeforeEach
     void init() {
@@ -51,9 +55,9 @@ public class PortfolioTest {
         portfolioCurrency = new PortfolioCurrency(Currency.getInstance("USD"));
         portfolioCashBalance = new Money(new BigDecimal(1000), portfolioCurrency);
         createdAt = Instant.now();
-
-        portfolio = new Portfolio(portfolioId, userId, name, desc, portfolioCurrency, portfolioCashBalance, createdAt);
-        new Portfolio(portfolioId, userId, name, null, portfolioCurrency, portfolioCashBalance, createdAt);
+        exchangeRateService = new SimpleExchangeRateService();
+        portfolio = new Portfolio(portfolioId, userId, name, desc, portfolioCurrency, portfolioCashBalance, exchangeRateService, createdAt);
+        new Portfolio(portfolioId, userId, name, null, portfolioCurrency, portfolioCashBalance, exchangeRateService, createdAt);
         updatedAt = createdAt;
     }
 
@@ -65,18 +69,18 @@ public class PortfolioTest {
 
         // null pointer check for empty id
         assertThrows(NullPointerException.class,
-                () -> new Portfolio(null, userId, name, desc, portfolioCurrency, portfolioCashBalance, createdAt));
+                () -> new Portfolio(null, userId, name, desc, portfolioCurrency, portfolioCashBalance,exchangeRateService, createdAt));
 
         // when name is blank (i.e. \n\n\n)
         assertThrows(IllegalArgumentException.class, () -> new Portfolio(portfolioId, userId, "   \r \n   ", desc,
-                portfolioCurrency1, portfolioCashBalanace1, createdAt));
+                portfolioCurrency1, portfolioCashBalanace1, exchangeRateService, createdAt));
         // when portfolio cash is negative, on creation
         assertThrows(IllegalArgumentException.class, () -> new Portfolio(portfolioId, userId, name, desc,
-                portfolioCurrency1, portfolioCashBalanace1, createdAt));
+                portfolioCurrency1, portfolioCashBalanace1, exchangeRateService, createdAt));
 
         // when you put in cash that isn't your native currency
         assertThrows(IllegalArgumentException.class, () -> new Portfolio(portfolioId, userId, name, desc,
-                portfolioCurrency, portfolioCashBalanace2, createdAt));
+                portfolioCurrency, portfolioCashBalanace2, exchangeRateService, createdAt));
 
         assertNotNull(portfolio);
         assertEquals(portfolioId, portfolio.getPortfolioId());
@@ -102,7 +106,7 @@ public class PortfolioTest {
     void testConstructor_zeroCashBalanceAllowed() {
         Money zeroCash = new Money(BigDecimal.ZERO, portfolioCurrency);
         assertDoesNotThrow(
-                () -> new Portfolio(portfolioId, userId, name, desc, portfolioCurrency, zeroCash, createdAt));
+                () -> new Portfolio(portfolioId, userId, name, desc, portfolioCurrency, zeroCash, exchangeRateService, createdAt));
     }
 
     @Test
@@ -116,16 +120,29 @@ public class PortfolioTest {
         Instant date = Instant.now();
         BigDecimal quantity = new BigDecimal(20);
         Money pricePerUnit = new Money(new BigDecimal(200), portfolioCurrency);
-        TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.COMPLETED,
-                TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
-        
+        TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.COMPLETED,TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
+                
         assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(null, quantity, date, pricePerUnit, transactionMetadata, null));
         assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, null, date, pricePerUnit, transactionMetadata, null));
         assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, null, pricePerUnit, transactionMetadata, null));
         assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, null, transactionMetadata, null));
         assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, pricePerUnit, null, null));
+        
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, new BigDecimal(-1), date, pricePerUnit, transactionMetadata, null));
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, new BigDecimal(0), date, pricePerUnit, transactionMetadata, null));
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, new Money(new BigDecimal(-1), portfolioCurrency), transactionMetadata, null));
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, new Money(new BigDecimal(0), portfolioCurrency), transactionMetadata, null));
 
 
+        TransactionMetadata transactionMetadataWrongStatus = new TransactionMetadata(TransactionStatus.FAILED, TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, pricePerUnit, transactionMetadataWrongStatus, null));
+        
+        List<Fee> fees1 = new ArrayList<>();
+        fees1.add(new Fee(FeeType.COMMISSION, new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("CAD"))))); // money fee should be == to portoflio currency pref
+        fees1.add(new Fee(FeeType.BROKERAGE, new Money(new BigDecimal(0.34), new PortfolioCurrency(Currency.getInstance("CAD"))))); // money fee should be == to portoflio currency pref
+        
+
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, pricePerUnit, transactionMetadata, fees1));
         
     }
 
