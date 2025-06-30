@@ -113,7 +113,7 @@ public class Portfolio {
         BigDecimal totalFees = BigDecimal.ZERO;
         fees = fees != null ? fees : Collections.emptyList();
         for (Fee fee : fees) {
-            if (!fee.amount().currency().equals(this.portfolioCurrencyPreference)) {
+            if (!fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
                 throw new IllegalArgumentException("Error all your fees must be in the same currency as the portfolio currency preference.");
             }
             
