@@ -166,7 +166,7 @@ public class TransactionFactory {
                         throw new IllegalArgumentException("Transaction Status you want to void MUST be completed.");
                 }
 
-                RoundingMode roundingMode = RoundingMode.HALF_UP;
+                RoundingMode roundingMode = RoundingMode.HALF_UP; //TODO change this to the actual precision class 
                 int cashDecimalPlaces = DecimalPrecision.CASH.getDecimalPlaces();
                 Money normalizedAmount = amount.setScale(cashDecimalPlaces, roundingMode);
 

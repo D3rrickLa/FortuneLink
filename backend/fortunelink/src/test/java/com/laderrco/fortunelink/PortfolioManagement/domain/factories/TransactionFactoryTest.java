@@ -185,8 +185,8 @@ public class TransactionFactoryTest {
                 TransactionType transactionType = TransactionType.DEPOSIT;
                 Instant transactionDate = Instant.now();
                 Money amount = new Money(new BigDecimal(350.32), new PortfolioCurrency(Currency.getInstance("USD")));
-                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
-                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.PENDING, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
+                TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
+                TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
 
                 List<Fee> fees = new ArrayList<>();
                 fees.add(new Fee(FeeType.COMMISSION,
