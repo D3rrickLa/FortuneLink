@@ -114,6 +114,7 @@ public class PortfolioTest {
         List<Fee> fees = new ArrayList<>();
         fees.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1), portfolioCurrency)));
 
+
         // assert fails nulls
         Exception e1 = assertThrows(NullPointerException.class, () ->  portfolio.recordCashflow(null, cashflowAmount, cashflowEventDate, transactionMetadata, fees));
         Exception e2 = assertThrows(NullPointerException.class, () ->  portfolio.recordCashflow(transactionType, null, cashflowEventDate, transactionMetadata, fees));
@@ -128,11 +129,11 @@ public class PortfolioTest {
         // assert fails, cashflow amount cannot be less than zero
         Money cashflowAmountNegative = new Money(new BigDecimal(-200), portfolioCurrency);
         Exception e5 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountNegative, cashflowEventDate, transactionMetadata, fees));
-        assertTrue(e5.getMessage().equals("Cash being " + transactionType + " cannot less than or equal to zero."));
+        assertTrue(e5.getMessage().equals("Cash amount for " + transactionType + " cannot less than or equal to zero."));
         
         Money cashflowAmountZero = new Money(new BigDecimal(0), portfolioCurrency);
         Exception e6 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountZero, cashflowEventDate, transactionMetadata, fees));
-        assertTrue(e6.getMessage().equals("Cash being " + transactionType + " cannot less than or equal to zero."));
+        assertTrue(e6.getMessage().equals("Cash amount for " + transactionType + " cannot less than or equal to zero."));
         
         //assert fails, type must be of the valid types
         Exception e7 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.CORPORATE_ACTION, cashflowAmount, cashflowEventDate, transactionMetadata, fees));
@@ -151,14 +152,25 @@ public class PortfolioTest {
         
         // assert fails, cash withdrawl is too large
         Money cashflowAmountLargerThanCashBal = new Money(new BigDecimal(200000), new PortfolioCurrency(Currency.getInstance("USD")));
-        Exception e10 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountLargerThanCashBal, cashflowEventDate, transactionMetadata, fees));
-        System.out.println(e10.getMessage());
+        Exception e10 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmountLargerThanCashBal, cashflowEventDate, transactionMetadata, fees));
         assertTrue(e10.getMessage().equals("Cash withdrawal is larger than what you have in this portfolio."));
         
-
+        // asset fails, fees no the same currency as portfolio pref
+        List<Fee> feesWrongCur = new ArrayList<>();
+        feesWrongCur.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1),  new PortfolioCurrency(Currency.getInstance("CAD")))));
+        feesWrongCur.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1),  new PortfolioCurrency(Currency.getInstance("CAD")))));
+        Exception e11 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmountLargerThanCashBal, cashflowEventDate, transactionMetadata, feesWrongCur));
+        assertTrue(e11.getMessage().equals("Error all your fees must be in the same currency as the portfolio currency preference."));
+        
+        
 
         // good assertion, need to see if the fee is og + amount deposited/withdrawn 
         portfolio.recordCashflow(transactionType, cashflowAmount, cashflowEventDate, transactionMetadata, fees);
+        portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmount, cashflowEventDate, transactionMetadata, null);
+
+        assertEquals(2, portfolio.getTransactions().size());
+        assertEquals(new BigDecimal(999).setScale(2), portfolio.getPortfolioCashBalance().amount());
+        assertTrue(portfolio.getUpdatedAt().isAfter(portfolio.getCreatedAt()));
     }
 
     @Test

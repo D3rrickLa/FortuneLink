@@ -162,8 +162,8 @@ public class TransactionFactory {
                 if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new IllegalArgumentException("Amoutn must be positive for cash transaction.");
                 }
-                if (transactionMetadata.transactionStatus() != TransactionStatus.ACTIVE && transactionMetadata.transactionStatus() != TransactionStatus.PENDING) {
-                        throw new IllegalArgumentException("Transaction Status you want to void MUST be active or pending.");
+                if (transactionMetadata.transactionStatus() != TransactionStatus.COMPLETED) {
+                        throw new IllegalArgumentException("Transaction Status you want to void MUST be completed.");
                 }
 
                 RoundingMode roundingMode = RoundingMode.HALF_UP;

@@ -99,10 +99,10 @@ public class Portfolio {
         }
 
         if (cashflowAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Cash being " + type + " cannot less than or equal to zero.");
+            throw new IllegalArgumentException("Cash amount for " + type + " cannot less than or equal to zero.");
         }
 
-        if (!cashflowAmount.currency().equals(this.portfolioCurrencyPreference)) {
+        if (!cashflowAmount.currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
             throw new IllegalArgumentException("Cash must have the same currency preference as the portfolio.");
         }
         
@@ -110,19 +110,17 @@ public class Portfolio {
             throw new IllegalArgumentException("Status in metadata must be COMPLETED.");
         }
 
-        // this won't work, dividends and interest can be in different currency
         BigDecimal totalFees = BigDecimal.ZERO;
-        if (fees != null) {
-            for (Fee fee : fees) {
-                if (!fee.amount().currency().equals(this.portfolioCurrencyPreference)) {
-                    throw new IllegalArgumentException("Error all your fees must be in the same currency as the portfolio currency preference.");
-                }
-                
-                totalFees = totalFees.add(fee.amount().amount());
-            }            
-        }
+        fees = fees != null ? fees : Collections.emptyList();
+        for (Fee fee : fees) {
+            if (!fee.amount().currency().equals(this.portfolioCurrencyPreference)) {
+                throw new IllegalArgumentException("Error all your fees must be in the same currency as the portfolio currency preference.");
+            }
+            
+            totalFees = totalFees.add(fee.amount().amount());
+        }            
+        
 
-        // this is wrong, need to include a subtraction/addition of fees
         Money newCashBalance; 
         if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
             newCashBalance = this.portfolioCashBalance.add(cashflowAmount).subtract(new Money(totalFees, portfolioCurrencyPreference));
@@ -137,6 +135,7 @@ public class Portfolio {
 
         this.portfolioCashBalance = newCashBalance;
 
+        // NOTE ON UUID.randomUUID(), while fine here, consider this to be externalized for more specific ID gen
         Transaction newCashTransaction = TransactionFactory.createCashTransaction(UUID.randomUUID(), portfolioId, type, cashflowEventDate, cashflowAmount, transactionMetadata, fees);
         this.transactions.add(newCashTransaction);
         this.updatedAt = Instant.now();
