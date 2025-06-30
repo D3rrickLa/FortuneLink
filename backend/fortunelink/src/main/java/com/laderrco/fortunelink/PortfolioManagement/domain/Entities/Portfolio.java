@@ -102,43 +102,22 @@ public class Portfolio {
             throw new IllegalArgumentException("Cash amount for " + type + " cannot less than or equal to zero.");
         }
 
-        if (!cashflowAmount.currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
-            throw new IllegalArgumentException("Cash must have the same currency preference as the portfolio.");
-        }
-        
         if (!transactionMetadata.transactionStatus().equals(TransactionStatus.COMPLETED)) {
             throw new IllegalArgumentException("Status in metadata must be COMPLETED.");
         }
 
-        BigDecimal totalFees = BigDecimal.ZERO;
-        fees = fees != null ? fees : Collections.emptyList();
-        for (Fee fee : fees) {
-            if (!fee.amount().currency().equals(this.portfolioCurrencyPreference)) {
-                throw new IllegalArgumentException("Error all your fees must be in the same currency as the portfolio currency preference.");
-            }
-            
-            totalFees = totalFees.add(fee.amount().amount());
-        }            
+        BigDecimal exchangeRate;
+        BigDecimal conversionFeeAmount;
+        // TODO, fix up the multi-currency
+        if (cashflowAmount.currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
+            exchangeRate = BigDecimal.ONE;
+            conversionFeeAmount = BigDecimal.ZERO;
+        }
+        else {
+            exchangeRate = exchangeRateService.getCurrencyExchangeRate(cashflowAmount.currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), cashflowEventDate)
         
-
-        Money newCashBalance; 
-        if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
-            newCashBalance = this.portfolioCashBalance.add(cashflowAmount).subtract(new Money(totalFees, portfolioCurrencyPreference));
+            // assuming that the fees parameter has a EXCHANGE_RATE fee for conversionFee
         }
-        else { 
-            Money totalWithdrawal = cashflowAmount.add(new Money(totalFees, portfolioCurrencyPreference));
-            if(this.portfolioCashBalance.compareTo(totalWithdrawal) < 0) {
-                throw new IllegalArgumentException("Cash withdrawal is larger than what you have in this portfolio.");
-            }
-            newCashBalance = this.portfolioCashBalance.subtract(totalWithdrawal);
-        }
-
-        this.portfolioCashBalance = newCashBalance;
-
-        // NOTE ON UUID.randomUUID(), while fine here, consider this to be externalized for more specific ID gen
-        Transaction newCashTransaction = TransactionFactory.createCashTransaction(UUID.randomUUID(), portfolioId, type, cashflowEventDate, cashflowAmount, transactionMetadata, fees);
-        this.transactions.add(newCashTransaction);
-        this.updatedAt = Instant.now();
     }
     
     public AssetHolding recordAssetHoldingPurchase(AssetIdentifier assetIdentifier, BigDecimal quantityOfAssetBought, Instant acquisitionDate, Money pricePerUnit, TransactionMetadata transactionMetadata, List<Fee> fees) {
