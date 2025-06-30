@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums;
 
 public enum TransactionType {
     DEPOSIT,

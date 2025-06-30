@@ -1,10 +1,10 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
 import java.time.Instant;
 import java.util.Objects;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionSource;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
 
 public record TransactionMetadata(TransactionStatus transactionStatus, TransactionSource transactionSource,
         String transactionDescription, Instant createdAt, Instant updatedAt) {

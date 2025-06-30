@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Factories;
+package com.laderrco.fortunelink.portfoliomanagement.domain.factories;
 
 // this class is meant for to be flexxible in terms of storing a specific transaction type (i.e. liability vs. asset transaction)
 import java.math.BigDecimal;
@@ -10,18 +10,18 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.Entities.Transaction;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetTransferDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.CashTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.CorporateActionTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionMetadata;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.VoidTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.DecimalPrecision;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.entities.Transaction;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransferDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CashTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CorporateActionTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.VoidTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.DecimalPrecision;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 

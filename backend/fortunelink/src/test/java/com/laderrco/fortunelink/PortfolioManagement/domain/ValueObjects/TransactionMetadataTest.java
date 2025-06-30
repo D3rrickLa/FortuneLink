@@ -10,8 +10,9 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionSource;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
 
 public class TransactionMetadataTest {
 

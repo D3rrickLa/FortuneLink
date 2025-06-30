@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.services;
+package com.laderrco.fortunelink.portfoliomanagement.domain.services;
 
 import java.math.BigDecimal;
 import java.time.Instant;

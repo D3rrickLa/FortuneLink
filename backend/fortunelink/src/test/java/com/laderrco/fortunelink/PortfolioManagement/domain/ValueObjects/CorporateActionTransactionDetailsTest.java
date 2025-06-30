@@ -10,7 +10,9 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CorporateActionTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.AssetType;
 
 public class CorporateActionTransactionDetailsTest {
     

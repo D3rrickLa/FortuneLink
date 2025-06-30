@@ -1,8 +1,8 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
 import java.util.Objects;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.AssetType;
 
 // NOTE: you would really put this as an interface, because there are many assets besides crypto and stocks/etfs
 // think about holding actual metals or private companies... but that is out of scope for now

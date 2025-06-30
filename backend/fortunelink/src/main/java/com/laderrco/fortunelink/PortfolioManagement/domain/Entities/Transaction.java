@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
+package com.laderrco.fortunelink.portfoliomanagement.domain.entities;
 
 import java.time.Instant;
 import java.util.List;
@@ -7,12 +7,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionMetadata;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.VoidInfo;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.VoidInfo;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 
 public class Transaction {

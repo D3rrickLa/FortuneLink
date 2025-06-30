@@ -10,6 +10,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.VoidTransactionDetails;
+
 public class VoidTransactionDetailsTest {
     @Test
     void testConstructor() {

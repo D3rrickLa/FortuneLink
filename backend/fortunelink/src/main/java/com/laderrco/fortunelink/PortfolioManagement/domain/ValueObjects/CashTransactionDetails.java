@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
 import java.math.BigDecimal;
 import java.util.Objects;

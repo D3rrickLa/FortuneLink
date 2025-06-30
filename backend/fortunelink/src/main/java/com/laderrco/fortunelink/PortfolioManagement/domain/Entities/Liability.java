@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
+package com.laderrco.fortunelink.portfoliomanagement.domain.entities;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;

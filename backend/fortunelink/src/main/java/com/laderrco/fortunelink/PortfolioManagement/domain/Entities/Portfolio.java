@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
+package com.laderrco.fortunelink.portfoliomanagement.domain.entities;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -12,16 +12,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.Factories.TransactionFactory;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.CashTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionMetadata;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.FeeType;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionType;
-import com.laderrco.fortunelink.PortfolioManagement.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfoliomanagement.domain.factories.TransactionFactory;
+import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
@@ -80,83 +77,69 @@ public class Portfolio {
         this.liabilities = new ArrayList<>();
     }
 
-    /*
-     * Behaviour - what can a portfolio do?
-     * in our case we have 3 items that interact with porfolio (Transaction, AssetHolding, Liability)
-     * so we need to have methods for adding and 'removing' said things from each entity
-     * we also need to deal with cashflow, how can we get cash in to/out of our portfolio?
-     * - deposit
-     * - withdrawl
-     * - dividend
-     * - interest
-     * 
-     * for such behaviours, whenever you are stuck, think of 'verbs' related to the Portoflio and things you want to do
-     * i.e. buying/sell stocks
-     * i.e. depositing/withdrawing money
-     * etc.
-     * 
-     * for what is a portfolio? think of 'nouns'
-     * i.e. it's a place to containizer all your finances so Cash in portfolio, investments, liabilities, transactions, etc.
-     * 
-     * NOTE: 
-     * since we are pulling our 'funds' from 1 cash balance, we need to deal with currency conversion, so whenever someone enters a trade that isn't today,
-     * we need to pull historical info for that exchange rate. Think of this like WealthSimple without a USD account, we can buy only with CAD, but we can convert
-     * our CAD to USD to buy something else. This is in contrast where we have dedicated accounts for USD and CAD
-    */
-
-
-    // what do we need to to add/remove cash to our account? actual cash
     public void recordCashflow(TransactionType type, Money cashflowAmount, Instant cashflowEventDate, TransactionMetadata transactionMetadata, List<Fee> fees) {
-        Objects.requireNonNull(type, "Transaction Type cannot be null.");
-        Objects.requireNonNull(cashflowAmount, "Cash flow amount cannot be null.");
-        Objects.requireNonNull(cashflowEventDate, "Transaction date cannot be null.");
+        /*
+         * --CHECKS NEEDED--
+         * Null checks
+         * Is Cashflow amount negative or 0 
+         * Is cashflow the same currency as the portfolio preference
+         * Is Cashflow type either deposit, withdrawl, interest, or dividend
+         * is status == completed
+         * is withdrawal too much
+         * check if fees are in the same currency as portfolio 
+        */
+        
+        Objects.requireNonNull(type, "Transaction type cannot be null.");
+        Objects.requireNonNull(cashflowAmount, "Amount of cash being put in/ taken out cannot be null.");
+        Objects.requireNonNull(cashflowEventDate, "Cash transaction date cannot be null.");
         Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
 
         if (!Set.of(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
-            throw new IllegalArgumentException("Transaction Type is not DEPOSIT, WITHDRAWAL, INTEREST, OR DIVIDENDS.");
+            throw new IllegalArgumentException("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, or DIVIDEND.");
         }
 
-        if (!cashflowAmount.currency().javaCurrency().equals(portfolioCurrencyPreference.javaCurrency())) {
-            throw new IllegalArgumentException("You can only record cash flow events with the same currency as your portfolio preference.");
+        if (cashflowAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Cash being " + type + " cannot less than or equal to zero.");
         }
 
-        if (transactionMetadata.transactionStatus() != TransactionStatus.COMPLETED) {
-            throw new IllegalArgumentException("Transaction Status must be compelted.");
+        if (!cashflowAmount.currency().equals(this.portfolioCurrencyPreference)) {
+            throw new IllegalArgumentException("Cash must have the same currency preference as the portfolio.");
         }
-
-        Money newCashBalance;
-        switch (type) {
-            case DEPOSIT:
-            case INTEREST:
-            case DIVIDEND:
-                newCashBalance = this.portfolioCashBalance.add(cashflowAmount);
-                break;
-            case WITHDRAWAL:
-                if (this.portfolioCashBalance.amount().compareTo(cashflowAmount.amount()) < 0) {
-                    throw new IllegalArgumentException("Insufficient cash balance for withdrawal.");
-                }
-                newCashBalance = this.portfolioCashBalance.subtract(cashflowAmount); // Assuming Money has a subtract method
-                break;
         
-            default:
-                // backup code, the if clause should have handled this, but incase it doesn't we have this
-                assert false : "Unhandled transaction type after validation: " + type;
-                throw new IllegalStateException("Unhandled transaction type for cashflow: " + type);
+        if (!transactionMetadata.transactionStatus().equals(TransactionStatus.COMPLETED)) {
+            throw new IllegalArgumentException("Status in metadata must be COMPLETED.");
+        }
+
+        // this won't work, dividends and interest can be in different currency
+        BigDecimal totalFees = BigDecimal.ZERO;
+        if (fees != null) {
+            for (Fee fee : fees) {
+                if (!fee.amount().currency().equals(this.portfolioCurrencyPreference)) {
+                    throw new IllegalArgumentException("Error all your fees must be in the same currency as the portfolio currency preference.");
+                }
+                
+                totalFees = totalFees.add(fee.amount().amount());
+            }            
+        }
+
+        // this is wrong, need to include a subtraction/addition of fees
+        Money newCashBalance; 
+        if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
+            newCashBalance = this.portfolioCashBalance.add(cashflowAmount).subtract(new Money(totalFees, portfolioCurrencyPreference));
+        }
+        else { 
+            Money totalWithdrawal = cashflowAmount.add(new Money(totalFees, portfolioCurrencyPreference));
+            if(this.portfolioCashBalance.compareTo(totalWithdrawal) < 0) {
+                throw new IllegalArgumentException("Cash withdrawal is larger than what you have in this portfolio.");
+            }
+            newCashBalance = this.portfolioCashBalance.subtract(totalWithdrawal);
         }
 
         this.portfolioCashBalance = newCashBalance;
 
-        CashTransactionDetails cashTransactionDetails = new CashTransactionDetails(cashflowAmount);
-        UUID transactionId = UUID.randomUUID();
-        fees = fees != null ? fees: Collections.emptyList();
-        // Build the Transaction object
-        Transaction newTransaction = TransactionFactory.createCashTransaction(transactionId, transactionId, type, cashflowEventDate, cashflowAmount, transactionMetadata, fees);
-
-        this.transactions.add(newTransaction);
-
-        // Update the portfolio's last modified timestamp
+        Transaction newCashTransaction = TransactionFactory.createCashTransaction(UUID.randomUUID(), portfolioId, type, cashflowEventDate, cashflowAmount, transactionMetadata, fees);
+        this.transactions.add(newCashTransaction);
         this.updatedAt = Instant.now();
- 
     }
     
     public AssetHolding recordAssetHoldingPurchase(AssetIdentifier assetIdentifier, BigDecimal quantityOfAssetBought, Instant acquisitionDate, Money pricePerUnit, TransactionMetadata transactionMetadata, List<Fee> fees) {

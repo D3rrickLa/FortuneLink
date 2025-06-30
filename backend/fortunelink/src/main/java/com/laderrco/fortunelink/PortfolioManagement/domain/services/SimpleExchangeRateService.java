@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.services;
+package com.laderrco.fortunelink.portfoliomanagement.domain.services;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -7,7 +7,7 @@ import java.util.Currency;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.laderrco.fortunelink.sharedkernel.Exceptions.ExchangeRateNotFoundException;
+import com.laderrco.fortunelink.sharedkernel.exceptions.ExchangeRateNotFoundException;
 
 // FOR TESTING
 public class SimpleExchangeRateService implements ExchangeRateService {

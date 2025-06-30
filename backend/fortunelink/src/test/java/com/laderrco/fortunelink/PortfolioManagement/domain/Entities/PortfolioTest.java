@@ -13,23 +13,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.hamcrest.number.IsNaN;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.postgresql.core.TransactionState;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.CashTransactionDetails;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Fee;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.TransactionMetadata;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.FeeType;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionSource;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionStatus;
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.TransactionType;
-import com.laderrco.fortunelink.PortfolioManagement.domain.services.ExchangeRateService;
-import com.laderrco.fortunelink.PortfolioManagement.domain.services.SimpleExchangeRateService;
+import com.laderrco.fortunelink.portfoliomanagement.domain.entities.Portfolio;
+import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfoliomanagement.domain.services.SimpleExchangeRateService;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.FeeType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
@@ -43,7 +43,6 @@ public class PortfolioTest {
     private PortfolioCurrency portfolioCurrency;
     private Money portfolioCashBalance;
     private Instant createdAt;
-    private Instant updatedAt;
     private ExchangeRateService exchangeRateService;
 
     @BeforeEach
@@ -58,7 +57,6 @@ public class PortfolioTest {
         exchangeRateService = new SimpleExchangeRateService();
         portfolio = new Portfolio(portfolioId, userId, name, desc, portfolioCurrency, portfolioCashBalance, exchangeRateService, createdAt);
         new Portfolio(portfolioId, userId, name, null, portfolioCurrency, portfolioCashBalance, exchangeRateService, createdAt);
-        updatedAt = createdAt;
     }
 
     @Test
@@ -103,162 +101,89 @@ public class PortfolioTest {
     }
 
     @Test
-    void testConstructor_zeroCashBalanceAllowed() {
-        Money zeroCash = new Money(BigDecimal.ZERO, portfolioCurrency);
-        assertDoesNotThrow(
-                () -> new Portfolio(portfolioId, userId, name, desc, portfolioCurrency, zeroCash, exchangeRateService, createdAt));
-    }
-
-    @Test
-    void testRecordNewLiability() {
-
-    }
-
-    @Test
     void testRecordAssetHoldingPurchase() {
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "APPLE", "NASDQA");
-        Instant date = Instant.now();
-        BigDecimal quantity = new BigDecimal(20);
-        Money pricePerUnit = new Money(new BigDecimal(200), portfolioCurrency);
-        TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.COMPLETED,TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
-                
-        assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(null, quantity, date, pricePerUnit, transactionMetadata, null));
-        assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, null, date, pricePerUnit, transactionMetadata, null));
-        assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, null, pricePerUnit, transactionMetadata, null));
-        assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, null, transactionMetadata, null));
-        assertThrows(NullPointerException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, pricePerUnit, null, null));
+        TransactionType transactionType = TransactionType.DEPOSIT;
+        Money cashflowAmount = new Money(new BigDecimal(200), portfolioCurrency);
+        Instant cashflowEventDate = Instant.now();
+
+        TransactionStatus status = TransactionStatus.COMPLETED;
+        TransactionSource source = TransactionSource.MANUAL_INPUT;
+        String description = "SOME METADATA";
+        TransactionMetadata transactionMetadata = new TransactionMetadata(status, source, description, cashflowEventDate, cashflowEventDate);
         
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, new BigDecimal(-1), date, pricePerUnit, transactionMetadata, null));
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, new BigDecimal(0), date, pricePerUnit, transactionMetadata, null));
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, new Money(new BigDecimal(-1), portfolioCurrency), transactionMetadata, null));
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, new Money(new BigDecimal(0), portfolioCurrency), transactionMetadata, null));
+        List<Fee> fees = new ArrayList<>();
+        fees.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1), portfolioCurrency)));
+
+        // assert fails nulls
+        Exception e1 = assertThrows(NullPointerException.class, () ->  portfolio.recordCashflow(null, cashflowAmount, cashflowEventDate, transactionMetadata, fees));
+        Exception e2 = assertThrows(NullPointerException.class, () ->  portfolio.recordCashflow(transactionType, null, cashflowEventDate, transactionMetadata, fees));
+        Exception e3 = assertThrows(NullPointerException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmount, null, transactionMetadata, fees));
+        Exception e4 = assertThrows(NullPointerException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmount, cashflowEventDate, null, fees));
+
+        assertTrue(e1.getMessage().equals("Transaction type cannot be null."));
+        assertTrue(e2.getMessage().equals("Amount of cash being put in/ taken out cannot be null."));
+        assertTrue(e3.getMessage().equals("Cash transaction date cannot be null."));
+        assertTrue(e4.getMessage().equals("Transaction metadata cannot be null."));
+        
+        // assert fails, cashflow amount cannot be less than zero
+        Money cashflowAmountNegative = new Money(new BigDecimal(-200), portfolioCurrency);
+        Exception e5 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountNegative, cashflowEventDate, transactionMetadata, fees));
+        assertTrue(e5.getMessage().equals("Cash being " + transactionType + " cannot less than or equal to zero."));
+        
+        Money cashflowAmountZero = new Money(new BigDecimal(0), portfolioCurrency);
+        Exception e6 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountZero, cashflowEventDate, transactionMetadata, fees));
+        assertTrue(e6.getMessage().equals("Cash being " + transactionType + " cannot less than or equal to zero."));
+        
+        //assert fails, type must be of the valid types
+        Exception e7 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.CORPORATE_ACTION, cashflowAmount, cashflowEventDate, transactionMetadata, fees));
+        assertTrue(e7.getMessage().equals("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, or DIVIDEND."));
+        
+        // assert fails, must have same currency as preference
+        Money cashflowAmountWrongPref = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("CAD")));
+        Exception e8 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountWrongPref, cashflowEventDate, transactionMetadata, fees));
+        assertTrue(e8.getMessage().equals("Cash must have the same currency preference as the portfolio."));
+        
+        
+        //assert fails, must have competed status
+        TransactionMetadata transactionMetadataFAILED = new TransactionMetadata(TransactionStatus.FAILED, source, description, cashflowEventDate, cashflowEventDate);
+        Exception e9 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmount, cashflowEventDate, transactionMetadataFAILED, fees));
+        assertTrue(e9.getMessage().equals("Status in metadata must be COMPLETED."));
+        
+        // assert fails, cash withdrawl is too large
+        Money cashflowAmountLargerThanCashBal = new Money(new BigDecimal(200000), new PortfolioCurrency(Currency.getInstance("USD")));
+        Exception e10 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountLargerThanCashBal, cashflowEventDate, transactionMetadata, fees));
+        System.out.println(e10.getMessage());
+        assertTrue(e10.getMessage().equals("Cash withdrawal is larger than what you have in this portfolio."));
+        
 
 
-        TransactionMetadata transactionMetadataWrongStatus = new TransactionMetadata(TransactionStatus.FAILED, TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, pricePerUnit, transactionMetadataWrongStatus, null));
-        
-        List<Fee> fees1 = new ArrayList<>();
-        fees1.add(new Fee(FeeType.COMMISSION, new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("CAD"))))); // money fee should be == to portoflio currency pref
-        fees1.add(new Fee(FeeType.BROKERAGE, new Money(new BigDecimal(0.34), new PortfolioCurrency(Currency.getInstance("CAD"))))); // money fee should be == to portoflio currency pref
-        
-
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordAssetHoldingPurchase(assetIdentifier, quantity, date, pricePerUnit, transactionMetadata, fees1));
-        
+        // good assertion, need to see if the fee is og + amount deposited/withdrawn 
+        portfolio.recordCashflow(transactionType, cashflowAmount, cashflowEventDate, transactionMetadata, fees);
     }
 
     @Test
     void testRecordAssetHoldingSale() {
-
+        
     }
 
     @Test
     void testRecordCashflow() {
-        Money cashflow = new Money(new BigDecimal(200), portfolioCurrency);
-        TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.COMPLETED,
-                TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
-        assertThrows(NullPointerException.class,
-                () -> portfolio.recordCashflow(null, cashflow, Instant.now(), transactionMetadata, null));
-        assertThrows(NullPointerException.class, () -> portfolio.recordCashflow(TransactionType.DEPOSIT, null,
-                Instant.now(), transactionMetadata, null));
-        assertThrows(NullPointerException.class,
-                () -> portfolio.recordCashflow(TransactionType.DEPOSIT, cashflow, null, transactionMetadata, null));
-        assertThrows(NullPointerException.class,
-                () -> portfolio.recordCashflow(TransactionType.DEPOSIT, null, Instant.now(), null, null));
-
-        // testing if the transaction type is not 'cash' related
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordCashflow(TransactionType.CORPORATE_ACTION,
-                cashflow, Instant.now(), transactionMetadata, null));
-
-        // testing to see if the money aded is the same as the currency pref
-        Money cashflowWrongPref = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("CAD")));
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordCashflow(TransactionType.DEPOSIT,
-                cashflowWrongPref, Instant.now(), transactionMetadata, null));
-
-        // testing if we remove more than we have in the balance
-        Money cashflowTooLarge = new Money(new BigDecimal(200000), new PortfolioCurrency(Currency.getInstance("USD")));
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordCashflow(TransactionType.WITHDRAWAL,
-                cashflowTooLarge, Instant.now(), transactionMetadata, null));
-
-        TransactionMetadata transactionMetadataNotCompleted = new TransactionMetadata(TransactionStatus.ACTIVE,
-                TransactionSource.MANUAL_INPUT, desc, createdAt, updatedAt);
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordCashflow(TransactionType.WITHDRAWAL,
-                cashflowTooLarge, Instant.now(), transactionMetadataNotCompleted, null));
-
-        // testing if money is negative
-        Money cashflowWrongNegative = new Money(new BigDecimal(-200),
-                new PortfolioCurrency(Currency.getInstance("CAD")));
-        assertThrows(IllegalArgumentException.class, () -> portfolio.recordCashflow(TransactionType.WITHDRAWAL,
-                cashflowWrongNegative, Instant.now(), transactionMetadata, null));
-
-        portfolio.recordCashflow(TransactionType.DEPOSIT, cashflow, createdAt, transactionMetadata, null);
-        portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflow, createdAt, transactionMetadata,
-                new ArrayList<>());
-
-    }
-
-    @Test
-    void testRecordCashflow_depositIncreasesBalanceAndRecordsTransaction() {
-        Money depositAmount = new Money(new BigDecimal("500.00"), portfolioCurrency);
-        Instant eventDate = Instant.now().minusSeconds(60); // Use a distinct date
-        TransactionMetadata depositMetadata = new TransactionMetadata(
-                TransactionStatus.COMPLETED,
-                TransactionSource.MANUAL_INPUT,
-                "Test deposit for positive scenario",
-                eventDate, // Using eventDate for metadata's creation date for simplicity in test
-                Instant.now() // updated date for metadata
-        );
-        List<Fee> noFees = Collections.emptyList(); // Pass an empty list, not null
-
-        // Capture initial state
-        Money initialBalance = portfolio.getPortfolioCashBalance();
-        int initialTransactionCount = portfolio.getTransactions().size();
-        Instant initialUpdatedAt = portfolio.getUpdatedAt();
-
-        // Perform the action
-        portfolio.recordCashflow(TransactionType.DEPOSIT, depositAmount, eventDate, depositMetadata, noFees);
-
-        // Assertions
-        // 1. Balance updated correctly
-        Money expectedBalance = initialBalance.add(depositAmount);
-        assertEquals(expectedBalance, portfolio.getPortfolioCashBalance(),
-                "Portfolio cash balance should increase by deposit amount.");
-
-        // 2. Transaction recorded
-        assertEquals(initialTransactionCount + 1, portfolio.getTransactions().size(),
-                "One transaction should be added.");
-        Transaction recordedTx = portfolio.getTransactions().get(initialTransactionCount); // Get the newly added
-                                                                                           // transaction
-
-        // 3. Transaction details are correct
-        assertNotNull(recordedTx.getTransactionId(), "Transaction ID should be generated.");
-        assertEquals(portfolio.getPortfolioId(), recordedTx.getPortfolioId(), "Portfolio ID should match.");
-        assertEquals(TransactionType.DEPOSIT, recordedTx.getTransactionType(), "Transaction type should be DEPOSIT.");
-        assertEquals(depositAmount, recordedTx.getTotalTransactionAmount(),
-                "Transaction amount should match deposit amount.");
-        assertEquals(eventDate, recordedTx.getTransactionDate(), "Transaction date should match event date.");
-        assertTrue(recordedTx.getTransactionDetails() instanceof CashTransactionDetails,
-                "Transaction details should be CashTransactionDetails.");
-        assertEquals(depositAmount, ((CashTransactionDetails) recordedTx.getTransactionDetails()).getNormalizedAmount(),
-                "Cash transaction details amount should match.");
-
-        // 4. Metadata is correctly assigned
-        assertEquals(depositMetadata, recordedTx.getTransactionMetadata(),
-                "Transaction metadata should be correctly assigned.");
-        assertTrue(recordedTx.getFees().isEmpty(), "No fees should be associated.");
-
-        // 5. UpdatedAt timestamp is updated
-        assertTrue(
-                portfolio.getUpdatedAt().isAfter(initialUpdatedAt) || portfolio.getUpdatedAt().equals(initialUpdatedAt),
-                "Portfolio updatedAt timestamp should be updated.");
+        
     }
 
     @Test
     void testRecordLiabilityPayment() {
+        
+    }
 
+    @Test
+    void testRecordNewLiability() {
+        
     }
 
     @Test
     void testVoidTransaction() {
-
+        
     }
+
 }

@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.entities.Liability;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;

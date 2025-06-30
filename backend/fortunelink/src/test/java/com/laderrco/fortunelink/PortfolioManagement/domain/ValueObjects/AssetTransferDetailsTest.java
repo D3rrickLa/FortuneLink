@@ -12,7 +12,9 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.AssetType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransferDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.AssetType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 

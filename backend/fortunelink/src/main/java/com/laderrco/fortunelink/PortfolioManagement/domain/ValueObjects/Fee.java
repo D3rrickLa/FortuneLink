@@ -1,9 +1,9 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
 import java.math.BigDecimal;
 import java.util.Objects;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.Enums.FeeType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.FeeType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 
 public record Fee(FeeType feeType, Money amount) {

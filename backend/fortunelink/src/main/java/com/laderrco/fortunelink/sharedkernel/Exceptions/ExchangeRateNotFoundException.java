@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.sharedkernel.Exceptions;
+package com.laderrco.fortunelink.sharedkernel.exceptions;
 
 public class ExchangeRateNotFoundException extends RuntimeException {
     public ExchangeRateNotFoundException(String message) {

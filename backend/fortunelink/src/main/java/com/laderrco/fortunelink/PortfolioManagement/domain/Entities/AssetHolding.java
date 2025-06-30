@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
+package com.laderrco.fortunelink.portfoliomanagement.domain.entities;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -7,7 +7,7 @@ import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.PortfolioManagement.domain.ValueObjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 
 public class AssetHolding {
