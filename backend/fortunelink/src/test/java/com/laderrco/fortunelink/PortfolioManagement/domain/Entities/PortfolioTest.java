@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -104,6 +105,7 @@ public class PortfolioTest {
     void testRecordAssetHoldingPurchase() {
         TransactionType transactionType = TransactionType.DEPOSIT;
         Money cashflowAmount = new Money(new BigDecimal(200), portfolioCurrency);
+        Money cashflowAmountOther = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("CAD")));
         Instant cashflowEventDate = Instant.now();
 
         TransactionStatus status = TransactionStatus.COMPLETED;
@@ -113,6 +115,7 @@ public class PortfolioTest {
         
         List<Fee> fees = new ArrayList<>();
         fees.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1), portfolioCurrency)));
+        fees.add(new Fee(FeeType.FOREIGN_EXCHANGE_CONVERSION, new Money(new BigDecimal(2), new PortfolioCurrency(Currency.getInstance("CAD")))));
 
 
         // assert fails nulls
@@ -137,12 +140,12 @@ public class PortfolioTest {
         
         //assert fails, type must be of the valid types
         Exception e7 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.CORPORATE_ACTION, cashflowAmount, cashflowEventDate, transactionMetadata, fees));
-        assertTrue(e7.getMessage().equals("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, or DIVIDEND."));
+        assertTrue(e7.getMessage().equals("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, EXPENSE, FEE, or DIVIDEND."));
         
         // assert fails, must have same currency as preference
-        Money cashflowAmountWrongPref = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("CAD")));
-        Exception e8 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountWrongPref, cashflowEventDate, transactionMetadata, fees));
-        assertTrue(e8.getMessage().equals("Cash must have the same currency preference as the portfolio."));
+        // Money cashflowAmountWrongPref = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("CAD")));
+        // Exception e8 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(transactionType, cashflowAmountWrongPref, cashflowEventDate, transactionMetadata, fees));
+        // assertTrue(e8.getMessage().equals("Cash must have the same currency preference as the portfolio."));
         
         
         //assert fails, must have competed status
@@ -156,20 +159,21 @@ public class PortfolioTest {
         assertTrue(e10.getMessage().equals("Cash withdrawal is larger than what you have in this portfolio."));
         
         // asset fails, fees no the same currency as portfolio pref
-        List<Fee> feesWrongCur = new ArrayList<>();
-        feesWrongCur.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1),  new PortfolioCurrency(Currency.getInstance("CAD")))));
-        feesWrongCur.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1),  new PortfolioCurrency(Currency.getInstance("CAD")))));
-        Exception e11 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmountLargerThanCashBal, cashflowEventDate, transactionMetadata, feesWrongCur));
-        assertTrue(e11.getMessage().equals("Error all your fees must be in the same currency as the portfolio currency preference."));
+        // List<Fee> feesWrongCur = new ArrayList<>();
+        // feesWrongCur.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1),  new PortfolioCurrency(Currency.getInstance("CAD")))));
+        // feesWrongCur.add(new Fee(FeeType.DEPOSIT_FEE, new Money(new BigDecimal(1),  new PortfolioCurrency(Currency.getInstance("CAD")))));
+        // Exception e11 = assertThrows(IllegalArgumentException.class, () ->  portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmountLargerThanCashBal, cashflowEventDate, transactionMetadata, feesWrongCur));
+        // assertTrue(e11.getMessage().equals("Error all your fees must be in the same currency as the portfolio currency preference."));
         
         
 
         // good assertion, need to see if the fee is og + amount deposited/withdrawn 
         portfolio.recordCashflow(transactionType, cashflowAmount, cashflowEventDate, transactionMetadata, fees);
         portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmount, cashflowEventDate, transactionMetadata, null);
+        portfolio.recordCashflow(TransactionType.WITHDRAWAL, cashflowAmountOther, cashflowEventDate, transactionMetadata, null);
 
-        assertEquals(2, portfolio.getTransactions().size());
-        assertEquals(new BigDecimal(999).setScale(2), portfolio.getPortfolioCashBalance().amount());
+        assertEquals(3, portfolio.getTransactions().size());
+        assertEquals(new BigDecimal(849.37).setScale(2, RoundingMode.HALF_UP), portfolio.getPortfolioCashBalance().amount());
         assertTrue(portfolio.getUpdatedAt().isAfter(portfolio.getCreatedAt()));
     }
 
