@@ -48,6 +48,12 @@ public class TransactionTest {
     private List<Fee> fees;
     private Transaction buyAssetTransaction;
 
+    private Money grossAssetCostInAssetCurrency;
+    private Money grossAssestCostInPorfolioCurrency;
+    private Money netPortfolioCashImpact;
+    private Money totalFOREXConversionFeesInPortfolioCurrency;
+    private Money totalOtherFeesInPortfolioCurrency;
+
     
 
     @BeforeEach
@@ -61,7 +67,14 @@ public class TransactionTest {
         pricerPerUnit = new Money(new BigDecimal(144.32), new PortfolioCurrency(Currency.getInstance("USD")));
         quantity = new BigDecimal(30);
 
-        transactionDetails = new AssetTransactionDetails(assetIdentifier, quantity, pricerPerUnit);
+        grossAssetCostInAssetCurrency = new Money(new BigDecimal(144.32*29.1), new PortfolioCurrency(Currency.getInstance("CAD")));
+        grossAssestCostInPorfolioCurrency = new Money(new BigDecimal(144.32*29.1), new PortfolioCurrency(Currency.getInstance("USD")));
+        netPortfolioCashImpact = new Money(new BigDecimal(144.32*10), new PortfolioCurrency(Currency.getInstance("USD")));
+        totalFOREXConversionFeesInPortfolioCurrency = new Money(new BigDecimal(29.1), new PortfolioCurrency(Currency.getInstance("USD")));
+        totalOtherFeesInPortfolioCurrency = new Money(new BigDecimal(1), new PortfolioCurrency(Currency.getInstance("USD")));
+    
+
+        transactionDetails = new AssetTransactionDetails(assetIdentifier, quantity, pricerPerUnit, grossAssestCostInPorfolioCurrency, grossAssestCostInPorfolioCurrency, grossAssestCostInPorfolioCurrency, grossAssestCostInPorfolioCurrency);
         
         transactionMetadata = new TransactionMetadata(TransactionStatus.ACTIVE, TransactionSource.MANUAL_INPUT, "SOME DESC.", transactionDate, transactionDate);
         voidInfo = null;
@@ -131,7 +144,7 @@ public class TransactionTest {
         // Money pricerPerUnit1 = new Money(new BigDecimal(144.32), new PortfolioCurrency(Currency.getInstance("USD")));
         // BigDecimal quantity1 = new BigDecimal(30);
         
-        AssetTransactionDetails transactionDetails1 = new AssetTransactionDetails(assetIdentifier, quantity, pricerPerUnit);
+        AssetTransactionDetails transactionDetails1 = new AssetTransactionDetails(assetIdentifier, quantity, pricerPerUnit, totalTransactionAmount1, totalTransactionAmount1, totalTransactionAmount1, totalTransactionAmount1);
         
         TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESC.", transactionDate, transactionDate);
         TransactionMetadata transactionMetadata3 = new TransactionMetadata(TransactionStatus.VOIDED, TransactionSource.MANUAL_INPUT, "SOME DESC.", transactionDate, transactionDate);

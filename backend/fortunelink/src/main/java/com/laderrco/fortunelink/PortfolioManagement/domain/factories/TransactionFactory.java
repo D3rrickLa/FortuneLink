@@ -45,7 +45,10 @@ public class TransactionFactory {
         // future we could think of.
         // for now though I think we are sticking to use STOCKS - on the exchange and
         // crypto
-        public static Transaction createBuyAssetTransaction(UUID transactionId, UUID portfolioId, AssetIdentifier assetIdentifier, Instant transactionDate, BigDecimal quantity, Money pricePerUnit, TransactionMetadata transactionMetadata, List<Fee> associatedFees) {
+        public static Transaction createBuyAssetTransaction(UUID transactionId, UUID portfolioId, AssetIdentifier assetIdentifier, 
+                        Instant transactionDate, BigDecimal quantity, Money pricePerUnit, Money grossAssetCostInAssetCurrency, 
+                        Money grossAssestCostInPorfolioCurrency, Money netPortfolioCashImpact, Money totalFOREXConversionFeesInPortfolioCurrency, 
+                        Money totalOtherFeesInPortfolioCurrency, TransactionMetadata transactionMetadata, List<Fee> associatedFees) {
 
                 Objects.requireNonNull(transactionId, "Transaction ID cannot be null.");
                 Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
@@ -53,7 +56,15 @@ public class TransactionFactory {
                 Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
                 Objects.requireNonNull(quantity, "Quantity cannot be null.");
                 Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null.");
+
+                Objects.requireNonNull(grossAssetCostInAssetCurrency, "Gross asset cost in asset's currency cannot be null");
+                Objects.requireNonNull(grossAssestCostInPorfolioCurrency, "Gross asset cost in portfolio's currency cannot be null");
+                Objects.requireNonNull(netPortfolioCashImpact, "Net portfolio cash impact cannot be null.");
+                Objects.requireNonNull(totalFOREXConversionFeesInPortfolioCurrency, "Total Forex conversion fee cannot be null.");
+                Objects.requireNonNull(totalOtherFeesInPortfolioCurrency, "Total other fees  cannot be null.");
+
                 Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
+                Objects.requireNonNull(associatedFees, "Fee list cannot be null.");
 
 
                 if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
@@ -62,42 +73,36 @@ public class TransactionFactory {
                 if (pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new IllegalArgumentException("Price per unit must be positive for a buy transaction.");
                 }
-                if (transactionMetadata.transactionStatus() != TransactionStatus.ACTIVE && transactionMetadata.transactionStatus() != TransactionStatus.PENDING) {
-                        throw new IllegalArgumentException("Transaction Status you want to void MUST be active or pending.");
+                if (transactionMetadata.transactionStatus() != TransactionStatus.COMPLETED) {
+                        throw new IllegalArgumentException("Transaction status must be COMPLETED for a new asset buy transaction.");
+                }
+                if (totalFOREXConversionFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Foreign exchange rate fees provided cannot be negative.");
+                }
+                if (totalOtherFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Total other fees provided cannot be negative.");
                 }
 
-                RoundingMode roundingMode = RoundingMode.HALF_UP;
-                int quantityDecimalPlaces = assetIdentifier.assetType().getDefaultQuantityPrecision().getDecimalPlaces();
-                int cashDecimalPlaces = DecimalPrecision.CASH.getDecimalPlaces();
+                AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, quantity, pricePerUnit, grossAssetCostInAssetCurrency, grossAssestCostInPorfolioCurrency, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency);
 
-                BigDecimal normalizedQuantity = quantity.setScale(quantityDecimalPlaces, roundingMode);
-                Money normalizedPricePerUnit = pricePerUnit.setScale(cashDecimalPlaces, roundingMode);
-                Money costOfAssets = normalizedPricePerUnit.multiply(normalizedQuantity).setScale(cashDecimalPlaces,
-                                roundingMode);
-
-                Money totalFees = associatedFees != null
-                                ? associatedFees.stream().map(Fee::amount)
-                                                .reduce(Money.ZERO(pricePerUnit.currency()), Money::add)
-                                                .setScale(cashDecimalPlaces, roundingMode)
-                                : Money.ZERO(pricePerUnit.currency());
-                Money totalTransactionAmount = costOfAssets.add(totalFees).negate().setScale(cashDecimalPlaces,
-                                roundingMode); // outflow
-
-                AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, normalizedQuantity, normalizedPricePerUnit);
 
                 return new Transaction.Builder()
-                                .transactionId(transactionId)
-                                .portfolioId(portfolioId)
-                                .transactionType(TransactionType.BUY)
-                                .totalTransactionAmount(totalTransactionAmount)
-                                .transactionDate(transactionDate)
-                                .transactionDetails(assetTransactionDetails)
-                                .transactionMetadata(transactionMetadata)
-                                .fees(associatedFees)
-                                .build();
+                        .transactionId(transactionId)
+                        .portfolioId(portfolioId)
+                        .transactionType(TransactionType.BUY)
+                        .totalTransactionAmount(netPortfolioCashImpact)
+                        .transactionDate(transactionDate)
+                        .transactionDetails(assetTransactionDetails)
+                        .transactionMetadata(transactionMetadata)
+                        .fees(associatedFees)
+                        .build();
         }
 
-        public static Transaction createSellAssetTransaction(UUID transactionId, UUID portfolioId, AssetIdentifier assetIdentifier, Instant transactionDate, BigDecimal quantity, Money pricePerUnit, TransactionMetadata transactionMetadata, List<Fee> associatedFees) {
+        public static Transaction createSellAssetTransaction(UUID transactionId, UUID portfolioId, AssetIdentifier assetIdentifier, 
+                        Instant transactionDate, BigDecimal quantity, Money pricePerUnit, 
+                        Money grossAssetCostInAssetCurrency, Money grossAssestCostInPorfolioCurrency, Money netPortfolioCashImpact, 
+                        Money totalFOREXConversionFeesInPortfolioCurrency, Money totalOtherFeesInPortfolioCurrency,
+                        TransactionMetadata transactionMetadata, List<Fee> associatedFees) {
 
                 Objects.requireNonNull(transactionId, "Transaction ID cannot be null.");
                 Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
@@ -114,40 +119,59 @@ public class TransactionFactory {
                 if (pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new IllegalArgumentException("Price per unit must be positive for a sell transaction.");
                 }
-                if (transactionMetadata.transactionStatus() != TransactionStatus.ACTIVE && transactionMetadata.transactionStatus() != TransactionStatus.PENDING) {
-                        throw new IllegalArgumentException("Transaction Status you want to void MUST be active or pending.");
+                if (transactionMetadata.transactionStatus() != TransactionStatus.COMPLETED) {
+                        throw new IllegalArgumentException("Transaction status must be COMPLETED for a new asset buy transaction.");
+                }
+                if (totalFOREXConversionFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Foreign exchange rate fees provided cannot be negative.");
+                }
+                if (totalOtherFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Total other fees provided cannot be negative.");
                 }
 
-                RoundingMode roundingMode = RoundingMode.HALF_UP;
-                int quantityDecimalPlaces = assetIdentifier.assetType().getDefaultQuantityPrecision()
-                                .getDecimalPlaces();
-                int cashDecimalPlaces = DecimalPrecision.CASH.getDecimalPlaces();
-
-                BigDecimal normalizedQuantity = quantity.setScale(quantityDecimalPlaces, roundingMode);
-                Money normalizedPricePerUnit = pricePerUnit.setScale(cashDecimalPlaces, roundingMode);
-                Money costOfAssetSale = normalizedPricePerUnit.multiply(normalizedQuantity).setScale(cashDecimalPlaces,
-                                roundingMode);
-
-                Money totalFees = associatedFees != null
-                                ? associatedFees.stream().map(Fee::amount)
-                                                .reduce(Money.ZERO(pricePerUnit.currency()), Money::add)
-                                                .setScale(cashDecimalPlaces, roundingMode)
-                                : Money.ZERO(pricePerUnit.currency());
-                Money totalTransactionAmount = costOfAssetSale.subtract(totalFees).setScale(cashDecimalPlaces,
-                                roundingMode); // inflow (after fees)
-
-                AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, normalizedQuantity, normalizedPricePerUnit);
+                AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, quantity, pricePerUnit, grossAssetCostInAssetCurrency, grossAssestCostInPorfolioCurrency, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency);
 
                 return new Transaction.Builder()
-                                .transactionId(transactionId)
-                                .portfolioId(portfolioId)
-                                .transactionType(TransactionType.SELL)
-                                .totalTransactionAmount(totalTransactionAmount)
-                                .transactionDate(transactionDate)
-                                .transactionDetails(assetTransactionDetails)
-                                .transactionMetadata(transactionMetadata)
-                                .fees(associatedFees)
-                                .build();
+                        .transactionId(transactionId)
+                        .portfolioId(portfolioId)
+                        .transactionType(TransactionType.SELL)
+                        .totalTransactionAmount(netPortfolioCashImpact)
+                        .transactionDate(transactionDate)
+                        .transactionDetails(assetTransactionDetails)
+                        .transactionMetadata(transactionMetadata)
+                        .fees(associatedFees)
+                        .build();
+
+                // RoundingMode roundingMode = RoundingMode.HALF_UP;
+                // int quantityDecimalPlaces = assetIdentifier.assetType().getDefaultQuantityPrecision()
+                //                 .getDecimalPlaces();
+                // int cashDecimalPlaces = DecimalPrecision.CASH.getDecimalPlaces();
+
+                // BigDecimal normalizedQuantity = quantity.setScale(quantityDecimalPlaces, roundingMode);
+                // Money normalizedPricePerUnit = pricePerUnit.setScale(cashDecimalPlaces, roundingMode);
+                // Money costOfAssetSale = normalizedPricePerUnit.multiply(normalizedQuantity).setScale(cashDecimalPlaces,
+                //                 roundingMode);
+
+                // Money totalFees = associatedFees != null
+                //                 ? associatedFees.stream().map(Fee::amount)
+                //                                 .reduce(Money.ZERO(pricePerUnit.currency()), Money::add)
+                //                                 .setScale(cashDecimalPlaces, roundingMode)
+                //                 : Money.ZERO(pricePerUnit.currency());
+                // Money totalTransactionAmount = costOfAssetSale.subtract(totalFees).setScale(cashDecimalPlaces,
+                //                 roundingMode); // inflow (after fees)
+
+                // AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(assetIdentifier, normalizedQuantity, normalizedPricePerUnit);
+
+                // return new Transaction.Builder()
+                //                 .transactionId(transactionId)
+                //                 .portfolioId(portfolioId)
+                //                 .transactionType(TransactionType.SELL)
+                //                 .totalTransactionAmount(totalTransactionAmount)
+                //                 .transactionDate(transactionDate)
+                //                 .transactionDetails(assetTransactionDetails)
+                //                 .transactionMetadata(transactionMetadata)
+                //                 .fees(associatedFees)
+                //                 .build();
         }
 
         // amount is always positive, we negate at the end if withdrawal

@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.entities;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,14 +14,14 @@ public class AssetHolding {
     private final UUID porfolioId;
     private final AssetIdentifier assetIdentifier;
     private BigDecimal quantity;
-    private ZonedDateTime acqusisitionDate;
+    private Instant acqusisitionDate;
     private Money costBasis; // per share cost basis
 
     private Instant createdAt;
     private Instant updatedAt;
 
     public AssetHolding(final UUID portfolioId, final UUID assetHoldingId, final AssetIdentifier assetIdentifier,
-            BigDecimal quantity, ZonedDateTime acqusisitionDate, Money totalSpentCost) {
+            BigDecimal quantity, Instant acqusisitionDate, Money totalSpentCost) {
         Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
         Objects.requireNonNull(assetHoldingId, "Asset Holding ID cannot be null.");
         Objects.requireNonNull(assetIdentifier, "Asset Identifier cannot be null.");
@@ -81,7 +80,7 @@ public class AssetHolding {
         BigDecimal newTotalQuantity = this.quantity.add(additionalQuantity);
 
         this.quantity = newTotalQuantity;
-        this.costBasis = new Money(combinedCost.divide(newTotalQuantity), this.costBasis.currency()); // Store total
+        this.costBasis = new Money(combinedCost.divide(newTotalQuantity, RoundingMode.HALF_EVEN), this.costBasis.currency()); // Store total
 
         this.updatedAt = Instant.now();
 
@@ -130,7 +129,7 @@ public class AssetHolding {
         return quantity;
     }
 
-    public ZonedDateTime getAcqusisitionDate() {
+    public Instant getAcqusisitionDate() {
         return acqusisitionDate;
     }
 

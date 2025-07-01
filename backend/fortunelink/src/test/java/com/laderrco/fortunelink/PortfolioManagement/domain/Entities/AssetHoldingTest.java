@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.util.Currency;
 import java.util.UUID;
 
@@ -26,7 +25,7 @@ public class AssetHoldingTest {
     private BigDecimal initQuantity;
     private Money initialSpentCost; // total spent on shares
     private AssetHolding assetHolding;
-    private ZonedDateTime dateTime;
+    private Instant dateTime;
 
     @BeforeEach
     void init() {
@@ -35,7 +34,7 @@ public class AssetHoldingTest {
         assetIdentifier = new AssetIdentifier(AssetType.STOCK, "APPL",  "APPLE", "NASDAQ");
         initQuantity = new BigDecimal(20);
         initialSpentCost = new Money(new BigDecimal(200), new PortfolioCurrency(Currency.getInstance("USD")));
-        dateTime = ZonedDateTime.now();
+        dateTime = Instant.now();
         assetHolding = new AssetHolding(portfolioId, assetHoldingId, assetIdentifier, initQuantity, dateTime, initialSpentCost);
     }
 

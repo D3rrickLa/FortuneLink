@@ -1,9 +1,7 @@
 package com.laderrco.fortunelink.PortfolioManagement.domain.Entities;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,17 +9,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
-import org.hamcrest.number.IsNaN;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.postgresql.core.TransactionState;
-
 import com.laderrco.fortunelink.portfoliomanagement.domain.entities.Portfolio;
 import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagement.domain.services.SimpleExchangeRateService;
