@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
@@ -185,6 +187,12 @@ public class TransactionFactoryTest {
                 TransactionType transactionType = TransactionType.DEPOSIT;
                 Instant transactionDate = Instant.now();
                 Money amount = new Money(new BigDecimal(350.32), new PortfolioCurrency(Currency.getInstance("USD")));
+                Money convertedAmount = new Money(new BigDecimal(300.32), new PortfolioCurrency(Currency.getInstance("CAD")));
+                BigDecimal exchangeRate = new BigDecimal(2); // is this 2% or 20%...
+                Money totalFOREXConversionFeesInPortfolioCurrency = new Money(new BigDecimal(1.3), new PortfolioCurrency(Currency.getInstance("CAD")));
+                Money totalOtherFeesInPortfolioCurrency = new Money(new BigDecimal(0.3), new PortfolioCurrency(Currency.getInstance("CAD")));
+                Money netPortoflioImpact = new Money(new BigDecimal(300.32), new PortfolioCurrency(Currency.getInstance("USD")));
+
                 TransactionMetadata transactionMetadata = new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
                 TransactionMetadata transactionMetadata2 = new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now());
 
@@ -201,16 +209,19 @@ public class TransactionFactoryTest {
                                                                                                                 // currency pref
 
 
-                Transaction transaction1 = TransactionFactory.createCashTransaction(transactionID, portfolioID, transactionType, transactionDate, amount, transactionMetadata, fees);
-                Transaction transaction2 = TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, amount, transactionMetadata, fees);
-                Transaction transaction3 = TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, amount, transactionMetadata2, null);
+                Transaction transaction1 = TransactionFactory.createCashTransaction(transactionID, portfolioID, transactionType, transactionDate, amount, convertedAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, transactionMetadata, fees);
+                Transaction transaction2 = TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, amount, convertedAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, transactionMetadata, fees);
+                Transaction transaction3 = TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, amount, convertedAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, transactionMetadata2, Collections.emptyList());
 
 
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, new Money(new BigDecimal(-1),  new PortfolioCurrency(Currency.getInstance("USD"))), transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, new Money(new BigDecimal(0),  new PortfolioCurrency(Currency.getInstance("USD"))), transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.VOID_BUY, transactionDate, amount, transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount, transactionMetadata, fees));
-                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, new Money(new BigDecimal(-1),  new PortfolioCurrency(Currency.getInstance("USD"))), convertedAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, transactionMetadata, fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.EXPENSE, transactionDate, new Money(new BigDecimal(0),  new PortfolioCurrency(Currency.getInstance("USD"))), convertedAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, transactionMetadata, fees));
+                // assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.VOID_BUY, transactionDate, amount, transactionMetadata, fees));
+                // assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount, transactionMetadata, fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  convertedAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, new TransactionMetadata(TransactionStatus.CANCELLED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  convertedAmount, new BigDecimal(-2), totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency, netPortoflioImpact, new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  convertedAmount, new BigDecimal(2), new Money(new BigDecimal(-1.3), new PortfolioCurrency(Currency.getInstance("CAD"))), totalOtherFeesInPortfolioCurrency, netPortoflioImpact, new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
+                assertThrows(IllegalArgumentException.class, () -> TransactionFactory.createCashTransaction(transactionID, portfolioID, TransactionType.REVERSE_STOCK_SPLIT, transactionDate, amount,  convertedAmount, new BigDecimal(2), totalFOREXConversionFeesInPortfolioCurrency, new Money(new BigDecimal(-1.3), new PortfolioCurrency(Currency.getInstance("CAD"))), netPortoflioImpact, new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "SOME DESCRIPTION", Instant.now(), Instant.now()), fees));
 
                 assertNotEquals(transaction2, transaction3);
                 assertNotEquals(transaction1, transaction3);

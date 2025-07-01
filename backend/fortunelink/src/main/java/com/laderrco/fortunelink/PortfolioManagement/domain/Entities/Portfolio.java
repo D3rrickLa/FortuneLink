@@ -17,6 +17,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRate
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
@@ -94,8 +95,8 @@ public class Portfolio {
         Objects.requireNonNull(cashflowEventDate, "Cash transaction date cannot be null.");
         Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
 
-        if (!Set.of(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
-            throw new IllegalArgumentException("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, or DIVIDEND.");
+        if (!Set.of(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL, TransactionType.INTEREST, TransactionType.DIVIDEND, TransactionType.EXPENSE, TransactionType.FEE).contains(type)) {
+            throw new IllegalArgumentException("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, EXPENSE, FEE, or DIVIDEND.");
         }
 
         if (cashflowAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -106,49 +107,76 @@ public class Portfolio {
             throw new IllegalArgumentException("Status in metadata must be COMPLETED.");
         }
 
-
-        BigDecimal exchangeRate;
-        // TODO, fix up the multi-currency
+        // checking to see if cashflowAmount is in native currency 
+        Money convertedCashflowAmount;
+        BigDecimal exchangeRate; // exhange rate one the cash amount itself (exclu. fees)
         if (cashflowAmount.currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
+            convertedCashflowAmount = cashflowAmount;
             exchangeRate = BigDecimal.ONE;
         }
         else {
             exchangeRate = exchangeRateService.getCurrencyExchangeRate(cashflowAmount.currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), cashflowEventDate);
-            // assuming that the fees parameter has a EXCHANGE_RATE fee for conversionFee
+            convertedCashflowAmount = cashflowAmount.convert(this.portfolioCurrencyPreference.javaCurrency(), exchangeRate, RoundingMode.HALF_EVEN);
         }
 
-        Money newCashFlowAmount = cashflowAmount.convert(this.portfolioCurrencyPreference.javaCurrency(), exchangeRate, RoundingMode.HALF_EVEN);
-
+        // checking to see if fees are in native currency
+        Money totalOtherFeesInPortoflioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
+        Money totalFOREXConversionFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
         fees = fees != null ? fees : Collections.emptyList();
-        BigDecimal feeTotalInPortfolioCurrency = BigDecimal.ZERO;
         for (Fee fee : fees) {
-            if (!fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
+            Money feeAmountInPortfolioCurrency;
+            if (fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
+                feeAmountInPortfolioCurrency = fee.amount();
+            }  
+            else {
+                // the forex service stuff here
                 BigDecimal feeExchangeRate = exchangeRateService.getCurrencyExchangeRate(fee.amount().currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), cashflowEventDate);
-                feeTotalInPortfolioCurrency = feeTotalInPortfolioCurrency.add(fee.amount().amount().multiply(feeExchangeRate));
+                feeAmountInPortfolioCurrency = fee.amount().convert(this.portfolioCurrencyPreference.javaCurrency(), feeExchangeRate, RoundingMode.HALF_EVEN);
+            } 
+
+
+            // we divided the logic into forex fees and other fees, this is the check
+            if (fee.feeType() == FeeType.FOREIGN_EXCHANGE_CONVERSION) {
+                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency.add(feeAmountInPortfolioCurrency);
             }
-
-            feeTotalInPortfolioCurrency = feeTotalInPortfolioCurrency.add(fee.amount().amount());
+            else {
+                totalOtherFeesInPortoflioCurrency = totalOtherFeesInPortoflioCurrency.add(feeAmountInPortfolioCurrency);
+            }
         }
 
-        Money newCashBalance;
+        // calculating new balance after fees
+        Money netPortfolioCashImpact;
         if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
-            newCashBalance = this.portfolioCashBalance.add(newCashFlowAmount).subtract(new Money(feeTotalInPortfolioCurrency, portfolioCurrencyPreference));
+            netPortfolioCashImpact = convertedCashflowAmount.subtract(totalOtherFeesInPortoflioCurrency).subtract(totalFOREXConversionFeesInPortfolioCurrency);
         }
-        else { 
-            Money totalWithdrawal = newCashFlowAmount.add(new Money(feeTotalInPortfolioCurrency, portfolioCurrencyPreference));
-            if(this.portfolioCashBalance.compareTo(totalWithdrawal) < 0) {
+        else {
+            // TransactionType.WITHDRAWAL
+            Money totalWithdrawalAmount = convertedCashflowAmount.add(totalOtherFeesInPortoflioCurrency).add(totalFOREXConversionFeesInPortfolioCurrency);
+            if (this.portfolioCashBalance.compareTo(totalWithdrawalAmount) < 0) {
                 throw new IllegalArgumentException("Cash withdrawal is larger than what you have in this portfolio.");
             }
-            newCashBalance = this.portfolioCashBalance.subtract(totalWithdrawal);
+            netPortfolioCashImpact = totalWithdrawalAmount.negate();
         }
 
-        this.portfolioCashBalance = newCashBalance;
-        
-        // NOTE ON UUID.randomUUID(), while fine here, consider this to be externalized for more specific ID gen
-        Transaction newCashTransaction = TransactionFactory.createCashTransaction(UUID.randomUUID(), portfolioId, type, cashflowEventDate, newCashFlowAmount, transactionMetadata, fees);
-        this.transactions.add(newCashTransaction);
-        this.updatedAt = Instant.now();
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netPortfolioCashImpact);
 
+        Transaction newCashTransaction = TransactionFactory.createCashTransaction(
+            UUID.randomUUID(), 
+            this.portfolioId, 
+            type, 
+            cashflowEventDate, 
+            cashflowAmount, 
+            convertedCashflowAmount, 
+            exchangeRate, 
+            totalFOREXConversionFeesInPortfolioCurrency, 
+            totalFOREXConversionFeesInPortfolioCurrency, 
+            netPortfolioCashImpact, 
+            transactionMetadata, 
+            fees);
+
+        this.transactions.add(newCashTransaction);
+
+        this.updatedAt = Instant.now();
     }
     
     public AssetHolding recordAssetHoldingPurchase(AssetIdentifier assetIdentifier, BigDecimal quantityOfAssetBought, Instant acquisitionDate, Money pricePerUnit, TransactionMetadata transactionMetadata, List<Fee> fees) {

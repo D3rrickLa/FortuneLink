@@ -14,7 +14,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.entities.Transaction;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransferDetails;
-import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CashTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CorporateActionTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
@@ -31,7 +31,7 @@ import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
  * NOTE: so when we look at actual transaction in a brokage account, all values are positive expect for 'fees' or 'cash back'
  * this system, internal, deals with signed values which is more accurate in terms of money management. We would use a display layer
  * to actual show positive/abs values
- * TODO: FINAL all the variables in the headers, mainly the UUIDs
+ * TODO: FINAL all the variables in the headers, mainly the UUIDs ALSO we need to remove all logic in the methods, the builder is for making Transaction, no logic
  */
 public class TransactionFactory {
         // include everything for transaction + things related to the
@@ -150,66 +150,50 @@ public class TransactionFactory {
                                 .build();
         }
 
-        // amount is always positive
-        public static Transaction createCashTransaction(UUID transactionId, UUID portfolioId, TransactionType transactionType, Instant transactionDate, Money amount, TransactionMetadata transactionMetadata, List<Fee> associatedFees) {
+        // amount is always positive, we negate at the end if withdrawal
+        public static Transaction createCashTransaction(UUID transactionId, UUID portfolioId, TransactionType transactionType, Instant transactionDate, 
+                        Money originalCashflowAmount, Money currencyPrefConvertedCashflowAmount, BigDecimal exchangeRate, Money totalFOREXConversionFeesInPortfolioCurrency, 
+                        Money totalOtherFeesInPortfolioCurrency, Money netPortfolioCashImpact, // this is the final net chang so from 100 USD -> 129.30 (after fees)
+                        TransactionMetadata transactionMetadata, List<Fee> associatedFees) {
                 Objects.requireNonNull(transactionId, "Transaction ID cannot be null.");
                 Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
                 Objects.requireNonNull(transactionType, "Transaction type cannot be null.");
                 Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
-                Objects.requireNonNull(amount, "Amount cannot be null.");
+                Objects.requireNonNull(originalCashflowAmount, "Amount cannot be null.");
+
+                Objects.requireNonNull(currencyPrefConvertedCashflowAmount, "Converted cashflow amount cannot be null.");
+                Objects.requireNonNull(exchangeRate, "Exchange rate cannot be null.");
+                Objects.requireNonNull(totalFOREXConversionFeesInPortfolioCurrency, "Total Forex conversion fee cannot be null.");
+                Objects.requireNonNull(totalOtherFeesInPortfolioCurrency, "Total other fees  cannot be null.");
+                Objects.requireNonNull(netPortfolioCashImpact, "Net portfolio cash impact cannot be null.");
+                
                 Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
+                Objects.requireNonNull(associatedFees, "Fee list cannot be null.");
                 
-                if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
-                        throw new IllegalArgumentException("Amoutn must be positive for cash transaction.");
-                }
+                // we need to negate at the portfolio level
+                // if (originalCashflowAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+                //         throw new IllegalArgumentException("Amount must be positive for cash transaction.");
+                // }
                 if (transactionMetadata.transactionStatus() != TransactionStatus.COMPLETED) {
-                        throw new IllegalArgumentException("Transaction Status you want to void MUST be completed.");
+                        throw new IllegalArgumentException("Transaction status must be COMPLETED for a new cash transaction.");
                 }
 
-                RoundingMode roundingMode = RoundingMode.HALF_UP; //TODO change this to the actual precision class 
-                int cashDecimalPlaces = DecimalPrecision.CASH.getDecimalPlaces();
-                Money normalizedAmount = amount.setScale(cashDecimalPlaces, roundingMode);
-
-                Money totalTransactionAmount;
-                switch (transactionType) {
-                        case DEPOSIT:
-                        case INTEREST:
-                        case DIVIDEND:
-                                totalTransactionAmount = normalizedAmount;
-                                break;
-                        case WITHDRAWAL:
-                        case EXPENSE:
-                        case FEE:
-                                totalTransactionAmount = normalizedAmount.negate();
-                                break;
-                        case BUY:
-                        case SELL:
-                        case PAYMENT:
-                        case VOID_BUY:
-                        case VOID_SELL:
-                        case VOID_WITHDRAWAL:
-                                throw new IllegalArgumentException("Invalid TransactionType for cash for cash transaction: " + transactionType);
-                
-                        default:
-                                throw new IllegalArgumentException("Unsupported TransactionType: " + transactionType);
+                if (exchangeRate.compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Exchange rate provided cannot be negative.");
+                }
+                if (totalFOREXConversionFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Foreign exchange rate fees provided cannot be negative.");
+                }
+                if (totalOtherFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalArgumentException("Total other fees provided cannot be negative.");
                 }
 
-                Money totalFees = associatedFees != null
-                        ? associatedFees.stream().map(Fee::amount)
-                                        .reduce(Money.ZERO(amount.currency()), Money::add)
-                                        .setScale(cashDecimalPlaces, roundingMode)
-                        : Money.ZERO(amount.currency());
-                
-                // Adjust totalTransactionAmount for associatedFees if applicable
-                totalTransactionAmount = totalTransactionAmount.add(totalFees.negate()).setScale(cashDecimalPlaces, roundingMode);
-
-                CashTransactionDetails cashTransactionDetails = new CashTransactionDetails(normalizedAmount);
-
+                CashflowTransactionDetails cashTransactionDetails = new CashflowTransactionDetails(originalCashflowAmount, currencyPrefConvertedCashflowAmount, exchangeRate, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency);
                 return new Transaction.Builder()
                         .transactionId(transactionId)
                         .portfolioId(portfolioId)
                         .transactionType(transactionType)
-                        .totalTransactionAmount(totalTransactionAmount)
+                        .totalTransactionAmount(netPortfolioCashImpact)
                         .transactionDate(transactionDate)
                         .transactionDetails(cashTransactionDetails)
                         .transactionMetadata(transactionMetadata)
