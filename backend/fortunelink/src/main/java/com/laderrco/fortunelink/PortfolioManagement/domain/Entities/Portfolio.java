@@ -124,6 +124,7 @@ public class Portfolio {
         Money totalFOREXConversionFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
         fees = fees != null ? fees : Collections.emptyList();
         for (Fee fee : fees) {
+
             Money feeAmountInPortfolioCurrency;
             if (fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
                 feeAmountInPortfolioCurrency = fee.amount();
