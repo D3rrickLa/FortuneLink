@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums;
 
 public enum AssetType {
     STOCK(DecimalPrecision.STOCK),

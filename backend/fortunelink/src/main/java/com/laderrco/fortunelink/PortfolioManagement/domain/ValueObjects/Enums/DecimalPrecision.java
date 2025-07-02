@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums;
 
 // For BigDecimal operations
 // used in Money class and Quantities variables

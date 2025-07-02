@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums;
+package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums;
 
 public enum FeeType {
     BROKERAGE,       // Fee charged by a broker (traditional assets)

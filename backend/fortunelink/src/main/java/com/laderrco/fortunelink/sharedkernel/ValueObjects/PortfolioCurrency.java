@@ -2,11 +2,9 @@ package com.laderrco.fortunelink.sharedkernel.ValueObjects;
 
 import java.util.Objects;
 
-import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.CryptoSymbols;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums.CryptoSymbols;
 
-/*
- * We are using the built in Java Currency class for the backbone of this custom Currency Value Object
- */
+
 public record PortfolioCurrency(java.util.Currency javaCurrency) {
     public PortfolioCurrency {
         Objects.requireNonNull(javaCurrency, "java.util.Currency cannot be null.");

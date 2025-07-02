@@ -68,6 +68,23 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
 
     }
 
+    public Money convert(Currency targetCurrency, BigDecimal exchangeRate, RoundingMode roundingMode) {
+        Objects.requireNonNull(targetCurrency, "Target currency cannot be null.");
+        Objects.requireNonNull(exchangeRate, "Exchange rate cannot be null.");
+        Objects.requireNonNull(roundingMode, "Rounding mode cannot be null.");
+
+        if (this.currency.javaCurrency().equals(targetCurrency)) {
+            return this; // Already in target currency
+        }
+
+        // Apply exchange rate. Scale matters for BigDecimal.
+        // Decide on appropriate scale, e.g., for currency.
+        int targetScale = targetCurrency.getDefaultFractionDigits();
+        BigDecimal convertedAmount = this.amount.multiply(exchangeRate).setScale(targetScale, roundingMode);
+
+        return new Money(convertedAmount, new PortfolioCurrency(targetCurrency));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -87,21 +104,5 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
         return Objects.hash(this.currency, this.amount);
     }
 
-    public Money convert(Currency targetCurrency, BigDecimal exchangeRate, RoundingMode roundingMode) {
-        Objects.requireNonNull(targetCurrency, "Target currency cannot be null.");
-        Objects.requireNonNull(exchangeRate, "Exchange rate cannot be null.");
-        Objects.requireNonNull(roundingMode, "Rounding mode cannot be null.");
-
-        if (this.currency.javaCurrency().equals(targetCurrency)) {
-            return this; // Already in target currency
-        }
-
-        // Apply exchange rate. Scale matters for BigDecimal.
-        // Decide on appropriate scale, e.g., for currency.
-        int targetScale = targetCurrency.getDefaultFractionDigits();
-        BigDecimal convertedAmount = this.amount.multiply(exchangeRate).setScale(targetScale, roundingMode);
-
-        return new Money(convertedAmount, new PortfolioCurrency(targetCurrency));
-    }
 
 }
