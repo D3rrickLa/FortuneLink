@@ -23,5 +23,13 @@ public enum TransactionType {
 
     STOCK_SPLIT,
     REVERSE_STOCK_SPLIT,
-    CORPORATE_ACTION  // for things other than splits
+    CORPORATE_ACTION,  // for things other than splits
+
+
+
+    CASH_DEPOSIT,
+    CASH_WITHDRAWAL,
+    ASSET_ADDITION,
+    ASSET_SALE,
+    REVERSAL,
 }

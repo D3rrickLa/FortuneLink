@@ -6,7 +6,6 @@ import java.util.Objects;
 
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 
-
 // these are immutable, while asset holding can change and evolve
 // this transaction details can't, if we passed the 
 // AssetHolding itself, will not be accurate as it can update
@@ -14,35 +13,59 @@ import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 public final class AssetTransactionDetails extends TransactionDetails {
     private final AssetIdentifier assetIdentifier;
     private final BigDecimal quantity;
-    private final Money pricePerUnit;
+    private final Money pricePerUnit; // This could be the price for either purchase or sale
+
+    // Fields primarily relevant for Purchases
     private final Money grossAssetCostInAssetCurrency;
     private final Money grossAssetCostInPortfolio;
+
+    // NEW FIELDS: Primarily relevant for Sales
+    private final Money netProceedsInAssetCurrency; // The total cash received for the asset units in asset's currency
+                                                    // (before specific fees if tracked separately)
+    private final Money netProceedsInPortfolioCurrency; // The total cash received for the asset units in portfolio's
+                                                        // currency (before specific fees if tracked separately)
+
+    public Money getNetProceedsInAssetCurrency() {
+        return netProceedsInAssetCurrency;
+    }
+
+    public Money getNetProceedsInPortfolioCurrency() {
+        return netProceedsInPortfolioCurrency;
+    }
+
     private final Money totalFOREXConversionFeesInPortfolioCurrency;
     private final Money totalOtherFeesInPortfolioCurrency;
 
-    public AssetTransactionDetails(AssetIdentifier assetIdentifier, BigDecimal quantity,Money pricePerUnit, Money grossAssetCostInAssetCurrency, Money grossAssestCostInPortfolioCurrency, Money totalFOREXConversionFeesInPortfolioCurrency, Money totalOtherFeesInPortfolioCurrency) {
+    public AssetTransactionDetails(AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit,
+            Money grossAssetCostInAssetCurrency, Money grossAssestCostInPortfolioCurrency,
+            Money totalFOREXConversionFeesInPortfolioCurrency, Money totalOtherFeesInPortfolioCurrency) {
         Objects.requireNonNull(assetIdentifier, "Asset Identifier cannot be null.");
         Objects.requireNonNull(quantity, "Quantity cannot be null.");
         Objects.requireNonNull(pricePerUnit, "Price Per Unit cannot be null.");
         Objects.requireNonNull(grossAssetCostInAssetCurrency, "Gross asset cost in asset currency cannot be null.");
-        Objects.requireNonNull(grossAssestCostInPortfolioCurrency, "Gross asset cost in portfolio currency cannot be null.");
-        Objects.requireNonNull(totalFOREXConversionFeesInPortfolioCurrency, "Total FOREX conversion fees cannot be null.");
+        Objects.requireNonNull(grossAssestCostInPortfolioCurrency,
+                "Gross asset cost in portfolio currency cannot be null.");
+        Objects.requireNonNull(totalFOREXConversionFeesInPortfolioCurrency,
+                "Total FOREX conversion fees cannot be null.");
         Objects.requireNonNull(totalOtherFeesInPortfolioCurrency, "Total other fees cannot be null.");
-
 
         if (pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) { // Changed to <= 0
             throw new IllegalArgumentException("Price of each asset unit must be greater than zero.");
         }
-        
+
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Quantity cannot be negative.");
         }
 
         if (grossAssetCostInAssetCurrency.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Gross asset cost in asset currency must be strictly positive for a purchase."); // Clarified message
+            throw new IllegalArgumentException(
+                    "Gross asset cost in asset currency must be strictly positive for a purchase."); // Clarified
+                                                                                                     // message
         }
         if (grossAssestCostInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Gross asset cost in portfolio currency must be strictly positive for a purchase."); // Clarified message
+            throw new IllegalArgumentException(
+                    "Gross asset cost in portfolio currency must be strictly positive for a purchase."); // Clarified
+                                                                                                         // message
         }
         if (totalFOREXConversionFeesInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Total FOREX conversion fees cannot be negative.");
@@ -57,6 +80,8 @@ public final class AssetTransactionDetails extends TransactionDetails {
         this.pricePerUnit = pricePerUnit;
         this.grossAssetCostInAssetCurrency = grossAssetCostInAssetCurrency;
         this.grossAssetCostInPortfolio = grossAssestCostInPortfolioCurrency;
+        this.netProceedsInAssetCurrency = null;
+        this.netProceedsInPortfolioCurrency = null;
         this.totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency;
         this.totalOtherFeesInPortfolioCurrency = totalOtherFeesInPortfolioCurrency;
     }
@@ -99,7 +124,8 @@ public final class AssetTransactionDetails extends TransactionDetails {
         }
 
         AssetTransactionDetails that = (AssetTransactionDetails) o;
-        return Objects.equals(this.assetIdentifier, that.assetIdentifier) && Objects.equals(this.quantity, that.quantity)
+        return Objects.equals(this.assetIdentifier, that.assetIdentifier)
+                && Objects.equals(this.quantity, that.quantity)
                 && Objects.equals(this.pricePerUnit, that.pricePerUnit);
     }
 

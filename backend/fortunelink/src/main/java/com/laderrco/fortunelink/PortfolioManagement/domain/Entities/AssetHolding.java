@@ -16,6 +16,8 @@ public class AssetHolding {
     private BigDecimal quantity;
     private Instant acqusisitionDate;
     private Money costBasis; // per share cost basis
+    private Money totalCostBasisInPortfolioCurrency; // This is the total cost for all units held
+    private Money averageCostPerUnitInPortfolioCurrency; // Derived
 
     private Instant createdAt;
     private Instant updatedAt;
@@ -77,10 +79,10 @@ public class AssetHolding {
         // cost basis - the average price you paid for a share
         BigDecimal currentTotalCost = this.costBasis.amount().multiply(this.quantity);
         BigDecimal combinedCost = currentTotalCost.add(additionalCostTotal.amount());
-        BigDecimal newTotalQuantity = this.quantity.add(additionalQuantity);
+        BigDecimal newquantity = this.quantity.add(additionalQuantity);
 
-        this.quantity = newTotalQuantity;
-        this.costBasis = new Money(combinedCost.divide(newTotalQuantity, RoundingMode.HALF_EVEN), this.costBasis.currency()); // Store total
+        this.quantity = newquantity;
+        this.costBasis = new Money(combinedCost.divide(newquantity, RoundingMode.HALF_EVEN), this.costBasis.currency()); // Store total
 
         this.updatedAt = Instant.now();
 
@@ -146,6 +148,75 @@ public class AssetHolding {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void reverseSale(BigDecimal quantityToRevert, Money costBasisOfRevertedQuantity) {
+        Objects.requireNonNull(quantityToRevert, "Quantity to revert cannot be null.");
+        Objects.requireNonNull(costBasisOfRevertedQuantity, "Cost basis of reverted quantity cannot be null.");
+
+        if (quantityToRevert.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity to revert must be greater than zero.");
+        }
+        if (costBasisOfRevertedQuantity.amount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Cost basis of reverted quantity cannot be negative.");
+        }
+        // Ensure currency matches portfolio currency
+        if (!this.totalCostBasisInPortfolioCurrency.currency().equals(costBasisOfRevertedQuantity.currency())) {
+            throw new IllegalArgumentException("Currency of cost basis to revert must match portfolio currency.");
+        }
+
+        // 1. Add the quantity back
+        this.quantity = this.quantity.add(quantityToRevert).setScale(6, RoundingMode.HALF_UP);
+
+        // 2. Add the original cost basis of those shares back
+        this.totalCostBasisInPortfolioCurrency = this.totalCostBasisInPortfolioCurrency.add(costBasisOfRevertedQuantity);
+
+        // 3. Recalculate average cost per unit
+        if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
+            this.averageCostPerUnitInPortfolioCurrency = this.totalCostBasisInPortfolioCurrency.divide(this.quantity);
+        } else {
+            // If quantity becomes zero (e.g., if you had 100, sold 100, then reversed that sale, and now have 100 back)
+            // Or if after a complex series of partial sales and reversals, the total quantity for the holding goes to 0
+            this.averageCostPerUnitInPortfolioCurrency = Money.ZERO(this.totalCostBasisInPortfolioCurrency.currency()); // Or remove holding
+        }
+    }
+
+    public void reverseAddition(BigDecimal quantityToRemove, Money grossAssetCostInPortfolioCurrency) {
+  Objects.requireNonNull(quantityToRemove, "Quantity to remove cannot be null.");
+        Objects.requireNonNull(grossAssetCostInPortfolioCurrency, "Gross asset cost in portfolio currency cannot be null.");
+
+        if (quantityToRemove.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity to remove must be greater than zero.");
+        }
+
+        // Basic check: Ensure we don't try to remove more than we have
+        // This is crucial for avoiding negative quantities, though for average cost,
+        // it might allow removing cost even if quantity is slightly off due to rounding.
+        if (this.quantity.compareTo(quantityToRemove) < 0) {
+            throw new IllegalArgumentException("Cannot reverse addition: Not enough quantity (" + quantityToRemove + ") to remove from holding (" + this.quantity + ").");
+        }
+
+        // Ensure currency consistency for cost basis
+        if (!this.totalCostBasisInPortfolioCurrency.currency().equals(grossAssetCostInPortfolioCurrency.currency())) {
+            throw new IllegalArgumentException("Currency of gross asset cost to remove must match portfolio currency for reversal.");
+        }
+
+        // 1. Subtract the quantity
+        this.quantity = this.quantity.subtract(quantityToRemove).setScale(6, RoundingMode.HALF_UP);
+
+        // 2. Subtract the cost basis
+        this.totalCostBasisInPortfolioCurrency = this.totalCostBasisInPortfolioCurrency.subtract(grossAssetCostInPortfolioCurrency);
+
+        // 3. Recalculate average cost per unit
+        if (this.quantity.compareTo(BigDecimal.ZERO) > 0) {
+            // If there are still shares left, recalculate average cost
+            this.averageCostPerUnitInPortfolioCurrency = this.totalCostBasisInPortfolioCurrency.divide(this.quantity);
+        } else {
+            // If quantity becomes zero, reset total cost basis and average cost to zero
+            this.totalCostBasisInPortfolioCurrency = Money.ZERO(this.totalCostBasisInPortfolioCurrency.currency());
+            this.averageCostPerUnitInPortfolioCurrency = Money.ZERO(this.averageCostPerUnitInPortfolioCurrency.currency());
+            // Note: If totalQuantity hits zero, the Portfolio might decide to remove this AssetHolding from its list.
+        }
     }
 
 }

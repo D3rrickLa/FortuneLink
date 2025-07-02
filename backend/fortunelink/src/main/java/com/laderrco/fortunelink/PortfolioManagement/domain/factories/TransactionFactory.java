@@ -475,4 +475,11 @@ public class TransactionFactory {
                         .build();
         }
 
+        public static Transaction createReversalTransaction(UUID randomUUID, UUID portfolioId, UUID transactionId,
+                        TransactionType originalType, Money totalTransactionAmount, Money reversalCashFlow, Instant now,
+                        TransactionMetadata transactionMetadata) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'createReversalTransaction'");
+        }
+
 }

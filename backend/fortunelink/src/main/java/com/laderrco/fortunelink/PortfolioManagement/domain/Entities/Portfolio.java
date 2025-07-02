@@ -18,9 +18,11 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIde
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.LiabilityPaymentDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ReversalDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.FeeType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionType;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
@@ -640,8 +642,8 @@ public class Portfolio {
         this.updatedAt = Instant.now();
     }
 
-   public void voidTransaction(final UUID transactionId, String reason) {
-        Objects.requireNonNull(transactionId, "Transaction ID to void cannot be null.");
+   public void voidTransaction(final UUID transactionIdToVoid, String reason) {
+       Objects.requireNonNull(transactionIdToVoid, "Transaction ID to void cannot be null.");
         Objects.requireNonNull(reason, "Reason for voiding cannot be null.");
 
         if (reason.isBlank()) {
@@ -649,13 +651,159 @@ public class Portfolio {
         }
 
         Optional<Transaction> optionalTransaction = this.transactions.stream()
-                .filter(t -> t.getTransactionId().equals(transactionId))
+                .filter(t -> t.getTransactionId().equals(transactionIdToVoid))
                 .findFirst();
 
         if (optionalTransaction.isEmpty()) {
-            throw new IllegalStateException("Transaction with ID " + transactionId + " cannot be found in portfolio.");
+            throw new IllegalStateException("Transaction with ID " + transactionIdToVoid + " cannot be found in portfolio.");
         }
+
+        Transaction originalTransaction = optionalTransaction.get();
+
+        // **IMPORTANT:** No change to originalTransaction's status here!
+        // This check is to prevent voiding an already conceptually voided transaction,
+        // if your system flags it for reporting purposes.
+        // If your TransactionStatus enum has a VOIDED state, and you *do* want to prevent
+        // double-voiding (even if the original is immutable, you might have a derived view),
+        // then your original TransactionFactory might set its status.
+        // For a strictly immutable ledger, you wouldn't have TransactionStatus.VOIDED on original.
+        // Instead, you'd check if a reversal transaction for this ID already exists.
+        // For simplicity for now, let's assume original is just 'COMPLETED' and we add a REVERSAL.
+
+        // Check if a reversal for this transaction already exists (prevents double reversal)
+        boolean alreadyReversed = this.transactions.stream()
+                .filter(t -> t.getTransactionType() == TransactionType.REVERSAL) // Assume you add REVERSAL to your enum
+                .map(Transaction::getTransactionDetails)
+                .filter(d -> d instanceof ReversalDetails)
+                .map(d -> (ReversalDetails) d)
+                .anyMatch(rd -> rd.getOriginalTransactionId().equals(transactionIdToVoid));
+
+        if (alreadyReversed) {
+            throw new IllegalArgumentException("Transaction with ID " + transactionIdToVoid + " has already been reversed.");
+        }
+        
+        // --- PREPARE FOR FINANCIAL REVERSAL ---
+        TransactionType originalType = originalTransaction.getTransactionType();
+        TransactionDetails originalDetails = originalTransaction.getTransactionDetails();
+        Money originalCashImpactAmount = originalTransaction.getTotalTransactionAmount(); // Assumed to be in portfolio's currency
+
+        // --- Perform Actual Reversals of Portfolio State ---
+        // These are the operations that modify the portfolio's balances (cash, holdings, liabilities).
+        // Each original transaction type has an inverse effect.
+
+        // 1. Reverse Cash Impact
+        Money reversalCashFlow; // This will be the amount that affects portfolioCashBalance
+        switch (originalType) {
+            case CASH_DEPOSIT:
+            case ASSET_SALE:
+                // Original: Cash INflow. Reversal: Cash OUTflow.
+                reversalCashFlow = originalCashImpactAmount.negate(); // Assuming Money.negate() exists or manually make negative for subtraction
+                this.portfolioCashBalance = this.portfolioCashBalance.subtract(originalCashImpactAmount);
+                break;
+            case CASH_WITHDRAWAL:
+            case PAYMENT: // Liability Payment
+            case ASSET_ADDITION: // Asset Purchase
+                // Original: Cash OUTflow. Reversal: Cash INflow.
+                reversalCashFlow = originalCashImpactAmount; // Already positive magnitude
+                this.portfolioCashBalance = this.portfolioCashBalance.add(originalCashImpactAmount);
+                break;
+            default:
+                throw new UnsupportedOperationException("Reversal of cash impact for transaction type " + originalType + " is not yet supported.");
+        }
+
+        // 2. Reverse Asset Holding / Liability Impact (Delegating to entities)
+        // These methods should perform the *opposite* action of the original transaction
+        switch (originalType) {
+                 case ASSET_ADDITION:
+                if (!(originalDetails instanceof AssetTransactionDetails)) {
+                    throw new IllegalStateException("Transaction " + originalTransaction.getTransactionId() + " of type ASSET_ADDITION has incorrect details type.");
+                }
+                AssetTransactionDetails assetBuyDetails = (AssetTransactionDetails) originalDetails;
+
+                Optional<AssetHolding> existingHoldingForBuyReversal = this.assetHoldings.stream()
+                        .filter(ah -> ah.getAssetIdentifier().equals(assetBuyDetails.getAssetIdentifier()))
+                        .findFirst();
+
+                if (existingHoldingForBuyReversal.isPresent()) {
+                    AssetHolding holding = existingHoldingForBuyReversal.get();
+                    // MAKE SURE YOU ARE PASSING THE PORTFOLIO CURRENCY COST HERE:
+                    holding.reverseAddition(assetBuyDetails.getQuantity(), assetBuyDetails.getGrossAssetCostInPortfolio());
+                } else {
+                    throw new IllegalStateException("Cannot reverse purchase for asset " + assetBuyDetails.getAssetIdentifier() + " as holding no longer exists or cannot be identified correctly for reversal.");
+                }
+                break;
+                case ASSET_SALE:
+                if (!(originalDetails instanceof AssetTransactionDetails)) {
+                    throw new IllegalStateException("Transaction " + originalTransaction.getTransactionId() + " of type ASSET_SALE has incorrect details type.");
+                }
+                AssetTransactionDetails assetSaleDetails = (AssetTransactionDetails) originalDetails;
+
+                Optional<AssetHolding> existingHoldingForSaleReversal = this.assetHoldings.stream()
+                        .filter(ah -> ah.getAssetIdentifier().equals(assetSaleDetails.getAssetIdentifier()))
+                        .findFirst();
+
+                if (existingHoldingForSaleReversal.isPresent()) {
+                    AssetHolding holding = existingHoldingForSaleReversal.get();
+                    // CORRECTED LINE: Using getNetProceedsInAssetCurrency()
+                    holding.reverseSale(assetSaleDetails.getQuantity(), assetSaleDetails.getNetProceedsInAssetCurrency());
+                } else {
+                    // This scenario means the asset was entirely sold and removed from holdings.
+                    // To "un-sell" it perfectly, you'd need to re-create the AssetHolding with its
+                    // original cost basis, which is typically derived from prior purchase transactions
+                    // rather than directly stored in the sale details themselves.
+                    // This is why full voiding can be very complex.
+                    throw new IllegalStateException("Cannot reverse sale for asset " + assetSaleDetails.getAssetIdentifier() + " as holding cannot be identified or recreated for reversal.");
+                }
+                break;
+
+            case PAYMENT: // Liability Payment
+                if (!(originalDetails instanceof LiabilityPaymentDetails)) {
+                    throw new IllegalStateException("Transaction " + originalTransaction.getTransactionId() + " of type PAYMENT has incorrect details type.");
+                }
+                LiabilityPaymentDetails paymentDetails = (LiabilityPaymentDetails) originalDetails;
+                
+                Optional<Liability> optionalLiabilityToReverse = this.liabilities.stream()
+                        .filter(l -> l.getLiabilityId().equals(paymentDetails.getLiabilityId()))
+                        .findFirst();
+                
+                if (optionalLiabilityToReverse.isEmpty()) {
+                    throw new IllegalStateException("Liability with ID " + paymentDetails.getLiabilityId() + " not found for voided payment transaction " + originalTransaction.getTransactionId());
+                }
+                Liability liabilityToReverse = optionalLiabilityToReverse.get();
+
+                liabilityToReverse.reversePayment(paymentDetails.getAmountAppliedToLiability());
+                break;
+
+            case CASH_DEPOSIT:
+            case CASH_WITHDRAWAL:
+                // No specific asset/liability reversal needed beyond cash impact.
+                break;
+
+            default:
+                // Other transaction types might not have specific entity reversals, or are not yet supported.
+                break;
+        }
+
+        // --- Record the NEW Reversal Transaction ---
+        // This is the immutable record of the voiding event itself.
+        Transaction newReversalTransaction = TransactionFactory.createReversalTransaction( // You'll need to add this method to your factory
+            UUID.randomUUID(),                          // New transaction ID
+            this.portfolioId,
+            originalTransaction.getTransactionId(),     // Reference to the original transaction being reversed
+            originalType,                               // The type of the original transaction
+            originalTransaction.getTotalTransactionAmount(), // The original impact amount for context
+            reversalCashFlow,                           // The cash impact of THIS reversal transaction
+            Instant.now(),                              // The date of the reversal
+            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT,"Reversal for " + originalType + " " + originalTransaction.getTransactionId() + ": " + reason, Instant.now(), Instant.now())
+            // Fees for the reversal itself are usually zero unless there's a fee for voiding.
+            // You might add specific reversal details here if your factory allows more complexity.
+        );
+        this.transactions.add(newReversalTransaction);
+
+        // --- Update Portfolio's overall timestamp ---
+        this.updatedAt = Instant.now();
     }
+    
     // --- Getter Methods --- //
     public UUID getPortfolioId() {
         return portfolioId;
