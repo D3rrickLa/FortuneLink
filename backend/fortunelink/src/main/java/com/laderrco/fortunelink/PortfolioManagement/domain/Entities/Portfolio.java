@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.entities;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,7 +15,10 @@ import java.util.UUID;
 import com.laderrco.fortunelink.portfoliomanagement.domain.factories.TransactionFactory;
 import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.LiabilityPaymentDetails;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.TransactionStatus;
@@ -23,32 +27,33 @@ import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.Percentage;
 import com.laderrco.fortunelink.sharedkernel.ValueObjects.PortfolioCurrency;
 
-
 public class Portfolio {
     private final UUID portfolioId;
     private final UUID userId; // FK from supabase
     private String portfolioName;
     private String portfolioDescription;
     private PortfolioCurrency portfolioCurrencyPreference; // your currency preference can change
-    private Money portfolioCashBalance; // cash in your portfolio, we need to make sure you have cash to spend on assets, else you can't make new transaction
+    private Money portfolioCashBalance; // cash in your portfolio, we need to make sure you have cash to spend on
+                                        // assets, else you can't make new transaction
     private final ExchangeRateService exchangeRateService;
 
     private final Instant createdAt;
     private Instant updatedAt;
-    
+
     private List<Transaction> transactions;
     private List<AssetHolding> assetHoldings;
     private List<Liability> liabilities;
-    
-    public Portfolio(final UUID portfolioId, final UUID userId, String portfolioName, String portfolioDescription, PortfolioCurrency portfolioCurrencyPreference, Money portfolioCashBalance, ExchangeRateService exchangeRateService, Instant createdAt) {
-        
+
+    public Portfolio(final UUID portfolioId, final UUID userId, String portfolioName, String portfolioDescription,
+            PortfolioCurrency portfolioCurrencyPreference, Money portfolioCashBalance,
+            ExchangeRateService exchangeRateService, Instant createdAt) {
+
         Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
         Objects.requireNonNull(userId, "User ID cannot be null.");
         Objects.requireNonNull(portfolioName, "Portfolio Name cannot be null.");
         Objects.requireNonNull(portfolioCurrencyPreference, "Portfolio Currency Preference cannot be null.");
         Objects.requireNonNull(portfolioCashBalance, "Cash Balance cannot be null.");
         Objects.requireNonNull(createdAt, "Creation date cannot be null.");
-
 
         if (portfolioName.trim().isEmpty()) {
             throw new IllegalArgumentException("The portfolio name cannot be empty.");
@@ -61,7 +66,7 @@ public class Portfolio {
         if (!portfolioCashBalance.currency().javaCurrency().equals(portfolioCurrencyPreference.javaCurrency())) {
             throw new IllegalArgumentException("Cash depositied does not match your currency preference.");
         }
-        
+
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.portfolioName = portfolioName;
@@ -77,25 +82,28 @@ public class Portfolio {
         this.liabilities = new ArrayList<>();
     }
 
-    public void recordCashflow(TransactionType type, Money cashflowAmount, Instant cashflowEventDate, TransactionMetadata transactionMetadata, List<Fee> fees) {
+    public void recordCashflow(TransactionType type, Money cashflowAmount, Instant cashflowEventDate,
+            TransactionMetadata transactionMetadata, List<Fee> fees) {
         /*
          * --CHECKS NEEDED--
          * Null checks
-         * Is Cashflow amount negative or 0 
+         * Is Cashflow amount negative or 0
          * Is cashflow the same currency as the portfolio preference
          * Is Cashflow type either deposit, withdrawl, interest, or dividend
          * is status == completed
          * is withdrawal too much
-         * check if fees are in the same currency as portfolio 
-        */
-        
+         * check if fees are in the same currency as portfolio
+         */
+
         Objects.requireNonNull(type, "Transaction type cannot be null.");
         Objects.requireNonNull(cashflowAmount, "Amount of cash being put in/ taken out cannot be null.");
         Objects.requireNonNull(cashflowEventDate, "Cash transaction date cannot be null.");
         Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
 
-        if (!Set.of(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL, TransactionType.INTEREST, TransactionType.DIVIDEND, TransactionType.EXPENSE, TransactionType.FEE).contains(type)) {
-            throw new IllegalArgumentException("Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, EXPENSE, FEE, or DIVIDEND.");
+        if (!Set.of(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL, TransactionType.INTEREST,
+                TransactionType.DIVIDEND, TransactionType.EXPENSE, TransactionType.FEE).contains(type)) {
+            throw new IllegalArgumentException(
+                    "Transaction Type must be either DEPOSIT, WITHDRAWAL, INTEREST, EXPENSE, FEE, or DIVIDEND.");
         }
 
         if (cashflowAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -106,16 +114,17 @@ public class Portfolio {
             throw new IllegalArgumentException("Status in metadata must be COMPLETED.");
         }
 
-        // checking to see if cashflowAmount is in native currency 
+        // checking to see if cashflowAmount is in native currency
         Money convertedCashflowAmount;
         BigDecimal exchangeRate; // exhange rate one the cash amount itself (exclu. fees)
         if (cashflowAmount.currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
             convertedCashflowAmount = cashflowAmount;
             exchangeRate = BigDecimal.ONE;
-        }
-        else {
-            exchangeRate = exchangeRateService.getCurrencyExchangeRate(cashflowAmount.currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), cashflowEventDate);
-            convertedCashflowAmount = cashflowAmount.convert(this.portfolioCurrencyPreference.javaCurrency(), exchangeRate, RoundingMode.HALF_EVEN);
+        } else {
+            exchangeRate = exchangeRateService.getCurrencyExchangeRate(cashflowAmount.currency().javaCurrency(),
+                    this.portfolioCurrencyPreference.javaCurrency(), cashflowEventDate);
+            convertedCashflowAmount = cashflowAmount.convert(this.portfolioCurrencyPreference.javaCurrency(),
+                    exchangeRate, RoundingMode.HALF_EVEN);
         }
 
         // checking to see if fees are in native currency
@@ -127,19 +136,20 @@ public class Portfolio {
             Money feeAmountInPortfolioCurrency;
             if (fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
                 feeAmountInPortfolioCurrency = fee.amount();
-            }  
-            else {
+            } else {
                 // the forex service stuff here
-                BigDecimal feeExchangeRate = exchangeRateService.getCurrencyExchangeRate(fee.amount().currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), cashflowEventDate);
-                feeAmountInPortfolioCurrency = fee.amount().convert(this.portfolioCurrencyPreference.javaCurrency(), feeExchangeRate, RoundingMode.HALF_EVEN);
-            } 
-
+                BigDecimal feeExchangeRate = exchangeRateService.getCurrencyExchangeRate(
+                        fee.amount().currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(),
+                        cashflowEventDate);
+                feeAmountInPortfolioCurrency = fee.amount().convert(this.portfolioCurrencyPreference.javaCurrency(),
+                        feeExchangeRate, RoundingMode.HALF_EVEN);
+            }
 
             // we divided the logic into forex fees and other fees, this is the check
             if (fee.feeType() == FeeType.FOREIGN_EXCHANGE_CONVERSION) {
-                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency.add(feeAmountInPortfolioCurrency);
-            }
-            else {
+                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency
+                        .add(feeAmountInPortfolioCurrency);
+            } else {
                 totalOtherFeesInPortoflioCurrency = totalOtherFeesInPortoflioCurrency.add(feeAmountInPortfolioCurrency);
             }
         }
@@ -147,11 +157,12 @@ public class Portfolio {
         // calculating new balance after fees
         Money netPortfolioCashImpact;
         if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(type)) {
-            netPortfolioCashImpact = convertedCashflowAmount.subtract(totalOtherFeesInPortoflioCurrency).subtract(totalFOREXConversionFeesInPortfolioCurrency);
-        }
-        else {
+            netPortfolioCashImpact = convertedCashflowAmount.subtract(totalOtherFeesInPortoflioCurrency)
+                    .subtract(totalFOREXConversionFeesInPortfolioCurrency);
+        } else {
             // TransactionType.WITHDRAWAL
-            Money totalWithdrawalAmount = convertedCashflowAmount.add(totalOtherFeesInPortoflioCurrency).add(totalFOREXConversionFeesInPortfolioCurrency);
+            Money totalWithdrawalAmount = convertedCashflowAmount.add(totalOtherFeesInPortoflioCurrency)
+                    .add(totalFOREXConversionFeesInPortfolioCurrency);
             if (this.portfolioCashBalance.compareTo(totalWithdrawalAmount) < 0) {
                 throw new IllegalArgumentException("Cash withdrawal is larger than what you have in this portfolio.");
             }
@@ -161,50 +172,51 @@ public class Portfolio {
         this.portfolioCashBalance = this.portfolioCashBalance.add(netPortfolioCashImpact);
 
         Transaction newCashTransaction = TransactionFactory.createCashTransaction(
-            UUID.randomUUID(), 
-            this.portfolioId, 
-            type, 
-            cashflowEventDate, 
-            cashflowAmount, 
-            convertedCashflowAmount, 
-            exchangeRate, 
-            totalFOREXConversionFeesInPortfolioCurrency, 
-            totalFOREXConversionFeesInPortfolioCurrency, 
-            netPortfolioCashImpact, 
-            transactionMetadata, 
-            fees);
+                UUID.randomUUID(),
+                this.portfolioId,
+                type,
+                cashflowEventDate,
+                cashflowAmount,
+                convertedCashflowAmount,
+                exchangeRate,
+                totalFOREXConversionFeesInPortfolioCurrency,
+                totalFOREXConversionFeesInPortfolioCurrency,
+                netPortfolioCashImpact,
+                transactionMetadata,
+                fees);
 
         this.transactions.add(newCashTransaction);
 
         this.updatedAt = Instant.now();
     }
-    
-    
+
     /**
      * 
      * @param assetIdentifier
      * @param quantityOfAssetBought
      * @param acquisitionDate
-     * @param rawPricePerUnit - pruse price of the asset in its native currency
+     * @param rawPricePerUnit       - pruse price of the asset in its native
+     *                              currency
      * @param transactionMetadata
      * @param fees
      * @return
      */
-    public AssetHolding recordAssetHoldingPurchase(AssetIdentifier assetIdentifier, BigDecimal quantityOfAssetBought, Instant acquisitionDate, Money rawPricePerUnit, TransactionMetadata transactionMetadata, List<Fee> fees) {
+    public AssetHolding recordAssetHoldingPurchase(AssetIdentifier assetIdentifier, BigDecimal quantityOfAssetBought,
+            Instant acquisitionDate, Money rawPricePerUnit, TransactionMetadata transactionMetadata, List<Fee> fees) {
         Objects.requireNonNull(assetIdentifier, "Asset Identifier cannot be null");
         Objects.requireNonNull(quantityOfAssetBought, "Quantity cannot be null.");
         Objects.requireNonNull(acquisitionDate, "Acquisition date cannot be null.");
         Objects.requireNonNull(rawPricePerUnit, "Price per unit cannot be null.");
         Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
-        
+
         if (quantityOfAssetBought.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Purchase quantity must be greater than zero.");
         }
-        
+
         if (rawPricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Price per unit must be greater than zero.");
         }
-        
+
         if (!transactionMetadata.transactionStatus().equals(TransactionStatus.COMPLETED)) {
             throw new IllegalArgumentException("Transaction status must be COMPLETED for a new asset purchase.");
         }
@@ -212,15 +224,20 @@ public class Portfolio {
         Money grossAssetCostInAssetCurrency = rawPricePerUnit.multiply(quantityOfAssetBought);
         PortfolioCurrency assetNativeCurrency = new PortfolioCurrency(rawPricePerUnit.currency().javaCurrency());
 
-        Money feesAddedToCostBasisInAssetCurrency = Money.ZERO(assetNativeCurrency); // for summing all cashflow reporting
+        Money feesAddedToCostBasisInAssetCurrency = Money.ZERO(assetNativeCurrency); // for summing all cashflow
+                                                                                     // reporting
         Money totalOtherFeesInPortoflioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
         Money totalFOREXConversionFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
-       
+
         fees = fees != null ? fees : Collections.emptyList();
 
-        // goal for fee loop -> process each individual fee object from hte inputted list and to
-        // For Asset Cost Basis: determine if the fee should be added to the assetholding's cost basis, if so conver it to the asset's native currency and add it to 'feesAddedTOCostBasisInAssetCurrency'
-        // for cashflow reporting: categorize the fees and vonert it to the portfolio's native currency
+        // goal for fee loop -> process each individual fee object from hte inputted
+        // list and to
+        // For Asset Cost Basis: determine if the fee should be added to the
+        // assetholding's cost basis, if so conver it to the asset's native currency and
+        // add it to 'feesAddedTOCostBasisInAssetCurrency'
+        // for cashflow reporting: categorize the fees and vonert it to the portfolio's
+        // native currency
         for (Fee fee : fees) {
             Objects.requireNonNull(fee, "Fee cannot be null.");
             Objects.requireNonNull(fee.amount(), "Fee amount cannot be null.");
@@ -231,47 +248,54 @@ public class Portfolio {
             }
 
             // --- A. Handling Fees for ASSET COST BASIS ---
-            // Goal: Figure out how much of this 'fee' should increase the asset's cost basis.
-            // The cost basis must always be in the ASSET'S NATIVE CURRENCY (e.g., USD for AAPL).
+            // Goal: Figure out how much of this 'fee' should increase the asset's cost
+            // basis.
+            // The cost basis must always be in the ASSET'S NATIVE CURRENCY (e.g., USD for
+            // AAPL).
 
             // Condition: Is this fee type one that should add to the asset's cost basis?
             // Your policy: BROKERAGE or REGULATORY fees add to cost basis.
             if (fee.feeType() == FeeType.BROKERAGE || fee.feeType() == FeeType.REGULATORY) {
-                Money feeForCostBasis; 
+                Money feeForCostBasis;
                 if (fee.amount().currency().javaCurrency().equals(assetNativeCurrency.javaCurrency())) {
                     feeForCostBasis = fee.amount();
-                }
-                else { // if the fee is in a different currency, must convert to asset's native currency
-                    BigDecimal feeToAssetRate = exchangeRateService.getCurrencyExchangeRate(fee.amount().currency().javaCurrency(), assetNativeCurrency.javaCurrency(), acquisitionDate);
-                    feeForCostBasis = fee.amount().convert(assetNativeCurrency.javaCurrency(), feeToAssetRate, RoundingMode.HALF_EVEN);
+                } else { // if the fee is in a different currency, must convert to asset's native
+                         // currency
+                    BigDecimal feeToAssetRate = exchangeRateService.getCurrencyExchangeRate(
+                            fee.amount().currency().javaCurrency(), assetNativeCurrency.javaCurrency(),
+                            acquisitionDate);
+                    feeForCostBasis = fee.amount().convert(assetNativeCurrency.javaCurrency(), feeToAssetRate,
+                            RoundingMode.HALF_EVEN);
                 }
 
                 feesAddedToCostBasisInAssetCurrency = feesAddedToCostBasisInAssetCurrency.add(feeForCostBasis);
             }
 
-             // --- B. Handling Fees for CASHFLOW REPORTING ---
+            // --- B. Handling Fees for CASHFLOW REPORTING ---
             // Goal: Figure out how much this 'fee' impacts the portfolio's cash balance.
-            // The cash balance and its impact must always be in the PORTFOLIO'S NATIVE CURRENCY (e.g., CAD).
+            // The cash balance and its impact must always be in the PORTFOLIO'S NATIVE
+            // CURRENCY (e.g., CAD).
             Money feeForCashflowReporting;
             if (fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
                 feeForCashflowReporting = fee.amount();
-            }
-            else {
-                BigDecimal feeToPortfolioRate = exchangeRateService.getCurrencyExchangeRate(fee.amount().currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), acquisitionDate);
-                feeForCashflowReporting = fee.amount().convert(this.portfolioCurrencyPreference.javaCurrency(), feeToPortfolioRate, RoundingMode.HALF_EVEN);
+            } else {
+                BigDecimal feeToPortfolioRate = exchangeRateService.getCurrencyExchangeRate(
+                        fee.amount().currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(),
+                        acquisitionDate);
+                feeForCashflowReporting = fee.amount().convert(this.portfolioCurrencyPreference.javaCurrency(),
+                        feeToPortfolioRate, RoundingMode.HALF_EVEN);
             }
 
             if (fee.feeType() == FeeType.FOREIGN_EXCHANGE_CONVERSION) {
-                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency.add(feeForCashflowReporting);
-            }
-            else {
+                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency
+                        .add(feeForCashflowReporting);
+            } else {
                 totalOtherFeesInPortoflioCurrency = totalOtherFeesInPortoflioCurrency.add(feeForCashflowReporting);
             }
         }
 
-            
-            
-        Money totalAssetCostBasisInAssetCurrency = grossAssetCostInAssetCurrency.add(feesAddedToCostBasisInAssetCurrency);
+        Money totalAssetCostBasisInAssetCurrency = grossAssetCostInAssetCurrency
+                .add(feesAddedToCostBasisInAssetCurrency);
         Optional<AssetHolding> existingHolding = assetHoldings.stream()
                 .filter(ah -> ah.getAssetIdentifier().equals(assetIdentifier))
                 .findFirst();
@@ -280,66 +304,358 @@ public class Portfolio {
         if (existingHolding.isPresent()) {
             holding = existingHolding.get();
             holding.recordAdditionPurchaseOfAssetHolding(quantityOfAssetBought, totalAssetCostBasisInAssetCurrency);
-        }
-        else {
-            holding = new AssetHolding(UUID.randomUUID(), portfolioId, assetIdentifier, quantityOfAssetBought, acquisitionDate, totalAssetCostBasisInAssetCurrency);
+        } else {
+            holding = new AssetHolding(UUID.randomUUID(), portfolioId, assetIdentifier, quantityOfAssetBought,
+                    acquisitionDate, totalAssetCostBasisInAssetCurrency);
             this.assetHoldings.add(holding);
         }
 
-        // calcualting the net cash impact on the portfolio
-        BigDecimal assetCostToPorfolioRate = exchangeRateService.getCurrencyExchangeRate(assetNativeCurrency.javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), acquisitionDate);
-        Money grossAssestCostInPorfolioCurrency = grossAssetCostInAssetCurrency.convert(this.portfolioCurrencyPreference.javaCurrency(), assetCostToPorfolioRate, RoundingMode.HALF_EVEN);
+        // calculate the net cash impact on the portfolio
+        BigDecimal assetCostToPorfolioRate = exchangeRateService.getCurrencyExchangeRate(
+                assetNativeCurrency.javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), acquisitionDate);
+        Money grossAssestCostInPorfolioCurrency = grossAssetCostInAssetCurrency.convert(
+                this.portfolioCurrencyPreference.javaCurrency(), assetCostToPorfolioRate, RoundingMode.HALF_EVEN);
 
-        Money netPortfolioCashImpact = grossAssestCostInPorfolioCurrency.add(totalFOREXConversionFeesInPortfolioCurrency).add(totalOtherFeesInPortoflioCurrency).negate();
+        Money netPortfolioCashImpact = grossAssestCostInPorfolioCurrency
+                .add(totalFOREXConversionFeesInPortfolioCurrency).add(totalOtherFeesInPortoflioCurrency).negate();
 
         if (this.portfolioCashBalance.amount().compareTo(netPortfolioCashImpact.amount().abs()) < 0) {
-            throw new IllegalArgumentException("Insufficient cash balance to complete asset purchase. Required: " + netPortfolioCashImpact + ", Available: " + this.portfolioCashBalance);
+            throw new IllegalArgumentException("Insufficient cash balance to complete asset purchase. Required: "
+                    + netPortfolioCashImpact + ", Available: " + this.portfolioCashBalance);
         }
 
         this.portfolioCashBalance = this.portfolioCashBalance.add(netPortfolioCashImpact);
 
-
         // need same treatment from cashflow with the new stuff
         Transaction newAssetTransaction = TransactionFactory.createBuyAssetTransaction(
-            UUID.randomUUID(), 
-            this.portfolioId, 
-            assetIdentifier, 
-            acquisitionDate, 
-            quantityOfAssetBought, 
-            rawPricePerUnit, 
-            grossAssetCostInAssetCurrency,
-            grossAssestCostInPorfolioCurrency,
-            netPortfolioCashImpact,
-            totalFOREXConversionFeesInPortfolioCurrency,
-            totalOtherFeesInPortoflioCurrency,
-            transactionMetadata, 
-            fees)
-        ;
+                UUID.randomUUID(),
+                this.portfolioId,
+                assetIdentifier,
+                acquisitionDate,
+                quantityOfAssetBought,
+                rawPricePerUnit,
+                grossAssetCostInAssetCurrency,
+                grossAssestCostInPorfolioCurrency,
+                netPortfolioCashImpact,
+                totalFOREXConversionFeesInPortfolioCurrency,
+                totalOtherFeesInPortoflioCurrency,
+                transactionMetadata,
+                fees);
         this.transactions.add(newAssetTransaction);
-       
-        return holding; 
-    }
-    
-    public void recordAssetHoldingSale(AssetIdentifier assetIdentifier, BigDecimal quantityToSell, Money salePricePerUnit) {
 
+        return holding;
     }
 
-    public Liability recordNewLiability(final UUID portfolioId, String liabilityName, String liabilityDescription, Money initialOutstandingBalance, Percentage interestRate, Instant maturityDate) {
-        return null;
+    public void recordAssetHoldingSale(AssetIdentifier assetIdentifier, BigDecimal quantityToSell, Instant saleDate,
+            Money rawSalePricePerUnit, TransactionMetadata transactionMetadata, List<Fee> fees) {
+        Objects.requireNonNull(assetIdentifier, "AssetIdentifier cannot be null.");
+        Objects.requireNonNull(quantityToSell, "Quantity to sell cannot be null.");
+        Objects.requireNonNull(saleDate, "Sale date cannot be null.");
+        Objects.requireNonNull(rawSalePricePerUnit, "Price per unit to sell cannot be null.");
+        Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
+
+        if (quantityToSell.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity to sell must be positive");
+        }
+
+        if (rawSalePricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Sale Price Per Unit must be positive");
+        }
+
+        if (transactionMetadata.transactionStatus() != TransactionStatus.COMPLETED) {
+            throw new IllegalArgumentException("Transaction status must be marked as COMPLETED.");
+        }
+
+        Money grossProceedsInAssetCurrency = rawSalePricePerUnit.multiply(quantityToSell);
+        PortfolioCurrency assetNativeCurrency = new PortfolioCurrency(rawSalePricePerUnit.currency().javaCurrency());
+
+        Money feesReducingProceedsInAssetCurrency = Money.ZERO(assetNativeCurrency); // For Gain/Loss calc
+        Money totalFOREXConversionFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference); // For
+                                                                                                          // Cashflow
+        Money totalOtherFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference); // For Cashflow
+
+        fees = fees != null ? fees : Collections.emptyList();
+
+        for (Fee fee : fees) {
+            Objects.requireNonNull(fee, "Fee cannot be null.");
+            Objects.requireNonNull(fee.amount(), "Fee amount cannot be null.");
+            Objects.requireNonNull(fee.feeType(), "Fee type cannot be null.");
+
+            if (fee.amount().amount().compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Fee amount cannot be negative for " + fee.feeType());
+            }
+            // --- A. Handling Fees for GAIN/LOSS Calcualtions ---
+            // Goal: Determine how much this fee REDUCES the proceeds (or increases the cost
+            // of sale)
+            // This must be in the ASSET'S NATIVE CURRENCY.
+            if (fee.feeType() == FeeType.BROKERAGE || fee.feeType() == FeeType.REGULATORY) {
+                Money feeForGainLossCalc;
+                if (fee.amount().currency().javaCurrency().equals(assetNativeCurrency.javaCurrency())) {
+                    feeForGainLossCalc = fee.amount();
+                } else {
+                    BigDecimal feeToAssetRate = exchangeRateService.getCurrencyExchangeRate(
+                            fee.amount().currency().javaCurrency(), assetNativeCurrency.javaCurrency(), saleDate);
+                    feeForGainLossCalc = fee.amount().convert(assetNativeCurrency.javaCurrency(), feeToAssetRate,
+                            RoundingMode.HALF_EVEN);
+                }
+                feesReducingProceedsInAssetCurrency = feesReducingProceedsInAssetCurrency.add(feeForGainLossCalc);
+            }
+
+            // --- B. Handle Fees for CASHFLOW REPORTING ---
+            // Goal: Determine how much this fee impacts the portfolio's cash balance.
+            // This must be in the PORTFOLIO'S NATIVE CURRENCY.
+            Money feeForCashflowReporting;
+            if (fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
+                feeForCashflowReporting = fee.amount();
+            } else {
+                BigDecimal feeToPortfolioRate = exchangeRateService.getCurrencyExchangeRate(
+                        fee.amount().currency().javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(),
+                        saleDate);
+                feeForCashflowReporting = fee.amount().convert(this.portfolioCurrencyPreference.javaCurrency(),
+                        feeToPortfolioRate, RoundingMode.HALF_EVEN);
+            }
+
+            if (fee.feeType() == FeeType.FOREIGN_EXCHANGE_CONVERSION) {
+                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency
+                        .add(feeForCashflowReporting);
+            } else {
+                totalOtherFeesInPortfolioCurrency = totalOtherFeesInPortfolioCurrency.add(feeForCashflowReporting);
+            }
+        }
+
+        Money netProceedsForGainLostCalcInAssetCurrency = grossProceedsInAssetCurrency
+                .subtract(feesReducingProceedsInAssetCurrency);
+        Optional<AssetHolding> existingHolding = this.assetHoldings.stream()
+                .filter(eh -> eh.getAssetIdentifier().equals(assetIdentifier))
+                .findFirst();
+        AssetHolding holding;
+        if (existingHolding.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Asset holding with identifier " + assetIdentifier.toString() + " not found in portfolio.");
+        } else {
+            holding = existingHolding.get();
+        }
+
+        if (quantityToSell.compareTo(holding.getQuantity()) > 0) {
+            throw new IllegalArgumentException("Cannot sell " + quantityToSell + " units. Only " + holding.getQuantity()
+                    + " available for " + assetIdentifier.toString() + " (Asset Holding ID: "
+                    + holding.getAssetHoldingId() + ").");
+        }
+
+        Money gainOrLossInAssetCurrency = holding.recordSaleOfAssetHolding(quantityToSell,
+                netProceedsForGainLostCalcInAssetCurrency);
+
+        BigDecimal assetProccedsToPortfolioRate = exchangeRateService.getCurrencyExchangeRate(
+                assetNativeCurrency.javaCurrency(), this.portfolioCurrencyPreference.javaCurrency(), saleDate);
+
+        Money grossProceedsInPortfolioCurrency = grossProceedsInAssetCurrency.convert(
+                this.portfolioCurrencyPreference.javaCurrency(), assetProccedsToPortfolioRate, RoundingMode.HALF_EVEN);
+
+        Money netPortfolioCashImpact = grossProceedsInPortfolioCurrency
+                .subtract(totalFOREXConversionFeesInPortfolioCurrency).subtract(totalOtherFeesInPortfolioCurrency);
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netPortfolioCashImpact);
+
+        Transaction newAssetTransaction = TransactionFactory.createSellAssetTransaction(
+                UUID.randomUUID(),
+                this.portfolioId,
+                assetIdentifier,
+                saleDate,
+                quantityToSell,
+                rawSalePricePerUnit,
+                gainOrLossInAssetCurrency,
+                grossProceedsInPortfolioCurrency,
+                netPortfolioCashImpact,
+                totalFOREXConversionFeesInPortfolioCurrency,
+                totalOtherFeesInPortfolioCurrency,
+                transactionMetadata,
+                fees);
+        this.transactions.add(newAssetTransaction);
     }
 
-    public void recordLiabilityPayment(final UUID portfolioId, final UUID liabilityId, Money paymentAmount, Instant transactionDate) {
+    public Liability recordNewLiability(final UUID portfolioId, String liabilityName, String liabilityDescription,
+            Money initialOutstandingBalance, Percentage interestRate, ZonedDateTime maturityDate) {
+        Objects.requireNonNull(liabilityName, "Liability name cannot be null.");
+        Objects.requireNonNull(initialOutstandingBalance, "Initial amount owned cannot be null.");
+        Objects.requireNonNull(interestRate, "Interest rate cannot be null.");
+        Objects.requireNonNull(maturityDate, "Date when liability is due cannot be null.");
 
+        if (initialOutstandingBalance.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Initial amount for liability must be positive.");
+
+        }
+
+        if (interestRate.percentValue().compareTo(BigDecimal.ZERO) < 0) { // some interest rates can be 0
+            throw new IllegalArgumentException("Interest rate must be positive.");
+        }
+        String finalDescription = (liabilityDescription == null || liabilityDescription.isBlank())
+                ? "Liability for " + liabilityName
+                : liabilityDescription;
+        Liability newLiability = new Liability(UUID.randomUUID(), portfolioId, liabilityName, finalDescription,
+                initialOutstandingBalance, interestRate, maturityDate);
+
+        this.liabilities.add(newLiability);
+        this.updatedAt = Instant.now(); // Update the aggregate root's timestamp
+
+        return newLiability;
     }
 
-    public void voidTransaction(final UUID transactionId, String reason) {
+    public void recordLiabilityPayment(final UUID liabilityId, Money paymentAmount,
+            Instant transactionDate, TransactionMetadata transactionMetadata, List<Fee> fees) {
+        Objects.requireNonNull(liabilityId, "Liability ID cannot be null.");
+        Objects.requireNonNull(paymentAmount, "Payment amount cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
 
+        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive.");
+        }
+
+        Optional<Liability> optionalLiability = this.liabilities.stream()
+                .filter(l -> l.getLiabilityId().equals(liabilityId))
+                .findFirst();
+
+        if (optionalLiability.isEmpty()) {
+            throw new IllegalArgumentException("Liability with ID " + liabilityId + " not found in portfolio.");
+        }
+        Liability foundLiability = optionalLiability.get();
+
+        // --- 2. Calculate payment amount in LIABILITY'S CURRENCY for updating
+        // liability balance ---
+        Money paymentAmountInLiabilityCurrency = paymentAmount;
+        if (!paymentAmount.currency().equals(foundLiability.getCurrentLiabilityBalance().currency())) {
+            BigDecimal rate = exchangeRateService.getCurrencyExchangeRate(
+                    paymentAmount.currency().javaCurrency(),
+                    foundLiability.getCurrentLiabilityBalance().currency().javaCurrency(),
+                    transactionDate);
+            paymentAmountInLiabilityCurrency = paymentAmount.convert(
+                    foundLiability.getCurrentLiabilityBalance().currency().javaCurrency(),
+                    rate,
+                    RoundingMode.HALF_EVEN);
+        }
+
+        // --- 3. Process Fees for Cashflow Impact ---
+        // These fees represent cash outflows from the portfolio due to making the
+        // payment.
+        Money totalFOREXConversionFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
+        Money totalOtherFeesInPortfolioCurrency = Money.ZERO(this.portfolioCurrencyPreference);
+
+        fees = fees != null ? fees : Collections.emptyList(); // Ensure fees list is not null
+
+        for (Fee fee : fees) {
+            Objects.requireNonNull(fee, "Fee cannot be null.");
+            Objects.requireNonNull(fee.amount(), "Fee amount cannot be null.");
+            Objects.requireNonNull(fee.feeType(), "Fee type cannot be null.");
+
+            if (fee.amount().amount().compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Fee amount cannot be negative for " + fee.feeType());
+            }
+
+            Money feeForCashflowReporting;
+            if (fee.amount().currency().javaCurrency().equals(this.portfolioCurrencyPreference.javaCurrency())) {
+                feeForCashflowReporting = fee.amount();
+            } else {
+                BigDecimal feeToPortfolioRate = exchangeRateService.getCurrencyExchangeRate(
+                        fee.amount().currency().javaCurrency(),
+                        this.portfolioCurrencyPreference.javaCurrency(),
+                        transactionDate);
+                feeForCashflowReporting = fee.amount().convert(
+                        this.portfolioCurrencyPreference.javaCurrency(),
+                        feeToPortfolioRate,
+                        RoundingMode.HALF_EVEN);
+            }
+
+            if (fee.feeType() == FeeType.FOREIGN_EXCHANGE_CONVERSION) {
+                totalFOREXConversionFeesInPortfolioCurrency = totalFOREXConversionFeesInPortfolioCurrency
+                        .add(feeForCashflowReporting);
+            } else {
+                totalOtherFeesInPortfolioCurrency = totalOtherFeesInPortfolioCurrency.add(feeForCashflowReporting);
+            }
+        }
+
+        // --- 4. Calculate payment amount in PORTFOLIO'S CASH CURRENCY for cash balance
+        // check and deduction ---
+        // This is the total cash outflow from the portfolio for the payment *itself*,
+        // before any separate fees are added.
+        Money actualPaymentCashOutflowInPortfolioCurrency;
+        if (!paymentAmount.currency().equals(this.portfolioCashBalance.currency())) {
+            BigDecimal rate = exchangeRateService.getCurrencyExchangeRate(
+                    paymentAmount.currency().javaCurrency(),
+                    this.portfolioCashBalance.currency().javaCurrency(),
+                    transactionDate);
+            actualPaymentCashOutflowInPortfolioCurrency = paymentAmount.convert(
+                    this.portfolioCashBalance.currency().javaCurrency(),
+                    rate,
+                    RoundingMode.HALF_EVEN);
+        } else {
+            actualPaymentCashOutflowInPortfolioCurrency = paymentAmount; // No conversion needed if currencies already
+                                                                         // match
+        }
+
+        // --- 5. Total Cash Outflow from Portfolio (Payment + Fees) ---
+        Money totalCashOutflowFromPortfolio = actualPaymentCashOutflowInPortfolioCurrency
+                .add(totalFOREXConversionFeesInPortfolioCurrency)
+                .add(totalOtherFeesInPortfolioCurrency);
+
+        // --- 6. Validate Payment Amount vs. Outstanding Balance (in liability's
+        // currency) ---
+        // This check should use paymentAmountInLiabilityCurrency against
+        // foundLiability.getCurrentLiabilityBalance()
+        if (paymentAmountInLiabilityCurrency.amount()
+                .compareTo(foundLiability.getCurrentLiabilityBalance().amount()) > 0) {
+            throw new IllegalArgumentException("Payment amount (" + paymentAmountInLiabilityCurrency
+                    + ") exceeds outstanding balance (" + foundLiability.getCurrentLiabilityBalance() + ").");
+        }
+
+        // --- 7. Check Portfolio's Cash Balance (using total cash outflow in
+        // portfolio's currency) ---
+        if (this.portfolioCashBalance.amount().compareTo(totalCashOutflowFromPortfolio.amount()) < 0) {
+            throw new IllegalArgumentException("Insufficient cash balance to make payment. Required: "
+                    + totalCashOutflowFromPortfolio + ", Available: " + this.portfolioCashBalance);
+        }
+
+        // --- 8. Update Portfolio's Cash Balance ---
+        this.portfolioCashBalance = this.portfolioCashBalance.subtract(totalCashOutflowFromPortfolio);
+
+        // --- 9. Delegate payment to the Liability ---
+        foundLiability.makeLiabilityPayment(paymentAmountInLiabilityCurrency);
+
+        // --- 10. Create and record a transaction ---
+        Transaction newLiabilityTransaction = TransactionFactory.createLiabilityPaymentTransaction(
+                UUID.randomUUID(),
+                this.portfolioId,
+                liabilityId,
+                paymentAmount, // Original payment amount (e.g., $100 USD)
+                actualPaymentCashOutflowInPortfolioCurrency, // The amount of the principal payment from portfolio cash
+                                                             // (e.g., $135 CAD)
+                paymentAmountInLiabilityCurrency, // The amount reducing the liability (e.g., $100 USD on a USD loan)
+                transactionDate,
+                foundLiability.getCurrentLiabilityBalance(), // The balance of the liability AFTER payment
+                transactionMetadata,
+                totalFOREXConversionFeesInPortfolioCurrency, // Calculated fees
+                totalOtherFeesInPortfolioCurrency, // Calculated fees
+                fees // Original list of fees for audit
+        );
+        this.transactions.add(newLiabilityTransaction);
+
+        // --- 11. Update Portfolio's overall timestamp ---
+        this.updatedAt = Instant.now();
     }
 
+   public void voidTransaction(final UUID transactionId, String reason) {
+        Objects.requireNonNull(transactionId, "Transaction ID to void cannot be null.");
+        Objects.requireNonNull(reason, "Reason for voiding cannot be null.");
 
+        if (reason.isBlank()) {
+            throw new IllegalArgumentException("Reason for voiding cannot be blank.");
+        }
 
+        Optional<Transaction> optionalTransaction = this.transactions.stream()
+                .filter(t -> t.getTransactionId().equals(transactionId))
+                .findFirst();
 
-
+        if (optionalTransaction.isEmpty()) {
+            throw new IllegalStateException("Transaction with ID " + transactionId + " cannot be found in portfolio.");
+        }
+    }
     // --- Getter Methods --- //
     public UUID getPortfolioId() {
         return portfolioId;
@@ -373,7 +689,8 @@ public class Portfolio {
         return updatedAt;
     }
 
-    // returning unmodifiable views, preventing external code from modifying the portfolio's internal state directly
+    // returning unmodifiable views, preventing external code from modifying the
+    // portfolio's internal state directly
     public List<Transaction> getTransactions() {
         return Collections.unmodifiableList(transactions);
     }
@@ -385,6 +702,5 @@ public class Portfolio {
     public List<Liability> getLiabilities() {
         return Collections.unmodifiableList(liabilities);
     }
-
 
 }

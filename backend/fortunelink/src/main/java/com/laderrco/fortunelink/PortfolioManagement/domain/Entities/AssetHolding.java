@@ -86,7 +86,7 @@ public class AssetHolding {
 
     }
 
-    public void recordSaleOfAssetHolding(BigDecimal quantityToSell, Money totalProceeds) {
+    public Money recordSaleOfAssetHolding(BigDecimal quantityToSell, Money totalProceeds) {
         Objects.requireNonNull(quantityToSell, "Quantity value cannot be null.");
         Objects.requireNonNull(totalProceeds, "Total Proceeds cannot be null");
 
@@ -106,11 +106,14 @@ public class AssetHolding {
         if (quantityToSell.compareTo(this.quantity) > 0) {
             throw new IllegalArgumentException("Amount enter to sell is larger than what you have for this asset.");
         }
-
+        Money costBasisOfSoldQuantity = this.costBasis.multiply(quantityToSell);
+        costBasisOfSoldQuantity = costBasisOfSoldQuantity.setScale(this.costBasis.currency().getDefaultScale(), RoundingMode.HALF_EVEN);
         // when you sell your asset, your cost basis per share doesn't change
         this.quantity = this.quantity.subtract(quantityToSell);
 
         this.updatedAt = Instant.now();
+
+        return totalProceeds.subtract(costBasisOfSoldQuantity);
     }
 
     public UUID getAssetHoldingId() {

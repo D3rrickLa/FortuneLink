@@ -152,4 +152,9 @@ public class Liability {
         return maturityDate;
     }
 
+    public void reversePayment(Money amountAppliedToLiability) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'reversePayment'");
+    }
+
 }

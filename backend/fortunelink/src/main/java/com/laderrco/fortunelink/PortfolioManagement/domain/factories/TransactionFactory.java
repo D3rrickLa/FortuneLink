@@ -17,6 +17,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetTra
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CorporateActionTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.LiabilityPaymentDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.VoidTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Enums.DecimalPrecision;
@@ -419,6 +420,59 @@ public class TransactionFactory {
                 .transactionMetadata(transactionMetadata)
                 .fees(Collections.emptyList()) // Assuming no fees for corporate actions        
                 .build();
+        }
+
+        public static Transaction createLiabilityPaymentTransaction(UUID transactionId, UUID portfolioId, UUID liabilityId,
+                        Money paymentAmount, Money paymentAmountInPortfolioCurrency,
+                        Money paymentAmountInLiabilityCurrency, Instant transactionDate, Money currentLiabilityBalance,
+                        TransactionMetadata transactionMetadata, Money totalFOREXConversionFeesInPortfolioCurrency, Money totalOtherFeesInPortfolioCurrency, List<Fee> fees) {
+                
+                Objects.requireNonNull(transactionId, "Transaction ID cannot be null.");
+                Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null.");
+                Objects.requireNonNull(liabilityId, "Liability ID cannot be null."); // If you want to include in a custom detail
+                Objects.requireNonNull(paymentAmount, "Payment amount cannot be null.");
+                Objects.requireNonNull(paymentAmountInPortfolioCurrency, "Payment amount in portfolio currency cannot be null.");
+                Objects.requireNonNull(paymentAmountInLiabilityCurrency, "Payment amount in liability currency cannot be null.");
+                Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+                Objects.requireNonNull(currentLiabilityBalance, "Current liability balance cannot be null.");
+                Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
+                // Also validate the fee parameters if they are new (can be Money.ZERO, but not null)
+                Objects.requireNonNull(totalFOREXConversionFeesInPortfolioCurrency, "Total FOREX fees cannot be null.");
+                Objects.requireNonNull(totalOtherFeesInPortfolioCurrency, "Total other fees cannot be null.");
+
+                BigDecimal exchangeRateForCashflowDetails = null;
+                if (!paymentAmount.currency().equals(paymentAmountInPortfolioCurrency.currency())) {
+                        // Recalculate or pass the rate used in Portfolio.recordLiabilityPayment
+                        // It's better to pass it as a parameter if already calculated in Portfolio
+                        // For simplicity, let's assume it's directly derived from the two amounts if conversion occurred.
+                        // Or better yet, pass the actual exchange rate used in Portfolio.recordLiabilityPayment
+                        // from paymentAmount.currency() to paymentAmountInPortfolioCurrency.currency()
+                        // If paymentAmount.amount() is not zero, otherwise it's undefined.
+                        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) != 0) {
+                        exchangeRateForCashflowDetails = paymentAmountInPortfolioCurrency.amount().divide(
+                                paymentAmount.amount(),
+                                // Use a standard scale for exchange rates, e.g., 6 or 8 decimal places
+                                8, // Or a constant for exchange rate precision
+                                RoundingMode.HALF_EVEN
+                        );
+                        } else {
+                        exchangeRateForCashflowDetails = BigDecimal.ONE; // Or throw error if original amount is zero but converted isn't
+                        }
+
+                } else {
+                        exchangeRateForCashflowDetails = BigDecimal.ONE; // No conversion, rate is 1
+                }
+                    LiabilityPaymentDetails liabilityPaymentDetails = new LiabilityPaymentDetails(liabilityId, paymentAmountInLiabilityCurrency, totalFOREXConversionFeesInPortfolioCurrency, totalOtherFeesInPortfolioCurrency);
+                return new Transaction.Builder()
+                        .transactionId(transactionId)
+                        .portfolioId(portfolioId)
+                        .transactionType(TransactionType.PAYMENT) // Or a more specific LIAB_PAYMENT if enum allows
+                        .totalTransactionAmount(paymentAmountInPortfolioCurrency) // This should be the magnitude of the cash outflow
+                        .transactionDate(transactionDate)
+                        .transactionDetails(liabilityPaymentDetails) // Now correctly created
+                        .transactionMetadata(transactionMetadata)
+                        .fees(fees) // If you put fees inside CashflowTransactionDetails, this can be empty
+                        .build();
         }
 
 }
