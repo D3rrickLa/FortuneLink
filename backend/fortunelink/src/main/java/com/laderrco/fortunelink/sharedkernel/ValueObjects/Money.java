@@ -14,7 +14,6 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
         amount = amount.setScale(currency.getDefaultScale(), RoundingMode.HALF_EVEN);
     }
 
-    // What can we do with money? we can add, subtract, multiple, and divide
     public Money add(Money other) {
         Objects.requireNonNull(other, "Cannot pass null to the 'add' function");
         if (!this.currency.equals(other.currency())) {
@@ -36,15 +35,16 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
     }
     
     public Money multiply(BigDecimal multiplier) {
+        Objects.requireNonNull("Multiplier cannot be null.");
         return new Money(amount.multiply(multiplier), this.currency);
     }
 
     public Money divide(BigDecimal divisor) {
         Objects.requireNonNull(divisor, "Divisor cannot be null");
         if (divisor.compareTo(BigDecimal.ZERO) == 0) {
-            throw new ArithmeticException("CAnnot divide by zero.");
+            throw new ArithmeticException("Cannot divide by zero.");
         }
-        return new Money(amount.divide(divisor, this.currency.getDefaultScale(), RoundingMode.HALF_UP), this.currency);
+        return new Money(amount.divide(divisor, this.currency.getDefaultScale(), RoundingMode.HALF_EVEN), this.currency);
     }
 
     public static Money ZERO(PortfolioCurrency currency) {
@@ -65,7 +65,6 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
     
     public Money negate() {
         return new Money(this.amount.negate(), this.currency);
-
     }
 
     public Money convert(Currency targetCurrency, BigDecimal exchangeRate, RoundingMode roundingMode) {
@@ -84,25 +83,5 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
 
         return new Money(convertedAmount, new PortfolioCurrency(targetCurrency));
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        Money that = (Money) o;
-        return Objects.equals(this.amount, that.amount)
-                && Objects.equals(this.currency, that.currency);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(this.currency, this.amount);
-    }
-
 
 }
