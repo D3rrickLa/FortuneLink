@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums;
 
+
 public enum CryptoSymbols {
     BTC, ETH, USDT, XRP, BNB, SOL, USDC, TRX, DOGE, ADA,
     HYPE, BCH, LEO, SUI, LINK, XLM, AVAX, TON, SHIB, LTC,

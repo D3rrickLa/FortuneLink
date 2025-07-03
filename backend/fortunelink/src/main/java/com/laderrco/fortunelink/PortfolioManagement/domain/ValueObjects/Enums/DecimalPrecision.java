@@ -9,7 +9,8 @@ public enum DecimalPrecision {
     CRYPTO(8),
     FOREX(5),
     COMMODITY(3),
-    CASH(2);
+    CASH(2),
+    PRECENTAGE(6);
 
     private final int decimalPlaces;
 

@@ -11,7 +11,7 @@ public record Money(BigDecimal amount, PortfolioCurrency currency) {
         Objects.requireNonNull(amount, "Amount cannot be null.");
         Objects.requireNonNull(currency, "Currency cannot be null.");
 
-        amount = amount.setScale(currency.getDefaultScale(), RoundingMode.HALF_UP);
+        amount = amount.setScale(currency.getDefaultScale(), RoundingMode.HALF_EVEN);
     }
 
     // What can we do with money? we can add, subtract, multiple, and divide

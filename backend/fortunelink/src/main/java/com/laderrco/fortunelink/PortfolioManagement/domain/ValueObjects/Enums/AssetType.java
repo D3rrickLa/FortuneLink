@@ -9,7 +9,6 @@ public enum AssetType {
     FOREX_PAIR(DecimalPrecision.FOREX),
     OTHER(DecimalPrecision.CASH);
 
-
     private final DecimalPrecision defaultQuantityPrecision;
 
     private AssetType(DecimalPrecision defaultQuantityPrecision) {
@@ -18,7 +17,5 @@ public enum AssetType {
 
     public DecimalPrecision getDefaultQuantityPrecision() {
         return defaultQuantityPrecision;
-    }
-
-    
+    } 
 }

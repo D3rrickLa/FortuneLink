@@ -42,23 +42,23 @@ erDiagram
     }
     
     %% Value Objects
-    Money {
+    Money { ✅
         decimal amount
         Currency currency
     }
     
-    Percentage {
+    Percentage { ✅
         decimal value
     }
     
-    AssetIdentifier {
+    AssetIdentifier { ✅
         string tickerSymbol
         string exchange
         string cryptoSymbol
         string assetCommonName
     }
     
-    TransactionType {
+    TransactionType { ✅
         enum type "Buy|Sell|Deposit|Withdrawal|Dividend|Interest|Expense|Fee"
     }
     
@@ -68,7 +68,7 @@ erDiagram
         Money netWorthValue
     }
     
-    Currency {
+    Currency { ✅
         string code
         string symbol
     }

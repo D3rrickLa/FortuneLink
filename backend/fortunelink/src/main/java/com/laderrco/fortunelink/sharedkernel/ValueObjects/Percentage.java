@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
-// Store thet value as the decimal percentage, i.e. 0.25
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums.DecimalPrecision;
+
 public record Percentage(BigDecimal percentValue) {
     public Percentage {
         Objects.requireNonNull(percentValue, "Percentage value cannot be null");
@@ -14,17 +15,22 @@ public record Percentage(BigDecimal percentValue) {
         }
 
         if (percentValue.scale() < 6) { // scale is the num of digits to the right of the decimal
-            percentValue = percentValue.setScale(6, RoundingMode.HALF_UP);
+            percentValue = percentValue.setScale(DecimalPrecision.PRECENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP);
         }
 
     }
 
+    /**
+     * 
+     * @param rawPecentageValue - a BigDecimal representing a precentage, (i.e. 100%, 25%, etc.) as is.
+     * @return a new Pecentage instance with the precentValue = x / 100
+     */
     public static Percentage fromPercent(BigDecimal rawPecentageValue) {
-        BigDecimal decimalValue = rawPecentageValue.multiply(BigDecimal.valueOf(100));
+        BigDecimal decimalValue = rawPecentageValue.divide(BigDecimal.valueOf(100), DecimalPrecision.PRECENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP);
         return new Percentage(decimalValue);
     }
 
-        @Override
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
