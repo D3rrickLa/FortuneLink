@@ -28,6 +28,10 @@ public final class AssetTransferTransactionDetails extends TransactionDetails {
             throw new IllegalArgumentException("Either sourceAccountId or destinationAccountId (or both) must be specified for AssetTransferDetails.");
         }
 
+        if (costBasisPerUnit.amount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Cost Basis Per Unit cannot be negative.");
+        }
+
 
         this.sourceAccountId = sourceAccountId;
         this.destinationAccountId = destinationAccountId;
@@ -36,25 +40,11 @@ public final class AssetTransferTransactionDetails extends TransactionDetails {
         this.costBasisPerUnit = costBasisPerUnit;
     }
     
-    public UUID getSourceAccountId() {
-        return sourceAccountId;
-    }
-
-    public UUID getDestinationAccountId() {
-        return destinationAccountId;
-    }
-    
-    public AssetIdentifier getAssetIdentifier() {
-        return assetIdentifier;
-    }
-
-    public BigDecimal getQuantity() {
-        return assetQuantity;
-    }
-
-    public Money getCostBasisPerUnit() {
-        return costBasisPerUnit;
-    }
+    public UUID getSourceAccountId() {return sourceAccountId;}
+    public UUID getDestinationAccountId() {return destinationAccountId;}
+    public AssetIdentifier getAssetIdentifier() {return assetIdentifier;}
+    public BigDecimal getAssetQuantity() {return assetQuantity;}
+    public Money getCostBasisPerUnit() {return costBasisPerUnit;}
 
     @Override
     public boolean equals(Object o) {
@@ -75,8 +65,6 @@ public final class AssetTransferTransactionDetails extends TransactionDetails {
     
     @Override
     public int hashCode() {
-        return Objects.hash(this.sourceAccountId, this.destinationAccountId);
+        return Objects.hash(this.sourceAccountId, this.destinationAccountId, this.assetIdentifier, this.assetQuantity, this.costBasisPerUnit);
     }
-    
-    
 }

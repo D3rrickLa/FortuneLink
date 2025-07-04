@@ -35,8 +35,7 @@ public final class CashflowTransactionDetails extends TransactionDetails{
         }
 
         // Ensure currencies are correct for audit
-        if (!convertedCashflowAmount.currency().equals(exchangeRateFee.currency()) || 
-            !convertedCashflowAmount.currency().equals(otherFees.currency())) {
+        if (!convertedCashflowAmount.currency().equals(exchangeRateFee.currency()) || !convertedCashflowAmount.currency().equals(otherFees.currency())) {
             throw new IllegalArgumentException("Converted cashflow amount and all fees in CashTransactionDetails must be in the same portfolio currency.");
         }   
         
@@ -47,25 +46,11 @@ public final class CashflowTransactionDetails extends TransactionDetails{
         this.otherFees = otherFees;
     }
 
-    public Money getOriginalCashflowAmount() {
-        return originalCashflowAmount;
-    }
-
-    public Money getConvertedCashflowAmount() {
-        return convertedCashflowAmount;
-    }
-
-    public BigDecimal getExchangeRate() {
-        return exchangeRate;
-    }
-
-    public Money getExchangeRateFee() {
-        return exchangeRateFee;
-    }
-
-    public Money getOtherFees() {
-        return otherFees;
-    }
+    public Money getOriginalCashflowAmount() {return originalCashflowAmount;}
+    public Money getConvertedCashflowAmount() {return convertedCashflowAmount;}
+    public BigDecimal getExchangeRate() {return exchangeRate;}
+    public Money getExchangeRateFee() {return exchangeRateFee;}
+    public Money getOtherFees() {return otherFees;}
 
     @Override
     public boolean equals(Object o) {

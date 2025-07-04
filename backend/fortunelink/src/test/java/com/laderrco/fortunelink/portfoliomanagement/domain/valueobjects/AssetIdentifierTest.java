@@ -35,6 +35,7 @@ public class AssetIdentifierTest {
         new AssetIdentifier(AssetType.CRYPTO, assetCommonName, primaryIdentifier, secondaryIdentifier);
         new AssetIdentifier(AssetType.COMMODITY, assetCommonName, primaryIdentifier, secondaryIdentifier);
         new AssetIdentifier(AssetType.FOREX_PAIR, assetCommonName, primaryIdentifier, secondaryIdentifier);
+        assertTrue(testAssetIdentifier01.assetType().getDefaultQuantityPrecision().getDecimalPlaces() == 4);
     }
     
     @Test 

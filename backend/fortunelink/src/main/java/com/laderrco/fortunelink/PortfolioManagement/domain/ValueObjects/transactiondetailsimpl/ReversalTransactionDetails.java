@@ -37,12 +37,8 @@ public final class ReversalTransactionDetails extends TransactionDetails {
     
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) {return true;}
+        if (o == null || getClass() != o.getClass()) {return false;}
 
         ReversalTransactionDetails that = (ReversalTransactionDetails) o;
         return Objects.equals(this.originalTransactionId, that.originalTransactionId) 
@@ -54,6 +50,4 @@ public final class ReversalTransactionDetails extends TransactionDetails {
     public int hashCode() {
         return Objects.hash(this.originalTransactionId, this.transactionType, this.reasonForReversal);
     }
-
-    
 }

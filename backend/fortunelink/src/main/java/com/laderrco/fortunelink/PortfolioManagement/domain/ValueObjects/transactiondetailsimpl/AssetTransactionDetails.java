@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transac
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
+import java.util.Set;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums.AssetType;
@@ -91,18 +92,18 @@ public final class AssetTransactionDetails extends TransactionDetails {
         }
 
         // Specific validation based on transactionType
-        if (transactionType != TransactionType.BUY && transactionType != TransactionType.SELL) {
+        if (!Set.of(TransactionType.BUY, TransactionType.SELL).contains(transactionType)) {
             throw new IllegalArgumentException("Invalid transaction type for AssetTransactionDetails: " + transactionType);
         }
 
         // Cost basis of sold quantity is ONLY relevant for ASSET_SALE
         if (transactionType == TransactionType.BUY && costBasisOfSoldQuantityInPortfolioCurrency != null) {
-            throw new IllegalArgumentException("Cost basis of sold quantity must be null for ASSET_ADDITION transaction type.");
+            throw new IllegalArgumentException("Cost basis of sold quantity must be null for BUY transaction type.");
         }
         if (transactionType == TransactionType.SELL) {
-            Objects.requireNonNull(costBasisOfSoldQuantityInPortfolioCurrency, "Cost basis of sold quantity cannot be null for ASSET_SALE transaction type.");
+            Objects.requireNonNull(costBasisOfSoldQuantityInPortfolioCurrency, "Cost basis of sold quantity cannot be null for SELL transaction type.");
             if (costBasisOfSoldQuantityInPortfolioCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Cost basis of sold quantity cannot be negative for ASSET_SALE.");
+                throw new IllegalArgumentException("Cost basis of sold quantity cannot be negative for SELL.");
             }
         }
 
