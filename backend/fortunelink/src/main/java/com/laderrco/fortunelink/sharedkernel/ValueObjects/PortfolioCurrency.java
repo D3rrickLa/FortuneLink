@@ -18,10 +18,6 @@ public record PortfolioCurrency(java.util.Currency javaCurrency) {
         return javaCurrency.getDefaultFractionDigits();
     }
 
-    public String getSymbol() {
-        return javaCurrency.getSymbol();
-    }
-
     public boolean isFiat(String code) {
         return !CryptoSymbols.isCrypto(code);
     }

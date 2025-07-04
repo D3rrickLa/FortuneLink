@@ -4,14 +4,13 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 import java.time.Instant;
 import java.util.Objects;
 
-import org.springframework.transaction.TransactionStatus;
-
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums.TransactionStatus;
 
 public record TransactionMetadata(TransactionStatus transactionStatus, TransactionSource transactionSource, String transactionDescription, Instant createdAt, Instant updatedAt) {
     public TransactionMetadata {
-        Objects.requireNonNull(transactionStatus, "Transaction Status cannot be null.");
-        Objects.requireNonNull(transactionSource, "Transaction Source cannot be null.");
+        Objects.requireNonNull(transactionStatus, "Transaction status cannot be null.");
+        Objects.requireNonNull(transactionSource, "Transaction source cannot be null.");
         Objects.requireNonNull(createdAt, "Creation timestamp cannot be null.");
         Objects.requireNonNull(updatedAt, "Updated timestamp cannot be null.");
     }

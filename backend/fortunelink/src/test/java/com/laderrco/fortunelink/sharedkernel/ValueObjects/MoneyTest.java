@@ -28,7 +28,6 @@ public class MoneyTest {
     void testZERO() {
         // Testing if we get back BigDeicmal or zero.
         Money zeroMoney = Money.ZERO(currency);
-        System.out.println(zeroMoney.amount());
         assertTrue(BigDecimal.ZERO.setScale(currency.getDefaultScale(), RoundingMode.HALF_EVEN).equals(zeroMoney.amount()));
         assertFalse(zeroMoney.amount().equals(testMoney01.amount()));
     }

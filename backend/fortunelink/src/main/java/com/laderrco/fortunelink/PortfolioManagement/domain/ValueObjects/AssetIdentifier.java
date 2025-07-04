@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
 import java.util.Objects;
+import java.util.Set;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.enums.AssetType;
 
@@ -58,6 +59,6 @@ public record AssetIdentifier(AssetType assetType, String assetCommonName, Strin
     }
 
     public boolean isStockOrETF() {
-        return this.assetType == AssetType.STOCK || this.assetType == AssetType.ETF;
+        return Set.of(AssetType.STOCK, AssetType.ETF).contains(this.assetType);
     }
 }

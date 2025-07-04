@@ -8,11 +8,11 @@ import com.laderrco.fortunelink.sharedkernel.ValueObjects.Money;
 
 public record Fee(FeeType feeType, Money feeAmount) {
     public Fee {
-        Objects.requireNonNull(feeType, "feeType cannot be null.");
-        Objects.requireNonNull(feeAmount, "feeAmount cannot be null.");
+        Objects.requireNonNull(feeType, "Fee type cannot be null.");
+        Objects.requireNonNull(feeAmount, "Fee amount cannot be null.");
 
         if (feeAmount.amount().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Fee amoutn cannot be a negative value.");
+            throw new IllegalArgumentException("Fee amount cannot be a negative value.");
         }
     }
 }
