@@ -1,77 +1,254 @@
-because I keep on messing up, I am mapping out all the mapping out all the classes and value objects
+# ENTITIES (Aggregate Root & Entities)
 
-things to note: 
-- we can never delete, we just 'reverse' a transaction. to the user it will look like it was deleted, but acutally it was marked as 'hidden' and can't be seen to the user
+## Portfolio - Aggregate Root
+**Purpose**: Main aggregate controlling all portfolio operations
+**Changes**: Added portfolio analysis methods, moved asset operations here
 
-# Entities
-Portfolio - Aggregate root 
-- Variables
-    - UUID portfolioId
-    - UUID UserId (FK -> supabase)
-    - String portfolio Name
-    - String portfolioDescription
-    - Money portfolioCashBalance
-    - Currency currencyPreference
-    - List<Fees> fees 
-    - List<Transaction> transaction
-    - List<AssetHoldings> assetHoldings
-    - List<Liability> liabilities
+Variables:
+- UUID portfolioId
+- UUID userId (FK -> supabase)
+- String portfolioName
+- String portfolioDescription
+- Money portfolioCashBalance
+- Currency currencyPreference
+- List<Fee> fees
+- List<Transaction> transactions
+- List<AssetHolding> assetHoldings
+- List<Liability> liabilities
 
-- Methods
-    - recordCashflow
-    - recordAssetHoldingPurchase 
-    - recordAssetHoldingSale 
-    - recordNewLiability 
-    - recorrdLiabilityPayment
-    - reverseTransaction
+Methods:
+- recordCashflow(CashflowTransactionDetails details)
+- recordAssetPurchase(AssetTransactionDetails details) // MOVED FROM AssetHolding
+- recordAssetSale(AssetTransactionDetails details) // MOVED FROM AssetHolding
+- recordNewLiability(LiabilityIncurrenceTransactionDetails details)
+- recordLiabilityPayment(LiabilityPaymentTransactionDetails details)
+- reverseTransaction(UUID transactionId, String reason)
+- calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices)
+- calculateUnrealizedGains(Map<AssetIdentifier, MarketPrice> currentPrices)
+- getAssetAllocation(Map<AssetIdentifier, MarketPrice> currentPrices)
+- accrueInterestOnLiabilities() // Calls liability.accrueInterest() on all liabilities
 
-Liability - entity 
-- Variables
-    - UUID liabilityId
-    - UUID portfolioId
-    - String liabilityName
-    - String liabilityDescription
-    - Money currentBalance
-    - Percentage interestRate
-    - Instant maturityDate
+## AssetHolding - Entity
+**Purpose**: Tracks quantity and cost basis of assets
+**Changes**: Removed transaction methods (moved to Portfolio), simplified to pure data + calculations
 
-- Methods
-    - Setters for name, description, and InterestRate
-    - makePayment
-    - reversePayment
-    - increaseLiabilityBalance
+Variables:
+- UUID assetId
+- UUID portfolioId
+- AssetIdentifier assetIdentifier
+- BigDecimal totalQuantity
+- Money totalAdjustedCostBasis (ACB for Canada)
+- Money averageCostPerUnit
+- Instant createdAt
+- Instant updatedAt
 
-AssetHolding - entity
-- Variables
-    - UUID assetId
-    - UUID portfolioId
-    - Assetidentifier assetIdentifier
-    - BigDecimal totalQuantity
-    - Money totalAdjustedCostBasis
-    - Money averageCostPerUnit
-    - Instant createdAt
-    - Instant updatedAt
+Methods:
+- getAverageACBPerUnit() // totalAdjustedCostBasis / totalQuantity
+- calculateCapitalGain(BigDecimal soldQuantity, Money salePrice)
+- addToPosition(BigDecimal quantity, Money costBasis) // Called by Portfolio
+- removeFromPosition(BigDecimal quantity) // Called by Portfolio
+- getCurrentValue(MarketPrice currentPrice)
 
-- Methods
-    - recordAdditionalAssetHoldingPurchase
-    - recordSaleOfAssetHolding
-    - reverseAssetHolding
+## Liability - Entity
+**Purpose**: Tracks debt obligations
+**Changes**: Added interest calculation methods
 
-Transaction - entity
-- Variables
-    - transactionId
-    - portfolioId
-    - TransactionType transactionType
-    - Money totalTransaction Amount (including fees, normalized to portfolio currency)
-    - Instant transactionDate
-    - TransactionDetails transactionDetails
-    - TransactionMetadata transactionMetadata
-    - List<Fee> fees
-    - Boolean hidden
+Variables:
+- UUID liabilityId
+- UUID portfolioId
+- String liabilityName
+- String liabilityDescription
+- Money currentBalance
+- Percentage annualInterestRate
+- Instant maturityDate
+- Instant lastInterestAccrualDate // NEW: Track when interest was last calculated
 
+Methods:
+- setName(String name)
+- setDescription(String description)
+- setInterestRate(Percentage rate)
+- makePayment(Money paymentAmount, Money principalAmount, Money interestAmount)
+- reversePayment(UUID paymentTransactionId)
+- increaseLiabilityBalance(Money amount)
+- calculateAccruedInterest() // NEW: Calculate interest since last accrual
+- accrueInterest() // NEW: Add accrued interest to balance
 
-# Value Objects
-## Enums
+## Transaction - Entity
+**Purpose**: Immutable record of all portfolio changes
+**Changes**: Added correlation and parent tracking, made truly immutable
+
+Variables:
+- UUID transactionId
+- UUID portfolioId
+- UUID correlationId // NEW: Group related transactions
+- UUID parentTransactionId // NEW: Link reversals to originals
+- TransactionType transactionType
+- Money totalTransactionAmount
+- Instant transactionDate
+- TransactionDetails transactionDetails
+- TransactionMetadata transactionMetadata
+- List<Fee> fees
+- Boolean hidden
+- Integer version // NEW: For optimistic locking
+
+Methods:
+- isReversal()
+- isReversed() // Check if this transaction has been reversed
+- getRelatedTransactions() // Find transactions with same correlationId
+
+# VALUE OBJECTS
+
+## Enhanced AssetIdentifier - Value Object
+**Purpose**: Robust asset identification using industry standards
+**Changes**: Added ISIN/CUSIP support, factory methods
+
+[See previous artifact for full implementation]
+
+## Money - Value Object
+**Purpose**: Represent monetary amounts with currency
+**Changes**: Added utility methods for better usability
+
+Variables:
+- BigDecimal amount
+- Currency currency
+
+Methods:
+- add(Money other)
+- subtract(Money other)
+- multiply(BigDecimal multiplier)
+- multiply(Long multiplier)
+- divide(BigDecimal divisor)
+- divide(Long divisor)
+- negate()
+- abs() // NEW: Absolute value
+- isZero() // NEW: Check if amount is zero
+- isPositive() // NEW: Check if amount > 0
+- isNegative() // NEW: Check if amount < 0
+- compareTo(Money other)
+- convertTo(Currency targetCurrency, ExchangeRate rate)
+- round() // NEW: Round to currency's default precision
+- static Money zero(Currency currency)
+
+## ExchangeRate - Value Object (NEW)
+**Purpose**: Represent currency exchange rates with metadata
+**Why Added**: Proper currency conversion tracking
+
+Variables:
+- Currency fromCurrency
+- Currency toCurrency
+- BigDecimal rate
+- Instant rateDate
+- String source // "Bank of Canada", "xe.com", etc.
+
+Methods:
+- getRate()
+- isExpired(Duration maxAge)
+- getInverseRate()
+
+## MarketPrice - Value Object (NEW)
+**Purpose**: Current market price of an asset
+**Why Added**: Portfolio valuation needs current prices
+
+Variables:
+- AssetIdentifier assetIdentifier
+- Money price
+- Instant priceDate
+- String source // "Yahoo Finance", "Manual", etc.
+
+Methods:
+- isStale(Duration maxAge)
+- getPriceInCurrency(Currency targetCurrency, ExchangeRate rate)
+
+## Fee - Value Object
+**Purpose**: Represent transaction fees
+**Changes**: None, already good
+
+Variables:
+- FeeType feeType
+- Money feeAmount
+
+## TransactionMetadata - Value Object
+**Purpose**: Track transaction lifecycle
+**Changes**: None, already good
+
+Variables:
+- TransactionStatus transactionStatus
+- TransactionSource transactionSource
+- String transactionDescription
+- Instant createdAt
+- Instant updatedAt
+
+Methods:
+- static TransactionMetadata create(TransactionSource source, String description)
+- updateStatus(TransactionStatus newStatus)
+
+## Percentage - Value Object
+**Purpose**: Represent percentage values
+**Changes**: None, already good
+
+Variables:
+- BigDecimal percentValue
+
+Methods:
+- static Percentage fromPercent(BigDecimal percent)
+- static Percentage fromDecimal(BigDecimal decimal)
+- toDecimal()
+- toPercent()
+
+# TRANSACTION DETAILS (Interface Implementations)
+
+## CashflowTransactionDetails - Value Object
+**Purpose**: Track cash inflows/outflows
+**Changes**: Enhanced currency conversion tracking
+
+Variables:
+- Money originalCashflowAmount
+- Money convertedCashflowAmount
+- ExchangeRate exchangeRate // CHANGED: Use ExchangeRate VO
+- Money totalConversionFees // COMBINED: forex + other fees
+
+## AssetTransactionDetails - Value Object
+**Purpose**: Track asset buy/sell transactions
+**Changes**: Simplified fee structure
+
+Variables:
+- AssetIdentifier assetIdentifier
+- BigDecimal quantity
+- Money pricePerUnit
+- Money assetValueInAssetCurrency
+- Money assetValueInPortfolioCurrency
+- Money costBasisInPortfolioCurrency
+- Money totalFeesInPortfolioCurrency // SIMPLIFIED: Combined all fees
+
+## LiabilityIncurrenceTransactionDetails - Value Object
+**Purpose**: Track new debt
+**Changes**: None, already good
+
+Variables:
+- Money originalLoanAmount
+- Percentage annualInterestRate
+- Instant maturityDate
+
+## LiabilityPaymentTransactionDetails - Value Object
+**Purpose**: Track debt payments
+**Changes**: None, already good
+
+Variables:
+- UUID liabilityId
+- Money totalPaymentAmount
+- Money principalAmount
+- Money interestAmount
+- Money feesAmount
+
+## ReversalTransactionDetails - Value Object
+**Purpose**: Track transaction reversals
+**Changes**: None, already good
+
+Variables:
+- UUID originalTransactionId
+- String reason
+
+# ENUMS (No changes needed)
 - AssetType
 - CryptoSymbols
 - DecimalPrecision
@@ -80,114 +257,22 @@ Transaction - entity
 - TransactionStatus
 - TransactionType
 
-## interface/abstract
-- TransactionDetails
+# CLASSES REMOVED:
+- AssetTransferTransactionDetails: Too complex for DIY tool
+- CorporateActionTransactionDetails: Not MVP, can add later
+- TaxLot: Not needed for Canadian ACB method
+- AllocationTarget: Too complex for DIY tool
 
-## others
-AssetIdentifier - VO
-- Variables
-    - AssetType assetType
-    - String assetName
-    - String primaryIdentifier
-    - String secondaryIdentifier
-    - String assetDescription
-- Methods
-    - isCrypto
-    - isStockOrEtf
+# CLASSES ADDED:
+- ExchangeRate: Proper currency conversion tracking
+- MarketPrice: Portfolio valuation support
 
-FEE - VO
-- Variables
-    - FeeType feeType
-    - Money feeAmount
-
-TransactionMetadata - VO
-- Variables
-    - TransactionStatus transactionStatus
-    - TransactionSource transactionSource
-    - String transactionDescription
-    - Instant createdAt 
-    - Instant updatedAt
-- Methods
-    - createMetadata (a static method, don't need to do new ....)
-    - updateStatus
-
-## impelments of TransactionDetails
-AssetTransactionDetails
-- Variables
-    - AssetIdentifier assetIdentifier
-    - BigDecimal quantity
-    - Money pricePerUnit
-    - TransactionType transactionType // we might not need this if we have it in the Transaction class already
-    - Money assetValueInAssetCurrency 
-    - Money assetValueInPortfolioCurrency
-    - Money costBasisOfSoldQuantityInPortfolioCurrency
-    - Money totalForexConversionFeeInPortfolioCurrency
-    - Money totalotherFeesInPortfolioCurrency // we should really just combined these 2 into 1 item
-
-AssetTransferTransactionDetails // shouldn't this just be inside the AssetTransactionDetails, seems kind of werid to have this
-- Variables
-    - UUID sourceAccountId
-    - UUID destinationAccountId;
-    - AssetIdentifier assetIdentifier
-    - BigDecimal quantity
-    - Money costBasisPerUnit
-
-CorporateActionTransactionDetails // handles things like 'splits', 'mergers', etc. tbh, might not do this, not a MVP item
-- Variables
-    - AssetIdentifier assetIdentifier
-    - BigDeicmal splitRatio
-
-
-LiabilityIncurrenceTransactionDetails // for when you have a liability initially, say you first record a student loan
-- Variables 
-    - Money originalLoanAmount
-    - Percentage interestPercentage
-    - Instant maturityDate
-
-LiabilityPaymentTransactionDetails // for making a loan payment
-- Variables
-    - UUID liabilityId 
-    - Money totoalOriginalPaymentAmount
-    - Money principalPaidAmount
-    - Money interestPaidAmount
-    - Money feesPaid Amount
-    - Money cashflowOutOfPortfolioCurrency
-
-ReversalTransactionDetails // for reversing any of the above transactions
-- Vaariables
-    - UUID originalTransactionid
-    - TransactionType <- should really just be implied as reversal
-    - String reason
-
-# shared kernel
-Money
-- Variables
-    - BigDecimal amount
-    - PortfolioCurrency currency // need a better name for this
-
-- Methods
-    - Add
-    - Subtract
-    - Multiple // multiple either by Long value or BigDecimal
-    - Divide
-    - ZERO
-    - compareTo
-    - negate
-    - convert // converting currency (i.e. USD -> CAD)
-
-Percentage
-- Variables
-    - BigDecimal percentValue
-
-- Methods
-    - Percentage fromPercent // (using this instead of constructor, we pass in a BigDecimal as the % and converts it to 0.NNNN)
-
-
-PortfolioCurrency
-- Variables
-    - Java.util.Currency currency
-
-- Methods
-    - code
-    - getDefaultScale
-    - isFiat
+# KEY CHANGES SUMMARY:
+1. **Moved asset operations** from AssetHolding to Portfolio (proper aggregate pattern)
+2. **Enhanced AssetIdentifier** with ISIN/CUSIP support
+3. **Added liability interest calculation** methods
+4. **Improved transaction linking** with correlationId and parentTransactionId
+5. **Added portfolio analysis methods** for total value and gains
+6. **Simplified fee structure** by combining related fees
+7. **Added currency conversion support** with ExchangeRate VO
+8. **Added market price tracking** for portfolio valuation
