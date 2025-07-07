@@ -1,5 +1,5 @@
 # ENTITIES (Aggregate Root & Entities)
-
+https://beatmarket.com/blog/a-complete-guide-to-portfolio-accounting-systems/
 ## Portfolio - Aggregate Root
 **Purpose**: Main aggregate controlling all portfolio operations
 **Changes**: Added portfolio analysis methods, moved asset operations here
@@ -96,15 +96,24 @@ Methods:
 - isReversed() // Check if this transaction has been reversed
 - getRelatedTransactions() // Find transactions with same correlationId
 
-# VALUE OBJECTS
+# --- VALUE OBJECTS ---
 
-## Enhanced AssetIdentifier - Value Object
+## Enhanced AssetIdentifier - Value Object ✅
 **Purpose**: Robust asset identification using industry standards
 **Changes**: Added ISIN/CUSIP support, factory methods
 
-[See previous artifact for full implementation]
+- Variables
+    - AssetType assetType
+    - String ISIN
+    - String assetName
+    - String assetExchangeInformation // where the stock/asset is being bought on (TSX? NYSX?)
+    - String assetDescription
+- Methods
+    - isCrypto
+    - isStockOrEtf
 
-## Money - Value Object
+
+## Money - Value Object ✅
 **Purpose**: Represent monetary amounts with currency
 **Changes**: Added utility methods for better usability
 
@@ -129,7 +138,7 @@ Methods:
 - round() // NEW: Round to currency's default precision
 - static Money zero(Currency currency)
 
-## ExchangeRate - Value Object (NEW)
+## ExchangeRate - Value Object (NEW) ✅
 **Purpose**: Represent currency exchange rates with metadata
 **Why Added**: Proper currency conversion tracking
 
@@ -145,7 +154,7 @@ Methods:
 - isExpired(Duration maxAge)
 - getInverseRate()
 
-## MarketPrice - Value Object (NEW)
+## MarketPrice - Value Object (NEW) ✅
 **Purpose**: Current market price of an asset
 **Why Added**: Portfolio valuation needs current prices
 
@@ -159,7 +168,7 @@ Methods:
 - isStale(Duration maxAge)
 - getPriceInCurrency(Currency targetCurrency, ExchangeRate rate)
 
-## Fee - Value Object
+## Fee - Value Object ✅
 **Purpose**: Represent transaction fees
 **Changes**: None, already good
 
@@ -167,7 +176,7 @@ Variables:
 - FeeType feeType
 - Money feeAmount
 
-## TransactionMetadata - Value Object
+## TransactionMetadata - Value Object ✅
 **Purpose**: Track transaction lifecycle
 **Changes**: None, already good
 
@@ -182,7 +191,7 @@ Methods:
 - static TransactionMetadata create(TransactionSource source, String description)
 - updateStatus(TransactionStatus newStatus)
 
-## Percentage - Value Object
+## Percentage - Value Object ✅
 **Purpose**: Represent percentage values
 **Changes**: None, already good
 
@@ -195,7 +204,7 @@ Methods:
 - toDecimal()
 - toPercent()
 
-# TRANSACTION DETAILS (Interface Implementations)
+#  --- TRANSACTION DETAILS (Interface Implementations) ---
 
 ## CashflowTransactionDetails - Value Object
 **Purpose**: Track cash inflows/outflows
@@ -267,6 +276,8 @@ Variables:
 - ExchangeRate: Proper currency conversion tracking
 - MarketPrice: Portfolio valuation support
 
+
+---
 # KEY CHANGES SUMMARY:
 1. **Moved asset operations** from AssetHolding to Portfolio (proper aggregate pattern)
 2. **Enhanced AssetIdentifier** with ISIN/CUSIP support
