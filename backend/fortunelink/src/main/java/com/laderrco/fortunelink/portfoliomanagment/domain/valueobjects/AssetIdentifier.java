@@ -30,7 +30,7 @@ public record AssetIdentifier(
     }
 
     private static boolean isValidISIN(String isin) {
-        return isin != null && isin.matches("[A-Z]{2}[A-Z0-9]{9}[0-9]");
+        return isin.matches("[A-Z]{2}[A-Z0-9]{9}[0-9]");
     }
 
     public boolean isCrypto() {

@@ -31,7 +31,9 @@ public record TransactionMetadata(
         return new TransactionMetadata(initialStatus, source, description, createdAt, createdAt);
     }
 
-    public TransactionMetadata updateStatus(TransactionStatus newStatus) {
-        return new TransactionMetadata(newStatus, this.transactionSource, this.description, this.createdAt, Instant.now());
+    public TransactionMetadata updateStatus(TransactionStatus newStatus, Instant newUpdatedAt) {
+        Objects.requireNonNull(newStatus, "New transaction status cannot be null.");
+        Objects.requireNonNull(newUpdatedAt, "New updated timestamp cannot be null.");
+        return new TransactionMetadata(newStatus, this.transactionSource, this.description, this.createdAt, newUpdatedAt);
     }
 }
