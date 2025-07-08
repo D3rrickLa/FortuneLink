@@ -13,6 +13,10 @@ public record Money(BigDecimal amount, Currency currency) {
         amount = amount.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
     }
 
+    public Money (double amount, Currency currency) {
+        this(BigDecimal.valueOf(amount), currency);
+    }
+
     private void areSameCurrency(Currency other, String methodName) {
         if (!this.currency.equals(other)) {
             throw new IllegalArgumentException(String.format(

@@ -6,7 +6,7 @@ public enum DecimalPrecision {
     CRYPTO(8),
     FOREX(5),
     COMMODITY(3),
-    CASH(2);
+    CASH(2); // this is wrong, cash/money handled by currency.getprecisiondefault()
 
     private final int decimalPlaces;
 

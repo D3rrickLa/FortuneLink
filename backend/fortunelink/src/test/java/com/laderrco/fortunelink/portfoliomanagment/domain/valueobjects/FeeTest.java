@@ -9,6 +9,7 @@ import java.util.Currency;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.FeeType;
+import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class FeeTest {
@@ -22,6 +23,6 @@ public class FeeTest {
 
     @Test
     void testConstructorInValidFeeNegative() {
-        assertThrows(IllegalArgumentException.class, () -> new Fee(FeeType.ACCOUNT_MAINTENANCE, new Money(new BigDecimal("-12.54"), Currency.getInstance("USD"))));
+        assertThrows(InvalidQuantityException.class, () -> new Fee(FeeType.ACCOUNT_MAINTENANCE, new Money(new BigDecimal("-12.54"), Currency.getInstance("USD"))));
     }
 }

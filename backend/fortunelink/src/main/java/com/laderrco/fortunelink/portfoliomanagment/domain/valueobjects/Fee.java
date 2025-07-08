@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects;
 
+import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import java.math.BigDecimal;
@@ -13,7 +14,7 @@ public record Fee(FeeType feeType, Money amount) {
         Objects.requireNonNull(amount, "Amount cannot be null.");
 
         if (amount.amount().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Fee amount cannot be negative.");
+            throw new InvalidQuantityException("Fee amount cannot be negative.");
         }
     }
     

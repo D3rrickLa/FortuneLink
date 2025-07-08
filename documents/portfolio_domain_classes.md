@@ -73,7 +73,7 @@ Methods:
 - calculateAccruedInterest() // NEW: Calculate interest since last accrual
 - accrueInterest() // NEW: Add accrued interest to balance
 
-## Transaction - Entity
+## Transaction - Entity 🟨
 **Purpose**: Immutable record of all portfolio changes
 **Changes**: Added correlation and parent tracking, made truly immutable
 
@@ -92,9 +92,12 @@ Variables:
 - Integer version // NEW: For optimistic locking
 
 Methods:
-- isReversal()
-- isReversed() // Check if this transaction has been reversed
+- isReversal() // if this transaction caused a reversal
+- isReversed() // Check if this transaction has been reversed 
 - getRelatedTransactions() // Find transactions with same correlationId
+
+
+NOTE -> isReversed and getRelatedTransaction should NOT be in the domain, but rather the repo
 
 # --- VALUE OBJECTS ---
 

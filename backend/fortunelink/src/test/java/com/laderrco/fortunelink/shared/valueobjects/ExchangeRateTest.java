@@ -91,7 +91,8 @@ public class ExchangeRateTest {
         BigDecimal largeRate = new BigDecimal("0.7200000");
 
         ExchangeRate exchangeRate = new ExchangeRate(cad, usd, largeRate, rateDate, source);
-        boolean expired = exchangeRate.isExpired(Duration.ZERO);
+        Duration tesDuration = Duration.ofDays(-12L);
+        boolean expired = exchangeRate.isExpired(tesDuration);
         assertTrue(expired);
     }
     
