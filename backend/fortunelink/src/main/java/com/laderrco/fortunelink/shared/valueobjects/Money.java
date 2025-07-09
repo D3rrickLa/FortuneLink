@@ -108,7 +108,6 @@ public record Money(BigDecimal amount, Currency currency) {
         return new Money(convertedAmount, targetCurrency);
     }
 
-
     public static Money ZERO(Currency currency) {
         return new Money(BigDecimal.ZERO, currency);
     }

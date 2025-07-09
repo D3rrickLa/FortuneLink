@@ -1,8 +1,9 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,10 +28,6 @@ public class Transaction {
     private final List<Fee> fees;
     private boolean hidden;
     private int version; // for updating if fixes are needed
-    
-    
-    
-
 
     public Transaction(
         UUID transactionId, 
@@ -46,6 +43,16 @@ public class Transaction {
         boolean hidden, 
         int version
     ) {
+        Objects.requireNonNull(transactionId, "Transaction id cannot be null.");
+        Objects.requireNonNull(portfolioId, "Portfolio id cannot be null.");
+        Objects.requireNonNull(correlationId, "Correlation id cannot be null.");
+        Objects.requireNonNull(transactionType, "Transactiont type cannot be null.");
+        Objects.requireNonNull(totalTransactionAmount, "Total transaction amount cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+        Objects.requireNonNull(transactionDetails, "Transaction details cannot be null.");
+        Objects.requireNonNull(transactionMetadata, "Transaction metadata cannot be null.");
+        Objects.requireNonNull(version, "Version cannot be null.");
+        
         this.transactionId = transactionId;
         this.portfolioId = portfolioId;
         this.correlationId = correlationId;
@@ -55,17 +62,60 @@ public class Transaction {
         this.transactionDate = transactionDate;
         this.transactionDetails = transactionDetails;
         this.transactionMetadata = transactionMetadata;
-        this.fees = fees;
+        this.fees = fees != null ? fees : Collections.emptyList();
         this.hidden = hidden;
         this.version = version;
     }
 
-
-
-
-
     public boolean isReversed() {
         return Set.of(TransactionType.REVERSAL_BUY, TransactionType.REVERSAL_DEPOSIT, TransactionType.REVERSAL_SELL, TransactionType.REVERSAL_WITHDRAWAL).contains(this.transactionType);
     }
-    
+
+    public UUID getTransactionId() {
+        return transactionId;
+    }
+
+    public UUID getPortfolioId() {
+        return portfolioId;
+    }
+
+    public UUID getCorrelationId() {
+        return correlationId;
+    }
+
+    public UUID getParentTransactionId() {
+        return parentTransactionId;
+    }
+
+    public TransactionType getTransactionType() {
+        return transactionType;
+    }
+
+    public Money getTotalTransactionAmount() {
+        return totalTransactionAmount;
+    }
+
+    public Instant getTransactionDate() {
+        return transactionDate;
+    }
+
+    public com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails getTransactionDetails() {
+        return transactionDetails;
+    }
+
+    public TransactionMetadata getTransactionMetadata() {
+        return transactionMetadata;
+    }
+
+    public List<Fee> getFees() {
+        return fees;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public int getVersion() {
+        return version;
+    }
 }

@@ -1,12 +1,12 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums;
 
 public enum DecimalPrecision {
-    STOCK(4),
     BOND(6),
+    COMMODITY(3),
     CRYPTO(8),
     FOREX(5),
-    COMMODITY(3),
-    CASH(2); // this is wrong, cash/money handled by currency.getprecisiondefault()
+    PERCENTAGE(6),
+    STOCK(4);
 
     private final int decimalPlaces;
 

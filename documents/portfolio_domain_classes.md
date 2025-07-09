@@ -49,7 +49,7 @@ Methods:
 - removeFromPosition(BigDecimal quantity) // Called by Portfolio
 - getCurrentValue(MarketPrice currentPrice)
 
-## Liability - Entity
+## Liability - Entity 🟨
 **Purpose**: Tracks debt obligations
 **Changes**: Added interest calculation methods
 
@@ -73,7 +73,11 @@ Methods:
 - calculateAccruedInterest() // NEW: Calculate interest since last accrual
 - accrueInterest() // NEW: Add accrued interest to balance
 
-## Transaction - Entity 🟨
+NOTE: we can't impelment the methods makePayment and reversePayment
+Both need outside data for them to compelte, which defeats the whole point of Entity and domains being a self-contained
+unit of data. we will instead have 'applyPayment' and 'reversePaymentEffect' methods that affects the balance 
+
+## Transaction - Entity ✅
 **Purpose**: Immutable record of all portfolio changes
 **Changes**: Added correlation and parent tracking, made truly immutable
 
@@ -97,7 +101,7 @@ Methods:
 - getRelatedTransactions() // Find transactions with same correlationId
 
 
-NOTE -> isReversed and getRelatedTransaction should NOT be in the domain, but rather the repo
+NOTE -> isReversal and getRelatedTransaction should NOT be in the domain, but rather the repo
 
 # --- VALUE OBJECTS ---
 
