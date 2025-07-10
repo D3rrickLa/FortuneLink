@@ -2,11 +2,8 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.Period;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Currency;
 import java.util.Objects;
 import java.util.UUID;
@@ -24,7 +21,6 @@ public class Liability {
     private Percentage annualInterestRate;
     private Instant maturityDate;
     private Instant lastInterestAccrualDate ; // when was interest last calculated.
-    private Currency liabilityCurrencyPreference;
     
     public Liability(
         UUID liabilityId, 
@@ -34,18 +30,32 @@ public class Liability {
         Money currentBalance,
         Percentage annualInterestRate,
         Instant maturityDate,
-        Instant lastInterestAccrualDate,
-        Currency liabilityCurrencyPreference
+        Instant lastInterestAccrualDate
     ) {
+        Objects.requireNonNull(liabilityId, "Liability id cannot be null.");
+        Objects.requireNonNull(portfolioId, "Portfolio id cannot be null.");
+        Objects.requireNonNull(name, "Name cannot be null.");
+        Objects.requireNonNull(currentBalance, "Liability balance cannot be null.");
+        Objects.requireNonNull(annualInterestRate, "Annual interest rate cannot be null.");
+        Objects.requireNonNull(maturityDate, "Maturity date cannot be null.");
+        Objects.requireNonNull(lastInterestAccrualDate, "Last interest accrual date cannot be null.");
+
+        if (currentBalance.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Initial liability balance cannot be a negative value.");
+        }
+
+        if (name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Liability name cannot be blank.");
+        }
+
         this.liabilityId = liabilityId;
         this.portfolioId = portfolioId;
         this.name = name;
-        this.description = description;
+        this.description = description.trim();
         this.currentBalance = currentBalance;
         this.annualInterestRate = annualInterestRate;
         this.maturityDate = maturityDate;
         this.lastInterestAccrualDate = lastInterestAccrualDate;
-        this.liabilityCurrencyPreference = liabilityCurrencyPreference;
     }
 
     public void applyPayment(Money paymentAmount) {
@@ -53,7 +63,7 @@ public class Liability {
         if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be a positive number.");
         }
-        if (!liabilityCurrencyPreference.equals(paymentAmount.currency())) {
+        if (!this.currentBalance.currency().equals(paymentAmount.currency())) {
             throw new IllegalArgumentException("Payment amount must be in the same currency as liability's currency preference.");
         }
         this.currentBalance = this.currentBalance.subtract(paymentAmount);
@@ -64,7 +74,7 @@ public class Liability {
         if (reverseAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Reverse amount must be a positive number.");
         }
-        if (!liabilityCurrencyPreference.equals(reverseAmount.currency())) {
+        if (!this.currentBalance.currency().equals(reverseAmount.currency())) {
             throw new IllegalArgumentException("Reverse amount must be in the same currency as liability's currency preference.");
         }
         this.currentBalance = this.currentBalance.add(reverseAmount);
@@ -75,7 +85,7 @@ public class Liability {
         if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount to increase liability balance must be a positive number.");
         }
-        if (!liabilityCurrencyPreference.equals(amount.currency())) {
+        if (!this.currentBalance.currency().equals(amount.currency())) {
             throw new IllegalArgumentException("Amount to increase liability balance must be the same currency as the liability currency preference.");
         }
         this.currentBalance = this.currentBalance.add(amount);
@@ -89,10 +99,9 @@ public class Liability {
         // we are assuming interest is calculated daily
 
         Instant currentDate = Instant.now();
-        
         long daysBetween = ChronoUnit.DAYS.between(this.lastInterestAccrualDate, currentDate);
         if (daysBetween <= 0) {
-            return Money.ZERO(liabilityCurrencyPreference);
+            return Money.ZERO(this.currentBalance.currency());
         }
         // annual rate / 365 = daily rate
         BigDecimal dailyRate = this.annualInterestRate.toDecimal().divide(BigDecimal.valueOf(365), 10, RoundingMode.HALF_EVEN);
@@ -100,7 +109,7 @@ public class Liability {
         // Interest = Principal x Daily Rate x Number of Days
         BigDecimal interestAmount = this.currentBalance.amount().multiply(dailyRate).multiply(BigDecimal.valueOf(daysBetween));
 
-        return new Money(interestAmount, liabilityCurrencyPreference);
+        return new Money(interestAmount, this.currentBalance.currency());
     }
 
     public Money accureInterest() {
@@ -159,7 +168,7 @@ public class Liability {
     }
 
     public Currency getLiabilityCurrencyPreference() {
-        return liabilityCurrencyPreference;
+        return this.currentBalance.currency();
     }
     
 }

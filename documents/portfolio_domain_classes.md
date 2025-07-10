@@ -28,7 +28,7 @@ Methods:
 - getAssetAllocation(Map<AssetIdentifier, MarketPrice> currentPrices)
 - accrueInterestOnLiabilities() // Calls liability.accrueInterest() on all liabilities
 
-## AssetHolding - Entity
+## AssetHolding - Entity 🟨
 **Purpose**: Tracks quantity and cost basis of assets
 **Changes**: Removed transaction methods (moved to Portfolio), simplified to pure data + calculations
 
@@ -38,7 +38,7 @@ Variables:
 - AssetIdentifier assetIdentifier
 - BigDecimal totalQuantity
 - Money totalAdjustedCostBasis (ACB for Canada)
-- Money averageCostPerUnit
+- Money averageCostPerUnit // removed as we can derive from totalAdjustedCostBasis / totalQuantity
 - Instant createdAt
 - Instant updatedAt
 
@@ -49,7 +49,7 @@ Methods:
 - removeFromPosition(BigDecimal quantity) // Called by Portfolio
 - getCurrentValue(MarketPrice currentPrice)
 
-## Liability - Entity 🟨
+## Liability - Entity ✅
 **Purpose**: Tracks debt obligations
 **Changes**: Added interest calculation methods
 

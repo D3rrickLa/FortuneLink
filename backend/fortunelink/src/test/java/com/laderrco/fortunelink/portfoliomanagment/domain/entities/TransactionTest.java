@@ -1,10 +1,13 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
@@ -60,11 +63,54 @@ public class TransactionTest {
         );
         boolean hidden = false;
         int version = 1;
-
-        Transaction newTransaction = new Transaction(parentTransactionId, parentTransactionId, correlationId, parentTransactionId, transactionType, totalTransactionAmount, transactionDate, transactionDetails, transactionMetadata, fees, hidden, version);
+        
+        Transaction newTransaction = new Transaction(UUID.randomUUID(), UUID.randomUUID(), correlationId, parentTransactionId, transactionType, totalTransactionAmount, transactionDate, transactionDetails, transactionMetadata, fees, hidden, version);
         assertNotNull(newTransaction);
-
+        
         assertTrue(newTransaction.isReversed());
     }
+    
+    
+    @Test
+    void testGetters() {
+        UUID correlationId = UUID.randomUUID();
+        UUID parentTransactionId = null;
+    
+        TransactionType transactionType = TransactionType.REVERSAL_BUY;
+        Money totalTransactionAmount = new Money(25.45d, usd);
+        Instant transactionDate = Instant.now();
+        TransactionDetails transactionDetails = new TransactionDetails() {};
+        
+        TransactionMetadata transactionMetadata = TransactionMetadata.createMetadata(
+            TransactionStatus.ACTIVE,
+            TransactionSource.MANUAL_INPUT,
+            "Some description about reversing my order.",
+            transactionDate
+        );
+    
+        fees.add(
+            new Fee(FeeType.COMMISSION, new Money(0.05d, usd))
+        );
+        fees.add(
+            new Fee(FeeType.OTHER, new Money(1.25d, usd))
+        );
+        boolean hidden = false;
+        int version = 1;
+        Transaction newTransaction = new Transaction(transactionId, portfolioId, correlationId, parentTransactionId, transactionType, totalTransactionAmount, transactionDate, transactionDetails, transactionMetadata, fees, hidden, version);
 
+        assertEquals(Collections.EMPTY_LIST, new Transaction(transactionId, portfolioId, correlationId, parentTransactionId, transactionType, totalTransactionAmount, transactionDate, transactionDetails, transactionMetadata, null, hidden, version).getFees());
+        assertEquals(transactionId, newTransaction.getTransactionId());
+        assertEquals(portfolioId, newTransaction.getPortfolioId());
+        assertEquals(correlationId, newTransaction.getCorrelationId());
+        assertEquals(parentTransactionId, newTransaction.getParentTransactionId());
+        assertEquals(transactionType, newTransaction.getTransactionType());
+        assertEquals(totalTransactionAmount, newTransaction.getTotalTransactionAmount());
+        assertEquals(transactionDate, newTransaction.getTransactionDate());
+        assertEquals(transactionDetails, newTransaction.getTransactionDetails());
+        assertEquals(transactionMetadata, newTransaction.getTransactionMetadata());
+        assertEquals(fees, newTransaction.getFees());
+        assertEquals(hidden, newTransaction.isHidden());
+        assertEquals(version, newTransaction.getVersion());
+
+    }
 }

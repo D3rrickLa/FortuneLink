@@ -99,7 +99,7 @@ public class Transaction {
         return transactionDate;
     }
 
-    public com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails getTransactionDetails() {
+    public TransactionDetails getTransactionDetails() {
         return transactionDetails;
     }
 
