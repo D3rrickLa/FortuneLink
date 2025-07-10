@@ -60,6 +60,14 @@ public class AssetHoldingTest {
         );
         
         assertNotNull(testAssetHolding);
+        assertEquals(assetId, testAssetHolding.getAssetId());
+        assertEquals(portfolioId, testAssetHolding.getPortfolioId());
+        assertEquals(assetIdentifier, testAssetHolding.getAssetIdentifier());
+        assertEquals(initalQuantity, testAssetHolding.getTotalQuantity());
+        assertEquals(initialCostPerUnit, testAssetHolding.getTotalAdjustedCostBasis());
+        assertEquals(createdAt, testAssetHolding.getCreatedAt());
+        assertEquals(createdAt, testAssetHolding.getUpdatedAt());
+        assertEquals(4, testAssetHolding.getAssetIdentifier().assetType().getDefaultQuantityPrecision().getDecimalPlaces());
     }
 
     @Test
@@ -164,7 +172,6 @@ public class AssetHoldingTest {
 
     @Test
     void testAddToPosition() {
-        // Setup initial values
         BigDecimal initialQuantity = BigDecimal.valueOf(207); // 207 + 50 = 257
         Money initialCostBasis = new Money(new BigDecimal("476.02"), usd); // This + 245.32 = 721.34
         
@@ -186,6 +193,37 @@ public class AssetHoldingTest {
         assertEquals(BigDecimal.valueOf(257), testAssetHolding.getTotalQuantity());
         assertEquals(new Money(new BigDecimal("721.34"), usd), testAssetHolding.getTotalAdjustedCostBasis());
     }   
+
+    @Test 
+    void testAddToPositionInValidIfBranches() {
+        BigDecimal initialQuantity = BigDecimal.valueOf(207); // 207 + 50 = 257
+        Money initialCostBasis = new Money(new BigDecimal("476.02"), usd); // This + 245.32 = 721.34
+        
+        AssetHolding testAssetHolding = new AssetHolding(
+            assetId, 
+            portfolioId, 
+            assetIdentifier, 
+            initialQuantity, 
+            initialCostBasis, 
+            createdAt
+        );
+
+        BigDecimal quantity = new BigDecimal(-2);
+        Money costBasis = new Money(new BigDecimal("245.32"), usd);
+        
+        Exception e1 = assertThrows(IllegalArgumentException.class, () -> testAssetHolding.addToPosition(quantity, costBasis));
+        assertEquals("Quantity must be positive.", e1.getMessage());
+        
+        BigDecimal quantity02 = new BigDecimal(20);
+        Currency cad = Currency.getInstance("CAD");
+        Money costBasis02 = new Money(new BigDecimal("245.32"), cad);
+        Exception e2 = assertThrows(IllegalArgumentException.class, () -> testAssetHolding.addToPosition(quantity02, costBasis02));
+        assertEquals("Cost basis currency must match existing holdings currency.", e2.getMessage());
+
+
+
+
+    }
 
     @Test
     void testCalculateCapitalGain() {
@@ -255,6 +293,22 @@ public class AssetHoldingTest {
         assertEquals(expected, avgCostBasisPerUnit);
     }
 
+    @Test 
+    void testGetAverageACBPerUnitTotalQuantityIsZero() {
+        AssetHolding testAssetHolding = new AssetHolding(
+            assetId, 
+            portfolioId, 
+            assetIdentifier, 
+            BigDecimal.ZERO, 
+            initialCostPerUnit, 
+            createdAt
+        );
+
+        Money avgCostBasisPerUnit = testAssetHolding.getAverageACBPerUnit();
+        Money expected = new Money(0.00, usd);
+        assertEquals(expected, avgCostBasisPerUnit);
+    }
+
     @Test
     void testGetCurrentValue() {
         AssetHolding testAssetHolding = new AssetHolding(
@@ -319,6 +373,23 @@ public class AssetHoldingTest {
         BigDecimal quantityToSell = BigDecimal.valueOf(20);
         testAssetHolding.removeFromPosition(quantityToSell);
         assertEquals(BigDecimal.valueOf(187), testAssetHolding.getTotalQuantity());
+    }
+
+    @Test 
+    void testRemoveFromPositionRemoveAll() {
+        AssetHolding testAssetHolding = new AssetHolding(
+            assetId, 
+            portfolioId, 
+            assetIdentifier, 
+            initalQuantity, 
+            initialCostPerUnit, 
+            createdAt
+        );
+    
+        BigDecimal quantityToSell = BigDecimal.valueOf(207);
+        testAssetHolding.removeFromPosition(quantityToSell);
+        assertEquals(BigDecimal.valueOf(0), testAssetHolding.getTotalQuantity());
+        assertEquals(BigDecimal.valueOf(0).setScale(2), testAssetHolding.getTotalAdjustedCostBasis().amount());
     }
     
     @Test

@@ -28,7 +28,7 @@ Methods:
 - getAssetAllocation(Map<AssetIdentifier, MarketPrice> currentPrices)
 - accrueInterestOnLiabilities() // Calls liability.accrueInterest() on all liabilities
 
-## AssetHolding - Entity 🟨
+## AssetHolding - Entity ✅
 **Purpose**: Tracks quantity and cost basis of assets
 **Changes**: Removed transaction methods (moved to Portfolio), simplified to pure data + calculations
 

@@ -33,7 +33,7 @@ public class AssetHolding {
         Objects.requireNonNull(totalAdjustedCostBasis, "Total adjusted cost basis cannot be null.");
         Objects.requireNonNull(createdAt, "Created at cannot be null.");
         
-        if (totalQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+        if (totalQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Quantity of asset cannot be less than zero.");
         }
 
@@ -97,16 +97,16 @@ public class AssetHolding {
      */
     public void addToPosition(BigDecimal quantity, Money costBasis) {
         // called by Portfolio
-        Objects.requireNonNull(quantity, "Quantity cannot be null");
-        Objects.requireNonNull(costBasis, "Cost basis cannot be null");
+        Objects.requireNonNull(quantity, "Quantity cannot be null.");
+        Objects.requireNonNull(costBasis, "Cost basis cannot be null.");
         
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
+            throw new IllegalArgumentException("Quantity must be positive.");
         }
 
         // Validate currency matches existing holdings
         if (!costBasis.currency().equals(this.totalAdjustedCostBasis.currency())) {
-            throw new IllegalArgumentException("Cost basis currency must match existing holdings currency");
+            throw new IllegalArgumentException("Cost basis currency must match existing holdings currency.");
         }
 
         this.totalQuantity = this.totalQuantity.add(quantity);
