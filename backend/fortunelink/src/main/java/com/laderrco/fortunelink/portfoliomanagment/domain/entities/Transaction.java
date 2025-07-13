@@ -20,9 +20,9 @@ public class Transaction {
     private final UUID parentTransactionId;
 
     private final TransactionType transactionType;
-    private final Money totalTransactionAmount;
+    private final Money totalTransactionAmount; // portfolio's currency preference. Full amount without fees
     private final Instant transactionDate;
-    private final com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails transactionDetails;
+    private final TransactionDetails transactionDetails;
     private final TransactionMetadata transactionMetadata;
     
     private final List<Fee> fees;

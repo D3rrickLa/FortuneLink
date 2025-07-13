@@ -12,11 +12,13 @@ import java.util.UUID;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetAllocation;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTransactionInput;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails;
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
@@ -57,7 +59,52 @@ public class Portfolio {
         this.exchangeRateService = exchangeRateService;
     }
 
-    public void recordCashflow(TransactionDetails details) {
+    // the parameter head might be wrong
+    // do we abstract some of the Transaction methods to the TransactionDetails class?
+    public void recordCashflow(CashflowTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
+
+        Money totalAmount = details.getCovertedCashflowAmount();
+
+        // this is technically wrong, we need to make sure all fee are/is in the portfolio's preference
+        Money totalFeesAmount = commonTransactionInput.fees().stream()
+            .map((Fee::amount))
+            .reduce(Money.ZERO(this.currencyPreference), Money::add);
+
+        Transaction newCashTransaction = new Transaction(
+            UUID.randomUUID(),
+            this.portfolioId,
+            commonTransactionInput.correlationId(),
+            commonTransactionInput.parentTransactionId(),
+            commonTransactionInput.transactionType(),
+            totalAmount,
+            transactionDate,
+            details, 
+            commonTransactionInput.transactionMetadata(),
+            commonTransactionInput.fees(),
+            false,
+            1
+        );
+
+        this.transactions.add(newCashTransaction);
+
+        Money netCashImpact = Money.ZERO(this.currencyPreference);
+        if (commonTransactionInput.transactionType() == TransactionType.DEPOSIT) {
+            netCashImpact = totalAmount.subtract(totalFeesAmount);
+        } 
+        else if (commonTransactionInput.transactionType() == TransactionType.WITHDRAWAL) {
+            // For withdrawal, both the withdrawn amount and fees are subtracted.
+            // Assuming principalTransactionAmount is positive (amount withdrawn).
+            netCashImpact = totalAmount.negate().subtract(totalFeesAmount);
+        } 
+        else {
+            // Handle other cashflow types or throw an exception if type is not recognized for cash balance update.
+            // For example, an `ACCOUNT_TRANSFER` might have a different net impact.
+            throw new IllegalArgumentException("Unsupported cashflow transaction type for balance update: " + commonTransactionInput.transactionType());
+        }
+
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
+
+        this.fees.addAll(commonTransactionInput.fees());
 
     }
 
@@ -85,14 +132,14 @@ public class Portfolio {
         // total value in portfolio's preference
         // this is an example, we would need an acutal service class to handle this
         // TODO switch to acutal service, currenyl using CAD -> USD
-        Money total = Money.ZERO(currencyPreference);
+        Money total = Money.ZERO(this.currencyPreference);
         for (AssetHolding assetHolding : assetHoldings) {
             // check if we need to even do it
             MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
 
             if (price != null) {
                 Money holdingValue = assetHolding.getCurrentValue(price);
-                Money convertedValue = holdingValue.convertTo(currencyPreference, new ExchangeRate(assetHolding.getTotalAdjustedCostBasis().currency(), currencyPreference, new BigDecimal(1.38), Instant.now(), null));
+                Money convertedValue = exchangeRateService.convert(holdingValue, this.currencyPreference);
                 total = total.add(convertedValue);
             }
         }
@@ -105,20 +152,14 @@ public class Portfolio {
 
     public AssetAllocation getAssetAllocation (Map<AssetIdentifier, MarketPrice> currentPrices) {
         Money totalValue = calculateTotalValue(currentPrices);
-        AssetAllocation allocation = new AssetAllocation(totalValue, currencyPreference);
+        AssetAllocation allocation = new AssetAllocation(totalValue, this.currencyPreference);
 
         for (AssetHolding assetHolding : assetHoldings) {
             MarketPrice marketPrice = currentPrices.get(assetHolding.getAssetIdentifier()); 
             if (marketPrice != null) {
                 Money holdingValue = assetHolding.getCurrentValue(marketPrice); // this needs to return value in portfolio pref
                 
-                Money covertedValue = holdingValue.convertTo(currencyPreference, new ExchangeRate(
-                    assetHolding.getTotalAdjustedCostBasis().currency(), 
-                    currencyPreference, 
-                    new BigDecimal("1.38"),
-                    Instant.now(), 
-                    null
-                ));
+                Money covertedValue = exchangeRateService.convert(holdingValue, this.currencyPreference);
                 
                 Percentage percentage = new Percentage(
                     covertedValue.amount()

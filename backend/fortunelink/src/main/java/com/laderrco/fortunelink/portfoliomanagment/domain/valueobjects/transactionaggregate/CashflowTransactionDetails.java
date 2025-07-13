@@ -6,7 +6,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 public final class CashflowTransactionDetails extends TransactionDetails {
     private final Money originalCashflowAmount;
     private final Money covertedCashflowAmount;
-    private final Money totalConversionFees;
+    private final Money totalConversionFees; // combined fees, forex + other
     private final ExchangeRate exchangeRate;
     
     public CashflowTransactionDetails(

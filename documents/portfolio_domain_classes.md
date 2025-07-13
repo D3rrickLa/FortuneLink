@@ -294,3 +294,21 @@ Variables:
 6. **Simplified fee structure** by combining related fees
 7. **Added currency conversion support** with ExchangeRate VO
 8. **Added market price tracking** for portfolio valuation
+
+
+--- 
+# UPDATE
+
+a new class is needed, the Portfolio methods do not have enought data to create a 
+transaction and other List<Object>
+
+we are creating CommonTransactionInput that will house some of the common
+Transaction.java variables, we are passing this into the method header of the methods 
+that need is (mainly the recordX methods)
+
+
+THIS TO CONSIDER
+- we need to be sure there are no overlap with the data being given in the TransactionDetails sub class 
+and this class. if there are 2 fees for example, how does portfolio know which one to choose?
+- another is the totalTransactionAmount, we need to make sure that we are passing the correct information to the Transaction.java
+when it is time to create one

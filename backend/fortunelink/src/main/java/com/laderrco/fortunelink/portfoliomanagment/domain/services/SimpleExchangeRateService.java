@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+// TODO fix this to you the money converTo method
 public class SimpleExchangeRateService implements ExchangeRateService {
 
     // Store predefined exchange rates for testing
