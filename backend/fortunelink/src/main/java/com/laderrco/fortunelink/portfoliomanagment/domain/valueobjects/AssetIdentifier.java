@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
 
 public record AssetIdentifier(
+    String symbol,
     AssetType assetType,
     String isin,
     String assetCommonName,
@@ -13,6 +14,7 @@ public record AssetIdentifier(
     
 ) {
     public AssetIdentifier{
+        Objects.requireNonNull(symbol, "Asset symbol cannot be null.");
         Objects.requireNonNull(assetType, "Asset type cannot be null.");
         Objects.requireNonNull(isin, "ISIN cannot be null.");
         Objects.requireNonNull(assetCommonName, "Asset common name cannot be null.");

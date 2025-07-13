@@ -35,6 +35,7 @@ public class AssetHoldingTest {
         assetId = UUID.randomUUID();
         portfolioId = UUID.randomUUID();
         assetIdentifier = new AssetIdentifier(
+            "APPL",
             AssetType.STOCK, 
             "US0378331005", 
             "APPLE", 

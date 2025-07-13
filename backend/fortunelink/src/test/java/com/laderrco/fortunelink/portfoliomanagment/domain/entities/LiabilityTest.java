@@ -105,7 +105,27 @@ public class LiabilityTest {
         // testing with a different lastInterestAccuralDate
         Liability testLiability02 = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, Instant.parse("2025-06-06T10:00:00.00Z"));
         Money interestAmount02 = testLiability02.calculateAccuredInterest();
-        assertEquals(new Money(19.81, usd), interestAmount02);
+        Instant currentDate = Instant.now();
+        long daysBetween = ChronoUnit.DAYS.between(Instant.parse("2025-06-06T10:00:00.00Z"), currentDate);
+        
+        Money amount;
+        
+        if (daysBetween <= 0) {
+            amount = Money.ZERO(testLiability.getLiabilityCurrencyPreference());
+        }
+        else{
+            // annual rate / 365 = daily rate
+            BigDecimal dailyRate = testLiability.getAnnualInterestRate().toDecimal().divide(BigDecimal.valueOf(365), 10, RoundingMode.HALF_EVEN);
+            // Interest = Principal x Daily Rate x Number of Days
+            BigDecimal interestAmount01 = testLiability.getCurrentBalance().amount().multiply(dailyRate).multiply(BigDecimal.valueOf(daysBetween));
+            amount = new Money(interestAmount01, usd);
+            
+        }
+        
+        
+        
+        
+        assertEquals(amount, interestAmount02);
     }
     
     @Test

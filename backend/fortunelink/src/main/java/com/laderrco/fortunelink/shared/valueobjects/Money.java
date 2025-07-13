@@ -111,4 +111,8 @@ public record Money(BigDecimal amount, Currency currency) {
     public static Money ZERO(Currency currency) {
         return new Money(BigDecimal.ZERO, currency);
     }
+
+    public static Money of(BigDecimal bigDecimal, Currency instance) {
+        return new Money(bigDecimal, instance);
+    }
 }

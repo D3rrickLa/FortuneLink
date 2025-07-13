@@ -31,6 +31,7 @@ public class MarketPriceTest {
     @BeforeEach
     void init() {
         assetIdentifier = new AssetIdentifier(
+        "APPL",
         AssetType.STOCK, 
         "US0378331005 ",
         "APPLE", 

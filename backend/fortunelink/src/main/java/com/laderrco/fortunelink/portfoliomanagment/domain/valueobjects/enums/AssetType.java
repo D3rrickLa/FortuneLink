@@ -6,6 +6,7 @@ public enum AssetType {
     CRYPTO(DecimalPrecision.CRYPTO),
     BOND(DecimalPrecision.BOND),
     COMMODITY(DecimalPrecision.COMMODITY),
+    REAL_ESTATE(DecimalPrecision.CASH),
     FOREX_PAIR(DecimalPrecision.FOREX),
     OTHER(DecimalPrecision.CASH);
 
