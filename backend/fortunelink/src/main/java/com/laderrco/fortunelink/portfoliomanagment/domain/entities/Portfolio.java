@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Currency;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.ExchangeRateService;
@@ -17,8 +19,10 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails;
+import com.laderrco.fortunelink.shared.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
@@ -29,7 +33,6 @@ public class Portfolio {
     private String portfolioDescription;
     private Money portfolioCashBalance;
     private Currency currencyPreference; // view everything in one currency, preference
-    private List<Fee> fees;
     private List<Transaction> transactions;
     private List<AssetHolding> assetHoldings;
     private List<Liability> liabilities;
@@ -51,7 +54,6 @@ public class Portfolio {
         this.portfolioDescription = portfolioDescription;
         this.portfolioCashBalance = portfolioCashBalance;
         this.currencyPreference = currencyPreference;
-        this.fees = new ArrayList<>();
         this.transactions = new ArrayList<>();
         this.assetHoldings = new ArrayList<>();
         this.liabilities = new ArrayList<>();
@@ -59,16 +61,29 @@ public class Portfolio {
         this.exchangeRateService = exchangeRateService;
     }
 
+    private Money getTotalFeesAmount(CommonTransactionInput commonTransactionInput) {
+        Money totalFeesAmount = Money.ZERO(this.currencyPreference);
+        for (Fee fee : commonTransactionInput.fees()) {
+            Money feeAmount = fee.amount();
+            if (!feeAmount.currency().equals(this.currencyPreference)) {
+                
+                feeAmount = exchangeRateService.convert(feeAmount, this.currencyPreference);
+                // NOTE: fees are not expected to be in the portfolio's currency, we will be converting
+                // if we did expect if to be in the currency fee amount, throw an error
+            }
+
+            totalFeesAmount = totalFeesAmount.add(feeAmount);
+        }
+        return totalFeesAmount;
+    }
+
     // the parameter head might be wrong
     // do we abstract some of the Transaction methods to the TransactionDetails class?
     public void recordCashflow(CashflowTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
 
-        Money totalAmount = details.getCovertedCashflowAmount();
+        Money totalAmount = details.getConvertedCashflowAmount();
 
-        // this is technically wrong, we need to make sure all fee are/is in the portfolio's preference
-        Money totalFeesAmount = commonTransactionInput.fees().stream()
-            .map((Fee::amount))
-            .reduce(Money.ZERO(this.currencyPreference), Money::add);
+        Money totalFeesAmount = getTotalFeesAmount(commonTransactionInput);
 
         Transaction newCashTransaction = new Transaction(
             UUID.randomUUID(),
@@ -88,10 +103,10 @@ public class Portfolio {
         this.transactions.add(newCashTransaction);
 
         Money netCashImpact = Money.ZERO(this.currencyPreference);
-        if (commonTransactionInput.transactionType() == TransactionType.DEPOSIT) {
+        if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(commonTransactionInput.transactionType())) {
             netCashImpact = totalAmount.subtract(totalFeesAmount);
         } 
-        else if (commonTransactionInput.transactionType() == TransactionType.WITHDRAWAL) {
+        else if (Set.of(TransactionType.WITHDRAWAL).contains(commonTransactionInput.transactionType())) {
             // For withdrawal, both the withdrawn amount and fees are subtracted.
             // Assuming principalTransactionAmount is positive (amount withdrawn).
             netCashImpact = totalAmount.negate().subtract(totalFeesAmount);
@@ -103,12 +118,64 @@ public class Portfolio {
         }
 
         this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
-
-        this.fees.addAll(commonTransactionInput.fees());
-
     }
 
-    public void recordAssetPurchase(TransactionDetails details) {
+    public void recordAssetPurchase(AssetTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
+        
+        if (commonTransactionInput.transactionType() != TransactionType.BUY) {
+            throw new IllegalArgumentException("Expected BUY transaction type, got: " + commonTransactionInput.transactionType());
+        }
+
+        Money totalTransactionAmount = details.getAssetValueInPortfolioCurrency();
+        Money totalFeesAmount = getTotalFeesAmount(commonTransactionInput);
+
+        Optional<AssetHolding> existingHolding = assetHoldings.stream()
+            .filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
+            .findFirst();
+        
+        AssetHolding holding;
+        if (existingHolding.isPresent()) {
+            holding = existingHolding.get();
+            holding.addToPosition(details.getQuantity(), details.getAssetValueInAssetCurrency());
+        }
+        else {
+            holding = new AssetHolding(
+                UUID.randomUUID(),
+                this.portfolioId,
+                details.getAssetIdentifier(),
+                details.getQuantity(),
+                details.getAssetValueInAssetCurrency(),
+                transactionDate
+            ); 
+            this.assetHoldings.add(holding);
+        }
+
+
+        // calculating the new impact on the porfolio current cash balance
+        Money netCashImpact = details.getAssetValueInPortfolioCurrency().add(totalFeesAmount).negate();
+        
+        Money newBalance = this.portfolioCashBalance.add(netCashImpact);
+        if (newBalance.isNegative()) {
+            throw new InsufficientFundsException("Insufficient cash for asset purchase.");
+        }
+
+        this.portfolioCashBalance = newBalance;
+
+        Transaction newAssetTransaction = new Transaction(
+            UUID.randomUUID(),
+            this.portfolioId,
+            commonTransactionInput.correlationId(),
+            commonTransactionInput.parentTransactionId(),
+            commonTransactionInput.transactionType(),
+            totalTransactionAmount,
+            transactionDate,
+            details, 
+            commonTransactionInput.transactionMetadata(),
+            commonTransactionInput.fees(),
+            false,
+            1
+        );
+        this.transactions.add(newAssetTransaction);
 
     }
 
@@ -177,49 +244,16 @@ public class Portfolio {
     public void accruelInterestLiabilities() {
 
     }
-
-    public UUID getPortfolioId() {
-        return portfolioId;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public String getPortfolioName() {
-        return portfolioName;
-    }
-
-    public String getPortfolioDescription() {
-        return portfolioDescription;
-    }
-
-    public Money getPortfolioCashBalance() {
-        return portfolioCashBalance;
-    }
-
-    public Currency getCurrencyPreference() {
-        return currencyPreference;
-    }
-
-    public List<Fee> getFees() {
-        return fees;
-    }
-
-    public List<Transaction> getTransactions() {
-        return transactions;
-    }
-
-    public List<AssetHolding> getAssetHoldings() {
-        return assetHoldings;
-    }
-
-    public List<Liability> getLiabilities() {
-        return liabilities;
-    }
-
-    public ExchangeRateService getExchangeRateService() {
-        return exchangeRateService;
-    }
+    
+    public UUID getPortfolioId() {return portfolioId;}
+    public UUID getUserId() {return userId;}
+    public String getPortfolioName() {return portfolioName;}
+    public String getPortfolioDescription() {return portfolioDescription;}
+    public Money getPortfolioCashBalance() {return portfolioCashBalance;}
+    public Currency getCurrencyPreference() {return currencyPreference;}
+    public List<Transaction> getTransactions() {return transactions;}
+    public List<AssetHolding> getAssetHoldings() {return assetHoldings;}
+    public List<Liability> getLiabilities() {return liabilities;}
+    public ExchangeRateService getExchangeRateService() {return exchangeRateService;}
     
 }

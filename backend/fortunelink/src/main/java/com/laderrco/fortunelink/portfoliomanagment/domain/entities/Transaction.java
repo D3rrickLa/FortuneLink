@@ -22,10 +22,10 @@ public class Transaction {
     private final TransactionType transactionType;
     private final Money totalTransactionAmount; // portfolio's currency preference. Full amount without fees
     private final Instant transactionDate;
-    private final TransactionDetails transactionDetails;
+    private final TransactionDetails transactionDetails; // cotnains both currencies 
     private final TransactionMetadata transactionMetadata;
     
-    private final List<Fee> fees;
+    private final List<Fee> fees; // og currency
     private boolean hidden;
     private int version; // for updating if fixes are needed
 

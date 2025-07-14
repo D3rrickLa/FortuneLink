@@ -11,7 +11,7 @@ Variables:
 - String portfolioDescription
 - Money portfolioCashBalance
 - Currency currencyPreference
-- List<Fee> fees
+- List<Fee> fees // I have no idea why we have this, will remove this
 - List<Transaction> transactions
 - List<AssetHolding> assetHoldings
 - List<Liability> liabilities
@@ -235,6 +235,8 @@ Variables:
 - Money assetValueInPortfolioCurrency
 - Money costBasisInPortfolioCurrency
 - Money totalFeesInPortfolioCurrency // SIMPLIFIED: Combined all fees
+
+NOTE: we need 2 new fields for ACB. costBasisInAssetCurrency and totalFeesInAssetCurrency
 
 ## LiabilityIncurrenceTransactionDetails - Value Object ✅
 **Purpose**: Track new debt
