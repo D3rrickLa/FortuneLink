@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Currency;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -121,22 +122,20 @@ public class Portfolio {
     }
 
     public void recordAssetPurchase(AssetTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
-        
-        if (commonTransactionInput.transactionType() != TransactionType.BUY) {
-            throw new IllegalArgumentException("Expected BUY transaction type, got: " + commonTransactionInput.transactionType());
-        }
+        Objects.requireNonNull(details, "details cannot be null.");
+        Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
+        Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
 
         Money totalTransactionAmount = details.getAssetValueInPortfolioCurrency();
-        Money totalFeesAmount = getTotalFeesAmount(commonTransactionInput);
-
+        Money totalFeesInPortfolioCurrency = getTotalFeesAmount(commonTransactionInput);
+        
         Optional<AssetHolding> existingHolding = assetHoldings.stream()
             .filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
             .findFirst();
-        
         AssetHolding holding;
         if (existingHolding.isPresent()) {
             holding = existingHolding.get();
-            holding.addToPosition(details.getQuantity(), details.getAssetValueInAssetCurrency());
+            holding.addToPosition(details.getQuantity(), details.getCostBasisInAssetCurrency());
         }
         else {
             holding = new AssetHolding(
@@ -144,16 +143,13 @@ public class Portfolio {
                 this.portfolioId,
                 details.getAssetIdentifier(),
                 details.getQuantity(),
-                details.getAssetValueInAssetCurrency(),
+                details.getCostBasisInAssetCurrency().add(details.getTotalFeesInAssetCurrency()),
                 transactionDate
-            ); 
+            );
             this.assetHoldings.add(holding);
         }
 
-
-        // calculating the new impact on the porfolio current cash balance
-        Money netCashImpact = details.getAssetValueInPortfolioCurrency().add(totalFeesAmount).negate();
-        
+        Money netCashImpact = details.getAssetValueInPortfolioCurrency().add(totalFeesInPortfolioCurrency).negate();
         Money newBalance = this.portfolioCashBalance.add(netCashImpact);
         if (newBalance.isNegative()) {
             throw new InsufficientFundsException("Insufficient cash for asset purchase.");
@@ -169,14 +165,13 @@ public class Portfolio {
             commonTransactionInput.transactionType(),
             totalTransactionAmount,
             transactionDate,
-            details, 
+            details,
             commonTransactionInput.transactionMetadata(),
             commonTransactionInput.fees(),
             false,
             1
         );
         this.transactions.add(newAssetTransaction);
-
     }
 
     public void recordAssetSale(TransactionDetails details) {

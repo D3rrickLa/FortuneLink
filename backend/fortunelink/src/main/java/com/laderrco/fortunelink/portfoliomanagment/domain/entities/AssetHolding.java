@@ -14,7 +14,7 @@ public class AssetHolding {
     private final UUID portfolioId;
     private final AssetIdentifier assetIdentifier;
     private BigDecimal totalQuantity;
-    private Money totalAdjustedCostBasis; // in asset's native currency
+    private Money totalAdjustedCostBasis; // in asset's native currency, this is a large number btw
     private final Instant createdAt;
     private Instant updatedAt;
 

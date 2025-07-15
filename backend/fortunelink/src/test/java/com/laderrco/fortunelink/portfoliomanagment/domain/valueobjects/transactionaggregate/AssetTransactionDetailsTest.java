@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Currency;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class AssetTransactionDetailsTest {
@@ -20,7 +22,9 @@ public class AssetTransactionDetailsTest {
     private Money assetValueInAssetCurrency;
     private Money assetValueInPortfolioCurrency;
     private Money costBasisInPortfolioCurrency;
+    private Money costBasisInAssetCurrency;
     private Money totalFeesInPortfolioCurrency;
+    private Money totalFeesInAssetCurrency;
 
     private Currency usd;
     private Currency cad;
@@ -45,16 +49,30 @@ public class AssetTransactionDetailsTest {
         assetValueInPortfolioCurrency = pricePerUnit.multiply(quantity).multiply(BigDecimal.valueOf(1.37));
 
         totalFeesInPortfolioCurrency = new Money(0.47, cad);
+        totalFeesInAssetCurrency = totalFeesInPortfolioCurrency.divide(BigDecimal.valueOf(1.37));
 
-        costBasisInPortfolioCurrency = Money.of(
-            quantity.multiply(pricePerUnit.amount()).add(totalFeesInPortfolioCurrency.amount()), 
-            cad
+        costBasisInAssetCurrency = Money.of(
+            quantity.multiply(pricePerUnit.amount()).add(totalFeesInAssetCurrency.amount()), 
+            usd
         );
+
+        costBasisInPortfolioCurrency = costBasisInAssetCurrency.convertTo(cad, 
+        new ExchangeRate(usd, cad, BigDecimal.valueOf(1.37), Instant.now(), null));
     }
 
     @Test
     void testConstructor() {
-        AssetTransactionDetails transactionDetails = new AssetTransactionDetails(assetIdentifier, quantity, pricePerUnit, assetValueInAssetCurrency, assetValueInPortfolioCurrency, costBasisInPortfolioCurrency, totalFeesInPortfolioCurrency);
+        AssetTransactionDetails transactionDetails = new AssetTransactionDetails(
+            assetIdentifier, 
+            quantity, 
+            pricePerUnit, 
+            assetValueInAssetCurrency, 
+            assetValueInPortfolioCurrency, 
+            costBasisInPortfolioCurrency,
+            costBasisInAssetCurrency, 
+            totalFeesInPortfolioCurrency,
+            totalFeesInAssetCurrency
+        );
         assertNotNull(transactionDetails);
         assertEquals(assetIdentifier, transactionDetails.getAssetIdentifier());
         assertEquals(quantity, transactionDetails.getQuantity());
@@ -62,6 +80,9 @@ public class AssetTransactionDetailsTest {
         assertEquals(assetValueInAssetCurrency, transactionDetails.getAssetValueInAssetCurrency());
         assertEquals(assetValueInPortfolioCurrency, transactionDetails.getAssetValueInPortfolioCurrency());
         assertEquals(costBasisInPortfolioCurrency, transactionDetails.getCostBasisInPortfolioCurrency());
+        assertEquals(costBasisInAssetCurrency, transactionDetails.getCostBasisInAssetCurrency());
         assertEquals(totalFeesInPortfolioCurrency, transactionDetails.getTotalFeesInPortfolioCurrency());
+        assertEquals(totalFeesInAssetCurrency, transactionDetails.getTotalFeesInAssetCurrency());
+
     }
 }

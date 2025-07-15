@@ -10,9 +10,9 @@ public final class AssetTransactionDetails extends TransactionDetails {
     private final AssetIdentifier assetIdentifier;
     private final BigDecimal quantity;
     private final Money pricePerUnit;
-    private final Money assetValueInAssetCurrency;
+    private final Money assetValueInAssetCurrency; // quant * ppu
     private final Money assetValueInPortfolioCurrency;
-    private final Money costBasisInPortfolioCurrency;
+    private final Money costBasisInPortfolioCurrency; // quant * ppu + fees
     private final Money costBasisInAssetCurrency;
     private final Money totalFeesInPortfolioCurrency; // SIMPLIFIED: Combined all fees
     private final Money totalFeesInAssetCurrency;
@@ -59,3 +59,8 @@ public final class AssetTransactionDetails extends TransactionDetails {
     
     
 }   
+
+/*
+ * NOTE
+ * so for fees, we want to sum only those that aren't in portfolio prefernce
+ */
