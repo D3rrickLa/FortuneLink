@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Currency;
@@ -18,14 +16,12 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIden
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTransactionInput;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails;
 import com.laderrco.fortunelink.shared.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 public class Portfolio {
     private final UUID portfolioId;
@@ -80,6 +76,7 @@ public class Portfolio {
 
     // the parameter head might be wrong
     // do we abstract some of the Transaction methods to the TransactionDetails class?
+    // we are trusting 'details' for all the pre calcualted financial gigures for a transaction
     public void recordCashflow(CashflowTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
 
         Money totalAmount = details.getConvertedCashflowAmount();
@@ -126,8 +123,13 @@ public class Portfolio {
         Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
         Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
 
+        if (commonTransactionInput.transactionType() != TransactionType.BUY) {
+            throw new IllegalArgumentException("Expected BUY transaction type, got: " + commonTransactionInput.transactionType());
+        }
+
         Money totalTransactionAmount = details.getAssetValueInPortfolioCurrency();
-        Money totalFeesInPortfolioCurrency = getTotalFeesAmount(commonTransactionInput);
+        // Money totalFeesInPortfolioCurrency = getTotalFeesAmount(commonTransactionInput); // this is the problem child, we already calculated this
+        // it might be giving us wrong values
         
         Optional<AssetHolding> existingHolding = assetHoldings.stream()
             .filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
@@ -143,13 +145,14 @@ public class Portfolio {
                 this.portfolioId,
                 details.getAssetIdentifier(),
                 details.getQuantity(),
-                details.getCostBasisInAssetCurrency().add(details.getTotalFeesInAssetCurrency()),
+                details.getCostBasisInAssetCurrency(),
                 transactionDate
             );
             this.assetHoldings.add(holding);
         }
 
-        Money netCashImpact = details.getAssetValueInPortfolioCurrency().add(totalFeesInPortfolioCurrency).negate();
+        // using the precalculated value instead of asset value in portfolio currency - fees in portfolio currency
+        Money netCashImpact = details.getCostBasisInPortfolioCurrency().negate();
         Money newBalance = this.portfolioCashBalance.add(netCashImpact);
         if (newBalance.isNegative()) {
             throw new InsufficientFundsException("Insufficient cash for asset purchase.");
@@ -174,8 +177,51 @@ public class Portfolio {
         this.transactions.add(newAssetTransaction);
     }
 
-    public void recordAssetSale(TransactionDetails details) {
+    public void recordAssetSale(AssetTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
+        Objects.requireNonNull(details, "details cannot be null.");
+        Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
+        Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
 
+        if (commonTransactionInput.transactionType() != TransactionType.SELL) {
+            throw new IllegalArgumentException("Expected SELL transaction type, got: " + commonTransactionInput.transactionType());
+        }
+
+        Optional<AssetHolding> existingHolding = assetHoldings.stream()
+            .filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
+            .findFirst();
+
+        if (existingHolding.isEmpty()) {
+            throw new IllegalArgumentException("Cannot sell asset not held in portfolio: " + details.getAssetIdentifier().symbol());
+        }
+
+        AssetHolding holding = existingHolding.get();
+        if (holding.getTotalQuantity().compareTo(details.getQuantity()) < 0) {
+            throw new IllegalArgumentException("Cannot sell more units than you have.");
+        }
+
+        
+        Money netCashImpact = details.getAssetValueInPortfolioCurrency().subtract(details.getTotalFeesInPortfolioCurrency());
+        if (!this.portfolioCashBalance.currency().equals(netCashImpact.currency())) {
+            throw new IllegalArgumentException("Portfolio cash balance currency does not match transaction's net cash impact currency.");
+        }
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact); // Cash increases
+        
+        holding.removeFromPosition(details.getQuantity());
+        Transaction newAssetTransaction = new Transaction(
+                UUID.randomUUID(),
+                this.portfolioId,
+                commonTransactionInput.correlationId(),
+                commonTransactionInput.parentTransactionId(),
+                commonTransactionInput.transactionType(), // Should be SELL
+                details.getAssetValueInPortfolioCurrency(), // Store the gross proceeds as the transaction amount
+                transactionDate,
+                details,
+                commonTransactionInput.transactionMetadata(),
+                commonTransactionInput.fees(), // Store the individual fees
+                false, 
+                1
+        );
+        this.transactions.add(newAssetTransaction);
     }
 
     public void recordNewLiability(TransactionDetails details) {
@@ -194,18 +240,19 @@ public class Portfolio {
         // total value in portfolio's preference
         // this is an example, we would need an acutal service class to handle this
         // TODO switch to acutal service, currenyl using CAD -> USD
-        Money total = Money.ZERO(this.currencyPreference);
-        for (AssetHolding assetHolding : assetHoldings) {
-            // check if we need to even do it
-            MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
+        // Money total = Money.ZERO(this.currencyPreference);
+        // for (AssetHolding assetHolding : assetHoldings) {
+        //     // check if we need to even do it
+        //     MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
 
-            if (price != null) {
-                Money holdingValue = assetHolding.getCurrentValue(price);
-                Money convertedValue = exchangeRateService.convert(holdingValue, this.currencyPreference);
-                total = total.add(convertedValue);
-            }
-        }
-        return total;
+        //     if (price != null) {
+        //         Money holdingValue = assetHolding.getCurrentValue(price);
+        //         Money convertedValue = exchangeRateService.convert(holdingValue, this.currencyPreference);
+        //         total = total.add(convertedValue);
+        //     }
+        // }
+        // return total;
+        return null;
     }   
     
     public Money calculateUnrealizedGains(AssetAllocation currentPrices) {
@@ -213,27 +260,28 @@ public class Portfolio {
     }
 
     public AssetAllocation getAssetAllocation (Map<AssetIdentifier, MarketPrice> currentPrices) {
-        Money totalValue = calculateTotalValue(currentPrices);
-        AssetAllocation allocation = new AssetAllocation(totalValue, this.currencyPreference);
+        return null;
+        // Money totalValue = calculateTotalValue(currentPrices);
+        // AssetAllocation allocation = new AssetAllocation(totalValue, this.currencyPreference);
 
-        for (AssetHolding assetHolding : assetHoldings) {
-            MarketPrice marketPrice = currentPrices.get(assetHolding.getAssetIdentifier()); 
-            if (marketPrice != null) {
-                Money holdingValue = assetHolding.getCurrentValue(marketPrice); // this needs to return value in portfolio pref
+        // for (AssetHolding assetHolding : assetHoldings) {
+        //     MarketPrice marketPrice = currentPrices.get(assetHolding.getAssetIdentifier()); 
+        //     if (marketPrice != null) {
+        //         Money holdingValue = assetHolding.getCurrentValue(marketPrice); // this needs to return value in portfolio pref
                 
-                Money covertedValue = exchangeRateService.convert(holdingValue, this.currencyPreference);
+        //         Money covertedValue = exchangeRateService.convert(holdingValue, this.currencyPreference);
                 
-                Percentage percentage = new Percentage(
-                    covertedValue.amount()
-                    .divide(totalValue.amount(), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100))
-                );
+        //         Percentage percentage = new Percentage(
+        //             covertedValue.amount()
+        //             .divide(totalValue.amount(), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP)
+        //             .multiply(BigDecimal.valueOf(100))
+        //         );
 
-                allocation.addAllocation(assetHolding.getAssetIdentifier(), covertedValue, percentage);
-            }
-        }
+        //         allocation.addAllocation(assetHolding.getAssetIdentifier(), covertedValue, percentage);
+        //     }
+        // }
 
-        return allocation;
+        // return allocation;
     } 
 
     public void accruelInterestLiabilities() {

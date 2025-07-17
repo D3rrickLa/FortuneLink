@@ -34,7 +34,9 @@ public final class AssetTransactionDetails extends TransactionDetails {
         Objects.requireNonNull(assetValueInAssetCurrency, "Asset value in asset currency cannot be null.");
         Objects.requireNonNull(assetValueInPortfolioCurrency, "Asset value in portfolio currency cannot be null.");
         Objects.requireNonNull(costBasisInPortfolioCurrency, "Cost basis in portfolio currency cannot be null.");
+        Objects.requireNonNull(costBasisInAssetCurrency, "Cost basis in asset currency cannot be null.");
         Objects.requireNonNull(totalFeesInPortfolioCurrency, "Total fees in portfolio currency cannot be null.");
+        Objects.requireNonNull(totalFeesInAssetCurrency, "Total fees in asset currency cannot be null.");
         
         this.assetIdentifier = assetIdentifier;
         this.quantity = quantity;

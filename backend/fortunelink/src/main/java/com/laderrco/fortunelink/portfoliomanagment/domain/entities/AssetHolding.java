@@ -125,7 +125,11 @@ public class AssetHolding {
             throw new IllegalArgumentException("Cannot sell more units than you have.");
         }
 
+        Money averageCostPerUnit = getAverageACBPerUnit();
+        Money costBasisOfSoldShares = averageCostPerUnit.multiply(quantity);
+
         this.totalQuantity = this.totalQuantity.subtract(quantity);
+        this.totalAdjustedCostBasis = this.totalAdjustedCostBasis.subtract(costBasisOfSoldShares);
         this.updatedAt = Instant.now();
         
         // When fully sold, ACB should be zero too

@@ -1,20 +1,20 @@
 package com.laderrco.fortunelink.shared.valueobjects;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.Currency;
 import java.util.Objects;
 
 public record Money(BigDecimal amount, Currency currency) {
+    public final static MathContext FINANCIAL_MATH_CONTEXT = MathContext.DECIMAL128;
     public Money {
         Objects.requireNonNull(amount, "Amount cannot be null.");
         Objects.requireNonNull(currency, "Currency cannot be null.");
-
-        amount = amount.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
     }
 
     public Money (double amount, Currency currency) {
-        this(BigDecimal.valueOf(amount), currency);
+        this(new BigDecimal(String.valueOf(amount), FINANCIAL_MATH_CONTEXT), currency);
     }
 
     private void areSameCurrency(Currency other, String methodName) {
@@ -30,18 +30,18 @@ public record Money(BigDecimal amount, Currency currency) {
     public Money add(Money other) {
         Objects.requireNonNull(other, "Cannot pass null to the 'add' method.");
         areSameCurrency(other.currency(), "add");
-        return new Money(this.amount.add(other.amount()), this.currency);
+        return new Money(this.amount.add(other.amount(), FINANCIAL_MATH_CONTEXT), this.currency);
     }
     
     public Money subtract(Money other) {
         Objects.requireNonNull(other, "Cannot pass null to the 'subtract' method.");
         areSameCurrency(other.currency, "subtract");
-        return  new Money(amount.subtract(other.amount), this.currency);
+        return  new Money(amount.subtract(other.amount, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
     public Money multiply(BigDecimal multiplier) {
         Objects.requireNonNull(multiplier, "Multiplier cannot be null.");
-        return new Money(this.amount.multiply(multiplier), this.currency);
+        return new Money(this.amount.multiply(multiplier, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
     public Money multiply(Long multiplier) {
@@ -53,7 +53,7 @@ public record Money(BigDecimal amount, Currency currency) {
         if (divisor.compareTo(BigDecimal.ZERO) == 0) {
             throw new ArithmeticException("Divisor cannot be zero.");
         }
-        return new Money(this.amount.divide(divisor, this.currency.getDefaultFractionDigits(), RoundingMode.HALF_EVEN), this.currency);
+        return new Money(this.amount.divide(divisor, FINANCIAL_MATH_CONTEXT), this.currency);
     }
     
     public Money divide(Long divisor) {
