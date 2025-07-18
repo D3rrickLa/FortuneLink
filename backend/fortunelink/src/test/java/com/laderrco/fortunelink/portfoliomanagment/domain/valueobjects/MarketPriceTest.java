@@ -72,9 +72,9 @@ public class MarketPriceTest {
         MarketPrice marketPrice = new MarketPrice(assetIdentifier, price, priceDate, source);
 
         MarketPrice cadMarketPrice = marketPrice.getPriceInCurrency(cad, exchangeRate);
-        BigDecimal expectedCost = new BigDecimal("294.70").setScale(cad.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        BigDecimal expectedCost = new BigDecimal("294.699");
 
-        assertEquals(expectedCost, cadMarketPrice.price().amount());
+        assertEquals(0, cadMarketPrice.price().amount().compareTo(expectedCost));
     }
 
     @Test

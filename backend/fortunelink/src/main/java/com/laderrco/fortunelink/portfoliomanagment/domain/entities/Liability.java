@@ -27,7 +27,7 @@ public class Liability {
         UUID portfolioId, 
         String name,
         String description, 
-        Money currentBalance,
+        Money currentBalance, // in liability currency
         Percentage annualInterestRate,
         Instant maturityDate,
         Instant lastInterestAccrualDate

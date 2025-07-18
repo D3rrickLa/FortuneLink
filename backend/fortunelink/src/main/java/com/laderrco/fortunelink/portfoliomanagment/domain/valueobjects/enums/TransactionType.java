@@ -10,6 +10,8 @@ public enum TransactionType {
     BUY,
     SELL,
 
+    LIABILITY_INCURRENCE,
+
     PAYMENT,
     EXPENSE,
     FEE,

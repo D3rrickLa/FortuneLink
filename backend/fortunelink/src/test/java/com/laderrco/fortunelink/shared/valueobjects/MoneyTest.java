@@ -3,11 +3,11 @@ package com.laderrco.fortunelink.shared.valueobjects;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Currency;
@@ -30,24 +30,36 @@ public class MoneyTest {
 
     @Test 
     void testConstructorValid() {
-        BigDecimal amount = new BigDecimal(20.45);
+        BigDecimal amount = new BigDecimal("20.45"); // <-- Use "20.45" instead of 20.45 (double)
         Money testMoney = new Money(amount, cad);
 
         assertNotNull(testMoney);
-        assertEquals(cad.getDefaultFractionDigits(), testMoney.amount().scale());
-        assertEquals(0, testMoney.amount().compareTo(new BigDecimal("20.45")));
+
+        // Do NOT assert on testMoney.amount().scale() matching FINANCIAL_MATH_CONTEXT.getPrecision().
+        // scale() tells you decimal places. getPrecision() tells you total digits.
+        // For "20.45", the scale is 2, not 34 or 48.
+        // The precision of the 'amount' BigDecimal when it's initialized directly will be its natural precision.
+        // The FINANCIAL_MATH_CONTEXT.getPrecision() (34) applies to *calculations* performed on Money objects,
+        // not necessarily the initial scale of the BigDecimal passed into the constructor.
+        
+        // Correct assertion for the amount value:
+        assertEquals(0, testMoney.amount().compareTo(new BigDecimal("20.45")), "The amount should be exactly 20.45");
+        
+        // If you want to assert the scale for this specific input, you'd assert its actual scale:
+        assertEquals(2, testMoney.amount().scale(), "The scale of 20.45 should be 2"); 
     }   
 
     @Test 
     void testConstructorInValid() {
-        assertThrows(NullPointerException.class, ()->new Money(null, cad));
+        assertThrows(NullPointerException.class, ()->new Money((BigDecimal) null, cad));
+        assertThrows(NullPointerException.class, ()->new Money((String) null, cad));
         assertThrows(NullPointerException.class, ()->new Money(defaultAmount, null));
     }
     
     @Test
     void testZERO() {
         Money testMoneyZeroed = Money.ZERO(cad);
-        assertEquals(BigDecimal.ZERO.setScale(cad.getDefaultFractionDigits()), testMoneyZeroed.amount());
+        assertEquals(BigDecimal.ZERO, testMoneyZeroed.amount());
         assertEquals(cad, testMoneyZeroed.currency());
     }
 
@@ -56,7 +68,7 @@ public class MoneyTest {
         BigDecimal amount = new BigDecimal(-20.45689271422222222);
         Money testMoney = new Money(amount, cad);
         Money absMoney = testMoney.abs();
-        assertEquals(amount.negate().setScale(cad.getDefaultFractionDigits(), RoundingMode.HALF_EVEN), absMoney.amount());
+        assertEquals(amount.negate(), absMoney.amount());
 
     }
 
@@ -66,10 +78,11 @@ public class MoneyTest {
         Money testMoney = new Money(amount, cad);
         Money testMoney2 = new Money(amount, cad);
         Money addedMoney = testMoney.add(testMoney2);
-        BigDecimal expected = new BigDecimal("40.9167") // floating point error, had to mess with it
-        .setScale(cad.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        BigDecimal expected = new BigDecimal("40.91134"); 
         
-        assertEquals(expected, addedMoney.amount());
+        // Assert that the full-precision amounts are equal.
+        assertEquals(expected, addedMoney.amount(), "The sum should be mathematically exact.");
+
     }
     
     @Test 
@@ -130,9 +143,9 @@ public class MoneyTest {
         
         Money usdMoney = cadMoney.convertTo(usd, exchangeRate);
         
-        // 20.46 * 0.72 = 14.7312 -> rounds to 14.73 (USD precision)
+        // 20.46 * 0.72 = 14.7312
         assertEquals(usd, usdMoney.currency());
-        assertEquals(new BigDecimal("14.73"), usdMoney.amount());
+        assertEquals(new BigDecimal("14.73120000"), usdMoney.amount());
     }
 
     @Test 
@@ -166,8 +179,7 @@ public class MoneyTest {
     void testDivide() {
         Money testMoney = new Money(defaultAmount, cad);
         Money testMoney2 = testMoney.divide(new BigDecimal(2));
-        BigDecimal expectedAmount = new BigDecimal("24.21")
-        .divide(new BigDecimal("2"), cad.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        BigDecimal expectedAmount = new BigDecimal("12.105");
         
         assertEquals(expectedAmount, testMoney2.amount());
     }
@@ -190,8 +202,7 @@ public class MoneyTest {
     void testDivideLong() {
         Money testMoney = new Money(defaultAmount, cad);
         Money testMoney2 = testMoney.divide(2L);
-        BigDecimal expectedAmount = new BigDecimal("24.21")
-        .divide(new BigDecimal("2"), cad.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        BigDecimal expectedAmount = new BigDecimal("12.105");
         
         assertEquals(expectedAmount, testMoney2.amount());
         
@@ -267,8 +278,7 @@ public class MoneyTest {
         
         Money subtractedMoney = testMoney.subtract(testMoney2);
         
-        BigDecimal expected = new BigDecimal("10.02") // floating point error, had to mess with it
-        .setScale(cad.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        BigDecimal expected = new BigDecimal("10.01567");
         
         assertEquals(expected, subtractedMoney.amount());
     }

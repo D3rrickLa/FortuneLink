@@ -2,12 +2,11 @@ package com.laderrco.fortunelink.shared.valueobjects;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.Currency;
 import java.util.Objects;
 
 public record Money(BigDecimal amount, Currency currency) {
-    public final static MathContext FINANCIAL_MATH_CONTEXT = MathContext.DECIMAL128;
+    private final static MathContext FINANCIAL_MATH_CONTEXT = MathContext.DECIMAL128;
     public Money {
         Objects.requireNonNull(amount, "Amount cannot be null.");
         Objects.requireNonNull(currency, "Currency cannot be null.");
@@ -15,6 +14,10 @@ public record Money(BigDecimal amount, Currency currency) {
 
     public Money (double amount, Currency currency) {
         this(new BigDecimal(String.valueOf(amount), FINANCIAL_MATH_CONTEXT), currency);
+    }
+
+    public Money (String amount, Currency currency) {
+        this(new BigDecimal(amount, FINANCIAL_MATH_CONTEXT), currency);
     }
 
     private void areSameCurrency(Currency other, String methodName) {

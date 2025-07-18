@@ -99,7 +99,7 @@ public class LiabilityTest {
     void testAccureInterest() {
         Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
         Money interestAmount = testLiability.calculateAccuredInterest();
-        Money expectedAmount = new Money(0, usd);
+        Money expectedAmount = Money.ZERO(usd);
         assertEquals(expectedAmount, interestAmount);
         
         // testing with a different lastInterestAccuralDate
