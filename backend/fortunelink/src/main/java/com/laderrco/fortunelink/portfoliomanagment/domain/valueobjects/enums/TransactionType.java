@@ -20,6 +20,7 @@ public enum TransactionType {
     REVERSAL_SELL,
     REVERSAL_WITHDRAWAL,
     REVERSAL_DEPOSIT,
+    REVERSAL
 
     // TRANSFER_IN,
     // TRANSFER_OUT,

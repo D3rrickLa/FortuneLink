@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
+import java.lang.foreign.Linker.Option;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Currency;
@@ -16,12 +17,15 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIden
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTransactionInput;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityPaymentTransactionDetails;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.ReversalTransactionDetails;
 import com.laderrco.fortunelink.shared.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.shared.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -60,9 +64,10 @@ public class Portfolio {
 		this.exchangeRateService = exchangeRateService;
 	}
 
-	private Money getTotalFeesAmount(CommonTransactionInput commonTransactionInput) {
+	private Money getTotalFeesAmount(List<Fee> fees) {
+		// TODO change this to accept FEE
 		Money totalFeesAmount = Money.ZERO(this.currencyPreference);
-		for (Fee fee : commonTransactionInput.fees()) {
+		for (Fee fee : fees) {
 			Money feeAmount = fee.amount();
 			if (!feeAmount.currency().equals(this.currencyPreference)) {
 
@@ -87,7 +92,7 @@ public class Portfolio {
 
 		Money totalAmount = details.getConvertedCashflowAmount();
 
-		Money totalFeesAmount = getTotalFeesAmount(commonTransactionInput);
+		Money totalFeesAmount = getTotalFeesAmount(commonTransactionInput.fees());
 
 		Transaction newCashTransaction = new Transaction(
 				UUID.randomUUID(),
@@ -302,7 +307,7 @@ public class Portfolio {
 
 		Liability liability = exitingLiability.get();
 
-		Money totalCashOutflow = details.getTotalPaymentAmountInPortfolioCurrency();
+		Money totalCashOutflow = details.getTotalPaymentAmountInPortfolioCurrency().add(getTotalFeesAmount(commonTransactionInput.fees()));
 		Money newCashBalance = this.portfolioCashBalance.subtract(totalCashOutflow);
 
 		if (newCashBalance.isNegative()) {
@@ -329,14 +334,136 @@ public class Portfolio {
             transactionDate,
             details, // Store the payment details
             commonTransactionInput.transactionMetadata(),
-            commonTransactionInput.fees() != null ? commonTransactionInput.fees() : new ArrayList<>(), // Any fees associated with this transaction
+            commonTransactionInput.fees(), // Any fees associated with this transaction
             false, // Typically not a realized gain/loss event
             1
         );
         this.transactions.add(newPaymentTransaction);
 	}
 
-	public void reverseTransaction(UUID transactionId, String reason) {
+	public void reverseTransaction(UUID transactionId, String reason, Instant transactionDate) {
+		ReversalTransactionDetails reversalTransactionDetails = new ReversalTransactionDetails(transactionId, reason);
+
+		Optional<Transaction> reversedTransaction = this.transactions.stream()
+			.filter(t -> t.getTransactionId().equals(transactionId))
+			.findFirst();
+		
+		if (reversedTransaction.isEmpty()) {
+			throw new IllegalArgumentException("Transaction to reverse does not exist");
+		}
+
+      	Transaction originalTransaction = reversedTransaction.get();
+
+        // Prevent reversing a reversal (or apply specific logic if allowed)
+        if (originalTransaction.getTransactionType() == TransactionType.REVERSAL) {
+             throw new IllegalArgumentException("Cannot reverse a reversal transaction.");
+        }
+        
+        // Prepare common input for the reversal *event* transaction record
+        // Note: The specific commonInput for the *underlying cashflow reversal*
+        // will be created inside the switch statement if needed.
+        CommonTransactionInput reversalCommonInput = new CommonTransactionInput(
+            UUID.randomUUID(), // New correlation ID for this reversal event
+            originalTransaction.getParentTransactionId(), // Parent ID links to the original transaction
+            TransactionType.REVERSAL, // Generic reversal type
+            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.SYSTEM, reason, transactionDate, transactionDate),
+            null // Fees for the reversal transaction itself, if any
+        );
+
+        // This will be the net cash impact of the *entire reversal operation*
+        // This variable is primarily for the REVERSAL transaction record's totalAmount
+        Money netCashImpactOfReversalOperation = Money.ZERO(this.currencyPreference); 
+
+		switch (originalTransaction.getTransactionType()) {
+			case DEPOSIT:
+			case WITHDRAWAL:
+			case INTEREST:
+			case DIVIDEND:
+				if (!(originalTransaction.getTransactionDetails() instanceof CashflowTransactionDetails)) {
+					throw new IllegalArgumentException("Original transaction details are not of CashflowTransactionDetails type ofr reversal.");
+				}
+
+				CashflowTransactionDetails originalCashflowDetails = (CashflowTransactionDetails) originalTransaction.getTransactionDetails();
+				
+				Money originalConvertedAmount = originalCashflowDetails.getConvertedCashflowAmount();
+                Money originalTotalConversionFees = originalCashflowDetails.getTotalConversionFees();
+             
+ 				List<Fee> originalOtherFeesList = originalTransaction.getFees(); // Access directly from the Transaction record
+                Money originalOtherFeesFromTransaction = getTotalFeesAmount( originalOtherFeesList);                
+				TransactionType inverseType;         
+				if (originalTransaction.getTransactionType() == TransactionType.DEPOSIT ||
+                    originalTransaction.getTransactionType() == TransactionType.INTEREST ||
+                    originalTransaction.getTransactionType() == TransactionType.DIVIDEND) {
+                    inverseType = TransactionType.WITHDRAWAL; // Reversing an inflow means an outflow
+                } else if (originalTransaction.getTransactionType() == TransactionType.WITHDRAWAL) {
+                    inverseType = TransactionType.DEPOSIT; // Reversing an outflow means an inflow
+                } else {
+                    // This case should ideally not be reached if the outer switch covers only cashflow types.
+                    throw new IllegalStateException("Unexpected cashflow type for reversal: " + originalTransaction.getTransactionType());
+                }
+              	
+				CashflowTransactionDetails reversalCashflowDetails = new CashflowTransactionDetails(
+                    originalConvertedAmount,
+                    originalConvertedAmount,
+                    originalTotalConversionFees,
+                    originalCashflowDetails.getExchangeRate()
+                );
+
+   				CommonTransactionInput reversalSubTransactionCommonInput = new CommonTransactionInput(
+                    UUID.randomUUID(),
+                    originalTransaction.getParentTransactionId(),
+                    inverseType,
+                    new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.SYSTEM, "Reversal of " + originalTransaction.getTransactionType() + ": " + reason, transactionDate, transactionDate),
+                    originalOtherFeesList // Pass the list of fees directly from the original transaction
+                );
+                this.recordCashflow(reversalCashflowDetails, reversalSubTransactionCommonInput, transactionDate);
+				// Calculate the net cash impact for the main REVERSAL transaction record.
+                Money originalNetCashImpact;
+                if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(originalTransaction.getTransactionType())) {
+                    originalNetCashImpact = originalConvertedAmount.subtract(originalTotalConversionFees).subtract(originalOtherFeesFromTransaction);
+                } else { // WITHDRAWAL
+                    originalNetCashImpact = originalConvertedAmount.negate().subtract(originalTotalConversionFees).subtract(originalOtherFeesFromTransaction);
+                }
+                netCashImpactOfReversalOperation = originalNetCashImpact.negate();
+				break;
+
+			case BUY:
+				
+				break;
+		
+			case SELL:
+				
+				break;
+			
+			case LIABILITY_INCURRENCE:
+				break;
+			
+			case PAYMENT:
+				break;
+		
+			default:
+				throw new UnsupportedOperationException("Reversal not supported for transaction type: " + originalTransaction.getTransactionType());
+		}
+		
+
+
+		Transaction reversalTransaction = new Transaction(
+			UUID.randomUUID(),
+			this.portfolioId,
+			UUID.randomUUID(),
+			originalTransaction.getTransactionId(),
+			TransactionType.REVERSAL_BUY, // need to fix this, probably just pass it as a param
+			netCashImpactOfReversalOperation, // we would need to add back/ remove the money
+			transactionDate,
+			reversalTransactionDetails,
+			new TransactionMetadata(null, null, reason, transactionDate, transactionDate),
+			null,
+			true,
+			originalTransaction.getVersion()+1
+		);
+
+		this.transactions.add(reversalTransaction);
+
 	}
 
 	public Money calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices) {

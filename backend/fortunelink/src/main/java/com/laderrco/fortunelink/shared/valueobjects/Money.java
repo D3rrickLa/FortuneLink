@@ -118,4 +118,12 @@ public record Money(BigDecimal amount, Currency currency) {
     public static Money of(BigDecimal bigDecimal, Currency instance) {
         return new Money(bigDecimal, instance);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Money money = (Money) o;
+        return this.amount.compareTo(money.amount) == 0 && this.currency.equals(money.currency);
+    }
 }
