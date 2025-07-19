@@ -16,8 +16,8 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 	private final Money totalFeesInLiabilityCurrency;
 
 	public LiabilityIncurrenceTransactionDetails(
-		String description, 
 		String liabilityName, 
+		String description, 
 		Money originalLoanAmount, 
 		Money originalLoanAmountInPortfolioCurrency, 
 		Percentage annualInterestRate,
@@ -38,8 +38,6 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 	public String getLiabilityName() {
 		return liabilityName;
 	}
-
-
 
 	public String getDescription() {
 		return description;

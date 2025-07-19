@@ -20,6 +20,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.Tra
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityIncurrenceTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityPaymentTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.TransactionDetails;
 import com.laderrco.fortunelink.shared.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.shared.exceptions.InsufficientFundsException;
@@ -123,39 +124,45 @@ public class Portfolio {
 		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
 	}
 
-	public void recordAssetPurchase(AssetTransactionDetails details, CommonTransactionInput commonTransactionInput,
-			Instant transactionDate) {
+	public void recordAssetPurchase(
+		AssetTransactionDetails details, 
+		CommonTransactionInput commonTransactionInput,
+		Instant transactionDate
+	) {
 		Objects.requireNonNull(details, "details cannot be null.");
 		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
 		Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
 
 		if (commonTransactionInput.transactionType() != TransactionType.BUY) {
-			throw new IllegalArgumentException("Expected BUY transaction type, got: "
-					+ commonTransactionInput.transactionType());
+			throw new IllegalArgumentException("Expected BUY transaction type, got: "+ commonTransactionInput.transactionType());
 		}
 
-		Money totalTransactionAmount = details.getAssetValueInPortfolioCurrency();
 		Optional<AssetHolding> existingHolding = assetHoldings.stream()
-				.filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
-				.findFirst();
+			.filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
+			.findFirst();
+		
 		AssetHolding holding;
+		
 		if (existingHolding.isPresent()) {
 			holding = existingHolding.get();
 			holding.addToPosition(details.getQuantity(), details.getCostBasisInAssetCurrency());
-		} else {
+		} 
+		else {
 			holding = new AssetHolding(
-					UUID.randomUUID(),
-					this.portfolioId,
-					details.getAssetIdentifier(),
-					details.getQuantity(),
-					details.getCostBasisInAssetCurrency(),
-					transactionDate);
+				UUID.randomUUID(),
+				this.portfolioId,
+				details.getAssetIdentifier(),
+				details.getQuantity(),
+				details.getCostBasisInAssetCurrency(),
+				transactionDate
+			);
 			this.assetHoldings.add(holding);
 		}
-
-		// using the precalculated value instead of asset value in portfolio currency -
-		// fees in portfolio currency
-		Money netCashImpact = details.getCostBasisInPortfolioCurrency().negate();
+			
+		// The costBasisInPortfolioCurrency from details *should already include* all fees.
+		// So, this is the total cash outflow for the purchase.
+		Money cashOutflow = details.getCostBasisInPortfolioCurrency();
+		Money netCashImpact = cashOutflow.negate();
 		Money newBalance = this.portfolioCashBalance.add(netCashImpact);
 		if (newBalance.isNegative()) {
 			throw new InsufficientFundsException("Insufficient cash for asset purchase.");
@@ -164,18 +171,19 @@ public class Portfolio {
 		this.portfolioCashBalance = newBalance;
 
 		Transaction newAssetTransaction = new Transaction(
-				UUID.randomUUID(),
-				this.portfolioId,
-				commonTransactionInput.correlationId(),
-				commonTransactionInput.parentTransactionId(),
-				commonTransactionInput.transactionType(),
-				totalTransactionAmount,
-				transactionDate,
-				details,
-				commonTransactionInput.transactionMetadata(),
-				commonTransactionInput.fees(),
-				false,
-				1);
+			UUID.randomUUID(),
+			this.portfolioId,
+			commonTransactionInput.correlationId(),
+			commonTransactionInput.parentTransactionId(),
+			commonTransactionInput.transactionType(),
+			cashOutflow,
+			transactionDate,
+			details,
+			commonTransactionInput.transactionMetadata(),
+			commonTransactionInput.fees(),
+			false,
+			1
+		);
 		this.transactions.add(newAssetTransaction);
 	}
 
@@ -204,8 +212,7 @@ public class Portfolio {
 			throw new IllegalArgumentException("Cannot sell more units than you have.");
 		}
 
-		Money netCashImpact = details.getAssetValueInPortfolioCurrency()
-				.subtract(details.getTotalFeesInPortfolioCurrency());
+		Money netCashImpact = details.getAssetValueInPortfolioCurrency().subtract(details.getTotalFeesInPortfolioCurrency());
 		if (!this.portfolioCashBalance.currency().equals(netCashImpact.currency())) {
 			throw new IllegalArgumentException(
 					"Portfolio cash balance currency does not match transaction's net cash impact currency.");
@@ -237,12 +244,12 @@ public class Portfolio {
 		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
 		Objects.requireNonNull(transactionDate, "TransactionDate cannot be null.");
 
-		if (commonTransactionInput.transactionType() != TransactionType.LIABILITY_INCURRENCE) {
-			throw new IllegalArgumentException("Liabilities can only be of type LIABILITY_INCURRENCE.");
+		if (!Set.of(TransactionType.LIABILITY_INCURRENCE, TransactionType.DEPOSIT).contains(commonTransactionInput.transactionType())) {
+			throw new IllegalArgumentException("Liability incurrence transaction type must be LIABILITY_INCURRENCE or DEPOSIT.");
 		}
 	
 		Money netCashReceived = details.getOriginalLoanAmountInPortfolioCurrency().subtract(details.getTotalFeesInPortfolioCurrency());
-		this.portfolioCashBalance.add(netCashReceived);
+		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashReceived);
 		
 		Transaction newLiabilityIncurrenceTransaction = new Transaction(
 			UUID.randomUUID(),
@@ -250,7 +257,7 @@ public class Portfolio {
 			commonTransactionInput.correlationId(),
 			commonTransactionInput.parentTransactionId(),
 			commonTransactionInput.transactionType(),
-			details.getOriginalLoanAmountInPortfolioCurrency(),
+			netCashReceived,
 			transactionDate,
 			details,
 			commonTransactionInput.transactionMetadata(),
@@ -266,7 +273,7 @@ public class Portfolio {
 			this.portfolioId,
 			details.getLiabilityName(),
 			details.getDescription(),
-			details.getOriginalLoanAmount(),
+			details.getOriginalLoanAmount().subtract(details.getTotalFeesInLiabilityCurrency()),
 			details.getAnnualInterestRate(),
 			details.getMaturityDate(),
 			transactionDate
@@ -276,12 +283,60 @@ public class Portfolio {
 		
 	}
 
-	public void recordLiabilityPayment(TransactionDetails details) {
+	public void recordLiabilityPayment(LiabilityPaymentTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
+		Objects.requireNonNull(details, "details cannot be null.");
+		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
+		Objects.requireNonNull(transactionDate, "TransactionDate cannot be null.");
 
+		if (!Set.of(TransactionType.PAYMENT).contains(commonTransactionInput.transactionType())) {
+			throw new IllegalArgumentException("Liability incurrence transaction type must be PAYMENT.");
+		}
+
+		Optional<Liability> exitingLiability = this.liabilities.stream()
+			.filter(l -> l.getLiabilityId().equals(details.getLiabilityId()))
+			.findFirst();
+		
+		if (exitingLiability.isEmpty()) {
+			throw new IllegalArgumentException(String.format("Liability with ID %s not found in portfolio.", details.getLiabilityId()));
+		}
+
+		Liability liability = exitingLiability.get();
+
+		Money totalCashOutflow = details.getTotalPaymentAmountInPortfolioCurrency();
+		Money newCashBalance = this.portfolioCashBalance.subtract(totalCashOutflow);
+
+		if (newCashBalance.isNegative()) {
+			throw new InsufficientFundsException("Insufficient cash to make liability payment.");
+		}
+		this.portfolioCashBalance = newCashBalance;
+		
+		// Reduce the liability's balance by the principal portion of the payment.
+        // The principal paid is the total payment in liability currency minus interest and fees (in liability currency).
+        Money principalReductionAmount = details.getTotalPaymentAmountInLiabilityCurrency()
+                                             .subtract(details.getInterestAmountInLiabilityCurrency())
+                                             .subtract(details.getFeesAmountInLiabilityCurrency());
+
+       
+        liability.applyPayment(principalReductionAmount);
+
+		Transaction newPaymentTransaction = new Transaction(
+            UUID.randomUUID(),
+            this.portfolioId,
+            commonTransactionInput.correlationId(),
+            commonTransactionInput.parentTransactionId(),
+            commonTransactionInput.transactionType(), // Should be PAYMENT
+            totalCashOutflow, // The total amount that affected cash (a positive value representing outflow)
+            transactionDate,
+            details, // Store the payment details
+            commonTransactionInput.transactionMetadata(),
+            commonTransactionInput.fees() != null ? commonTransactionInput.fees() : new ArrayList<>(), // Any fees associated with this transaction
+            false, // Typically not a realized gain/loss event
+            1
+        );
+        this.transactions.add(newPaymentTransaction);
 	}
 
 	public void reverseTransaction(UUID transactionId, String reason) {
-
 	}
 
 	public Money calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices) {

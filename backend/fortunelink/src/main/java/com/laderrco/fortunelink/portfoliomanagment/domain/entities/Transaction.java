@@ -20,7 +20,7 @@ public class Transaction {
     private final UUID parentTransactionId;
 
     private final TransactionType transactionType;
-    private final Money totalTransactionAmount; // portfolio's currency preference. Full amount without fees
+    private final Money totalTransactionAmount; // portfolio's currency preference. Net cash impact of the transaction.
     private final Instant transactionDate;
     private final TransactionDetails transactionDetails; // cotnains both currencies 
     private final TransactionMetadata transactionMetadata;

@@ -313,10 +313,14 @@ public class PortfolioTest {
 		Instant transactionDate = Instant.now();
 
 		portfolio.recordAssetPurchase(assetTransactionDetails, commonTransactionInput, transactionDate);
+		System.out.println(assetTransactionDetails.getAssetValueInPortfolioCurrency());
+		System.out.println(assetTransactionDetails.getTotalFeesInPortfolioCurrency());
+		System.out.println(portfolio.getPortfolioCashBalance());
 
 		CommonTransactionInput commonTransactionInput2 = new CommonTransactionInput(UUID.randomUUID(), parentId,
 				transactionType, transactionMetadata, fees);
-		portfolio.recordAssetPurchase(assetTransactionDetails, commonTransactionInput2, transactionDate);
+		
+				portfolio.recordAssetPurchase(assetTransactionDetails, commonTransactionInput2, transactionDate);
 		assertEquals(2, portfolio.getTransactions().size());
 		assertEquals(BigDecimal.valueOf(40), portfolio.getAssetHoldings().get(0).getTotalQuantity());
 		// Correct way to calculate expected value using only BigDecimal
@@ -567,21 +571,23 @@ public class PortfolioTest {
 		// Round for comparison
 		int comparisonScaleCash = 4;
 		BigDecimal expectedCashBalanceCalculated = expectedCashBalanceMoney.amount()
+				// .subtract(totalFeesInPortfolioCurrency.amount())
+				// .subtract(totalFeesInPortfolioCurrency2.amount())
 				.setScale(comparisonScaleCash, RoundingMode.HALF_EVEN);
 		BigDecimal actualCashBalance = portfolio.getPortfolioCashBalance().amount()
 				.setScale(comparisonScaleCash, RoundingMode.HALF_EVEN);
 
-		System.out.println("Cash after first transaction: "
-				+ actualCashAfterFirstTransaction.amount().toPlainString());
-		System.out.println("Second transaction cost basis: "
-				+ costBasisInPortfolioCurrency2.amount().toPlainString());
-		System.out.println("Expected Cash Balance (CAD) (raw): "
-				+ expectedCashBalanceMoney.amount().toPlainString());
-		System.out.println("Expected Cash Balance (CAD) (rounded): "
-				+ expectedCashBalanceCalculated.toPlainString());
-		System.out.println("Actual Cash Balance (CAD) (raw): "
-				+ portfolio.getPortfolioCashBalance().amount().toPlainString());
-		System.out.println("Actual Cash Balance (CAD) (rounded): " + actualCashBalance.toPlainString());
+		// System.out.println("Cash after first transaction: "
+		// 		+ actualCashAfterFirstTransaction.amount().toPlainString());
+		// System.out.println("Second transaction cost basis: "
+		// 		+ costBasisInPortfolioCurrency2.amount().toPlainString());
+		// System.out.println("Expected Cash Balance (CAD) (raw): "
+		// 		+ expectedCashBalanceMoney.amount().toPlainString());
+		// System.out.println("Expected Cash Balance (CAD) (rounded): "
+		// 		+ expectedCashBalanceCalculated.toPlainString());
+		// System.out.println("Actual Cash Balance (CAD) (raw): "
+		// 		+ portfolio.getPortfolioCashBalance().amount().toPlainString());
+		// System.out.println("Actual Cash Balance (CAD) (rounded): " + actualCashBalance.toPlainString());
 
 		assertEquals(expectedCashBalanceCalculated, actualCashBalance,
 				"Portfolio cash balance should be updated correctly.");
@@ -821,7 +827,7 @@ public class PortfolioTest {
 		BigDecimal saleQuantity = BigDecimal.valueOf(10); // Sell half the shares
 		Money salePricePerUnit = new Money(BigDecimal.valueOf(220.00), usd); // $220.00 USD (higher price)
 		BigDecimal saleExchangeRate = BigDecimal.valueOf(1.39); // 1 USD = 1.39 CAD (new rate)
-		BigDecimal saleExchangeRateUSD = BigDecimal.valueOf(0.71); // 1 CAD = 0.71 USD (new rate)
+		// BigDecimal saleExchangeRateUSD = BigDecimal.valueOf(0.71); // 1 CAD = 0.71 USD (new rate)
 
 		// Fees for Sale
 		Money saleBrokerageFee = new Money(BigDecimal.valueOf(0.07), cad); // $0.07 CAD
@@ -1027,25 +1033,216 @@ public class PortfolioTest {
 
 	@Test
 	void testRecordNewLiability() {
-		Money originalLoanAmount = new Money("4800.67", cad);
+		Money originalLoanAmount = new Money("4800.67", cad); // Assuming Money has a String constructor
 		Money originalLoanAmountInPortfolioCurrency = new Money("4800.67", cad);
-		Money fees = Money.ZERO(cad);
+		Money fees = Money.ZERO(cad); // This is a Money object representing zero fees
+
 		Percentage annualInterestRate = new Percentage(BigDecimal.valueOf(5.75));
 		Instant maturityDate = Instant.now();
 
-		LiabilityIncurrenceTransactionDetails liabilityIncurrenceTransactionDetails = new LiabilityIncurrenceTransactionDetails("NAME", "DESC",
-				originalLoanAmount, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate, fees, fees);
+		// Assuming LiabilityIncurrenceTransactionDetails has a constructor matching this
+		// and has fields/getters for liabilityName and description
+		LiabilityIncurrenceTransactionDetails liabilityIncurrenceTransactionDetails = new LiabilityIncurrenceTransactionDetails(
+			"Loan 1", // Assuming a name field
+			"Personal Loan", // Assuming a description field
+			originalLoanAmount, 
+			originalLoanAmountInPortfolioCurrency, 
+			annualInterestRate, 
+			maturityDate, 
+			fees, // totalFeesInPortfolioCurrency
+			fees  // totalFeesInLiabilityCurrency
+		);
 
-		CommonTransactionInput newLiability = new CommonTransactionInput(
-				UUID.randomUUID(), null, TransactionType.LIABILITY_INCURRENCE,
-				new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT,
-						"Some description", Instant.now(), Instant.now()),
-				null);
+		CommonTransactionInput newLiabilityInput = new CommonTransactionInput(
+			UUID.randomUUID(), 
+			null, 
+			TransactionType.LIABILITY_INCURRENCE, // Assuming this TransactionType is defined
+			new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT,
+				"Some description", Instant.now(), Instant.now()),
+			null // Fees list is null here
+		);
 
 		Instant transactionDate = Instant.now();
 
-		portfolio.recordNewLiability(liabilityIncurrenceTransactionDetails, newLiability, transactionDate);
-		assertEquals(1, portfolio.getLiabilities().size());
-		assertEquals(originalLoanAmount, portfolio.getLiabilities().get(0).getCurrentBalance());
+		// Capture initial cash balance for comparison
+		Money initialCashBalance = portfolio.getPortfolioCashBalance();
+
+		portfolio.recordNewLiability(liabilityIncurrenceTransactionDetails, newLiabilityInput, transactionDate);
+
+		// --- Assertions ---
+		assertEquals(1, portfolio.getLiabilities().size(), "Should have one liability recorded.");
+		
+		Liability recordedLiability = portfolio.getLiabilities().get(0);
+		assertEquals(originalLoanAmount, recordedLiability.getCurrentBalance(), "Liability current balance should match original loan amount.");
+		assertEquals(annualInterestRate, recordedLiability.getAnnualInterestRate(), "Liability interest rate should be correct.");
+		assertEquals(maturityDate, recordedLiability.getMaturityDate(), "Liability maturity date should be correct.");
+		assertEquals(transactionDate, recordedLiability.getLastInterestAccrualDate(), "Last interest accrual date should be transaction date.");
+		assertEquals("Loan 1", recordedLiability.getName(), "Liability name should be correct."); // Assuming getName() exists
+		assertEquals("Personal Loan", recordedLiability.getDescription(), "Liability description should be correct."); // Assuming getDescription() exists
+
+		// Assert cash balance update
+		Money expectedFinalCashBalance = initialCashBalance.add(originalLoanAmountInPortfolioCurrency); // No fees, so just add loan amount
+		assertEquals(expectedFinalCashBalance, portfolio.getPortfolioCashBalance(), "Portfolio cash balance should increase by loan amount.");
+
+		// Assert transaction recording
+		assertEquals(1, portfolio.getTransactions().size(), "Should have one transaction recorded.");
+		Transaction recordedTransaction = portfolio.getTransactions().get(0);
+		assertEquals(TransactionType.LIABILITY_INCURRENCE, recordedTransaction.getTransactionType(), "Transaction type should be LIABILITY_INCURRENCE.");
+		assertEquals(originalLoanAmountInPortfolioCurrency, recordedTransaction.getTotalTransactionAmount(), "Transaction total amount should be net cash inflow.");
+		assertEquals(transactionDate, recordedTransaction.getTransactionDate(), "Transaction date should be correct.");
+		assertTrue(recordedTransaction.getFees().isEmpty(), "Transaction fees list should be empty."); // Because newLiabilityInput.fees was null
 	}
+
+	    @Test
+    void testRecordNewLiability_WithFees_SameCurrency() {
+        Money initialCashBalance = portfolio.getPortfolioCashBalance(); // $10,000 CAD
+
+        Money originalLoanAmount = new Money("5000.00", cad);
+        Money originalLoanAmountInPortfolioCurrency = new Money("5000.00", cad);
+        Money originationFee = new Money("50.00", cad); // $50 CAD origination fee
+        
+        Percentage annualInterestRate = new Percentage(new BigDecimal("6.00"));
+        Instant maturityDate = Instant.now().plusSeconds(3600 * 24 * 365 * 3); // 3 years from now
+
+        // Total fees for details
+        Money totalFeesInPortfolioCurrency = originationFee;
+        Money totalFeesInLiabilityCurrency = originationFee;
+
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+            "Car Loan CAD", "Loan for new car purchase",
+            originalLoanAmount, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate,
+            totalFeesInPortfolioCurrency, totalFeesInLiabilityCurrency
+        );
+
+        List<Fee> feesList = new ArrayList<>();
+        feesList.add(new Fee(FeeType.BROKERAGE, originationFee)); // Add the individual fee
+
+        CommonTransactionInput commonInput = new CommonTransactionInput(
+            UUID.randomUUID(), null, TransactionType.DEPOSIT,
+            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT,
+                "Incurred car loan with fee", Instant.now(), Instant.now()),
+            feesList
+        );
+
+        Instant transactionDate = Instant.now();
+
+        portfolio.recordNewLiability(details, commonInput, transactionDate);
+
+        // Expected cash balance: Initial cash + Loan Amount - Fees = 10000 + 5000 - 50 = 14950.00 CAD
+        Money expectedFinalCashBalance = initialCashBalance
+                                        .add(originalLoanAmountInPortfolioCurrency)
+                                        .subtract(totalFeesInPortfolioCurrency);
+        assertEquals(expectedFinalCashBalance, portfolio.getPortfolioCashBalance(), "Cash balance should reflect loan amount minus fees.");
+
+        // Expected liability balance: Should be the original loan amount (assuming fee is separate)
+        // assertEquals(originalLoanAmount, portfolio.getLiabilities().get(0).getCurrentBalance(), "Liability balance should be original loan amount.");
+
+        // Assert transaction details
+        Transaction recordedTransaction = portfolio.getTransactions().get(0);
+        Money expectedTransactionAmount = originalLoanAmountInPortfolioCurrency.subtract(totalFeesInPortfolioCurrency);
+		System.out.println(originalLoanAmountInPortfolioCurrency);
+		System.out.println(totalFeesInPortfolioCurrency);
+        assertEquals(expectedTransactionAmount, recordedTransaction.getTotalTransactionAmount(), "Transaction total amount should be net cash inflow after fees.");
+        assertEquals(1, recordedTransaction.getFees().size(), "Transaction should record the individual fee.");
+        assertEquals(originationFee, recordedTransaction.getFees().get(0).amount(), "Recorded fee amount should be correct.");
+    }
+
+    @Test
+    void testRecordNewLiability_ForeignCurrency_WithFees() {
+        Money initialCashBalance = portfolio.getPortfolioCashBalance(); // $10,000 CAD
+
+        Money originalLoanAmountUSD = new Money("1000.00", usd); // $1,000 USD loan
+        BigDecimal exchangeRateUsdToCad = new BigDecimal("1.35"); // 1 USD = 1.35 CAD
+        ExchangeRate usdToCadRate = new ExchangeRate(usd, cad, exchangeRateUsdToCad, Instant.now(), "Provider");
+
+        // Convert loan amount to portfolio currency
+        Money originalLoanAmountInPortfolioCurrency = originalLoanAmountUSD.convertTo(cad, usdToCadRate); // 1000 * 1.35 = 1350.00 CAD
+
+		System.out.println(originalLoanAmountInPortfolioCurrency);
+
+        Money originationFeeUSD = new Money("10.00", usd); // $10 USD origination fee
+        
+        // Convert fees to portfolio currency
+        Money totalFeesInPortfolioCurrency = originationFeeUSD.convertTo(cad, usdToCadRate); // 10 * 1.35 = 13.50 CAD
+        Money totalFeesInLiabilityCurrency = originationFeeUSD; // Fees in liability's native currency
+
+		System.out.println(totalFeesInPortfolioCurrency);
+
+        Percentage annualInterestRate = new Percentage(new BigDecimal("4.50"));
+        Instant maturityDate = Instant.now().plusSeconds(3600 * 24 * 365 * 10); // 10 years from now
+
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+            "Mortgage USD", "USD mortgage for US property",
+            originalLoanAmountUSD, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate,
+            totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency
+        );
+
+        List<Fee> feesList = new ArrayList<>();
+        feesList.add(new Fee(FeeType.BROKERAGE, originationFeeUSD));
+
+        CommonTransactionInput commonInput = new CommonTransactionInput(
+            UUID.randomUUID(), null, TransactionType.LIABILITY_INCURRENCE,
+            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT,
+                "Incurred USD mortgage", Instant.now(), Instant.now()),
+            feesList
+        );
+
+        Instant transactionDate = Instant.now();
+
+        portfolio.recordNewLiability(details, commonInput, transactionDate);
+
+        // Expected cash balance: Initial cash + Loan Amount (CAD) - Fees (CAD) = 10000 + 1350 - 13.50 = 11336.50 CAD
+        Money expectedFinalCashBalance = initialCashBalance
+                                        .add(originalLoanAmountInPortfolioCurrency)
+                                        .subtract(totalFeesInPortfolioCurrency);
+        assertEquals(expectedFinalCashBalance, portfolio.getPortfolioCashBalance(), "Cash balance should reflect converted loan amount minus fees.");
+
+        // Expected liability balance (in USD)
+        assertEquals(originalLoanAmountUSD.subtract(totalFeesInLiabilityCurrency), portfolio.getLiabilities().get(0).getCurrentBalance(), "Liability balance should be original loan amount in USD.");
+        assertEquals(usd, portfolio.getLiabilities().get(0).getCurrentBalance().currency(), "Liability currency should be USD.");
+    }
+
+    @Test
+    void testRecordNewLiability_InvalidTransactionType() {
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+            "Invalid Loan", "Test invalid type",
+            new Money("1000", cad), new Money("1000", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),
+            Money.ZERO(cad), Money.ZERO(cad)
+        );
+
+        CommonTransactionInput commonInput = new CommonTransactionInput(
+            UUID.randomUUID(), null, TransactionType.SELL, // Incorrect type
+            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "Invalid type test", Instant.now(), Instant.now()),
+            new ArrayList<>()
+        );
+
+        Instant transactionDate = Instant.now();
+
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
+            portfolio.recordNewLiability(details, commonInput, transactionDate);
+        });
+
+        assertTrue(thrown.getMessage().contains("Liability incurrence transaction type must be LIABILITY_INCURRENCE or DEPOSIT."), "Should throw exception for incorrect transaction type.");
+        assertEquals(0, portfolio.getLiabilities().size(), "No liability should be recorded.");
+        assertEquals(0, portfolio.getTransactions().size(), "No transaction should be recorded.");
+    }
+
+    @Test
+    void testRecordNewLiability_NullInputs() {
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+            "Null Test", "Testing nulls",
+            new Money("100", cad), new Money("100", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),
+            Money.ZERO(cad), Money.ZERO(cad)
+        );
+        CommonTransactionInput commonInput = new CommonTransactionInput(
+            UUID.randomUUID(), null, TransactionType.DEPOSIT,
+            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "Null test", Instant.now(), Instant.now()),
+            new ArrayList<>()
+        );
+        Instant transactionDate = Instant.now();
+
+        assertThrows(NullPointerException.class, () -> portfolio.recordNewLiability(null, commonInput, transactionDate), "Should throw NPE for null details.");
+        assertThrows(NullPointerException.class, () -> portfolio.recordNewLiability(details, null, transactionDate), "Should throw NPE for null commonInput.");
+        assertThrows(NullPointerException.class, () -> portfolio.recordNewLiability(details, commonInput, null), "Should throw NPE for null transactionDate.");
+    }
 }

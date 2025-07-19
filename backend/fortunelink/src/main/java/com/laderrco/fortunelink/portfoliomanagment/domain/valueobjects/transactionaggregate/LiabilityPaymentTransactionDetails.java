@@ -6,26 +6,53 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public final class LiabilityPaymentTransactionDetails extends TransactionDetails {
     private final UUID liabilityId;
-    private final Money totalPaymentAmount;
-    private final Money interestAmount;
-    private final Money feesAmount;
-   
+    private final Money totalPaymentAmountInLiabilityCurrency;
+    private final Money interestAmountInLiabilityCurrency;
+    private final Money feesAmountInLiabilityCurrency;
+    private final Money totalPaymentAmountInPortfolioCurrency;
+    private final Money interestAmountInPortfolioCurrency;
+    private final Money feesAmountInPortfolioCurrency;
+
     public LiabilityPaymentTransactionDetails(
         UUID liabilityId, 
-        Money totalPaymentAmount, 
-        Money interestAmount,
-        Money feesAmount
+        Money totalPaymentAmountInLiabilityCurrency,
+        Money interestAmountInLiabilityCurrency, 
+        Money feesAmountInLiabilityCurrency,
+        Money totalPaymentAmountInPortfolioCurrency, 
+        Money interestAmountInPortfolioCurrency,
+        Money feesAmountInPortfolioCurrency
     ) {
         this.liabilityId = liabilityId;
-        this.totalPaymentAmount = totalPaymentAmount;
-        this.interestAmount = interestAmount;
-        this.feesAmount = feesAmount;
+        this.totalPaymentAmountInLiabilityCurrency = totalPaymentAmountInLiabilityCurrency; // principal + interest
+        this.interestAmountInLiabilityCurrency = interestAmountInLiabilityCurrency; // amount from total that is interest
+        this.feesAmountInLiabilityCurrency = feesAmountInLiabilityCurrency;
+        this.totalPaymentAmountInPortfolioCurrency = totalPaymentAmountInPortfolioCurrency;
+        this.interestAmountInPortfolioCurrency = interestAmountInPortfolioCurrency;
+        this.feesAmountInPortfolioCurrency = feesAmountInPortfolioCurrency;
     }
-    
-    public UUID getLiabilityId() {return liabilityId;}
-    public Money getTotalPaymentAmount() {return totalPaymentAmount;}
-    public Money getInterestAmount() {return interestAmount;}
-    public Money getFeesAmount() {return feesAmount;}
+
+    public UUID getLiabilityId() {
+        return liabilityId;
+    }
+    public Money getTotalPaymentAmountInLiabilityCurrency() {
+        return totalPaymentAmountInLiabilityCurrency;
+    }
+    public Money getInterestAmountInLiabilityCurrency() {
+        return interestAmountInLiabilityCurrency;
+    }
+    public Money getFeesAmountInLiabilityCurrency() {
+        return feesAmountInLiabilityCurrency;
+    }
+    public Money getTotalPaymentAmountInPortfolioCurrency() {
+        return totalPaymentAmountInPortfolioCurrency;
+    }
+    public Money getInterestAmountInPortfolioCurrency() {
+        return interestAmountInPortfolioCurrency;
+    }
+    public Money getFeesAmountInPortfolioCurrency() {
+        return feesAmountInPortfolioCurrency;
+    }
+   
     
     
 }
