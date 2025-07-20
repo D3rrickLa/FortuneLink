@@ -16,17 +16,17 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.SimpleExchangeRateService;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTransactionInput;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityPaymentTransactionDetails;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
@@ -41,7 +41,6 @@ public class PortfolioTestPart2 {
 	private Currency cad;
 	private Currency usd;
 	private ExchangeRateService exchangeRateService;
-	private AssetIdentifier appleAsset;
     
     private String liabilityName;
     private String description;
@@ -70,10 +69,7 @@ public class PortfolioTestPart2 {
 
 		portfolio = new Portfolio(
 				portfolioId, userId, name, desc, portfolioCashBalance, cad, exchangeRateService);
-
-		appleAsset = new AssetIdentifier(
-				"APPL", AssetType.STOCK, "US0378331005", "Apple", "NASDAQ", "DESCRIPTION");
-        
+   
         liabilityName = "CAR LOAN";
         description = "some car loan";
         
@@ -442,5 +438,65 @@ public class PortfolioTestPart2 {
         }, "Should throw IllegalArgumentException for negative payment amounts.");
 
         // Optionally, assert that no state changes occurred (cash, liability balance, transaction count)
+    }
+
+    @Test 
+    void testReverseTransaction() { 
+  // Initial cash balance (from @BeforeEach) = 12000.00 CAD
+
+    // Transaction details setup (as is)
+    Money originalMoney = new Money("2000.00", cad); // Use string constructor for BigDecimal
+    Money convertedMoney = originalMoney;
+    Money totalConversionFee = new Money("0.00", cad); // Use string constructor
+    ExchangeRate exchangeRate = null;
+
+    CashflowTransactionDetails cashflowTransactionDetails = new CashflowTransactionDetails(
+        originalMoney, convertedMoney, totalConversionFee, exchangeRate
+    );
+
+    // Common transaction setup (as is)
+    List<Fee> fees = new ArrayList<>();
+    fees.add(new Fee(FeeType.DEPOSIT_FEE, new Money("0.05", cad))); // Use string constructor
+    TransactionMetadata transactionMetadata = new TransactionMetadata(
+        TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "DEPOSITED MONEY", Instant.now(), Instant.now()
+    );
+
+    UUID correlationId = UUID.randomUUID();
+    UUID parentId = null;
+    TransactionType transactionType = TransactionType.DEPOSIT;
+
+    CommonTransactionInput commonTransactionInput = new CommonTransactionInput(
+        correlationId, parentId, transactionType, transactionMetadata, fees
+    );
+
+    // Perform the initial deposit
+    portfolio.recordCashflow(cashflowTransactionDetails, commonTransactionInput, Instant.now());
+
+    // Calculate expected balance after DEPOSIT:
+    // Initial: 12000.00
+    // Deposit: +2000.00
+    // Fee:     -0.05
+    // Balance after deposit = 12000.00 + 2000.00 - 0.05 = 13999.95 CAD
+    assertEquals(new Money("13999.95", cad), portfolio.getPortfolioCashBalance(), "Cash balance after initial deposit should be correct.");
+
+    UUID transactionIdToReverse = portfolio.getTransactions().get(0).getTransactionId();
+
+    // Perform the reversal
+    portfolio.reverseTransaction(transactionIdToReverse, "OPPS", Instant.MAX);
+
+    // Calculate expected balance after REVERSAL:
+    // Balance before reversal: 13999.95
+    // Reversal (as a WITHDRAWAL): -2000.00 (original amount)
+    // Fee on withdrawal: -0.05 (another fee charged for the withdrawal)
+    // Balance after reversal = 13999.95 - 2000.00 - 0.05 = 11999.90 CAD
+    assertEquals(new Money("11999.90", cad), portfolio.getPortfolioCashBalance(), "Cash balance after reversal should correctly account for original and reversal fees.");
+
+    // Assert that a REVERSAL transaction record exists
+    assertEquals(3, portfolio.getTransactions().size(), "There should be two transactions: original deposit and the reversal.");
+    assertTrue(portfolio.getTransactions().stream()
+                .anyMatch(t -> t.getTransactionType() == TransactionType.REVERSAL &&
+                               t.getParentTransactionId().equals(transactionIdToReverse)),
+                "A REVERSAL transaction record linked to the original should exist.");
+
     }
 }
