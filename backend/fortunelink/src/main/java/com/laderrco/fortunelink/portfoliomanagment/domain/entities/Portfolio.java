@@ -332,315 +332,54 @@ public class Portfolio {
         this.transactions.add(newPaymentTransaction);
 	}
 
-	public void reverseTransaction(UUID transactionId, String reason, Instant transactionDate) {
-		Objects.requireNonNull(transactionId, "transactionId cannot be null.");
+	public void reverseTransaction(UUID reversalTransactionId, String reason, Instant reversalDate) {
+		Objects.requireNonNull(reversalTransactionId, "reversalTransactionId cannot be null.");
 		Objects.requireNonNull(reason, "reason cannot be null.");
-		Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
+		Objects.requireNonNull(reversalDate, "reversalDate cannot be null.");
 
-		Optional<Transaction> reversedTransaction = this.transactions.stream()
-			.filter(t -> t.getTransactionId().equals(transactionId))
+		// what to do
+		/*
+		 * Find if the TransactionId exists
+		 * if it does exists, find out what action it was
+		 * depending on the action we reverse it accordingly
+		 */
+
+		Optional<Transaction> transactionOptional = this.transactions.stream()
+			.filter(t -> t.getTransactionId().equals(reversalTransactionId))
 			.findFirst();
 		
-		if (reversedTransaction.isEmpty()) {
-			throw new IllegalArgumentException("Transaction to reverse does not exist");
+		Transaction originalTransaction = transactionOptional.get();
+		if (originalTransaction.getTransactionType().equals(TransactionType.REVERSAL)) {
+			throw new IllegalArgumentException("Cannot reverse a reversal transaction.");
 		}
 
-      	Transaction originalTransaction = reversedTransaction.get();
-
-        if (originalTransaction.getTransactionType() == TransactionType.REVERSAL) {
-             throw new IllegalArgumentException("Cannot reverse a reversal transaction.");
-        }
-        
-        // This will be the net cash impact of the *entire reversal operation*
-        // This variable is primarily for the REVERSAL transaction record's totalTransactionAmount
-        Money netCashImpactOfReversalOperation = Money.ZERO(this.currencyPreference); 
-
-		switch (originalTransaction.getTransactionType()) {
-			case DEPOSIT:
-			case WITHDRAWAL:
-			case INTEREST:
-			case DIVIDEND:
-				if (!(originalTransaction.getTransactionDetails() instanceof CashflowTransactionDetails)) {
-					throw new IllegalArgumentException("Original transaction details are not of CashflowTransactionDetails type reversal.");
-				}
-
-				CashflowTransactionDetails originalCashflowDetails = (CashflowTransactionDetails) originalTransaction.getTransactionDetails();
-				
-				Money originalConvertedAmount = originalCashflowDetails.getConvertedCashflowAmount();
-                Money originalTotalConversionFees = originalCashflowDetails.getTotalConversionFees();
-             
-				// NOTE this could be a problem if we use a FOREX and it gives today's price, not prices from N
- 				List<Fee> originalOtherFeesList = originalTransaction.getFees();
-                Money originalOtherFeesFromTransaction = getTotalFeesAmount(originalOtherFeesList);                
-				
-				TransactionType inverseType;         
-				if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(originalTransaction.getTransactionType())) {
-                    inverseType = TransactionType.WITHDRAWAL; // Reversing an inflow means an outflow
-                } else if (originalTransaction.getTransactionType() == TransactionType.WITHDRAWAL) {
-                    inverseType = TransactionType.DEPOSIT; // Reversing an outflow means an inflow
-                } else {
-                    // This case should ideally not be reached if the outer switch covers only cashflow types.
-                    throw new IllegalStateException("Unexpected cashflow type for reversal: " + originalTransaction.getTransactionType());
-                }
-              	
-				CashflowTransactionDetails reversalCashflowDetails = new CashflowTransactionDetails(
-                    originalConvertedAmount,
-                    originalConvertedAmount,
-                    originalTotalConversionFees,
-                    originalCashflowDetails.getExchangeRate()
-                );
-
-   				CommonTransactionInput reversalSubTransactionCommonInput = new CommonTransactionInput(
-                    UUID.randomUUID(),
-                    originalTransaction.getParentTransactionId(),
-                    inverseType,
-                    new TransactionMetadata(
-						TransactionStatus.COMPLETED, 
-						TransactionSource.SYSTEM, 
-						"Reversal of " + originalTransaction.getTransactionType() + ": " + reason, transactionDate, transactionDate
-					),
-                    originalOtherFeesList // Pass the list of fees directly from the original transaction
-                );
-                this.recordCashflow(reversalCashflowDetails, reversalSubTransactionCommonInput, transactionDate);
-				
-				// Calculate the net cash impact for the main REVERSAL transaction record.
-                Money originalNetCashImpact;
-                if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND).contains(originalTransaction.getTransactionType())) {
-                    originalNetCashImpact = originalConvertedAmount.subtract(originalTotalConversionFees).subtract(originalOtherFeesFromTransaction);
-                } else { // WITHDRAWAL
-                    originalNetCashImpact = originalConvertedAmount.negate().subtract(originalTotalConversionFees).subtract(originalOtherFeesFromTransaction);
-                }
-                netCashImpactOfReversalOperation = originalNetCashImpact.negate();
-				break;
-
-			case BUY:
-				if (!(originalTransaction.getTransactionDetails() instanceof AssetTransactionDetails)) {
-					throw new IllegalArgumentException("Original transaction details are not of AssetTransactionDetails type reversal.");
-				}
-
-				AssetTransactionDetails originalAssetBuyTransactionDetails = (AssetTransactionDetails) originalTransaction.getTransactionDetails();
-
-		    	Money reversalSaleProceedsInPortfolioCurrency = originalAssetBuyTransactionDetails.getCostBasisInPortfolioCurrency();
-                Money reversalSaleProceedsInAssetCurrency = originalAssetBuyTransactionDetails.getCostBasisInAssetCurrency();
-
-				
-				Money reversalTotalFeesInPortfolioCurrency = Money.ZERO(this.currencyPreference); // Or refund original fees?
-                Money reversalTotalFeesInAssetCurrency = Money.ZERO(originalAssetBuyTransactionDetails.getAssetValueInAssetCurrency().currency());
-
-				AssetTransactionDetails reversalSellDetails = new AssetTransactionDetails(
-                    originalAssetBuyTransactionDetails.getAssetIdentifier(),
-                    originalAssetBuyTransactionDetails.getQuantity(),
-                    originalAssetBuyTransactionDetails.getPricePerUnit(), // Use original purchase price for a "clean" reversal
-                    originalAssetBuyTransactionDetails.getAssetValueInAssetCurrency(), // Original asset value
-                    originalAssetBuyTransactionDetails.getAssetValueInPortfolioCurrency(), // Original asset value in portfolio currency
-                    reversalSaleProceedsInPortfolioCurrency, // This is the 'cost basis' for the original buy, now proceeds for reversal sell
-                    reversalSaleProceedsInAssetCurrency, // Same for asset currency
-                    reversalTotalFeesInPortfolioCurrency, // Fees for this reversal sell (e.g., zero)
-                    reversalTotalFeesInAssetCurrency
-                );
-
-				TransactionMetadata revSellMetadata = new TransactionMetadata(
-					TransactionStatus.COMPLETED, 
-					TransactionSource.SYSTEM, 
-					reason, 
-					transactionDate, 
-					transactionDate
-				);
-
-				CommonTransactionInput reversalSellCommonInput = new CommonTransactionInput(
-					UUID.randomUUID(), 
-					originalTransaction.getTransactionId(), 
-					TransactionType.SELL, 
-					revSellMetadata, 
-					null
-				);
-                this.recordAssetSale(reversalSellDetails, reversalSellCommonInput, transactionDate);
-                netCashImpactOfReversalOperation = originalAssetBuyTransactionDetails.getCostBasisInPortfolioCurrency();
-
-				break;
+		Money reversalAmount = originalTransaction.getTotalTransactionAmount().negate();
+		this.portfolioCashBalance = this.portfolioCashBalance.add(reversalAmount);
 		
-			case SELL:
-				if (!(originalTransaction.getTransactionDetails() instanceof AssetTransactionDetails)) {
-                    throw new IllegalArgumentException("Original transaction details are not of AssetTransactionDetails type for SELL reversal.");
-                }
-                AssetTransactionDetails originalSellDetails = (AssetTransactionDetails) originalTransaction.getTransactionDetails();
-       			
-				Money reversalPurchaseCostInPortfolioCurrency = originalSellDetails.getCostBasisInPortfolioCurrency(); // Assuming this was the total proceeds
-                Money reversalPurchaseCostInAssetCurrency = originalSellDetails.getCostBasisInAssetCurrency(); // Assuming this was the total proceeds
- 				
-				Money reversalTotalFeesInPortfolioCurrencyForBuy = Money.ZERO(this.currencyPreference); // No new fees for this reversal 'buy'
-                Money reversalTotalFeesInAssetCurrencyForBuy = Money.ZERO(originalSellDetails.getAssetValueInAssetCurrency().currency());
-
-                AssetTransactionDetails reversalBuyDetails = new AssetTransactionDetails(
-                    originalSellDetails.getAssetIdentifier(),
-                    originalSellDetails.getQuantity(),
-                    originalSellDetails.getPricePerUnit(), // Use original sale price for a "clean" reversal
-                    originalSellDetails.getAssetValueInAssetCurrency(),
-                    originalSellDetails.getAssetValueInPortfolioCurrency(),
-                    reversalPurchaseCostInPortfolioCurrency, // This is the 'sale proceeds' for the original sell, now cost for reversal buy
-                    reversalPurchaseCostInAssetCurrency,
-                    reversalTotalFeesInPortfolioCurrencyForBuy, // Fees for this reversal buy (e.g., zero)
-                    reversalTotalFeesInAssetCurrencyForBuy
-                );				
-				
-				TransactionMetadata revBuyMetadata = new TransactionMetadata(
-					TransactionStatus.COMPLETED, 
-					TransactionSource.SYSTEM, 
-					reason, 
-					transactionDate, 
-					transactionDate
-				);
-
-				CommonTransactionInput reversalBuyCommonInput = new CommonTransactionInput(
-					UUID.randomUUID(), 
-					originalTransaction.getTransactionId(), 
-					TransactionType.SELL, 
-					revBuyMetadata, 
-					null
-				);               
-
-				this.recordAssetPurchase(reversalBuyDetails, reversalBuyCommonInput, transactionDate);
-                netCashImpactOfReversalOperation = originalSellDetails.getCostBasisInPortfolioCurrency().negate(); // Assuming costBasisInPortfolioCurrency was the total proceeds
-				break;
-			
-			case LIABILITY_INCURRENCE:
-				if (!(originalTransaction.getTransactionDetails() instanceof LiabilityIncurrenceTransactionDetails)) {
-                    throw new IllegalArgumentException("Original transaction details are not of LiabilityIncurrenceTransactionDetails type for LIABILITY_INCURRENCE reversal.");
-                }
-				LiabilityIncurrenceTransactionDetails originalIncurrenceDetails = (LiabilityIncurrenceTransactionDetails) originalTransaction.getTransactionDetails();
-
-				Money originalNetLoanProceedsInPortfolioCurrency = originalIncurrenceDetails.getOriginalLoanAmountInPortfolioCurrency().subtract(originalIncurrenceDetails.getTotalFeesInPortfolioCurrency());
-                
-				// updating the cash balance of the portfolio
-				// We effectively "pay back" the net amount received.
-                // Create a temporary "withdrawal" cashflow to reflect this.
-                CashflowTransactionDetails cashflowDetailsForIncurrenceReversal = new CashflowTransactionDetails(
-                    originalNetLoanProceedsInPortfolioCurrency,
-                    originalNetLoanProceedsInPortfolioCurrency,
-                    Money.ZERO(this.currencyPreference), // No conversion fees for this internal reversal cashflow
-                    null // No exchange rate for this internal reversal cashflow
-                );
-				TransactionMetadata revIncurrenceMetadata = new TransactionMetadata(
-					TransactionStatus.COMPLETED, 
-					TransactionSource.SYSTEM, 
-					reason, 
-					transactionDate, 
-					transactionDate
-				);
-				CommonTransactionInput commonInputForIncurrenceCashflowReversal = new CommonTransactionInput(
-                    UUID.randomUUID(), 
-					originalTransaction.getTransactionId(), 
-					TransactionType.WITHDRAWAL, 
-					revIncurrenceMetadata, 
-					null
-                );
-                this.recordCashflow(cashflowDetailsForIncurrenceReversal, commonInputForIncurrenceCashflowReversal, transactionDate);
-
- 				// --- Adjust Liability (Remove or Zero Out) ---
-                Optional<Liability> liabilityToReverseOpt = this.liabilities.stream()
-                    .filter(l -> l.getLiabilityId().equals(originalTransaction.getTransactionId()))
-                    .findFirst();
-
-                if (liabilityToReverseOpt.isPresent()) {
-                    // Option A: Remove the liability completely (if it truly never existed)
-                    this.liabilities.remove(liabilityToReverseOpt.get());
-                    // Option B: Set its balance to zero (if you want to keep the record)
-                    // liabilityToReverseOpt.get().reduceBalance(liabilityToReverseOpt.get().getCurrentBalance()); // Assuming reduceBalance handles paying off full amount
-                } else {
-                    // This scenario indicates a data inconsistency if the transaction exists but liability doesn't
-                    System.err.println("Warning: Liability for original incurrence transaction " + originalTransaction.getTransactionId() + " not found during reversal.");
-                }
-
-                // Calculate net cash impact for the overarching REVERSAL transaction.
-                // Original incurrence was a cash inflow (positive). Reversal is a cash outflow (negative).
-                netCashImpactOfReversalOperation = originalNetLoanProceedsInPortfolioCurrency.negate();
-                break;
-			
-			case PAYMENT:               
-				if (!(originalTransaction.getTransactionDetails() instanceof LiabilityPaymentTransactionDetails)) {
-                    throw new IllegalArgumentException("Original transaction details are not of LiabilityPaymentTransactionDetails type for reversal.");
-                }
-                LiabilityPaymentTransactionDetails originalPaymentDetails = (LiabilityPaymentTransactionDetails) originalTransaction.getTransactionDetails();
-                
-				// To reverse a PAYMENT:
-                // 1. Add back cash to the portfolio (the total amount paid).
-                // 2. Add back the principal portion to the liability's balance.
-
-                Money originalTotalPaymentInPortfolioCurrency = originalPaymentDetails.getTotalPaymentAmountInPortfolioCurrency();
-                Money originalPrincipalPaidInLiabilityCurrency = originalPaymentDetails.getTotalPaymentAmountInLiabilityCurrency().subtract(originalPaymentDetails.getInterestAmountInLiabilityCurrency()).subtract(originalPaymentDetails.getFeesAmountInLiabilityCurrency());
-
-				// --- Update Portfolio Cash Balance ---
-                // We effectively "redeposit" the cash that was paid out.
-                CashflowTransactionDetails cashflowDetailsForPaymentReversal = new CashflowTransactionDetails(
-                    originalTotalPaymentInPortfolioCurrency,
-                    originalTotalPaymentInPortfolioCurrency,
-                    Money.ZERO(this.currencyPreference), // No conversion fees for this internal reversal cashflow
-                    null // No exchange rate for this internal reversal cashflow
-                );			
-				TransactionMetadata revIncurrencePaymentMetadata = new TransactionMetadata(
-					TransactionStatus.COMPLETED, 
-					TransactionSource.SYSTEM, 
-					reason, 
-					transactionDate, 
-					transactionDate
-				);
-				CommonTransactionInput commonInputForIncurrencePaymentReversal = new CommonTransactionInput(
-                    UUID.randomUUID(), 
-					originalTransaction.getTransactionId(), 
-					TransactionType.WITHDRAWAL, 
-					revIncurrencePaymentMetadata, 
-					null
-                );
-                this.recordCashflow(cashflowDetailsForPaymentReversal, commonInputForIncurrencePaymentReversal, transactionDate);
-
-                // --- Adjust Liability (Add back principal) ---
-                Optional<Liability> liabilityToReversePaymentOpt = this.liabilities.stream()
-                    .filter(l -> l.getLiabilityId().equals(originalPaymentDetails.getLiabilityId()))
-                    .findFirst();
-
-                if (liabilityToReversePaymentOpt.isPresent()) {
-                    liabilityToReversePaymentOpt.get().increaseLiabilityBalance(originalPrincipalPaidInLiabilityCurrency); // this could be the downfall of me
-                } else {
-                    System.err.println("Warning: Liability for original payment transaction " + originalTransaction.getTransactionId() + " not found during reversal.");
-                }
-
-                // Calculate net cash impact for the overarching REVERSAL transaction.
-                // Original payment was a cash outflow (negative). Reversal is a cash inflow (positive).
-                netCashImpactOfReversalOperation = originalTotalPaymentInPortfolioCurrency;		
-                
-				break;
-		
-			default:
-				throw new UnsupportedOperationException("Reversal not supported for transaction type: " + originalTransaction.getTransactionType());
-		}
-		
-
-		ReversalTransactionDetails reversalTransactionDetails = new ReversalTransactionDetails(transactionId, reason);
-       	CommonTransactionInput reversalCommonInput = new CommonTransactionInput(
-            UUID.randomUUID(),
-            originalTransaction.getParentTransactionId(),
-            TransactionType.REVERSAL,
-            new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.SYSTEM, reason, transactionDate, transactionDate),
-            null
-        );
-
+		ReversalTransactionDetails reversalTransactionDetails = new ReversalTransactionDetails(reversalTransactionId, reason);
+		TransactionMetadata reversalMetadata = new TransactionMetadata(
+			TransactionStatus.COMPLETED,
+			TransactionSource.SYSTEM,
+			"REVERSAL of transaction: " + reversalTransactionId.toString(),
+			reversalDate,
+			reversalDate
+		);
 		Transaction reversalTransaction = new Transaction(
 			UUID.randomUUID(),
 			this.portfolioId,
-			UUID.randomUUID(),
-			originalTransaction.getTransactionId(),
-			TransactionType.REVERSAL, 
-			netCashImpactOfReversalOperation,
-			transactionDate,
+			UUID.randomUUID(), // correlationId
+			reversalTransactionId,
+			TransactionType.REVERSAL,
+			reversalAmount,
+			reversalDate,
 			reversalTransactionDetails,
-			reversalCommonInput.transactionMetadata(),
-			null,
-			false,
-			originalTransaction.getVersion()+1
+			reversalMetadata,
+			null, // fees, usually null
+			false, // not hidden
+			1
 		);
 
 		this.transactions.add(reversalTransaction);
-
 	}
 
 	public Money calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices) {
