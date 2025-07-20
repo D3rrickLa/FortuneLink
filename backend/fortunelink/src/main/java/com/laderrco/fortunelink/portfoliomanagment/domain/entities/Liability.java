@@ -91,12 +91,12 @@ public class Liability {
         this.currentBalance = this.currentBalance.add(amount);
     }
 
-    public void reduceBalance(Money amount) {
+    public void reduceLiabilityBalance(Money amount) {
         Objects.requireNonNull(amount, "Amount to reduce cannot be null.");
         if (!this.currentBalance.currency().equals(amount.currency())) {
             throw new IllegalArgumentException("Reduction amount currency must match liability currency.");
         }
-        if (amount.amount().compareTo(BigDecimal.ZERO) < 0) { // Only allow positive reductions
+        if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) { // Only allow positive reductions
             throw new IllegalArgumentException("Reduction amount must be positive.");
         }
         this.currentBalance = this.currentBalance.subtract(amount);

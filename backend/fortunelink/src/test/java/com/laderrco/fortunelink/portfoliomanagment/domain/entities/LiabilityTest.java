@@ -313,4 +313,38 @@ public class LiabilityTest {
         
     }
 
+    @Test
+    void testReduceBalance() {
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Money amountToDecrease = new Money(100.87, usd);
+        Money expectedMoney = new Money(2400.00d, usd);
+        testLiability.reduceLiabilityBalance(amountToDecrease);
+        assertEquals(expectedMoney.amount().setScale(2), testLiability.getCurrentBalance().amount());
+    }
+
+        @Test 
+    void testDecreaseLiabilityBalanceInValidNullValue() {
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Exception e1 = assertThrows(NullPointerException.class, () -> testLiability.reduceLiabilityBalance(null));
+        assertEquals("Amount to reduce cannot be null.", e1.getMessage());
+    }
+    
+    @Test
+    void testDecreaseLiabilityBalanceInValidNegativeAndZeroMoney() {
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Money negativeMoney = new Money(-25.65, usd);
+        Exception e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.reduceLiabilityBalance(negativeMoney));
+        assertEquals("Reduction amount must be positive.", e1.getMessage());
+        e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.reduceLiabilityBalance(new Money(0d, usd)));
+        assertEquals("Reduction amount must be positive.", e1.getMessage());
+    }
+    
+    @Test 
+    void testDecreaseLiabilityBalanceInValidWrongCurrency() {
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Currency eur = Currency.getInstance("EUR");
+        Money cadMoney = new Money(20.45, eur);        
+        Exception e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.reduceLiabilityBalance(cadMoney));
+        assertEquals("Reduction amount currency must match liability currency.", e1.getMessage());
+    }
 }

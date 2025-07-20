@@ -298,4 +298,16 @@ public class MoneyTest {
         Exception e1 = assertThrows(IllegalArgumentException.class, () -> testMoney.subtract(testMoney2));
         assertEquals("Cannot subtract money with different currencies. Please convert them to be the same.", e1.getMessage());
     }
+
+    @Test 
+    void testEquals() {
+        Money money01 = Money.ZERO(cad);
+        Money money02 = Money.ZERO(cad);
+
+        assertTrue(money01.equals(money02));
+        assertTrue(money01.equals(money01));
+        assertFalse(money01.equals(null));
+        assertFalse(money01.equals(new Object()));
+        assertFalse(money01.equals(Money.ZERO(usd)));
+    }
 }
