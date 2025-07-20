@@ -10,6 +10,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
@@ -67,6 +68,20 @@ public class PortfolioTest {
 
 		appleAsset = new AssetIdentifier(
 				"APPL", AssetType.STOCK, "US0378331005", "Apple", "NASDAQ", "DESCRIPTION");
+	}
+
+	@Test 
+	void Getters() {
+		assertEquals(portfolio, portfolio);
+		assertEquals(portfolioId, portfolio.getPortfolioId());
+		assertEquals(userId, portfolio.getUserId());
+		assertEquals(name, portfolio.getPortfolioName());
+		assertEquals(desc, portfolio.getPortfolioDescription());
+		assertEquals(cad, portfolio.getCurrencyPreference());
+		assertEquals(Collections.emptyList(), portfolio.getTransactions());
+		assertEquals(Collections.emptyList(), portfolio.getAssetHoldings());
+		assertEquals(Collections.emptyList(), portfolio.getLiabilities());
+		assertEquals(exchangeRateService, portfolio.getExchangeRateService());
 	}
 
 	@Test
@@ -1043,6 +1058,7 @@ public class PortfolioTest {
 		// Assuming LiabilityIncurrenceTransactionDetails has a constructor matching this
 		// and has fields/getters for liabilityName and description
 		LiabilityIncurrenceTransactionDetails liabilityIncurrenceTransactionDetails = new LiabilityIncurrenceTransactionDetails(
+			UUID.randomUUID(),
 			"Loan 1", // Assuming a name field
 			"Personal Loan", // Assuming a description field
 			originalLoanAmount, 
@@ -1109,6 +1125,7 @@ public class PortfolioTest {
         Money totalFeesInLiabilityCurrency = originationFee;
 
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+			UUID.randomUUID(),
             "Car Loan CAD", "Loan for new car purchase",
             originalLoanAmount, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate,
             totalFeesInPortfolioCurrency, totalFeesInLiabilityCurrency
@@ -1171,7 +1188,8 @@ public class PortfolioTest {
         Percentage annualInterestRate = new Percentage(new BigDecimal("4.50"));
         Instant maturityDate = Instant.now().plusSeconds(3600 * 24 * 365 * 10); // 10 years from now
 
-        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(	
+			UUID.randomUUID(),
             "Mortgage USD", "USD mortgage for US property",
             originalLoanAmountUSD, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate,
             totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency
@@ -1205,6 +1223,7 @@ public class PortfolioTest {
     @Test
     void testRecordNewLiability_InvalidTransactionType() {
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+			UUID.randomUUID(),
             "Invalid Loan", "Test invalid type",
             new Money("1000", cad), new Money("1000", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),
             Money.ZERO(cad), Money.ZERO(cad)
@@ -1230,6 +1249,7 @@ public class PortfolioTest {
     @Test
     void testRecordNewLiability_NullInputs() {
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+			UUID.randomUUID(),
             "Null Test", "Testing nulls",
             new Money("100", cad), new Money("100", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),
             Money.ZERO(cad), Money.ZERO(cad)

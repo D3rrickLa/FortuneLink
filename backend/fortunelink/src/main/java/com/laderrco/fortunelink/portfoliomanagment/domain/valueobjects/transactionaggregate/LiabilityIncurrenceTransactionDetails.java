@@ -1,39 +1,45 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 public final class LiabilityIncurrenceTransactionDetails extends TransactionDetails {
+	private final UUID liabilityId;
 	private final String liabilityName;
 	private final String description;
-	private final Money originalLoanAmount;
+	private final Money originalLoanAmountInLiabilityCurrency;
 	private final Money originalLoanAmountInPortfolioCurrency;
 	private final Percentage annualInterestRate;
 	private final Instant maturityDate;
-	private final Money totalFeesInPortfolioCurrency;
 	private final Money totalFeesInLiabilityCurrency;
+	private final Money totalFeesInPortfolioCurrency;
 
 	public LiabilityIncurrenceTransactionDetails(
+		UUID liabilityId,
 		String liabilityName, 
 		String description, 
-		Money originalLoanAmount, 
+		Money originalLoanAmountInLiabilityCurrency, 
 		Money originalLoanAmountInPortfolioCurrency, 
 		Percentage annualInterestRate,
 		Instant maturityDate, 
 		Money totalFeesInLiabilityCurrency, 
 		Money totalFeesInPortfolioCurrency
 	) {
+		this.liabilityId = liabilityId;
 		this.liabilityName = liabilityName;
 		this.description = description;
-		this.originalLoanAmount = originalLoanAmount;
+		this.originalLoanAmountInLiabilityCurrency = originalLoanAmountInLiabilityCurrency;
 		this.originalLoanAmountInPortfolioCurrency = originalLoanAmountInPortfolioCurrency;
 		this.annualInterestRate = annualInterestRate;
 		this.maturityDate = maturityDate;
-		this.totalFeesInPortfolioCurrency = totalFeesInPortfolioCurrency;
 		this.totalFeesInLiabilityCurrency = totalFeesInLiabilityCurrency;
+		this.totalFeesInPortfolioCurrency = totalFeesInPortfolioCurrency;
 	}
+
+	
 
 	public String getLiabilityName() {
 		return liabilityName;
@@ -43,8 +49,8 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 		return description;
 	}
 
-	public Money getOriginalLoanAmount() {
-		return originalLoanAmount;
+	public Money getOriginalLoanAmountInLiabilityCurrency() {
+		return originalLoanAmountInLiabilityCurrency;
 	}
 
 	public Money getOriginalLoanAmountInPortfolioCurrency() {
@@ -65,6 +71,10 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 
 	public Money getTotalFeesInLiabilityCurrency() {
 		return totalFeesInLiabilityCurrency;
+	}
+
+	public UUID getLiabilityId() {
+		return liabilityId;
 	}
 
 	

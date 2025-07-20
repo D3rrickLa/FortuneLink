@@ -23,10 +23,8 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.Fee
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityPaymentTransactionDetails;
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
@@ -79,7 +77,7 @@ public class PortfolioTestPart2 {
         maturityDate = Instant.now();
         totalFeesInLiaCur = Money.ZERO(cad);
         totalFeesInPorfolioCur = Money.ZERO(cad);
-        defaultIncurence = new LiabilityIncurrenceTransactionDetails(liabilityName, description, originalLoanAmount, originalLoanAmountInPortfolioCur, annualInterestRate, maturityDate, totalFeesInLiaCur, totalFeesInPorfolioCur);
+        defaultIncurence = new LiabilityIncurrenceTransactionDetails(UUID.randomUUID(), liabilityName, description, originalLoanAmount, originalLoanAmountInPortfolioCur, annualInterestRate, maturityDate, totalFeesInLiaCur, totalFeesInPorfolioCur);
 
         commonTransactionInput = new CommonTransactionInput(
             UUID.randomUUID(), 
@@ -320,7 +318,7 @@ public class PortfolioTestPart2 {
         // Incur a small liability for easy full payoff
         Money smallLoanAmount = new Money("50.00", cad);
         portfolio.recordNewLiability(
-            new LiabilityIncurrenceTransactionDetails("Small Loan", "", smallLoanAmount, smallLoanAmount, new Percentage(BigDecimal.ZERO), maturityDate, Money.ZERO(cad), Money.ZERO(cad)),
+            new LiabilityIncurrenceTransactionDetails(	UUID.randomUUID(), "Small Loan", "", smallLoanAmount, smallLoanAmount, new Percentage(BigDecimal.ZERO), maturityDate, Money.ZERO(cad), Money.ZERO(cad)),
             new CommonTransactionInput(UUID.randomUUID(), null, TransactionType.DEPOSIT, new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "", Instant.now(), Instant.now()), new ArrayList<>()),
             Instant.now()
         );

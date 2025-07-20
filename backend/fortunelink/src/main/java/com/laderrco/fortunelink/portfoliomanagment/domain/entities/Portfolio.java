@@ -90,11 +90,13 @@ public class Portfolio {
 		if (Set.of(TransactionType.DEPOSIT, TransactionType.INTEREST, TransactionType.DIVIDEND)
 				.contains(commonTransactionInput.transactionType())) {
 			netCashImpact = totalAmount.subtract(totalFeesAmount);
-		} else if (Set.of(TransactionType.WITHDRAWAL).contains(commonTransactionInput.transactionType())) {
+		} 
+		else if (Set.of(TransactionType.WITHDRAWAL).contains(commonTransactionInput.transactionType())) {
 			// For withdrawal, both the withdrawn amount and fees are subtracted.
 			// Assuming principalTransactionAmount is positive (amount withdrawn).
 			netCashImpact = totalAmount.negate().subtract(totalFeesAmount);
-		} else {
+		} 
+		else {
 			// Handle other cashflow types or throw an exception if type is not recognized
 			// for cash balance update.
 			// For example, an `ACCOUNT_TRANSFER` might have a different net impact.
@@ -103,19 +105,20 @@ public class Portfolio {
 		}
 
 		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
-				Transaction newCashTransaction = new Transaction(
-				UUID.randomUUID(),
-				this.portfolioId,
-				commonTransactionInput.correlationId(),
-				commonTransactionInput.parentTransactionId(),
-				commonTransactionInput.transactionType(),
-				totalAmount,
-				transactionDate,
-				details,
-				commonTransactionInput.transactionMetadata(),
-				commonTransactionInput.fees(),
-				false,
-				1);
+		Transaction newCashTransaction = new Transaction(
+			UUID.randomUUID(),
+			this.portfolioId,
+			commonTransactionInput.correlationId(),
+			commonTransactionInput.parentTransactionId(),
+			commonTransactionInput.transactionType(),
+			netCashImpact,
+			transactionDate,
+			details,
+			commonTransactionInput.transactionMetadata(),
+			commonTransactionInput.fees(),
+			false,
+			1
+		);
 
 		this.transactions.add(newCashTransaction);
 	}
@@ -235,8 +238,8 @@ public class Portfolio {
 
 	// liabilities, you technically gain cash
 	// when you take out a loan, your cash balance increases by the loan principal minus any fees
-	public void recordNewLiability(LiabilityIncurrenceTransactionDetails details, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
-		Objects.requireNonNull(details, "details cannot be null.");
+	public void recordNewLiability(LiabilityIncurrenceTransactionDetails initialDetails, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
+		Objects.requireNonNull(initialDetails, "details cannot be null.");
 		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
 		Objects.requireNonNull(transactionDate, "TransactionDate cannot be null.");
 
@@ -244,8 +247,33 @@ public class Portfolio {
 			throw new IllegalArgumentException("Liability incurrence transaction type must be LIABILITY_INCURRENCE or DEPOSIT.");
 		}
 	
-		Money netCashReceived = details.getOriginalLoanAmountInPortfolioCurrency().subtract(details.getTotalFeesInPortfolioCurrency());
-		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashReceived);
+		Liability liability = new Liability(
+			UUID.randomUUID(),
+			this.portfolioId,
+			initialDetails.getLiabilityName(),
+			initialDetails.getDescription(),
+			initialDetails.getOriginalLoanAmountInLiabilityCurrency().subtract(initialDetails.getTotalFeesInLiabilityCurrency()),
+			initialDetails.getAnnualInterestRate(),
+			initialDetails.getMaturityDate(),
+			transactionDate
+		);
+
+		this.liabilities.add(liability);
+		LiabilityIncurrenceTransactionDetails incurrenceTransactionDetails = new LiabilityIncurrenceTransactionDetails(
+			liability.getLiabilityId(),        
+			initialDetails.getLiabilityName(),
+			initialDetails.getDescription(),
+			initialDetails.getOriginalLoanAmountInLiabilityCurrency(),
+			initialDetails.getOriginalLoanAmountInPortfolioCurrency(),
+			initialDetails.getAnnualInterestRate(),
+			initialDetails.getMaturityDate(),
+			initialDetails.getTotalFeesInLiabilityCurrency(),
+			initialDetails.getTotalFeesInPortfolioCurrency()
+		);
+
+
+		Money netCashImpact = incurrenceTransactionDetails.getOriginalLoanAmountInPortfolioCurrency().subtract(incurrenceTransactionDetails.getTotalFeesInPortfolioCurrency());
+		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
 		
 		Transaction newLiabilityIncurrenceTransaction = new Transaction(
 			UUID.randomUUID(),
@@ -253,29 +281,15 @@ public class Portfolio {
 			commonTransactionInput.correlationId(),
 			commonTransactionInput.parentTransactionId(),
 			commonTransactionInput.transactionType(),
-			netCashReceived,
+			netCashImpact,
 			transactionDate,
-			details,
+			incurrenceTransactionDetails,
 			commonTransactionInput.transactionMetadata(),
 			commonTransactionInput.fees(),
 			false,
 			1
 		);
 		this.transactions.add(newLiabilityIncurrenceTransaction);
-
-
-		Liability liability = new Liability(
-			UUID.randomUUID(),
-			this.portfolioId,
-			details.getLiabilityName(),
-			details.getDescription(),
-			details.getOriginalLoanAmount().subtract(details.getTotalFeesInLiabilityCurrency()),
-			details.getAnnualInterestRate(),
-			details.getMaturityDate(),
-			transactionDate
-		);
-
-		this.liabilities.add(liability);
 		
 	}
 
@@ -348,14 +362,63 @@ public class Portfolio {
 			.filter(t -> t.getTransactionId().equals(reversalTransactionId))
 			.findFirst();
 		
-		Transaction originalTransaction = transactionOptional.get();
-		if (originalTransaction.getTransactionType().equals(TransactionType.REVERSAL)) {
-			throw new IllegalArgumentException("Cannot reverse a reversal transaction.");
+		if (transactionOptional.isEmpty()) {
+			throw new IllegalStateException("Original transaction not found.");
 		}
 
-		Money reversalAmount = originalTransaction.getTotalTransactionAmount().negate();
-		this.portfolioCashBalance = this.portfolioCashBalance.add(reversalAmount);
-		
+		Transaction originalTransaction = transactionOptional.get();
+		if (originalTransaction.getTransactionType().equals(TransactionType.REVERSAL)) {
+			throw new IllegalStateException("Cannot reverse a reversal transaction.");
+		}
+
+
+		Money netCashImpactOfReversal = Money.ZERO(this.currencyPreference);
+
+		switch (originalTransaction.getTransactionType()) {
+			case DEPOSIT:
+			case WITHDRAWAL:
+				netCashImpactOfReversal = originalTransaction.getTotalTransactionAmount().negate();
+				break;
+				
+			case LIABILITY_INCURRENCE:
+				LiabilityIncurrenceTransactionDetails originalIncurrenceTransactionDetails = (LiabilityIncurrenceTransactionDetails) originalTransaction.getTransactionDetails();
+				netCashImpactOfReversal = originalIncurrenceTransactionDetails.getOriginalLoanAmountInPortfolioCurrency().negate();
+
+				// finding the liability and reduce its balance
+				Optional<Liability> liabilityOptional = this.liabilities.stream()
+					.filter(l -> l.getLiabilityId().equals(originalIncurrenceTransactionDetails.getLiabilityId())) // we don't have the liability id here
+					.findFirst();
+				if (liabilityOptional.isPresent()) {
+					liabilityOptional.get().reduceLiabilityBalance(originalIncurrenceTransactionDetails.getOriginalLoanAmountInLiabilityCurrency());
+				}
+				else {
+					throw new IllegalStateException("Liability not found for incurrence reversal.");
+				}
+				break;
+			case PAYMENT:
+				LiabilityPaymentTransactionDetails originalPaymentTransactionDetails = (LiabilityPaymentTransactionDetails) originalTransaction.getTransactionDetails();
+				netCashImpactOfReversal = originalPaymentTransactionDetails.getTotalPaymentAmountInPortfolioCurrency();
+
+				Money principalPaidInLiabilityCurrency = originalPaymentTransactionDetails.getTotalPaymentAmountInLiabilityCurrency()
+					.subtract(originalPaymentTransactionDetails.getInterestAmountInLiabilityCurrency())
+					.subtract(originalPaymentTransactionDetails.getFeesAmountInLiabilityCurrency());
+
+				Optional<Liability> targetLiability = this.liabilities.stream()
+					.filter(l -> l.getLiabilityId().equals(originalPaymentTransactionDetails.getLiabilityId()))
+					.findFirst();
+				if (targetLiability.isPresent()) {
+					targetLiability.get().increaseLiabilityBalance(principalPaidInLiabilityCurrency); // Add principal back to liability
+            	} 
+				else {
+                	throw new IllegalStateException("Liability not found for payment reversal.");
+            	}
+				break;
+
+			default:
+				throw new UnsupportedOperationException("Reversal for transaction type: " + originalTransaction.getTransactionType() +" not yet supported.");
+		}
+		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpactOfReversal);
+
 		ReversalTransactionDetails reversalTransactionDetails = new ReversalTransactionDetails(reversalTransactionId, reason);
 		TransactionMetadata reversalMetadata = new TransactionMetadata(
 			TransactionStatus.COMPLETED,
@@ -370,7 +433,7 @@ public class Portfolio {
 			UUID.randomUUID(), // correlationId
 			reversalTransactionId,
 			TransactionType.REVERSAL,
-			reversalAmount,
+			netCashImpactOfReversal.negate(), // total amoutn of the reversal transaction
 			reversalDate,
 			reversalTransactionDetails,
 			reversalMetadata,
@@ -379,7 +442,7 @@ public class Portfolio {
 			1
 		);
 
-		this.transactions.add(reversalTransaction);
+		this.transactions.add(reversalTransaction);    
 	}
 
 	public Money calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices) {

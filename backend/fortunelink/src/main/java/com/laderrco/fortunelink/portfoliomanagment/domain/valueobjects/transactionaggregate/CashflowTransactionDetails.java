@@ -5,10 +5,11 @@ import java.util.Objects;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+// this is for cash related events ONLY so other fees don't go here, just cash conversion fees
 public final class CashflowTransactionDetails extends TransactionDetails {
     private final Money originalCashflowAmount;
     private final Money convertedCashflowAmount;
-    private final Money totalConversionFees; // combined fees, forex + other
+    private final Money totalConversionFees; 
     private final ExchangeRate exchangeRate;
     
     public CashflowTransactionDetails(
