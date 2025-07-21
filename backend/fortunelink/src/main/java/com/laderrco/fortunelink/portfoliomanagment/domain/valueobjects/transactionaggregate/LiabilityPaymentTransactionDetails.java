@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -22,6 +23,14 @@ public final class LiabilityPaymentTransactionDetails extends TransactionDetails
         Money interestAmountInPortfolioCurrency,
         Money feesAmountInPortfolioCurrency
     ) {
+        Objects.requireNonNull(liabilityId, "Liability id cannot be null.");
+        Objects.requireNonNull(totalPaymentAmountInLiabilityCurrency, "Total payment amount in liability currency cannot be null.");
+        Objects.requireNonNull(interestAmountInLiabilityCurrency, "Interest amount in liability currency cannot be null.");
+        Objects.requireNonNull(feesAmountInLiabilityCurrency, "Fee amount in liability currency cannot be null.");
+        Objects.requireNonNull(totalPaymentAmountInPortfolioCurrency, "Total payment amount in Portfolio currency cannot be null.");
+        Objects.requireNonNull(interestAmountInPortfolioCurrency, "Interest amount in portfolio currency cannot be null.");
+        Objects.requireNonNull(feesAmountInPortfolioCurrency, "Fee amount in portfolio currency cannot be null.");
+        
         this.liabilityId = liabilityId;
         this.totalPaymentAmountInLiabilityCurrency = totalPaymentAmountInLiabilityCurrency; // principal + interest
         this.interestAmountInLiabilityCurrency = interestAmountInLiabilityCurrency; // amount from total that is interest

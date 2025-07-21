@@ -25,6 +25,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.Tra
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityPaymentTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.ReversalTransactionDetails;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
@@ -93,6 +94,10 @@ public class PortfolioTestPart3 {
         portfolio.reverseTransaction(reversalId, "OPP", testDate);
 
         assertEquals(new Money(12000, cad), portfolio.getPortfolioCashBalance());
+
+        ReversalTransactionDetails reversalTransactionDetails = (ReversalTransactionDetails) portfolio.getTransactions().get(portfolio.getTransactions().size()-1).getTransactionDetails();
+        assertEquals(reversalId, reversalTransactionDetails.getOriginalTransactionId());
+        assertEquals("OPP", reversalTransactionDetails.getReason());
     }
 
 @Test
