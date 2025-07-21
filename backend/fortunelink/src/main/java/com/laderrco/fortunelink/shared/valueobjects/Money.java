@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.shared.valueobjects;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.Currency;
 import java.util.Objects;
 
@@ -117,6 +118,10 @@ public record Money(BigDecimal amount, Currency currency) {
 
     public static Money of(BigDecimal bigDecimal, Currency instance) {
         return new Money(bigDecimal, instance);
+    }
+
+    public Money roundToTwoDecimalPlaces() {
+        return new Money(this.amount().setScale(2, RoundingMode.HALF_UP), this.currency());
     }
 
     @Override

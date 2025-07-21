@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Currency;
@@ -17,6 +19,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTra
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
@@ -25,9 +28,11 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.LiabilityPaymentTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.ReversalTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate.SimpleTransactionDetails;
 import com.laderrco.fortunelink.shared.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.shared.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 public class Portfolio {
 	private final UUID portfolioId;
@@ -446,62 +451,122 @@ public class Portfolio {
 	}
 
 	public Money calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices) {
-		// total value in portfolio's preference
-		// this is an example, we would need an acutal service class to handle this
-		// TODO switch to acutal service, currenyl using CAD -> USD
-		// Money total = Money.ZERO(this.currencyPreference);
-		// for (AssetHolding assetHolding : assetHoldings) {
-		// // check if we need to even do it
-		// MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
+		Money total = Money.ZERO(this.currencyPreference);
+		for (AssetHolding assetHolding : assetHoldings) {
+		// check if we need to even do it
+		MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
 
-		// if (price != null) {
-		// Money holdingValue = assetHolding.getCurrentValue(price);
-		// Money convertedValue = exchangeRateService.convert(holdingValue,
-		// this.currencyPreference);
-		// total = total.add(convertedValue);
-		// }
-		// }
-		// return total;
-		return null;
+		if (price != null) {
+			Money holdingValue = assetHolding.getCurrentValue(price);
+			Money convertedValue = exchangeRateService.convert(holdingValue,
+			this.currencyPreference);
+			total = total.add(convertedValue);
+			}
+		}
+		return total;
 	}
 
-	public Money calculateUnrealizedGains(AssetAllocation currentPrices) {
-		return null;
+	public Money calculateUnrealizedGains(Map<AssetIdentifier, MarketPrice> currentPrices) {
+		Money totalMarketValue = this.calculateTotalValue(currentPrices); // Re-use the method above
+
+		Money totalCostBasis = Money.ZERO(this.currencyPreference);
+
+		for (AssetHolding assetHolding : assetHoldings) {
+			// Get the cost basis of the holding in its original currency
+			Money costBasisInAssetCurrency = assetHolding.getTotalAdjustedCostBasis();
+
+			// Convert that cost basis to the portfolio's preferred currency
+			Money convertedCostBasisInPortfolioCurrency = exchangeRateService.convert(
+				costBasisInAssetCurrency,
+				this.currencyPreference
+			);
+			totalCostBasis = totalCostBasis.add(convertedCostBasisInPortfolioCurrency);
+		}
+
+		// Unrealized Gain = Current Market Value - Total Cost Basis
+		return totalMarketValue.subtract(totalCostBasis);
 	}
 
 	public AssetAllocation getAssetAllocation(Map<AssetIdentifier, MarketPrice> currentPrices) {
-		return null;
-		// Money totalValue = calculateTotalValue(currentPrices);
-		// AssetAllocation allocation = new AssetAllocation(totalValue,
-		// this.currencyPreference);
+		Money totalValue = calculateTotalValue(currentPrices);
 
-		// for (AssetHolding assetHolding : assetHoldings) {
-		// MarketPrice marketPrice =
-		// currentPrices.get(assetHolding.getAssetIdentifier());
-		// if (marketPrice != null) {
-		// Money holdingValue = assetHolding.getCurrentValue(marketPrice); // this needs
-		// to return value in portfolio pref
+		// Handle case where totalValue is zero to prevent division by zero
+		if (totalValue.amount().compareTo(BigDecimal.ZERO) == 0) {
+			return new AssetAllocation(totalValue, this.currencyPreference); // Return empty allocation
+		}
 
-		// Money covertedValue = exchangeRateService.convert(holdingValue,
-		// this.currencyPreference);
+		AssetAllocation allocation = new AssetAllocation(totalValue, this.currencyPreference);
 
-		// Percentage percentage = new Percentage(
-		// covertedValue.amount()
-		// .divide(totalValue.amount(), DecimalPrecision.PERCENTAGE.getDecimalPlaces(),
-		// RoundingMode.HALF_UP)
-		// .multiply(BigDecimal.valueOf(100))
-		// );
+		for (AssetHolding assetHolding : assetHoldings) {
+			MarketPrice marketPrice = currentPrices.get(assetHolding.getAssetIdentifier());
 
-		// allocation.addAllocation(assetHolding.getAssetIdentifier(), covertedValue,
-		// percentage);
-		// }
-		// }
+			if (marketPrice != null) {
+				Money holdingValueInAssetCurrency = assetHolding.getCurrentValue(marketPrice);
 
-		// return allocation;
+				Money convertedValueInPortfolioCurrency = exchangeRateService.convert(
+					holdingValueInAssetCurrency,
+					this.currencyPreference
+				);
+
+				// Calculate percentage
+				// Ensure proper division with BigDecimal and RoundingMode
+				BigDecimal percentageAmount = convertedValueInPortfolioCurrency.amount()
+					.divide(totalValue.amount(), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP)
+					.multiply(BigDecimal.valueOf(100));
+
+				Percentage percentage = new Percentage(percentageAmount);
+
+				allocation.addAllocation(assetHolding.getAssetIdentifier(), convertedValueInPortfolioCurrency, percentage);
+			}
+		}
+		return allocation;
 	}
 
-	public void accruelInterestLiabilities() {
+	public void accruelInterestLiabilities(Instant accrualDate) {
+		for (Liability liability : this.liabilities) {
+			// Calculate the number of days since last accrual (or loan inception)
+			// This is a simplified example; real-world might use more sophisticated day count conventions.
+			Instant lastAccrual = liability.getLastInterestAccrualDate() != null ? liability.getLastInterestAccrualDate() : liability.getLastInterestAccrualDate();
+			long daysBetween = java.time.Duration.between(lastAccrual, accrualDate).toDays();
 
+			if (daysBetween <= 0) {
+				continue; // No days passed, no interest to accrue
+			}
+
+			Money currentPrincipalBalance = liability.getCurrentBalance(); // Assume this excludes already accrued interest if principal is separate
+			Percentage annualRate = liability.getAnnualInterestRate();
+
+			// Simplified daily interest accrual
+			// Interest = Principal * (Annual Rate / 365) * Days
+			BigDecimal dailyRate = annualRate.percentageValue().divide(BigDecimal.valueOf(365), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP);
+			BigDecimal interestAmountValue = currentPrincipalBalance.amount().multiply(dailyRate).multiply(BigDecimal.valueOf(daysBetween));
+			
+			Money accruedInterest = new Money(interestAmountValue, currentPrincipalBalance.currency());
+
+			if (accruedInterest.amount().compareTo(BigDecimal.ZERO) > 0) {
+				liability.increaseLiabilityBalance(accruedInterest); // Increase the liability balance
+
+				// Optional: Record an interest accrual transaction for auditing
+				// This transaction usually doesn't affect cash directly until payment
+				Transaction interestAccrualTransaction = new Transaction(
+					UUID.randomUUID(),
+					this.portfolioId,
+					UUID.randomUUID(), // correlationId
+					liability.getLiabilityId(), // Link to the liability
+					TransactionType.INTEREST, // New TransactionType
+					accruedInterest, // Amount of interest accrued (could be negative if representing expense)
+					accrualDate,
+					new SimpleTransactionDetails("Interest accrued on liability " + liability.getLiabilityId()), // Or a specific InterestAccrualTransactionDetails
+					new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.SYSTEM, "Accrued interest", accrualDate, Instant.now()),
+					null, // No direct fees for accrual itself
+					false,
+					1
+				);
+				this.transactions.add(interestAccrualTransaction);
+
+				liability.setLastAccrualDate(accrualDate); // Update last accrual date
+			}
+		}
 	}
 
 	public UUID getPortfolioId() {
@@ -544,4 +609,12 @@ public class Portfolio {
 		return exchangeRateService;
 	}
 
+	public void addAssetHolding(AssetHolding holding) {
+		Objects.requireNonNull(holding, "holding cannot be null.");
+		this.assetHoldings.add(holding);
+	}
+	public void addLiability(Liability liability) {
+		Objects.requireNonNull(liability, "liability cannot be null.");
+		this.liabilities.add(liability);
+	}
 }

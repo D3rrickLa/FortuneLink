@@ -36,7 +36,6 @@ public class PortfolioTestPart3 {
 	private Money initialPortfolioCashBalance;
 	private ExchangeRateService exchangeRateService;
 
-    private Currency usd;
     private Currency cad;
     private Portfolio portfolio;
     private UUID portfolioId;
@@ -44,7 +43,6 @@ public class PortfolioTestPart3 {
 
     @BeforeEach
     void init() {
-        usd = Currency.getInstance("USD");
         cad = Currency.getInstance("CAD");
         portfolioId = UUID.randomUUID();
         userId = UUID.randomUUID();

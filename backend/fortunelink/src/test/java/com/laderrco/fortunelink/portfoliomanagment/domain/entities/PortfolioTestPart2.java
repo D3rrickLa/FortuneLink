@@ -37,7 +37,6 @@ public class PortfolioTestPart2 {
 	private String desc;
 	private Money portfolioCashBalance;
 	private Currency cad;
-	private Currency usd;
 	private ExchangeRateService exchangeRateService;
     
     private String liabilityName;
@@ -60,7 +59,6 @@ public class PortfolioTestPart2 {
 		desc = "some desc";
 
 		cad = Currency.getInstance("CAD");
-		usd = Currency.getInstance("USD");
 
 		portfolioCashBalance = new Money(12000, cad);
 		exchangeRateService = new SimpleExchangeRateService();

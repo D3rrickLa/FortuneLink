@@ -146,6 +146,10 @@ public class Liability {
         this.annualInterestRate = annualInterestRate;
     }
 
+    public void setLastAccrualDate(Instant newDate) {
+        this.lastInterestAccrualDate = newDate;
+    }
+
     public UUID getLiabilityId() {
         return liabilityId;
     }
