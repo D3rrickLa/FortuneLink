@@ -409,5 +409,11 @@ a set of features you *must* have for your first deployable version
 
 social feature later on
 
+## Shoe horning AI into this project - for the future
+1. AI/ML predictor or your current portfolio (time series, but like at 1, 5, 10, 30 years)
+2. AI agent for make recommendation on what to do, markets to look out for and stocks recommendations to balance out the portfolio
+
+
 --- 
 This is the end of the Project Documentation.
+
