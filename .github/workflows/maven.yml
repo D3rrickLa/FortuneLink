@@ -29,6 +29,17 @@ jobs:
         cache: maven
     - name: Change DIR for Maven
       run: cd backend/fortunelink
+
+    - name: Setup Maven settings.xml
+      uses: s4u/maven-settings-action@v3.0.0
+      with:
+        servers: | 
+          [{
+            "id": "github",
+            "username" : "${{ secrets.GITHUB_USERNAME }}",
+            "username" : "${{ secrets.GITHUB_TOKEN }}",
+          }]
+
     - name: Run Maven Tests
       run: mvn test -X
 
