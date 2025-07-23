@@ -36,8 +36,8 @@ jobs:
         servers: | 
           [{
             "id": "github",
-            "username" : "${{ secrets.GITHUB_USERNAME }}",
-            "username" : "${{ secrets.GITHUB_TOKEN }}",
+            "username" : "${{ secrets.GH_USERNAME }}",
+            "username" : "${{ secrets.GH_TOKEN }}",
           }]
 
     - name: Run Maven Tests
