@@ -39,6 +39,9 @@ jobs:
             "username" : "${{ secrets.GH_USERNAME }}",
             "username" : "${{ secrets.GH_TOKEN }}",
           }]
+        sonatypeSnapshots: false
+        apacheSnapshots: false
+        override: true
 
     - name: Run Maven Tests
       run: mvn test -X
