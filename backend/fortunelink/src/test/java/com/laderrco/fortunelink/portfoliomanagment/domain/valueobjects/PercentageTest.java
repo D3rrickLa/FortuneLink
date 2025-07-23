@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.shared.valueobjects;
+package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

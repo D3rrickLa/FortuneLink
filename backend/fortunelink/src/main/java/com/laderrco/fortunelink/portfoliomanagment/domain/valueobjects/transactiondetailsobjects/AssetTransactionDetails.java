@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 
 public final class AssetTransactionDetails extends TransactionDetails {
     private final AssetIdentifier assetIdentifier;

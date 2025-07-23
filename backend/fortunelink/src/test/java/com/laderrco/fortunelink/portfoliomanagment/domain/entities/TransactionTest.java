@@ -15,13 +15,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.TransactionDetails;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class TransactionTest {
     UUID transactionId;

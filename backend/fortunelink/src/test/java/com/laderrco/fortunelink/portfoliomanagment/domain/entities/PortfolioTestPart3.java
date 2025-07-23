@@ -15,7 +15,10 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTransactionInput;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
@@ -26,9 +29,6 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityPaymentTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.ReversalTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.infrastructure.services.SimpleExchangeRateService;
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 public class PortfolioTestPart3 {
     private UUID userId;

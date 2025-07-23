@@ -6,9 +6,6 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.Objects;
 
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-
 public record MarketPrice(AssetIdentifier assetIdentifier, Money price, Instant priceDate, String source) {
     public MarketPrice {
         Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");

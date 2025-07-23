@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class AssetHoldingTest {
 

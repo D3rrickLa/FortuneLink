@@ -15,8 +15,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
 
 public class LiabilityTest {
     UUID liabilityId;

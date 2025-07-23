@@ -7,7 +7,7 @@ import java.util.UUID;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 
 public class AssetHolding {
     private final UUID assetId;

@@ -18,6 +18,8 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIden
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.CommonTransactionInput;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionSource;
@@ -29,10 +31,8 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityPaymentTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.ReversalTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.SimpleTransactionDetails;
-import com.laderrco.fortunelink.shared.exceptions.AssetNotFoundException;
-import com.laderrco.fortunelink.shared.exceptions.InsufficientFundsException;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
+import com.laderrco.fortunelink.portfoliomanagment.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfoliomanagment.exceptions.InsufficientFundsException;
 
 public class Portfolio {
 	private final UUID portfolioId;

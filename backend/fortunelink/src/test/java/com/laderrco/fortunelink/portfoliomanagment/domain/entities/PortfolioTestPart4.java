@@ -22,11 +22,11 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Allocatio
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetAllocation;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPrice;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.infrastructure.services.SimpleExchangeRateService;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 public class PortfolioTestPart4 {
     private UUID userId;

@@ -11,10 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ExchangeRate;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.AssetTransactionDetails;
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class AssetTransactionDetailsTest {
     private AssetIdentifier assetIdentifier;

@@ -8,8 +8,8 @@ import java.util.Currency;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
 
 // might need a way to change the currency of the liability 
 public class Liability {

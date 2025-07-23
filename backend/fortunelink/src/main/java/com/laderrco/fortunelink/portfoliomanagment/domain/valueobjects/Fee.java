@@ -1,12 +1,10 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects;
 
-import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-
 import java.math.BigDecimal;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.FeeType;
+import com.laderrco.fortunelink.portfoliomanagment.exceptions.InvalidQuantityException;
 
 public record Fee(FeeType feeType, Money amount) {
     public Fee {

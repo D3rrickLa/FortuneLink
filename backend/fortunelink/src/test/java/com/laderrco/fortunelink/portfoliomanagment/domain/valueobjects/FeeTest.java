@@ -9,8 +9,7 @@ import java.util.Currency;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.FeeType;
-import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.exceptions.InvalidQuantityException;
 
 public class FeeTest {
 

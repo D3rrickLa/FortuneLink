@@ -11,8 +11,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
-import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 // organizes data
 // it's a snapshot object that answers the question - How is my money distributed across different invesetments right now?

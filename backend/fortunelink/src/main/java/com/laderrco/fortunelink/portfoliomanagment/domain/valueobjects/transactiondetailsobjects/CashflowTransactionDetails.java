@@ -2,8 +2,8 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transact
 
 import java.util.Objects;
 
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ExchangeRate;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 
 // this is for cash related events ONLY so other fees don't go here, just cash conversion fees
 public final class CashflowTransactionDetails extends TransactionDetails {

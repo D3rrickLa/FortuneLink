@@ -3,7 +3,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transact
 import java.util.Objects;
 import java.util.UUID;
 
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 
 public final class LiabilityPaymentTransactionDetails extends TransactionDetails {
     private final UUID liabilityId;

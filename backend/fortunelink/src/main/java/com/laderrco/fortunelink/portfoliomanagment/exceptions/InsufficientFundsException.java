@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.shared.exceptions;
+package com.laderrco.fortunelink.portfoliomanagment.exceptions;
 
 public final class InsufficientFundsException extends RuntimeException{
     public InsufficientFundsException(String message) {
