@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagment.domain.services;
+package com.laderrco.fortunelink.portfoliomanagment.infrastructure.services;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -6,6 +6,7 @@ import java.util.Currency;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.laderrco.fortunelink.portfoliomanagment.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 // TODO fix this to you the money converTo method

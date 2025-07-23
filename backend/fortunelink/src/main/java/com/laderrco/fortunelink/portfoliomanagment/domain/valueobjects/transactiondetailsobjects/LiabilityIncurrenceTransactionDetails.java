@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate;
+package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects;
 
 import java.time.Instant;
 import java.util.UUID;

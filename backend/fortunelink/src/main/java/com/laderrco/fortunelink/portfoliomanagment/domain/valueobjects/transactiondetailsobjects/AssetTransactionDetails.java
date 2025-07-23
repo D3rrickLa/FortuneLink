@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactionaggregate;
+package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects;
 
 import java.math.BigDecimal;
 import java.util.Objects;
