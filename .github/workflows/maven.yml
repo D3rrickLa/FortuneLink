@@ -27,6 +27,8 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
+    - name: Change DIR for Maven
+      run: cd backend/fortunelink
     - name: Run Maven Tests
       run: mvn test -X
 
