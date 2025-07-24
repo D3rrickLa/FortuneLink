@@ -175,8 +175,5 @@ public class AssetHolding {
 
     public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    
-    
+    }    
 }

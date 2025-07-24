@@ -414,6 +414,8 @@ social feature later on
 2. AI agent for make recommendation on what to do, markets to look out for and stocks recommendations to balance out the portfolio
 
 
+Application Layer -> the use cases or features of the system
+
 --- 
 This is the end of the Project Documentation.
 

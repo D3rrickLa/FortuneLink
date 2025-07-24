@@ -36,6 +36,6 @@ public record MarketPrice(AssetIdentifier assetIdentifier, Money price, Instant 
         
         Money convertedPrice = this.price.convertTo(targetCurrency, rate);
         return new MarketPrice(this.assetIdentifier, convertedPrice, this.priceDate, this.source);
-
     }
+
 }

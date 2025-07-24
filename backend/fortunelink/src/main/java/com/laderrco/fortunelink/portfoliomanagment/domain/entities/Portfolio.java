@@ -522,6 +522,27 @@ public class Portfolio {
 		return allocation;
 	}
 
+	public Money calculateTotalLiabilitiesValue() {
+		if (this.liabilities == null || this.liabilities.isEmpty()) {
+        	return Money.ZERO(this.currencyPreference); // Or portfolio's base currency
+    	}
+   		Money total = Money.ZERO(this.currencyPreference); // Initialize with portfolio's currency
+    	for (Liability liability : this.liabilities) {
+        	// Ensure currency consistency or handle conversion if liabilities can be in different currencies
+			// For simplicity, assuming all liabilities are already in portfolio's currency for sum
+			total = total.add(liability.getCurrentBalance());
+		}
+    return total;
+		
+	}
+
+	public Money netWorth(Money totalMarketValue, Money totalLiabilitiesValue) {
+		if (!totalMarketValue.currency().equals(this.currencyPreference) || !totalLiabilitiesValue.currency().equals(this.currencyPreference)) {
+			throw new IllegalArgumentException("CUrrency mismatch for net worth calculation.");
+		}
+		return totalMarketValue.subtract(totalLiabilitiesValue);
+	}
+
 	public void accruelInterestLiabilities(Instant accrualDate) {
 		for (Liability liability : this.liabilities) {
 			// Calculate the number of days since last accrual (or loan inception)
