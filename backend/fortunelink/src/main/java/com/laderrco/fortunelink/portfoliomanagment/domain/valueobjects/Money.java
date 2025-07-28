@@ -124,6 +124,19 @@ public record Money(BigDecimal amount, Currency currency) {
         return new Money(this.amount().setScale(2, RoundingMode.HALF_UP), this.currency());
     }
 
+    public Percentage percentageOf(Money total) {
+        Objects.requireNonNull(total, "Total cannot be null.");
+        areSameCurrency(total.currency(), "percentageOf");
+
+        if (total.amount.compareTo(BigDecimal.ZERO) == 0) {
+            return Percentage.of(0);
+        }
+
+        BigDecimal percentageValue = this.amount.divide(total.amount, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        return new Percentage(percentageValue.stripTrailingZeros());
+
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

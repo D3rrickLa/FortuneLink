@@ -19,14 +19,15 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
 
 public class LiabilityTest {
-    UUID liabilityId;
-    UUID portfolioId;
-    String name;
-    String description;
-    Money defaultCurrency;
-    Currency usd;
-    Instant maturityDate;
-    Percentage defaultInterestRate;
+    private UUID liabilityId;
+    private UUID portfolioId;
+    private String name;
+    private String description;
+    private Money defaultCurrency;
+    private Currency usd;
+    private Instant incurrenceDate;
+    private Instant maturityDate;
+    private Percentage defaultInterestRate;
 
     
     @BeforeEach
@@ -38,51 +39,52 @@ public class LiabilityTest {
         usd = Currency.getInstance("USD");
         defaultCurrency = new Money(2500.87, usd);
         maturityDate = Instant.parse("2030-12-10T10:35:45.00Z");
+        incurrenceDate = Instant.now();
         defaultInterestRate = Percentage.fromPercentage(new BigDecimal("8.76"));
     }
 
     @Test 
     void testConstructor() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, Instant.now(), maturityDate, maturityDate);
         assertNotNull(testLiability);
     }
 
     @Test
     void testConstructorInValidNullForAllParameters() {
-        Exception e1 = assertThrowsExactly(NullPointerException.class, () -> new Liability(null, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate));
+        Exception e1 = assertThrowsExactly(NullPointerException.class, () -> new Liability(null, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate));
         assertEquals("Liability id cannot be null.", e1.getMessage());
 
-        Exception e2 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, null, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate));
+        Exception e2 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, null, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate));
         assertEquals("Portfolio id cannot be null.", e2.getMessage());
-        Exception e3 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, null, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate));
+        Exception e3 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, null, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate));
         assertEquals("Name cannot be null.", e3.getMessage());
-        Exception e4 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, null, defaultInterestRate, maturityDate, maturityDate));
+        Exception e4 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, null, defaultInterestRate, incurrenceDate, maturityDate, maturityDate));
         assertEquals("Liability balance cannot be null.", e4.getMessage());
-        Exception e5 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, null, maturityDate, maturityDate));
+        Exception e5 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, null, incurrenceDate, maturityDate, maturityDate));
         assertEquals("Annual interest rate cannot be null.", e5.getMessage());
-        Exception e6 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, null, maturityDate));
+        Exception e6 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, null, maturityDate));
         assertEquals("Maturity date cannot be null.", e6.getMessage());
-        Exception e7 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, null));
+        Exception e7 = assertThrowsExactly(NullPointerException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, null));
         assertEquals("Last interest accrual date cannot be null.", e7.getMessage());
     }
 
     @Test 
     void testConstructorInValidCurrentBalanceIsNegativeOrZero() {
         defaultCurrency = new Money(0d, usd);
-        Exception e1 = assertThrowsExactly(IllegalArgumentException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate));
+        Exception e1 = assertThrowsExactly(IllegalArgumentException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, Instant.now(), maturityDate, maturityDate));
         assertEquals("Initial liability balance cannot be a negative value.", e1.getMessage());
     }
     
     @Test
     void testConstructorInValidNameIsBlank() { 
         name = "\r\r";
-        Exception e1 = assertThrowsExactly(IllegalArgumentException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate));
+        Exception e1 = assertThrowsExactly(IllegalArgumentException.class, () -> new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate));
         assertEquals("Liability name cannot be blank.", e1.getMessage());
     }
 
     @Test 
     void testGetters() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         assertEquals(liabilityId, testLiability.getLiabilityId());
         assertEquals(portfolioId, testLiability.getPortfolioId());
         assertEquals(name, testLiability.getName());
@@ -97,14 +99,14 @@ public class LiabilityTest {
     // these test will always be changing
     @Test
     void testAccureInterest() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
-        Money interestAmount = testLiability.calculateAccuredInterest();
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
+        Money interestAmount = testLiability.calculateAccruedInterest(Instant.now());
         Money expectedAmount = Money.ZERO(usd);
         assertEquals(expectedAmount, interestAmount);
         
         // testing with a different lastInterestAccuralDate
-        Liability testLiability02 = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, Instant.parse("2025-06-06T10:00:00.00Z"));
-        Money interestAmount02 = testLiability02.calculateAccuredInterest();
+        Liability testLiability02 = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, Instant.parse("2025-06-06T10:00:00.00Z"));
+        Money interestAmount02 = testLiability02.calculateAccruedInterest(Instant.now());
         Instant currentDate = Instant.now();
         long daysBetween = ChronoUnit.DAYS.between(Instant.parse("2025-06-06T10:00:00.00Z"), currentDate);
         
@@ -130,7 +132,7 @@ public class LiabilityTest {
     
     @Test
     void testCalculateAccuredInterest() {
-        Liability testLiability01 = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, Instant.parse("2025-06-06T10:00:00.00Z"));
+        Liability testLiability01 = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, Instant.parse("2025-06-06T10:00:00.00Z"));
         
         Instant currentDate = Instant.now();
         long daysBetween = ChronoUnit.DAYS.between(Instant.parse("2025-06-06T10:00:00.00Z"), currentDate);
@@ -150,7 +152,7 @@ public class LiabilityTest {
         }
         Money expectedAmount = new Money(testLiability01.getCurrentBalance().add(amount).amount(), usd);
         
-        Money interest = testLiability01.accureInterest();
+        Money interest = testLiability01.accrueInterest(Instant.now());
         assertEquals(amount, interest);    
 
         assertEquals(expectedAmount, testLiability01.getCurrentBalance());
@@ -158,7 +160,7 @@ public class LiabilityTest {
 
     @Test
     void testIncreaseLiabilityBalance() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money amountToIncrease = new Money(105.45, usd);
         Money expectedMoney = new Money(2606.32d, usd);
         testLiability.increaseLiabilityBalance(amountToIncrease);
@@ -167,14 +169,14 @@ public class LiabilityTest {
     
     @Test 
     void testIncreaseLiabilityBalanceInValidNullValue() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Exception e1 = assertThrows(NullPointerException.class, () -> testLiability.increaseLiabilityBalance(null));
         assertEquals("Amount to increase liability balance cannot be null.", e1.getMessage());
     }
     
     @Test
     void testIncreaseLiabilityBalanceInValidNegativeAndZeroMoney() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money negativeMoney = new Money(-25.65, usd);
         Exception e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.increaseLiabilityBalance(negativeMoney));
         assertEquals("Amount to increase liability balance must be a positive number.", e1.getMessage());
@@ -184,7 +186,7 @@ public class LiabilityTest {
     
     @Test 
     void testIncreaseLiabilityBalanceInValidWrongCurrency() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Currency cad = Currency.getInstance("CAD");
         Money cadMoney = new Money(20.45, cad);        
         Exception e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.increaseLiabilityBalance(cadMoney));
@@ -193,39 +195,39 @@ public class LiabilityTest {
     
     @Test 
     void testApplyPayment() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money principalAmount = new Money(25d, usd);
-        testLiability.applyPayment(principalAmount);
+        testLiability.applyPayment(principalAmount, Instant.now());
         assertEquals(new BigDecimal("2475.87"), testLiability.getCurrentBalance().amount());
     }
     
     @Test 
     void testApplyPaymentInValidNullAmount() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
-        assertThrows(NullPointerException.class,() ->testLiability.applyPayment(null));
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
+        assertThrows(NullPointerException.class,() ->testLiability.applyPayment(null, Instant.now()));
     }
 
     @Test
     void testApplyPaymentInValidNotRightCurrency() {        
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Currency cad = Currency.getInstance("CAD");
         Money principalAmount = new Money(25d, cad);
-        Exception e1 = assertThrows(IllegalArgumentException.class,() ->testLiability.applyPayment(principalAmount));
+        Exception e1 = assertThrows(IllegalArgumentException.class,() ->testLiability.applyPayment(principalAmount, Instant.now()));
         assertEquals("Payment amount must be in the same currency as liability's currency preference.", e1.getMessage());
     }
     
     @Test
     void testApplyPaymentInValidNegativeValue() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money principalAmount = new Money(-25.67, usd);
-        Exception e1 = assertThrows(IllegalArgumentException.class,() ->testLiability.applyPayment(principalAmount));
+        Exception e1 = assertThrows(IllegalArgumentException.class,() ->testLiability.applyPayment(principalAmount, Instant.now()));
         assertEquals("Payment amount must be a positive number.", e1.getMessage());
     }
 
 
     @Test 
     void testReversePayment() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money principalAmount = new Money(25d, usd);
         testLiability.reversePaymentEffect(principalAmount);
         assertEquals(new BigDecimal("2525.87"), testLiability.getCurrentBalance().amount());
@@ -233,13 +235,13 @@ public class LiabilityTest {
     
     @Test 
     void testReversePaymentInValidNullAmount() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         assertThrows(NullPointerException.class,() ->testLiability.reversePaymentEffect(null));
     }
 
     @Test
     void testReversePaymentInValidNotRightCurrency() {        
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Currency cad = Currency.getInstance("CAD");
         Money principalAmount = new Money(25d, cad);
         Exception e1 = assertThrows(IllegalArgumentException.class,() ->testLiability.reversePaymentEffect(principalAmount));
@@ -248,7 +250,7 @@ public class LiabilityTest {
     
     @Test
     void testReversePaymentInValidNegativeValue() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money principalAmount = new Money(-25.67, usd);
         Exception e1 = assertThrows(IllegalArgumentException.class,() ->testLiability.reversePaymentEffect(principalAmount));
         assertEquals("Reverse amount must be a positive number.", e1.getMessage());
@@ -257,7 +259,7 @@ public class LiabilityTest {
 
     @Test
     void testSetAnnualInterestRate() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         
         Percentage newAnnualPercentage = new Percentage(new BigDecimal(7.65));
         testLiability.setAnnualInterestRate(newAnnualPercentage);
@@ -267,14 +269,14 @@ public class LiabilityTest {
     
     @Test
     void testSetAnnualInterestRateInValidNull() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Exception e1 = assertThrows(NullPointerException.class, () -> testLiability.setAnnualInterestRate(null));
         assertEquals("New annual interest rate cannot be null.", e1.getMessage());
     }
     
     @Test
     void testSetAnnualInterestRateInValidNegativeValue() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Exception e1 = assertThrows(IllegalArgumentException.class, () -> 
         testLiability.setAnnualInterestRate(new Percentage(new BigDecimal("-21.3412438"))));
         assertEquals("Percentage value cannot be negative", e1.getMessage());
@@ -282,7 +284,7 @@ public class LiabilityTest {
 
     @Test
     void testSetDescription() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         assertNotNull(testLiability.getDescription());
         
         String updatedDesc = "some new desc";
@@ -292,7 +294,7 @@ public class LiabilityTest {
     
     @Test
     void testSetName() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         assertNotNull(testLiability.getName());
         
         String updatedName = "New name";
@@ -303,7 +305,7 @@ public class LiabilityTest {
     
     @Test 
     void testSetNameBadInValidNullAndBlank() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         assertNotNull(testLiability.getName());
 
         Exception e1 = assertThrows(NullPointerException.class, () -> testLiability.setName(null));
@@ -315,7 +317,7 @@ public class LiabilityTest {
 
     @Test
     void testReduceBalance() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money amountToDecrease = new Money(100.87, usd);
         Money expectedMoney = new Money(2400.00d, usd);
         testLiability.reduceLiabilityBalance(amountToDecrease);
@@ -324,14 +326,14 @@ public class LiabilityTest {
 
         @Test 
     void testDecreaseLiabilityBalanceInValidNullValue() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Exception e1 = assertThrows(NullPointerException.class, () -> testLiability.reduceLiabilityBalance(null));
         assertEquals("Amount to reduce cannot be null.", e1.getMessage());
     }
     
     @Test
     void testDecreaseLiabilityBalanceInValidNegativeAndZeroMoney() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Money negativeMoney = new Money(-25.65, usd);
         Exception e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.reduceLiabilityBalance(negativeMoney));
         assertEquals("Reduction amount must be positive.", e1.getMessage());
@@ -341,7 +343,7 @@ public class LiabilityTest {
     
     @Test 
     void testDecreaseLiabilityBalanceInValidWrongCurrency() {
-        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultInterestRate, maturityDate, maturityDate);
+        Liability testLiability = new Liability(liabilityId, portfolioId, name, description, defaultCurrency, defaultCurrency, defaultInterestRate, incurrenceDate, maturityDate, maturityDate);
         Currency eur = Currency.getInstance("EUR");
         Money cadMoney = new Money(20.45, eur);        
         Exception e1 = assertThrows(IllegalArgumentException.class, () -> testLiability.reduceLiabilityBalance(cadMoney));

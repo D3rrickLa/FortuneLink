@@ -24,7 +24,7 @@ public class AssetIdentifierTest {
         String isin ="US0378331005";
         String name = "\r\r\r";
         String exchange = "NASDAQ";
-        Exception e1 = assertThrows(IllegalArgumentException.class, () -> new AssetIdentifier(symbol, assetType, isin, name, exchange, null));
+        Exception e1 = assertThrows(IllegalArgumentException.class, () -> new AssetIdentifier(symbol, assetType, isin, name, exchange, null, "TECH"));
         assertTrue(e1.getMessage().equals("Asset name cannot be blank."));
     }
     
@@ -33,7 +33,7 @@ public class AssetIdentifierTest {
         String isin ="US037833100";
         String name = "APPLE";
         String exchange = "NASDAQ";
-        Exception e1 = assertThrows(IllegalArgumentException.class, () -> new AssetIdentifier(symbol, assetType, isin, name, exchange, null));
+        Exception e1 = assertThrows(IllegalArgumentException.class, () -> new AssetIdentifier(symbol, assetType, isin, name, exchange, null, "TECH"));
         assertTrue(e1.getMessage().equals("Invalid ISIN format."));
     }
 
@@ -42,13 +42,13 @@ public class AssetIdentifierTest {
         String isin ="US0378331005";
         String name = "Apple";
         String exchange = "NASDAQ";
-        AssetIdentifier identifier = new AssetIdentifier(symbol, assetType, isin, name, exchange, null);
+        AssetIdentifier identifier = new AssetIdentifier(symbol, assetType, isin, name, exchange, null, "TECH");
         assertFalse(identifier.isCrypto());
         
         assertFalse(CryptoSymbols.isCrypto("APPL"));
         assertTrue(CryptoSymbols.isCrypto("BTC"));
 
-        AssetIdentifier identifier2 = new AssetIdentifier(symbol, AssetType.CRYPTO, isin, name, exchange, null);
+        AssetIdentifier identifier2 = new AssetIdentifier(symbol, AssetType.CRYPTO, isin, name, exchange, null, "TECH");
         assertTrue(identifier2.isCrypto());
     }
     
@@ -57,12 +57,12 @@ public class AssetIdentifierTest {
         String isin ="US0378331005";
         String name = "Apple";
         String exchange = "NASDAQ";
-        AssetIdentifier identifier = new AssetIdentifier(symbol, assetType, isin, name, exchange, null);
+        AssetIdentifier identifier = new AssetIdentifier(symbol, assetType, isin, name, exchange, null, "TECH");
         assertTrue(identifier.isStockOrETF());
-        identifier = new AssetIdentifier(symbol, AssetType.ETF, isin, name, exchange, null);
+        identifier = new AssetIdentifier(symbol, AssetType.ETF, isin, name, exchange, null, "TECH");
         assertTrue(identifier.isStockOrETF());
 
-        AssetIdentifier identifier2 = new AssetIdentifier(symbol, AssetType.CRYPTO, isin, name, exchange, null);
+        AssetIdentifier identifier2 = new AssetIdentifier(symbol, AssetType.CRYPTO, isin, name, exchange, null, "TECH");
         assertFalse(identifier2.isStockOrETF());
 
     }

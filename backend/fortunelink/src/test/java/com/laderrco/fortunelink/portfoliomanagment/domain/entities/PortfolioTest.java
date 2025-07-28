@@ -67,7 +67,7 @@ public class PortfolioTest {
 				portfolioId, userId, name, desc, portfolioCashBalance, cad, exchangeRateService);
 
 		appleAsset = new AssetIdentifier(
-				"APPL", AssetType.STOCK, "US0378331005", "Apple", "NASDAQ", "DESCRIPTION");
+				"APPL", AssetType.STOCK, "US0378331005", "Apple", "NASDAQ", "DESCRIPTION", "TECHNOLOGY");
 	}
 
 	@Test 
@@ -168,7 +168,8 @@ public class PortfolioTest {
 				"US0378331005",
 				"Apple",
 				"NASDAQ",
-				"DESCRIPTION");
+				"DESCRIPTION",
+				"TECH");
 
 		quantity = BigDecimal.valueOf(20);
 		pricePerUnit = new Money(214.55, usd);
@@ -273,7 +274,8 @@ public class PortfolioTest {
 				"US0378331005",
 				"Apple",
 				"NASDAQ",
-				"DESCRIPTION");
+				"DESCRIPTION",
+				"TECH");
 
 		quantity = BigDecimal.valueOf(20);
 		pricePerUnit = new Money(214.55, usd);
@@ -403,7 +405,8 @@ public class PortfolioTest {
 				"US0378331005",
 				"Apple",
 				"NASDAQ",
-				"DESCRIPTION");
+				"DESCRIPTION",
+				"TECH");
 
 		quantity = BigDecimal.valueOf(20);
 		pricePerUnit = new Money(214.55, usd);
@@ -628,7 +631,8 @@ public class PortfolioTest {
 				"US0378331005",
 				"Apple",
 				"NASDAQ",
-				"DESCRIPTION");
+				"DESCRIPTION",
+				"TECH");
 
 		quantity = BigDecimal.valueOf(200);
 		pricePerUnit = new Money(214.55, usd);
@@ -705,7 +709,8 @@ public class PortfolioTest {
 				"US0378331005",
 				"Apple",
 				"NASDAQ",
-				"DESCRIPTION");
+				"DESCRIPTION",
+				"TECH");
 
 		quantity = BigDecimal.valueOf(20);
 		pricePerUnit = new Money(214.55, usd);
@@ -1017,7 +1022,7 @@ public class PortfolioTest {
 		BigDecimal saleQuantity = BigDecimal.valueOf(5);
 		Money salePricePerUnit = new Money(BigDecimal.valueOf(100.00), usd);
 		AssetIdentifier nonHeldAsset = new AssetIdentifier("GOOG", AssetType.STOCK, "US02079K1079", "Google",
-				"NASDAQ", "DESC");
+				"NASDAQ", "DESC", "TECH");
 
 		AssetTransactionDetails saleDetails = new AssetTransactionDetails(
 				nonHeldAsset, saleQuantity, salePricePerUnit,
@@ -1064,6 +1069,7 @@ public class PortfolioTest {
 			originalLoanAmount, 
 			originalLoanAmountInPortfolioCurrency, 
 			annualInterestRate, 
+			Instant.now(),
 			maturityDate, 
 			fees, // totalFeesInPortfolioCurrency
 			fees  // totalFeesInLiabilityCurrency
@@ -1127,8 +1133,13 @@ public class PortfolioTest {
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
 			UUID.randomUUID(),
             "Car Loan CAD", "Loan for new car purchase",
-            originalLoanAmount, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate,
-            totalFeesInPortfolioCurrency, totalFeesInLiabilityCurrency
+            originalLoanAmount, 
+			originalLoanAmountInPortfolioCurrency, 
+			annualInterestRate, 
+			Instant.now(), 
+			maturityDate,
+            totalFeesInPortfolioCurrency, 
+			totalFeesInLiabilityCurrency
         );
 
         List<Fee> feesList = new ArrayList<>();
@@ -1191,7 +1202,7 @@ public class PortfolioTest {
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(	
 			UUID.randomUUID(),
             "Mortgage USD", "USD mortgage for US property",
-            originalLoanAmountUSD, originalLoanAmountInPortfolioCurrency, annualInterestRate, maturityDate,
+            originalLoanAmountUSD, originalLoanAmountInPortfolioCurrency, annualInterestRate, Instant.now(),maturityDate,
             totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency
         );
 
@@ -1225,7 +1236,7 @@ public class PortfolioTest {
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
 			UUID.randomUUID(),
             "Invalid Loan", "Test invalid type",
-            new Money("1000", cad), new Money("1000", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),
+            new Money("1000", cad), new Money("1000", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),Instant.now(),
             Money.ZERO(cad), Money.ZERO(cad)
         );
 
@@ -1251,7 +1262,7 @@ public class PortfolioTest {
         LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
 			UUID.randomUUID(),
             "Null Test", "Testing nulls",
-            new Money("100", cad), new Money("100", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),
+            new Money("100", cad), new Money("100", cad), new Percentage(new BigDecimal("1.0")), Instant.now(),Instant.now(),
             Money.ZERO(cad), Money.ZERO(cad)
         );
         CommonTransactionInput commonInput = new CommonTransactionInput(

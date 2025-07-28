@@ -37,7 +37,7 @@ jobs:
           [{
             "id": "github",
             "username" : "${{ secrets.GH_USERNAME }}",
-            "username" : "${{ secrets.GH_TOKEN }}",
+            "password" : "${{ secrets.GH_TOKEN }}",
           }]
         sonatypeSnapshots: false
         apacheSnapshots: false

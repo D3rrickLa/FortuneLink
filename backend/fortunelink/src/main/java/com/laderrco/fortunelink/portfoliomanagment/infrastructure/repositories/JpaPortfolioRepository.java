@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagment.infrastructure.services.repositories;
+package com.laderrco.fortunelink.portfoliomanagment.infrastructure.repositories;
 
 import java.util.UUID;
 

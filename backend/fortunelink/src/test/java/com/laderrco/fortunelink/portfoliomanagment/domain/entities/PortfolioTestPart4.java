@@ -66,9 +66,9 @@ public class PortfolioTestPart4 {
         testDate = Instant.now();
 
         // --- Setup Assets for Valuation and Allocation Tests ---
-        apple = new AssetIdentifier("APPL", AssetType.STOCK, "US0378331005", "APPLE", "NASDAQ", null);
-        microsoft = new AssetIdentifier("MSFT", AssetType.STOCK, "US0378331001", "MICROSOFT", "NASDAQ", null);
-        shopify = new AssetIdentifier("SHOP", AssetType.STOCK, "US0378331006", "SHOPIFY", "TSX", null); // Assuming SHOP is NYSE or TSX if CAD
+        apple = new AssetIdentifier("APPL", AssetType.STOCK, "US0378331005", "APPLE", "NASDAQ", null, "TECH");
+        microsoft = new AssetIdentifier("MSFT", AssetType.STOCK, "US0378331001", "MICROSOFT", "NASDAQ", null, "TECH");
+        shopify = new AssetIdentifier("SHOP", AssetType.STOCK, "US0378331006", "SHOPIFY", "TSX", null, "TECH"); // Assuming SHOP is NYSE or TSX if CAD
 
         // Apple: 10 shares, bought at $150 USD per share = $1500 USD cost basis
         appleHolding = new AssetHolding(UUID.randomUUID(), portfolio.getPortfolioId(), apple, BigDecimal.TEN, new Money("1500.00", usd), Instant.now());
@@ -251,8 +251,10 @@ public class PortfolioTestPart4 {
                 portfolioId,
                 "loan name",
                 "loan desc",
+                loanAmount, 
                 loanAmount, // originalLoanAmountInLiabilityCurrency
                 annualInterestRate,
+                Instant.now(),
                 testDate.plus(365, ChronoUnit.DAYS), // Maturity in 1 year,
                 Instant.now()
         );

@@ -32,7 +32,7 @@ public class AssetAllocationTest {
             AssetType.STOCK, 
             "US0378331005",
             "APPLE", 
-            "NASDAQ", "SOME APPLE DESC");
+            "NASDAQ", "SOME APPLE DESC", "TECH");
     }
 
 
@@ -78,7 +78,7 @@ public class AssetAllocationTest {
             AssetType.STOCK, 
             "US0378331007",
             "GOOGLE", 
-            "NASDAQ", "SOME GOOGLE DESC");
+            "NASDAQ", "SOME GOOGLE DESC", "TECH");
         // When
         allocation.addAllocation(appleIdentifier, appleValue, applePercentage);
         allocation.addAllocation(googleIdentifier, googleValue, googlePercentage);
@@ -109,14 +109,14 @@ public class AssetAllocationTest {
             AssetType.BOND, 
             "US0378331007",
             "10 Year Treasury", 
-            "GOV", "SOME GOVERNMENT DESC"
+            "GOV", "SOME GOVERNMENT DESC", "TECH"
         );
         AssetIdentifier btc = new AssetIdentifier(
             "BTC",
             AssetType.CRYPTO, 
             "US0378331010",
             "Bitcoin", 
-            "COINGEEKO", "SOME BTC DESC"
+            "COINGEEKO", "SOME BTC DESC", "TECH"
         );
 
 
@@ -154,7 +154,7 @@ public class AssetAllocationTest {
             AssetType.STOCK, 
             "US0378331007",
             "GOOGLE", 
-            "NASDAQ", "SOME GOOGLE DESC");
+            "NASDAQ", "SOME GOOGLE DESC", "TECH");
 
         // Given
         allocation.addAllocation(appleIdentifier,  
@@ -176,13 +176,13 @@ public class AssetAllocationTest {
             AssetType.STOCK, 
             "US0378331007",
             "GOOGLE", 
-            "NASDAQ", "SOME GOOGLE DESC");
+            "NASDAQ", "SOME GOOGLE DESC", "TECH");
         AssetIdentifier btc = new AssetIdentifier(
             "BTC",
             AssetType.CRYPTO, 
             "US0378331010",
             "Bitcoin", 
-            "COINGEEKO", "SOME BTC DESC"
+            "COINGEEKO", "SOME BTC DESC", "TECH"
         );
         // Given - Well diversified portfolio
         allocation.addAllocation(appleIdentifier, 
@@ -207,13 +207,13 @@ public class AssetAllocationTest {
             AssetType.STOCK, 
             "US0378331007",
             "GOOGLE", 
-            "NASDAQ", "SOME GOOGLE DESC");
+            "NASDAQ", "SOME GOOGLE DESC", "TECH");
         AssetIdentifier btc = new AssetIdentifier(
             "BTC",
             AssetType.CRYPTO, 
             "US0378331010",
             "Bitcoin", 
-            "COINGEEKO", "SOME BTC DESC"
+            "COINGEEKO", "SOME BTC DESC", "TECH"
         );
 
         // Given

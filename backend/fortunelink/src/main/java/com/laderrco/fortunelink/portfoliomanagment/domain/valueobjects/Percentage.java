@@ -35,5 +35,9 @@ public record Percentage(BigDecimal percentageValue) {
     public int compareTo(Percentage other) {
         Objects.requireNonNull(other, "Comparison value cannot be null");
         return this.percentageValue.compareTo(other.percentageValue);
+    }
+
+    public static Percentage of(int value) {
+        return new Percentage(BigDecimal.valueOf(value));
     }    
 }

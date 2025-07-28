@@ -41,7 +41,8 @@ public class AssetTransactionDetailsTest {
             "US0378331005",
             "Apple", 
             "NASDAQ",
-            "DESCRIPTION"
+            "DESCRIPTION",
+            "TECH"
         );
 
         quantity = new BigDecimal(204);

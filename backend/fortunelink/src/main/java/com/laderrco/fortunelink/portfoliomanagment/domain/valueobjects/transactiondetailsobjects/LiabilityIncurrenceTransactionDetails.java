@@ -13,6 +13,7 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 	private final Money originalLoanAmountInLiabilityCurrency;
 	private final Money originalLoanAmountInPortfolioCurrency;
 	private final Percentage annualInterestRate;
+	private final Instant incurrenceDate;
 	private final Instant maturityDate;
 	private final Money totalFeesInLiabilityCurrency;
 	private final Money totalFeesInPortfolioCurrency;
@@ -24,6 +25,7 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 		Money originalLoanAmountInLiabilityCurrency, 
 		Money originalLoanAmountInPortfolioCurrency, 
 		Percentage annualInterestRate,
+		Instant incurrenceDate, 
 		Instant maturityDate, 
 		Money totalFeesInLiabilityCurrency, 
 		Money totalFeesInPortfolioCurrency
@@ -34,6 +36,7 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 		this.originalLoanAmountInLiabilityCurrency = originalLoanAmountInLiabilityCurrency;
 		this.originalLoanAmountInPortfolioCurrency = originalLoanAmountInPortfolioCurrency;
 		this.annualInterestRate = annualInterestRate;
+		this.incurrenceDate = incurrenceDate;
 		this.maturityDate = maturityDate;
 		this.totalFeesInLiabilityCurrency = totalFeesInLiabilityCurrency;
 		this.totalFeesInPortfolioCurrency = totalFeesInPortfolioCurrency;
@@ -60,7 +63,7 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 	public Percentage getAnnualInterestRate() {
 		return annualInterestRate;
 	}
-
+	
 	public Instant getMaturityDate() {
 		return maturityDate;
 	}
@@ -75,6 +78,10 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
 
 	public UUID getLiabilityId() {
 		return liabilityId;
+	}
+
+	public Instant getIncurrenceDate() {
+		return incurrenceDate;
 	}
 
 	

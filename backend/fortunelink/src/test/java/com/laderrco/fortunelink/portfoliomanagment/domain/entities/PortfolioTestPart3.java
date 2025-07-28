@@ -152,7 +152,7 @@ public class PortfolioTestPart3 {
         // This implicitly creates the Liability and populates originalIncurrenceTransactionDetails.getLiabilityId()
         portfolio.recordNewLiability(
                 new LiabilityIncurrenceTransactionDetails(UUID.randomUUID(), "Test Loan Incurrence", "", loanAmount, loanAmount,
-                        new Percentage(BigDecimal.ZERO), testDate.plusSeconds(10000), totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency), // Placeholder for ID
+                        new Percentage(BigDecimal.ZERO), Instant.now(), testDate.plusSeconds(10000), totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency), // Placeholder for ID
                 createCommonInput(TransactionType.LIABILITY_INCURRENCE, "Initial Loan", new ArrayList<>()), // Loan incurrence is a DEPOSIT
                 testDate
         );
@@ -195,7 +195,7 @@ public class PortfolioTestPart3 {
 
         portfolio.recordNewLiability(
                 new LiabilityIncurrenceTransactionDetails(UUID.randomUUID(), "Test Loan Incurrence", "", loanAmount, loanAmount,
-                        new Percentage(BigDecimal.ZERO), testDate.plusSeconds(10000), totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency), // Placeholder for ID
+                        new Percentage(BigDecimal.ZERO), Instant.now(), testDate.plusSeconds(10000), totalFeesInLiabilityCurrency, totalFeesInPortfolioCurrency), // Placeholder for ID
                 createCommonInput(TransactionType.LIABILITY_INCURRENCE, "Initial Loan", new ArrayList<>()), // Loan incurrence is a DEPOSIT
                 testDate
         );

@@ -33,7 +33,8 @@ public class MarketPriceTest {
         "US0378331005 ",
         "APPLE", 
         "NASDAQ", 
-        "SOME DESCRIPTION"
+        "SOME DESCRIPTION",
+        "TECH"
         );
         usd = Currency.getInstance("USD");
         cad = Currency.getInstance("CAD");

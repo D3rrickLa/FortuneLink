@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetAllocation;
@@ -243,7 +244,7 @@ public class Portfolio {
 
 	// liabilities, you technically gain cash
 	// when you take out a loan, your cash balance increases by the loan principal minus any fees
-	public void recordNewLiability(LiabilityIncurrenceTransactionDetails initialDetails, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
+	public Liability recordNewLiability(LiabilityIncurrenceTransactionDetails initialDetails, CommonTransactionInput commonTransactionInput, Instant transactionDate) {
 		Objects.requireNonNull(initialDetails, "details cannot be null.");
 		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
 		Objects.requireNonNull(transactionDate, "TransactionDate cannot be null.");
@@ -258,7 +259,9 @@ public class Portfolio {
 			initialDetails.getLiabilityName(),
 			initialDetails.getDescription(),
 			initialDetails.getOriginalLoanAmountInLiabilityCurrency().subtract(initialDetails.getTotalFeesInLiabilityCurrency()),
+			initialDetails.getOriginalLoanAmountInLiabilityCurrency().subtract(initialDetails.getTotalFeesInLiabilityCurrency()),
 			initialDetails.getAnnualInterestRate(),
+			initialDetails.getIncurrenceDate(),
 			initialDetails.getMaturityDate(),
 			transactionDate
 		);
@@ -272,6 +275,7 @@ public class Portfolio {
 			initialDetails.getOriginalLoanAmountInPortfolioCurrency(),
 			initialDetails.getAnnualInterestRate(),
 			initialDetails.getMaturityDate(),
+			initialDetails.getIncurrenceDate(),
 			initialDetails.getTotalFeesInLiabilityCurrency(),
 			initialDetails.getTotalFeesInPortfolioCurrency()
 		);
@@ -295,6 +299,7 @@ public class Portfolio {
 			1
 		);
 		this.transactions.add(newLiabilityIncurrenceTransaction);
+		return liability;
 		
 	}
 
@@ -332,7 +337,7 @@ public class Portfolio {
                                              .subtract(details.getFeesAmountInLiabilityCurrency());
 
        
-        liability.applyPayment(principalReductionAmount);
+        liability.applyPayment(principalReductionAmount, Instant.now());
 
 		Transaction newPaymentTransaction = new Transaction(
             UUID.randomUUID(),
@@ -453,15 +458,15 @@ public class Portfolio {
 	public Money calculateTotalValue(Map<AssetIdentifier, MarketPrice> currentPrices) {
 		Money total = Money.ZERO(this.currencyPreference);
 		for (AssetHolding assetHolding : assetHoldings) {
-		// check if we need to even do it
-		MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
+			// check if we need to even do it
+			MarketPrice price = currentPrices.get(assetHolding.getAssetIdentifier());
 
-		if (price != null) {
-			Money holdingValue = assetHolding.getCurrentValue(price);
-			Money convertedValue = exchangeRateService.convert(holdingValue,
-			this.currencyPreference);
-			total = total.add(convertedValue);
-			}
+			if (price != null) {
+				Money holdingValue = assetHolding.getCurrentValue(price);
+				Money convertedValue = exchangeRateService.convert(holdingValue,
+				this.currencyPreference);
+				total = total.add(convertedValue);
+				}
 		}
 		return total;
 	}
@@ -588,6 +593,47 @@ public class Portfolio {
 				liability.setLastAccrualDate(accrualDate); // Update last accrual date
 			}
 		}
+	}
+
+	public Map<String, Money> getAssetAllocationByType(Map<AssetIdentifier, MarketPrice> currentPrices) {
+		return assetHoldings.stream()
+            .collect(Collectors.groupingBy(
+                ah -> ah.getAssetIdentifier().assetType().name(), // Group by AssetType's name
+                Collectors.reducing(
+                    Money.ZERO(currencyPreference), // Initial value
+                    ah -> {
+                        MarketPrice marketPrice = currentPrices.get(ah.getAssetIdentifier());
+                        if (marketPrice != null) {
+                            // Convert market price to portfolio's currency before calculating holding value
+                            Money priceInPortfolioCurrency = exchangeRateService.convert(marketPrice.price(), currencyPreference);
+                            return priceInPortfolioCurrency.multiply(ah.getTotalQuantity());
+                        }
+                        return Money.ZERO(currencyPreference); // Unpriced assets contribute zero to allocation
+                    },
+                    Money::add // Sum up the Money values
+                )
+            )
+		);
+	}
+
+	public Map<String, Money> getAssetAllocationBySector(Map<AssetIdentifier, MarketPrice> currentPrices) {
+		return assetHoldings.stream()
+            .collect(Collectors.groupingBy(
+                ah -> ah.getAssetIdentifier().industrySector(), // Group by IndustrySector
+                Collectors.reducing(
+                    Money.ZERO(currencyPreference), // Initial value
+                    ah -> {
+                        MarketPrice marketPrice = currentPrices.get(ah.getAssetIdentifier());
+                        if (marketPrice != null) {
+                            // Convert market price to portfolio's currency before calculating holding value
+                            Money priceInPortfolioCurrency = exchangeRateService.convert(marketPrice.price(), currencyPreference);
+                            return priceInPortfolioCurrency.multiply(ah.getTotalQuantity());
+                        }
+                        return Money.ZERO(currencyPreference); // Unpriced assets contribute zero to allocation
+                    },
+                    Money::add // Sum up the Money values
+                )
+            ));
 	}
 
 	public UUID getPortfolioId() {

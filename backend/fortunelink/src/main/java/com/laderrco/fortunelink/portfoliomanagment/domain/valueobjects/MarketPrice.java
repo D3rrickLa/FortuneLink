@@ -38,4 +38,8 @@ public record MarketPrice(AssetIdentifier assetIdentifier, Money price, Instant 
         return new MarketPrice(this.assetIdentifier, convertedPrice, this.priceDate, this.source);
     }
 
+    public static MarketPrice ZERO(AssetIdentifier assetIdentifier, Currency currency) {
+        return new MarketPrice(assetIdentifier, Money.ZERO(currency), Instant.now(), "SYSTEM");
+    }
+
 }

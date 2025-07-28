@@ -75,7 +75,7 @@ public class PortfolioTestPart2 {
         maturityDate = Instant.now();
         totalFeesInLiaCur = Money.ZERO(cad);
         totalFeesInPorfolioCur = Money.ZERO(cad);
-        defaultIncurence = new LiabilityIncurrenceTransactionDetails(UUID.randomUUID(), liabilityName, description, originalLoanAmount, originalLoanAmountInPortfolioCur, annualInterestRate, maturityDate, totalFeesInLiaCur, totalFeesInPorfolioCur);
+        defaultIncurence = new LiabilityIncurrenceTransactionDetails(UUID.randomUUID(), liabilityName, description, originalLoanAmount, originalLoanAmountInPortfolioCur, annualInterestRate, Instant.now(), maturityDate, totalFeesInLiaCur, totalFeesInPorfolioCur);
 
         commonTransactionInput = new CommonTransactionInput(
             UUID.randomUUID(), 
@@ -316,7 +316,7 @@ public class PortfolioTestPart2 {
         // Incur a small liability for easy full payoff
         Money smallLoanAmount = new Money("50.00", cad);
         portfolio.recordNewLiability(
-            new LiabilityIncurrenceTransactionDetails(	UUID.randomUUID(), "Small Loan", "", smallLoanAmount, smallLoanAmount, new Percentage(BigDecimal.ZERO), maturityDate, Money.ZERO(cad), Money.ZERO(cad)),
+            new LiabilityIncurrenceTransactionDetails(	UUID.randomUUID(), "Small Loan", "", smallLoanAmount, smallLoanAmount, new Percentage(BigDecimal.ZERO), Instant.now(), maturityDate, Money.ZERO(cad), Money.ZERO(cad)),
             new CommonTransactionInput(UUID.randomUUID(), null, TransactionType.DEPOSIT, new TransactionMetadata(TransactionStatus.COMPLETED, TransactionSource.MANUAL_INPUT, "", Instant.now(), Instant.now()), new ArrayList<>()),
             Instant.now()
         );

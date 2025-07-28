@@ -39,7 +39,8 @@ public class AssetHoldingTest {
             "US0378331005", 
             "APPLE", 
             "NASDAQ", 
-            "SOME DESCRIPTOIN"
+            "SOME DESCRIPTOIN",
+            "TECH"
         );
 
         initalQuantity = new BigDecimal("207");
