@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagment.application.services;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.Currency;
 import java.util.List;
@@ -13,11 +12,22 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.laderrco.fortunelink.portfoliomanagment.application.commands.RecordAssetDisposalCommand;
+import com.laderrco.fortunelink.portfoliomanagment.application.commands.RecordAssetPurchaseCommand;
+import com.laderrco.fortunelink.portfoliomanagment.application.commands.RecordCashDeposit;
+import com.laderrco.fortunelink.portfoliomanagment.application.commands.RecordCashWidthdrawalCommand;
+import com.laderrco.fortunelink.portfoliomanagment.application.commands.RecordLiabilityPaymentCommand;
+import com.laderrco.fortunelink.portfoliomanagment.application.commands.RecordNewLiabilityCommand;
 import com.laderrco.fortunelink.portfoliomanagment.application.dtos.AssetAllocationDto;
 import com.laderrco.fortunelink.portfoliomanagment.application.dtos.MoneyDto;
 import com.laderrco.fortunelink.portfoliomanagment.application.dtos.PortfolioDetailsDto;
 import com.laderrco.fortunelink.portfoliomanagment.application.dtos.TransactionDto;
 import com.laderrco.fortunelink.portfoliomanagment.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfoliomanagment.application.queries.GetAssetAllocationQuery;
+import com.laderrco.fortunelink.portfoliomanagment.application.queries.GetPortfolioDetailsQuery;
+import com.laderrco.fortunelink.portfoliomanagment.application.queries.GetTotalPortfolioValueQuery;
+import com.laderrco.fortunelink.portfoliomanagment.application.queries.GetTransactionHistoryQuery;
+import com.laderrco.fortunelink.portfoliomanagment.application.queries.GetUnrealizedGainsQuery;
 import com.laderrco.fortunelink.portfoliomanagment.domain.entities.Liability;
 import com.laderrco.fortunelink.portfoliomanagment.domain.entities.Portfolio;
 import com.laderrco.fortunelink.portfoliomanagment.domain.entities.Transaction;
@@ -32,18 +42,21 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.MarketPri
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.PaymentAllocationResult;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.AssetTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.CashflowTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.InterestExpenseDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.InterestIncomeDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityPaymentTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.SimpleTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.TransactionDetails;
 
+import jakarta.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 // Write opetaions (commands) -> UUID or String
 // read, use DTOS
+// we should handle any domain errors that might be thrown in here with a generic 'Application Error'
 @Service
 @AllArgsConstructor
 public class PortfolioApplicationService {
@@ -82,33 +95,27 @@ public class PortfolioApplicationService {
 
     @Transactional
     public UUID recordAssetAcquisition(
-        UUID portfolioId,
-        AssetIdentifier assetIdentifier,
-        BigDecimal quantity,
-        Money purchasePrice, // price per unit in asset's native currency
-        Instant transactionDate,
-        List<Fee> fees,
-        TransactionMetadata transactionMetadata
+        @Nonnull RecordAssetPurchaseCommand command
     ) {
 
-        Portfolio portfolio = getPortfolio(portfolioId);
-        Money purchasePriceInPortfolioCurrency = exchangeRateService.convert(purchasePrice, portfolio.getCurrencyPreference());
+        Portfolio portfolio = getPortfolio(command.portfolioId());
+        Money purchasePriceInPortfolioCurrency = exchangeRateService.convert(command.purchasePrice(), portfolio.getCurrencyPreference());
 
         // fees can be a mixture
-        Money totalFeesInPortfolioCurrency = fees.stream()
+        Money totalFeesInPortfolioCurrency = command.fees().stream()
             .map(Fee::amount)
             .map(feeAmount -> exchangeRateService.convert(feeAmount, portfolio.getCurrencyPreference()))
             .reduce(Money.ZERO(portfolio.getCurrencyPreference()), Money::add);
             
             
-            Money totalFeesInAssetCurrency = fees.stream()
+            Money totalFeesInAssetCurrency = command.fees().stream()
             .map(Fee::amount)
-            .map(feeAmount -> exchangeRateService.convert(feeAmount, purchasePrice.currency()))
-            .reduce(Money.ZERO(purchasePrice.currency()), Money::add);
+            .map(feeAmount -> exchangeRateService.convert(feeAmount, command.purchasePrice().currency()))
+            .reduce(Money.ZERO(command.purchasePrice().currency()), Money::add);
 
 
-        Money assetValueInAssetCurrency = purchasePrice.multiply(quantity);
-        Money assetValueInPortfolioCurrency = purchasePriceInPortfolioCurrency.multiply(quantity);
+        Money assetValueInAssetCurrency = command.purchasePrice().multiply(command.quantity());
+        Money assetValueInPortfolioCurrency = purchasePriceInPortfolioCurrency.multiply(command.quantity());
 
         Money costBasisInAssetCurrency = assetValueInAssetCurrency.add(totalFeesInAssetCurrency);
         Money costBasisInPortfolioCurrency = assetValueInPortfolioCurrency.add(totalFeesInPortfolioCurrency);
@@ -117,15 +124,16 @@ public class PortfolioApplicationService {
         // --- Construct Domain Detail Objects ---
         // These constructors would be defined in your Domain Layer
         AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(
-            assetIdentifier,
-            quantity,
-            purchasePrice,
+            command.assetIdentifier(),
+            command.quantity(),
+            command.purchasePrice(),
             assetValueInAssetCurrency,
             assetValueInPortfolioCurrency,
             costBasisInPortfolioCurrency,
             costBasisInAssetCurrency,
             totalFeesInPortfolioCurrency,
-            totalFeesInAssetCurrency
+            totalFeesInAssetCurrency,
+            null
         );
 
 
@@ -133,47 +141,41 @@ public class PortfolioApplicationService {
             UUID.randomUUID(), // parent Transaction Id
             UUID.randomUUID(), // correlation Transaction Id
             TransactionType.BUY,
-            transactionMetadata,
-            fees // list of fees
+            command.transactionMetadata(),
+            command.fees() // list of fees
         );
 
         // --- Delegate to Domain Aggregate ---
-        portfolio.recordAssetPurchase(assetTransactionDetails, commonTransactionInput, transactionDate);
+        portfolio.recordAssetPurchase(assetTransactionDetails, commonTransactionInput, command.transactionDate());
 
         portfolioRepository.save(portfolio);
-        return portfolioId; // As per your example, returning portfolioId
+        return command.portfolioId(); // As per your example, returning portfolioId
 
     }
 
     @Transactional
     public UUID recordAssetDisposal(
-        UUID portfolioId,
-        AssetIdentifier assetIdentifier,
-        BigDecimal quantity,
-        Money salePrice, // in native currency
-        Instant transactionDate,
-        List<Fee> fees,
-        TransactionMetadata transactionMetadata
+        @Nonnull RecordAssetDisposalCommand command
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(command.portfolioId());
 
-        Money salePriceInPortfolioCurrency = exchangeRateService.convert(salePrice, portfolio.getCurrencyPreference());
+        Money salePriceInPortfolioCurrency = exchangeRateService.convert(command.salePrice(), portfolio.getCurrencyPreference());
        
         // --- Calculate total fees in portfolio's currency ---
-        Money totalFeesInPortfolioCurrency = fees.stream()
+        Money totalFeesInPortfolioCurrency = command.fees().stream()
             .map(Fee::amount)
             .map(feeAmount -> exchangeRateService.convert(feeAmount, portfolio.getCurrencyPreference()))
             .reduce(Money.ZERO(portfolio.getCurrencyPreference()), Money::add);
 
         // --- Calculate total fees in the asset's original currency ---
-        Money totalFeesInAssetCurrency = fees.stream()
+        Money totalFeesInAssetCurrency = command.fees().stream()
             .map(Fee::amount)
-            .map(feeAmount -> exchangeRateService.convert(feeAmount, salePrice.currency())) // Convert to asset's original currency
-            .reduce(Money.ZERO(salePrice.currency()), Money::add);
+            .map(feeAmount -> exchangeRateService.convert(feeAmount, command.salePrice().currency())) // Convert to asset's original currency
+            .reduce(Money.ZERO(command.salePrice().currency()), Money::add);
 
         // --- Calculate all derived values for AssetTransactionDetails (for disposal) ---
-        Money assetValueInAssetCurrency = salePrice.multiply(quantity);
-        Money assetValueInPortfolioCurrency = salePriceInPortfolioCurrency.multiply(quantity);
+        Money assetValueInAssetCurrency = command.salePrice().multiply(command.quantity());
+        Money assetValueInPortfolioCurrency = salePriceInPortfolioCurrency.multiply(command.quantity());
 
         // For disposal, cost basis related values might represent net proceeds or similar,
         // depending on your domain's exact definition for disposal 'costBasis' fields in AssetTransactionDetails.
@@ -182,146 +184,134 @@ public class PortfolioApplicationService {
         Money costBasisInPortfolioCurrency = assetValueInPortfolioCurrency.subtract(totalFeesInPortfolioCurrency);
 
         AssetTransactionDetails assetTransactionDetails = new AssetTransactionDetails(
-            assetIdentifier,
-            quantity,
-            salePrice, // pricePerUnit (original salePrice)
+            command.assetIdentifier(),
+            command.quantity(),
+            command.salePrice(), // pricePerUnit (original salePrice)
             assetValueInAssetCurrency,
             assetValueInPortfolioCurrency,
             costBasisInPortfolioCurrency,
             costBasisInAssetCurrency,
             totalFeesInPortfolioCurrency,
-            totalFeesInAssetCurrency
+            totalFeesInAssetCurrency,
+            null
         );
 
         CommonTransactionInput commonTransactionInput = new CommonTransactionInput(
             UUID.randomUUID(),
             UUID.randomUUID(),
             TransactionType.SELL,
-            transactionMetadata,
-            fees
+            command.transactionMetadata(),
+            command.fees()
         );
 
-        portfolio.recordAssetSale(assetTransactionDetails, commonTransactionInput, transactionDate);
+        portfolio.recordAssetSale(assetTransactionDetails, commonTransactionInput, command.transactionDate());
 
         portfolioRepository.save(portfolio);
-        return portfolioId;
+        return command.portfolioId();
 
     }
 
     @Transactional
     public UUID recordCashDeposit(
-        UUID portfolioId,
-        Money amount, 
-        Instant transactionDate,
-        TransactionMetadata metadata
+        @Nonnull RecordCashDeposit command
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(command.portfolioId());
 
-        Money depositAmountInPortoflioCurrency = exchangeRateService.convert(amount, portfolio.getCurrencyPreference());
+        Money depositAmountInPortoflioCurrency = exchangeRateService.convert(command.amount(), portfolio.getCurrencyPreference());
 
         ExchangeRate exchangeRate = new ExchangeRate(
-            amount.currency(), 
+            command.amount().currency(), 
             portfolio.getCurrencyPreference(), 
-            exchangeRateService.getExchangeRate(amount.currency(),portfolio.getCurrencyPreference()), 
-            transactionDate, 
+            exchangeRateService.getExchangeRate(command.amount().currency(),portfolio.getCurrencyPreference()), 
+            command.transactionDate(), 
             "SYSTEM"
         );
 
         CashflowTransactionDetails cashflowTransactionDetails = new CashflowTransactionDetails(
-            amount, depositAmountInPortoflioCurrency, Money.ZERO(amount.currency()), exchangeRate)
+            command.amount(), depositAmountInPortoflioCurrency, Money.ZERO(command.amount().currency()), exchangeRate)
         ;
         
         CommonTransactionInput commonTransactionInput = new CommonTransactionInput(
             UUID.randomUUID(), 
             UUID.randomUUID(), TransactionType.DEPOSIT, 
-            metadata, 
+            command.metadata(), 
             null
         );
-        portfolio.recordCashflow(cashflowTransactionDetails, commonTransactionInput, transactionDate);
+        portfolio.recordCashflow(cashflowTransactionDetails, commonTransactionInput, command.transactionDate());
 
         portfolioRepository.save(portfolio);
-        return portfolioId;
+        return command.portfolioId();
     }
 
     @Transactional
     public UUID recordCashWithdrawal(
-        UUID portfolioId,
-        Money amount, 
-        Instant transactionDate,
-        TransactionMetadata metadata
+        @Nonnull RecordCashWidthdrawalCommand command
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(command.portfolioId());
 
-        Money depositAmountInPortoflioCurrency = exchangeRateService.convert(amount, portfolio.getCurrencyPreference());
+        Money depositAmountInPortoflioCurrency = exchangeRateService.convert(command.amount(), portfolio.getCurrencyPreference());
 
         ExchangeRate exchangeRate = new ExchangeRate(
-            amount.currency(), 
+            command.amount().currency(), 
             portfolio.getCurrencyPreference(), 
-            exchangeRateService.getExchangeRate(amount.currency(),portfolio.getCurrencyPreference()), 
-            transactionDate, 
+            exchangeRateService.getExchangeRate(command.amount().currency(),portfolio.getCurrencyPreference()), 
+            command.transactionDate(), 
             "SYSTEM"
         );
 
         CashflowTransactionDetails cashflowTransactionDetails = new CashflowTransactionDetails(
-            amount, depositAmountInPortoflioCurrency, Money.ZERO(amount.currency()), exchangeRate)
+            command.amount(), depositAmountInPortoflioCurrency, Money.ZERO(command.amount().currency()), exchangeRate)
         ;
         
         CommonTransactionInput commonTransactionInput = new CommonTransactionInput(
             UUID.randomUUID(), 
             UUID.randomUUID(), TransactionType.WITHDRAWAL, 
-            metadata, 
+            command.metadata(), 
             null
         );
-        portfolio.recordCashflow(cashflowTransactionDetails, commonTransactionInput, transactionDate);
+        portfolio.recordCashflow(cashflowTransactionDetails, commonTransactionInput, command.transactionDate());
 
         portfolioRepository.save(portfolio);
-        return portfolioId;
+        return command.portfolioId();
     }
 
     @Transactional
     public UUID recordNewLiability(
-        UUID portfolioId,
-        Money originalLoanAmount, // Original amount of the loan/liability (in its native currency)
-        Percentage annualInterestRate,
-        Instant incurrenceDate,
-        Instant maturityDate,
-        String description,
-        List<Fee> fees,
-        TransactionMetadata transactionMetadata
+        @Nonnull RecordNewLiabilityCommand command
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
-        Money loanAmountInPortfolioCurrency = exchangeRateService.convert(originalLoanAmount, portfolio.getCurrencyPreference());
+        Portfolio portfolio = getPortfolio(command.portfolioId());
+        Money loanAmountInPortfolioCurrency = exchangeRateService.convert(command.originalLoanAmount(), portfolio.getCurrencyPreference());
 
       // --- Calculate total fees in portfolio's currency ---
-        Money totalFeesInPortfolioCurrency = fees.stream()
+        Money totalFeesInPortfolioCurrency = command.fees().stream()
             .map(Fee::amount)
             .map(feeAmount -> exchangeRateService.convert(feeAmount, portfolio.getCurrencyPreference()))
             .reduce(Money.ZERO(portfolio.getCurrencyPreference()), Money::add);
 
         // --- Calculate total fees in the asset's original currency ---
-        Money totalFeesInAssetCurrency = fees.stream()
+        Money totalFeesInAssetCurrency = command.fees().stream()
             .map(Fee::amount)
-            .map(feeAmount -> exchangeRateService.convert(feeAmount, originalLoanAmount.currency())) // Convert to asset's original currency
-            .reduce(Money.ZERO(originalLoanAmount.currency()), Money::add);
+            .map(feeAmount -> exchangeRateService.convert(feeAmount, command.originalLoanAmount().currency())) // Convert to asset's original currency
+            .reduce(Money.ZERO(command.originalLoanAmount().currency()), Money::add);
 
 
         LiabilityIncurrenceTransactionDetails liabilityIncurrenceTransactionDetails = new LiabilityIncurrenceTransactionDetails(
             UUID.randomUUID(), 
             "NAME", 
-            description, 
-            originalLoanAmount, 
+            command.description(), 
+            command.originalLoanAmount(), 
             loanAmountInPortfolioCurrency, 
-            annualInterestRate, 
-            incurrenceDate,
-            maturityDate, 
+            command.annualInterestRate(), 
+            command.incurrenceDate(),
+            command.maturityDate(), 
             totalFeesInAssetCurrency, 
             totalFeesInPortfolioCurrency
         );
 
         CommonTransactionInput commonTransactionInput = new CommonTransactionInput(
-            UUID.randomUUID(), UUID.randomUUID(), TransactionType.LIABILITY_INCURRENCE, transactionMetadata, fees);
+            UUID.randomUUID(), UUID.randomUUID(), TransactionType.LIABILITY_INCURRENCE, command.transactionMetadata(), command.fees());
 
-        Liability newLiability = portfolio.recordNewLiability(liabilityIncurrenceTransactionDetails, commonTransactionInput, incurrenceDate);
+        Liability newLiability = portfolio.recordNewLiability(liabilityIncurrenceTransactionDetails, commonTransactionInput, command.incurrenceDate());
 
         portfolioRepository.save(portfolio);
         return newLiability.getLiabilityId();
@@ -330,45 +320,40 @@ public class PortfolioApplicationService {
 
     @Transactional
     public UUID recordLiabilityPayment(
-        UUID portfolioId, 
-        UUID liabilityId,
-        Money totalPaymentAmountInLiabilityCurrency,
-        Instant paymentDate,
-        List<Fee> fees,
-        TransactionMetadata transactionMetadata
+        @Nonnull RecordLiabilityPaymentCommand command
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(command.portfolioId());
         
         Liability selectedLiability = portfolio.getLiabilities().stream()
-            .filter(l -> l.getLiabilityId().equals(liabilityId))
+            .filter(l -> l.getLiabilityId().equals(command.liabilityId()))
             .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("Liability ID " + liabilityId + " does not exist in this portfolio."));
+            .orElseThrow(() -> new IllegalArgumentException("Liability ID " + command.liabilityId() + " does not exist in this portfolio."));
 
 
         // making payment to liability
-        PaymentAllocationResult paymentResult = selectedLiability.applyPayment(totalPaymentAmountInLiabilityCurrency, paymentDate);
+        PaymentAllocationResult paymentResult = selectedLiability.applyPayment(command.totalPaymentAmountInLiabilityCurrency(), command.paymentDate());
 
         
        // calculate total cash outflow from the portfolio's prespective
-        Money totalFeesInLiabilityCurrency = fees.stream()
+        Money totalFeesInLiabilityCurrency = command.fees().stream()
             .map(Fee::amount)
-            .map(feeAmount -> exchangeRateService.convert(feeAmount, totalPaymentAmountInLiabilityCurrency.currency())) // Convert to asset's original currency
-            .reduce(Money.ZERO(totalPaymentAmountInLiabilityCurrency.currency()), Money::add);
+            .map(feeAmount -> exchangeRateService.convert(feeAmount, command.totalPaymentAmountInLiabilityCurrency().currency())) // Convert to asset's original currency
+            .reduce(Money.ZERO(command.totalPaymentAmountInLiabilityCurrency().currency()), Money::add);
             
-        Money totalFeesInPortfolioCurrency = fees.stream()
+        Money totalFeesInPortfolioCurrency = command.fees().stream()
             .map(Fee::amount)
             .map(feeAmount -> exchangeRateService.convert(feeAmount, portfolio.getCurrencyPreference()))
             .reduce(Money.ZERO(portfolio.getCurrencyPreference()), Money::add);
             
         
-        Money totalCashOutflowInLiabilityCurrency = totalPaymentAmountInLiabilityCurrency.add(totalFeesInLiabilityCurrency);
+        Money totalCashOutflowInLiabilityCurrency = command.totalPaymentAmountInLiabilityCurrency().add(totalFeesInLiabilityCurrency);
         Money totalCashOutflowInPortfolioCurrency = exchangeRateService.convert(totalCashOutflowInLiabilityCurrency, portfolio.getCurrencyPreference());
 
         Money interestAmountInPortfolioCurrency = exchangeRateService.convert(paymentResult.interestPaid(), portfolio.getCurrencyPreference());
 
         LiabilityPaymentTransactionDetails liabilityPaymentTransactionDetails = new LiabilityPaymentTransactionDetails(
             selectedLiability.getLiabilityId(),
-            totalPaymentAmountInLiabilityCurrency,
+            command.totalPaymentAmountInLiabilityCurrency(),
             paymentResult.interestPaid(),              // Interest portion in liability's currency (from domain)
             totalFeesInLiabilityCurrency,
             totalCashOutflowInPortfolioCurrency,
@@ -380,26 +365,26 @@ public class PortfolioApplicationService {
             UUID.randomUUID(),
             UUID.randomUUID(),
             TransactionType.PAYMENT,
-            transactionMetadata,
-            fees
+            command.transactionMetadata(),
+            command.fees()
         );
         
         portfolio.recordLiabilityPayment(
             liabilityPaymentTransactionDetails,
             commonTransactionInput,
-            paymentDate
+            command.paymentDate()
         );
 
         portfolioRepository.save(portfolio);
 
-        return portfolioId;
+        return command.portfolioId();
     }
 
     @Transactional(readOnly = true)
     public PortfolioDetailsDto getPortfolioDetails(
-        UUID portfolioId
+        @Nonnull GetPortfolioDetailsQuery query
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(query.portfolioId());
         Set<AssetIdentifier> uniqueAssetsInPortfolio = portfolio.getAssetHoldings().stream()
             .map(ah -> ah.getAssetIdentifier())
             .collect(Collectors.toSet());
@@ -479,9 +464,9 @@ public class PortfolioApplicationService {
 
     @Transactional(readOnly = true)
     public AssetAllocationDto getAssetAllocation(
-        UUID portoflioId
+        @Nonnull GetAssetAllocationQuery query
     ) {
-        Portfolio portfolio = getPortfolio(portoflioId);
+        Portfolio portfolio = getPortfolio(query.portfolioId());
         
         Set<AssetIdentifier> uniqueAssetsInPortfolio = portfolio.getAssetHoldings().stream()
             .map(ah -> ah.getAssetIdentifier())
@@ -523,9 +508,9 @@ public class PortfolioApplicationService {
 
     @Transactional(readOnly = true)
     public MoneyDto getTotalPortfolioValue(
-        UUID portfolioId
+        @Nonnull GetTotalPortfolioValueQuery query
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(query.portfolioId());
 
         Set<AssetIdentifier> uniqueAssetsInPortfolio = portfolio.getAssetHoldings().stream()
             .map(ah -> ah.getAssetIdentifier())
@@ -538,9 +523,9 @@ public class PortfolioApplicationService {
 
     @Transactional(readOnly = true)
     public MoneyDto getUnrealizedGains(
-        UUID portfolioId
+        @Nonnull GetUnrealizedGainsQuery query
     ) {
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(query.portfolioId());
 
         // Get current market prices to calculate unrealized gains
         Set<AssetIdentifier> uniqueAssetsInPortfolio = portfolio.getAssetHoldings().stream()
@@ -554,13 +539,15 @@ public class PortfolioApplicationService {
     }
     
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionHistory(UUID portfolioId, Instant startDate, Instant endDate) {
+    public List<TransactionDto> getTransactionHistory(
+        @Nonnull GetTransactionHistoryQuery query
+    ) {
         
-        Portfolio portfolio = getPortfolio(portfolioId);
+        Portfolio portfolio = getPortfolio(query.portfolioId());
 
 
         return portfolio.getTransactions().stream()
-            .filter(tx -> !tx.getTransactionDate().isBefore(startDate) && !tx.getTransactionDate().isAfter(endDate))
+            .filter(tx -> !tx.getTransactionDate().isBefore(query.startDate()) && !tx.getTransactionDate().isAfter(query.endDate()))
             .sorted(Comparator.comparing(Transaction::getTransactionDate))
             .map(tx -> {
                 String description;
@@ -569,91 +556,184 @@ public class PortfolioApplicationService {
                 UUID relatedEntityId = null;
 
                 TransactionDetails details = tx.getTransactionDetails();
-                if (details instanceof AssetTransactionDetails purchaseDetails && tx.getTransactionType() == TransactionType.BUY) {
-                    primaryAmount = purchaseDetails.totalPurchasePrice().amount();
-                    description = String.format("Bought %s shares of %s for %s %s",
-                        purchaseDetails.getQuantity().stripTrailingZeros().toPlainString(),
-                        purchaseDetails.assetSymbol(),
-                        purchaseDetails.getAssetValueInAssetCurrency().amount().stripTrailingZeros().toPlainString(),
-                        purchaseDetails.getAssetValueInAssetCurrency().currency().getCurrencyCode()
-                    );
-                    relatedEntityName = purchaseDetails.assetSymbol();
-                    relatedEntityId = purchaseDetails.assetHoldingId();
-                } else if (details instanceof AssetTransactionDetails saleDetails && tx.getTransactionType() == TransactionType.SELL) {
-                    primaryAmount = saleDetails.totalSaleProceeds().amount();
-                    description = String.format("Sold %s shares of %s for %s %s",
-                        saleDetails.getQuantity().stripTrailingZeros().toPlainString(),
-                        saleDetails.assetSymbol(),
-                        saleDetails.totalSaleProceeds().amount().stripTrailingZeros().toPlainString(),
-                        saleDetails.totalSaleProceeds().currency().getCode()
-                    );
-                    relatedEntityName = saleDetails.assetSymbol();
-                    relatedEntityId = saleDetails.assetHoldingId();
-                } else if (details instanceof CashflowTransactionDetails depositDetails && tx.getTransactionType() == TransactionType.DEPOSIT) {
-                    primaryAmount = depositDetails.depositAmount().amount();
-                    description = String.format("Cash Deposit: %s %s",
-                        depositDetails.depositAmount().amount().stripTrailingZeros().toPlainString(),
-                        depositDetails.depositAmount().currency().getCode()
-                    );
-                    // No related entity ID for simple cash transactions
-                } else if (details instanceof CashflowTransactionDetails withdrawalDetails && tx.getTransactionType() == TransactionType.WITHDRAWAL) {
-                    primaryAmount = withdrawalDetails.withdrawalAmount().amount();
-                    description = String.format("Cash Withdrawal: %s %s",
-                        withdrawalDetails.withdrawalAmount().amount().stripTrailingZeros().toPlainString(),
-                        withdrawalDetails.withdrawalAmount().currency().getCode()
-                    );
-                    // No related entity ID for simple cash transactions
-                } else if (details instanceof LiabilityPaymentTransactionDetails paymentDetails && tx.getTransactionType() == TransactionType.PAYMENT) {
-                    primaryAmount = paymentDetails.totalPaymentAmountInLiabilityCurrency().amount();
-                    // You might need to fetch Liability name here or pass it into details when created
-                    description = String.format("Liability Payment: %s %s (Interest: %s)",
-                        paymentDetails.totalPaymentAmountInLiabilityCurrency().amount().stripTrailingZeros().toPlainString(),
-                        paymentDetails.totalPaymentAmountInLiabilityCurrency().currency().getCode(),
-                        paymentDetails.interestAmountInLiabilityCurrency().amount().stripTrailingZeros().toPlainString()
-                    );
-                    relatedEntityId = paymentDetails.liabilityId();
-                    // Placeholder for name: You might need portfolio.getLiability(paymentDetails.liabilityId()).getName()
-                    // or ensure the name is stored in details if Liability isn't always available from portfolio
-                    relatedEntityName = "Liability " + paymentDetails.liabilityId().toString().substring(0, 8) + "..."; // Fallback
-                } else if (details instanceof LiabilityIncurrenceTransactionDetails incurrenceDetails && tx.getTransactionType() == TransactionType.LIABILITY_INCURRENCE) {
-                    primaryAmount = incurrenceDetails.originalLiabilityAmount().amount();
-                    description = String.format("New Loan Incurred: %s %s",
-                        incurrenceDetails.originalLiabilityAmount().amount().stripTrailingZeros().toPlainString(),
-                        incurrenceDetails.originalLiabilityAmount().currency().getCode()
-                    );
-                    relatedEntityId = incurrenceDetails.liabilityId();
-                    relatedEntityName = "Loan " + incurrenceDetails.liabilityId().toString().substring(0, 8) + "..."; // Fallback
-                } else if (details instanceof InterestAccrualTransactionDetails interestDetails && tx.getTransactionType() == TransactionType.INTEREST) {
-                    primaryAmount = interestDetails.accruedInterestAmount().amount();
-                    description = String.format("Interest Accrual: %s %s on Liability",
-                        interestDetails.accruedInterestAmount().amount().stripTrailingZeros().toPlainString(),
-                        interestDetails.accruedInterestAmount().currency().getCode()
-                    );
-                    relatedEntityId = interestDetails.liabilityId();
-                    relatedEntityName = "Liability " + interestDetails.liabilityId().toString().substring(0, 8) + "..."; // Fallback
+                TransactionType type = tx.getTransactionType();
+
+                switch (type) {
+                    case BUY:
+                        if (details instanceof AssetTransactionDetails assetDetails) {
+                            primaryAmount = assetDetails.getAssetValueInAssetCurrency().amount();
+                            description = String.format("Bought %s shares of %s for %s %s",
+                                assetDetails.getQuantity().stripTrailingZeros().toPlainString(),
+                                assetDetails.getAssetIdentifier().symbol(),
+                                assetDetails.getAssetValueInAssetCurrency().amount().stripTrailingZeros().toPlainString(),
+                                assetDetails.getAssetValueInAssetCurrency().currency().getCurrencyCode()
+                            );
+
+                            relatedEntityName = assetDetails.getAssetIdentifier().symbol();
+                            relatedEntityId = assetDetails.getAssetHoldingId();
+                        }
+                        else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "BUY transaction with unexpected details";
+                        }
+                        break;
+                
+                    case SELL:
+                        if (details instanceof AssetTransactionDetails assetDetails) {
+                            Money netProceedsFromSale = assetDetails.getAssetValueInAssetCurrency().subtract(assetDetails.getTotalFeesInAssetCurrency());
+
+                            primaryAmount = netProceedsFromSale.amount();
+                            description = String.format("Sold %s shares of %s for %s %s (Fees: %s %s)",
+                                assetDetails.getQuantity().stripTrailingZeros().toPlainString(),
+                                assetDetails.getAssetIdentifier().symbol(),
+                                netProceedsFromSale.amount().stripTrailingZeros().toPlainString(),
+                                netProceedsFromSale.currency().getCurrencyCode(),
+                                assetDetails.getTotalFeesInAssetCurrency().amount().stripTrailingZeros().toPlainString(),
+                                assetDetails.getTotalFeesInAssetCurrency().currency().getCurrencyCode()
+                            );
+
+                            relatedEntityName = assetDetails.getAssetIdentifier().symbol();
+                            relatedEntityId = assetDetails.getAssetHoldingId();
+                        }   
+                        else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "SELL transaction with unexpected details.";
+                        }
+
+                        break;
+
+                    case DEPOSIT:
+                        if(details instanceof CashflowTransactionDetails cashflowDetails) { // Assuming Deposit uses CashflowTransactionDetails
+                            primaryAmount = cashflowDetails.getOriginalCashflowAmount().amount();
+                            description = String.format("Cash Deposit: %s %s",
+                                cashflowDetails.getOriginalCashflowAmount().amount().stripTrailingZeros().toPlainString(),
+                                cashflowDetails.getOriginalCashflowAmount().currency().getCurrencyCode()
+                            );
+                        } 
+                        else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "DEPOSIT transaction with unexpected details.";
+                        }
+                        break;
+
+                    case WITHDRAWAL:
+                        if (details instanceof CashflowTransactionDetails cashflowDetails) { // Assuming Withdrawal uses CashflowTransactionDetails
+                            primaryAmount = cashflowDetails.getOriginalCashflowAmount().amount();
+                            description = String.format("Cash Withdrawal: %s %s",
+                                cashflowDetails.getOriginalCashflowAmount().amount().stripTrailingZeros().toPlainString(),
+                                cashflowDetails.getOriginalCashflowAmount().currency().getCurrencyCode()
+                            );
+                        } 
+                        else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "WITHDRAWAL transaction with unexpected details.";
+                        }
+                        break;
+
+                    case PAYMENT: // This refers to Liability Payment
+                        if (details instanceof LiabilityPaymentTransactionDetails paymentDetails) {
+                            primaryAmount = paymentDetails.getTotalPaymentAmountInLiabilityCurrency().amount();
+                            description = String.format("Liability Payment: %s %s (Interest: %s %s)",
+                                paymentDetails.getTotalPaymentAmountInLiabilityCurrency().amount().stripTrailingZeros().toPlainString(),
+                                paymentDetails.getTotalPaymentAmountInLiabilityCurrency().currency().getCurrencyCode(),
+                                paymentDetails.getInterestAmountInLiabilityCurrency().amount().stripTrailingZeros().toPlainString(),
+                                paymentDetails.getInterestAmountInLiabilityCurrency().currency().getCurrencyCode()
+                            );
+                            relatedEntityId = paymentDetails.getLiabilityId(); // ASSUMPTION: liabilityId is stored in details
+
+                            // OPTIONAL: Fetch actual liability name if portfolio provides a lookup method
+                            // portfolio.getLiabilityById(relatedEntityId).map(Liability::getName).orElse(...)
+                            relatedEntityName = "Liability " + paymentDetails.getLiabilityId().toString().substring(0, 8) + "..."; // Fallback
+                        } 
+                        else {
+                             primaryAmount = tx.getTotalTransactionAmount().amount();
+                             description = "PAYMENT transaction with unexpected details.";
+                        }
+                        break;
+                    case LIABILITY_INCURRENCE:
+                        if (details instanceof LiabilityIncurrenceTransactionDetails incurrenceDetails) {
+                            primaryAmount = incurrenceDetails.getOriginalLoanAmountInLiabilityCurrency().amount();
+                            description = String.format("New Loan Incurred: %s %s",
+                                incurrenceDetails.getOriginalLoanAmountInLiabilityCurrency().amount().stripTrailingZeros().toPlainString(),
+                                incurrenceDetails.getOriginalLoanAmountInLiabilityCurrency().currency().getCurrencyCode()
+                            );
+                            relatedEntityId = incurrenceDetails.getLiabilityId(); // ASSUMPTION: liabilityId is stored in details
+
+                            // OPTIONAL: Fetch actual liability name
+                            // relatedEntityName = portfolio.getLiabilityById(relatedEntityId).map(Liability::getName).orElse(...)
+                            relatedEntityName = "Loan " + incurrenceDetails.getLiabilityId().toString().substring(0, 8) + "..."; // Fallback
+                        }
+                        else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "LIABILITY_INCURRENCE transaction with unexpected details.";
+                        }
+                        break;
+                    
+                    case INTEREST_INCOME:
+                        if (details instanceof InterestIncomeDetails incomeDetails) {
+                            primaryAmount = incomeDetails.getAmountEarned().amount();
+                            description = String.format("Interest Income: %s %s from %s",
+                                incomeDetails.getAmountEarned().amount().stripTrailingZeros().toPlainString(),
+                                incomeDetails.getAmountEarned().currency().getCurrencyCode(),
+                                incomeDetails.getSourceDescription()
+                            );
+                            relatedEntityId = incomeDetails.getRealtedAccountId(); // Can be null
+                            relatedEntityName = incomeDetails.getSourceDescription(); // Use source description as name
+                        } else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "INTEREST_INCOME transaction with unexpected details.";
+                        }
+                        break;
+
+                    case INTEREST_EXPENSE:
+                        if (details instanceof InterestExpenseDetails expenseDetails) {
+                            primaryAmount = expenseDetails.getAmountAccruedOrPaid().amount();
+                            description = String.format("Interest Expense: %s %s on Liability",
+                                expenseDetails.getAmountAccruedOrPaid().amount().stripTrailingZeros().toPlainString(),
+                                expenseDetails.getAmountAccruedOrPaid().currency().getCurrencyCode()
+                            );
+                            relatedEntityId = expenseDetails.getLiabilityId();
+                            // You might want to fetch the liability name here:
+                            // relatedEntityName = portfolio.getLiabilityById(relatedEntityId).map(Liability::getName).orElse(...)
+                            relatedEntityName = "Liability " + expenseDetails.getLiabilityId().toString().substring(0, 8) + "..."; // Fallback
+                        } else {
+                            primaryAmount = tx.getTotalTransactionAmount().amount();
+                            description = "INTEREST_EXPENSE transaction with unexpected details.";
+                        }
+                        break;
+
+                    case SIMPLE: // For generic messages, assuming SimpleTransactionDetails
+                        if (details instanceof SimpleTransactionDetails simpleDetails) {
+                            primaryAmount = tx.getTotalTransactionAmount().amount(); // Use totalTransactionAmount as primary
+                            description = simpleDetails.getDescription();
+                        } 
+                        else {
+                             primaryAmount = tx.getTotalTransactionAmount().amount();
+                             description = "SIMPLE transaction with unexpected details.";
+                        }
+                        break;
+                   
+
+                    default:
+                        primaryAmount = tx.getTotalTransactionAmount().amount();
+                        description = "Unknown Transaction Type: " + type.name();
+                        break;
                 }
-                else if (details instanceof SimpleTransactionDetails simpleDetails) {
-                    primaryAmount = tx.getTotalTransactionAmount().amount(); // Fallback to total amount
-                    description = simpleDetails.getDescription();
-                }
-                else {
-                    // Fallback for unhandled transaction types
-                    primaryAmount = tx.getTotalTransactionAmount().amount();
-                    description = "Unhandled Transaction Type: " + tx.getTransactionType().name();
-                }
+                 // The totalTransactionAmount on the Transaction domain object is your net cash impact
                 BigDecimal cashImpact = tx.getTotalTransactionAmount().amount();
 
                 return new TransactionDto(
                     tx.getTransactionId(),
                     tx.getTransactionDate(),
-                    tx.getTransactionType().name(), // Use enum name for String representation
+                    tx.getTransactionType().name(),
                     description,
-                    tx.getTotalTransactionAmount().currency().getCurrencyCode(), 
+                    tx.getTotalTransactionAmount().currency().getCurrencyCode(), // Currency of the cash impact
                     primaryAmount,
                     cashImpact,
                     relatedEntityName,
                     relatedEntityId
                 );
+                
                 
             })
             .collect(Collectors.toList());

@@ -11,6 +11,8 @@ public enum TransactionType {
     SELL,
 
     LIABILITY_INCURRENCE,
+    INTEREST_INCOME,
+    INTEREST_EXPENSE,
 
     PAYMENT,
     EXPENSE,
@@ -20,7 +22,9 @@ public enum TransactionType {
     REVERSAL_SELL,
     REVERSAL_WITHDRAWAL,
     REVERSAL_DEPOSIT,
-    REVERSAL
+    REVERSAL, 
+
+    SIMPLE
 
     // TRANSFER_IN,
     // TRANSFER_OUT,

@@ -92,3 +92,24 @@ Loan payment: You spend cash → negative impact
 The sign convention ensures that summing all totalTransactionAmount values gives you the net change in portfolio cash, which is exactly what "net cash impact" means.
 Your fees list still captures the detailed fee breakdown in original currency for audit/reporting purposes.
 Does this cash flow perspective make sense for your design?
+
+
+
+
+
+----------
+@Service
+@AllArgsConstructor
+public class PortfolioApplicationService {
+    private final PortfolioRepository portfolioRepository;
+    private final ExchangeRateService exchangeRateService;
+    private final PriceService pricingService;
+    // private final AuditService auditService; // <--- You'd add this here
+
+    public void recordAssetPurchase(RecordAssetPurchaseCommand command, UUID userId) {
+        // ... (your existing logic to buy asset, update portfolio, save) ...
+
+        // AFTER SUCCESSFUL SAVE:
+        // auditService.logAssetPurchase(userId, command.portfolioId(), command.assetIdentifier(), command.quantity(), ...);
+    }
+}

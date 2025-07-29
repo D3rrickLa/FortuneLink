@@ -130,43 +130,50 @@ public class Portfolio {
 	}
 
 	public void recordAssetPurchase(
-		AssetTransactionDetails details, 
+		AssetTransactionDetails initialDetails, 
 		CommonTransactionInput commonTransactionInput,
 		Instant transactionDate
 	) {
-		Objects.requireNonNull(details, "details cannot be null.");
+		Objects.requireNonNull(initialDetails, "details cannot be null.");
 		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
 		Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
 
 		if (commonTransactionInput.transactionType() != TransactionType.BUY) {
 			throw new IllegalArgumentException("Expected BUY transaction type, got: "+ commonTransactionInput.transactionType());
 		}
-
+		
+		
 		Optional<AssetHolding> existingHolding = assetHoldings.stream()
-			.filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
-			.findFirst();
+		.filter(ah -> ah.getAssetIdentifier().equals(initialDetails.getAssetIdentifier()))
+		.findFirst();
 		
 		AssetHolding holding;
+		UUID finalAssetHoldingId;
 		
 		if (existingHolding.isPresent()) {
 			holding = existingHolding.get();
-			holding.addToPosition(details.getQuantity(), details.getCostBasisInAssetCurrency());
+			holding.addToPosition(initialDetails.getQuantity(), initialDetails.getCostBasisInAssetCurrency());
+			finalAssetHoldingId = holding.getAssetId();
 		} 
 		else {
+			UUID newHoldingId = UUID.randomUUID();
 			holding = new AssetHolding(
-				UUID.randomUUID(),
+				newHoldingId,
 				this.portfolioId,
-				details.getAssetIdentifier(),
-				details.getQuantity(),
-				details.getCostBasisInAssetCurrency(),
+				initialDetails.getAssetIdentifier(),
+				initialDetails.getQuantity(),
+				initialDetails.getCostBasisInAssetCurrency(),
 				transactionDate
 			);
 			this.assetHoldings.add(holding);
+			finalAssetHoldingId = newHoldingId; // This is the ID for the new holding
+
 		}
-			
+		AssetTransactionDetails enrichedDetails = initialDetails.withAssetHoldingId(finalAssetHoldingId);
+
 		// The costBasisInPortfolioCurrency from details *should already include* all fees.
 		// So, this is the total cash outflow for the purchase.
-		Money cashOutflow = details.getCostBasisInPortfolioCurrency();
+		Money cashOutflow = enrichedDetails.getCostBasisInPortfolioCurrency();
 		Money netCashImpact = cashOutflow.negate();
 		Money newBalance = this.portfolioCashBalance.add(netCashImpact);
 		if (newBalance.isNegative()) {
@@ -183,7 +190,7 @@ public class Portfolio {
 			commonTransactionInput.transactionType(),
 			cashOutflow,
 			transactionDate,
-			details,
+			enrichedDetails,
 			commonTransactionInput.transactionMetadata(),
 			commonTransactionInput.fees(),
 			false,
@@ -192,9 +199,9 @@ public class Portfolio {
 		this.transactions.add(newAssetTransaction);
 	}
 
-	public void recordAssetSale(AssetTransactionDetails details, CommonTransactionInput commonTransactionInput,
+	public void recordAssetSale(AssetTransactionDetails initialDetails, CommonTransactionInput commonTransactionInput,
 			Instant transactionDate) {
-		Objects.requireNonNull(details, "details cannot be null.");
+		Objects.requireNonNull(initialDetails, "details cannot be null.");
 		Objects.requireNonNull(commonTransactionInput, "commonTransactionInput cannot be null.");
 		Objects.requireNonNull(transactionDate, "transactionDate cannot be null.");
 
@@ -204,37 +211,39 @@ public class Portfolio {
 		}
 
 		Optional<AssetHolding> existingHolding = assetHoldings.stream()
-				.filter(ah -> ah.getAssetIdentifier().equals(details.getAssetIdentifier()))
+				.filter(ah -> ah.getAssetIdentifier().equals(initialDetails.getAssetIdentifier()))
 				.findFirst();
 
 		if (existingHolding.isEmpty()) {
 			throw new AssetNotFoundException("Cannot sell asset not held in portfolio: "
-					+ details.getAssetIdentifier().symbol());
+					+ initialDetails.getAssetIdentifier().symbol());
 		}
 
 		AssetHolding holding = existingHolding.get();
-		if (holding.getTotalQuantity().compareTo(details.getQuantity()) < 0) {
+		if (holding.getTotalQuantity().compareTo(initialDetails.getQuantity()) < 0) {
 			throw new IllegalArgumentException("Cannot sell more units than you have.");
 		}
 
-		Money netCashImpact = details.getAssetValueInPortfolioCurrency().subtract(details.getTotalFeesInPortfolioCurrency());
+		AssetTransactionDetails enrichedDetails = initialDetails.withAssetHoldingId(holding.getAssetId());
+
+		Money netCashImpact = enrichedDetails.getAssetValueInPortfolioCurrency().subtract(enrichedDetails.getTotalFeesInPortfolioCurrency());
 		if (!this.portfolioCashBalance.currency().equals(netCashImpact.currency())) {
 			throw new IllegalArgumentException(
 					"Portfolio cash balance currency does not match transaction's net cash impact currency.");
 		}
 		this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact); // Cash increases
 
-		holding.removeFromPosition(details.getQuantity());
+		holding.removeFromPosition(enrichedDetails.getQuantity());
 		Transaction newAssetTransaction = new Transaction(
 				UUID.randomUUID(),
 				this.portfolioId,
 				commonTransactionInput.correlationId(),
 				commonTransactionInput.parentTransactionId(),
 				commonTransactionInput.transactionType(), // Should be SELL
-				details.getAssetValueInPortfolioCurrency(), // Store the gross proceeds as the
+				enrichedDetails.getAssetValueInPortfolioCurrency(), // Store the gross proceeds as the
 										// transaction amount
 				transactionDate,
-				details,
+				enrichedDetails,
 				commonTransactionInput.transactionMetadata(),
 				commonTransactionInput.fees(), // Store the individual fees
 				false,

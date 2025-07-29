@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transact
 
 import java.math.BigDecimal;
 import java.util.Objects;
+import java.util.UUID;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -16,7 +17,8 @@ public final class AssetTransactionDetails extends TransactionDetails {
     private final Money costBasisInAssetCurrency;
     private final Money totalFeesInPortfolioCurrency; // SIMPLIFIED: Combined all fees
     private final Money totalFeesInAssetCurrency;
-    
+    private final UUID assetHoldingId;
+
     public AssetTransactionDetails(
         AssetIdentifier assetIdentifier, 
         BigDecimal quantity, 
@@ -26,7 +28,8 @@ public final class AssetTransactionDetails extends TransactionDetails {
         Money costBasisInPortfolioCurrency,
         Money costBasisInAssetCurrency,
         Money totalFeesInPortfolioCurrency,
-        Money totalFeesInAssetCurrency
+        Money totalFeesInAssetCurrency,
+        UUID assetHoldingId
     ) {
         Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
         Objects.requireNonNull(quantity, "Quantity cannot be null.");
@@ -47,8 +50,55 @@ public final class AssetTransactionDetails extends TransactionDetails {
         this.costBasisInAssetCurrency = costBasisInAssetCurrency;
         this.totalFeesInPortfolioCurrency = totalFeesInPortfolioCurrency;
         this.totalFeesInAssetCurrency = totalFeesInAssetCurrency;
+        this.assetHoldingId = assetHoldingId;
     }
 
+    /**
+     * Returns a new AssetTransactionDetails instance with the specified assetHoldingId.
+     * This is essential for populating the ID after it's generated.
+     */
+    public AssetTransactionDetails withAssetHoldingId(UUID newAssetHoldingId) {
+        return new AssetTransactionDetails(
+            this.assetIdentifier,
+            this.quantity,
+            this.pricePerUnit,
+            this.assetValueInAssetCurrency,
+            this.assetValueInPortfolioCurrency,
+            this.costBasisInPortfolioCurrency,
+            this.costBasisInAssetCurrency,
+            this.totalFeesInPortfolioCurrency,
+            this.totalFeesInAssetCurrency,
+            newAssetHoldingId
+            
+        );
+    }
+
+    public AssetTransactionDetails(
+        AssetIdentifier assetIdentifier, 
+        BigDecimal quantity, 
+        Money pricePerUnit,
+        Money assetValueInAssetCurrency, 
+        Money assetValueInPortfolioCurrency, 
+        Money costBasisInPortfolioCurrency,
+        Money costBasisInAssetCurrency,
+        Money totalFeesInPortfolioCurrency,
+        Money totalFeesInAssetCurrency
+    ) {
+        super();
+        this.assetIdentifier = assetIdentifier;
+        this.quantity = quantity;
+        this.pricePerUnit = pricePerUnit;
+        this.assetValueInAssetCurrency = assetValueInAssetCurrency;
+        this.assetValueInPortfolioCurrency = assetValueInPortfolioCurrency;
+        this.costBasisInPortfolioCurrency = costBasisInPortfolioCurrency;
+        this.costBasisInAssetCurrency = costBasisInAssetCurrency;
+        this.totalFeesInPortfolioCurrency = totalFeesInPortfolioCurrency;
+        this.totalFeesInAssetCurrency = totalFeesInAssetCurrency;
+        this.assetHoldingId = null;
+    }
+    
+    
+    public UUID getAssetHoldingId() {return assetHoldingId;}
     public AssetIdentifier getAssetIdentifier() {return assetIdentifier;}
     public BigDecimal getQuantity() {return quantity;}
     public Money getPricePerUnit() {return pricePerUnit;}
@@ -58,6 +108,7 @@ public final class AssetTransactionDetails extends TransactionDetails {
     public Money getCostBasisInAssetCurrency() {return costBasisInAssetCurrency;}
     public Money getTotalFeesInPortfolioCurrency() {return totalFeesInPortfolioCurrency;}
     public Money getTotalFeesInAssetCurrency() {return totalFeesInAssetCurrency;}
+
     
     
 }   

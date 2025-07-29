@@ -201,7 +201,8 @@ public class PortfolioTest {
 				costBasisInPortfolioCurrency,
 				costBasisInAssetCurrency,
 				totalFeesInPortfolioCurrency,
-				totalFeesInAssestCurrency);
+				totalFeesInAssestCurrency,
+				null);
 
 		UUID correlationId = UUID.randomUUID();
 		UUID parentId = null;
@@ -307,7 +308,8 @@ public class PortfolioTest {
 				costBasisInPortfolioCurrency,
 				costBasisInAssetCurrency,
 				totalFeesInPortfolioCurrency,
-				totalFeesInAssestCurrency);
+				totalFeesInAssestCurrency,
+				null);
 
 		UUID correlationId = UUID.randomUUID();
 		UUID parentId = null;
@@ -443,7 +445,8 @@ public class PortfolioTest {
 				costBasisInPortfolioCurrency,
 				costBasisInAssetCurrency,
 				totalFeesInPortfolioCurrency,
-				totalFeesInAssestCurrency);
+				totalFeesInAssestCurrency,
+				null);
 
 		UUID correlationId = UUID.randomUUID();
 		UUID parentId = null;
