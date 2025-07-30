@@ -375,6 +375,7 @@ Another feasibility that came to mind, algorithms for user content... How does I
 - PostgreSQL – Primary relational database
 - Redis – Used for caching community posts (image URLs stored externally)
 - GraphQL – API communication between front end and back end
+- REST - for MVP API
 - Spring Boot - Back end framework for business layer and data handling
 
 ### DevOps
@@ -408,6 +409,23 @@ a set of features you *must* have for your first deployable version
 2. User Account settings
 
 social feature later on
+
+
+DDD Layers
+The idea is separation of concerns, isolating different parts of our system based on what they do.
+
+Domain Layer
+- brain and heart of the application, containg business logic, rules, and entities that define our domain - what the system is about
+- no knowledge of outside systems like DB or frameworks. Should also be tested independently 
+
+Application Layer
+- the chef of this resturant. it know how to fulfill specific requests by orchestrating the business rules from the Domain layer
+- we implement the use caes in the above doc
+
+
+Infrastructure Layer
+- utility room, handling the technical details and external connections. it knows how things are stored
+- we will provide the concrete implementations for interfaces defined in the domain and app layer
 
 --- 
 This is the end of the Project Documentation.
