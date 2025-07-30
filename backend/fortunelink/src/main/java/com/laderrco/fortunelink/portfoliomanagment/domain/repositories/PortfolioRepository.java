@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.entities.Portfolio;
 
 public interface PortfolioRepository {
     public Optional<Portfolio> findById(UUID id);
-    public List<Portfolio> findByUserId(UUID id);
+    public Optional<Portfolio> findByUserId(UUID id);
     public Portfolio save(Portfolio portfolio);
     public void delete(Portfolio portfolio);
     List<Portfolio> findAll();
