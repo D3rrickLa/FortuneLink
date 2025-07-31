@@ -209,6 +209,8 @@ Record Liability Payment:
 - Description: A user records a payment made towards a liability, reducing the outstanding balance.
 - Trigger: User inputs payment details.
 
+### Goals & Financial Planning Bounded Context
+
 View Current Net Worth:
 
 - Description: The system calculates and displays the user's current net worth based on all recorded assets (at current market prices) and liabilities.
@@ -224,7 +226,6 @@ Analyze Asset Allocation:
 - Description: The system visualizes the distribution of assets by type, sector, or geography within the portfolio.
 - Trigger: User accesses allocation view.
 
-### Goals & Financial Planning Bounded Context
 
 Define a New Financial Goal:
 
@@ -302,6 +303,9 @@ Moderate Content/Users (for Moderators):
 
 - Description: A moderator reviews reported content, applies rules, and manages user statuses (e.g., suspension, ban).
 - Trigger: Moderator accesses moderation tools.
+
+### User and Authentication Bounded Context
+Basically we are handling the authentication, sign up, etc. here
 
 
 ## Aggregate Design Diagram

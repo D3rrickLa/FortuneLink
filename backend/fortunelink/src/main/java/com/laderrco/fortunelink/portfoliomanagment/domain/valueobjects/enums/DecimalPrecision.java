@@ -1,13 +1,16 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums;
 
+import java.math.MathContext;
+
 public enum DecimalPrecision {
     BOND(6),
-    CASH(4),
-    COMMODITY(4),
+    CASH(6),
+    COMMODITY(6),
     CRYPTO(8),
-    FOREX(5),
+    FOREX(6),
+    MONEY(MathContext.DECIMAL128.getPrecision()),
     PERCENTAGE(8),
-    STOCK(4);
+    STOCK(6);
 
     private final int decimalPlaces;
 

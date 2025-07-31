@@ -9,34 +9,36 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
  * User
  * 
  * <<Value Objects>>
- * TransactionType ✅
+ * <<<ENUMS>>>
  * AssetType ✅
- * LiabilityType ✅
- * FeeType ✅
- * 
- * TransactionStatus ✅
- * TransactionSource ✅
- * 
+ * CryptoSymbols ✅
  * DecimalPrecision ✅
- * CryptoSymbols <- should be replaced by either a DB to reference or a service
+ * FeeType ✅
+ * TransactionSource ✅
+ * TransactionStatus ✅
+ * TransactionType ✅
+ * LiabilityType (new) ✅
  * 
+ * <<<OTHER>>>
+ * AllocationItem -> most likely a separate domain concern (Goal Management)
+ * AssetAllocation -> most likely a separate domain concern (Goal Management)
  * AssetIdentifier
- * AllocationItem
- * AssetAllocation
- * 
- * TransactionMetadata
- * ExchangeRate
- * 
- * Money
- * Fee
- * Percentage
- * 
+ * CommonTransactionInput (removed, in TransactionDetails)
+ * ExchangeRate ✅
+ * Fee ✅
  * MarketPrice
+ * Money ✅
+ * PaymentAllocationResult
+ * Percentage ✅
+ * TransactionMetadata (removed, in TransactionDetails)
+ * 
+ * <<TransactionDetails>>
+ * TransactionDetails
  * 
  * <<Services>>
- * CurrencyConversionService
- * MarketDataService
- * PortfolioDomainService
+ * CurrencyConversionService 🟨
+ * MarketDataService 🟨
+ * PortfolioDomainService 🟨
  */
 
 public class Portfolio {

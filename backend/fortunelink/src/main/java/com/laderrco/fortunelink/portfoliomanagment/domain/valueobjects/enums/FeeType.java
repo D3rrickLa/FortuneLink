@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums;
 
 public enum FeeType {
     BROKERAGE,
+    TRANSACTION_FEE,
     GAS,
     FOREIGN_EXCHANGE_CONVERSION,
     COMMISSION,

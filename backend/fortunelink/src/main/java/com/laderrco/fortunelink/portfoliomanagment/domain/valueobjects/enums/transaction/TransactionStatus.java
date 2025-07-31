@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transactionutil;
+package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction;
 
 public enum TransactionStatus {
     ACTIVE,
