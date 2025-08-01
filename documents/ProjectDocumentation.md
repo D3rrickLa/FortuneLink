@@ -305,7 +305,12 @@ Moderate Content/Users (for Moderators):
 - Trigger: Moderator accesses moderation tools.
 
 ### User and Authentication Bounded Context
-Basically we are handling the authentication, sign up, etc. here
+Basically we are handling the authentication, sign up, etc. here.
+It's an external service (Supabase) that other contexts integrates with 
+
+### Market Data
+a canonical source for asset information (individually and or list) which include
+prices, sectors, descriptions, and other market-related data. this will be consumed by other contexts (key lang: Price, Sector, Exchange, MarketCap, etc.)
 
 
 ## Aggregate Design Diagram

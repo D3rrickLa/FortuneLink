@@ -22,23 +22,34 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
  * <<<OTHER>>>
  * AllocationItem -> most likely a separate domain concern (Goal Management)
  * AssetAllocation -> most likely a separate domain concern (Goal Management)
- * AssetIdentifier
+ * AssetIdentifier ✅
  * CommonTransactionInput (removed, in TransactionDetails)
  * ExchangeRate ✅
  * Fee ✅
- * MarketPrice
+ * MarketPrice ✅
  * Money ✅
  * PaymentAllocationResult
  * Percentage ✅
  * TransactionMetadata (removed, in TransactionDetails)
+ * All Entitiies Id VOs ✅
  * 
  * <<TransactionDetails>>
- * TransactionDetails
+ * TransactionDetails 🟨
+ * And all its children 
  * 
  * <<Services>>
  * CurrencyConversionService 🟨
  * MarketDataService 🟨
- * PortfolioDomainService 🟨
+ * PortfolioDomainService 🟨 -> for logic that doesn't fit into a single aggregate, might/might not be needed
+ * 
+ * <<Repositories>>
+ * PortfolioRepository
+ * UserRepository
+ * 
+ * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere
+ * AssetBoughtEvent
+ * DividendReceivedEvent
+ * PortfolioCreatedEvent
  */
 
 public class Portfolio {

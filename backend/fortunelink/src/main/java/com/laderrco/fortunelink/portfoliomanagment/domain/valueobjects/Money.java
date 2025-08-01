@@ -24,8 +24,8 @@ public record Money(
         }
     }
 
-    private void validateParameter(Object other, String methodName) {
-        Objects.requireNonNull(other, String.format("%s cannot be null.", methodName));
+    private void validateParameter(Object other, String parameterName) {
+        Objects.requireNonNull(other, String.format("%s cannot be null.", parameterName));
     }
 
     public Money add(Money other) {
@@ -106,7 +106,7 @@ public record Money(
             throw new IllegalArgumentException("Exchange rate currency don't match conversion request.");
         }
 
-        BigDecimal convertedAmount = exchangeRate.exchangeRate().multiply(this.amount());
+        BigDecimal convertedAmount = exchangeRate.exchangeRate().multiply(this.amount()).setScale(DecimalPrecision.CASH.getDecimalPlaces());
         return new Money(convertedAmount, targetCurrency);
     }
 

@@ -132,7 +132,7 @@ class MoneyTest {
         ExchangeRate rate = new ExchangeRate(USD, EUR, BigDecimal.valueOf(0.9), Instant.now());
         Money m1 = new Money(BigDecimal.valueOf(100), USD);
         Money converted = m1.convertTo(EUR, rate);
-        assertEquals(BigDecimal.valueOf(90.0), converted.amount());
+        assertEquals(BigDecimal.valueOf(90.0).setScale(6), converted.amount());
         assertEquals(EUR, converted.currency());
     }
 
