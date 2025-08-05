@@ -1,63 +1,38 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-
-import org.springframework.transaction.TransactionStatus;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionStatus;
 
+// NOTE: some of the variables are lifecycle items, please remove and place them into Transaction.java
+// Remember: VO -> immutable objects whose identity is defined by its data while Entities can change over time
 public abstract class TransactionDetails {
     // put common transaction inputs in here
-    private final UUID correlationId; // for when an event generates multiple transactions
-    private final UUID parentTransactionId;
-    private final TransactionType transactionType;
-    
     // metadata will be in this class rather than a separate class
-    private final TransactionStatus status;
     private final TransactionSource source;
     private final String description;
     private final List<Fee> fees;
-    private final Instant createdAt;
+
     
-    public TransactionDetails(
-        UUID correlationId, 
-        UUID parentTransactionId, 
-        TransactionType transactionType,
-        TransactionStatus status,
+    protected TransactionDetails(
         TransactionSource source, 
         String description, 
-        List<Fee> fees, 
-        Instant createdAt
+        List<Fee> fees
     ) {
-        this.correlationId = correlationId;
-        this.parentTransactionId = parentTransactionId;
-        this.transactionType = transactionType;
-        this.status = status;
         this.source = source;
-        this.description = description;
-        this.fees = fees;
-        this.createdAt = createdAt;
+        this.description = description.trim();
+        this.fees = fees != null ? Collections.unmodifiableList(fees) : Collections.emptyList();
+
     }
 
-    public UUID getCorrelationId() {
-        return correlationId;
-    }
 
-    public UUID getParentTransactionId() {
-        return parentTransactionId;
-    }
-
-    public TransactionType getTransactionType() {
-        return transactionType;
-    }
-
-    public TransactionStatus getStatus() {
-        return status;
-    }
+    public abstract TransactionDetails updateStatus(TransactionStatus newStatus, Instant updatedAt);
 
     public TransactionSource getSource() {
         return source;
@@ -69,10 +44,5 @@ public abstract class TransactionDetails {
 
     public List<Fee> getFees() {
         return fees;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-       
+    }  
 }

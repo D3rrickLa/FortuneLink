@@ -14,17 +14,17 @@ public record Fee(
     Instant time
 ) {
     public Fee {
-        validateParameter(type, "constructor - type");
-        validateParameter(amount, "constructor - amount");
-        validateParameter(description, "constructor - description");
-        validateParameter(time, "constructor - time");
+        validateParameter(type, "Type");
+        validateParameter(amount, "Amount");
+        validateParameter(description, "Description");
+        validateParameter(time, "Time");
 
         if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidQuantityException("Fee amount must be positive.");
         }
     }
-    private void validateParameter(Object other, String methodName) {
-        Objects.requireNonNull(other, String.format("%s cannot be null.", methodName));
+    private void validateParameter(Object other, String parameterName) {
+        Objects.requireNonNull(other, String.format("%s cannot be null.", parameterName));
     }
 
 }

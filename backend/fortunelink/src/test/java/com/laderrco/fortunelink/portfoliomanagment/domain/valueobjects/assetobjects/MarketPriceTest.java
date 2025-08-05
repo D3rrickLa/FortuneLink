@@ -32,7 +32,7 @@ public class MarketPriceTest {
     void constructor_shouldCreateValidMarketPrice() {
         MarketPrice mp = new MarketPrice(asset, money(new BigDecimal("100.00"), USD), Instant.now(), "Yahoo");
         assertEquals(asset, mp.assetIdentifier());
-        assertEquals(new BigDecimal("100.00"), mp.price().amount());
+        assertEquals(new BigDecimal("100.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), mp.price().amount());
         assertEquals(USD, mp.price().currency());
         assertEquals("Yahoo", mp.source());
     }
@@ -40,7 +40,7 @@ public class MarketPriceTest {
     @Test
     void constructor_shouldAllowZeroPriceIfRelaxed() {
         MarketPrice mp = new MarketPrice(asset, money(BigDecimal.ZERO, USD), Instant.now(), null);
-        assertEquals(BigDecimal.ZERO, mp.price().amount());
+        assertEquals(BigDecimal.ZERO.setScale(DecimalPrecision.MONEY.getDecimalPlaces()), mp.price().normalizedForDisplay().amount());
         assertEquals("SYSTEM", mp.source());
     }
 
@@ -57,7 +57,7 @@ public class MarketPriceTest {
         Exception ex = assertThrows(NullPointerException.class, () ->
             new MarketPrice(null, money(BigDecimal.ONE, USD), Instant.now(), "Yahoo")
         );
-        assertTrue(ex.getMessage().contains("Asset Identifier cannot be null."));
+        assertTrue(ex.getMessage().contains("Asset identifier cannot be null."));
     }
 
     @Test
@@ -73,7 +73,7 @@ public class MarketPriceTest {
         Exception ex = assertThrows(NullPointerException.class, () ->
             new MarketPrice(asset, money(BigDecimal.ONE, USD), null, "Yahoo")
         );
-        assertTrue(ex.getMessage().contains("Price Date cannot be null."));
+        assertTrue(ex.getMessage().contains("Price date cannot be null."));
     }
 
     @Test
@@ -94,7 +94,7 @@ public class MarketPriceTest {
     void isStale_shouldThrowIfMaxAgeIsNull() {
         MarketPrice mp = new MarketPrice(asset, money(new BigDecimal("100.00"), USD), Instant.now(), "Yahoo");
         Exception ex = assertThrows(NullPointerException.class, () -> mp.isStale(null));
-        assertTrue(ex.getMessage().contains("Max Age cannot be null."));
+        assertTrue(ex.getMessage().contains("Max duration cannot be null."));
     }
 
     @Test
@@ -104,7 +104,7 @@ public class MarketPriceTest {
 
         MarketPrice converted = mp.getPriceInCurrency(EUR, rate);
         assertEquals(EUR, converted.price().currency());
-        assertEquals(new BigDecimal("90.00").setScale(DecimalPrecision.CASH.getDecimalPlaces()), converted.price().amount());
+        assertEquals(new BigDecimal("90.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), converted.price().normalizedForDisplay().amount());
         assertEquals(mp.assetIdentifier(), converted.assetIdentifier());
         assertEquals(mp.priceDate(), converted.priceDate());
     }
@@ -115,7 +115,7 @@ public class MarketPriceTest {
         MarketPrice mp = new MarketPrice(asset, money(new BigDecimal("100.00"), USD), Instant.now(), "Yahoo");
 
         Exception ex = assertThrows(NullPointerException.class, () -> mp.getPriceInCurrency(null, rate));
-        assertTrue(ex.getMessage().contains("Target Currency cannot be null."));
+        assertTrue(ex.getMessage().contains("Target currency cannot be null."));
     }
 
     @Test
@@ -147,7 +147,7 @@ public class MarketPriceTest {
     @Test
     void zeroMethod_shouldCreateValidZeroMarketPrice() {
         MarketPrice zero = MarketPrice.ZERO(asset, USD);
-        assertEquals(BigDecimal.ZERO, zero.price().amount());
+        assertEquals(BigDecimal.ZERO.setScale(DecimalPrecision.MONEY.getDecimalPlaces()), zero.price().normalizedForDisplay().amount());
         assertEquals("SYSTEM", zero.source());
         assertEquals(USD, zero.price().currency());
         assertFalse(zero.isStale(Duration.ofSeconds(1))); // Should be fresh

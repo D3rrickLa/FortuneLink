@@ -5,7 +5,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
  * Portfolio
  * AssetHolding
  * Liability
- * Transaction
+ * Transaction 🟨
  * User
  * 
  * <<Value Objects>>
@@ -46,7 +46,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
  * PortfolioRepository
  * UserRepository
  * 
- * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere
+ * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere wihtout the aggregate itself knowing hte details of that reaction
  * AssetBoughtEvent
  * DividendReceivedEvent
  * PortfolioCreatedEvent

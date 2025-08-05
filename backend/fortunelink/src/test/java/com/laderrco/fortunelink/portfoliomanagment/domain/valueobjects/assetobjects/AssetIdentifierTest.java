@@ -73,7 +73,7 @@ public class AssetIdentifierTest {
         Exception ex = assertThrows(IllegalArgumentException.class, () ->
             new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "   ", "NASDAQ")
         );
-        assertTrue(ex.getMessage().contains("Asset Name cannot be blank."));
+        assertTrue(ex.getMessage().contains("Asset name cannot be blank."));
     }
 
     @Test
@@ -81,7 +81,7 @@ public class AssetIdentifierTest {
         Exception ex = assertThrows(IllegalArgumentException.class, () ->
             new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "   ")
         );
-        assertTrue(ex.getMessage().contains("Asset Name cannot be blank."));
+        assertTrue(ex.getMessage().contains("Asset name cannot be blank."));
     }
 
     @Test

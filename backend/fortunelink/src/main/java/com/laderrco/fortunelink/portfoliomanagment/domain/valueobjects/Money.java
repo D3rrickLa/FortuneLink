@@ -2,11 +2,13 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.Currency;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
 
+// need to deal with the scaling
 public record Money(
     BigDecimal amount, 
     Currency currency
@@ -14,10 +16,12 @@ public record Money(
     private final static MathContext FINANCIAL_MATH_CONTEXT = MathContext.DECIMAL128; 
 
     public Money {
-        validateParameter(amount, "constructor - amount");
-        validateParameter(currency, "constructor - currency");
-    }
+        validateParameter(amount, "Amount");
+        validateParameter(currency, "Currency");
 
+        amount = amount.setScale(DecimalPrecision.MONEY.getDecimalPlaces(), RoundingMode.HALF_EVEN); // TODO remove or keep? find out
+    }
+    
     private void isSameCurrency(Currency other, String methodName) {
         if (!this.currency.equals(other)) {
             throw new IllegalArgumentException(String.format("Cannot %s money with different currencies. Please convert them to be the same.", methodName));
@@ -29,36 +33,37 @@ public record Money(
     }
 
     public Money add(Money other) {
-        validateParameter(other, "add");
+        validateParameter(other, "Money");
         isSameCurrency(other.currency(), "add");
         return new Money(this.amount.add(other.amount()), this.currency);
     }
 
     public Money subtract(Money other) {
-        validateParameter(other, "subtract");
+        validateParameter(other, "Money");
         isSameCurrency(other.currency(), "subtract");
         return new Money(amount.subtract(other.amount, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
     public Money mulitply(BigDecimal multiplier) {
-        validateParameter(multiplier, "multiply");
+        validateParameter(multiplier, "Multiplier");
         return new Money(this.amount.multiply(multiplier, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
     public Money mulitply(Double multiplier) {
-        validateParameter(multiplier, "multiply");
+        validateParameter(multiplier, "Multiplier");
         return mulitply(new BigDecimal(String.valueOf(multiplier)));
     }
 
     public Money divide(BigDecimal divisor){
-        validateParameter(divisor, "divide");
+        validateParameter(divisor, "Divisor");
         if (divisor.compareTo(BigDecimal.ZERO) == 0) {
             throw new ArithmeticException("Divisor cannot be zero.");
         }
-        return new Money(this.amount.divide(divisor, FINANCIAL_MATH_CONTEXT).setScale(DecimalPrecision.MONEY.getDecimalPlaces()), this.currency);
+        return new Money(this.amount.divide(divisor, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
     public Money divide(Double divisor) {
+        validateParameter(divisor, "Divisor");
         return divide(new BigDecimal(String.valueOf(divisor)));
     }
 
@@ -71,54 +76,60 @@ public record Money(
     }
 
     public boolean isZero() {
-        if (amount.compareTo(BigDecimal.ZERO) != 0) {
-            return false;
-        }
-        return true;
+        return amount.compareTo(BigDecimal.ZERO) == 0;
     }
 
     public boolean isPositive() {
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return false;
-        }
-        return true;
-        
+        return amount.compareTo(BigDecimal.ZERO) > 0;
     }
     
     public boolean isNegative() {
-        if (amount.compareTo(BigDecimal.ZERO) > 0) {
-            return false;
-        }
-        return true;        
+        return amount.compareTo(BigDecimal.ZERO) < 0;
     }
 
     public int compareTo(Money other) {
-        validateParameter(other, "compareTo");
+        validateParameter(other, "Money");
         isSameCurrency(other.currency, "compareTo");
         return this.amount.compareTo(other.amount());
     }
 
     public Money convertTo(Currency targetCurrency, ExchangeRate exchangeRate) {
-        validateParameter(targetCurrency, "convertTo");
-        validateParameter(exchangeRate, "convertTo");
+        validateParameter(targetCurrency, "Target currency");
+        validateParameter(exchangeRate, "Exchange rate");
         
         if (!this.currency().equals(exchangeRate.fromCurrency()) || !targetCurrency.equals(exchangeRate.toCurrency())) {
             throw new IllegalArgumentException("Exchange rate currency don't match conversion request.");
         }
 
-        BigDecimal convertedAmount = exchangeRate.exchangeRate().multiply(this.amount()).setScale(DecimalPrecision.CASH.getDecimalPlaces());
+        BigDecimal convertedAmount = exchangeRate.exchangeRate().multiply(this.amount(), FINANCIAL_MATH_CONTEXT);
+        System.out.println(convertedAmount);
         return new Money(convertedAmount, targetCurrency);
     }
 
+    public Money normalizedForDisplay() {
+        return new Money(this.amount.setScale(DecimalPrecision.MONEY.getDecimalPlaces()), this.currency);
+    }
+
     public static Money ZERO(Currency currency) {
+        Objects.requireNonNull(currency, "Currency cannot be null.");
         return new Money(BigDecimal.ZERO, currency);
     }
 
     public static Money of(BigDecimal value, Currency currency) {
+        Objects.requireNonNull(value, "Value cannot be null.");
+        Objects.requireNonNull(currency, "Currency cannot be null.");
         return new Money(value, currency);
     }
 
-    public static Money of(Double value, Currency currency) {
+    public static Money of(double value, Currency currency) {
+        Objects.requireNonNull(value, "Value cannot be null.");
+        Objects.requireNonNull(currency, "Currency cannot be null.");
+        return new Money(new BigDecimal(String.valueOf(value)), currency);
+    }
+
+    public static Money of(long value, Currency currency) {
+        Objects.requireNonNull(value, "Value cannot be null.");
+        Objects.requireNonNull(currency, "Currency cannot be null.");
         return new Money(new BigDecimal(String.valueOf(value)), currency);
     }
 }

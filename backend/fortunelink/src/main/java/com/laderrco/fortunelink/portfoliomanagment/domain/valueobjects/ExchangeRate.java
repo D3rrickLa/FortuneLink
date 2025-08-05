@@ -19,8 +19,8 @@ public record ExchangeRate(
     public ExchangeRate {
         Objects.requireNonNull(fromCurrency, "From Currency cannot be null.");
         Objects.requireNonNull(toCurrency, "To Currency cannot be null.");
-        Objects.requireNonNull(exchangeRate, "Exchange Rate cannot be null.");
-        Objects.requireNonNull(exchangeRateDate, "Exchange Rate Date cannot be null.");
+        Objects.requireNonNull(exchangeRate, "Exchange rate cannot be null.");
+        Objects.requireNonNull(exchangeRateDate, "Exchange rate date cannot be null.");
 
         if (fromCurrency.equals(toCurrency)) {
             throw new IllegalArgumentException("Cannot convert currency to itself.");
@@ -45,6 +45,7 @@ public record ExchangeRate(
     }
     
     public Boolean isExpired(Duration maxAge) {
+        Objects.requireNonNull(maxAge, "Max duration cannot be null.");
         return exchangeRateDate.isBefore(Instant.now().minus(maxAge));
     }
 }

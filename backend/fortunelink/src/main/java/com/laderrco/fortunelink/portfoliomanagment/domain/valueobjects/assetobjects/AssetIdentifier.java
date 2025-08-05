@@ -23,10 +23,10 @@ public record AssetIdentifier(
         assetExchangeName = assetExchangeName.trim().toUpperCase();
         isin = isin.trim().toUpperCase();
         if (assetName.isEmpty()) {
-            throw new IllegalArgumentException("Asset Name cannot be blank.");
+            throw new IllegalArgumentException("Asset name cannot be blank.");
         }
         if (assetExchangeName.isEmpty()) {
-            throw new IllegalArgumentException("Asset Name cannot be blank.");
+            throw new IllegalArgumentException("Asset name cannot be blank.");
         }
         if (isValidISIN(isin) == false) {
             throw new IllegalArgumentException("Invalid ISIN format.");

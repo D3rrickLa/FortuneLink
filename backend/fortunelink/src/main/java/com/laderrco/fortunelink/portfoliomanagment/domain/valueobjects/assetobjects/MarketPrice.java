@@ -17,9 +17,9 @@ public record MarketPrice(
     String source
 ) {
     public MarketPrice {
-        validateParameter(assetIdentifier, "Asset Identifier");
+        validateParameter(assetIdentifier, "Asset identifier");
         validateParameter(price, "Price");
-        validateParameter(priceDate, "Price Date");
+        validateParameter(priceDate, "Price date");
 
         if (price.amount().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Price must not be negative.");
@@ -33,7 +33,7 @@ public record MarketPrice(
     }
 
     public MarketPrice getPriceInCurrency(Currency targetCurrency, ExchangeRate rate) {
-        validateParameter(targetCurrency, "Target Currency");
+        validateParameter(targetCurrency, "Target currency");
         validateParameter(rate, "Rate");
         
         // Validate exchange rate matches the conversion
@@ -47,8 +47,9 @@ public record MarketPrice(
         Money convertedPrice = this.price.convertTo(targetCurrency, rate);
         return new MarketPrice(this.assetIdentifier, convertedPrice, this.priceDate, this.source);
     }
+
     public boolean isStale(Duration maxAge) {
-        validateParameter(maxAge, "Max Age");
+        validateParameter(maxAge, "Max duration");
         return priceDate.isBefore(Instant.now().minus(maxAge));
     }   
     
