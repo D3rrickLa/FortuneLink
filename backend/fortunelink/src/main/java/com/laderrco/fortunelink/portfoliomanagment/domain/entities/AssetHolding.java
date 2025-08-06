@@ -37,6 +37,5 @@ public class AssetHolding {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
-    
-    
+        
 }

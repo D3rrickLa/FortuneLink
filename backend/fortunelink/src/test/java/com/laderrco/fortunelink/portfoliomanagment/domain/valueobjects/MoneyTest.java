@@ -58,7 +58,7 @@ class MoneyTest {
     @Test
     void multiply_shouldReturnScaledAmount() {
         Money money = new Money(BigDecimal.valueOf(20), USD);
-        Money result = money.mulitply(2.5);
+        Money result = money.multiply(2.5);
         assertEquals(BigDecimal.valueOf(50.0).setScale(DecimalPrecision.MONEY.getDecimalPlaces()), result.amount());
     }
 

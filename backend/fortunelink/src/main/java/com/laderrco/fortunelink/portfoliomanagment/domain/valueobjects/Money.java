@@ -44,14 +44,14 @@ public record Money(
         return new Money(amount.subtract(other.amount, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
-    public Money mulitply(BigDecimal multiplier) {
+    public Money multiply(BigDecimal multiplier) {
         validateParameter(multiplier, "Multiplier");
         return new Money(this.amount.multiply(multiplier, FINANCIAL_MATH_CONTEXT), this.currency);
     }
 
-    public Money mulitply(Double multiplier) {
+    public Money multiply(Double multiplier) {
         validateParameter(multiplier, "Multiplier");
-        return mulitply(new BigDecimal(String.valueOf(multiplier)));
+        return multiply(new BigDecimal(String.valueOf(multiplier)));
     }
 
     public Money divide(BigDecimal divisor){
