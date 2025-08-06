@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.Portf
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.TransactionDetails;
 
+// NOTE: TREAT EVERY FINANCE INTERACT AS DISTINCT AND INDEPENDENT
 public class Transaction {
     private final TransactionId transactionId;
     private final CorrelationId correlationId; // for when an event generates multiple transactions

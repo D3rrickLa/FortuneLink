@@ -106,11 +106,24 @@ class MoneyTest {
         Money money = new Money(BigDecimal.valueOf(10), USD);
         assertTrue(money.isPositive());
     }
+    
+    @Test 
+    void isPositive_shouldReturnFalseForNegative() {
+        Money money = new Money(BigDecimal.valueOf(-10), USD);
+        assertFalse(money.isPositive());
+
+    }
 
     @Test
     void isNegative_shouldReturnTrueForNegative() {
         Money money = new Money(BigDecimal.valueOf(-10), USD);
         assertTrue(money.isNegative());
+    }
+    
+    @Test
+    void isNegative_shouldReturnFalseForNegative() {
+        Money money = new Money(BigDecimal.valueOf(10), USD);
+        assertFalse(money.isNegative());
     }
 
     @Test

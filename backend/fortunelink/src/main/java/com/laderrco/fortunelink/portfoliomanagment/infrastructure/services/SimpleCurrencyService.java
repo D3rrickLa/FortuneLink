@@ -52,7 +52,8 @@ public class SimpleCurrencyService implements CurrencyConversionService {
             if (inverseRate != null) {
                 // Ensure no division by zero and handle potential precision issues
                 return BigDecimal.ONE.divide(inverseRate, 10, RoundingMode.HALF_UP);
-            } else {
+            } 
+            else {
                 throw new IllegalArgumentException("Exchange rate not found for " + from.getCurrencyCode() + " to " + to.getCurrencyCode());
             }
         }

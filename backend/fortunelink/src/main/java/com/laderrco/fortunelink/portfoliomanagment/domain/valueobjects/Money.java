@@ -21,6 +21,10 @@ public record Money(
 
         amount = amount.setScale(DecimalPrecision.MONEY.getDecimalPlaces(), RoundingMode.HALF_EVEN); // TODO remove or keep? find out
     }
+
+    public Money(double amount, String currency) {
+        this(new BigDecimal(amount), Currency.getInstance(currency));
+    }
     
     private void isSameCurrency(Currency other, String methodName) {
         if (!this.currency.equals(other)) {

@@ -30,5 +30,29 @@ public enum TransactionType {
 
     OTHER
     
+
+    /*
+     * BONUS
+     * BUYS
+     * DEPOSITS
+     * DIVIDENDS
+     * INTEREST
+     * FEES
+     * FUNDS CONVERTED
+     * GRANTS
+     * MARGIN INTEREST CHARGES
+     * OPTIONS EXPIRED
+     * OPTIONS EXERCISED OR ASSIGNED
+     * CASH SENT AND RECEIVED
+     * REDUNFDS AND REIMBURSEMENTS
+     * SELLS
+     * STAKING REWARDS
+     * STAKING ACTION
+     * TAX
+     * PURCHASES
+     * TRANSFER
+     * WIDTHDRAWALS
+     * WRITE-OFFS
+     */
     
 }

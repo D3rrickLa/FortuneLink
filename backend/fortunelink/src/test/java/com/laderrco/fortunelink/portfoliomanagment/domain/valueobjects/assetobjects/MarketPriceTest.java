@@ -32,6 +32,7 @@ public class MarketPriceTest {
     void constructor_shouldCreateValidMarketPrice() {
         MarketPrice mp = new MarketPrice(asset, money(new BigDecimal("100.00"), USD), Instant.now(), "Yahoo");
         assertEquals(asset, mp.assetIdentifier());
+        assertEquals(AssetType.STOCK.getDefaultQuantityPrecision(), asset.type().getDefaultQuantityPrecision());
         assertEquals(new BigDecimal("100.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), mp.price().amount());
         assertEquals(USD, mp.price().currency());
         assertEquals("Yahoo", mp.source());

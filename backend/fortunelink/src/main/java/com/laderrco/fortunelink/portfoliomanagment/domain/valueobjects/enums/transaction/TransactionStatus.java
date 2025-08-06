@@ -11,4 +11,18 @@ public enum TransactionStatus {
     FAILED,
     CANCELLED,
     VOIDED
+    /*
+     * CANCELLED
+     * CANCELLING
+     * COMPLETED
+     * DECLINED
+     * EXPIRED
+     * FAILED
+     * IN PROGRESS
+     * PENDING
+     * REFUNDED
+     * REJECTED
+     * REVERSED
+     * TRANSFERRING
+     */
 }

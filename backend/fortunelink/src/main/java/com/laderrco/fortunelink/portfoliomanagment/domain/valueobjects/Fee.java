@@ -23,6 +23,11 @@ public record Fee(
             throw new InvalidQuantityException("Fee amount must be positive.");
         }
     }
+    
+    public Fee(FeeType feeType, Money amount, String description) {
+        this(feeType, amount, description, Instant.now());
+    }
+
     private void validateParameter(Object other, String parameterName) {
         Objects.requireNonNull(other, String.format("%s cannot be null.", parameterName));
     }
