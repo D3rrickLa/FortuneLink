@@ -48,10 +48,10 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * TransactionDetails ✅
  * --------------------------
  * TradeExecutionTransactionDetails ✅
- * CashflowTransactionDetails
- * IncomeTransactionDetails
- * LiabilityIncurredTransactionDetails
- * LiabilityPaymentTransactionDetails
+ * CashflowTransactionDetails ✅
+ * IncomeTransactionDetails ✅
+ * LiabilityIncurredTransactionDetails ✅
+ * LiabilityPaymentTransactionDetails ✅
  * 
  * <<Services>>
  * CurrencyConversionService ✅
