@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.assetobjects;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Currency;
@@ -13,19 +14,25 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 public record MarketPrice(
     AssetIdentifier assetIdentifier,
     Money price, // asset price in its native currency
-    Instant priceDate,
+    Instant timestamp,
+    Clock clock,
     String source
 ) {
     public MarketPrice {
         validateParameter(assetIdentifier, "Asset identifier");
         validateParameter(price, "Price");
-        validateParameter(priceDate, "Price date");
+        validateParameter(timestamp, "Price date");
+        validateParameter(clock, "Clock");
 
         if (price.amount().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Price must not be negative.");
         }
 
         source = source == null ? "SYSTEM": source.trim(); // this might be a problem if blank
+    }
+
+    public MarketPrice(AssetIdentifier assetIdentifier, Money price, Instant timestamp, String source) {
+        this(assetIdentifier, price, timestamp, Clock.systemDefaultZone(), source);
     }
 
     private void validateParameter(Object other, String parameterName) {
@@ -45,15 +52,15 @@ public record MarketPrice(
         }
         
         Money convertedPrice = this.price.convertTo(targetCurrency, rate);
-        return new MarketPrice(this.assetIdentifier, convertedPrice, this.priceDate, this.source);
+        return new MarketPrice(this.assetIdentifier, convertedPrice, this.timestamp, this.clock, this.source);
     }
 
     public boolean isStale(Duration maxAge) {
         validateParameter(maxAge, "Max duration");
-        return priceDate.isBefore(Instant.now().minus(maxAge));
+        return timestamp.isBefore(clock.instant().minus(maxAge));
     }   
     
     public static MarketPrice ZERO(AssetIdentifier assetIdentifier, Currency currency) {
-        return new MarketPrice(assetIdentifier, Money.ZERO(currency), Instant.now(), "SYSTEM");
+        return new MarketPrice(assetIdentifier, Money.ZERO(currency), Instant.now(), Clock.systemDefaultZone(), "SYSTEM");
     }
 }

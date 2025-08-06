@@ -114,4 +114,6 @@ public class Portfolio {
     private AssetHolding createNewAssetHolding(AssetIdentifier assetIdentifier) {
         return null;
     }
+
+    // note we will have to do the same thing for the Liability
 }

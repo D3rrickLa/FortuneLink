@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Currency;
 
 import org.junit.jupiter.api.Test;
@@ -107,7 +109,7 @@ public class MarketPriceTest {
         assertEquals(EUR, converted.price().currency());
         assertEquals(new BigDecimal("90.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), converted.price().normalizedForDisplay().amount());
         assertEquals(mp.assetIdentifier(), converted.assetIdentifier());
-        assertEquals(mp.priceDate(), converted.priceDate());
+        assertEquals(mp.timestamp(), converted.timestamp());
     }
 
     @Test
@@ -157,9 +159,14 @@ public class MarketPriceTest {
     // Edge Case: Timestamp right at boundary
     @Test
     void isStale_shouldHandleBoundaryCondition() {
-        Instant threshold = Instant.now().minus(Duration.ofSeconds(10));
-        MarketPrice mp = new MarketPrice(asset, money(new BigDecimal("50"), USD), threshold, "Yahoo");
-        assertFalse(mp.isStale(Duration.ofSeconds(10)));
-        assertTrue(mp.isStale(Duration.ofSeconds(9)));
+        Instant fixedNow = Instant.parse("2025-08-06T23:27:00Z");
+        Clock fixedClock = Clock.fixed(fixedNow, ZoneOffset.UTC);
+
+        Instant threshold = fixedNow.minus(Duration.ofSeconds(10));
+        MarketPrice mp = new MarketPrice(asset, money(new BigDecimal("50"), USD), threshold, fixedClock, "Yahoo");
+
+        assertFalse(mp.isStale(Duration.ofSeconds(10))); // exactly at boundary
+        assertTrue(mp.isStale(Duration.ofSeconds(9)));   // just over boundary
+
     }
 }
