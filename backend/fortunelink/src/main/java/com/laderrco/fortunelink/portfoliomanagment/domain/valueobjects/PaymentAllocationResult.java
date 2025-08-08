@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects;
 
 import java.util.Objects;
 
+// used as a DTO almost, summarizing what you paid and what is left
 public record PaymentAllocationResult(
     Money principalPaid,
     Money interestPaid,

@@ -15,7 +15,7 @@ public final class LiabilityIncurrenceTransactionDetails extends TransactionDeta
     private final Money principalAmount;
     private final Percentage interestRate; // year
 
-    protected LiabilityIncurrenceTransactionDetails(
+    public LiabilityIncurrenceTransactionDetails(
         LiabilityId liabilityId,
         Money principalAmount,
         Percentage interestRate,

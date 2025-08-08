@@ -119,6 +119,24 @@ public record Money(
         return new Money(BigDecimal.ZERO, currency);
     }
 
+    public Money min(Money other) {
+        validateParameter(other, "Money");
+        if (other.currency() != this.currency) {
+            throw new IllegalArgumentException("Currency must match for min operation to work.");
+        }
+        BigDecimal minAmount = this.amount.min(other.amount());
+        return new Money(minAmount, this.currency); 
+    }
+    
+    public Money max(Money other) {
+        validateParameter(other, "Money");
+        if (other.currency() != this.currency) {
+            throw new IllegalArgumentException("Currency must match for max operation to work.");
+        }
+        BigDecimal maxAmount = this.amount.max(other.amount());
+        return new Money(maxAmount, this.currency); 
+    }
+
     public static Money of(BigDecimal value, Currency currency) {
         Objects.requireNonNull(value, "Value cannot be null.");
         Objects.requireNonNull(currency, "Currency cannot be null.");

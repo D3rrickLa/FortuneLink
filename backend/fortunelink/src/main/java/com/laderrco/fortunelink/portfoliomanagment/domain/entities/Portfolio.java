@@ -1,21 +1,30 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
+import java.lang.foreign.Linker.Option;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.assetobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.LiabilityId;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.TradeExecutionTransactionDetails;
 
 /*
  * <<Entities>>
  * Portfolio
  * AssetHolding
- * Liability
+ * Liability 🟨
  * Transaction 🟨
  * User
  * 
@@ -39,7 +48,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * Fee ✅
  * MarketPrice ✅
  * Money ✅
- * PaymentAllocationResult
+ * PaymentAllocationResult ✅
  * Percentage ✅
  * TransactionMetadata (removed, in TransactionDetails)
  * All Entitiies Id VOs ✅
@@ -52,6 +61,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * IncomeTransactionDetails ✅
  * LiabilityIncurredTransactionDetails ✅
  * LiabilityPaymentTransactionDetails ✅
+ * ReversalTransactionDetails ✅🟨 <- new method/transaction
  * 
  * <<Services>>
  * CurrencyConversionService ✅
@@ -77,6 +87,18 @@ public class Portfolio {
      * handle liabilities
      */
     
+    private final PortfolioId portfolioId;
+    private Map<LiabilityId, Liability> liabilities = new HashMap<>();
+    private final List<Object> domainEvents = new ArrayList<>();
+
+
+
+    
+
+    public Portfolio(PortfolioId portfolioId, Map<LiabilityId, Liability> liabilities) {
+        this.portfolioId = portfolioId;
+        this.liabilities = liabilities;
+    }
 
     // this is how we would handle the Trade Execution thing
     // proof of concept so I don't lose it
@@ -116,4 +138,40 @@ public class Portfolio {
     }
 
     // note we will have to do the same thing for the Liability
+    public void recordNewLiability() {
+        Liability liability = createNewLiability();
+
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+
+        this.liabilities.put(null, liability);
+        // new LiabilityIncurredEvent
+
+
+        //domainEvents.add(event)
+    }
+
+    public void updateLiability(LiabilityId liabilityId, LiabilityDetails newDetails) {
+        Liability existingLiability = liabilities.get(liabilityId);
+
+        existingLiability.updateDetails(newDetails);
+    }
+
+    private Optional<Liability> findLiability() {
+        return null;
+    }
+
+    private Liability createNewLiability() {
+        return null;
+    }
+
+    public List<Object> getDomainEvents() {
+        return Collections.unmodifiableList(this.domainEvents);
+    }
 }
