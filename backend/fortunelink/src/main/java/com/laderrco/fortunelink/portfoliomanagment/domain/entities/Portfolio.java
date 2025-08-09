@@ -9,15 +9,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityIncurredEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityPaymentRecordedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.PaymentAllocationResult;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.assetobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionStatus;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.AssetHoldingId;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.CorrelationId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.LiabilityId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityIncurrenceTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityPaymentTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.TradeExecutionTransactionDetails;
 
 /*
@@ -76,6 +87,8 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * AssetBoughtEvent
  * DividendReceivedEvent
  * PortfolioCreatedEvent
+ * LiabilityPaymentRecordedEvent
+ * LiabilityIncurredEvent
  */
 
 public class Portfolio {
@@ -87,17 +100,46 @@ public class Portfolio {
      * handle liabilities
      */
     
+    private final User user;
     private final PortfolioId portfolioId;
+    private String portfolioName;
+    private String portfolioDescription;
+    private Money portfolioCashBalance; // can get currency pref from this, don't know if we need a sep field
+
     private Map<LiabilityId, Liability> liabilities = new HashMap<>();
+    private Map<AssetHoldingId, AssetHolding> holdings = new HashMap<>(); // for performance and convenience we use a map
+    private List<Transaction> transactions = new ArrayList<>(); // record of events that happened, generally immutable and for historical data. that's why list
+    
     private final List<Object> domainEvents = new ArrayList<>();
 
-
+    private final CurrencyConversionService conversionService;    
 
     
 
-    public Portfolio(PortfolioId portfolioId, Map<LiabilityId, Liability> liabilities) {
+    public Portfolio(
+        User user, 
+        PortfolioId portfolioId, 
+        String portfolioName, 
+        String portfolioDescription,
+        Money portfolioCashBalance, 
+        Map<LiabilityId, Liability> liabilities,
+        Map<AssetHoldingId, AssetHolding> holdings, 
+        List<Transaction> transactions,
+        CurrencyConversionService conversionService
+    ) {
+        this.user = user;
         this.portfolioId = portfolioId;
+        this.portfolioName = portfolioName;
+        this.portfolioDescription = portfolioDescription;
+        this.portfolioCashBalance = portfolioCashBalance;
         this.liabilities = liabilities;
+        this.holdings = holdings;
+        this.transactions = transactions;
+        this.conversionService = conversionService;
+    }
+
+    private Money calculateTotalFees(List<Fee> fees) {
+        return null;
     }
 
     // this is how we would handle the Trade Execution thing
@@ -138,23 +180,121 @@ public class Portfolio {
     }
 
     // note we will have to do the same thing for the Liability
-    public void recordNewLiability() {
-        Liability liability = createNewLiability();
-
-        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
+    public void incurrNewLiability(
+        LiabilityDetails liabilityDetails,
+        Money liabilityAmount,
+        TransactionSource source,
+        List<Fee> fees,
+        Instant incurrenceDate
+    ) {
+        LiabilityId liabilityId = new LiabilityId(UUID.randomUUID());
+        Liability liability = new Liability(
+            liabilityId,
+            this.portfolioId,
+            liabilityDetails,
+            liabilityAmount,
+            incurrenceDate
         );
 
-        this.liabilities.put(null, liability);
+        LiabilityIncurrenceTransactionDetails details = new LiabilityIncurrenceTransactionDetails(
+            liabilityId,
+            liabilityAmount,
+            liabilityDetails.annualInterestRate(),
+            source,
+            liabilityDetails.description(),
+            fees
+        );
+
+        this.liabilities.put(liabilityId, liability);
+
+        // will throw an error, the details need a function to return total summed fees
+        Money netCashImpact = details.getPrincipalAmount().subtract(details.getFees());
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
+
+        // create transaction new and add it
+        Transaction transaction = new Transaction(
+            new TransactionId(UUID.randomUUID()),
+            new CorrelationId(UUID.randomUUID()),
+            null, // parent id,
+            this.portfolioId,
+            TransactionType.LIABILITY_INCURRENCE,
+            TransactionStatus.COMPLETED,
+            details,
+            netCashImpact,
+            incurrenceDate,
+            Instant.now()
+        );
+        this.transactions.add(transaction);
+
         // new LiabilityIncurredEvent
+        LiabilityIncurredEvent event = new LiabilityIncurredEvent(
+            liabilityId, 
+            details.getInterestRate(), 
+            liabilityAmount
+        );
+
+        domainEvents.add(event);
+
+    }
+
+    public void recordLiabilityPayment(
+        LiabilityId liabilityId, 
+        Money paymentAmount,
+        TransactionSource source,
+        List<Fee> fees,
+        Instant transactionDate
+
+    ) {
+        // some event for recording a payment
+        Liability liability = this.liabilities.get(liabilityId);
+        if (liability == null) {
+            throw new IllegalArgumentException("Liability not found.");
+        }
+
+        PaymentAllocationResult result = liability.recordPayment(paymentAmount, Instant.now()); // time should be passed
+        
+        // need to create a transaction here
+        // also need a TransactionDetails sub child (LiabilityPaymentTransactionDetails)
+
+        Money totalFees = calculateTotalFees(fees); // technically don't need this
+        // because Money has a subtract meant for subtracting from fees, but like should probably
+        // not have that in said class
+        Money cashImpact = paymentAmount.negate().subtract(totalFees);
+        this.portfolioCashBalance = this.portfolioCashBalance.add(cashImpact);
+
+        LiabilityPaymentTransactionDetails details = new LiabilityPaymentTransactionDetails(
+            liabilityId, 
+            result.principalPaid(),
+            result.interestPaid(),
+            source, 
+            "Liability payment", 
+            fees
+        );
+
+        Transaction transaction = new Transaction (
+            new TransactionId(UUID.randomUUID()),
+            new CorrelationId(UUID.randomUUID()),
+            null, // parent Id
+            this.portfolioId,
+            TransactionType.PAYMENT,
+            TransactionStatus.COMPLETED,
+            details,
+            cashImpact,
+            transactionDate,
+            Instant.now()
+        );
+        this.transactions.add(transaction);
+                this.transactions.add(transaction);
+        LiabilityPaymentRecordedEvent event = new LiabilityPaymentRecordedEvent(liabilityId, paymentAmount, paymentAmount, Instant.now());
+        domainEvents.add(event);
 
 
-        //domainEvents.add(event)
+
+        // at the end of the transaciton, an application service would dispatch these events...
+        // but how?
+        // ans: after the app service loads Portfolio from the repo, it can call one of the methods in Portfolio
+        // after that, it than calls the getDomainEvents to get the list of new events
+        // it then uses a separate domai nevent dispatcher to publish these events to any listening services
     }
 
     public void updateLiability(LiabilityId liabilityId, LiabilityDetails newDetails) {
@@ -163,13 +303,6 @@ public class Portfolio {
         existingLiability.updateDetails(newDetails);
     }
 
-    private Optional<Liability> findLiability() {
-        return null;
-    }
-
-    private Liability createNewLiability() {
-        return null;
-    }
 
     public List<Object> getDomainEvents() {
         return Collections.unmodifiableList(this.domainEvents);

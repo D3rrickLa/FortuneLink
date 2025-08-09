@@ -2,10 +2,9 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import java.time.Instant;
 
-import org.springframework.transaction.TransactionStatus;
-
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.CorrelationId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
