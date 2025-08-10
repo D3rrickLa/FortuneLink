@@ -9,5 +9,6 @@ public enum LiabilityType {
     LINE_OF_CREDIT,
     BILLS,
     CREDIT,
-    OVERDRAFT
+    OVERDRAFT,
+    OTHER
 }

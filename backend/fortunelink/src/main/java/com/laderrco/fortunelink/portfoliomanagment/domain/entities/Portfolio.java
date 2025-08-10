@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Currency;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,9 +115,26 @@ public class Portfolio {
 
     private final CurrencyConversionService conversionService;    
 
+    // need a no arg constructor as it is responsible for init all the internal fields
+    // every public method that changes the portfolio's state should create a Transaction and domain evnet
+    // need to valide fields (i.e. you should chekc if we have enough funds, etc.)
     
+    public Portfolio(User user, String portfolioName, String portfolioDescription, Money initialBalance, CurrencyConversionService conversionService) {
+        this(
+            user, 
+            new PortfolioId(UUID.randomUUID()), 
+            portfolioName, 
+            portfolioDescription, 
+            initialBalance, 
+            new HashMap<LiabilityId, Liability>(), 
+            new HashMap<AssetHoldingId, AssetHolding>(), 
+            new ArrayList<Transaction>(), 
+            conversionService
+        );
+    }
 
-    public Portfolio(
+
+    private Portfolio(
         User user, 
         PortfolioId portfolioId, 
         String portfolioName, 
@@ -138,8 +156,27 @@ public class Portfolio {
         this.conversionService = conversionService;
     }
 
-    private Money calculateTotalFees(List<Fee> fees) {
-        return null;
+
+    // this is still technically wrong, fees can be in many currency type, need to convert 
+    private Money calculateTotalFees(List<Fee> fees, Instant transactionDate) {
+        if (fees == null || fees.isEmpty()) {
+            return Money.ZERO(this.portfolioCashBalance.currency());
+        }
+
+        Money totalFees = Money.ZERO(this.portfolioCashBalance.currency());
+        Currency portfolioCurrency = this.portfolioCashBalance.currency();
+
+        for (Fee fee : fees) {
+            Money feeAmount = fee.amount();
+            
+            // If the fee's currency is different from the portfolio's, convert it
+            if (!feeAmount.currency().equals(portfolioCurrency)) {
+                feeAmount = conversionService.convert(feeAmount, portfolioCurrency, transactionDate);
+            }
+            
+            totalFees = totalFees.add(feeAmount);
+        }
+        return totalFees;
     }
 
     // this is how we would handle the Trade Execution thing
@@ -153,6 +190,13 @@ public class Portfolio {
         TransactionSource source,
         String description
     ) {
+        // this needs to do the following
+        /*
+         * calculate the total cost (price * quant + fees)
+         * update hte assetholding quant
+         * create a nd add new Transaction to our list
+         * register a domain event
+         */
         AssetHolding assetHolding = findAssetHolding(assetIdentifier)
             .orElseGet(() -> createNewAssetHolding(assetIdentifier));
 
@@ -205,10 +249,8 @@ public class Portfolio {
             fees
         );
 
-        this.liabilities.put(liabilityId, liability);
-
-        // will throw an error, the details need a function to return total summed fees
-        Money netCashImpact = details.getPrincipalAmount().subtract(details.getFees());
+        Money summedFees = calculateTotalFees(fees, incurrenceDate); // the method actual should exist in TransactionDetails.java 
+        Money netCashImpact = details.getPrincipalAmount().subtract(summedFees);
         this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
 
         // create transaction new and add it
@@ -224,13 +266,16 @@ public class Portfolio {
             incurrenceDate,
             Instant.now()
         );
+        
         this.transactions.add(transaction);
+        this.liabilities.put(liabilityId, liability);
 
         // new LiabilityIncurredEvent
         LiabilityIncurredEvent event = new LiabilityIncurredEvent(
             liabilityId, 
             details.getInterestRate(), 
-            liabilityAmount
+            liabilityAmount,
+            Instant.now()
         );
 
         domainEvents.add(event);
@@ -252,17 +297,10 @@ public class Portfolio {
         }
 
         PaymentAllocationResult result = liability.recordPayment(paymentAmount, Instant.now()); // time should be passed
-        
-        // need to create a transaction here
-        // also need a TransactionDetails sub child (LiabilityPaymentTransactionDetails)
 
-        Money totalFees = calculateTotalFees(fees); // technically don't need this
-        // because Money has a subtract meant for subtracting from fees, but like should probably
-        // not have that in said class
-        Money cashImpact = paymentAmount.negate().subtract(totalFees);
-        this.portfolioCashBalance = this.portfolioCashBalance.add(cashImpact);
+        Money totalFees = calculateTotalFees(fees, transactionDate);
 
-        LiabilityPaymentTransactionDetails details = new LiabilityPaymentTransactionDetails(
+        LiabilityPaymentTransactionDetails details = new LiabilityPaymentTransactionDetails( // should change this to add LiabilityType Enum
             liabilityId, 
             result.principalPaid(),
             result.interestPaid(),
@@ -270,7 +308,10 @@ public class Portfolio {
             "Liability payment", 
             fees
         );
-
+        
+        Money cashImpact = paymentAmount.negate().subtract(totalFees); // fees are part of the total cash impact
+        this.portfolioCashBalance = this.portfolioCashBalance.add(cashImpact);
+        
         Transaction transaction = new Transaction (
             new TransactionId(UUID.randomUUID()),
             new CorrelationId(UUID.randomUUID()),
@@ -283,8 +324,9 @@ public class Portfolio {
             transactionDate,
             Instant.now()
         );
+        
         this.transactions.add(transaction);
-                this.transactions.add(transaction);
+
         LiabilityPaymentRecordedEvent event = new LiabilityPaymentRecordedEvent(liabilityId, paymentAmount, paymentAmount, Instant.now());
         domainEvents.add(event);
 

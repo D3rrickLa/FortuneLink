@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.Currency;
-import java.util.List;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.DecimalPrecision;
@@ -47,17 +46,6 @@ public record Money(
         validateParameter(other, "Money");
         isSameCurrency(other.currency(), "subtract");
         return new Money(amount.subtract(other.amount, FINANCIAL_MATH_CONTEXT), this.currency);
-    }
-
-    public Money subtract(List<Fee> fees) {
-        Money summedFees = Money.ZERO(this.currency);
-        for (Fee fee : fees) {
-            if (fee.amount().currency().equals(this.currency)) {
-                summedFees = summedFees.add(fee.amount());
-            }
-        }
-
-        return new Money(this.amount.subtract(summedFees.amount()), this.currency);
     }
 
     public Money multiply(BigDecimal multiplier) {

@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.infrastructure.services;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.Currency;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,6 +10,10 @@ import java.util.Map;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 
+/**
+ * This Service Implementation is just for testing
+ */
+@Deprecated
 public class SimpleCurrencyService implements CurrencyConversionService {
     private final Map<String, BigDecimal> exchangeRates;
 
@@ -62,6 +67,20 @@ public class SimpleCurrencyService implements CurrencyConversionService {
 
     @Override
     public Money convert(Money amount, Currency targetCurrency) {
+        if (amount.currency().equals(targetCurrency)) {
+            return amount; // No conversion needed
+        }
+
+        BigDecimal rate = getExchangeRate(amount.currency(), targetCurrency);
+        // Assuming your Money class has a method to create a new Money object with the converted amount
+        // You'll need to define how Money handles multiplication and precision
+        BigDecimal convertedAmount = amount.amount().multiply(rate);
+        return new Money(convertedAmount, targetCurrency);
+    }
+
+
+    @Override
+    public Money convert(Money amount, Currency targetCurrency, Instant asOfDate) {
         if (amount.currency().equals(targetCurrency)) {
             return amount; // No conversion needed
         }
