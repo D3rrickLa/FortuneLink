@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
-import java.lang.foreign.Linker.Option;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -9,11 +8,14 @@ import java.util.Currency;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetBoughtEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityIncurredEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityPaymentRecordedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -36,9 +38,9 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * <<Entities>>
  * Portfolio
  * AssetHolding
- * Liability 🟨
+ * Liability ✅
  * Transaction 🟨
- * User
+ * User ✅
  * 
  * <<Value Objects>>
  * <<<ENUMS>>>
@@ -85,7 +87,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * UserRepository
  * 
  * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere wihtout the aggregate itself knowing hte details of that reaction
- * AssetBoughtEvent
+ * AssetBoughtEvent ✅
  * DividendReceivedEvent
  * PortfolioCreatedEvent
  * LiabilityPaymentRecordedEvent
@@ -107,17 +109,17 @@ public class Portfolio {
     private String portfolioDescription;
     private Money portfolioCashBalance; // can get currency pref from this, don't know if we need a sep field
 
-    private Map<LiabilityId, Liability> liabilities = new HashMap<>();
-    private Map<AssetHoldingId, AssetHolding> holdings = new HashMap<>(); // for performance and convenience we use a map
-    private List<Transaction> transactions = new ArrayList<>(); // record of events that happened, generally immutable and for historical data. that's why list
+    private Map<LiabilityId, Liability> liabilities;
+    private Map<AssetHoldingId, AssetHolding> holdings; // for performance and convenience we use a map
+    private List<Transaction> transactions; // record of events that happened, generally immutable and for historical data. that's why list
     
-    private final List<Object> domainEvents = new ArrayList<>();
+    private final List<Object> domainEvents;
 
     private final CurrencyConversionService conversionService;    
 
-    // need a no arg constructor as it is responsible for init all the internal fields
+    // need a no arg constructor as it is responsible for init all the internal fields ✅
     // every public method that changes the portfolio's state should create a Transaction and domain evnet
-    // need to valide fields (i.e. you should chekc if we have enough funds, etc.)
+    // need to valide fields (i.e. you should check if we have enough funds, etc.)
     
     public Portfolio(User user, String portfolioName, String portfolioDescription, Money initialBalance, CurrencyConversionService conversionService) {
         this(
@@ -129,10 +131,12 @@ public class Portfolio {
             new HashMap<LiabilityId, Liability>(), 
             new HashMap<AssetHoldingId, AssetHolding>(), 
             new ArrayList<Transaction>(), 
+            new ArrayList<Object>(),
             conversionService
         );
-    }
 
+        // there should be a domain event here
+    }
 
     private Portfolio(
         User user, 
@@ -143,6 +147,7 @@ public class Portfolio {
         Map<LiabilityId, Liability> liabilities,
         Map<AssetHoldingId, AssetHolding> holdings, 
         List<Transaction> transactions,
+        List<Object> domainEvents,
         CurrencyConversionService conversionService
     ) {
         this.user = user;
@@ -153,11 +158,10 @@ public class Portfolio {
         this.liabilities = liabilities;
         this.holdings = holdings;
         this.transactions = transactions;
+        this.domainEvents = domainEvents;
         this.conversionService = conversionService;
     }
 
-
-    // this is still technically wrong, fees can be in many currency type, need to convert 
     private Money calculateTotalFees(List<Fee> fees, Instant transactionDate) {
         if (fees == null || fees.isEmpty()) {
             return Money.ZERO(this.portfolioCashBalance.currency());
@@ -179,6 +183,26 @@ public class Portfolio {
         return totalFees;
     }
 
+    private Optional<AssetHolding> findAssetHolding(AssetIdentifier assetIdentifier) {
+        return this.holdings.values().stream()
+            .filter(ah -> ah.getAssetIdentifier().equals(assetIdentifier))
+            .findFirst();
+    }
+
+    private AssetHolding createNewAssetHolding(AssetIdentifier assetIdentifier) {
+        AssetHolding newHolding = new AssetHolding(
+            new AssetHoldingId(UUID.randomUUID()), 
+            this.portfolioId, 
+            assetIdentifier, 
+            BigDecimal.ZERO, 
+            portfolioCashBalance, 
+            portfolioCashBalance, 
+            Instant.now() 
+        );
+
+        this.holdings.put(newHolding.getAssetHoldingId(), newHolding);
+        return newHolding;
+    }
     // this is how we would handle the Trade Execution thing
     // proof of concept so I don't lose it
     public void buyAsset(
@@ -193,12 +217,27 @@ public class Portfolio {
         // this needs to do the following
         /*
          * calculate the total cost (price * quant + fees)
-         * update hte assetholding quant
-         * create a nd add new Transaction to our list
+         * update the assetholding quant/costBasis
+         * create and add new Transaction to our list
          * register a domain event
          */
+
+        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
+
+        Money totalFees = calculateTotalFees(nativeFees, transactionDate);
+        Money assetCost = pricePerUnit.multiply(quantity);
+        Money totalCost = assetCost.add(totalFees);
+
+        Money netCashImpact = totalCost.negate();
+        if (this.portfolioCashBalance.add(netCashImpact).isNegative()) {
+            throw new InsufficientFundsException("Insufficient cash for asset purchase.");
+        }
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
+
         AssetHolding assetHolding = findAssetHolding(assetIdentifier)
             .orElseGet(() -> createNewAssetHolding(assetIdentifier));
+
+        assetHolding.addToPosition(quantity, assetCost);
 
         TradeExecutionTransactionDetails details = new TradeExecutionTransactionDetails(
             assetIdentifier, 
@@ -207,20 +246,49 @@ public class Portfolio {
             source, 
             description, 
             nativeFees, 
-            null, 
-            null, 
-            null
+            this.portfolioCashBalance.currency(), 
+            assetHolding.getAssetHoldingId(), 
+            this.conversionService
         );
 
         // create transaction and add it to the portfolio
+        Transaction transaction = new Transaction(
+            new TransactionId(UUID.randomUUID()), 
+            new CorrelationId(UUID.randomUUID()), 
+            null, 
+            this.portfolioId, 
+            TransactionType.BUY, 
+            TransactionStatus.COMPLETED, 
+            details, 
+            pricePerUnit, 
+            transactionDate, 
+            transactionDate
+        );
+
+        this.transactions.add(transaction);
+
+        AssetBoughtEvent event = new AssetBoughtEvent(
+            this.portfolioId,
+            assetHolding.getAssetHoldingId(),
+            assetIdentifier,
+            quantity,
+            totalCost,
+            Instant.now()
+        );
+        this.domainEvents.add(event);
     }
 
-    private Optional<AssetHolding> findAssetHolding(AssetIdentifier assetIdentifier) {
-        return null;
-    }
+    public void sellAsset(
+        AssetHoldingId assetHoldingId,
+        Money amountToSell, // we are going to assume we are selling by quantity of stock and not by Money????? this could be wrong
+        List<Fee> nativeFees,
+        Instant transactionDate,
+        TransactionSource source,
+        String description
+    ) {
+        AssetHolding assetHolding = this.holdings.get(assetHoldingId);
 
-    private AssetHolding createNewAssetHolding(AssetIdentifier assetIdentifier) {
-        return null;
+        assetHolding.removeFromPosition(null);
     }
 
     // note we will have to do the same thing for the Liability
@@ -327,16 +395,14 @@ public class Portfolio {
         
         this.transactions.add(transaction);
 
-        LiabilityPaymentRecordedEvent event = new LiabilityPaymentRecordedEvent(liabilityId, paymentAmount, paymentAmount, Instant.now());
-        domainEvents.add(event);
-
-
-
         // at the end of the transaciton, an application service would dispatch these events...
         // but how?
         // ans: after the app service loads Portfolio from the repo, it can call one of the methods in Portfolio
         // after that, it than calls the getDomainEvents to get the list of new events
-        // it then uses a separate domai nevent dispatcher to publish these events to any listening services
+        // it then uses a separate domain event dispatcher to publish these events to any listening services
+        LiabilityPaymentRecordedEvent event = new LiabilityPaymentRecordedEvent(liabilityId, paymentAmount, paymentAmount, Instant.now());
+        domainEvents.add(event);
+
     }
 
     public void updateLiability(LiabilityId liabilityId, LiabilityDetails newDetails) {
@@ -345,8 +411,52 @@ public class Portfolio {
         existingLiability.updateDetails(newDetails);
     }
 
-
     public List<Object> getDomainEvents() {
         return Collections.unmodifiableList(this.domainEvents);
     }
+
+    public User getUser() {
+        return user;
+    }
+
+
+    public PortfolioId getPortfolioId() {
+        return portfolioId;
+    }
+
+
+    public String getPortfolioName() {
+        return portfolioName;
+    }
+
+
+    public String getPortfolioDescription() {
+        return portfolioDescription;
+    }
+
+
+    public Money getPortfolioCashBalance() {
+        return portfolioCashBalance;
+    }
+
+
+    public Map<LiabilityId, Liability> getLiabilities() {
+        return liabilities;
+    }
+
+
+    public Map<AssetHoldingId, AssetHolding> getHoldings() {
+        return holdings;
+    }
+
+
+    public List<Transaction> getTransactions() {
+        return transactions;
+    }
+
+
+    public CurrencyConversionService getConversionService() {
+        return conversionService;
+    }
+    
 }

@@ -169,4 +169,36 @@ class MoneyTest {
         Money money = Money.of(123.45, USD);
         assertEquals(BigDecimal.valueOf(123.45).setScale(DecimalPrecision.MONEY.getDecimalPlaces()), money.amount());
     }
+
+    @Test 
+    void testMin_Comparison() {
+        Money money01 = Money.of(20, EUR);
+        Money money02 = Money.ZERO(EUR);
+        assertEquals(money02, money01.min(money02));
+        assertEquals(money02, money02.min(money01));
+    }
+
+    @Test 
+    void testMin_ThrowsErrorWhenNotSameCurrency() {
+        Money money01 = Money.of(20, EUR);
+        Money money02 = Money.of(30, USD);
+        assertThrows(IllegalArgumentException.class, () -> money01.min(money02));
+        assertThrows(IllegalArgumentException.class, () -> money02.min(money01));
+    }
+
+    @Test 
+    void testMax_Comparison() {
+        Money money01 = Money.of(20, EUR);
+        Money money02 = Money.ZERO(EUR);
+        assertEquals(money01, money01.max(money02));
+        assertEquals(money01, money02.max(money01));
+    }
+
+    @Test 
+    void testMax_ThrowsErrorWhenNotSameCurrency() {
+        Money money01 = Money.of(20, EUR);
+        Money money02 = Money.of(30, USD);
+        assertThrows(IllegalArgumentException.class, () -> money01.max(money02));
+        assertThrows(IllegalArgumentException.class, () -> money02.max(money01));
+    }
 }
