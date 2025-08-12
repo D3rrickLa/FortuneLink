@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums;
 
+import java.util.Set;
+
 public enum AssetType {
     BOND(DecimalPrecision.BOND),
     COMMODITY(DecimalPrecision.COMMODITY),
@@ -20,5 +22,9 @@ public enum AssetType {
 
     public DecimalPrecision getDefaultQuantityPrecision() {
         return defaultQuantityPrecision;
+    }
+
+    public boolean requiresISIN() {
+        return Set.of(STOCK, ETF, BOND).contains(this);
     }
 }

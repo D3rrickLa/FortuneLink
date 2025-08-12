@@ -13,8 +13,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetBoughtEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetSoldEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityIncurredEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityPaymentRecordedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
@@ -196,19 +198,17 @@ public class Portfolio {
             assetIdentifier, 
             BigDecimal.ZERO, 
             portfolioCashBalance, 
-            portfolioCashBalance, 
             Instant.now() 
         );
 
         this.holdings.put(newHolding.getAssetHoldingId(), newHolding);
         return newHolding;
     }
-    // this is how we would handle the Trade Execution thing
-    // proof of concept so I don't lose it
+
     public void buyAsset(
         AssetIdentifier assetIdentifier,
         BigDecimal quantity,
-        Money pricePerUnit,
+        Money pricePerUnit, // in native currency
         List<Fee> nativeFees,
         Instant transactionDate,
         TransactionSource source,
@@ -224,11 +224,14 @@ public class Portfolio {
 
         Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
 
-        Money totalFees = calculateTotalFees(nativeFees, transactionDate);
+        // all of these variables are in the native currency
+        Money totalFees = calculateTotalFees(nativeFees, transactionDate); // returns total fees in native currency
         Money assetCost = pricePerUnit.multiply(quantity);
-        Money totalCost = assetCost.add(totalFees);
+        Money totalCost = assetCost.add(totalFees); // total cash outflow, and trust cost basis
 
-        Money netCashImpact = totalCost.negate();
+        Money totalCostPortfolioCurrency = conversionService.convert(totalCost, this.portfolioCashBalance.currency(), transactionDate);
+        Money netCashImpact = totalCostPortfolioCurrency.negate();
+        
         if (this.portfolioCashBalance.add(netCashImpact).isNegative()) {
             throw new InsufficientFundsException("Insufficient cash for asset purchase.");
         }
@@ -237,7 +240,8 @@ public class Portfolio {
         AssetHolding assetHolding = findAssetHolding(assetIdentifier)
             .orElseGet(() -> createNewAssetHolding(assetIdentifier));
 
-        assetHolding.addToPosition(quantity, assetCost);
+        // that AddToPosition method should recieve thet total cost of the new acqusisition
+        assetHolding.addToPosition(quantity, totalCost);
 
         TradeExecutionTransactionDetails details = new TradeExecutionTransactionDetails(
             assetIdentifier, 
@@ -280,15 +284,67 @@ public class Portfolio {
 
     public void sellAsset(
         AssetHoldingId assetHoldingId,
-        Money amountToSell, // we are going to assume we are selling by quantity of stock and not by Money????? this could be wrong
+        BigDecimal quantityToSell,
+        Money pricePerUnit,  // native currency
         List<Fee> nativeFees,
         Instant transactionDate,
         TransactionSource source,
         String description
     ) {
         AssetHolding assetHolding = this.holdings.get(assetHoldingId);
+        if (assetHolding == null) {
+            throw new AssetNotFoundException("Cannot sell asset not held in portfolio.");
+        }
+        if (assetHolding.getQuantity().compareTo(quantityToSell) < 0) {
+            throw new IllegalArgumentException("Cannot sell more units than you have.");
+        }
 
-        assetHolding.removeFromPosition(null);
+        Money totalFees = calculateTotalFees(nativeFees, transactionDate);
+        Money grossProceeds = pricePerUnit.multiply(quantityToSell);
+        Money netCashImpact = grossProceeds.subtract(totalFees);
+
+        assetHolding.removeFromPosition(quantityToSell);
+        Money netCashImpactPortfolioCurrency = conversionService.convert(netCashImpact, this.portfolioCashBalance.currency(), transactionDate);
+
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpactPortfolioCurrency);
+
+        TradeExecutionTransactionDetails details = new TradeExecutionTransactionDetails(
+            assetHolding.getAssetIdentifier(),
+            quantityToSell.negate(), 
+            pricePerUnit,
+            source,
+            description,
+            nativeFees,
+            this.portfolioCashBalance.currency(),
+            assetHoldingId,
+            this.conversionService
+        );
+
+        Transaction transaction = new Transaction(
+            new TransactionId(UUID.randomUUID()),
+            new CorrelationId(UUID.randomUUID()),
+            null,
+            this.portfolioId,
+            TransactionType.SELL,
+            TransactionStatus.COMPLETED,
+            details,
+            netCashImpact,
+            transactionDate,
+            Instant.now()
+        );
+
+        this.transactions.add(transaction);
+
+        AssetSoldEvent event = new AssetSoldEvent(
+            this.portfolioId,
+            assetHoldingId,
+            assetHolding.getAssetIdentifier(),
+            quantityToSell,
+            grossProceeds,
+            Instant.now()
+        );
+
+        this.domainEvents.add(event);
     }
 
     // note we will have to do the same thing for the Liability

@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.Ass
 public record AssetIdentifier(
     AssetType type,
     String symbol,
-    String isin,
+    String isin, // Bitcoin doesn't have, making this a catch all term i guess...
     String assetName,
     String assetExchangeName
 ) {
@@ -28,8 +28,8 @@ public record AssetIdentifier(
         if (assetExchangeName.isEmpty()) {
             throw new IllegalArgumentException("Asset name cannot be blank.");
         }
-        if (isValidISIN(isin) == false) {
-            throw new IllegalArgumentException("Invalid ISIN format.");
+        if (type.requiresISIN() && !isValidISIN(isin)) {
+            throw new IllegalArgumentException("Invalid or missing ISIN for asset type: " + type);
         }
         
     }
