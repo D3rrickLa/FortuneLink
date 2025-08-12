@@ -1,6 +1,8 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import java.time.Instant;
+import java.util.Objects;
+import java.util.Set;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
@@ -21,7 +23,7 @@ public class Transaction {
     private TransactionStatus status;
     private final TransactionDetails transactionDetails;
 
-    private Money transactionNetImpact; // in portfolio's currency
+    private final Money transactionNetImpact; // in portfolio's currency
     private final Instant transactionDate;
 
     private boolean hidden;
@@ -29,6 +31,16 @@ public class Transaction {
 
     private final Instant createdAt;
     private Instant updatedAt;
+
+       // Valid reversal transaction types
+    private static final Set<TransactionType> REVERSAL_TYPES = Set.of(
+        TransactionType.REVERSAL,
+        TransactionType.REVERSAL_BUY,
+        TransactionType.REVERSAL_DEPOSIT,
+        TransactionType.REVERSAL_SELL,
+        TransactionType.REVERSAL_WITHDRAWAL,
+        TransactionType.REVERSE_STOCK_SPLIT
+    );
 
     
 
@@ -44,86 +56,109 @@ public class Transaction {
         Instant transactionDate,
         Instant createdAt
     ) {
-        this.transactionId = transactionId;
-        this.correlationId = correlationId;
-        this.parentTransactionId = parentTransactionId;
-        this.portfolioId = portfolioId;
-        this.type = type;
-        this.status = status;
-        this.transactionDetails = transactionDetails;
-        this.transactionNetImpact = transactionNetImpact;
-        this.transactionDate = transactionDate;
-        this.createdAt = createdAt;
+        // Validation
+        this.transactionId = Objects.requireNonNull(transactionId, "Transaction ID cannot be null");
+        this.correlationId = Objects.requireNonNull(correlationId, "Correlation ID cannot be null");
+        this.parentTransactionId = parentTransactionId; // Can be null
+        this.portfolioId = Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null");
+        this.type = Objects.requireNonNull(type, "Transaction type cannot be null");
+        this.status = Objects.requireNonNull(status, "Transaction status cannot be null");
+        this.transactionDetails = Objects.requireNonNull(transactionDetails, "Transaction details cannot be null");
+        this.transactionNetImpact = Objects.requireNonNull(transactionNetImpact, "Transaction net impact cannot be null");
+        this.transactionDate = Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
+        this.createdAt = Objects.requireNonNull(createdAt, "Created at cannot be null");
+        
         this.updatedAt = createdAt;
-
         this.hidden = false;
         this.version = 1;
     }
 
     private void updateVersion() {
         this.version += 1;
-    } 
-
+    }
 
     public void updateStatus(TransactionStatus newStatus, Instant updatedAt) {
+        Objects.requireNonNull(newStatus, "New status cannot be null");
+        Objects.requireNonNull(updatedAt, "Updated at cannot be null");
+        
+        if (updatedAt.isBefore(this.updatedAt)) {
+            throw new IllegalArgumentException("Updated at cannot be before current updated at");
+        }
+        
         this.status = newStatus;
         this.updatedAt = updatedAt;
         updateVersion();
     }
 
-    public TransactionId getTransactionId() {
-        return transactionId;
+    public void hide(Instant updatedAt) {
+        Objects.requireNonNull(updatedAt, "Updated at cannot be null");
+        
+        if (updatedAt.isBefore(this.updatedAt)) {
+            throw new IllegalArgumentException("Updated at cannot be before current updated at");
+        }
+        
+        this.hidden = true;
+        this.updatedAt = updatedAt;
+        updateVersion();
     }
 
-    public CorrelationId getCorrelationId() {
-        return correlationId;
+    public void unhide(Instant updatedAt) {
+        Objects.requireNonNull(updatedAt, "Updated at cannot be null");
+        
+        if (updatedAt.isBefore(this.updatedAt)) {
+            throw new IllegalArgumentException("Updated at cannot be before current updated at");
+        }
+        
+        this.hidden = false;
+        this.updatedAt = updatedAt;
+        updateVersion();
     }
 
-    public TransactionId getParentTransactionId() {
-        return parentTransactionId;
+    public boolean isReversal() {
+        return REVERSAL_TYPES.contains(this.type);
     }
 
-    public PortfolioId getPortfolioId() {
-        return portfolioId;
+    public boolean canBeUpdated() {
+        return this.status != TransactionStatus.FINALIZED && 
+               this.status != TransactionStatus.CANCELLED;
     }
 
-    public TransactionType getType() {
-        return type;
+    // Getters
+    public TransactionId getTransactionId() { return transactionId; }
+    public CorrelationId getCorrelationId() { return correlationId; }
+    public TransactionId getParentTransactionId() { return parentTransactionId; }
+    public PortfolioId getPortfolioId() { return portfolioId; }
+    public TransactionType getType() { return type; }
+    public TransactionStatus getStatus() { return status; }
+    public TransactionDetails getTransactionDetails() { return transactionDetails; }
+    public Money getTransactionNetImpact() { return transactionNetImpact; }
+    public Instant getTransactionDate() { return transactionDate; }
+    public boolean isHidden() { return hidden; }
+    public int getVersion() { return version; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Transaction that = (Transaction) obj;
+        return Objects.equals(transactionId, that.transactionId);
     }
 
-    public TransactionStatus getStatus() {
-        return status;
+    @Override
+    public int hashCode() {
+        return Objects.hash(transactionId);
     }
 
-    public TransactionDetails getTransactionDetails() {
-        return transactionDetails;
+    @Override
+    public String toString() {
+        return "Transaction{" +
+                "transactionId=" + transactionId +
+                ", type=" + type +
+                ", status=" + status +
+                ", netImpact=" + transactionNetImpact +
+                ", version=" + version +
+                '}';
     }
-
-    public Money getTransactionNetImpact() {
-        return transactionNetImpact;
-    }
-
-    public Instant getTransactionDate() {
-        return transactionDate;
-    }
-
-    public boolean isHidden() {
-        return hidden;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-
-    
-  
 }
