@@ -603,6 +603,7 @@ public class Portfolio {
     public void reverseTransaction(
         TransactionId transactionId,
         String reason,
+        TransactionSource source,
         String description,
         List<Fee> fees,
         Instant transactionDate
@@ -650,6 +651,14 @@ public class Portfolio {
         }
 
         // Create the reversal transaction to maintain a complete history.
+        ReversalTransactionDetails details = new ReversalTransactionDetails(
+            originalTransaction.getTransactionId(), 
+            reason, 
+            source,
+            description,
+            fees
+        );
+
         Transaction reversalTransaction = new Transaction(
             new TransactionId(UUID.randomUUID()),
             new CorrelationId(UUID.randomUUID()),
@@ -657,7 +666,7 @@ public class Portfolio {
             this.portfolioId,
             TransactionType.REVERSAL,
             TransactionStatus.COMPLETED,
-            new ReversalTransactionDetails(originalTransaction.getTransactionId(), reason, description, this.portfolioCashBalance.currency()),
+            details,
             reversalAmount,
             transactionDate,
             Instant.now()

@@ -70,7 +70,8 @@ public class Liability {
                      
         }
 
-        this.accrueInterest(paymentDate);
+        // this shouldn't be here
+        // this.accrueInterest(paymentDate);
 
 
         Money interestPaid = Money.ZERO(paymentAmount.currency());
@@ -128,17 +129,22 @@ public class Liability {
         if (asOfDate.isBefore(this.lastInterestAccrualDate) || asOfDate.equals(this.lastInterestAccrualDate)) {
             return Money.ZERO(this.currentBalance.currency());
         }
+        
         long daysBetween = ChronoUnit.DAYS.between(this.lastInterestAccrualDate, asOfDate);
         Money principalForCalculation = this.currentBalance.subtract(this.accruedUnpaidInterest);
-        if (principalForCalculation.amount().compareTo(BigDecimal.ZERO) < 0) {
-            principalForCalculation = Money.ZERO(this.currentBalance.currency());
+        
+        // If current balance is negative OR principal portion is negative/zero, no interest should accrue
+        if (this.currentBalance.amount().compareTo(BigDecimal.ZERO) < 0 || 
+            principalForCalculation.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            return Money.ZERO(this.currentBalance.currency());
         }
+        
         BigDecimal dailyRate = this.details.annualInterestRate().value()
             .divide(BigDecimal.valueOf(365), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP);
 
-        BigDecimal interestAmount = principalForCalculation.amount().multiply(dailyRate).multiply(BigDecimal.valueOf(daysBetween));
-
-        
+        BigDecimal interestAmount = principalForCalculation.amount()
+            .multiply(dailyRate)
+            .multiply(BigDecimal.valueOf(daysBetween));
         
         return new Money(interestAmount, this.currentBalance.currency());
     }

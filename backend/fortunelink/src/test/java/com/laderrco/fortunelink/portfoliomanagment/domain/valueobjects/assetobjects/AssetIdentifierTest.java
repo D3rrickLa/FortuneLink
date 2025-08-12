@@ -90,7 +90,7 @@ public class AssetIdentifierTest {
         Exception ex = assertThrows(IllegalArgumentException.class, () ->
             new AssetIdentifier(AssetType.STOCK, "AAPL", badIsin, "Apple", "NASDAQ")
         );
-        assertTrue(ex.getMessage().contains("Invalid ISIN format."));
+        assertTrue(ex.getMessage().contains("Invalid or missing ISIN for asset type: " + AssetType.STOCK));
     }
 
     @Test

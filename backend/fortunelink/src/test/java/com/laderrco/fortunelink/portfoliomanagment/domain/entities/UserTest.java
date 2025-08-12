@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -130,7 +131,10 @@ public class UserTest {
         User user2 = User.createNew(sameId, "Another Name", Currency.getInstance("EUR"));
 
         assertEquals(user1, user2);
+        assertEquals(user1, user1);
         assertEquals(user1.hashCode(), user2.hashCode());
+        assertNotEquals(user1, null);
+        assertNotEquals(user1, new Object());
     }
 
 }
