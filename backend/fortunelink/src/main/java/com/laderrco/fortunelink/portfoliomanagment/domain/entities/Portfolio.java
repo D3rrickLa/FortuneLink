@@ -14,8 +14,10 @@ import java.util.UUID;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetBoughtEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetSoldEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.CashflowRecordedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityIncurredEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityPaymentRecordedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.TransactionReversedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
@@ -23,6 +25,8 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.PaymentAllocationResult;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.assetobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.CashflowType;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.IncomeType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionStatus;
@@ -32,14 +36,16 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.Liabi
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityIncurrenceTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityPaymentTransactionDetails;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.ReversalTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.TradeExecutionTransactionDetails;
 
 /*
  * <<Entities>>
- * Portfolio
- * AssetHolding
+ * Portfolio 🟨
+ * AssetHolding ✅
  * Liability ✅
  * Transaction 🟨
  * User ✅
@@ -90,10 +96,12 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * 
  * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere wihtout the aggregate itself knowing hte details of that reaction
  * AssetBoughtEvent ✅
+ * AssetSellEvent
  * DividendReceivedEvent
  * PortfolioCreatedEvent
- * LiabilityPaymentRecordedEvent
- * LiabilityIncurredEvent
+ * LiabilityPaymentRecordedEvent ✅
+ * LiabilityIncurredEvent ✅
+ * CashflowRecordedEvent ✅
  */
 
 public class Portfolio {
@@ -461,11 +469,226 @@ public class Portfolio {
 
     }
 
+    public void recordCashflow(
+        Money amount, // in portfolio currency
+        CashflowType cashflowType,
+        TransactionSource source,
+        String description,
+        List<Fee> fees,
+        Instant transactionDate
+    ) {
+        if (!amount.currency().equals(this.portfolioCashBalance.currency())) {
+            throw new IllegalArgumentException("Cashflow amount currency must match portfolio's currency.");
+        }
+        if (amount.amount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Amount cannot be negative.");
+        }
+
+        // 2. Calculate fees and net impact
+        Money totalFees = calculateTotalFees(fees, transactionDate); // in portfolio currency
+        Money netCashImpact;
+        TransactionType type;
+
+        switch (cashflowType) {
+            case DEPOSIT:
+                netCashImpact = amount.subtract(totalFees);
+                type = TransactionType.DEPOSIT;
+                break;
+            case WITHDRAWAL:
+                // For a withdrawal, we debit the amount and the fees
+                netCashImpact = amount.add(totalFees).negate();
+                type = TransactionType.WITHDRAWAL;
+                break;
+            case DIVIDEND:
+            case INTEREST:
+            case RENTAL_INCOME:
+                netCashImpact = amount.subtract(totalFees);
+                type = TransactionType.INCOME;
+                break;
+            case FOREIGN_TAX_WITHHELD:
+            case BROKERAGE_FEE:
+            case MANAGEMENT_FEE:
+                // For direct fees, the 'amount' represents the fee itself
+                netCashImpact = amount.negate();
+                type = TransactionType.FEE;
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported cashflow type: " + cashflowType);
+        }
+        
+        // 3. Check for sufficient funds and update cash balance
+        if (this.portfolioCashBalance.add(netCashImpact).amount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InsufficientFundsException("Insufficient cash for this transaction.");
+        }
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
+
+        // 4. Create TransactionDetails and Transaction
+        CashflowTransactionDetails details = new CashflowTransactionDetails(
+            amount,
+            cashflowType,
+            source,
+            description,
+            fees
+        );
+
+        Transaction transaction = new Transaction(
+            new TransactionId(UUID.randomUUID()),
+            new CorrelationId(UUID.randomUUID()),
+            null, 
+            this.portfolioId,
+            type,
+            TransactionStatus.COMPLETED,
+            details,
+            netCashImpact,
+            transactionDate,
+            Instant.now()
+        );
+        this.transactions.add(transaction);
+
+        // 5. Publish a Domain Event
+        CashflowRecordedEvent event = new CashflowRecordedEvent(
+            this.portfolioId,
+            details,
+            netCashImpact,
+            transactionDate
+        );
+        this.domainEvents.add(event);
+        
+
+    }
+
+    public void recordIncome(
+        Money amount, // in portfolio currency
+        IncomeType incomeType,
+        TransactionSource sourceIdentifier, // e.g., asset symbol or bank account name
+        String description,
+        List<Fee> fees,
+        Instant transactionDate
+    ) {
+        Objects.requireNonNull(amount, "Amount cannot be null.");
+        Objects.requireNonNull(incomeType, "Income type cannot be null.");
+        Objects.requireNonNull(sourceIdentifier, "Source identifier cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+
+        // Map the income type to the correct CashflowType
+        CashflowType cashflowType;
+        switch (incomeType) {
+            case DIVIDEND:
+                cashflowType = CashflowType.DIVIDEND;
+                break;
+            case INTEREST:
+                cashflowType = CashflowType.INTEREST;
+                break;
+            case RENTAL:
+                cashflowType = CashflowType.RENTAL_INCOME;
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported income type: " + incomeType);
+        }
+
+        // The recordCashflow method handles all the core logic
+        // for updating the cash balance, creating the transaction,
+        // and publishing the domain event.
+        recordCashflow(
+            amount,
+            cashflowType,
+            // You can create a specific TransactionSource here if needed
+            sourceIdentifier,
+            description,
+            fees,
+            transactionDate
+        );
+    }
+
+    public void reverseTransaction(
+        TransactionId transactionId,
+        String reason,
+        String description,
+        List<Fee> fees,
+        Instant transactionDate
+    ) {
+        Transaction originalTransaction = this.transactions.stream()
+            .filter(t -> t.getTransactionId().equals(transactionId))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
+
+        if (originalTransaction.getType() == TransactionType.REVERSAL) {
+            throw new IllegalArgumentException("Cannot reverse a reversal transaction");
+        }
+
+        // The reversal amount is the exact opposite of the original transaction's net impact.
+        // New fees are handled as a separate cashflow.
+        Money reversalAmount = originalTransaction.getTransactionNetImpact().negate();
+        
+        // Update the cash balance with the reversal amount.
+        this.portfolioCashBalance = this.portfolioCashBalance.add(reversalAmount);
+
+        // Reverse specific transaction effects
+        switch (originalTransaction.getType()) {
+            case BUY:
+                TradeExecutionTransactionDetails buyDetails = (TradeExecutionTransactionDetails) originalTransaction.getTransactionDetails();
+                AssetHolding buyHolding = holdings.get(buyDetails.getAssetHoldingId());
+                // Remove the exact quantity that was originally bought.
+                buyHolding.removeFromPosition(buyDetails.getQuantity().abs());
+                break;
+            case SELL:
+                TradeExecutionTransactionDetails sellDetails = (TradeExecutionTransactionDetails) originalTransaction.getTransactionDetails();
+                AssetHolding sellHolding = holdings.get(sellDetails.getAssetHoldingId());
+                // Add the exact quantity back.
+                // The cost basis is derived from the original transaction's details,
+                // not the net impact, which includes proceeds. We need to re-calculate it.
+                Money originalCostBasisForSale = sellHolding.getAverageACBPerUnit().multiply(sellDetails.getQuantity());
+                sellHolding.addToPosition(sellDetails.getQuantity().abs(), originalCostBasisForSale);
+                break;
+            case LIABILITY_INCURRENCE:
+                LiabilityId liabilityId = ((LiabilityIncurrenceTransactionDetails) originalTransaction.getTransactionDetails()).getLiabilityId();
+                liabilities.remove(liabilityId);
+                break;
+            default:
+                // For simple cashflow transactions (DEPOSIT, WITHDRAWAL, etc.), the cash balance update is sufficient.
+                break;
+        }
+
+        // Create the reversal transaction to maintain a complete history.
+        Transaction reversalTransaction = new Transaction(
+            new TransactionId(UUID.randomUUID()),
+            new CorrelationId(UUID.randomUUID()),
+            originalTransaction.getTransactionId(), // Link to the original transaction
+            this.portfolioId,
+            TransactionType.REVERSAL,
+            TransactionStatus.COMPLETED,
+            new ReversalTransactionDetails(originalTransaction.getTransactionId(), reason, description, this.portfolioCashBalance.currency()),
+            reversalAmount,
+            transactionDate,
+            Instant.now()
+        );
+        this.transactions.add(reversalTransaction);
+
+        // Handle new fees as a separate cashflow transaction if they exist.
+        if (fees != null && !fees.isEmpty()) {
+            // Here you would call a method to record the fees.
+            // E.g., recordCashflow(feesAmount, CashflowType.REVERSAL_FEE, ..., transactionDate)
+            // This keeps the reversal logic clean and auditable.
+        }
+
+        // Publish a domain event for the reversal.
+        TransactionReversedEvent event = new TransactionReversedEvent(
+            this.portfolioId,
+            originalTransaction.getTransactionId(),
+            reversalTransaction.getTransactionId(),
+            Instant.now()
+        );
+        this.domainEvents.add(event);
+    }
+
     public void updateLiability(LiabilityId liabilityId, LiabilityDetails newDetails) {
         Liability existingLiability = liabilities.get(liabilityId);
 
         existingLiability.updateDetails(newDetails);
     }
+
+
+    // --- GETTERS ---
 
     public List<Object> getDomainEvents() {
         return Collections.unmodifiableList(this.domainEvents);

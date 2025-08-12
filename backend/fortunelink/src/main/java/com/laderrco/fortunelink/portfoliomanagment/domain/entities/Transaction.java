@@ -71,5 +71,59 @@ public class Transaction {
         updateVersion();
     }
 
+    public TransactionId getTransactionId() {
+        return transactionId;
+    }
+
+    public CorrelationId getCorrelationId() {
+        return correlationId;
+    }
+
+    public TransactionId getParentTransactionId() {
+        return parentTransactionId;
+    }
+
+    public PortfolioId getPortfolioId() {
+        return portfolioId;
+    }
+
+    public TransactionType getType() {
+        return type;
+    }
+
+    public TransactionStatus getStatus() {
+        return status;
+    }
+
+    public TransactionDetails getTransactionDetails() {
+        return transactionDetails;
+    }
+
+    public Money getTransactionNetImpact() {
+        return transactionNetImpact;
+    }
+
+    public Instant getTransactionDate() {
+        return transactionDate;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+
+    
   
 }

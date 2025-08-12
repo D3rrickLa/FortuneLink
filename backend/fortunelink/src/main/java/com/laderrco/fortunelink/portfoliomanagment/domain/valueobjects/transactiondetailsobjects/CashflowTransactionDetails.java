@@ -18,7 +18,7 @@ public class CashflowTransactionDetails extends TransactionDetails {
     private final CashflowType cashflowType;
     
 
-    protected CashflowTransactionDetails(
+    public CashflowTransactionDetails(
         Money amount,
         CashflowType cashflowType,
 

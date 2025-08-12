@@ -8,6 +8,8 @@ public enum TransactionType {
     STOCK_SPLIT,
     CORPORATE_ACTION,
     
+    INCOME,
+    RENTAL_INCOME,
     INTEREST_INCOME,
     INTEREST_EXPENSE,
 
@@ -26,7 +28,6 @@ public enum TransactionType {
     REVERSAL_WITHDRAWAL,
     REVERSAL_DEPOSIT,
     REVERSE_STOCK_SPLIT,
-
 
     OTHER
     
