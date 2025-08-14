@@ -47,7 +47,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * Portfolio 🟨
  * AssetHolding ✅
  * Liability ✅
- * Transaction 🟨
+ * Transaction ✅
  * User ✅
  * 
  * <<Value Objects>>
@@ -96,7 +96,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * 
  * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere wihtout the aggregate itself knowing hte details of that reaction
  * AssetBoughtEvent ✅
- * AssetSellEvent
+ * AssetSellEvent ✅
  * DividendReceivedEvent
  * PortfolioCreatedEvent
  * LiabilityPaymentRecordedEvent ✅
