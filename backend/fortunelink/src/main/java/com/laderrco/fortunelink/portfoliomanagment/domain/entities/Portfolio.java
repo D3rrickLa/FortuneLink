@@ -17,6 +17,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetSoldEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.CashflowRecordedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityIncurredEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityPaymentRecordedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.PortfolioCreatedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.TransactionReversedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
@@ -98,7 +99,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * AssetBoughtEvent ✅
  * AssetSellEvent ✅
  * DividendReceivedEvent
- * PortfolioCreatedEvent
+ * PortfolioCreatedEvent ✅
  * LiabilityPaymentRecordedEvent ✅
  * LiabilityIncurredEvent ✅
  * CashflowRecordedEvent ✅
@@ -117,15 +118,13 @@ public class Portfolio {
     private final PortfolioId portfolioId;
     private String portfolioName;
     private String portfolioDescription;
-    private Money portfolioCashBalance; // can get currency pref from this, don't know if we need a sep field
+    private Money portfolioCashBalance;
 
-    private Map<LiabilityId, Liability> liabilities;
-    private Map<AssetHoldingId, AssetHolding> holdings; // for performance and convenience we use a map
-    private List<Transaction> transactions; // record of events that happened, generally immutable and for historical data. that's why list
-    
+    private final Map<LiabilityId, Liability> liabilities;
+    private final Map<AssetHoldingId, AssetHolding> holdings;
+    private final List<Transaction> transactions;
     private final List<Object> domainEvents;
-
-    private final CurrencyConversionService conversionService;    
+    private final CurrencyConversionService conversionService;
 
     // need a no arg constructor as it is responsible for init all the internal fields ✅
     // every public method that changes the portfolio's state should create a Transaction and domain evnet
@@ -138,14 +137,15 @@ public class Portfolio {
             portfolioName, 
             portfolioDescription, 
             initialBalance, 
-            new HashMap<LiabilityId, Liability>(), 
-            new HashMap<AssetHoldingId, AssetHolding>(), 
-            new ArrayList<Transaction>(), 
-            new ArrayList<Object>(),
+            new HashMap<>(), 
+            new HashMap<>(), 
+            new ArrayList<>(), 
+            new ArrayList<>(),
             conversionService
         );
 
-        // there should be a domain event here
+        // Add PortfolioCreatedEvent
+        this.domainEvents.add(new PortfolioCreatedEvent(this.portfolioId, user.getId(), initialBalance, Instant.now()));
     }
 
     private Portfolio(
@@ -160,32 +160,43 @@ public class Portfolio {
         List<Object> domainEvents,
         CurrencyConversionService conversionService
     ) {
-        this.user = user;
-        this.portfolioId = portfolioId;
-        this.portfolioName = portfolioName;
-        this.portfolioDescription = portfolioDescription;
-        this.portfolioCashBalance = portfolioCashBalance;
-        this.liabilities = liabilities;
-        this.holdings = holdings;
-        this.transactions = transactions;
-        this.domainEvents = domainEvents;
-        this.conversionService = conversionService;
+        this.user = Objects.requireNonNull(user, "User cannot be null");
+        this.portfolioId = Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null");
+        this.portfolioName = validatePortfolioName(portfolioName);
+        this.portfolioDescription = portfolioDescription; // Can be null
+        this.portfolioCashBalance = Objects.requireNonNull(portfolioCashBalance, "Initial balance cannot be null");
+        this.liabilities = Objects.requireNonNull(liabilities, "Liabilities map cannot be null");
+        this.holdings = Objects.requireNonNull(holdings, "Holdings map cannot be null");
+        this.transactions = Objects.requireNonNull(transactions, "Transactions list cannot be null");
+        this.domainEvents = Objects.requireNonNull(domainEvents, "Domain events list cannot be null");
+        this.conversionService = Objects.requireNonNull(conversionService, "Currency conversion service cannot be null");
     }
 
-    private Money calculateTotalFees(List<Fee> fees, Instant transactionDate) {
+    private String validatePortfolioName(String name) {
+        Objects.requireNonNull(name, "Portfolio name cannot be null");
+        if (name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Portfolio name cannot be empty");
+        }
+        if (name.length() > 100) {
+            throw new IllegalArgumentException("Portfolio name cannot exceed 100 characters");
+        }
+        return name.trim();
+    }
+
+    //for assets we use the asset currency, else we use portfolio currency
+    private Money calculateTotalFees(List<Fee> fees, Currency targetCurrency, Instant transactionDate) {
         if (fees == null || fees.isEmpty()) {
-            return Money.ZERO(this.portfolioCashBalance.currency());
+            return Money.ZERO(targetCurrency);
         }
 
-        Money totalFees = Money.ZERO(this.portfolioCashBalance.currency());
-        Currency portfolioCurrency = this.portfolioCashBalance.currency();
+        Money totalFees = Money.ZERO(targetCurrency);
 
         for (Fee fee : fees) {
             Money feeAmount = fee.amount();
             
-            // If the fee's currency is different from the portfolio's, convert it
-            if (!feeAmount.currency().equals(portfolioCurrency)) {
-                feeAmount = conversionService.convert(feeAmount, portfolioCurrency, transactionDate);
+            // If the fee's currency is different from the target currency, convert it
+            if (!feeAmount.currency().equals(targetCurrency)) {
+                feeAmount = conversionService.convert(feeAmount, targetCurrency, transactionDate);
             }
             
             totalFees = totalFees.add(feeAmount);
@@ -212,44 +223,55 @@ public class Portfolio {
         this.holdings.put(newHolding.getAssetHoldingId(), newHolding);
         return newHolding;
     }
+    
+    private void validateSufficientFunds(Money requiredAmount, String operation) {
+        if (this.portfolioCashBalance.add(requiredAmount).isNegative()) {
+            throw new InsufficientFundsException("Insufficient cash for " + operation + ". Required: " + 
+                requiredAmount.negate() + ", Available: " + this.portfolioCashBalance);
+        }
+    }
 
+    // note we are expecting the user is buying in native currency, no conversion, do it on your own
     public void buyAsset(
         AssetIdentifier assetIdentifier,
         BigDecimal quantity,
-        Money pricePerUnit, // in native currency
+        Money pricePerUnit,
         List<Fee> nativeFees,
         Instant transactionDate,
         TransactionSource source,
         String description
     ) {
-        // this needs to do the following
-        /*
-         * calculate the total cost (price * quant + fees)
-         * update the assetholding quant/costBasis
-         * create and add new Transaction to our list
-         * register a domain event
-         */
+        // Validation
+        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null");
+        Objects.requireNonNull(quantity, "Quantity cannot be null");
+        Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
+        Objects.requireNonNull(source, "Transaction source cannot be null");
+        
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+        if (pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price per unit must be positive");
+        }
 
-        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
-
-        // all of these variables are in the native currency
-        Money totalFees = calculateTotalFees(nativeFees, transactionDate); // returns total fees in native currency
+        Money totalFees = calculateTotalFees(nativeFees, pricePerUnit.currency(), transactionDate);
         Money assetCost = pricePerUnit.multiply(quantity);
-        Money totalCost = assetCost.add(totalFees); // total cash outflow, and trust cost basis
 
-        Money totalCostPortfolioCurrency = conversionService.convert(totalCost, this.portfolioCashBalance.currency(), transactionDate);
+        // Now, add them together in the same currency
+        Money totalCostInAssetCurrency = assetCost.add(totalFees);
+
+        Money totalCostPortfolioCurrency = conversionService.convert(totalCostInAssetCurrency, this.portfolioCashBalance.currency(), transactionDate);
         Money netCashImpact = totalCostPortfolioCurrency.negate();
         
-        if (this.portfolioCashBalance.add(netCashImpact).isNegative()) {
-            throw new InsufficientFundsException("Insufficient cash for asset purchase.");
-        }
+        validateSufficientFunds(netCashImpact, "asset purchase");
+        
         this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
 
         AssetHolding assetHolding = findAssetHolding(assetIdentifier)
             .orElseGet(() -> createNewAssetHolding(assetIdentifier));
 
-        // that AddToPosition method should recieve thet total cost of the new acqusisition
-        assetHolding.addToPosition(quantity, totalCost);
+        assetHolding.addToPosition(quantity, totalCostInAssetCurrency);
 
         TradeExecutionTransactionDetails details = new TradeExecutionTransactionDetails(
             assetIdentifier, 
@@ -257,13 +279,12 @@ public class Portfolio {
             pricePerUnit, 
             source, 
             description, 
-            nativeFees, 
+            nativeFees == null || nativeFees.isEmpty() ? Collections.emptyList() : nativeFees, 
             this.portfolioCashBalance.currency(), 
             assetHolding.getAssetHoldingId(), 
             this.conversionService
         );
 
-        // create transaction and add it to the portfolio
         Transaction transaction = new Transaction(
             new TransactionId(UUID.randomUUID()), 
             new CorrelationId(UUID.randomUUID()), 
@@ -272,9 +293,9 @@ public class Portfolio {
             TransactionType.BUY, 
             TransactionStatus.COMPLETED, 
             details, 
-            pricePerUnit, 
+            netCashImpact, // Fixed: was pricePerUnit
             transactionDate, 
-            transactionDate
+            transactionDate // Fixed: was Instant.now()
         );
 
         this.transactions.add(transaction);
@@ -284,8 +305,8 @@ public class Portfolio {
             assetHolding.getAssetHoldingId(),
             assetIdentifier,
             quantity,
-            totalCost,
-            Instant.now()
+            totalCostInAssetCurrency,
+            transactionDate // Fixed: was Instant.now()
         );
         this.domainEvents.add(event);
     }
@@ -299,21 +320,38 @@ public class Portfolio {
         TransactionSource source,
         String description
     ) {
-        AssetHolding assetHolding = this.holdings.get(assetHoldingId);
-        if (assetHolding == null) {
-            throw new AssetNotFoundException("Cannot sell asset not held in portfolio.");
-        }
-        if (assetHolding.getQuantity().compareTo(quantityToSell) < 0) {
-            throw new IllegalArgumentException("Cannot sell more units than you have.");
+         // Validation
+        Objects.requireNonNull(assetHoldingId, "Asset holding ID cannot be null");
+        Objects.requireNonNull(quantityToSell, "Quantity to sell cannot be null");
+        Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
+        Objects.requireNonNull(source, "Transaction source cannot be null");
+        
+        if (quantityToSell.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity to sell must be positive");
         }
 
-        Money totalFees = calculateTotalFees(nativeFees, transactionDate);
+        AssetHolding assetHolding = this.holdings.get(assetHoldingId);
+        if (assetHolding == null) {
+            throw new AssetNotFoundException("Cannot sell asset not held in portfolio");
+        }
+        if (assetHolding.getQuantity().compareTo(quantityToSell) < 0) {
+            throw new IllegalArgumentException("Cannot sell more units than you have. Available: " + 
+                assetHolding.getQuantity() + ", Requested: " + quantityToSell);
+        }
+
+        Money totalFees = calculateTotalFees(nativeFees, pricePerUnit.currency(), transactionDate);
         Money grossProceeds = pricePerUnit.multiply(quantityToSell);
         Money netCashImpact = grossProceeds.subtract(totalFees);
 
         assetHolding.removeFromPosition(quantityToSell);
-        Money netCashImpactPortfolioCurrency = conversionService.convert(netCashImpact, this.portfolioCashBalance.currency(), transactionDate);
+        
+        // Clean up empty holdings
+        if (assetHolding.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
+            this.holdings.remove(assetHoldingId);
+        }
 
+        Money netCashImpactPortfolioCurrency = conversionService.convert(netCashImpact, this.portfolioCashBalance.currency(), transactionDate);
         this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpactPortfolioCurrency);
 
         TradeExecutionTransactionDetails details = new TradeExecutionTransactionDetails(
@@ -336,9 +374,9 @@ public class Portfolio {
             TransactionType.SELL,
             TransactionStatus.COMPLETED,
             details,
-            netCashImpact,
+            netCashImpactPortfolioCurrency, // Fixed: was netCashImpact in native currency
             transactionDate,
-            Instant.now()
+            transactionDate // Fixed: was Instant.now()
         );
 
         this.transactions.add(transaction);
@@ -349,14 +387,14 @@ public class Portfolio {
             assetHolding.getAssetIdentifier(),
             quantityToSell,
             grossProceeds,
-            Instant.now()
+            transactionDate // Fixed: was Instant.now()
         );
 
         this.domainEvents.add(event);
     }
 
     // note we will have to do the same thing for the Liability
-    public void incurrNewLiability(
+    public LiabilityId  incurrNewLiability(
         LiabilityDetails liabilityDetails,
         Money liabilityAmount,
         TransactionSource source,
@@ -381,7 +419,7 @@ public class Portfolio {
             fees
         );
 
-        Money summedFees = calculateTotalFees(fees, incurrenceDate); // the method actual should exist in TransactionDetails.java 
+        Money summedFees = calculateTotalFees(fees, this.portfolioCashBalance.currency(), incurrenceDate); // the method actual should exist in TransactionDetails.java 
         Money netCashImpact = details.getPrincipalAmount().subtract(summedFees);
         this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact);
 
@@ -411,7 +449,8 @@ public class Portfolio {
         );
 
         domainEvents.add(event);
-
+        
+        return liabilityId;
     }
 
     public void recordLiabilityPayment(
@@ -422,17 +461,30 @@ public class Portfolio {
         Instant transactionDate
 
     ) {
-        // some event for recording a payment
-        Liability liability = this.liabilities.get(liabilityId);
-        if (liability == null) {
-            throw new IllegalArgumentException("Liability not found.");
+        Objects.requireNonNull(liabilityId, "Liability ID cannot be null");
+        Objects.requireNonNull(paymentAmount, "Payment amount cannot be null");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
+        Objects.requireNonNull(source, "Transaction source cannot be null");
+
+        if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive");
         }
 
-        PaymentAllocationResult result = liability.recordPayment(paymentAmount, Instant.now()); // time should be passed
+        Liability liability = this.liabilities.get(liabilityId);
+        if (liability == null) {
+            throw new IllegalArgumentException("Liability not found: " + liabilityId);
+        }
 
-        Money totalFees = calculateTotalFees(fees, transactionDate);
+        PaymentAllocationResult result = liability.recordPayment(paymentAmount, transactionDate); // Fixed: was Instant.now()
+        Money totalFees = calculateTotalFees(fees, this.portfolioCashBalance.currency(), transactionDate);
 
-        LiabilityPaymentTransactionDetails details = new LiabilityPaymentTransactionDetails( // should change this to add LiabilityType Enum
+        // Fixed cash impact calculation
+        Money totalCashOutflow = paymentAmount.add(totalFees);
+        validateSufficientFunds(totalCashOutflow.negate(), "liability payment");
+        
+        this.portfolioCashBalance = this.portfolioCashBalance.subtract(totalCashOutflow);
+
+        LiabilityPaymentTransactionDetails details = new LiabilityPaymentTransactionDetails(
             liabilityId, 
             result.principalPaid(),
             result.interestPaid(),
@@ -441,30 +493,27 @@ public class Portfolio {
             fees
         );
         
-        Money cashImpact = paymentAmount.negate().subtract(totalFees); // fees are part of the total cash impact
-        this.portfolioCashBalance = this.portfolioCashBalance.add(cashImpact);
-        
-        Transaction transaction = new Transaction (
+        Transaction transaction = new Transaction(
             new TransactionId(UUID.randomUUID()),
             new CorrelationId(UUID.randomUUID()),
-            null, // parent Id
+            null,
             this.portfolioId,
             TransactionType.PAYMENT,
             TransactionStatus.COMPLETED,
             details,
-            cashImpact,
+            totalCashOutflow.negate(), // Fixed: proper cash impact
             transactionDate,
-            Instant.now()
+            transactionDate // Fixed: was Instant.now()
         );
         
         this.transactions.add(transaction);
 
-        // at the end of the transaciton, an application service would dispatch these events...
-        // but how?
-        // ans: after the app service loads Portfolio from the repo, it can call one of the methods in Portfolio
-        // after that, it than calls the getDomainEvents to get the list of new events
-        // it then uses a separate domain event dispatcher to publish these events to any listening services
-        LiabilityPaymentRecordedEvent event = new LiabilityPaymentRecordedEvent(liabilityId, paymentAmount, paymentAmount, Instant.now());
+        LiabilityPaymentRecordedEvent event = new LiabilityPaymentRecordedEvent(
+            liabilityId, 
+            paymentAmount, 
+            result.principalPaid(), // Fixed: was paymentAmount twice
+            transactionDate // Fixed: was Instant.now()
+        );
         domainEvents.add(event);
 
     }
@@ -485,7 +534,7 @@ public class Portfolio {
         }
 
         // 2. Calculate fees and net impact
-        Money totalFees = calculateTotalFees(fees, transactionDate); // in portfolio currency
+        Money totalFees = calculateTotalFees(fees, this.portfolioCashBalance.currency(), transactionDate); // in portfolio currency
         Money netCashImpact;
         TransactionType type;
 
@@ -696,13 +745,20 @@ public class Portfolio {
         existingLiability.updateDetails(newDetails);
     }
 
-
-    // --- GETTERS ---
-
-    public List<Object> getDomainEvents() {
-        return Collections.unmodifiableList(this.domainEvents);
+    public void updatePortfolioDetails(String newName, String newDescription) {
+        if (newName != null) {
+            this.portfolioName = validatePortfolioName(newName);
+        }
+        if (newDescription != null) {
+            this.portfolioDescription = newDescription;
+        }
     }
 
+    public void clearDomainEvents() {
+        this.domainEvents.clear();
+    }
+
+    // --- GETTERS ---
     public User getUser() {
         return user;
     }
@@ -729,19 +785,20 @@ public class Portfolio {
 
 
     public Map<LiabilityId, Liability> getLiabilities() {
-        return liabilities;
+        return Collections.unmodifiableMap(liabilities);
     }
-
 
     public Map<AssetHoldingId, AssetHolding> getHoldings() {
-        return holdings;
+        return Collections.unmodifiableMap(holdings);
     }
-
 
     public List<Transaction> getTransactions() {
-        return transactions;
+        return Collections.unmodifiableList(transactions);
     }
 
+    public List<Object> getDomainEvents() {
+        return Collections.unmodifiableList(this.domainEvents);
+    }
 
     public CurrencyConversionService getConversionService() {
         return conversionService;

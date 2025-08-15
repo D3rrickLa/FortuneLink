@@ -9,7 +9,29 @@ public class User {
     private String userName;
     private String firstName;
     private String lastName;   
-    private LocalDateTime createdAt; 
+    private LocalDateTime createdAt;
+    
+    
+    
+    public UUID getId() {
+        return id;
+    }
+    public String getEmail() {
+        return email;
+    }
+    public String getUserName() {
+        return userName;
+    }
+    public String getFirstName() {
+        return firstName;
+    }
+    public String getLastName() {
+        return lastName;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    } 
 
+    
 
 }

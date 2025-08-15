@@ -27,6 +27,10 @@ public class User {
         return new User(id, displayName, reportingCurrencyPreference, new HashSet<>());
     }
 
+    public User() {
+        
+    }
+
     // --- Behavioral methods ---
     public void addPortfolio(PortfolioId portfolioId) {
         Objects.requireNonNull(portfolioId, "PortfolioId cannot be null");

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
@@ -61,33 +62,68 @@ public class PortfolioTest {
                 now);
 
         assertEquals(1, portfolio.getTransactions().size());
-        assertEquals(1, portfolio.getDomainEvents().size());
+        assertEquals(2, portfolio.getDomainEvents().size());
         assertEquals(1, portfolio.getLiabilities().size());
     }
 
     @Test
     public void testRecordLiabilityPayment_updatesCashBalanceAndCreatesTransaction() {
         Portfolio portfolio = createTestPortfolio();
-        LiabilityId liabilityId = createAndAddLiability(portfolio);
+        LiabilityDetails details = new LiabilityDetails(
+            "Loan", 
+            "DESC",
+            LiabilityType.AUTO_LOAN,
+            new Percentage(BigDecimal.valueOf(0.05)), 
+            Instant.now()
+            
+        );
+        
+        // 1. Incur the liability using a public method on the Portfolio aggregate.
+        LiabilityId liabilityId =   portfolio.incurrNewLiability(
+            details, 
+            new Money(new BigDecimal("1000"), USD), 
+            TransactionSource.MANUAL,
+            Collections.emptyList(),
+            Instant.now()
+            );
+            
         Money paymentAmount = new Money(new BigDecimal("500"), USD);
         List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, new Money(new BigDecimal("10"), USD), "DESC", Instant.now()));
         Instant now = Instant.now();
+        
 
+        // 2. Now, record the payment using another public method.
         portfolio.recordLiabilityPayment(
-                liabilityId,
-                paymentAmount,
-                TransactionSource.SYSTEM,
-                fees,
-                now);
+            liabilityId,
+            paymentAmount,
+            TransactionSource.SYSTEM,
+            fees,
+            now);
 
-        assertEquals(1, portfolio.getTransactions().size());
-        assertEquals(1, portfolio.getDomainEvents().size());
+        assertEquals(2, portfolio.getTransactions().size());
+        assertEquals(3, portfolio.getDomainEvents().size());
     }
 
     @Test
     public void testUpdateLiability_changesDetails() {
         Portfolio portfolio = createTestPortfolio();
-        LiabilityId liabilityId = createAndAddLiability(portfolio);
+        LiabilityDetails details = new LiabilityDetails(
+            "Loan", 
+            "DESC",
+            LiabilityType.AUTO_LOAN,
+            new Percentage(BigDecimal.valueOf(0.05)), 
+            Instant.now()
+            
+        );
+        
+        // 1. Incur the liability using a public method on the Portfolio aggregate.
+        LiabilityId liabilityId =   portfolio.incurrNewLiability(
+            details, 
+            new Money(new BigDecimal("1000"), USD), 
+            TransactionSource.MANUAL,
+            Collections.emptyList(),
+            Instant.now()
+            );
 
         LiabilityDetails newDetails = new LiabilityDetails("Loan", "Updated Loan", LiabilityType.OTHER, new Percentage(BigDecimal.valueOf(0.07)), Instant.now());
         portfolio.updateLiability(liabilityId, newDetails);
