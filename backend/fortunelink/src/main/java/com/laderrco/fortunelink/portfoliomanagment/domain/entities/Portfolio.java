@@ -45,7 +45,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
 
 /*
  * <<Entities>>
- * Portfolio 🟨
+ * Portfolio ✅
  * AssetHolding ✅
  * Liability ✅
  * Transaction ✅
@@ -84,7 +84,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * IncomeTransactionDetails ✅
  * LiabilityIncurredTransactionDetails ✅
  * LiabilityPaymentTransactionDetails ✅
- * ReversalTransactionDetails ✅🟨 <- new method/transaction
+ * ReversalTransactionDetails ✅ <- new method/transaction
  * 
  * <<Services>>
  * CurrencyConversionService ✅
