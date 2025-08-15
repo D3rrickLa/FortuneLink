@@ -19,7 +19,7 @@ public record Money(
         validateParameter(amount, "Amount");
         validateParameter(currency, "Currency");
 
-        amount = amount.setScale(DecimalPrecision.MONEY.getDecimalPlaces(), RoundingMode.HALF_EVEN); // TODO remove or keep? find out
+        amount = amount.setScale(DecimalPrecision.MONEY.getDecimalPlaces(), RoundingMode.HALF_EVEN);
     }
 
     public Money(double amount, String currency) {

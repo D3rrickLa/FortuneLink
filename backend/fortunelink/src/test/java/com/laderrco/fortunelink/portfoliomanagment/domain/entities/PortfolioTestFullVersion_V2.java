@@ -1110,17 +1110,24 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should throw exception for null parameters")
         void shouldThrowExceptionForNullParameters() {
             Money amount = Money.of(BigDecimal.valueOf(100), usdCurrency);
-            
+
             assertAll(
                 () -> assertThrows(NullPointerException.class, () ->
-                    portfolio.recordIncome(null, IncomeType.DIVIDEND, TransactionSource.MANUAL, "Desc", Collections.emptyList(), testDate)),
+                portfolio.recordIncome(null, IncomeType.DIVIDEND, TransactionSource.MANUAL, "Desc", Collections.emptyList(), testDate)),
                 () -> assertThrows(NullPointerException.class, () ->
-                    portfolio.recordIncome(amount, null, TransactionSource.MANUAL, "Desc", Collections.emptyList(), testDate)),
+                portfolio.recordIncome(amount, null, TransactionSource.MANUAL, "Desc", Collections.emptyList(), testDate)),
                 () -> assertThrows(NullPointerException.class, () ->
-                    portfolio.recordIncome(amount, IncomeType.DIVIDEND, null, "Desc", Collections.emptyList(), testDate)),
+                portfolio.recordIncome(amount, IncomeType.DIVIDEND, null, "Desc", Collections.emptyList(), testDate)),
                 () -> assertThrows(NullPointerException.class, () ->
-                    portfolio.recordIncome(amount, IncomeType.DIVIDEND, TransactionSource.MANUAL, "Desc", Collections.emptyList(), null))
-            );
+                portfolio.recordIncome(amount, IncomeType.DIVIDEND, TransactionSource.MANUAL, "Desc", Collections.emptyList(), null))
+                );
+        }
+            
+        @Test 
+        @DisplayName("Should throw exception when incomeType is not valid")
+        void shouldThrowExceptionForInvalidIncomeType() {
+            Money amount = Money.of(BigDecimal.valueOf(100), usdCurrency);
+            assertThrows(IllegalArgumentException.class, ()->portfolio.recordIncome(amount, IncomeType.ERROR, TransactionSource.MANUAL, "desc", Collections.emptyList(), testDate));
         }
     }
 }

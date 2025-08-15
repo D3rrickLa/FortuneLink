@@ -92,8 +92,8 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transacti
  * PortfolioDomainService 🟨 -> for logic that doesn't fit into a single aggregate, might/might not be needed
  * 
  * <<Repositories>>
- * PortfolioRepository
- * UserRepository
+ * PortfolioRepository ✅🟨
+ * UserRepository ✅🟨
  * 
  * <<Events>> allows us to build scalable architecture where a change in one aggregate can trigger a rection elsewhere wihtout the aggregate itself knowing hte details of that reaction
  * AssetBoughtEvent ✅
@@ -602,8 +602,6 @@ public class Portfolio {
             transactionDate
         );
         this.domainEvents.add(event);
-        
-
     }
 
     public void recordIncome(

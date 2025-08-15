@@ -1,6 +1,9 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -129,5 +132,36 @@ public class PortfolioTest {
         portfolio.updateLiability(liabilityId, newDetails);
 
         assertEquals("Updated Loan", portfolio.getLiabilities().get(liabilityId).getDetails().description());
+    }
+
+    @Test 
+    void testUpdatePortfolioDetails_Correct() {
+        Portfolio portfolio = createTestPortfolio();
+        portfolio.updatePortfolioDetails("someting else", "new thing");
+        assertAll(
+            () -> assertEquals("someting else", portfolio.getPortfolioName()),
+            () ->assertEquals("new thing", portfolio.getPortfolioDescription())
+        );
+    }
+
+    @Test
+    void testValidatePortfolioName_Invalid() {
+        Portfolio portfolio = createTestPortfolio();
+        assertThrows(IllegalArgumentException.class, 
+            () -> portfolio.updatePortfolioDetails("\n\n\n\n", null));
+        assertThrows(IllegalArgumentException.class, 
+            () -> portfolio.updatePortfolioDetails("\n\n\n\n", "null"));
+        assertThrows(IllegalArgumentException.class, 
+            () -> portfolio.updatePortfolioDetails("100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded100charactersexceeded", 
+            "null"));
+
+        assertDoesNotThrow(() -> portfolio.updatePortfolioDetails(null, null));
+    };
+
+    @Test 
+    void testClearDomainEvents() {
+        Portfolio portfolio = createTestPortfolio();
+        portfolio.clearDomainEvents();
+        assertEquals(0, portfolio.getDomainEvents().size());
     }
 }
