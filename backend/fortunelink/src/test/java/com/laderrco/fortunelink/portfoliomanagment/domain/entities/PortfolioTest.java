@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
@@ -35,19 +36,6 @@ public class PortfolioTest {
                 "Testing liabilities",
                 new Money(new BigDecimal("10000"), USD),
                 new SimpleCurrencyService());
-    }
-
-    private LiabilityId createAndAddLiability(Portfolio portfolio) {
-        LiabilityId id = new LiabilityId(UUID.randomUUID());
-        Liability liability = new Liability(
-            id,
-            portfolio.getPortfolioId(),
-            new LiabilityDetails("Loan", "Updated Loan", LiabilityType.OTHER, new Percentage(BigDecimal.valueOf(0.05)), Instant.now()),
-            new Money(new BigDecimal("1000"), USD),
-            Instant.now()
-        );  
-        portfolio.getLiabilities().put(id, liability);
-        return id;
     }
 
     @Test
@@ -133,6 +121,33 @@ public class PortfolioTest {
 
         assertEquals("Updated Loan", portfolio.getLiabilities().get(liabilityId).getDetails().description());
     }
+    
+    @Test
+    public void testUpdateLiability_NothingHappensWhenLiabilityDetailsIsNull() {
+        Portfolio portfolio = createTestPortfolio();
+        LiabilityDetails details = new LiabilityDetails(
+            "Loan", 
+            "DESC",
+            LiabilityType.AUTO_LOAN,
+            new Percentage(BigDecimal.valueOf(0.05)), 
+            Instant.now()
+            
+        );
+        
+        // 1. Incur the liability using a public method on the Portfolio aggregate.
+        LiabilityId liabilityId =   portfolio.incurrNewLiability(
+            details, 
+            new Money(new BigDecimal("1000"), USD), 
+            TransactionSource.MANUAL,
+            Collections.emptyList(),
+            Instant.now()
+            );
+
+        // LiabilityDetails newDetails = new LiabilityDetails("Loan", "Updated Loan", LiabilityType.OTHER, new Percentage(BigDecimal.valueOf(0.07)), Instant.now());
+        portfolio.updateLiability(liabilityId, null);
+
+        assertNotEquals("Updated Loan", portfolio.getLiabilities().get(liabilityId).getDetails().description());
+    }
 
     @Test 
     void testUpdatePortfolioDetails_Correct() {
@@ -164,4 +179,5 @@ public class PortfolioTest {
         portfolio.clearDomainEvents();
         assertEquals(0, portfolio.getDomainEvents().size());
     }
+
 }

@@ -31,6 +31,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.events.PortfolioCreate
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.TransactionReversedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -106,6 +107,18 @@ public class PortfolioTestFullVersion_V2 {
             return currency;
         }
 
+    }
+
+    @Test 
+    void TestUserGenrations() {
+        String name = "name";
+        String email = "email";
+        TestUser user = new TestUser(name, email, eurCurrency);
+        assertAll(
+            () -> assertEquals(name, user.getName()),
+            () -> assertEquals(email, user.getEmail()),
+            () -> assertEquals(eurCurrency, user.getCurrency())
+        );
     }
 
     // Test implementation of AssetIdentifier
@@ -280,7 +293,8 @@ public class PortfolioTestFullVersion_V2 {
             assertAll(
                 () -> assertEquals(buyQuantity, portfolio.getHoldings().get(holdingId).getQuantity()),
                 () -> assertEquals(3, portfolio.getTransactions().size()),
-                () -> assertEquals(TransactionType.REVERSAL, portfolio.getTransactions().get(2).getType())
+                () -> assertEquals(TransactionType.REVERSAL, portfolio.getTransactions().get(2).getType()),
+                () -> assertTrue(balanceAfterSell.compareTo(Money.of(BigDecimal.valueOf(1000), usdCurrency)) > 0)
             );
         }
 
@@ -297,12 +311,13 @@ public class PortfolioTestFullVersion_V2 {
             LiabilityId liabilityId = portfolio.getLiabilities().keySet().iterator().next();
             
             // Reverse the liability incurrence
-            portfolio.reverseTransaction(liabilityTransactionId, "Liability reversal", TransactionSource.MANUAL, "Reversal", Collections.emptyList(), testDate);
+            portfolio.reverseTransaction(liabilityTransactionId, "Liability reversal", TransactionSource.MANUAL, "Reversal", null, testDate);
             
             assertAll(
                 () -> assertEquals(initialBalance, portfolio.getPortfolioCashBalance()),
                 () -> assertTrue(portfolio.getLiabilities().isEmpty()),
-                () -> assertEquals(2, portfolio.getTransactions().size())
+                () -> assertEquals(2, portfolio.getTransactions().size()),
+                () -> assertTrue(portfolio.getLiabilities().containsKey(liabilityId) == false)
             );
         }
 
@@ -450,7 +465,7 @@ public class PortfolioTestFullVersion_V2 {
             Money price = Money.of(BigDecimal.valueOf(50), usdCurrency);
             Money initialBalance = portfolio.getPortfolioCashBalance();
             
-            assertThrows(IllegalArgumentException.class, ()->
+            assertThrows(InvalidQuantityException.class, ()->
             portfolio.buyAsset(testAssetId, BigDecimal.ZERO, price, Collections.emptyList(), testDate, TransactionSource.MANUAL, "Zero buy"));
             
             // Should create transaction but not affect balance significantly (except maybe fees)
@@ -678,6 +693,16 @@ public class PortfolioTestFullVersion_V2 {
                 portfolio.buyAsset(testAssetId, largeQuantity, pricePerUnit, fees, testDate, TransactionSource.MANUAL, "Test buy")
             );
         }
+        
+        @Test
+        @DisplayName("Should throw exception when price per unit is not positive")
+        void shouldThrowExceptionWhenNegativeOrZeroPrice() {
+            BigDecimal largeQuantity = BigDecimal.valueOf(1000);
+            Money pricePerUnitWrong = Money.of(-1, usdCurrency);
+            assertThrows(IllegalArgumentException.class, () ->
+                portfolio.buyAsset(testAssetId, largeQuantity, pricePerUnitWrong, fees, testDate, TransactionSource.MANUAL, "Test buy")
+            );
+        }
 
         @Test
         @DisplayName("Should throw exception when asset identifier is null")
@@ -809,9 +834,31 @@ public class PortfolioTestFullVersion_V2 {
 
         @Test
         @DisplayName("Should throw exception when asset holding not found")
-        void shouldThrowExceptionWhenAssetHoldingNotFound() {
+        void shouldThrowExceptionWhenAssetHoldingNotFound2() {
             AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
             
+            assertThrows(AssetNotFoundException.class, () ->
+                portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+            );
+        }
+        
+        @Test
+        @DisplayName("Should throw exception when quantity to sell is not positive")
+        void shouldThrowExceptionWhenQuantityToSellIsNotPositive() {
+            // Use a valid holding id for quantity validation
+            assertThrows(InvalidQuantityException.class, () ->
+                portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(0), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+            );
+            assertThrows(InvalidQuantityException.class, () ->
+                portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(-1), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when asset holding not found")
+        void shouldThrowExceptionWhenAssetHoldingNotFound() {
+            AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
+
             assertThrows(AssetNotFoundException.class, () ->
                 portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
@@ -822,7 +869,7 @@ public class PortfolioTestFullVersion_V2 {
         void shouldThrowExceptionWhenSellingMoreThanOwned() {
             BigDecimal excessiveQuantity = BigDecimal.valueOf(200);
             
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(InvalidQuantityException.class, () ->
                 portfolio.sellAsset(assetHoldingId, excessiveQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
         }
@@ -860,6 +907,15 @@ public class PortfolioTestFullVersion_V2 {
             BigDecimal expectedRemainingQuantity = initialQuantity.subtract(sellQuantity);
             assertEquals(expectedRemainingQuantity, holding.getQuantity());
         }
+
+        @Test 
+        @DisplayName("Should remove the holding when we sell all")
+        void shouldRemoveHoldingWhenQuantityIs0() {
+
+            portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(100), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            assertTrue(portfolio.getHoldings().isEmpty());
+            assertTrue(portfolio.getHoldings().containsKey(assetHoldingId) == false);
+        }
     }
 
     @Nested
@@ -896,7 +952,7 @@ public class PortfolioTestFullVersion_V2 {
         @Test
         @DisplayName("Should publish liability incurred event")
         void shouldPublishLiabilityIncurredEvent() {
-            portfolio.incurrNewLiability(testLiabilityDetails, liabilityAmount, TransactionSource.MANUAL, fees, testDate);
+            portfolio.incurrNewLiability(testLiabilityDetails, liabilityAmount, TransactionSource.MANUAL, null, testDate);
             
             assertTrue(portfolio.getDomainEvents().get(1) instanceof LiabilityIncurredEvent);
             
@@ -954,6 +1010,31 @@ public class PortfolioTestFullVersion_V2 {
                 portfolio.recordLiabilityPayment(nonExistentId, paymentAmount, TransactionSource.MANUAL, Collections.emptyList(), testDate)
             );
         }
+       
+        @Test
+        @DisplayName("Should throw exception when liability currency is not portfolios")
+        void shouldThrowExceptionWhenLiabilityIsNotSameCurrencyAsPortfolio() {
+            assertThrows(IllegalArgumentException.class, () ->portfolio.incurrNewLiability(testLiabilityDetails, Money.of(200, eurCurrency), TransactionSource.MANUAL, Collections.emptyList(), testDate));
+
+        }
+
+
+        @Test 
+        @DisplayName("Should throw error when payment amount is not positive")
+        void shouldThrowErrorWhenPaymentAmountIsNotPositive() {
+            // First incur liability
+            portfolio.incurrNewLiability(testLiabilityDetails, liabilityAmount, TransactionSource.MANUAL, Collections.emptyList(), testDate);
+            LiabilityId liabilityId = portfolio.getLiabilities().keySet().iterator().next();
+            
+            Money paymentAmount = Money.of(BigDecimal.valueOf(-500), usdCurrency);
+            
+            assertThrows(IllegalArgumentException.class, () ->
+                portfolio.recordLiabilityPayment(liabilityId, paymentAmount, TransactionSource.MANUAL, Collections.emptyList(), testDate)
+            );
+            assertThrows(IllegalArgumentException.class, () ->
+                portfolio.recordLiabilityPayment(liabilityId,  Money.of(BigDecimal.valueOf(0), usdCurrency), TransactionSource.MANUAL, Collections.emptyList(), testDate)
+            );
+        }
     }
 
     @Nested
@@ -965,10 +1046,11 @@ public class PortfolioTestFullVersion_V2 {
         void shouldSuccessfullyRecordDeposit() {
             Money depositAmount = Money.of(BigDecimal.valueOf(1000), usdCurrency);
             Money initialBalance = portfolio.getPortfolioCashBalance();
+            List<Fee> fees = Arrays.asList(new Fee(FeeType.DEPOSIT_FEE, Money.of(BigDecimal.valueOf(5), usdCurrency),"desc"));
+
+            portfolio.recordCashflow(depositAmount, CashflowType.DEPOSIT, TransactionSource.MANUAL, "Test deposit", fees, testDate);
             
-            portfolio.recordCashflow(depositAmount, CashflowType.DEPOSIT, TransactionSource.MANUAL, "Test deposit", Collections.emptyList(), testDate);
-            
-            Money expectedBalance = initialBalance.add(depositAmount);
+            Money expectedBalance = initialBalance.add(depositAmount).subtract(Money.of(5, usdCurrency));
             assertAll(
                 () -> assertEquals(expectedBalance, portfolio.getPortfolioCashBalance()),
                 () -> assertEquals(1, portfolio.getTransactions().size()),
@@ -983,7 +1065,7 @@ public class PortfolioTestFullVersion_V2 {
             Money withdrawalAmount = Money.of(BigDecimal.valueOf(1000), usdCurrency);
             Money initialBalance = portfolio.getPortfolioCashBalance();
             
-            portfolio.recordCashflow(withdrawalAmount, CashflowType.WITHDRAWAL, TransactionSource.MANUAL, "Test withdrawal", Collections.emptyList(), testDate);
+            portfolio.recordCashflow(withdrawalAmount, CashflowType.WITHDRAWAL, TransactionSource.MANUAL, "Test withdrawal", null, testDate);
             
             Money expectedBalance = initialBalance.subtract(withdrawalAmount);
             assertEquals(expectedBalance, portfolio.getPortfolioCashBalance());
@@ -996,6 +1078,16 @@ public class PortfolioTestFullVersion_V2 {
             
             assertThrows(InsufficientFundsException.class, () ->
                 portfolio.recordCashflow(excessiveAmount, CashflowType.WITHDRAWAL, TransactionSource.MANUAL, "Excessive withdrawal", Collections.emptyList(), testDate)
+            );
+        }
+       
+        @Test
+        @DisplayName("Should throw exception for bad cashflowtype")
+        void shouldThrowExceptionForBadCashflowType() {
+            Money excessiveAmount = Money.of(BigDecimal.valueOf(200), usdCurrency);
+            
+            assertThrows(IllegalArgumentException.class, () ->
+                portfolio.recordCashflow(excessiveAmount, CashflowType.TRANSFER, TransactionSource.MANUAL, "Excessive withdrawal", Collections.emptyList(), testDate)
             );
         }
 

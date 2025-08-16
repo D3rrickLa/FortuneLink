@@ -21,6 +21,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.events.PortfolioCreate
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.TransactionReversedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -185,6 +186,9 @@ public class Portfolio {
 
     //for assets we use the asset currency, else we use portfolio currency
     private Money calculateTotalFees(List<Fee> fees, Currency targetCurrency, Instant transactionDate) {
+        Objects.requireNonNull(targetCurrency, "Target currency cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+        
         if (fees == null || fees.isEmpty()) {
             return Money.ZERO(targetCurrency);
         }
@@ -211,6 +215,7 @@ public class Portfolio {
     }
 
     private AssetHolding createNewAssetHolding(AssetIdentifier assetIdentifier) {
+        Objects.requireNonNull(assetIdentifier, "Asset Identifier cannot be null.");
         AssetHolding newHolding = new AssetHolding(
             new AssetHoldingId(UUID.randomUUID()), 
             this.portfolioId, 
@@ -225,6 +230,8 @@ public class Portfolio {
     }
     
     private void validateSufficientFunds(Money requiredAmount, String operation) {
+        Objects.requireNonNull(requiredAmount, "Required amount cannot be null.");
+        Objects.requireNonNull(operation, "Operation cannot be null.");
         if (this.portfolioCashBalance.add(requiredAmount).isNegative()) {
             throw new InsufficientFundsException("Insufficient cash for " + operation + ". Required: " + 
                 requiredAmount.negate() + ", Available: " + this.portfolioCashBalance);
@@ -249,7 +256,7 @@ public class Portfolio {
         Objects.requireNonNull(source, "Transaction source cannot be null");
         
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
+            throw new InvalidQuantityException("Quantity must be positive");
         }
         if (pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Price per unit must be positive");
@@ -328,7 +335,7 @@ public class Portfolio {
         Objects.requireNonNull(source, "Transaction source cannot be null");
         
         if (quantityToSell.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Quantity to sell must be positive");
+            throw new InvalidQuantityException("Quantity to sell must be positive");
         }
 
         AssetHolding assetHolding = this.holdings.get(assetHoldingId);
@@ -336,7 +343,7 @@ public class Portfolio {
             throw new AssetNotFoundException("Cannot sell asset not held in portfolio");
         }
         if (assetHolding.getQuantity().compareTo(quantityToSell) < 0) {
-            throw new IllegalArgumentException("Cannot sell more units than you have. Available: " + 
+            throw new InvalidQuantityException("Cannot sell more units than you have. Available: " + 
                 assetHolding.getQuantity() + ", Requested: " + quantityToSell);
         }
 
@@ -393,7 +400,6 @@ public class Portfolio {
         this.domainEvents.add(event);
     }
 
-    // note we will have to do the same thing for the Liability
     public LiabilityId  incurrNewLiability(
         LiabilityDetails liabilityDetails,
         Money liabilityAmount,
@@ -401,6 +407,21 @@ public class Portfolio {
         List<Fee> fees,
         Instant incurrenceDate
     ) {
+        Objects.requireNonNull(liabilityDetails, "Liability details cannot be null.");
+        Objects.requireNonNull(liabilityAmount, "Initial liability amount cannot be null.");
+        Objects.requireNonNull(source, "Transaction source cannot be null.");
+        Objects.requireNonNull(incurrenceDate, "Date of new liability cannot be null.");
+
+        if (!liabilityAmount.currency().equals(this.portfolioCashBalance.currency())) {
+            throw new IllegalArgumentException(
+                String.format("Liability currency %s must match portfolio currency %s", 
+                    liabilityAmount.currency(), 
+                    this.portfolioCashBalance.currency())
+            );
+        }
+        
+        fees = fees == null ? Collections.emptyList() : fees;        
+
         LiabilityId liabilityId = new LiabilityId(UUID.randomUUID());
         Liability liability = new Liability(
             liabilityId,
@@ -470,6 +491,14 @@ public class Portfolio {
             throw new IllegalArgumentException("Payment amount must be positive");
         }
 
+        if (!paymentAmount.currency().equals(this.portfolioCashBalance.currency())) {
+            throw new IllegalArgumentException(
+                String.format("Payment currency %s must match portfolio currency %s", 
+                    paymentAmount.currency(), 
+                    this.portfolioCashBalance.currency())
+            );
+        }
+        
         Liability liability = this.liabilities.get(liabilityId);
         if (liability == null) {
             throw new IllegalArgumentException("Liability not found: " + liabilityId);
@@ -526,9 +555,18 @@ public class Portfolio {
         List<Fee> fees,
         Instant transactionDate
     ) {
+        Objects.requireNonNull(amount, "Cashflow amount cannot be null.");
+        Objects.requireNonNull(cashflowType, "Cashflow type cannot be null.");
+        Objects.requireNonNull(source, "Source cannot be null.");
+        Objects.requireNonNull(description, "Description cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+
+        fees = fees == null ? Collections.emptyList() : fees;
+
         if (!amount.currency().equals(this.portfolioCashBalance.currency())) {
             throw new IllegalArgumentException("Cashflow amount currency must match portfolio's currency.");
         }
+
         if (amount.amount().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Amount cannot be negative.");
         }
@@ -655,6 +693,15 @@ public class Portfolio {
         List<Fee> fees,
         Instant transactionDate
     ) {
+
+        Objects.requireNonNull(transactionId, "Transaction id cannot be null.");
+        Objects.requireNonNull(reason, "Reason cannot be null.");
+        Objects.requireNonNull(source, "Source cannot be null.");
+        Objects.requireNonNull(description, "Description cannot be null.");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+
+        fees = fees == null ? Collections.emptyList() : fees;
+
         Transaction originalTransaction = this.transactions.stream()
             .filter(t -> t.getTransactionId().equals(transactionId))
             .findFirst()
@@ -738,9 +785,12 @@ public class Portfolio {
     }
 
     public void updateLiability(LiabilityId liabilityId, LiabilityDetails newDetails) {
+        Objects.requireNonNull(liabilityId, "Liability id cannot be null.");
         Liability existingLiability = liabilities.get(liabilityId);
 
-        existingLiability.updateDetails(newDetails);
+        if (newDetails != null) {
+            existingLiability.updateDetails(newDetails);
+        }
     }
 
     public void updatePortfolioDetails(String newName, String newDescription) {

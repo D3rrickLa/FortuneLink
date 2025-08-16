@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums;
 
+import java.util.Objects;
+
 public enum CryptoSymbols {
     BTC, ETH, USDT, XRP, BNB, SOL, USDC, TRX, DOGE, ADA,
     HYPE, BCH, LEO, SUI, LINK, XLM, AVAX, TON, SHIB, LTC,
@@ -13,6 +15,7 @@ public enum CryptoSymbols {
     THETA, BSV, SAND, LDO, BTT, IOTA, GALA, JASMY, PENDLE, ZRO;
 
     public static Boolean isCrypto(String symbol) {
+        Objects.requireNonNull(symbol, "Crypto symbol cannot be null.");
         for (CryptoSymbols cryptoSymbol : values()) {
             if (cryptoSymbol.name().equalsIgnoreCase(symbol)) {
                 return true;

@@ -63,9 +63,11 @@ public class AssetHolding {
         if (soldQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Sold quantity must be positive");
         }
+        
         if (soldQuantity.compareTo(this.quantity) > 0) {
             throw new IllegalArgumentException("Sold quantity greater than your current holdings.");
         }
+
         if (!salePrice.currency().equals(this.totalAdjustedCostBasisNativeCurrency.currency())) {
             throw new IllegalArgumentException("Sale price currency must match native currency.");
         }
