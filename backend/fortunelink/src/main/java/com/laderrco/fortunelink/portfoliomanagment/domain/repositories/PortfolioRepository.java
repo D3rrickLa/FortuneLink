@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagment.repositories;
+package com.laderrco.fortunelink.portfoliomanagment.domain.repositories;
 
 import java.util.List;
 import java.util.Optional;
