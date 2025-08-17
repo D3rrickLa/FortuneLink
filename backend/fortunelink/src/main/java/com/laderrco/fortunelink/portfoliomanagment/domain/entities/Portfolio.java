@@ -322,6 +322,7 @@ public class Portfolio {
         this.domainEvents.add(event);
     }
 
+    // so apprently, using the assetHoldingId is bad -> a) it's more friendly for the identifier to be put in and b) we want to hide this info
     public void sellAsset(
         AssetHoldingId assetHoldingId,
         BigDecimal quantityToSell,
@@ -406,6 +407,8 @@ public class Portfolio {
 
         this.domainEvents.add(event);
     }
+
+
 
     public LiabilityId  incurrNewLiability(
         LiabilityDetails liabilityDetails,

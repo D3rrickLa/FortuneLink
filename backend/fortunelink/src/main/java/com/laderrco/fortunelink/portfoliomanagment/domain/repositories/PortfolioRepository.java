@@ -9,7 +9,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.UserI
 
 public interface PortfolioRepository {
     public PortfolioId save(Portfolio portfolio);
-    public Optional<PortfolioId> findById(PortfolioId portfolioId);
+    public Optional<Portfolio> findById(PortfolioId portfolioId);
     public List<Portfolio> findAll(UserId userId);
     public void delete(PortfolioId portfolioId);
 }

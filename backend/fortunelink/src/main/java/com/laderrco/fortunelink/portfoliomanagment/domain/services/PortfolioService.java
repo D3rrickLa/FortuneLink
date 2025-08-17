@@ -31,7 +31,8 @@ public interface PortfolioService {
      */
 
     public PortfolioId createPortfolio(UserId userId, String name, String description);
-    public void recordTrade(PortfolioId portfolioId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price, List<Fee> fees, Instant transactionDate, TransactionSource source);
+    public void recordBuy(PortfolioId portfolioId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price, List<Fee> fees, Instant transactionDate, TransactionSource source);
+    public void recordSell(PortfolioId portfolioId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price, List<Fee> fees, Instant transactionDate, TransactionSource source);
     public void recordCashflow(PortfolioId portfolioId, Money amount, CashflowType cashflowType, TransactionSource source, String description, List<Fee> fees, Instant transactionDate);
     public void recordLiabilityIncurrence(PortfolioId portfolioId, LiabilityDetails details, Money initialAmount, TransactionSource source, List<Fee> fees, Instant transactionDate);
     public void recordLiabilityPayment(PortfolioId portfolioId, LiabilityId liabilityId, Money paymentAmount, TransactionSource source, List<Fee> fees, Instant transactionDate);
