@@ -24,7 +24,7 @@ public class Liability {
 
     // Monetary values stored in the liability's native currency
     private final Money originalAmount;
-    private Money currentBalance;
+    private Money currentBalance; // this field is wrong, this is a representation of principal + accured 
     private Money accruedUnpaidInterest;
 
     // Lifecycle and Audit Fields
@@ -68,48 +68,12 @@ public class Liability {
         if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be a positive value.");
         }
-        else if (!this.currentBalance.currency().equals(paymentAmount.currency())) {
-            throw new IllegalArgumentException("Payment amoutn must be in the same currency as the liability's currency preference.");
-                     
+        
+        if (!this.currentBalance.currency().equals(paymentAmount.currency())) {
+            throw new IllegalArgumentException("Payment amount must be in the same currency as the liability's currency preference.");             
         }
-
-        // this shouldn't be here
-        // this.accrueInterest(paymentDate);
 
         Money interestPaid = Money.ZERO(paymentAmount.currency());
-        Money principalPaid = Money.ZERO(paymentAmount.currency());
-        Money remainingPayment = paymentAmount;
-
-        // apply payment to the unpaid interest first, if there's outstanding accured interest
-        if (this.accruedUnpaidInterest.isPositive()) {
-            Money paymentAppliedToInterest = remainingPayment.min(this.accruedUnpaidInterest);
-            interestPaid = paymentAppliedToInterest;
-            remainingPayment = remainingPayment.subtract(paymentAppliedToInterest);
-
-            this.accruedUnpaidInterest = this.accruedUnpaidInterest.subtract(paymentAppliedToInterest);
-        }
-
-        // apply any remaining payment to the principal
-        if (remainingPayment.isPositive()) {
-            principalPaid = remainingPayment;            
-        }
-
-        // deduct the *total acutal payment* from the current balance
-        // current balance already includes principal + accrued interest
-        // the individual reductions (interestPaid, principalPaid) are for tracking/reporting purposes
-        this.currentBalance = this.currentBalance.subtract(paymentAmount);
-
-        // handle overpayment
-        if (this.currentBalance.isNegative()) {
-            principalPaid = principalPaid.add(this.currentBalance.negate());
-            this.currentBalance = Money.ZERO(this.currentBalance.currency());
-        }
-
-        // have some event like LiabilityPaymentRecordedEvent to carry the liabilityId, principalPaid, and interestPaid
-        // this allows the other parts of your system, portfolio, to react ot this change without hte liability
-        // knowing about them
-        return new PaymentAllocationResult(principalPaid, interestPaid, this.currentBalance);
-
     }
 
     public Money accrueInterest(Instant accrualDate) {
@@ -136,6 +100,7 @@ public class Liability {
         Money principalForCalculation = this.currentBalance.subtract(this.accruedUnpaidInterest);
         
         // If current balance is negative OR principal portion is negative/zero, no interest should accrue
+        // the first part of the if statement might not even run do to how the payment process work
         if (this.currentBalance.amount().compareTo(BigDecimal.ZERO) < 0 || 
             principalForCalculation.amount().compareTo(BigDecimal.ZERO) <= 0) {
             return Money.ZERO(this.currentBalance.currency());

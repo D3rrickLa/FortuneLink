@@ -62,6 +62,13 @@ public class LiabilityTest {
         assertTrue(result.principalPaid().amount().compareTo(BigDecimal.ZERO) > 0);
     }
 
+    @Test 
+    void recordPayment_IfBranchWhenRemaingBalaneIsNegative() {
+        Money payment = new Money(BigDecimal.valueOf(0.01), currency);
+        PaymentAllocationResult result = liability.recordPayment(payment, incurrenceDate.plus(31, ChronoUnit.DAYS));
+
+    }
+
     @Test
     void recordPayment_shouldThrowIfCurrencyMismatch() {
         Money payment = new Money(BigDecimal.valueOf(100), Currency.getInstance("EUR"));
@@ -117,6 +124,19 @@ public class LiabilityTest {
     void calculateAccruedInterest_shouldHandleNegativePrincipal() {
         liability.recordPayment(new Money(BigDecimal.valueOf(12000), currency), incurrenceDate.plus(1, ChronoUnit.DAYS));
         Money interest = liability.calculateAccruedInterest(incurrenceDate.plus(10, ChronoUnit.DAYS));
+        assertEquals(Money.ZERO(currency).amount(), interest.amount());
+    }
+
+    @Test 
+    void calculateAccruedInterest_TestingCUrrentBalanceCompareToZeroWorksCorrectly() {
+        liability.recordPayment(new Money(BigDecimal.valueOf(10000000), currency), incurrenceDate.plus(1, ChronoUnit.DAYS));
+        Money interest = liability.calculateAccruedInterest(incurrenceDate.plus(10, ChronoUnit.DAYS));
+        assertEquals(Money.ZERO(currency).amount(), interest.amount());
+    }
+
+    @Test 
+    void calculateAccruedInterest_EarlierAsOfDate() {
+        Money interest = liability.calculateAccruedInterest(Instant.MIN);
         assertEquals(Money.ZERO(currency).amount(), interest.amount());
     }
 

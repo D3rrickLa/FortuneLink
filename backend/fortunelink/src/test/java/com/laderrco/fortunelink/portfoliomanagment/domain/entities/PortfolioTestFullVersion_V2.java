@@ -847,7 +847,7 @@ public class PortfolioTestFullVersion_V2 {
             
             assertThrows(AssetNotFoundException.class, () ->
                 // portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
-                portfolio.sellAsset(nonExistenAssetIdentifier, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                portfolio.sellAsset(nonExistenAssetIdentifier, sellQuantity, sellPrice, null, testDate, TransactionSource.MANUAL, "Test sell")
             );
         }
         

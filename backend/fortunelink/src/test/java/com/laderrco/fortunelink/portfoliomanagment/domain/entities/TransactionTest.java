@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Currency;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -77,6 +78,7 @@ public class TransactionTest {
                 () -> assertEquals(TransactionStatus.PENDING, transaction.getStatus()),
                 () -> assertEquals(transactionDetails, transaction.getTransactionDetails()),
                 () -> assertEquals(transactionNetImpact, transaction.getTransactionNetImpact()),
+                () -> assertEquals(Optional.empty(), transaction.getRealizedGainLoss()),
                 () -> assertEquals(transactionDate, transaction.getTransactionDate()),
                 () -> assertEquals(createdAt, transaction.getCreatedAt()),
                 () -> assertEquals(createdAt, transaction.getUpdatedAt()),
@@ -507,5 +509,17 @@ public class TransactionTest {
             () -> assertTrue(toString.contains("netImpact=" + transactionNetImpact)),
             () -> assertTrue(toString.contains("version=1"))
         );
+    }
+
+    @Test 
+    void isMarkedAsCompletedCorrect() {
+        Transaction transaction = new Transaction(
+            transactionId, correlationId, parentTransactionId, portfolioId,
+            TransactionType.DEPOSIT, TransactionStatus.PENDING,
+            transactionDetails, transactionNetImpact, transactionDate, createdAt
+        );
+
+        transaction.markCompleted();
+        assertTrue(transaction.getStatus() == TransactionStatus.COMPLETED);
     }
 }
