@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -24,13 +25,14 @@ public class Transaction {
     private final TransactionDetails transactionDetails;
 
     private final Money transactionNetImpact; // in portfolio's currency
+    private final Money realizedGainLoss;
     private final Instant transactionDate;
 
     private boolean hidden;
     private int version;
 
     private final Instant createdAt;
-    private Instant updatedAt;
+    private Instant updatedAt; // operational metadata changes only
 
     // Valid reversal transaction types
     private static final Set<TransactionType> REVERSAL_TYPES = Set.of(
@@ -53,6 +55,7 @@ public class Transaction {
         TransactionStatus status,
         TransactionDetails transactionDetails, 
         Money transactionNetImpact, 
+        Money realizedGainLoss,
         Instant transactionDate,
         Instant createdAt
     ) {
@@ -66,12 +69,41 @@ public class Transaction {
         this.transactionDetails = Objects.requireNonNull(transactionDetails, "Transaction details cannot be null");
         this.transactionNetImpact = Objects.requireNonNull(transactionNetImpact, "Transaction net impact cannot be null");
         this.transactionDate = Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
+        this.realizedGainLoss = realizedGainLoss;
         this.createdAt = Objects.requireNonNull(createdAt, "Created at cannot be null");
         
         this.updatedAt = createdAt;
         this.hidden = false;
         this.version = 1;
     }
+
+    public Transaction(
+            TransactionId transactionId, 
+            CorrelationId correlationId, 
+            TransactionId parentTransactionId,
+            PortfolioId portfolioId, 
+            TransactionType type, 
+            TransactionStatus status,
+            TransactionDetails transactionDetails, 
+            Money transactionNetImpact, 
+            Instant transactionDate,
+            Instant createdAt
+        ) {
+            this(
+                transactionId,
+                correlationId,
+                parentTransactionId,
+                portfolioId,
+                type,
+                status,
+                transactionDetails,
+                transactionNetImpact,
+                null,
+                transactionDate,
+                createdAt
+            );
+        }
+
 
     private void updateVersion() {
         this.version += 1;
@@ -123,6 +155,12 @@ public class Transaction {
                this.status != TransactionStatus.CANCELLED;
     }
 
+    public void markCompleted() { 
+        this.status = TransactionStatus.COMPLETED;
+        this.updatedAt = Instant.now();
+    }
+
+
     // Getters
     public TransactionId getTransactionId() { return transactionId; }
     public CorrelationId getCorrelationId() { return correlationId; }
@@ -132,6 +170,7 @@ public class Transaction {
     public TransactionStatus getStatus() { return status; }
     public TransactionDetails getTransactionDetails() { return transactionDetails; }
     public Money getTransactionNetImpact() { return transactionNetImpact; }
+    public Optional<Money> getRealizedGainLoss() { return Optional.ofNullable(realizedGainLoss); }
     public Instant getTransactionDate() { return transactionDate; }
     public boolean isHidden() { return hidden; }
     public int getVersion() { return version; }

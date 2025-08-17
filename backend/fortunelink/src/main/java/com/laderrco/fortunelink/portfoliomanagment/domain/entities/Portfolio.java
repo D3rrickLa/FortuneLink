@@ -37,6 +37,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.Corre
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.LiabilityId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.CashflowTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.transactiondetailsobjects.LiabilityIncurrenceTransactionDetails;
@@ -115,7 +116,7 @@ public class Portfolio {
      * handle liabilities
      */
     
-    private final User user;
+    private final UserId userId;
     private final PortfolioId portfolioId;
     private String portfolioName;
     private String portfolioDescription;
@@ -131,9 +132,9 @@ public class Portfolio {
     // every public method that changes the portfolio's state should create a Transaction and domain evnet
     // need to valide fields (i.e. you should check if we have enough funds, etc.)
     
-    public Portfolio(User user, String portfolioName, String portfolioDescription, Money initialBalance, CurrencyConversionService conversionService) {
+    public Portfolio(UserId userId, String portfolioName, String portfolioDescription, Money initialBalance, CurrencyConversionService conversionService) {
         this(
-            user, 
+            userId, 
             new PortfolioId(UUID.randomUUID()), 
             portfolioName, 
             portfolioDescription, 
@@ -146,11 +147,11 @@ public class Portfolio {
         );
 
         // Add PortfolioCreatedEvent
-        this.domainEvents.add(new PortfolioCreatedEvent(this.portfolioId, user.getId(), initialBalance, Instant.now()));
+        this.domainEvents.add(new PortfolioCreatedEvent(this.portfolioId, userId, initialBalance, Instant.now()));
     }
 
     private Portfolio(
-        User user, 
+        UserId userId, 
         PortfolioId portfolioId, 
         String portfolioName, 
         String portfolioDescription,
@@ -161,7 +162,7 @@ public class Portfolio {
         List<Object> domainEvents,
         CurrencyConversionService conversionService
     ) {
-        this.user = Objects.requireNonNull(user, "User cannot be null");
+        this.userId = Objects.requireNonNull(userId, "User id cannot be null");
         this.portfolioId = Objects.requireNonNull(portfolioId, "Portfolio ID cannot be null");
         this.portfolioName = validatePortfolioName(portfolioName);
         this.portfolioDescription = portfolioDescription; // Can be null
@@ -306,7 +307,7 @@ public class Portfolio {
             details, 
             netCashImpact, // Fixed: was pricePerUnit
             transactionDate, 
-            transactionDate // Fixed: was Instant.now()
+            Instant.now()
         );
 
         this.transactions.add(transaction);
@@ -323,6 +324,7 @@ public class Portfolio {
     }
 
     // so apprently, using the assetHoldingId is bad -> a) it's more friendly for the identifier to be put in and b) we want to hide this info
+    @Deprecated()
     public void sellAsset(
         AssetHoldingId assetHoldingId,
         BigDecimal quantityToSell,
@@ -391,7 +393,7 @@ public class Portfolio {
             details,
             netCashImpactPortfolioCurrency, // Fixed: was netCashImpact in native currency
             transactionDate,
-            transactionDate // Fixed: was Instant.now()
+            Instant.now() 
         );
 
         this.transactions.add(transaction);
@@ -402,14 +404,102 @@ public class Portfolio {
             assetHolding.getAssetIdentifier(),
             quantityToSell,
             grossProceeds,
+            null,
             transactionDate // Fixed: was Instant.now()
         );
 
         this.domainEvents.add(event);
     }
 
+    public void sellAsset(
+        AssetIdentifier assetIdentifier,
+        BigDecimal quantityToSell,
+        Money pricePerUnit, 
+        List<Fee> nativeFees,
+        Instant transactionDate,
+        TransactionSource source,
+        String description
+    ) {
+        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null");
+        Objects.requireNonNull(quantityToSell, "Quantity to sell cannot be null");
+        Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
+        Objects.requireNonNull(source, "Transaction source cannot be null");
+        
+        nativeFees = nativeFees == null ? Collections.emptyList() : nativeFees;
+        description = description.trim();
+        
+        AssetHolding assetHolding = this.holdings.values().stream()
+            .filter(h -> h.getAssetIdentifier().equals(assetIdentifier))
+            .findFirst()
+            .orElseThrow(() -> new AssetNotFoundException("Cannot sell asset hot held in portfolio."));
+        
+        
+        if (quantityToSell.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidQuantityException("Quantity to sell must be positive");
+        }
 
+        if (assetHolding.getQuantity().compareTo(quantityToSell) < 0) {
+            throw new InvalidQuantityException("Cannot sell more units than you have. Available: " + 
+                assetHolding.getQuantity() + ", Requested: " + quantityToSell);
+        }
 
+        Money totalFees = calculateTotalFees(nativeFees, pricePerUnit.currency(), transactionDate);
+        Money grossProceeds = pricePerUnit.multiply(quantityToSell);
+        Money netProceedsNativeCurrency = grossProceeds.subtract(totalFees);
+
+        Money costBasis = assetHolding.getAverageACBPerUnit().multiply(quantityToSell);
+        Money costBasisInPortfolioCurrency = conversionService.convert(costBasis, this.portfolioCashBalance.currency());
+        Money realizedGainLoss = netProceedsNativeCurrency.subtract(costBasisInPortfolioCurrency);
+
+        assetHolding.removeFromPosition(quantityToSell);
+
+        if (assetHolding.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
+            this.holdings.remove(assetHolding.getAssetHoldingId());
+        }
+
+        Money netCashImpactPortfolioCurrency = conversionService.convert(netProceedsNativeCurrency, this.portfolioCashBalance.currency(), transactionDate);
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpactPortfolioCurrency);
+        
+        TradeExecutionTransactionDetails details = new TradeExecutionTransactionDetails(
+            assetIdentifier,
+            quantityToSell.negate(), 
+            pricePerUnit,
+            source,
+            description,
+            nativeFees,
+            this.portfolioCashBalance.currency(),
+            assetHolding.getAssetHoldingId(),
+            this.conversionService
+        );
+
+        Transaction transaction = new Transaction(
+            new TransactionId(UUID.randomUUID()),
+            new CorrelationId(UUID.randomUUID()),
+            null,
+            this.portfolioId,
+            TransactionType.SELL,
+            TransactionStatus.COMPLETED,
+            details,
+            netCashImpactPortfolioCurrency,
+            realizedGainLoss,
+            transactionDate,
+            Instant.now() 
+        );
+        this.transactions.add(transaction);
+
+        AssetSoldEvent event = new AssetSoldEvent(
+            this.portfolioId,
+            assetHolding.getAssetHoldingId(),
+            assetIdentifier,
+            quantityToSell,
+            grossProceeds,
+            realizedGainLoss,
+            transactionDate
+        );
+        this.domainEvents.add(event);
+    }
+    
     public LiabilityId  incurrNewLiability(
         LiabilityDetails liabilityDetails,
         Money liabilityAmount,
@@ -547,7 +637,7 @@ public class Portfolio {
             details,
             totalCashOutflow.negate(), // Fixed: proper cash impact
             transactionDate,
-            transactionDate // Fixed: was Instant.now()
+            Instant.now() 
         );
         
         this.transactions.add(transaction);
@@ -822,8 +912,8 @@ public class Portfolio {
     }
 
     // --- GETTERS ---
-    public User getUser() {
-        return user;
+    public UserId getUserId() {
+        return userId;
     }
 
 

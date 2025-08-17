@@ -15,6 +15,7 @@ public record AssetSoldEvent(
     AssetIdentifier assetIdentifier,
     BigDecimal quantityToSell,
     Money grossProceeds,
+    Money realizedGainLoss,
     Instant timestamp
 ) {
     public AssetSoldEvent {
@@ -23,6 +24,7 @@ public record AssetSoldEvent(
         Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
         Objects.requireNonNull(quantityToSell, "Quantity to sell cannot be null.");
         Objects.requireNonNull(grossProceeds, "Gross proceeds of sold asset cannot be null.");
+        Objects.requireNonNull(realizedGainLoss, "Realized gain/loss of sold asset cannot be null.");
         Objects.requireNonNull(timestamp, "timestamp of event cannot be null.");
     }
 }

@@ -31,7 +31,7 @@ public class PortfolioTest {
     // tests for liability
     private Portfolio createTestPortfolio() {
         return new Portfolio(
-                User.createNew(new UserId(UUID.randomUUID()), "NAME", USD),
+                new UserId(UUID.randomUUID()),
                 "Test Portfolio",
                 "Testing liabilities",
                 new Money(new BigDecimal("10000"), USD),

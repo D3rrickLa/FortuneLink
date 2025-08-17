@@ -95,7 +95,6 @@ public class PortfolioTestFullVersion_V2 {
             this.name = name;
             this.email = email;
             this.currency = currency;
-            System.out.println(super.getId());
         }
 
         public String getName() {
@@ -181,9 +180,8 @@ public class PortfolioTestFullVersion_V2 {
             "Test Loan", 
             new Percentage(BigDecimal.valueOf(5.0))
         ).convert();
-        System.out.println(testUser.getId());
 
-        portfolio = new Portfolio(testUser, "Test Portfolio", "Test Description", initialBalance, conversionService);
+        portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
     }
 
     @Nested
@@ -225,6 +223,7 @@ public class PortfolioTestFullVersion_V2 {
     class TransactionReversalTests {
 
         private TransactionId originalTransactionId;
+        private AssetIdentifier assetIdentifier;
 
         @BeforeEach
         void setUp() {
@@ -232,6 +231,7 @@ public class PortfolioTestFullVersion_V2 {
             Money amount = Money.of(BigDecimal.valueOf(1000), usdCurrency);
             portfolio.recordCashflow(amount, CashflowType.DEPOSIT, TransactionSource.MANUAL, "Original deposit", Collections.emptyList(), testDate);
             originalTransactionId = portfolio.getTransactions().get(0).getTransactionId();
+            assetIdentifier = testAssetId;
         }
 
         @Test
@@ -255,7 +255,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should successfully reverse buy transaction")
         void shouldSuccessfullyReverseBuyTransaction() {
             // Clear previous transaction and create a buy transaction
-            portfolio = new Portfolio(testUser, "Test Portfolio", "Test Description", initialBalance, conversionService);
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
             
             BigDecimal quantity = BigDecimal.valueOf(100);
             Money price = Money.of(BigDecimal.valueOf(50), usdCurrency);
@@ -278,7 +278,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should successfully reverse sell transaction")
         void shouldSuccessfullyReverseSellTransaction() {
             // Setup: Buy then sell
-            portfolio = new Portfolio(testUser, "Test Portfolio", "Test Description", initialBalance, conversionService);
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
             
             BigDecimal buyQuantity = BigDecimal.valueOf(100);
             Money buyPrice = Money.of(BigDecimal.valueOf(50), usdCurrency);
@@ -287,7 +287,7 @@ public class PortfolioTestFullVersion_V2 {
             AssetHoldingId holdingId = portfolio.getHoldings().keySet().iterator().next();
             BigDecimal sellQuantity = BigDecimal.valueOf(50);
             Money sellPrice = Money.of(BigDecimal.valueOf(60), usdCurrency);
-            portfolio.sellAsset(holdingId, sellQuantity, sellPrice, Collections.emptyList(), testDate, TransactionSource.MANUAL, "Sell to reverse");
+            portfolio.sellAsset(assetIdentifier, sellQuantity, sellPrice, Collections.emptyList(), testDate, TransactionSource.MANUAL, "Sell to reverse");
             
             TransactionId sellTransactionId = portfolio.getTransactions().get(1).getTransactionId();
             Money balanceAfterSell = portfolio.getPortfolioCashBalance();
@@ -307,7 +307,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should successfully reverse liability incurrence")
         void shouldSuccessfullyReverseLiabilityIncurrence() {
             // Clear and create liability incurrence
-            portfolio = new Portfolio(testUser, "Test Portfolio", "Test Description", initialBalance, conversionService);
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
             
             Money liabilityAmount = Money.of(BigDecimal.valueOf(5000), usdCurrency);
             portfolio.incurrNewLiability(testLiabilityDetails, liabilityAmount, TransactionSource.MANUAL, Collections.emptyList(), testDate);
@@ -422,7 +422,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should return correct portfolio properties")
         void shouldReturnCorrectPortfolioProperties() {
             assertAll(
-                () -> assertEquals(testUser, portfolio.getUser()),
+                () -> assertEquals(testUser.getId(), portfolio.getUserId()),
                 () -> assertNotNull(portfolio.getPortfolioId()),
                 () -> assertEquals("Test Portfolio", portfolio.getPortfolioName()),
                 () -> assertEquals("Test Description", portfolio.getPortfolioDescription()),
@@ -596,8 +596,9 @@ public class PortfolioTestFullVersion_V2 {
             portfolio.recordLiabilityPayment(liabilityId, payment, TransactionSource.MANUAL, Collections.emptyList(), testDate);
             
             // 6. Sell some assets // domain event #7
-            AssetHoldingId holdingId = portfolio.getHoldings().keySet().iterator().next();
-            portfolio.sellAsset(holdingId, BigDecimal.valueOf(50), Money.of(BigDecimal.valueOf(60), usdCurrency), Collections.emptyList(), testDate, TransactionSource.MANUAL, "Partial sale");
+            // AssetHoldingId holdingId = portfolio.getHoldings().keySet().iterator().next();
+            // portfolio.sellAsset(holdingId, BigDecimal.valueOf(50), Money.of(BigDecimal.valueOf(60), usdCurrency), Collections.emptyList(), testDate, TransactionSource.MANUAL, "Partial sale");
+            portfolio.sellAsset(testAssetId, BigDecimal.valueOf(50), Money.of(BigDecimal.valueOf(60), usdCurrency), Collections.emptyList(), testDate, TransactionSource.MANUAL, "Partial sale");
             
             // Verify final state
             assertAll(
@@ -634,10 +635,10 @@ public class PortfolioTestFullVersion_V2 {
     }
         // Should create portfolio with valid parameters"
     void shouldCreatePortfolioWithValidParameters() {
-        Portfolio newPortfolio = new Portfolio(testUser, "New Portfolio", "Description", initialBalance, conversionService);
+        Portfolio newPortfolio = new Portfolio(testUser.getId(), "New Portfolio", "Description", initialBalance, conversionService);
         
         assertAll(
-            () -> assertEquals(testUser, newPortfolio.getUser()),
+            () -> assertEquals(testUser, newPortfolio.getUserId()),
             () -> assertEquals("New Portfolio", newPortfolio.getPortfolioName()),
             () -> assertEquals("Description", newPortfolio.getPortfolioDescription()),
             () -> assertEquals(initialBalance, newPortfolio.getPortfolioCashBalance()),
@@ -652,8 +653,8 @@ public class PortfolioTestFullVersion_V2 {
     @Test
     @DisplayName("Should create portfolio with unique ID")
     void shouldCreatePortfolioWithUniqueId() {
-        Portfolio portfolio1 = new Portfolio(testUser, "Portfolio 1", "Desc", initialBalance, conversionService);
-        Portfolio portfolio2 = new Portfolio(testUser, "Portfolio 2", "Desc", initialBalance, conversionService);
+        Portfolio portfolio1 = new Portfolio(testUser.getId(), "Portfolio 1", "Desc", initialBalance, conversionService);
+        Portfolio portfolio2 = new Portfolio(testUser.getId(), "Portfolio 2", "Desc", initialBalance, conversionService);
         
         assertNotEquals(portfolio1.getPortfolioId(), portfolio2.getPortfolioId());
     }
@@ -829,7 +830,8 @@ public class PortfolioTestFullVersion_V2 {
         void shouldSuccessfullySellAsset() {
             Money initialCash = portfolio.getPortfolioCashBalance();
             
-            portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            // portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            portfolio.sellAsset(testAssetId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
             
             Money expectedCashIncrease = Money.of(BigDecimal.valueOf(2995), usdCurrency); // (60*50) - 5 fees
             Money expectedNewBalance = initialCash.add(expectedCashIncrease);
@@ -840,10 +842,12 @@ public class PortfolioTestFullVersion_V2 {
         @Test
         @DisplayName("Should throw exception when asset holding not found")
         void shouldThrowExceptionWhenAssetHoldingNotFound2() {
-            AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
+            // AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
+            AssetIdentifier nonExistenAssetIdentifier = new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-KRAKEN", "Bitcoin", "KRAKEN");
             
             assertThrows(AssetNotFoundException.class, () ->
-                portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                // portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                portfolio.sellAsset(nonExistenAssetIdentifier, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
         }
         
@@ -852,20 +856,24 @@ public class PortfolioTestFullVersion_V2 {
         void shouldThrowExceptionWhenQuantityToSellIsNotPositive() {
             // Use a valid holding id for quantity validation
             assertThrows(InvalidQuantityException.class, () ->
-                portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(0), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                // portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(0), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                portfolio.sellAsset(testAssetId, BigDecimal.valueOf(0), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
             assertThrows(InvalidQuantityException.class, () ->
-                portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(-1), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                // portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(-1), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                portfolio.sellAsset(testAssetId, BigDecimal.valueOf(-1), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
         }
 
         @Test
         @DisplayName("Should throw exception when asset holding not found")
         void shouldThrowExceptionWhenAssetHoldingNotFound() {
-            AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
+            // AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
+            AssetIdentifier nonExistenAssetIdentifier = new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-KRAKEN", "Bitcoin", "KRAKEN");
 
             assertThrows(AssetNotFoundException.class, () ->
-                portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                // portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                portfolio.sellAsset(nonExistenAssetIdentifier, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
         }
 
@@ -875,14 +883,16 @@ public class PortfolioTestFullVersion_V2 {
             BigDecimal excessiveQuantity = BigDecimal.valueOf(200);
             
             assertThrows(InvalidQuantityException.class, () ->
-                portfolio.sellAsset(assetHoldingId, excessiveQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                // portfolio.sellAsset(assetHoldingId, excessiveQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
+                portfolio.sellAsset(testAssetId, excessiveQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
             );
         }
 
         @Test
         @DisplayName("Should create correct transaction record for sell")
         void shouldCreateCorrectTransactionRecordForSell() {
-            portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            // portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            portfolio.sellAsset(testAssetId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
             
             // Should have 2 transactions now (buy + sell)
             assertEquals(2, portfolio.getTransactions().size());
@@ -894,7 +904,8 @@ public class PortfolioTestFullVersion_V2 {
         @Test
         @DisplayName("Should publish asset sold event")
         void shouldPublishAssetSoldEvent() {
-            portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            // portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            portfolio.sellAsset(testAssetId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
             
             // Should have 2 events now (buy + sell)
             assertEquals(3, portfolio.getDomainEvents().size());
@@ -907,7 +918,8 @@ public class PortfolioTestFullVersion_V2 {
             AssetHolding holding = portfolio.getHoldings().get(assetHoldingId);
             BigDecimal initialQuantity = holding.getQuantity();
             
-            portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            // portfolio.sellAsset(assetHoldingId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            portfolio.sellAsset(testAssetId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
             
             BigDecimal expectedRemainingQuantity = initialQuantity.subtract(sellQuantity);
             assertEquals(expectedRemainingQuantity, holding.getQuantity());
@@ -917,7 +929,8 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should remove the holding when we sell all")
         void shouldRemoveHoldingWhenQuantityIs0() {
 
-            portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(100), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            // portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(100), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
+            portfolio.sellAsset(testAssetId, BigDecimal.valueOf(100), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
             assertTrue(portfolio.getHoldings().isEmpty());
             assertTrue(portfolio.getHoldings().containsKey(assetHoldingId) == false);
         }

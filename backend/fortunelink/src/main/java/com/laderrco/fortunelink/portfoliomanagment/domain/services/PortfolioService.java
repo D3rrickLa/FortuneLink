@@ -30,7 +30,7 @@ public interface PortfolioService {
      * etc.
      */
 
-    public PortfolioId createPortfolio(UserId userId, String name, String description);
+    public PortfolioId createPortfolio(UserId userId, String name, String description, Money initialBalance);
     public void recordBuy(PortfolioId portfolioId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price, List<Fee> fees, Instant transactionDate, TransactionSource source);
     public void recordSell(PortfolioId portfolioId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price, List<Fee> fees, Instant transactionDate, TransactionSource source);
     public void recordCashflow(PortfolioId portfolioId, Money amount, CashflowType cashflowType, TransactionSource source, String description, List<Fee> fees, Instant transactionDate);

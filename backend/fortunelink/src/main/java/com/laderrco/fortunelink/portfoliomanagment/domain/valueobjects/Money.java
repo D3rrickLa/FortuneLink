@@ -106,7 +106,6 @@ public record Money(
         }
 
         BigDecimal convertedAmount = exchangeRate.exchangeRate().multiply(this.amount(), FINANCIAL_MATH_CONTEXT);
-        System.out.println(convertedAmount);
         return new Money(convertedAmount, targetCurrency);
     }
 
