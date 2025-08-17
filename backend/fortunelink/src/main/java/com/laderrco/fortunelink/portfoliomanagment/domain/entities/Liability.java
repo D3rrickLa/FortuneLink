@@ -24,7 +24,7 @@ public class Liability {
 
     // Monetary values stored in the liability's native currency
     private final Money originalAmount;
-    private Money currentBalance; // this field is wrong, this is a representation of principal + accured 
+    private Money principalBalance; // this field is wrong, this is a representation of principal + accured 
     private Money accruedUnpaidInterest;
 
     // Lifecycle and Audit Fields
@@ -51,13 +51,13 @@ public class Liability {
         this.portfolioId = portfolioId;
         this.details = details;
         this.originalAmount = originalAmount;
-        this.currentBalance = originalAmount;
+        this.principalBalance = originalAmount;
         this.accruedUnpaidInterest = Money.ZERO(originalAmount.currency());
         this.incurrenceDate = incurrenceDate;
         this.lastInterestAccrualDate = incurrenceDate;
     }
 
-     private void validateParameter(Object other, String parameterName) {
+    private void validateParameter(Object other, String parameterName) {
         Objects.requireNonNull(other, String.format("%s cannot be null.", parameterName));
     }
 
@@ -69,20 +69,45 @@ public class Liability {
             throw new IllegalArgumentException("Payment amount must be a positive value.");
         }
         
-        if (!this.currentBalance.currency().equals(paymentAmount.currency())) {
+        if (!this.principalBalance.currency().equals(paymentAmount.currency())) {
             throw new IllegalArgumentException("Payment amount must be in the same currency as the liability's currency preference.");             
         }
 
         Money interestPaid = Money.ZERO(paymentAmount.currency());
+        Money principalPaid = Money.ZERO(paymentAmount.currency());
+        Money remainingPayment = paymentAmount;
+
+        // apply payment to unpaid interest first
+        if (this.accruedUnpaidInterest.isPositive()) {
+            Money paymentAppliedToInterest = remainingPayment.min(this.accruedUnpaidInterest);
+            interestPaid = paymentAppliedToInterest;
+            this.accruedUnpaidInterest = this.accruedUnpaidInterest.subtract(paymentAppliedToInterest);
+        }
+
+        // apply payment to principal 
+        if (remainingPayment.isPositive()) {
+            Money paymentAppliedToPrincipal = remainingPayment.min(this.principalBalance);
+            principalPaid = paymentAppliedToPrincipal;
+
+            this.principalBalance = this.principalBalance.subtract(paymentAppliedToPrincipal);
+        }
+
+        Money overpayment = Money.ZERO(paymentAmount.currency());
+        Money totalOwed = this.principalBalance.add(this.accruedUnpaidInterest);
+
+        if (paymentAmount.compareTo(totalOwed.add(interestPaid).add(principalPaid)) > 0) {
+            overpayment = paymentAmount.subtract(interestPaid).subtract(principalPaid);
+        }
+
+        return new PaymentAllocationResult(principalPaid, interestPaid, getCurrentBalance(), overpayment);
     }
 
     public Money accrueInterest(Instant accrualDate) {
-        validateParameter(accrualDate, "Accural date");
+        validateParameter(accrualDate, "Accrual date");
 
         Money newlyAccruedAmount = this.calculateAccruedInterest(accrualDate);
         if (newlyAccruedAmount.amount().compareTo(BigDecimal.ZERO) > 0) {
-            this.currentBalance = this.currentBalance.add(newlyAccruedAmount);
-
+            // Only update unpaid interest - currentBalance is calculated
             this.accruedUnpaidInterest = this.accruedUnpaidInterest.add(newlyAccruedAmount);
             this.lastInterestAccrualDate = accrualDate;
         }
@@ -92,28 +117,25 @@ public class Liability {
     
     public Money calculateAccruedInterest(Instant asOfDate) {
         validateParameter(asOfDate, "As of date");
+        
         if (asOfDate.isBefore(this.lastInterestAccrualDate) || asOfDate.equals(this.lastInterestAccrualDate)) {
-            return Money.ZERO(this.currentBalance.currency());
+            return Money.ZERO(this.principalBalance.currency());            
         }
-        
-        long daysBetween = ChronoUnit.DAYS.between(this.lastInterestAccrualDate, asOfDate);
-        Money principalForCalculation = this.currentBalance.subtract(this.accruedUnpaidInterest);
-        
-        // If current balance is negative OR principal portion is negative/zero, no interest should accrue
-        // the first part of the if statement might not even run do to how the payment process work
-        if (this.currentBalance.amount().compareTo(BigDecimal.ZERO) < 0 || 
-            principalForCalculation.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            return Money.ZERO(this.currentBalance.currency());
-        }
-        
-        BigDecimal dailyRate = this.details.annualInterestRate().value()
-            .divide(BigDecimal.valueOf(365), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP);
 
-        BigDecimal interestAmount = principalForCalculation.amount()
+        long daysBetween = ChronoUnit.DAYS.between(this.lastInterestAccrualDate, asOfDate);
+
+        if (this.principalBalance.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            return Money.ZERO(this.principalBalance.currency());
+        }
+
+        BigDecimal dailyRate = this.details.annualInterestRate().value()   
+            .divide(BigDecimal.valueOf(365), DecimalPrecision.PERCENTAGE.getDecimalPlaces(), RoundingMode.HALF_UP);
+        
+        BigDecimal interestAmount = this.principalBalance.amount()
             .multiply(dailyRate)
             .multiply(BigDecimal.valueOf(daysBetween));
-        
-        return new Money(interestAmount, this.currentBalance.currency());
+
+        return new Money(interestAmount, this.principalBalance.currency());
     }
 
     public void reversePayment(Money amount) {
@@ -122,12 +144,12 @@ public class Liability {
             throw new IllegalArgumentException("Reverse amount cannot be negative.");
         }
 
-        if (!this.currentBalance.currency().equals(amount.currency())) {
+        if (!this.principalBalance.currency().equals(amount.currency())) {
             throw new IllegalArgumentException("Reverse amount must be in the same currency as the liability balance.");
         }
 
-        this.currentBalance = this.currentBalance.add(amount);
-    
+        // Just add it back to principal - simple but potentially inaccurate
+        this.principalBalance = this.principalBalance.add(amount);
     }
     
     // should change this to be specific detail's variables
@@ -136,6 +158,10 @@ public class Liability {
         this.details = details;
     }
     
+    public Money getCurrentBalance() {
+        return principalBalance.add(accruedUnpaidInterest);
+    }
+
     public LiabilityId getLiabilityId() {
         return liabilityId;
     }
@@ -152,8 +178,8 @@ public class Liability {
         return originalAmount;
     }
 
-    public Money getCurrentBalance() {
-        return currentBalance;
+    public Money getPrincipalBalance() {
+        return principalBalance;
     }
 
     public Money getAccruedUnpaidInterest() {
