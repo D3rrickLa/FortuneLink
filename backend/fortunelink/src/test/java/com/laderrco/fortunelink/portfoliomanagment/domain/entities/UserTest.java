@@ -24,6 +24,11 @@ public class UserTest {
     private final PortfolioId portfolioId2 = new PortfolioId(UUID.randomUUID());
 
     @Test
+    void createBlankUser_ShouldThrowUnsupportedOperationException() {
+        assertThrows(UnsupportedOperationException.class, ()-> new User());
+    }
+
+    @Test
     void createNew_shouldInitializeUserWithEmptyPortfolioSet() {
         User user = User.createNew(userId, displayName, currency);
 

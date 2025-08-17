@@ -209,6 +209,7 @@ public class Portfolio {
     }
 
     private Optional<AssetHolding> findAssetHolding(AssetIdentifier assetIdentifier) {
+        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
         return this.holdings.values().stream()
             .filter(ah -> ah.getAssetIdentifier().equals(assetIdentifier))
             .findFirst();
@@ -254,6 +255,9 @@ public class Portfolio {
         Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null");
         Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
         Objects.requireNonNull(source, "Transaction source cannot be null");
+
+        nativeFees = nativeFees == null ? Collections.emptyList() : nativeFees;
+        description = description.trim();
         
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidQuantityException("Quantity must be positive");
@@ -334,6 +338,9 @@ public class Portfolio {
         Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
         Objects.requireNonNull(source, "Transaction source cannot be null");
         
+        nativeFees = nativeFees == null ? Collections.emptyList() : nativeFees;
+        description = description.trim();
+        
         if (quantityToSell.compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidQuantityException("Quantity to sell must be positive");
         }
@@ -412,6 +419,9 @@ public class Portfolio {
         Objects.requireNonNull(source, "Transaction source cannot be null.");
         Objects.requireNonNull(incurrenceDate, "Date of new liability cannot be null.");
 
+        fees = fees == null ? Collections.emptyList() : fees;
+
+
         if (!liabilityAmount.currency().equals(this.portfolioCashBalance.currency())) {
             throw new IllegalArgumentException(
                 String.format("Liability currency %s must match portfolio currency %s", 
@@ -486,6 +496,8 @@ public class Portfolio {
         Objects.requireNonNull(paymentAmount, "Payment amount cannot be null");
         Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
         Objects.requireNonNull(source, "Transaction source cannot be null");
+
+        fees = fees == null ? Collections.emptyList() : fees;
 
         if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be positive");

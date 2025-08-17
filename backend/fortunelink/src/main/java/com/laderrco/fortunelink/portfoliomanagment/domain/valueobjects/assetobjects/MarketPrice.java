@@ -61,6 +61,8 @@ public record MarketPrice(
     }   
     
     public static MarketPrice ZERO(AssetIdentifier assetIdentifier, Currency currency) {
+        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
+        Objects.requireNonNull(currency, "Currency cannot be null.");
         return new MarketPrice(assetIdentifier, Money.ZERO(currency), Instant.now(), Clock.systemDefaultZone(), "SYSTEM");
     }
 }

@@ -15,7 +15,7 @@ public class User {
     private Currency reportingCurrencyPreference;
     private Set<PortfolioId> portfolioIds;
     
-    private User(UserId id, String displayName, Currency reportingCurrencyPreference, Set<PortfolioId> portfolioIds) {
+    protected User(UserId id, String displayName, Currency reportingCurrencyPreference, Set<PortfolioId> portfolioIds) {
         this.id = Objects.requireNonNull(id);
         this.displayName = Objects.requireNonNull(displayName);
         this.reportingCurrencyPreference = Objects.requireNonNull(reportingCurrencyPreference);
@@ -28,8 +28,9 @@ public class User {
     }
 
     public User() {
-        
+        throw new UnsupportedOperationException("A no args User cannot be created");
     }
+
 
     // --- Behavioral methods ---
     public void addPortfolio(PortfolioId portfolioId) {
@@ -52,8 +53,6 @@ public class User {
         if (newDisplayName.isBlank()) throw new IllegalArgumentException("Display name cannot be blank");
         this.displayName = newDisplayName;
     }
-
-    
 
     public UserId getId() {
         return id;
@@ -84,5 +83,6 @@ public class User {
     public int hashCode() {
         return Objects.hash(id);
     }
+    
 }
 

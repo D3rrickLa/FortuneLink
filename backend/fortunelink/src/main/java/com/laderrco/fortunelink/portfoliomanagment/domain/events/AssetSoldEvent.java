@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.events;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.assetobjects.AssetIdentifier;
@@ -16,5 +17,12 @@ public record AssetSoldEvent(
     Money grossProceeds,
     Instant timestamp
 ) {
-
+    public AssetSoldEvent {
+        Objects.requireNonNull(portfolioId, "Portfolio id cannot be null.");
+        Objects.requireNonNull(assetHoldingId, "Asset holding id cannot be null.");
+        Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
+        Objects.requireNonNull(quantityToSell, "Quantity to sell cannot be null.");
+        Objects.requireNonNull(grossProceeds, "Gross proceeds of sold asset cannot be null.");
+        Objects.requireNonNull(timestamp, "timestamp of event cannot be null.");
+    }
 }

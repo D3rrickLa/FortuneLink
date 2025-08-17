@@ -38,6 +38,12 @@ public class Liability {
         Money originalAmount,
         Instant incurrenceDate
     ) {
+        validateParameter(liabilityId, "Liability id");
+        validateParameter(portfolioId, "Portfolio id");
+        validateParameter(details, "details");
+        validateParameter(originalAmount, "Original amount");
+        validateParameter(incurrenceDate, "Incurrence date");
+
         if (!originalAmount.isPositive()) {
             throw new IllegalArgumentException("Original amount must be positive.");
         }
@@ -56,11 +62,8 @@ public class Liability {
     }
 
     public PaymentAllocationResult recordPayment(Money paymentAmount, Instant paymentDate) {
-        /*
-         * 1. calc how much of the payment goes to the interest and principal
-         * 2. reduce the current bal and accured interest (do it to the interest first, then principal)
-         * 3. update audit fields
-         */
+        validateParameter(paymentAmount, "Payment amount");
+        validateParameter(paymentDate, "Payment date");
 
         if (paymentAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be a positive value.");
@@ -72,7 +75,6 @@ public class Liability {
 
         // this shouldn't be here
         // this.accrueInterest(paymentDate);
-
 
         Money interestPaid = Money.ZERO(paymentAmount.currency());
         Money principalPaid = Money.ZERO(paymentAmount.currency());

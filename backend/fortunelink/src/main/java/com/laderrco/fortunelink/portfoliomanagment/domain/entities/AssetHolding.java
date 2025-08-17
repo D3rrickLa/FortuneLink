@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
+import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -29,6 +30,13 @@ public class AssetHolding {
         Instant createdAt, 
         Instant updatedAt
     ) {
+        validateParameter(assetHoldingId, "Assetholding id");
+        validateParameter(portfolioId, "Portfolio id");
+        validateParameter(assetIdentifier, "Asset identifier");
+        validateParameter(quantity, "Quantity");
+        validateParameter(totalAdjustedCostBasisNativeCurrency, "Total adjust cost basis in native asset's currency");
+        validateParameter(createdAt, "Creation date");
+
         this.assetHoldingId = assetHoldingId;
         this.portfolioId = portfolioId;
         this.assetIdentifier = assetIdentifier;
@@ -58,8 +66,15 @@ public class AssetHolding {
 
     }
 
+    private void validateParameter(Object other, String parameterName) {
+        Objects.requireNonNull(other, String.format("%s cannot be null.", parameterName));
+    }
+
 
     public Money calculateCapitalGain(BigDecimal soldQuantity, Money salePrice) {
+        validateParameter(soldQuantity, "Sold quantity");
+        validateParameter(salePrice, "Sale price");
+
         if (soldQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Sold quantity must be positive");
         }
@@ -93,6 +108,8 @@ public class AssetHolding {
     }
 
     public void removeFromPosition(BigDecimal quantity) {
+        validateParameter(quantity, "Quantity");
+
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Quantity must be positive.");
         }
@@ -114,6 +131,7 @@ public class AssetHolding {
     }   
 
     public Money getCurrentValue(MarketPrice currentPrice) {
+        validateParameter(currentPrice, "Current market price");
         if (!currentPrice.price().currency().equals(this.totalAdjustedCostBasisNativeCurrency.currency())) {
             throw new IllegalArgumentException("Market price currency must match.");
         }
@@ -121,6 +139,9 @@ public class AssetHolding {
     }
 
     public Money getCostBasisInOtherCurrency(CurrencyConversionService conversionService, Currency currency, Instant asOfDate) {
+        validateParameter(conversionService, "Convserion service");
+        validateParameter("Currency", "Currency to convert to");
+        validateParameter(asOfDate, "As of date");
         return conversionService.convert(this.totalAdjustedCostBasisNativeCurrency, currency, asOfDate);
     }
 
@@ -159,10 +180,5 @@ public class AssetHolding {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
-
-
-
-
-    
-        
+            
 }

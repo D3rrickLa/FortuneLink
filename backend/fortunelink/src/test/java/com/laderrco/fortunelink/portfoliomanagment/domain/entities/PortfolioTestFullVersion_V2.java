@@ -14,6 +14,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Currency;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -90,11 +91,11 @@ public class PortfolioTestFullVersion_V2 {
         private String email;
         private Currency currency;
         public TestUser(String name, String email, Currency currency) {
-            super.createNew(new UserId(UUID.randomUUID()), name, currency);
+            super(new UserId(UUID.randomUUID()), name, currency, new HashSet<>());
             this.name = name;
             this.email = email;
             this.currency = currency;
-
+            System.out.println(super.getId());
         }
 
         public String getName() {
@@ -107,18 +108,6 @@ public class PortfolioTestFullVersion_V2 {
             return currency;
         }
 
-    }
-
-    @Test 
-    void TestUserGenrations() {
-        String name = "name";
-        String email = "email";
-        TestUser user = new TestUser(name, email, eurCurrency);
-        assertAll(
-            () -> assertEquals(name, user.getName()),
-            () -> assertEquals(email, user.getEmail()),
-            () -> assertEquals(eurCurrency, user.getCurrency())
-        );
     }
 
     // Test implementation of AssetIdentifier
@@ -192,6 +181,7 @@ public class PortfolioTestFullVersion_V2 {
             "Test Loan", 
             new Percentage(BigDecimal.valueOf(5.0))
         ).convert();
+        System.out.println(testUser.getId());
 
         portfolio = new Portfolio(testUser, "Test Portfolio", "Test Description", initialBalance, conversionService);
     }
@@ -199,6 +189,21 @@ public class PortfolioTestFullVersion_V2 {
     @Nested
     @DisplayName("Portfolio Creation Tests")
     class PortfolioCreationTests {
+
+        @Test 
+        @DisplayName("Should generate a new user")
+        void TestUserGenrations() {
+            String name = "name";
+            String email = "email";
+            TestUser user = new TestUser(name, email, eurCurrency);
+            assertAll(
+                () -> assertEquals(name, user.getName()),
+                () -> assertEquals(email, user.getEmail()),
+                () -> assertEquals(eurCurrency, user.getCurrency()),
+                () -> assertNotEquals(testUser, user)
+            );
+        }
+
 
         @Test
         @DisplayName("Should handle fees correctly with income")

@@ -32,7 +32,7 @@ public class Transaction {
     private final Instant createdAt;
     private Instant updatedAt;
 
-       // Valid reversal transaction types
+    // Valid reversal transaction types
     private static final Set<TransactionType> REVERSAL_TYPES = Set.of(
         TransactionType.REVERSAL,
         TransactionType.REVERSAL_BUY,

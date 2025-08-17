@@ -6,4 +6,8 @@ import com.laderrco.fortunelink.shared.NotImplemented;
 public final class DomainPortfolioService implements PortfolioService{
     // this is meant for business process that invovlefs more than one
     // aggregate
+
+    public DomainPortfolioService() {
+        throw new UnsupportedOperationException();
+    }
 }
