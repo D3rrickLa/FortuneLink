@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Currency;
+
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.AssetType;
@@ -19,7 +21,8 @@ public class AssetIdentifierTest {
             "AAPL",
             VALID_ISIN,
             "Apple Inc.",
-            "NASDAQ"
+            "NASDAQ",
+            Currency.getInstance("USD")
         );
 
         assertEquals(AssetType.STOCK, identifier.type());
@@ -31,7 +34,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfTypeIsNull() {
         Exception ex = assertThrows(NullPointerException.class, () ->
-            new AssetIdentifier(null, "AAPL", VALID_ISIN, "Apple", "NASDAQ")
+            new AssetIdentifier(null, "AAPL", VALID_ISIN, "Apple", "NASDAQ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Asset Type cannot be null."));
     }
@@ -39,7 +42,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfSymbolIsNull() {
         Exception ex = assertThrows(NullPointerException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, null, VALID_ISIN, "Apple", "NASDAQ")
+            new AssetIdentifier(AssetType.STOCK, null, VALID_ISIN, "Apple", "NASDAQ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Asset Symbol cannot be null."));
     }
@@ -47,7 +50,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfISINIsNull() {
         Exception ex = assertThrows(NullPointerException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, "AAPL", null, "Apple", "NASDAQ")
+            new AssetIdentifier(AssetType.STOCK, "AAPL", null, "Apple", "NASDAQ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("ISIN cannot be null."));
     }
@@ -55,7 +58,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfAssetNameIsNull() {
         Exception ex = assertThrows(NullPointerException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, null, "NASDAQ")
+            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, null, "NASDAQ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Assest Name cannot be null."));
     }
@@ -63,7 +66,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfAssetExchangeIsNull() {
         Exception ex = assertThrows(NullPointerException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", null)
+            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", null, Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Asset Exchange cannot be null."));
     }
@@ -71,7 +74,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfAssetNameIsBlank() {
         Exception ex = assertThrows(IllegalArgumentException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "   ", "NASDAQ")
+            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "   ", "NASDAQ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Asset name cannot be blank."));
     }
@@ -79,7 +82,7 @@ public class AssetIdentifierTest {
     @Test
     void constructor_shouldThrowIfExchangeIsBlank() {
         Exception ex = assertThrows(IllegalArgumentException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "   ")
+            new AssetIdentifier(AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "   ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Asset name cannot be blank."));
     }
@@ -88,7 +91,7 @@ public class AssetIdentifierTest {
     void constructor_shouldThrowIfISINFormatIsInvalid() {
         String badIsin = "123456789"; // Too short
         Exception ex = assertThrows(IllegalArgumentException.class, () ->
-            new AssetIdentifier(AssetType.STOCK, "AAPL", badIsin, "Apple", "NASDAQ")
+            new AssetIdentifier(AssetType.STOCK, "AAPL", badIsin, "Apple", "NASDAQ", Currency.getInstance("USD"))
         );
         assertTrue(ex.getMessage().contains("Invalid or missing ISIN for asset type: " + AssetType.STOCK));
     }
@@ -96,7 +99,7 @@ public class AssetIdentifierTest {
     @Test
     void isCrypto_shouldReturnTrueForCryptoType() {
         AssetIdentifier identifier = new AssetIdentifier(
-            AssetType.CRYPTO, "BTC", VALID_ISIN, "Bitcoin", "Coinbase"
+            AssetType.CRYPTO, "BTC", VALID_ISIN, "Bitcoin", "Coinbase", Currency.getInstance("USD")
         );
         assertTrue(identifier.isCrypto());
     }
@@ -104,7 +107,7 @@ public class AssetIdentifierTest {
     @Test
     void isCrypto_shouldReturnFalseForNonCryptoType() {
         AssetIdentifier identifier = new AssetIdentifier(
-            AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "NASDAQ"
+            AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "NASDAQ", Currency.getInstance("USD")
         );
         assertFalse(identifier.isCrypto());
     }
@@ -112,10 +115,10 @@ public class AssetIdentifierTest {
     @Test
     void isStockOrEtf_shouldReturnTrueForStockOrEtf() {
         AssetIdentifier stock = new AssetIdentifier(
-            AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "NASDAQ"
+            AssetType.STOCK, "AAPL", VALID_ISIN, "Apple", "NASDAQ", Currency.getInstance("USD")
         );
         AssetIdentifier etf = new AssetIdentifier(
-            AssetType.ETF, "VOO", VALID_ISIN, "Vanguard", "NYSE"
+            AssetType.ETF, "VOO", VALID_ISIN, "Vanguard", "NYSE", Currency.getInstance("USD")
         );
         assertTrue(stock.isStockOrEtf());
         assertTrue(etf.isStockOrEtf());
@@ -124,7 +127,7 @@ public class AssetIdentifierTest {
     @Test
     void isStockOrEtf_shouldReturnFalseForOtherAssetType() {
         AssetIdentifier crypto = new AssetIdentifier(
-            AssetType.CRYPTO, "ETH", VALID_ISIN, "Ethereum", "Binance"
+            AssetType.CRYPTO, "ETH", VALID_ISIN, "Ethereum", "Binance", Currency.getInstance("USD")
         );
         assertFalse(crypto.isStockOrEtf());
     }

@@ -19,6 +19,8 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
     private final Money assetValueInPortfolioCurrency; // at time of purchase
     private final Money totalFeesInPortfolioCurrency;
     private final AssetHoldingId assetHoldingId;
+    private final Money realizedGainLossAssetCurrency;
+    private final Money realizedGainLossPortfolioCurrency;
 
     // cost basis is calculated with the follow: assetValue + totalFees 
     // update ^^^ this is a property of the AssetHolding
@@ -49,7 +51,41 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         this.assetValueInPortfolioCurrency = convertedPrice.multiply(quantity);
         this.totalFeesInPortfolioCurrency = totalConvertedFees;
         this.assetHoldingId = assetHoldingId;
+        this.realizedGainLossAssetCurrency = null;
+        this.realizedGainLossPortfolioCurrency = null;
     }
+
+    public TradeExecutionTransactionDetails(
+        AssetIdentifier assetIdentifier,
+        BigDecimal quantity,
+        Money pricePerUnit,
+        TransactionSource source,
+        String description,
+        List<Fee> nativeFees,
+        Currency portfolioCurrency,
+        AssetHoldingId assetHoldingId,
+        CurrencyConversionService currencyConversionService,
+        Money realizedGainLossAssetCurrency,
+        Money realizedGainLossPortfolioCurrency
+    ) {
+        super(source, description, nativeFees);
+
+        Money convertedPrice = currencyConversionService.convert(pricePerUnit, portfolioCurrency);
+        Money totalConvertedFees = nativeFees.stream()
+            .map(fee -> currencyConversionService.convert(fee.amount(), portfolioCurrency))
+            .reduce(Money.ZERO(portfolioCurrency), Money::add);
+
+        this.assetIdentifier = assetIdentifier;
+        this.quantity = quantity;
+        this.pricePerUnit = pricePerUnit; // Store the original for audit
+        this.assetValueInNativeCurrency = pricePerUnit.multiply(quantity);
+        this.assetValueInPortfolioCurrency = convertedPrice.multiply(quantity);
+        this.totalFeesInPortfolioCurrency = totalConvertedFees;
+        this.assetHoldingId = assetHoldingId;
+        this.realizedGainLossAssetCurrency = realizedGainLossAssetCurrency;
+        this.realizedGainLossPortfolioCurrency = realizedGainLossPortfolioCurrency;
+    }
+
 
     public AssetIdentifier getAssetIdentifier() {
         return assetIdentifier;
@@ -79,5 +115,14 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         return assetHoldingId;
     }
 
+    public Money getRealizedGainLossAssetCurrency() {
+        return realizedGainLossAssetCurrency;
+    }
+
+    public Money getRealizedGainLossPortfolioCurrency() {
+        return realizedGainLossPortfolioCurrency;
+    }
+
+    
     
 }

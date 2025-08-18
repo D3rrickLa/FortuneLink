@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.assetobjects;
 
+import java.util.Currency;
 import java.util.Objects;
 import java.util.Set;
 
@@ -10,7 +11,8 @@ public record AssetIdentifier(
     String symbol,
     String isin, // Bitcoin doesn't have, making this a catch all term i guess...
     String assetName,
-    String assetExchangeName
+    String assetExchangeName,
+    Currency assetTradedIn
 ) {
     public AssetIdentifier {
         Objects.requireNonNull(type, "Asset Type cannot be null.");
@@ -18,6 +20,7 @@ public record AssetIdentifier(
         Objects.requireNonNull(isin, "ISIN cannot be null.");
         Objects.requireNonNull(assetName, "Assest Name cannot be null.");
         Objects.requireNonNull(assetExchangeName, "Asset Exchange cannot be null.");
+        Objects.requireNonNull(assetTradedIn, "Asset currency cannot be null.");
 
         assetName = assetName.trim();
         assetExchangeName = assetExchangeName.trim().toUpperCase();

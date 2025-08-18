@@ -153,4 +153,8 @@ public record Money(
         Objects.requireNonNull(currency, "Currency cannot be null.");
         return new Money(new BigDecimal(String.valueOf(value)), currency);
     }
+
+    public boolean isGreaterThan(Money totalApplied) {
+        return this.amount.compareTo(totalApplied.amount()) > 0;
+    }
 }

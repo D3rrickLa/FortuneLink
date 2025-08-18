@@ -8,6 +8,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.entities.Portfolio;
 import com.laderrco.fortunelink.portfoliomanagment.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.DomainEventPublisher;
+import com.laderrco.fortunelink.portfoliomanagment.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.PortfolioService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
@@ -23,20 +24,22 @@ public final class ApplicationPortfolioService implements PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
     private final CurrencyConversionService currencyConversionService;
+    private final MarketDataService marketDataService;
     private final DomainEventPublisher domainEventPublisher;
 
     
 
-    public ApplicationPortfolioService(PortfolioRepository portfolioRepository, CurrencyConversionService currencyConversionService, DomainEventPublisher domainEventPublisher) {
+    public ApplicationPortfolioService(PortfolioRepository portfolioRepository, CurrencyConversionService currencyConversionService,  MarketDataService marketDataService, DomainEventPublisher domainEventPublisher) {
         this.portfolioRepository = portfolioRepository;
         this.currencyConversionService = currencyConversionService;
+        this.marketDataService = marketDataService;
         this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
     public PortfolioId createPortfolio(UserId userId, String name, String description, Money initialBalance) {
         // 1. Business Logic: The logic to create a new portfolio is in the aggregate.
-        Portfolio newPortfolio = new Portfolio(userId, name, description, initialBalance, currencyConversionService);
+        Portfolio newPortfolio = new Portfolio(userId, name, description, initialBalance, currencyConversionService, marketDataService);
         
         // 2. Orchestration: Use the repository to persist the new aggregate.
         PortfolioId newId = portfolioRepository.save(newPortfolio);

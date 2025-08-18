@@ -25,6 +25,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.Liabi
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
 import com.laderrco.fortunelink.portfoliomanagment.infrastructure.services.SimpleCurrencyService;
+import com.laderrco.fortunelink.portfoliomanagment.infrastructure.services.SimpleMaketDataService;
 
 public class PortfolioTest {
     private Currency USD = Currency.getInstance("USD");
@@ -35,7 +36,9 @@ public class PortfolioTest {
                 "Test Portfolio",
                 "Testing liabilities",
                 new Money(new BigDecimal("10000"), USD),
-                new SimpleCurrencyService());
+                new SimpleCurrencyService(),
+                new SimpleMaketDataService()
+                );
     }
 
     @Test
@@ -93,6 +96,23 @@ public class PortfolioTest {
 
         assertEquals(2, portfolio.getTransactions().size());
         assertEquals(3, portfolio.getDomainEvents().size());
+    }
+
+    @Test 
+    void test_RecordLiabilityPaymentExceptionThrowWhenCurrenyNotMatch() {
+        Portfolio portfolio = createTestPortfolio();
+        Money liabilityAmount = new Money(new BigDecimal("1000"), USD);
+        List<Fee> fees = List.of(new Fee(FeeType.REGULATORY, new Money(new BigDecimal("50"), USD), "desc", Instant.now()));
+        Instant now = Instant.now();
+
+        LiabilityId liabilityId = portfolio.incurrNewLiability(
+            new LiabilityDetails("Loan", "Loan Desc", LiabilityType.OTHER, new Percentage(BigDecimal.valueOf(0.05)), Instant.now()),
+                liabilityAmount,
+                TransactionSource.SYSTEM,
+                fees,
+                now);
+
+        assertThrows(IllegalArgumentException.class, () -> portfolio.recordLiabilityPayment(liabilityId, Money.of(20, Currency.getInstance("CAD")), TransactionSource.SYSTEM, null, now));
     }
 
     @Test
@@ -180,4 +200,43 @@ public class PortfolioTest {
         assertEquals(0, portfolio.getDomainEvents().size());
     }
 
+    @Test 
+    void testValidateTransactionDate() {
+        Portfolio portfolio = createTestPortfolio();
+
+      LiabilityDetails details = new LiabilityDetails(
+            "Loan", 
+            "DESC",
+            LiabilityType.AUTO_LOAN,
+            new Percentage(BigDecimal.valueOf(0.05)), 
+            Instant.now()
+            
+        );
+        
+        
+        assertThrows(IllegalArgumentException.class, ()-> portfolio.incurrNewLiability(
+            details, 
+            new Money(new BigDecimal("1000"), USD), 
+            TransactionSource.MANUAL,
+            Collections.emptyList(),
+            Instant.now().plusSeconds(300)
+            ) );
+    }
+
+    @Test
+    void updateLiability_ThrowsExceptionWithUnknownLiability() {
+        Portfolio portfolio = createTestPortfolio();
+        LiabilityDetails details = new LiabilityDetails(
+            "Loan", 
+            "DESC",
+            LiabilityType.AUTO_LOAN,
+            new Percentage(BigDecimal.valueOf(0.05)), 
+            Instant.now()
+            
+        );
+        
+        assertThrows(IllegalArgumentException.class, () -> portfolio.updateLiability(new LiabilityId(UUID.randomUUID()), details));
+    }
+
+    
 }

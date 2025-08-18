@@ -36,6 +36,7 @@ public class AssetHolding {
         validateParameter(quantity, "Quantity");
         validateParameter(totalAdjustedCostBasisNativeCurrency, "Total adjust cost basis in native asset's currency");
         validateParameter(createdAt, "Creation date");
+        validateParameter(updatedAt, "Updated date");
 
         this.assetHoldingId = assetHoldingId;
         this.portfolioId = portfolioId;
@@ -90,6 +91,8 @@ public class AssetHolding {
         Money costBasisForSoldQuantity = getAverageACBPerUnit().multiply(soldQuantity);
         Money totalProceeds = salePrice.multiply(soldQuantity);
         
+        this.updatedAt = Instant.now();
+        
         return totalProceeds.subtract(costBasisForSoldQuantity);
     }
 
@@ -115,7 +118,7 @@ public class AssetHolding {
         }
 
         if (this.quantity.compareTo(quantity) < 0) {
-            throw new IllegalArgumentException("Cannot sell more units that you have.");
+            throw new IllegalArgumentException("Cannot sell more units than you have.");
         }
 
         Money averageCostPerUnitNative = this.totalAdjustedCostBasisNativeCurrency.divide(this.quantity);
@@ -139,8 +142,8 @@ public class AssetHolding {
     }
 
     public Money getCostBasisInOtherCurrency(CurrencyConversionService conversionService, Currency currency, Instant asOfDate) {
-        validateParameter(conversionService, "Convserion service");
-        validateParameter("Currency", "Currency to convert to");
+        validateParameter(conversionService, "Conversion service");
+        validateParameter(currency, "Currency to convert to");
         validateParameter(asOfDate, "As of date");
         return conversionService.convert(this.totalAdjustedCostBasisNativeCurrency, currency, asOfDate);
     }

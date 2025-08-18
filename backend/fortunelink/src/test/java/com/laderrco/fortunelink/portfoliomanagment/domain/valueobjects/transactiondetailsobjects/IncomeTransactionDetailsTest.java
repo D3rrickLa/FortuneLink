@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
+import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,7 +22,7 @@ public class IncomeTransactionDetailsTest {
     public void testValidConstructionAndGetters() {
         // Arrange
         AssetHoldingId holdingId = new AssetHoldingId(UUID.randomUUID());
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "US0378331005", "Apple", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "US0378331005", "Apple", "NASDAQ", Currency.getInstance("USD"));
         Money amount = new Money(25.00, "CAD");
         TransactionSource source = TransactionSource.SYSTEM;
         String description = "Dividend payout";
@@ -48,7 +49,7 @@ public class IncomeTransactionDetailsTest {
 
     @Test
     public void testNullAssetHoldingIdThrowsException() {
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "US0378331005", "Apple", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "US0378331005", "Apple", "NASDAQ", Currency.getInstance("USD"));
         Money amount = new Money(30.00, "CAD");
 
         Exception exception = assertThrows(NullPointerException.class, () -> {
@@ -87,7 +88,7 @@ public class IncomeTransactionDetailsTest {
     @Test
     public void testNullAmountThrowsException() {
         AssetHoldingId holdingId = new AssetHoldingId(UUID.randomUUID());
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "GOOG", "US02079K3059", "Google", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "GOOG", "US02079K3059", "Google", "NASDAQ", Currency.getInstance("USD"));
 
         Exception exception = assertThrows(NullPointerException.class, () -> {
             new IncomeTransactionDetails(
@@ -106,7 +107,7 @@ public class IncomeTransactionDetailsTest {
     @Test
     public void testEmptyFeesListIsAllowed() {
         AssetHoldingId holdingId = new AssetHoldingId(UUID.randomUUID());
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "TSLA", "US88160R1014 ", "Tesla", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "TSLA", "US88160R1014 ", "Tesla", "NASDAQ", Currency.getInstance("USD"));
         Money amount = new Money(40.00, "CAD");
 
         IncomeTransactionDetails details = new IncomeTransactionDetails(

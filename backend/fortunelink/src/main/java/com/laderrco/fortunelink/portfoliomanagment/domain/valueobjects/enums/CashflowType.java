@@ -14,5 +14,5 @@ public enum CashflowType {
     BROKERAGE_FEE,
     MANAGEMENT_FEE,
     
-    TRANSFER
+    TRANSFER, INTEREST_EXPENSE
 }

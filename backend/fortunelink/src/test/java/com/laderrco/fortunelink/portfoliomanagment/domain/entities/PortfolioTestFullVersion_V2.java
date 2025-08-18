@@ -6,7 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.Instant;
@@ -14,8 +24,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Currency;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -23,7 +35,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetBoughtEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetSoldEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.CashflowRecordedEvent;
@@ -34,6 +49,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFou
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
+import com.laderrco.fortunelink.portfoliomanagment.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Percentage;
@@ -48,9 +64,11 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.tra
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.LiabilityId;
+import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
+import com.laderrco.fortunelink.portfoliomanagment.infrastructure.services.SimpleMaketDataService;
 
 public class PortfolioTestFullVersion_V2 {
     // Test implementation of CurrencyConversionService
@@ -121,7 +139,7 @@ public class PortfolioTestFullVersion_V2 {
         }
 
         public AssetIdentifier convert() {
-            return new AssetIdentifier(type, symbol, "US1234567890", symbol+"_fullname", "EXCHANGE");
+            return new AssetIdentifier(type, symbol, "US1234567890", symbol+"_fullname", "EXCHANGE", Currency.getInstance("USD"));
         }
 
         @Override
@@ -157,6 +175,7 @@ public class PortfolioTestFullVersion_V2 {
 
     private Portfolio portfolio;
     private User testUser;
+    private MarketDataService marketDataService;
     private CurrencyConversionService conversionService;
     private Money initialBalance;
     private Currency usdCurrency;
@@ -174,6 +193,7 @@ public class PortfolioTestFullVersion_V2 {
         
         testUser = new TestUser("John Doe", "john@example.com", usdCurrency);
         conversionService = new TestCurrencyConversionService();
+        marketDataService = new SimpleMaketDataService();
         testAssetId = new TestAssetIdentifier("AAPL", AssetType.STOCK).convert();
         testLiabilityDetails = new TestLiabilityDetails(
             LiabilityType.LOAN, 
@@ -181,7 +201,7 @@ public class PortfolioTestFullVersion_V2 {
             new Percentage(BigDecimal.valueOf(5.0))
         ).convert();
 
-        portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
+        portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService, marketDataService);
     }
 
     @Nested
@@ -255,7 +275,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should successfully reverse buy transaction")
         void shouldSuccessfullyReverseBuyTransaction() {
             // Clear previous transaction and create a buy transaction
-            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService, marketDataService);
             
             BigDecimal quantity = BigDecimal.valueOf(100);
             Money price = Money.of(BigDecimal.valueOf(50), usdCurrency);
@@ -278,7 +298,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should successfully reverse sell transaction")
         void shouldSuccessfullyReverseSellTransaction() {
             // Setup: Buy then sell
-            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService, marketDataService);
             
             BigDecimal buyQuantity = BigDecimal.valueOf(100);
             Money buyPrice = Money.of(BigDecimal.valueOf(50), usdCurrency);
@@ -307,7 +327,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should successfully reverse liability incurrence")
         void shouldSuccessfullyReverseLiabilityIncurrence() {
             // Clear and create liability incurrence
-            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService);
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService, marketDataService);
             
             Money liabilityAmount = Money.of(BigDecimal.valueOf(5000), usdCurrency);
             portfolio.incurrNewLiability(testLiabilityDetails, liabilityAmount, TransactionSource.MANUAL, Collections.emptyList(), testDate);
@@ -512,10 +532,10 @@ public class PortfolioTestFullVersion_V2 {
             Money depositAmount = Money.of(BigDecimal.valueOf(1000), usdCurrency);
             portfolio.recordCashflow(depositAmount, CashflowType.DEPOSIT, TransactionSource.MANUAL, "Deposit", Collections.emptyList(), testDate);
             
-            portfolio.buyAsset(testAssetId, BigDecimal.valueOf(10), Money.of(BigDecimal.valueOf(50), usdCurrency), Collections.emptyList(), testDate.plusSeconds(1), TransactionSource.MANUAL, "Buy");
+            portfolio.buyAsset(testAssetId, BigDecimal.valueOf(10), Money.of(BigDecimal.valueOf(50), usdCurrency), Collections.emptyList(), testDate.minusSeconds(1), TransactionSource.MANUAL, "Buy");
             
             Money withdrawalAmount = Money.of(BigDecimal.valueOf(500), usdCurrency);
-            portfolio.recordCashflow(withdrawalAmount, CashflowType.WITHDRAWAL, TransactionSource.MANUAL, "Withdrawal", Collections.emptyList(), testDate.plusSeconds(2));
+            portfolio.recordCashflow(withdrawalAmount, CashflowType.WITHDRAWAL, TransactionSource.MANUAL, "Withdrawal", Collections.emptyList(), testDate.minusSeconds(2));
             
             List<Transaction> transactions = portfolio.getTransactions();
             assertEquals(3, transactions.size());
@@ -635,7 +655,7 @@ public class PortfolioTestFullVersion_V2 {
     }
         // Should create portfolio with valid parameters"
     void shouldCreatePortfolioWithValidParameters() {
-        Portfolio newPortfolio = new Portfolio(testUser.getId(), "New Portfolio", "Description", initialBalance, conversionService);
+        Portfolio newPortfolio = new Portfolio(testUser.getId(), "New Portfolio", "Description", initialBalance, conversionService, marketDataService);
         
         assertAll(
             () -> assertEquals(testUser, newPortfolio.getUserId()),
@@ -653,8 +673,8 @@ public class PortfolioTestFullVersion_V2 {
     @Test
     @DisplayName("Should create portfolio with unique ID")
     void shouldCreatePortfolioWithUniqueId() {
-        Portfolio portfolio1 = new Portfolio(testUser.getId(), "Portfolio 1", "Desc", initialBalance, conversionService);
-        Portfolio portfolio2 = new Portfolio(testUser.getId(), "Portfolio 2", "Desc", initialBalance, conversionService);
+        Portfolio portfolio1 = new Portfolio(testUser.getId(), "Portfolio 1", "Desc", initialBalance, conversionService, marketDataService);
+        Portfolio portfolio2 = new Portfolio(testUser.getId(), "Portfolio 2", "Desc", initialBalance, conversionService, marketDataService);
         
         assertNotEquals(portfolio1.getPortfolioId(), portfolio2.getPortfolioId());
     }
@@ -843,7 +863,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should throw exception when asset holding not found")
         void shouldThrowExceptionWhenAssetHoldingNotFound2() {
             // AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
-            AssetIdentifier nonExistenAssetIdentifier = new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-KRAKEN", "Bitcoin", "KRAKEN");
+            AssetIdentifier nonExistenAssetIdentifier = new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-KRAKEN", "Bitcoin", "KRAKEN", usdCurrency);
             
             assertThrows(AssetNotFoundException.class, () ->
                 // portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
@@ -869,7 +889,7 @@ public class PortfolioTestFullVersion_V2 {
         @DisplayName("Should throw exception when asset holding not found")
         void shouldThrowExceptionWhenAssetHoldingNotFound() {
             // AssetHoldingId nonExistentId = new AssetHoldingId(UUID.randomUUID());
-            AssetIdentifier nonExistenAssetIdentifier = new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-KRAKEN", "Bitcoin", "KRAKEN");
+            AssetIdentifier nonExistenAssetIdentifier = new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-KRAKEN", "Bitcoin", "KRAKEN", usdCurrency);
 
             assertThrows(AssetNotFoundException.class, () ->
                 // portfolio.sellAsset(nonExistentId, sellQuantity, sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell")
@@ -1238,6 +1258,217 @@ public class PortfolioTestFullVersion_V2 {
         void shouldThrowExceptionForInvalidIncomeType() {
             Money amount = Money.of(BigDecimal.valueOf(100), usdCurrency);
             assertThrows(IllegalArgumentException.class, ()->portfolio.recordIncome(amount, IncomeType.ERROR, TransactionSource.MANUAL, "desc", Collections.emptyList(), testDate));
+        }
+    }
+
+    @Nested
+    @DisplayName("Testing calcualteTotalValue")
+    @ExtendWith(MockitoExtension.class)
+    class CalculateTotalValueTests {
+        @Mock
+        private MarketDataService marketDataService;
+
+        @Mock
+        private CurrencyConversionService conversionService;
+        private Currency USD;
+        
+        @BeforeEach
+        void init() {
+            USD = Currency.getInstance("USD");
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService, marketDataService);
+
+        }
+        
+        @Test
+        void testCalculateTotalValue_WithHoldingsAndLiabilities() throws Exception {
+            Instant valuationDate = Instant.now();
+            
+            AssetHolding holding = mock(AssetHolding.class);
+            Liability liability = mock(Liability.class);
+            
+            Money holdingValue = new Money(new BigDecimal("500.00"), USD);
+            Money liabilityValue = new Money(new BigDecimal("200.00"), USD);
+            
+            AssetHoldingId assetHoldingId = new AssetHoldingId(UUID.randomUUID());
+            LiabilityId liabilityId = new LiabilityId(UUID.randomUUID());
+            
+            // Use reflection to access private fields
+            Field holdingsField = Portfolio.class.getDeclaredField("holdings");
+            holdingsField.setAccessible(true);
+            Map<AssetHoldingId, AssetHolding> holdings = 
+                (Map<AssetHoldingId, AssetHolding>) holdingsField.get(portfolio);
+            holdings.put(assetHoldingId, holding);
+            
+            Field liabilitiesField = Portfolio.class.getDeclaredField("liabilities");
+            liabilitiesField.setAccessible(true);
+            Map<LiabilityId, Liability> liabilities = 
+                (Map<LiabilityId, Liability>) liabilitiesField.get(portfolio);
+            liabilities.put(liabilityId, liability);
+            
+            // Rest of your test...
+            when(marketDataService.calculateHoldingValue(holding, valuationDate))
+                .thenReturn(holdingValue);
+            when(liability.getCurrentBalance())
+                .thenReturn(new Money(new BigDecimal("200.00"), USD));
+            when(conversionService.convert(any(), eq(USD), eq(valuationDate)))
+                .thenReturn(liabilityValue);
+            
+            Money result = portfolio.calculateTotalValue(valuationDate);
+            
+            assertEquals(new Money(new BigDecimal("10300.00"), USD), result);
+        }
+        @Test
+        void testCalculateTotalValue_NullValuationDate_ShouldThrowException() {
+            assertThrows(NullPointerException.class, () -> portfolio.calculateTotalValue(null));
+        }
+    }
+
+    @Nested
+    @DisplayName("Testing accrueInterest")
+    @ExtendWith(MockitoExtension.class)
+    class AccrueInterestTest {
+        @Mock
+        private MarketDataService marketDataService;
+
+        @Mock
+        private CurrencyConversionService conversionService;
+        private Currency USD;
+        
+        @BeforeEach
+        void init() {
+            USD = Currency.getInstance("USD");
+            portfolio = new Portfolio(testUser.getId(), "Test Portfolio", "Test Description", initialBalance, conversionService, marketDataService);
+
+        }
+        
+        @Test
+        void testAccrueInterest_WithAccruedInterest() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+            Instant accrualDate = Instant.now();
+
+            LiabilityId liabilityId = new LiabilityId(UUID.randomUUID());
+
+            Liability liability = mock(Liability.class);
+            when(liability.accrueInterest(accrualDate)).thenReturn(new Money(new BigDecimal("50.00"), USD));
+            when(liability.getLiabilityId()).thenReturn(liabilityId);
+
+            Portfolio testPortfolio = new Portfolio(
+                new UserId(UUID.randomUUID()),
+                "Test Portfolio",
+                "desc",
+                new Money(new BigDecimal("1000.00"), USD),
+                conversionService,
+                marketDataService
+            );
+
+            // Inject liability via reflection
+            Field liabilitiesField = Portfolio.class.getDeclaredField("liabilities");
+            liabilitiesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<LiabilityId, Liability> liabilities = (Map<LiabilityId, Liability>) liabilitiesField.get(testPortfolio);
+            liabilities.put(liabilityId, liability);
+
+            // Spy
+            Portfolio spyPortfolio = Mockito.spy(testPortfolio);
+
+            // Stub recordCashflow so Mockito can track it
+            doNothing().when(spyPortfolio).recordCashflow(
+                any(Money.class),
+                any(CashflowType.class),
+                any(TransactionSource.class),
+                anyString(),
+                anyList(),
+                any(Instant.class)
+            );
+
+            spyPortfolio.accrueInterest(accrualDate);
+
+            verify(spyPortfolio).recordCashflow(
+                eq(new Money(new BigDecimal("50.00"), USD)),
+                eq(CashflowType.INTEREST_EXPENSE),
+                eq(TransactionSource.SYSTEM),
+                eq("Interest accrual for liability " + liabilityId),
+                eq(Collections.emptyList()),
+                eq(accrualDate)
+            );
+        }
+
+        @Test
+        void testAccrueInterest_NoInterestAccrued_ShouldNotRecordCashflow() {
+            Instant accrualDate = Instant.now();
+
+            // Create proper ID
+            LiabilityId liabilityId = new LiabilityId(UUID.randomUUID());
+            
+            Liability liability = mock(Liability.class);
+            // when(liability.accrueInterest(accrualDate)).thenReturn(new Money(BigDecimal.ZERO, USD));
+            // when(liability.getLiabilityId()).thenReturn(liabilityId);
+
+            // Create portfolio with test data using package-private constructor
+            Map<LiabilityId, Liability> testLiabilities = new HashMap<>();
+            testLiabilities.put(liabilityId, liability);
+            
+            Portfolio testPortfolio = new Portfolio(
+                new UserId(UUID.randomUUID()),
+                "Test Portfolio",
+                "desc",
+                new Money(new BigDecimal("1000.00"), USD),
+                conversionService,
+                marketDataService
+            );
+
+            Portfolio spyPortfolio = Mockito.spy(testPortfolio);
+            spyPortfolio.accrueInterest(accrualDate);
+
+            verify(spyPortfolio, never()).recordCashflow(any(), any(), any(), any(), any(), any());
+        }
+
+
+
+        @Test
+        void testAccrueInterest_VerifySideEffects() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+            Instant accrualDate = Instant.now();
+            
+            LiabilityId liabilityId = new LiabilityId(UUID.randomUUID());
+            Liability liability = mock(Liability.class);
+            
+            when(liability.accrueInterest(accrualDate)).thenReturn(new Money(new BigDecimal("50.00"), USD));
+            when(liability.getLiabilityId()).thenReturn(liabilityId);
+
+            Portfolio testPortfolio = new Portfolio(
+                new UserId(UUID.randomUUID()),
+                "Test Portfolio",
+                "desc",
+                new Money(new BigDecimal("1000.00"), USD),
+                conversionService,
+                marketDataService
+            );
+
+            Field liabilitiesField = Portfolio.class.getDeclaredField("liabilities");
+            liabilitiesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<LiabilityId, Liability> liabilities = (Map<LiabilityId, Liability>) liabilitiesField.get(testPortfolio);
+            liabilities.put(liabilityId, liability);
+
+            Money initialBalance = testPortfolio.getPortfolioCashBalance();
+            int initialTransactionCount = testPortfolio.getTransactions().size();
+
+            testPortfolio.accrueInterest(accrualDate);
+
+            // ✅ Verify balance decreased
+            Money expectedBalance = initialBalance.subtract(new Money(new BigDecimal("50.00"), USD));
+            assertEquals(expectedBalance, testPortfolio.getPortfolioCashBalance());
+
+            // ✅ Verify transaction added
+            assertEquals(initialTransactionCount + 1, testPortfolio.getTransactions().size());
+
+            Transaction lastTransaction = testPortfolio.getTransactions().getLast(); // or get(size - 1)
+            assertEquals(TransactionType.EXPENSE, lastTransaction.getType());
+            assertEquals(new Money(new BigDecimal("-50.00"), USD), lastTransaction.getTransactionNetImpact());
+        }
+
+        @Test
+        void testAccrueInterest_NullDate_ShouldThrowException() {
+            assertThrows(NullPointerException.class, () -> portfolio.accrueInterest(null));
         }
     }
 }

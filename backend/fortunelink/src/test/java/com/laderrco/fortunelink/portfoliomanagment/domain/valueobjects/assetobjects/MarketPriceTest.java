@@ -24,7 +24,7 @@ public class MarketPriceTest {
     private final Currency USD = Currency.getInstance("USD");
     private final Currency EUR = Currency.getInstance("EUR");
 
-    private final AssetIdentifier asset = new AssetIdentifier(AssetType.STOCK, "AAPL", "US1234567890", "Apple", "NASDAQ");
+    private final AssetIdentifier asset = new AssetIdentifier(AssetType.STOCK, "AAPL", "US1234567890", "Apple", "NASDAQ", USD);
 
     private Money money(BigDecimal amount, Currency currency) {
         return new Money(amount, currency);

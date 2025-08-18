@@ -15,7 +15,7 @@ public record PaymentAllocationResult(
         Objects.requireNonNull(remainingBalance, "Remaining balance cannot be null.");
         Objects.requireNonNull(overPayment, "Overpayment cannot be null.");
 
-        if (!principalPaid.currency().equals(interestPaid.currency()) || !principalPaid.currency().equals(remainingBalance.currency())) {
+        if (!principalPaid.currency().equals(interestPaid.currency()) || !principalPaid.currency().equals(remainingBalance.currency()) || !principalPaid.currency().equals(overPayment.currency())) {
             throw new IllegalArgumentException("All amounts in PaymentAllocationResult must have the same currency.");
         }
     }

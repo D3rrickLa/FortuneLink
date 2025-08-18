@@ -33,7 +33,7 @@ public class AssetHoldingTest {
         assetHolding = new AssetHolding(
             new AssetHoldingId(UUID.randomUUID()),
             new PortfolioId(UUID.randomUUID()),
-            new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-Spot", "Bitcoin", "CoinGeeko"),
+            new AssetIdentifier(AssetType.CRYPTO, "BTC", "BTC-Spot", "Bitcoin", "CoinGeeko", usd),
             BigDecimal.valueOf(10),
             new Money(new BigDecimal("100000.00"), usd),
             Instant.now()
@@ -176,7 +176,7 @@ public class AssetHoldingTest {
         AssetHolding emptyHolding = new AssetHolding(
             new AssetHoldingId(UUID.randomUUID()),
             new PortfolioId(UUID.randomUUID()),
-            new AssetIdentifier(AssetType.CRYPTO, "ETH", "ETH-ERC20", "Ethereum", "CoinGeeko"),
+            new AssetIdentifier(AssetType.CRYPTO, "ETH", "ETH-ERC20", "Ethereum", "CoinGeeko", usd),
             BigDecimal.ZERO,
             Money.ZERO(usd),
             Instant.now()

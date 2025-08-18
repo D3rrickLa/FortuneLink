@@ -20,7 +20,8 @@ public class DividendReceivedEventTest {
             "AAPL",
             "US1234567890",
             "Apple Inc.",
-            "NASDAQ"
+            "NASDAQ",
+            Currency.getInstance("USD")
         );
 
         Money amount = Money.of(20, Currency.getInstance("USD"));

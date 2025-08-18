@@ -29,7 +29,7 @@ public class TradeExecutionTransactionDetailsTest {
 
     @Test
     void testConstructionAndFieldValues() {
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "US0378331005", "Apple", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "AAPL", "US0378331005", "Apple", "NASDAQ", Currency.getInstance("USD"));
         BigDecimal quantity = new BigDecimal("10");
         Money pricePerUnit = new Money(new BigDecimal("100"), nativeCurrency);
         Fee fee1 = new Fee(FeeType.TRANSACTION_FEE, new Money(new BigDecimal("5"), nativeCurrency), "Transaction Fee", Instant.now());
@@ -73,7 +73,7 @@ public class TradeExecutionTransactionDetailsTest {
 
     @Test
     void testZeroFeesHandledCorrectly() {
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "GOOG", "US02079K3059", "Google", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "GOOG", "US02079K3059", "Google", "NASDAQ", Currency.getInstance("USD"));
         BigDecimal quantity = new BigDecimal("5");
         Money pricePerUnit = new Money(new BigDecimal("200"), nativeCurrency);
         List<Fee> nativeFees = List.of(); // No fees
@@ -99,7 +99,7 @@ public class TradeExecutionTransactionDetailsTest {
     void testSameCurrencyConversion() {
         Currency sameCurrency = Currency.getInstance("CAD");
 
-        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "TSLA", "US88160R1014", "Tesla", "NASDAQ");
+        AssetIdentifier assetIdentifier = new AssetIdentifier(AssetType.STOCK, "TSLA", "US88160R1014", "Tesla", "NASDAQ", Currency.getInstance("USD"));
         BigDecimal quantity = new BigDecimal("3");
         Money pricePerUnit = new Money(new BigDecimal("150"), sameCurrency);
         List<Fee> fees = List.of(new Fee(FeeType.OTHER, new Money(new BigDecimal("10"), sameCurrency), "Flat Fee", Instant.now()));

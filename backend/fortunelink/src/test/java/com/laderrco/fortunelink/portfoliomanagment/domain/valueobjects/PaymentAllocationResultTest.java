@@ -17,8 +17,9 @@ public class PaymentAllocationResultTest {
         Money principalPaid = Money.of(100.0, USD);
         Money interestPaid = Money.of(10, USD);
         Money remainingBalance = Money.of(90, USD);
-        
-        assertDoesNotThrow(() -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance));
+        Money overpayment = Money.of(20, USD);
+
+        assertDoesNotThrow(() -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance, overpayment));
     }
     
     @Test 
@@ -26,7 +27,8 @@ public class PaymentAllocationResultTest {
         Money principalPaid = Money.of(100.0, USD);
         Money interestPaid = Money.of(10, EUR);
         Money remainingBalance = Money.of(90, USD);
-        assertThrows(IllegalArgumentException.class, () -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance));
+        Money overpayment = Money.of(20, USD);
+        assertThrows(IllegalArgumentException.class, () -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance, overpayment));
     }
     
     @Test 
@@ -34,6 +36,18 @@ public class PaymentAllocationResultTest {
         Money principalPaid = Money.of(100.0, USD);
         Money interestPaid = Money.of(10, USD);
         Money remainingBalance = Money.of(90, EUR);
-        assertThrows(IllegalArgumentException.class, () -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance));
+        Money overpayment = Money.of(20, USD);
+
+        assertThrows(IllegalArgumentException.class, () -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance, overpayment));
+    }
+
+    @Test 
+    void constructor_InValid_DifferentCurrency3() {
+        Money principalPaid = Money.of(100.0, USD);
+        Money interestPaid = Money.of(10, USD);
+        Money remainingBalance = Money.of(90, USD);
+        Money overpayment = Money.of(20, EUR);
+
+        assertThrows(IllegalArgumentException.class, () -> new PaymentAllocationResult(principalPaid, interestPaid, remainingBalance, overpayment));
     }
 }
