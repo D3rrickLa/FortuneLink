@@ -21,6 +21,7 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
     private final AssetHoldingId assetHoldingId;
     private final Money realizedGainLossAssetCurrency;
     private final Money realizedGainLossPortfolioCurrency;
+    private final Money acbPerUnitAtSale; // Store ACB per unit at time of sale for reversals
 
     // cost basis is calculated with the follow: assetValue + totalFees 
     // update ^^^ this is a property of the AssetHolding
@@ -53,6 +54,7 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         this.assetHoldingId = assetHoldingId;
         this.realizedGainLossAssetCurrency = null;
         this.realizedGainLossPortfolioCurrency = null;
+        this.acbPerUnitAtSale = null; // Not applicable for buy transactions
     }
 
     public TradeExecutionTransactionDetails(
@@ -84,6 +86,40 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         this.assetHoldingId = assetHoldingId;
         this.realizedGainLossAssetCurrency = realizedGainLossAssetCurrency;
         this.realizedGainLossPortfolioCurrency = realizedGainLossPortfolioCurrency;
+        this.acbPerUnitAtSale = null; // Will be set by the Portfolio when creating sell transactions
+    }
+
+    public TradeExecutionTransactionDetails(
+        AssetIdentifier assetIdentifier,
+        BigDecimal quantity,
+        Money pricePerUnit,
+        TransactionSource source,
+        String description,
+        List<Fee> nativeFees,
+        Currency portfolioCurrency,
+        AssetHoldingId assetHoldingId,
+        CurrencyConversionService currencyConversionService,
+        Money realizedGainLossAssetCurrency,
+        Money realizedGainLossPortfolioCurrency,
+        Money acbPerUnitAtSale
+    ) {
+        super(source, description, nativeFees);
+
+        Money convertedPrice = currencyConversionService.convert(pricePerUnit, portfolioCurrency);
+        Money totalConvertedFees = nativeFees.stream()
+            .map(fee -> currencyConversionService.convert(fee.amount(), portfolioCurrency))
+            .reduce(Money.ZERO(portfolioCurrency), Money::add);
+
+        this.assetIdentifier = assetIdentifier;
+        this.quantity = quantity;
+        this.pricePerUnit = pricePerUnit; // Store the original for audit
+        this.assetValueInNativeCurrency = pricePerUnit.multiply(quantity);
+        this.assetValueInPortfolioCurrency = convertedPrice.multiply(quantity);
+        this.totalFeesInPortfolioCurrency = totalConvertedFees;
+        this.assetHoldingId = assetHoldingId;
+        this.realizedGainLossAssetCurrency = realizedGainLossAssetCurrency;
+        this.realizedGainLossPortfolioCurrency = realizedGainLossPortfolioCurrency;
+        this.acbPerUnitAtSale = acbPerUnitAtSale;
     }
 
 
@@ -123,6 +159,8 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         return realizedGainLossPortfolioCurrency;
     }
 
-    
+    public Money getAcbPerUnitAtSale() {
+        return acbPerUnitAtSale;
+    }
     
 }

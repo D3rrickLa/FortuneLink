@@ -35,4 +35,14 @@ public interface CurrencyConversionService {
      * @return the converted amount in the target Currency
      */
     public Money convert(Money amount, Currency targetCurrency, Instant asOfDate);
+
+    /**
+     * Converts a monetary amount to a target currency using the latest available exchange rate.
+     * 
+     * @param amount The amount to convert
+     * @param targetCurrency The currency to convert to
+     * @return The converted amount in the target currency
+     */
+    public Money convertWithLatestRate(Money amount, Currency targetCurrency);
+
 }

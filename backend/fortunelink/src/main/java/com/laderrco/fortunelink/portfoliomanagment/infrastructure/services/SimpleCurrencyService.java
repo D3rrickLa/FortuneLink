@@ -13,7 +13,6 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 /**
  * This Service Implementation is just for testing
  */
-@Deprecated
 public class SimpleCurrencyService implements CurrencyConversionService {
     private final Map<String, BigDecimal> exchangeRates;
 
@@ -90,6 +89,12 @@ public class SimpleCurrencyService implements CurrencyConversionService {
         // You'll need to define how Money handles multiplication and precision
         BigDecimal convertedAmount = amount.amount().multiply(rate);
         return new Money(convertedAmount, targetCurrency);
+    }
+
+
+    @Override
+    public Money convertWithLatestRate(Money amount, Currency targetCurrency) {
+        return convert(amount, targetCurrency);
     }
 
     

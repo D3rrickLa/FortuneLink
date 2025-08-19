@@ -64,7 +64,6 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.tra
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.enums.transaction.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.LiabilityId;
-import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.liabilityobjects.LiabilityDetails;
@@ -100,6 +99,11 @@ public class PortfolioTestFullVersion_V2 {
         @Override
         public Money convert(Money amount, Currency targetCurrency) {
             return convert(amount, targetCurrency, Instant.now());
+        }
+
+        @Override
+        public Money convertWithLatestRate(Money amount, Currency targetCurrency) {
+            return convert(amount, targetCurrency);
         }
     }
 
@@ -1295,12 +1299,14 @@ public class PortfolioTestFullVersion_V2 {
             // Use reflection to access private fields
             Field holdingsField = Portfolio.class.getDeclaredField("holdings");
             holdingsField.setAccessible(true);
+            @SuppressWarnings("unchecked")
             Map<AssetHoldingId, AssetHolding> holdings = 
                 (Map<AssetHoldingId, AssetHolding>) holdingsField.get(portfolio);
             holdings.put(assetHoldingId, holding);
             
             Field liabilitiesField = Portfolio.class.getDeclaredField("liabilities");
             liabilitiesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
             Map<LiabilityId, Liability> liabilities = 
                 (Map<LiabilityId, Liability>) liabilitiesField.get(portfolio);
             liabilities.put(liabilityId, liability);

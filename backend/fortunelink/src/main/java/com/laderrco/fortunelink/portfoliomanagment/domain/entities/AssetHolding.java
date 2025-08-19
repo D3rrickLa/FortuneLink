@@ -20,6 +20,8 @@ public class AssetHolding {
     private Money totalAdjustedCostBasisNativeCurrency;
     private final Instant createdAt;
     private Instant updatedAt;
+
+    private boolean active;
     
     private AssetHolding(
         AssetHoldingId assetHoldingId, 
@@ -45,6 +47,7 @@ public class AssetHolding {
         this.totalAdjustedCostBasisNativeCurrency = totalAdjustedCostBasisNativeCurrency;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.active = true;
     }
 
     public AssetHolding(
@@ -131,7 +134,15 @@ public class AssetHolding {
             this.totalAdjustedCostBasisNativeCurrency = Money.ZERO(this.totalAdjustedCostBasisNativeCurrency.currency());
         }
         this.updatedAt = Instant.now();
-    }   
+    }  
+    
+    public void markAsInactive() {
+        this.active = false;
+    }
+
+    public void reactivate() {
+        this.active = true;
+    }
 
     public Money getCurrentValue(MarketPrice currentPrice) {
         validateParameter(currentPrice, "Current market price");
@@ -182,6 +193,10 @@ public class AssetHolding {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isActive() {
+        return active;
     }
             
 }
