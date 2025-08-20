@@ -12,12 +12,21 @@ public record Snapshot(
     Money portfolioCashBalance,
     Map<LiabilityId, Liability> liabilities,
     Map<AssetHoldingId, AssetHolding> holdings,
-    String reason
+    String reason,
+    long portfolioVersion,
+    long assetIndexVersion,
+    boolean isPermanent
 ) {
     public Snapshot {
         portfolioCashBalance = Objects.requireNonNull(portfolioCashBalance, "Portfolio cash balance cannot be null");
         liabilities = Objects.requireNonNull(liabilities, "Liabilities map cannot be null");
         holdings = Objects.requireNonNull(holdings, "Holdings map cannot be null");
         reason = Objects.requireNonNull(reason, "Reason cannot be null");
+        if (portfolioVersion < 0) {
+            throw new IllegalArgumentException("Portfolio version cannot be negative");
+        }
+        if (assetIndexVersion < 0) {
+            throw new IllegalArgumentException("Asset index version cannot be negative");
+        }
     }
 }

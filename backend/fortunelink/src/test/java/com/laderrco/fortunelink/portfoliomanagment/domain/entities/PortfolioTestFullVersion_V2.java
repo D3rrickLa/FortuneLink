@@ -388,6 +388,15 @@ public class PortfolioTestFullVersion_V2 {
 
         @Test
         @DisplayName("Should handle reversal with additional fees")
+        void shouldHandleReversalWithoutAdditionalFees() {            
+            portfolio.reverseTransaction(originalTransactionId, "Test reversal with fees", TransactionSource.MANUAL, "Desc", null, testDate);
+            
+            // The reversal should restore the original balance, and fees would be handled separately
+            // (though the current implementation doesn't seem to process reversal fees)
+            assertEquals(initialBalance, portfolio.getPortfolioCashBalance());
+        }
+        @Test
+        @DisplayName("Should handle reversal with additional fees")
         void shouldHandleReversalWithAdditionalFees() {
             List<Fee> reversalFees = Arrays.asList(new Fee(FeeType.BROKERAGE, Money.of(25, usdCurrency), "amount"));
             
@@ -395,7 +404,7 @@ public class PortfolioTestFullVersion_V2 {
             
             // The reversal should restore the original balance, and fees would be handled separately
             // (though the current implementation doesn't seem to process reversal fees)
-            assertEquals(initialBalance, portfolio.getPortfolioCashBalance());
+            assertEquals(initialBalance.subtract(Money.of(25, usdCurrency)), portfolio.getPortfolioCashBalance());
         }
     }
 
@@ -955,8 +964,10 @@ public class PortfolioTestFullVersion_V2 {
 
             // portfolio.sellAsset(assetHoldingId, BigDecimal.valueOf(100), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
             portfolio.sellAsset(testAssetId, BigDecimal.valueOf(100), sellPrice, fees, testDate, TransactionSource.MANUAL, "Test sell");
-            assertTrue(portfolio.getHoldings().isEmpty());
-            assertTrue(portfolio.getHoldings().containsKey(assetHoldingId) == false);
+            // assertTrue(portfolio.getHoldings().isEmpty()); // holdings don't go to zero anymore when we sell all, it's a soft delete
+            // assertTrue(portfolio.getHoldings().containsKey(assetHoldingId) == false);
+            assertTrue(portfolio.getHoldings().size() == 1);
+            assertTrue(portfolio.getHoldings().get(assetHoldingId).isActive() == false);
         }
     }
 

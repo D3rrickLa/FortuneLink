@@ -235,7 +235,7 @@ public class PortfolioTest {
             
         );
         
-        assertThrows(IllegalArgumentException.class, () -> portfolio.updateLiability(new LiabilityId(UUID.randomUUID()), details));
+        assertThrows(IllegalStateException.class, () -> portfolio.updateLiability(new LiabilityId(UUID.randomUUID()), details));
     }
 
     

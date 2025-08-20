@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagment.domain.entities;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Currency;
@@ -17,7 +18,10 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.events.AssetSoldEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.CashflowRecordedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityIncurredEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityPaymentRecordedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.LiabilityUpdatedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.PortfolioCreatedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.PortfolioDetailsUpdatedEvent;
+import com.laderrco.fortunelink.portfoliomanagment.domain.events.SnapshotRollbackEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.events.TransactionReversedEvent;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
@@ -134,6 +138,7 @@ public class Portfolio {
     private final MarketDataService marketDataService;
 
     private long version;
+    private long assetIndexVersion;
     private Instant lastModifiedAt;
     private String lastOperations;
 
@@ -188,6 +193,7 @@ public class Portfolio {
         this.conversionService = Objects.requireNonNull(conversionService, "Currency conversion service cannot be null");
         this.marketDataService = Objects.requireNonNull(marketDataService, "Maket data service cannot be null");
         this.version = 0;
+        this.assetIndexVersion = 0;
         this.lastModifiedAt = Instant.now();
         this.lastOperations = "Portfolio created";
     }
@@ -210,6 +216,18 @@ public class Portfolio {
         }
     }
 
+    private static final int MAX_TRANSACTIONS_PER_DAY = 1000;
+    private void validateTransactionLimits() {
+        long today = Instant.now().truncatedTo(ChronoUnit.DAYS).getEpochSecond();
+        long todaysTransactions = transactions.stream()
+            .filter(t -> t.getTransactionDate().truncatedTo(ChronoUnit.DAYS).getEpochSecond() == today)
+            .count();
+
+        if (todaysTransactions >= MAX_TRANSACTIONS_PER_DAY) {
+            throw new IllegalStateException("Daily transaction limit exceeded");
+        }
+    }
+
     private Money convertWithFallback(Money amount, Currency targetCurrency, Instant transactionDate) {
         try {
             return conversionService.convert(amount, targetCurrency, transactionDate);
@@ -220,6 +238,10 @@ public class Portfolio {
 
     private void incrementVersion() {
         this.version++;
+    }
+
+    private void incrementAssetIndexVersion() {
+        this.assetIndexVersion++;
     }
 
     private void recordLastOperations(String operation) {
@@ -273,6 +295,7 @@ public class Portfolio {
 
         this.holdings.put(newHolding.getAssetHoldingId(), newHolding);
         this.assetIndex.put(assetIdentifier, newHolding.getAssetHoldingId());
+        incrementAssetIndexVersion();
         return newHolding;
     }
     
@@ -309,6 +332,7 @@ public class Portfolio {
         Objects.requireNonNull(source, "Transaction source cannot be null");
         validateTransactionDate(transactionDate);
         validatePrice(pricePerUnit, "asset purchase");
+        validateTransactionLimits();
 
         nativeFees = nativeFees == null ? Collections.emptyList() : nativeFees;
         description = description.trim();
@@ -316,6 +340,7 @@ public class Portfolio {
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidQuantityException("Quantity must be positive");
         }
+
         if (pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Price per unit must be positive");
         }
@@ -324,9 +349,10 @@ public class Portfolio {
         Money assetCost = pricePerUnit.multiply(quantity);
 
         // Now, add them together in the same currency
+        // note: if fees are in different currency could be a problem, but that shouldn't be a problem with the totalFees method assignment
         Money totalCostInAssetCurrency = assetCost.add(totalFees);
-
         Money totalCostPortfolioCurrency = convertWithFallback(totalCostInAssetCurrency, this.portfolioCashBalance.currency(), transactionDate);
+
         Money netCashImpact = totalCostPortfolioCurrency.negate();
         
         validateSufficientFunds(netCashImpact, "asset purchase");
@@ -394,7 +420,8 @@ public class Portfolio {
         Objects.requireNonNull(source, "Transaction source cannot be null");
         validateTransactionDate(transactionDate);
         validatePrice(pricePerUnit, "asset sale");
-        
+        validateTransactionLimits();
+
         nativeFees = nativeFees == null ? Collections.emptyList() : nativeFees;
         description = description.trim();
         
@@ -427,6 +454,7 @@ public class Portfolio {
             // this.holdings.remove(assetHolding.getAssetHoldingId());
             assetHolding.markAsInactive(); // we don't remove the asset holding, we just mark it as inactive
             assetIndex.remove(assetIdentifier); // Remove from index when inactive
+            incrementAssetIndexVersion();
         }
 
         this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpactPortfolioCurrency);
@@ -487,8 +515,10 @@ public class Portfolio {
         Objects.requireNonNull(source, "Transaction source cannot be null.");
         Objects.requireNonNull(incurrenceDate, "Date of new liability cannot be null.");
         validateTransactionDate(incurrenceDate);
+        validateTransactionLimits();
 
         fees = fees == null ? Collections.emptyList() : fees;
+        
 
 
         if (!liabilityAmount.currency().equals(this.portfolioCashBalance.currency())) {
@@ -564,7 +594,8 @@ public class Portfolio {
         Objects.requireNonNull(paymentAmount, "Payment amount cannot be null");
         Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
         Objects.requireNonNull(source, "Transaction source cannot be null");
-        validateTransactionDate(transactionDate);
+        validateTransactionDate(transactionDate);  
+        validateTransactionLimits();
 
         fees = fees == null ? Collections.emptyList() : fees;
 
@@ -642,7 +673,8 @@ public class Portfolio {
         Objects.requireNonNull(source, "Source cannot be null.");
         Objects.requireNonNull(description, "Description cannot be null.");
         Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
-        validateTransactionDate(transactionDate);
+        validateTransactionDate(transactionDate);  
+        validateTransactionLimits();
 
         fees = fees == null ? Collections.emptyList() : fees;
 
@@ -792,8 +824,10 @@ public class Portfolio {
         validateTransactionDate(transactionDate);
         incrementVersion();
         recordLastOperations("Transaction reversal");
+        validateTransactionLimits();
 
         fees = fees == null ? Collections.emptyList() : fees;
+        Money totalFees = calculateTotalFees(fees, this.portfolioCashBalance.currency(), transactionDate); // in portfolio currency
 
         Transaction originalTransaction = this.transactions.stream()
             .filter(t -> t.getTransactionId().equals(transactionId))
@@ -818,6 +852,12 @@ public class Portfolio {
                 AssetHolding buyHolding = holdings.get(buyDetails.getAssetHoldingId());
                 if (buyHolding != null) {
                     buyHolding.removeFromPosition(buyDetails.getQuantity().abs());
+                    
+                    if (buyHolding.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
+                        buyHolding.markAsInactive();
+                        assetIndex.remove(buyDetails.getAssetIdentifier());
+                        incrementAssetIndexVersion();
+                    }
                 }    
                 // If null, the holding was already sold off completely, so reversal is just cash adjustment
                 break;
@@ -846,6 +886,7 @@ public class Portfolio {
                 if (!sellHolding.isActive()) {
                     sellHolding.reactivate();
                     assetIndex.put(sellDetails.getAssetIdentifier(), sellHolding.getAssetHoldingId());
+                    incrementAssetIndexVersion();
                 }
                 break;
             case LIABILITY_INCURRENCE:
@@ -868,7 +909,7 @@ public class Portfolio {
 
         Transaction reversalTransaction = new Transaction(
             new TransactionId(UUID.randomUUID()),
-            new CorrelationId(UUID.randomUUID()),
+            originalTransaction.getCorrelationId(),
             originalTransaction.getTransactionId(), // Link to the original transaction
             this.portfolioId,
             TransactionType.REVERSAL,
@@ -885,7 +926,6 @@ public class Portfolio {
             // Here you would call a method to record the fees.
             // E.g., recordCashflow(feesAmount, CashflowType.REVERSAL_FEE, ..., transactionDate)
             // This keeps the reversal logic clean and auditable.
-            Money totalFees = calculateTotalFees(fees, this.portfolioCashBalance.currency(), transactionDate);
             recordCashflow(
                 totalFees,
                 CashflowType.BROKERAGE_FEE,
@@ -911,8 +951,15 @@ public class Portfolio {
 
         Money totalValue = this.portfolioCashBalance;
         for (AssetHolding holding : holdings.values()) {
-           Money holdingValue = marketDataService.calculateHoldingValue(holding, valuationDate);
-           totalValue = totalValue.add(holdingValue);
+            try {
+                Money holdingValue = marketDataService.calculateHoldingValue(holding, valuationDate);
+                totalValue = totalValue.add(holdingValue);
+            } catch (Exception e) {
+                // Log the error and continue, or rethrow based on your needs
+                // For DIY tool, maybe just skip the problematic holding and log it
+                System.err.println("Failed to calculate value for holding: " + holding.getAssetIdentifier() + ". Error: " + e.getMessage());
+                // Or use a default value of zero, or the last known value
+            }
         }
 
         for (Liability liability : liabilities.values()) {
@@ -951,37 +998,74 @@ public class Portfolio {
 
     public void updateLiability(LiabilityId liabilityId, LiabilityDetails newDetails) {
         Objects.requireNonNull(liabilityId, "Liability id cannot be null.");
-        Liability existingLiability = liabilities.get(liabilityId);
-        if (existingLiability == null) {
-            throw new IllegalArgumentException("Liability not found: " + liabilityId);
+        Liability existingLiability = Optional.ofNullable(liabilities.get(liabilityId))
+            .orElseThrow(() -> new IllegalStateException("Liability with id: " + liabilityId.liabilityId().toString()));
+        if (newDetails != null) {
+            LiabilityDetails oldDetails = existingLiability.getDetails(); // You'd need this getter
+            existingLiability.updateDetails(newDetails);
+            
+            LiabilityUpdatedEvent event = new LiabilityUpdatedEvent(
+                liabilityId,
+                oldDetails,
+                newDetails,
+                Instant.now()
+            );
+            domainEvents.add(event);
+            incrementVersion();
+            recordLastOperations("Liability updated");
         }
 
-        if (newDetails != null) {
-            existingLiability.updateDetails(newDetails);
-        }
     }
 
     public void updatePortfolioDetails(String newName, String newDescription) {
+        String oldName = this.portfolioName;
+        String oldDescription = this.portfolioDescription;
+        
         if (newName != null) {
             this.portfolioName = validatePortfolioName(newName);
         }
         if (newDescription != null) {
             this.portfolioDescription = newDescription;
         }
+        
+        PortfolioDetailsUpdatedEvent event = new PortfolioDetailsUpdatedEvent(
+            this.portfolioId,
+            oldName,
+            oldDescription,
+            this.portfolioName,
+            this.portfolioDescription,
+            Instant.now()
+        );
+        domainEvents.add(event);
+        incrementVersion();
+        recordLastOperations("Portfolio details updated");
     }
+
 
     public void clearDomainEvents() {
         this.domainEvents.clear();
     }
+    private static final int MAX_ROLLING_SNAPSHOTS = 10;
 
     // this is for transaciton status and failure handling
     public void takeSnapshot(String reason) {
         Objects.requireNonNull(reason, "Reason cannot be null");
-        this.snapshots.add(new Snapshot(this.portfolioCashBalance, this.liabilities, this.holdings, reason));
+        this.snapshots.add(new Snapshot(this.portfolioCashBalance, this.liabilities, this.holdings, reason, this.version, this.assetIndexVersion, false));
+    
+        // Keep only the last N snapshots (except permanent ones)
+        if (snapshots.size() > MAX_ROLLING_SNAPSHOTS) {
+            // Remove oldest non-permanent snapshot
+            snapshots.removeIf(s -> !s.isPermanent() && snapshots.indexOf(s) < snapshots.size() - MAX_ROLLING_SNAPSHOTS);
+        }
     }
 
     public void clearSnapshots() {
         this.snapshots.clear();
+    }
+
+    public void takePermanentSnapshot(String reason) {
+        Objects.requireNonNull(reason, "Reason cannot be null");
+        this.snapshots.add(new Snapshot(this.portfolioCashBalance, this.liabilities, this.holdings, reason, this.version, this.assetIndexVersion, true));
     }
 
     public void rollbackToLastSnapshot() {
@@ -1000,21 +1084,29 @@ public class Portfolio {
                     this.assetIndex.put(holding.getAssetIdentifier(), holding.getAssetHoldingId());
                 }
             }
-            
+
+            SnapshotRollbackEvent event = new SnapshotRollbackEvent(
+                this.portfolioId,
+                lastSnapshot.reason(),
+                Instant.now()
+            );
+            domainEvents.add(event);
+            incrementVersion();
+            recordLastOperations("Snapshot rollback");
             this.snapshots.remove(lastSnapshot);
         }
     }
 
     // Validation method for debugging index consistency
-    // private void validateIndexConsistency() {
-    //     // For debugging purposes
-    //     for (Map.Entry<AssetIdentifier, AssetHoldingId> entry : assetIndex.entrySet()) {
-    //         AssetHolding holding = holdings.get(entry.getValue());
-    //         if (holding == null || !holding.isActive()) {
-    //             throw new IllegalStateException("Index inconsistency detected for asset: " + entry.getKey());
-    //         }
-    //     }
-    // }
+    public void validateIndexConsistency() {
+        // For debugging purposes
+        for (Map.Entry<AssetIdentifier, AssetHoldingId> entry : assetIndex.entrySet()) {
+            AssetHolding holding = holdings.get(entry.getValue());
+            if (holding == null || !holding.isActive()) {
+                throw new IllegalStateException("Index inconsistency detected for asset: " + entry.getKey());
+            }
+        }
+    }
 
     // --- GETTERS ---
     public UserId getUserId() {
@@ -1050,6 +1142,10 @@ public class Portfolio {
         return Collections.unmodifiableMap(holdings);
     }
 
+    public Map<AssetIdentifier, AssetHoldingId> getAssetIndex() {
+        return Collections.unmodifiableMap(assetIndex);
+    }
+
     public List<Transaction> getTransactions() {
         return Collections.unmodifiableList(transactions);
     }
@@ -1064,6 +1160,10 @@ public class Portfolio {
 
     public long getVersion() {
         return version;
+    }
+
+    public long getAssetIndexVersion() {
+        return assetIndexVersion;
     }
 
     public Instant getLastModifiedAt() {
