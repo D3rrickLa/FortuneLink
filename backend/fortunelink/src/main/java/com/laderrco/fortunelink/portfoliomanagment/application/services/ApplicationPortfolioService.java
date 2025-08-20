@@ -38,16 +38,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
 
     @Override
     public PortfolioId createPortfolio(UserId userId, String name, String description, Money initialBalance) {
-        // 1. Business Logic: The logic to create a new portfolio is in the aggregate.
-        Portfolio newPortfolio = new Portfolio(userId, name, description, initialBalance, currencyConversionService, marketDataService);
-        
-        // 2. Orchestration: Use the repository to persist the new aggregate.
-        PortfolioId newId = portfolioRepository.save(newPortfolio);
-
-        // Optional: Publish a PortfolioCreatedEvent if needed.
-        // domainEventPublisher.publish(new PortfolioCreatedEvent(newId));
-
-        return newId;
+        return null;
     }
 
     @Override
@@ -60,14 +51,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
         Instant transactionDate,
         TransactionSource source
     ) {
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-            .orElseThrow(() -> new IllegalArgumentException("Portfolio not found."));
 
-        // Delegate the specific "buy" action to the domain aggregate.
-        portfolio.buyAsset(assetIdentifier, quantity, price, fees, transactionDate, source, "Buy order");
-
-        portfolioRepository.save(portfolio);
-        domainEventPublisher.publish(portfolio.getDomainEvents());
     }
 
     @Override
@@ -80,14 +64,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
         Instant transactionDate,
         TransactionSource source
     ) {
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-            .orElseThrow(() -> new IllegalArgumentException("Portfolio not found."));
-
-        // Delegate the specific "sell" action to the domain aggregate.
-        // portfolio.sellAsset(assetIdentifier, quantity, price, fees, transactionDate, source, "Sell order");
-
-        portfolioRepository.save(portfolio);
-        domainEventPublisher.publish(portfolio.getDomainEvents());
+  
     }
 
     @Override
@@ -100,13 +77,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
         List<Fee> fees, 
         Instant transactionDate
     ) {
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-            .orElseThrow(() -> new IllegalArgumentException("Portfolio not found."));
 
-        portfolio.recordCashflow(amount, cashflowType, source, description, fees, transactionDate);
-
-        portfolioRepository.save(portfolio);
-        domainEventPublisher.publish(portfolio.getDomainEvents());
     }
 
     @Override
@@ -118,13 +89,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
         List<Fee> fees, 
         Instant transactionDate
     ) {
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-            .orElseThrow(() -> new IllegalArgumentException("Portfolio not found."));
 
-        portfolio.incurrNewLiability(details, initialAmount, source, fees, transactionDate);
-
-        portfolioRepository.save(portfolio);
-        domainEventPublisher.publish(portfolio.getDomainEvents());
     }
 
     @Override
@@ -136,13 +101,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
         List<Fee> fees, 
         Instant transactionDate
     ) {
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-            .orElseThrow(() -> new IllegalArgumentException("Portfolio not found."));
-        
-        portfolio.recordLiabilityPayment(liabilityId, paymentAmount, source, fees, transactionDate);
 
-        portfolioRepository.save(portfolio);
-        domainEventPublisher.publish(portfolio.getDomainEvents());
     }
  
 }
