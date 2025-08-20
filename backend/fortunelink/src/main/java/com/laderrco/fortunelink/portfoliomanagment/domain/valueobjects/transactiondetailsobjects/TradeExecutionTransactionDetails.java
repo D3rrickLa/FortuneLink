@@ -49,7 +49,7 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         this.quantity = quantity;
         this.pricePerUnit = pricePerUnit; // Store the original for audit
         this.assetValueInNativeCurrency = pricePerUnit.multiply(quantity);
-        this.assetValueInPortfolioCurrency = convertedPrice.multiply(quantity);
+        this.assetValueInPortfolioCurrency = convertedPrice.multiply(quantity); // we don't have this, need to get 
         this.totalFeesInPortfolioCurrency = totalConvertedFees;
         this.assetHoldingId = assetHoldingId;
         this.realizedGainLossAssetCurrency = null;
@@ -87,6 +87,23 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         this.realizedGainLossAssetCurrency = realizedGainLossAssetCurrency;
         this.realizedGainLossPortfolioCurrency = realizedGainLossPortfolioCurrency;
         this.acbPerUnitAtSale = null; // Will be set by the Portfolio when creating sell transactions
+    }
+
+    // this is the constructor we are going to use
+    public TradeExecutionTransactionDetails(
+        AssetIdentifier assetIdentifier,
+        BigDecimal quantity, 
+        Money pricePerUnit, // original price
+        Money assestValueInNativeCurrency,
+        Money assetValueInPortfolioCurrency,
+        
+        TransactionSource source,
+        String description,
+        List<Fee> fees,
+        Money totalFeesInPortfolioCurrency,
+        AssetHoldingId assetHoldingId
+    ) {
+        this(assetIdentifier, quantity, pricePerUnit, source, description, fees, null, assetHoldingId, null);
     }
 
     public TradeExecutionTransactionDetails(
