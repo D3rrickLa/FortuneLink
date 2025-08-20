@@ -7,4 +7,8 @@ public record CorrelationId(UUID correlationId) {
     public CorrelationId {
         Objects.requireNonNull(correlationId, "Correlation id cannot be null.");
     }
+
+    public static CorrelationId createRandom() {
+        return new CorrelationId(UUID.randomUUID());
+    }
 }

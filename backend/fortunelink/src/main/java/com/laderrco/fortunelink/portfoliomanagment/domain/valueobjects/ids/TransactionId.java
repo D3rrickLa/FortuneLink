@@ -7,4 +7,8 @@ public record TransactionId(UUID transactionId) {
     public TransactionId {
         Objects.requireNonNull(transactionId, "Transaction id cannot be null.");
     }
+
+    public static TransactionId createRandom() {
+        return new TransactionId(UUID.randomUUID());
+    }
 }

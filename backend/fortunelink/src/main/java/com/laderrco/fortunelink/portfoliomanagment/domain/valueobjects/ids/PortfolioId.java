@@ -7,4 +7,8 @@ public record PortfolioId(UUID portfolioId) {
     public PortfolioId {
         Objects.requireNonNull(portfolioId, "Portfolio id cannot be null.");
     }
+
+    public static PortfolioId createRandom() {
+        return new PortfolioId(UUID.randomUUID());
+    }
 }

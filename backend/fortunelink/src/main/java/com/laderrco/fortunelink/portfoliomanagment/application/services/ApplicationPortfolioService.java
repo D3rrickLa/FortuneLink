@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-import com.laderrco.fortunelink.portfoliomanagment.domain.entities.Portfolio;
 import com.laderrco.fortunelink.portfoliomanagment.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.CurrencyConversionService;
 import com.laderrco.fortunelink.portfoliomanagment.domain.services.DomainEventPublisher;
@@ -36,6 +35,15 @@ public final class ApplicationPortfolioService implements PortfolioService {
         this.domainEventPublisher = domainEventPublisher;
     }
 
+    private String sanitizeDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+        String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+
     @Override
     public PortfolioId createPortfolio(UserId userId, String name, String description, Money initialBalance) {
         return null;
@@ -51,7 +59,7 @@ public final class ApplicationPortfolioService implements PortfolioService {
         Instant transactionDate,
         TransactionSource source
     ) {
-
+        // String cleanDescription = sanitizeDescription(null);
     }
 
     @Override
@@ -103,5 +111,24 @@ public final class ApplicationPortfolioService implements PortfolioService {
     ) {
 
     }
+
+    public PortfolioRepository getPortfolioRepository() {
+        return portfolioRepository;
+    }
+
+    public CurrencyConversionService getCurrencyConversionService() {
+        return currencyConversionService;
+    }
+
+    public MarketDataService getMarketDataService() {
+        return marketDataService;
+    }
+
+    public DomainEventPublisher getDomainEventPublisher() {
+        return domainEventPublisher;
+    }
+
+
+    
  
 }
