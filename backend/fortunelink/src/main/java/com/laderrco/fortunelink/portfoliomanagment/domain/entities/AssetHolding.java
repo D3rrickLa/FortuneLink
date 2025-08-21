@@ -99,18 +99,17 @@ public class AssetHolding {
         return totalProceeds.subtract(costBasisForSoldQuantity);
     }
 
-    public void addToPosition(BigDecimal quantity, Money costBasisNative) {
+    public void addToPosition(BigDecimal quantity, Money totalCostBasis, Money totalFees) {
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Quantity must be positive.");
         }
-        if (!costBasisNative.currency().equals(this.totalAdjustedCostBasisNativeCurrency.currency())) {
+        if (!totalCostBasis.currency().equals(this.totalAdjustedCostBasisNativeCurrency.currency())) {
             throw new IllegalArgumentException("Cost basis currency must match existing holding currency.");
         }
 
         this.quantity = this.quantity.add(quantity);
-        this.totalAdjustedCostBasisNativeCurrency = this.totalAdjustedCostBasisNativeCurrency.add(costBasisNative);
+        this.totalAdjustedCostBasisNativeCurrency = this.totalAdjustedCostBasisNativeCurrency.add(totalCostBasis);
         this.updatedAt = Instant.now();
-        
     }
 
     public void removeFromPosition(BigDecimal quantity) {
