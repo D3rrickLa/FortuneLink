@@ -44,8 +44,6 @@ public class Transaction {
         TransactionType.REVERSE_STOCK_SPLIT
     );
 
-    
-
     public Transaction(
         TransactionId transactionId, 
         CorrelationId correlationId, 
