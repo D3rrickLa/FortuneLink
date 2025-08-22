@@ -99,7 +99,7 @@ public class AssetHolding {
         return totalProceeds.subtract(costBasisForSoldQuantity);
     }
 
-    public void addToPosition(BigDecimal quantity, Money totalCostBasis, Money totalFees) {
+    public void addToPosition(BigDecimal quantity, Money totalCostBasis) {
         if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Quantity must be positive.");
         }

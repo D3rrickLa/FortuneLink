@@ -122,45 +122,15 @@ public final class TradeExecutionTransactionDetails extends TransactionDetails {
         );
     }
 
-
-    public AssetIdentifier getAssetIdentifier() {
-        return assetIdentifier;
-    }
-
-    public BigDecimal getQuantity() {
-        return quantity;
-    }
-
-    public Money getPricePerUnit() {
-        return pricePerUnit;
-    }
-
-    public Money getAssetValueInNativeCurrency() {
-        return assetValueInNativeCurrency;
-    }
-
-    public Money getAssetValueInPortfolioCurrency() {
-        return assetValueInPortfolioCurrency;
-    }
-
-    public Money getTotalFeesInPortfolioCurrency() {
-        return totalFeesInPortfolioCurrency;
-    }
-
-    public AssetHoldingId getAssetHoldingId() {
-        return assetHoldingId;
-    }
-
-    public Money getRealizedGainLossAssetCurrency() {
-        return realizedGainLossAssetCurrency;
-    }
-
-    public Money getRealizedGainLossPortfolioCurrency() {
-        return realizedGainLossPortfolioCurrency;
-    }
-
-    public Money getAcbPerUnitAtSale() {
-        return acbPerUnitAtSale;
-    }
+    public AssetIdentifier getAssetIdentifier() { return assetIdentifier; }
+    public BigDecimal getQuantity() { return quantity; }
+    public Money getPricePerUnit() { return pricePerUnit; }
+    public Money getAssetValueInNativeCurrency() { return assetValueInNativeCurrency; }
+    public Money getAssetValueInPortfolioCurrency() { return assetValueInPortfolioCurrency; }
+    public Money getTotalFeesInPortfolioCurrency() { return totalFeesInPortfolioCurrency; }
+    public AssetHoldingId getAssetHoldingId() { return assetHoldingId; }
+    public Money getRealizedGainLossAssetCurrency() { return realizedGainLossAssetCurrency; }
+    public Money getRealizedGainLossPortfolioCurrency() { return realizedGainLossPortfolioCurrency; }
+    public Money getAcbPerUnitAtSale() { return acbPerUnitAtSale; }
     
 }

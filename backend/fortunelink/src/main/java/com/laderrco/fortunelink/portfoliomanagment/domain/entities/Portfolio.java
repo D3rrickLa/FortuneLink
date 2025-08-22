@@ -231,63 +231,82 @@ public class Portfolio {
     // enforce business rules and invariants
     // maintain consistency of the aggregate
     // react to business events
-
     public void buyAsset(
         AssetIdentifier assetIdentifier,
-        BigDecimal quantity, 
+        BigDecimal quantityToBuy,
         Money pricePerUnitInAssetCurrency,
-        Money assetCostInPortfolioCurrency, // For cash balance
-        Money totalFeesInPortfolioCurrency, // For transaction record
-        Money totalFeesInAssetCurrency,     // For ACB calculation
+        Money assetCostInPortfolioCurrency, // conversion service gets 
+        Money totalFeesInPortfolioCurrency,
+        Money totalFeesInAssetCurrency,
         Instant transactionDate,
-        
-        TransactionSource source, 
+
+        TransactionSource source,
         String description,
         List<Fee> fees
     ) {
-        AssetIdentifier validatedAssetIdentifier  = Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
-        quantity = Objects.requireNonNull(quantity, "Quantity cannot be null.");
-        pricePerUnitInAssetCurrency = Objects.requireNonNull(pricePerUnitInAssetCurrency, "Price per unit cannot be null.");
-        assetCostInPortfolioCurrency = Objects.requireNonNull(assetCostInPortfolioCurrency, "Asset cost in portfolio currency cannot be null.");
-        
-        totalFeesInPortfolioCurrency = Objects.requireNonNull(totalFeesInPortfolioCurrency, "Total fees in portfolio currency cannot be null.");
-        totalFeesInAssetCurrency = Objects.requireNonNull(totalFeesInAssetCurrency, "Total asset fees in asset currency cannot be null.");
+        AssetIdentifier validateAssetIdentifier = Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
+        quantityToBuy = Objects.requireNonNull(quantityToBuy, "Quantity cannot be null.");
+        pricePerUnitInAssetCurrency = Objects.requireNonNull(pricePerUnitInAssetCurrency, "Price per unit in asset currency cannot be null.");
         transactionDate = Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+        assetCostInPortfolioCurrency = Objects.requireNonNull(assetCostInPortfolioCurrency, "Asset cost in portfolio cannot be null.");
+        totalFeesInPortfolioCurrency = Objects.requireNonNull(totalFeesInPortfolioCurrency, "Total fees in portfolio currency cannot be null.");
+        totalFeesInAssetCurrency = Objects.requireNonNull(totalFeesInAssetCurrency, "Total fees in asset currency cannot be null.");
 
-        validateBaseTransactionDetails(source, description, fees);
+        validateBaseTransactionDetails(source, description, fees);  
         validateTransactionDate(transactionDate);
         validatePrice(pricePerUnitInAssetCurrency);
-        validateQuantity(quantity);
-        validateAssetPriceCurrency(validatedAssetIdentifier, pricePerUnitInAssetCurrency);
+        validateQuantity(quantityToBuy);
+        validateAssetPriceCurrency(validateAssetIdentifier, pricePerUnitInAssetCurrency);
+
         
+        
+        // logic validation 
+        
+        /*
+        * // -- stuff that needs to be calculated, you either calculated it in here, or pass it in the parameter -- // 
+        * Money totalFees = calculateTotalFees() // fees in native price, all of them
+        * Money assetCost = pricePerUnit * quantity
+        * 
+        * Money totalCostInAssetCurrency = assetCost.add(totalFees)
+        * Money totalCostInPortfolioCurrency = convert()
+        * 
+        * Money netCashImpact = totalCostPortfolio.negate()
+        * 
+        * this.portfolioCashBalance = this.portfolioCashBalance.add(netCashImpact)
+        * 
+        */
+        Money assetCostInAssetCurrency = pricePerUnitInAssetCurrency.multiply(quantityToBuy);
+        // then we need the totalFees in AssetCurrency
+        Money totalCostInAssetCurrency = assetCostInAssetCurrency.add(totalFeesInAssetCurrency);
+
+        // then we need the totalCost in portfolio, which is assetCost and total Fees, we can't use the conversion so we must pass it in
         Money totalCostInPortfolioCurrency = assetCostInPortfolioCurrency.add(totalFeesInPortfolioCurrency);
-        validateSufficientFunds(totalCostInPortfolioCurrency.negate(), "asset purchase");
+        validateSufficientFunds(totalCostInPortfolioCurrency, "buyAsset");
 
         this.portfolioCashBalance = this.portfolioCashBalance.subtract(totalCostInPortfolioCurrency);
 
-        AssetHolding assetHolding = findAssetHolding(validatedAssetIdentifier)
-            .orElseGet(() -> createNewAssetHolding(validatedAssetIdentifier));
-        
-        Money assetCostInAssetCurrency = pricePerUnitInAssetCurrency.multiply(quantity);
-        Money totalCostBasisInAssetCurrency = assetCostInAssetCurrency.add(totalFeesInAssetCurrency);
-        assetHolding.addToPosition(quantity, totalCostBasisInAssetCurrency, totalFeesInAssetCurrency);
+        AssetHolding assetHolding = findAssetHolding(validateAssetIdentifier)
+            .orElseGet(() -> createNewAssetHolding(validateAssetIdentifier));
+
+        assetHolding.addToPosition(quantityToBuy, totalCostInAssetCurrency);
 
         TradeExecutionTransactionDetails details = TradeExecutionTransactionDetails.createBuyDetails(
             assetHolding.getAssetHoldingId(),
-            validatedAssetIdentifier, 
-            quantity, 
-            pricePerUnitInAssetCurrency, 
-            assetCostInPortfolioCurrency, // asset cost without fees 
-            totalFeesInPortfolioCurrency,
-            source, 
-            description, 
+            validateAssetIdentifier,
+            quantityToBuy,
+            pricePerUnitInAssetCurrency,
+            assetCostInPortfolioCurrency,
+            totalFeesInPortfolioCurrency, 
+            
+            source,
+            description,
             fees
         );
-        
-        Transaction transaciton = new Transaction(
+
+        Transaction transaction = new Transaction(
             TransactionId.createRandom(),
             CorrelationId.createRandom(),
-            null, 
+            null,
             this.portfolioId,
             TransactionType.BUY,
             TransactionStatus.COMPLETED,
@@ -297,116 +316,103 @@ public class Portfolio {
             Instant.now()
         );
 
-        this.transactions.add(transaciton);
-        
+        this.transactions.add(transaction);
+
         addDomainEvent(new AssetBoughtEvent(
             this.portfolioId,
             assetHolding.getAssetHoldingId(),
-            validatedAssetIdentifier,
-            quantity,
-            pricePerUnitInAssetCurrency.multiply(quantity).add(totalFeesInAssetCurrency), // total cost basis
+            validateAssetIdentifier,
+            quantityToBuy,
+            totalCostInAssetCurrency,
             transactionDate
         ));
-            
-        this.recordLastOperation("Asset bought: " + assetIdentifier.symbol());
+
+        recordLastOperation("Asset bought: " + assetIdentifier.symbol());      
     }
 
     public void sellAsset(
         AssetIdentifier assetIdentifier,
-        BigDecimal quantity, 
+        BigDecimal quantityToSell,
         Money pricePerUnitInAssetCurrency,
-        Money assetProceedsInPortfolioCurrency,
-        Money totalFeesInPortfolioCurrency, 
-        Money totalFeesInAssetCurrency, 
-        Money realizedGainLossAssetCurrency,
+
+        Money assetProceedsInPortfolioCurrency, // conversion service gets 
+        Money totalFeesInPortfolioCurrency,
+        Money totalFeesInAssetCurrency,   
         Money realizedGainLossPortfolioCurrency,
-        Money acbPerUnitAtSale,
+
         Instant transactionDate,
-        
-        TransactionSource source, 
+
+        TransactionSource source,
         String description,
         List<Fee> fees
     ) {
-        AssetIdentifier validatedAssetIdentifier = Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
-        Objects.requireNonNull(quantity, "Quantity cannot be null.");
-        Objects.requireNonNull(pricePerUnitInAssetCurrency, "Price per unit cannot be null.");
-        Objects.requireNonNull(assetProceedsInPortfolioCurrency, "Asset proceeds in portfolio currency cannot be null.");
-        Objects.requireNonNull(totalFeesInPortfolioCurrency, "Total fees in portfolio currency cannot be null.");
-        Objects.requireNonNull(totalFeesInAssetCurrency, "Total fees in asset currency cannot be null.");
-        Objects.requireNonNull(realizedGainLossAssetCurrency, "Realized gain/loss in asset currency cannot be null.");
-        Objects.requireNonNull(realizedGainLossPortfolioCurrency, "Realized gain/loss in portfolio currency cannot be null.");
-        Objects.requireNonNull(acbPerUnitAtSale, "ACB per unit at sale cannot be null.");
-        Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
+        AssetIdentifier validateAssetIdentifier = Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
+        quantityToSell = Objects.requireNonNull(quantityToSell, "Quantity cannot be null.");
+        pricePerUnitInAssetCurrency = Objects.requireNonNull(pricePerUnitInAssetCurrency, "Price per unit in asset currency cannot be null.");
+        transactionDate = Objects.requireNonNull(transactionDate, "Transaction date cannot be null.");
 
-        validateBaseTransactionDetails(source, description, fees);
+        validateBaseTransactionDetails(source, description, fees);  
         validateTransactionDate(transactionDate);
         validatePrice(pricePerUnitInAssetCurrency);
-        validateQuantity(quantity);
-        validateAssetPriceCurrency(validatedAssetIdentifier, pricePerUnitInAssetCurrency);
+        validateQuantity(quantityToSell);
+        validateAssetPriceCurrency(validateAssetIdentifier, pricePerUnitInAssetCurrency);
 
-        AssetHolding assetHolding = findAssetHolding(validatedAssetIdentifier)
-            .orElseThrow(() -> new AssetNotFoundException("Cannot sell asset not held in portfolio: " + validatedAssetIdentifier.symbol()));
+        AssetHolding assetHolding = findAssetHolding(validateAssetIdentifier)
+            .orElseThrow(() -> new AssetNotFoundException("CAnnot sell asset not held in portfolio."));
+
+            
+        Money assetGrossProceedsInAssetCurrency = pricePerUnitInAssetCurrency.multiply(quantityToSell);
+        Money assetNetProceedsInAssetCurrency = assetGrossProceedsInAssetCurrency.subtract(totalFeesInAssetCurrency);
+            
+        Money costBasisAssetCurrency = assetHolding.getAverageACBPerUnit().multiply(quantityToSell);
+        Money realizedGainLossAssetCurrency = assetNetProceedsInAssetCurrency.subtract(costBasisAssetCurrency);
+            
+        Money netProceedsInPortflioCurrency = assetProceedsInPortfolioCurrency.subtract(totalFeesInPortfolioCurrency);
         
-        assetHolding.removeFromPosition(quantity);
-        
-        Money netProceedsInPortfolioCurrency = assetProceedsInPortfolioCurrency.subtract(totalFeesInPortfolioCurrency);
-        this.portfolioCashBalance = this.portfolioCashBalance.add(netProceedsInPortfolioCurrency);
+        assetHolding.removeFromPosition(quantityToSell);
+        this.portfolioCashBalance = this.portfolioCashBalance.add(netProceedsInPortflioCurrency);
 
         TradeExecutionTransactionDetails details = TradeExecutionTransactionDetails.createSellDetails(
             assetHolding.getAssetHoldingId(),
-            validatedAssetIdentifier,
-            quantity,
+            validateAssetIdentifier,
+            quantityToSell,
             pricePerUnitInAssetCurrency,
-            assetProceedsInPortfolioCurrency,
+            assetProceedsInPortfolioCurrency, // no fees
             totalFeesInPortfolioCurrency,
             realizedGainLossAssetCurrency,
             realizedGainLossPortfolioCurrency,
-            acbPerUnitAtSale,
+            assetHolding.getAverageACBPerUnit(),
+
             source,
             description,
             fees
         );
-
+        
         Transaction transaction = new Transaction(
             TransactionId.createRandom(),
             CorrelationId.createRandom(),
-            null, 
+            null,
             this.portfolioId,
             TransactionType.SELL,
             TransactionStatus.COMPLETED,
             details,
-            netProceedsInPortfolioCurrency,      // Positive cash flow for sell
+            netProceedsInPortflioCurrency,
             transactionDate,
             Instant.now()
         );
 
         this.transactions.add(transaction);
 
-        // Domain event
         addDomainEvent(new AssetSoldEvent(
             this.portfolioId,
             assetHolding.getAssetHoldingId(),
-            validatedAssetIdentifier,
-            quantity,
-            pricePerUnitInAssetCurrency.multiply(quantity), // Gross proceeds in asset currency
+            validateAssetIdentifier,
+            quantityToSell,
+            pricePerUnitInAssetCurrency.multiply(quantityToSell),
             realizedGainLossAssetCurrency,
             transactionDate
         ));
 
-        this.recordLastOperation("Asset sold: " + validatedAssetIdentifier.symbol());
-    }
-
-    public LiabilityId incurLiability(
-        LiabilityDetails liabilityDetails,
-        Money principalAmount,
-        Instant incurrenceDate,
-        TransactionSource source,
-        String description 
-    ) {
-        Objects.requireNonNull(liabilityDetails, "Liability details cannot be null");
-        Objects.requireNonNull(principalAmount, "Principal amount cannot be null");
-        validateTransactionDate(incurrenceDate);
-
-        return null;
+        this.recordLastOperation("Asset sold: " + validateAssetIdentifier.symbol());
     }
 }
