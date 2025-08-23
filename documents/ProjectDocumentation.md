@@ -199,6 +199,8 @@ Record Income (Dividend/Interest):
 - Description: A user records passive income received from an asset holding (e.g., stock dividend, bond interest).
 - Trigger: User inputs income details.
 
+### Loan Management Bounded Context
+
 Add New Liability:
 
 - Description: A user records a new debt (e.g., mortgage, student loan) to track their overall financial obligations.
