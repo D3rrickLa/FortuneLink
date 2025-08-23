@@ -199,6 +199,8 @@ Record Income (Dividend/Interest):
 - Description: A user records passive income received from an asset holding (e.g., stock dividend, bond interest).
 - Trigger: User inputs income details.
 
+### Loan Management Bounded Context
+
 Add New Liability:
 
 - Description: A user records a new debt (e.g., mortgage, student loan) to track their overall financial obligations.
@@ -208,6 +210,8 @@ Record Liability Payment:
 
 - Description: A user records a payment made towards a liability, reducing the outstanding balance.
 - Trigger: User inputs payment details.
+
+### Goals & Financial Planning Bounded Context
 
 View Current Net Worth:
 
@@ -224,7 +228,6 @@ Analyze Asset Allocation:
 - Description: The system visualizes the distribution of assets by type, sector, or geography within the portfolio.
 - Trigger: User accesses allocation view.
 
-### Goals & Financial Planning Bounded Context
 
 Define a New Financial Goal:
 
@@ -302,6 +305,14 @@ Moderate Content/Users (for Moderators):
 
 - Description: A moderator reviews reported content, applies rules, and manages user statuses (e.g., suspension, ban).
 - Trigger: Moderator accesses moderation tools.
+
+### User and Authentication Bounded Context
+Basically we are handling the authentication, sign up, etc. here.
+It's an external service (Supabase) that other contexts integrates with 
+
+### Market Data
+a canonical source for asset information (individually and or list) which include
+prices, sectors, descriptions, and other market-related data. this will be consumed by other contexts (key lang: Price, Sector, Exchange, MarketCap, etc.)
 
 
 ## Aggregate Design Diagram
