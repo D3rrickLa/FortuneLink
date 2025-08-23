@@ -24,6 +24,7 @@ import com.laderrco.fortunelink.portfoliomanagment.domain.events.interfaces.Doma
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.InvalidQuantityException;
+import com.laderrco.fortunelink.portfoliomanagment.domain.exceptions.LiabilityNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagment.domain.valueobjects.PaymentAllocationResult;
@@ -177,7 +178,7 @@ public class Portfolio {
             // this isn't really an error, can turn into one,
             // price might be legitimately converted, but log for now
             System.out.println("Currency mismatch between asset and price");
-        }
+        } 
     }
 
     private void validateSufficientFunds(Money requiredAmount, String operations) {
@@ -512,7 +513,7 @@ public class Portfolio {
 
         Liability liability = this.liabilities.get(liabilityId);
         if (liability == null) {
-            throw new IllegalArgumentException("Liability not found: " + liabilityId);
+            throw new LiabilityNotFoundException("Liability not found: " + liabilityId);
         }
 
         PaymentAllocationResult result = liability.recordPayment(paymentAmount, transactionDate);
