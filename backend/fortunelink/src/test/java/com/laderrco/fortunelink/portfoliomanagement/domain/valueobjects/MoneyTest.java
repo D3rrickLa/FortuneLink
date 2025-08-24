@@ -118,7 +118,7 @@ class MoneyTest {
         @Test
         void convertToValidExchangeRate() {
             Money usd = Money.of(10, USD);
-            ExchangeRate rate = new ExchangeRate(USD, EUR, BigDecimal.valueOf(2));
+            CurrencyConversion rate = new CurrencyConversion(USD, EUR, BigDecimal.valueOf(2));
             Money eur = usd.convertTo(EUR, rate);
             assertEquals(Money.of(20, EUR), eur);
         }
@@ -126,7 +126,7 @@ class MoneyTest {
         @Test
         void convertToMismatchedExchangeRateThrows() {
             Money usd = Money.of(10, USD);
-            ExchangeRate wrongRate = new ExchangeRate(EUR, USD, BigDecimal.ONE);
+            CurrencyConversion wrongRate = new CurrencyConversion(EUR, USD, BigDecimal.ONE);
             assertThrows(CurrencyMismatchException.class, () -> usd.convertTo(EUR, wrongRate));
         }
     }
@@ -248,13 +248,13 @@ class MoneyTest {
         @Test
         void convertToNullThrows() {
             Money a = Money.of(10, USD);
-            assertThrows(NullPointerException.class, () -> a.convertTo(null, new ExchangeRate(USD, EUR, BigDecimal.ONE, Instant.now())));
+            assertThrows(NullPointerException.class, () -> a.convertTo(null, new CurrencyConversion(USD, EUR, BigDecimal.ONE, Instant.now())));
             assertThrows(NullPointerException.class, () -> a.convertTo(EUR, null));
         }
 
         @Test
         void convertTo_shouldThrowException_whenExchangeRateMismatch() {
-            ExchangeRate rate = new ExchangeRate(EUR, USD, BigDecimal.valueOf(1.1), Instant.now());
+            CurrencyConversion rate = new CurrencyConversion(EUR, USD, BigDecimal.valueOf(1.1), Instant.now());
             Money m1 = new Money(BigDecimal.valueOf(100), USD);
             assertThrows(CurrencyMismatchException.class, () -> m1.convertTo(EUR, rate));
             Money m2 = new Money(BigDecimal.valueOf(100), EUR);

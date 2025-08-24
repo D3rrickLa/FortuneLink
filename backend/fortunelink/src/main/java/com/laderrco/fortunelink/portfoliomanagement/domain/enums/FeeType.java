@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.enums;
 
+// track why money is leaving, separate from cash movement
 public enum FeeType {
     // --- Trading & Investment Fees ---
     BROKERAGE(FeeCategory.TRADING),
@@ -52,7 +53,8 @@ public enum FeeType {
     ADVISORY_FEE(FeeCategory.MISCELLANEOUS),
     PLATFORM_FEE(FeeCategory.MISCELLANEOUS),
     INSURANCE_FEE(FeeCategory.MISCELLANEOUS),
-    OTHER(FeeCategory.MISCELLANEOUS);
+    OTHER(FeeCategory.MISCELLANEOUS),
+    UNKNOWN(FeeCategory.MISCELLANEOUS);
 
     private final FeeCategory category;
 
@@ -63,4 +65,5 @@ public enum FeeType {
     public FeeCategory getCategory() {
         return category;
     }
+
 }

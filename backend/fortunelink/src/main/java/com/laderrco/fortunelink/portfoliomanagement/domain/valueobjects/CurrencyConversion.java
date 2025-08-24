@@ -10,7 +10,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.enums.DecimalPrecisio
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.ExchangeRateGeneralException;
 
-public record ExchangeRate(
+public record CurrencyConversion(
     Currency fromCurrency,
     Currency toCurrency,
     BigDecimal exchangeRate,
@@ -18,7 +18,7 @@ public record ExchangeRate(
 ) {
     private final static int FOREX_SCALE = DecimalPrecision.FOREX.getDecimalPlaces();
 
-    public ExchangeRate {
+    public CurrencyConversion {
         validateParameter(fromCurrency, "From currency");
         validateParameter(toCurrency, "To currency");
         validateParameter(exchangeRate, "Exchange rate");
@@ -37,12 +37,28 @@ public record ExchangeRate(
         }
     }
 
-    public ExchangeRate(Currency fromCurrency, Currency toCurrency, BigDecimal exchangeRate) {
+    public CurrencyConversion(Currency fromCurrency, Currency toCurrency, BigDecimal exchangeRate) {
         this(fromCurrency, toCurrency, exchangeRate, Instant.now());
     }
 
-    public static ExchangeRate of(String fromCurrency, String toCurrency, double exchangeRate, Instant date) {
-        return new ExchangeRate(Currency.getInstance(fromCurrency), Currency.getInstance(toCurrency), BigDecimal.valueOf(exchangeRate), date);
+    public static CurrencyConversion of(String fromCurrency, String toCurrency, double exchangeRate, Instant date) {
+        return new CurrencyConversion(Currency.getInstance(fromCurrency), Currency.getInstance(toCurrency), BigDecimal.valueOf(exchangeRate), date);
+    }
+
+    public Money convert(Money amount) {
+        amount = Objects.requireNonNull(amount, "Amount cannot be null.");
+        if (amount.currency() != fromCurrency) {
+            throw new CurrencyMismatchException("Amount to convert must have the same currency as the exchange rate object.");
+        }
+        return new Money(amount.amount().multiply(this.exchangeRate), this.toCurrency);
+    }
+
+    public Money convertBack(Money amount) {
+        if (!amount.currency().equals(toCurrency)) {
+            throw new IllegalArgumentException("Amount currency does not match exchange rate toCurrency");
+        }
+        BigDecimal nativeAmount = amount.amount().divide(exchangeRate, toCurrency.getDefaultFractionDigits(), RoundingMode.HALF_UP);
+        return Money.of(nativeAmount, fromCurrency);
     }
 
     /**
@@ -50,7 +66,7 @@ public record ExchangeRate(
      * @param other
      * @param parameterName
      */
-    private static  void validateParameter(Object other, String parameterName) {
+    private static void validateParameter(Object other, String parameterName) {
         Objects.requireNonNull(other, String.format("%s cannot be null.", parameterName));
     }
 }

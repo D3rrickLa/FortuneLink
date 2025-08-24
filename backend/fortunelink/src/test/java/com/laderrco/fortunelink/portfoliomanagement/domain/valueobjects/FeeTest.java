@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
@@ -13,58 +14,60 @@ import static org.assertj.core.api.Assertions.*;
 class FeeTest {
 
     // --- Helper ---
-    private static Money money(double amount) {
-        return Money.of(BigDecimal.valueOf(amount), "USD");
+    private static MonetaryAmount money(double amount) {
+        CurrencyConversion conversion = CurrencyConversion.of("USD", "CAD", 1.42, Instant.now());
+        MonetaryAmount ma = new MonetaryAmount(Money.of(BigDecimal.valueOf(amount), "USD"), conversion);
+        return ma;
     }
 
     // --- Canonical Constructor Tests ---
     @Test
     void constructor_shouldCreateFee() {
         Instant now = Instant.now();
-        Fee fee = new Fee(FeeType.BROKERAGE, money(10), "Brokerage fee", now);
+        Fee fee = new Fee(FeeType.BROKERAGE, money(10), "Brokerage fee", null, now);
 
         assertThat(fee.type()).isEqualTo(FeeType.BROKERAGE);
-        assertThat(fee.amount().amount()).isEqualByComparingTo(BigDecimal.valueOf(10));
+        assertThat(fee.amount().nativeAmount().amount()).isEqualByComparingTo(BigDecimal.valueOf(10));
         assertThat(fee.description()).isEqualTo("Brokerage fee");
         assertThat(fee.time()).isEqualTo(now);
     }
 
     @Test
     void constructor_shouldAllowZeroAmount() {
-        Fee fee = new Fee(FeeType.TRANSACTION_FEE, money(0), "Free fee", Instant.now());
-        assertThat(fee.amount().amount()).isEqualByComparingTo(BigDecimal.ZERO);
+        Fee fee = new Fee(FeeType.TRANSACTION_FEE, money(0), "Free fee", Collections.emptyMap(), Instant.now());
+        assertThat(fee.amount().nativeAmount().amount()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
     void constructor_shouldThrowForNegativeAmount() {
         assertThatExceptionOfType(InvalidQuantityException.class)
-                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(-1), "Negative fee", Instant.now()))
-                .withMessage("Fee amount cannot be negative.");
+                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(-1), "Negative fee", Collections.emptyMap(), Instant.now()))
+                .withMessage("Amount cannot be negative.");
     }
 
     @Test
     void constructor_shouldThrowForNullParameters() {
         assertThatNullPointerException()
-                .isThrownBy(() -> new Fee(null, money(1), "Desc", Instant.now()))
+                .isThrownBy(() -> new Fee(null, money(1), "Desc", Collections.emptyMap(), Instant.now()))
                 .withMessageContaining("Type cannot be null");
 
         assertThatNullPointerException()
-                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, null, "Desc", Instant.now()))
+                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, null, "Desc",  Collections.emptyMap(), Instant.now()))
                 .withMessageContaining("Amount cannot be null");
 
         assertThatNullPointerException()
-                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), null, Instant.now()))
+                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), null, Collections.emptyMap(), Instant.now()))
                 .withMessageContaining("Description cannot be null");
 
         assertThatNullPointerException()
-                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), "Desc", null))
+                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), "Desc", Collections.emptyMap(), null))
                 .withMessageContaining("Time cannot be null");
     }
 
     @Test
     void constructor_shouldThrowForBlankDescription() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), " ", Instant.now()))
+                .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), " ", Collections.emptyMap(), Instant.now()))
                 .withMessage("Description cannot be blank.");
     }
 
@@ -76,11 +79,12 @@ class FeeTest {
                 .type(FeeType.COMMISSION)
                 .amount(money(5))
                 .description("Commission fee")
+                .metadata(Collections.emptyMap())
                 .time(now)
                 .build();
 
         assertThat(fee.type()).isEqualTo(FeeType.COMMISSION);
-        assertThat(fee.amount().amount()).isEqualByComparingTo(BigDecimal.valueOf(5));
+        assertThat(fee.amount().nativeAmount().amount()).isEqualByComparingTo(BigDecimal.valueOf(5));
         assertThat(fee.description()).isEqualTo("Commission fee");
         assertThat(fee.time()).isEqualTo(now);
     }

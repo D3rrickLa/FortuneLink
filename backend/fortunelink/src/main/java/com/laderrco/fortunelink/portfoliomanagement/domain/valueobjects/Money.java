@@ -72,7 +72,7 @@ public record Money(
         return new Money(this.amount.divide(new BigDecimal(String.valueOf(divisor)), FINANCIAL_MATH_CONTEXT), this.currency); 
     }
 
-    public Money convertTo(Currency targetCurrency, ExchangeRate exchangeRate) {
+    public Money convertTo(Currency targetCurrency, CurrencyConversion exchangeRate) {
         validateParameter(targetCurrency, "Target currency");   
         validateParameter(exchangeRate, "Exchange rate");
         

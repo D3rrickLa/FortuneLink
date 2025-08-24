@@ -13,13 +13,13 @@ import org.junit.jupiter.api.Test;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.ExchangeRateGeneralException;
 
-public class ExchangeRateTest {
+public class CurrencyConversionTest {
  private static final int FOREX_SCALE = 6; // assume DecimalPrecision.FOREX.getDecimalPlaces() = 6
 
     @Test
     void constructor_shouldCreateExchangeRateSuccessfully() {
         Instant now = Instant.now();
-        ExchangeRate rate = new ExchangeRate(
+        CurrencyConversion rate = new CurrencyConversion(
                 Currency.getInstance("USD"),
                 Currency.getInstance("EUR"),
                 new BigDecimal("1.234567"),
@@ -35,7 +35,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_sameCurrency_shouldThrow() {
         assertThrows(CurrencyMismatchException.class, () -> {
-            new ExchangeRate(
+            new CurrencyConversion(
                     Currency.getInstance("USD"),
                     Currency.getInstance("USD"),
                     BigDecimal.ONE,
@@ -47,7 +47,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_negativeRate_shouldThrow() {
         assertThrows(ExchangeRateGeneralException.class, () -> {
-            new ExchangeRate(
+            new CurrencyConversion(
                     Currency.getInstance("USD"),
                     Currency.getInstance("EUR"),
                     new BigDecimal("-1.0"),
@@ -59,7 +59,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_wrongScale_shouldRound() {
         BigDecimal rateValue = new BigDecimal("1.23456789"); // more digits than FOREX_SCALE
-        ExchangeRate er = new ExchangeRate(
+        CurrencyConversion er = new CurrencyConversion(
                 Currency.getInstance("USD"),
                 Currency.getInstance("EUR"),
                 rateValue,
@@ -72,7 +72,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_exactScale_shouldKeepValue() {
         BigDecimal rateValue = new BigDecimal("1.234567"); // exactly FOREX_SCALE
-        ExchangeRate er = new ExchangeRate(
+        CurrencyConversion er = new CurrencyConversion(
                 Currency.getInstance("USD"),
                 Currency.getInstance("EUR"),
                 rateValue,
@@ -85,7 +85,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_nullFromCurrency_shouldThrow() {
         assertThrows(NullPointerException.class, () -> {
-            new ExchangeRate(
+            new CurrencyConversion(
                     null,
                     Currency.getInstance("EUR"),
                     BigDecimal.ONE,
@@ -97,7 +97,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_nullToCurrency_shouldThrow() {
         assertThrows(NullPointerException.class, () -> {
-            new ExchangeRate(
+            new CurrencyConversion(
                     Currency.getInstance("USD"),
                     null,
                     BigDecimal.ONE,
@@ -109,7 +109,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_nullExchangeRate_shouldThrow() {
         assertThrows(NullPointerException.class, () -> {
-            new ExchangeRate(
+            new CurrencyConversion(
                     Currency.getInstance("USD"),
                     Currency.getInstance("EUR"),
                     null,
@@ -121,7 +121,7 @@ public class ExchangeRateTest {
     @Test
     void constructor_nullExchangeRateDate_shouldThrow() {
         assertThrows(NullPointerException.class, () -> {
-            new ExchangeRate(
+            new CurrencyConversion(
                     Currency.getInstance("USD"),
                     Currency.getInstance("EUR"),
                     BigDecimal.ONE,
@@ -132,7 +132,7 @@ public class ExchangeRateTest {
 
     @Test
     void convenienceConstructor_shouldSetExchangeRateDateToNow() {
-        ExchangeRate rate = new ExchangeRate(
+        CurrencyConversion rate = new CurrencyConversion(
                 Currency.getInstance("USD"),
                 Currency.getInstance("EUR"),
                 new BigDecimal("1.234567")
@@ -147,7 +147,7 @@ public class ExchangeRateTest {
     @Test
     void factoryMethod_of_shouldCreateCorrectExchangeRate() {
         Instant now = Instant.now();
-        ExchangeRate rate = ExchangeRate.of("USD", "EUR", 1.234567, now);
+        CurrencyConversion rate = CurrencyConversion.of("USD", "EUR", 1.234567, now);
 
         assertEquals(Currency.getInstance("USD"), rate.fromCurrency());
         assertEquals(Currency.getInstance("EUR"), rate.toCurrency());
