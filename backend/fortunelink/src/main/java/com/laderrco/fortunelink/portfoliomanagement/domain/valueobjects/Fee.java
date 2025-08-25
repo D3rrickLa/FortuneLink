@@ -11,7 +11,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidQua
 
 public record Fee(
     FeeType type, 
-    MonetaryAmount amount,
+    MonetaryAmount amount, // Native currency → Portfolio currency conversion
     String description,
     Map<String, String> metadata, // optional, can be empty/null
     Instant time

@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
-
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
@@ -24,11 +23,15 @@ public abstract class TransactionDetails {
        this.fees = fees != null ? Collections.unmodifiableList(fees) : Collections.emptyList();
     }
 
-    // Safe to keep here because *all* transactions may have fees
-    public Money getTotalFeesInPortfolioCurrency(Currency portfolioCurrency) {
+    /**
+     * Sum all fees in a givne taget ecurrency (portfolio currency)
+     * @param targetCurrency is the currency we want to use 
+     * @return Money.java where the value equals to the summed of all fees in portfolio currency
+     */
+    public Money getTotalFeesInCurrency(Currency targetCurrency) {
         return fees.stream()
-            .map(fee -> fee.amount().getPortfolioAmount())
-            .reduce(Money.ZERO(portfolioCurrency), Money::add);
+            .map(fee -> fee.amount().getConversionAmount())
+            .reduce(Money.ZERO(targetCurrency), Money::add);
     }
 
     public TransactionSource getSource() {return source;}

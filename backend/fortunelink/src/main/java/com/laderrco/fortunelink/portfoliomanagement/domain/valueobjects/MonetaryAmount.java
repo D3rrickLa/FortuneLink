@@ -6,10 +6,29 @@ import java.util.Objects;
 
 /**
  * Encapsualtes both native and portfolio values
+ * 
+ * --- EXAMPLES ---
+ * 
+ * // European stock dividend received in EUR, portfolio in CAD
+    MonetaryAmount dividend = MonetaryAmount.of(
+        Money.of(100.00, EUR),                        // Native: what you received
+        CurrencyConversion.of(1.45, EUR, CAD)         // 1 EUR = 1.45 CAD
+    );
+    // Native: €100.00
+    // Portfolio: CAD $145.00
+
+    // US brokerage fee charged in USD, portfolio in CAD  
+    MonetaryAmount fee = MonetaryAmount.of(
+        Money.of(9.95, USD),                          // Native: what you were charged
+        CurrencyConversion.of(1.35, USD, CAD)         // 1 USD = 1.35 CAD
+    );
+    // Native: $9.95 USD
+ *  // Portfolio: CAD $13.43
+ * 
  */
 public record MonetaryAmount(
-    Money nativeAmount,
-    CurrencyConversion conversion
+    Money nativeAmount, // what was actually charged/paid
+    CurrencyConversion conversion // native -> portfolio conversion
 ) {
     public MonetaryAmount {
         nativeAmount = Objects.requireNonNull(nativeAmount, "Native amount cannot be null.");
@@ -43,8 +62,7 @@ public record MonetaryAmount(
         return new MonetaryAmount(this.nativeAmount.multiply(multiplier), this.conversion);
     }
 
-    public Money getPortfolioAmount() {
+    public Money getConversionAmount() {
         return this.conversion.convert(this.nativeAmount);
     }
-
 }

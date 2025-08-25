@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,13 +42,11 @@ public class TradeTransactionDetails extends TransactionDetails {
         this.assetIdentifier = Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
         this.quantity = Objects.requireNonNull(quantity, "Quantity cannot be null.");
         this.pricePerUnit = Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null.");
-
-
         this.realizedGainLoss = realizedGainLoss;
         this.acbPerUnitAtSale = acbPerUnitAtSale;
     }
 
-    public static final TradeTransactionDetails buyDetails(
+    public static final TradeTransactionDetails buy(
         AssetHoldingId assetHoldingId,
         AssetIdentifier assetIdentifier,
         BigDecimal quantity,
@@ -59,7 +58,7 @@ public class TradeTransactionDetails extends TransactionDetails {
         return new TradeTransactionDetails(assetHoldingId, assetIdentifier, quantity, pricePerUnit, null, null, source, description, fees);
     }
 
-    public static final TradeTransactionDetails sellDetails(
+    public static final TradeTransactionDetails sell(
         AssetHoldingId assetHoldingId, 
         AssetIdentifier assetIdentifier, 
         BigDecimal quantity,
@@ -76,24 +75,23 @@ public class TradeTransactionDetails extends TransactionDetails {
         return new TradeTransactionDetails(assetHoldingId, assetIdentifier, quantity, pricePerUnit, realizedGainLoss, acbPerUnitAtSale, source, description, fees);
     }
     
-    // we get TradeTrpe from the aggregate Transaction and does the cost basis calculation
+    // Net cost including fees
     public Money calculateNetCost(TradeType tradeType) {
-        Money grossValue = getGrossValue().getPortfolioAmount();
-        Money totalFees = super.getTotalFeesInPortfolioCurrency(grossValue.currency());
+        Money grossValue = getGrossValue().getConversionAmount();
+        Money totalFees = super.getTotalFeesInCurrency(grossValue.currency());
 
         return switch (tradeType) {
             case BUY -> grossValue.add(totalFees);
             case SELL -> grossValue.subtract(totalFees);
-            case SHORT_SELL -> grossValue.subtract(totalFees); // different semantics
-            case COVER_SHORT -> grossValue.add(totalFees);
-            default -> throw new IllegalArgumentException("Unexpected value: " + tradeType);
+            default -> throw new IllegalArgumentException("Unexpected trade type: " + tradeType);
         };
-        
     }
 
-    public MonetaryAmount getGrossValue() {
-        return pricePerUnit.multiply(quantity); // asset value without fees
-    }
+    public boolean isBuy(TradeType tradeType) { return tradeType == TradeType.BUY; }
+    public boolean isSell(TradeType tradeType) { return tradeType == TradeType.SELL; }
+
+    // Gross value of the trade (without fees)
+    public MonetaryAmount getGrossValue() {return pricePerUnit.multiply(quantity);}
 
     public AssetHoldingId getAssetHoldingId() {return assetHoldingId;}
     public AssetIdentifier getAssetIdentifier() {return assetIdentifier;}
@@ -102,6 +100,4 @@ public class TradeTransactionDetails extends TransactionDetails {
     public MonetaryAmount getRealizedGainLoss() {return realizedGainLoss;}
     public MonetaryAmount getAcbPerUnitAtSale() {return acbPerUnitAtSale;}
     
-    
-
 }
