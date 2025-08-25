@@ -10,7 +10,6 @@ import java.util.Currency;
 
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.ExchangeRateGeneralException;
 
 public class CurrencyConversionTest {
@@ -30,18 +29,6 @@ public class CurrencyConversionTest {
         assertEquals(Currency.getInstance("EUR"), rate.toCurrency());
         assertEquals(new BigDecimal("1.234567"), rate.exchangeRate());
         assertEquals(now, rate.exchangeRateDate());
-    }
-
-    @Test
-    void constructor_sameCurrency_shouldThrow() {
-        assertThrows(CurrencyMismatchException.class, () -> {
-            new CurrencyConversion(
-                    Currency.getInstance("USD"),
-                    Currency.getInstance("USD"),
-                    BigDecimal.ONE,
-                    Instant.now()
-            );
-        });
     }
 
     @Test

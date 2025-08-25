@@ -7,7 +7,6 @@ import java.util.Currency;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.DecimalPrecision;
-import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.ExchangeRateGeneralException;
 
 public record CurrencyConversion(
@@ -24,9 +23,10 @@ public record CurrencyConversion(
         validateParameter(exchangeRate, "Exchange rate");
         validateParameter(exchangeRateDate, "Exchange rate date");
         
-        if (fromCurrency.equals(toCurrency)) {
-            throw new CurrencyMismatchException("Cannot convert currency to itself.");
-        }
+        // NOT NEEDED ANYMOTE, BUSINESS RULES CHANGED
+        // if (fromCurrency.equals(toCurrency)) {
+        //     throw new CurrencyMismatchException("Cannot convert currency to itself.");
+        // }
 
         if (exchangeRate.compareTo(BigDecimal.ZERO) < 0) {
             throw new ExchangeRateGeneralException("Exchange rate must be positive.");
@@ -45,10 +45,18 @@ public record CurrencyConversion(
         return new CurrencyConversion(Currency.getInstance(fromCurrency), Currency.getInstance(toCurrency), BigDecimal.valueOf(exchangeRate), date);
     }
 
+    public static CurrencyConversion identity(Currency currency) {
+        return new CurrencyConversion(currency, currency, BigDecimal.ONE, Instant.now());
+    }
+
+    public static CurrencyConversion identity(String currency) {
+        return new CurrencyConversion(Currency.getInstance(currency), Currency.getInstance(currency), BigDecimal.ONE, Instant.now());
+    }
+
     public Money convert(Money amount) {
         amount = Objects.requireNonNull(amount, "Amount cannot be null.");
-        if (amount.currency() != fromCurrency) {
-            throw new CurrencyMismatchException("Amount to convert must have the same currency as the exchange rate object.");
+        if (isIdentity()) {
+            return amount;
         }
         return new Money(amount.amount().multiply(this.exchangeRate), this.toCurrency);
     }
@@ -59,6 +67,10 @@ public record CurrencyConversion(
         }
         BigDecimal nativeAmount = amount.amount().divide(exchangeRate, toCurrency.getDefaultFractionDigits(), RoundingMode.HALF_UP);
         return Money.of(nativeAmount, fromCurrency);
+    }
+    
+    public boolean isIdentity() {
+        return fromCurrency.equals(toCurrency) && exchangeRate.equals(BigDecimal.ONE);
     }
 
     /**

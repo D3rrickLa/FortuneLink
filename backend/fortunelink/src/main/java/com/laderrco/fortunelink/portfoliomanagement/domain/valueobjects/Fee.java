@@ -23,6 +23,7 @@ public record Fee(
         validateParameter(time, "Time");
 
         // this can't trigger because of the check in MonetaryAmount
+        // update ^ this will now trigger, MontaryAmount shouldn't dicate what amount is good or bad, what if we get refunded??? 
         if (amount.nativeAmount().amount().compareTo(BigDecimal.ZERO) < 0) {
             throw new InvalidQuantityException("Fee amount cannot be negative.");
         }

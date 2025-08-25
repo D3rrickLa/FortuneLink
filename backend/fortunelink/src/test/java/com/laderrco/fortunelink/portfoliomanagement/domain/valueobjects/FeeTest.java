@@ -42,7 +42,7 @@ class FeeTest {
     void constructor_shouldThrowForNegativeAmount() {
         assertThatExceptionOfType(InvalidQuantityException.class)
                 .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(-1), "Negative fee", Collections.emptyMap(), Instant.now()))
-                .withMessage("Amount cannot be negative.");
+                .withMessage("Fee amount cannot be negative.");
     }
 
     @Test
