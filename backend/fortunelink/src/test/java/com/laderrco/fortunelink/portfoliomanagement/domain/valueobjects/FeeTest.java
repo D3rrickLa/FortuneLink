@@ -6,6 +6,7 @@ import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.FeeCategory;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidQuantityException;
 
@@ -30,6 +31,7 @@ class FeeTest {
         assertThat(fee.amount().nativeAmount().amount()).isEqualByComparingTo(BigDecimal.valueOf(10));
         assertThat(fee.description()).isEqualTo("Brokerage fee");
         assertThat(fee.time()).isEqualTo(now);
+        assertThat(fee.type().getCategory()).isEqualTo(FeeCategory.TRADING);
     }
 
     @Test

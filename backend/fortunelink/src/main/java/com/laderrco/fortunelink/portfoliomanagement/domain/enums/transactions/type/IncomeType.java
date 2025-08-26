@@ -2,7 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.t
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionCategory;
 
-public enum IncomeExpenseType implements TransactionType {
+public enum IncomeType implements TransactionType {
     INTEREST_INCOME,
     STAKING_REWARD,
     BONUS,

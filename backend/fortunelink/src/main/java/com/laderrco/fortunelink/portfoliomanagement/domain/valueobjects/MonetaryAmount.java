@@ -55,10 +55,12 @@ public record MonetaryAmount(
         );
     }
     public MonetaryAmount add(MonetaryAmount other) {
+        // might need a check for equality
         return new MonetaryAmount(this.nativeAmount.add(other.nativeAmount), this.conversion);
     }
 
     public MonetaryAmount multiply(BigDecimal multiplier) {
+        // should we allow negatives?
         return new MonetaryAmount(this.nativeAmount.multiply(multiplier), this.conversion);
     }
 

@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 
