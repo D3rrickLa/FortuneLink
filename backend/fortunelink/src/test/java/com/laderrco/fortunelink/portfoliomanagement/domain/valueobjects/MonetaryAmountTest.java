@@ -1,85 +1,161 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Currency;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.DecimalPrecision;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 
-public class MonetaryAmountTest {
-    private Money nativeAmountUSD;
-    private CurrencyConversion conversion;
+class MonetaryAmountTest {
 
-    @BeforeEach
-    void init() {
-        conversion = new CurrencyConversion(Currency.getInstance("USD"), Currency.getInstance("CAD"), BigDecimal.valueOf(1.42));
-        nativeAmountUSD = Money.of(25, Currency.getInstance("USD"));
+    Currency USD = Currency.getInstance("USD");
+    Currency CAD = Currency.getInstance("CAD");
+    Currency EUR = Currency.getInstance("EUR");
+    Instant now = Instant.now();
+
+    Money usd100 = Money.of(new BigDecimal("100.00"), USD);
+    Money usd50 = Money.of(new BigDecimal("50.00"), USD);
+    Money cad100 = Money.of(new BigDecimal("100.00"), CAD);
+
+    CurrencyConversion usdToCad = new CurrencyConversion(USD, CAD, new BigDecimal("1.25"), now);
+    CurrencyConversion cadToUsd = new CurrencyConversion(CAD, USD, new BigDecimal("0.75"), now);
+    CurrencyConversion cadToEur = new CurrencyConversion(CAD, EUR, new BigDecimal("0.62"), now);
+    CurrencyConversion identityCad = CurrencyConversion.identity(CAD);
+
+    @Test
+    void constructor_shouldThrowIfNativeCurrencyMismatch() {
+        Money money = Money.of(BigDecimal.TEN, CAD);
+        CurrencyConversion conversion = new CurrencyConversion(USD, CAD, BigDecimal.ONE, now);
+
+        Exception ex = assertThrows(CurrencyMismatchException.class, () ->
+            new MonetaryAmount(money, conversion)
+        );
+        assertEquals("Conversion from-currency must match native amount currency.", ex.getMessage());
     }
 
     @Test
-    void test_Constructor_Valid() {
-        MonetaryAmount amount = new MonetaryAmount(nativeAmountUSD, conversion);
-        assertEquals(Money.of(25, "USD"), amount.nativeAmount());
-    }
-
-    @Test 
-    void test_ZERO() {
-        MonetaryAmount amount = MonetaryAmount.ZERO(Currency.getInstance("USD"));
-        assertEquals(BigDecimal.ZERO.setScale(DecimalPrecision.MONEY.getDecimalPlaces()), amount.nativeAmount().amount());
-        assertEquals(Currency.getInstance("USD"), amount.conversion().toCurrency());
-        assertEquals(Currency.getInstance("USD"), amount.conversion().fromCurrency());
-    }
-
-    @Test 
-    void test_ZERO_Two_Currencies() {
-        MonetaryAmount amount = MonetaryAmount.ZERO(Currency.getInstance("USD"), Currency.getInstance("EUR"));
-        assertEquals(BigDecimal.ZERO.setScale(DecimalPrecision.MONEY.getDecimalPlaces()), amount.nativeAmount().amount());
-        assertEquals(Currency.getInstance("USD"), amount.nativeAmount().currency());
-        assertEquals(Currency.getInstance("USD"), amount.conversion().fromCurrency());
-        assertEquals(Currency.getInstance("EUR"), amount.conversion().toCurrency());
+    void factory_of_shouldCreateValidAmount() {
+        MonetaryAmount amount = MonetaryAmount.of(usd100, usdToCad);
+        assertEquals(usd100, amount.nativeAmount());
+        assertEquals(CAD, amount.conversion().toCurrency());
     }
 
     @Test
-    void test_Add_Valid() {
-        MonetaryAmount amount = MonetaryAmount.of(nativeAmountUSD, conversion);
-        MonetaryAmount amount2 = MonetaryAmount.of(nativeAmountUSD.multiply(2), conversion);
-        MonetaryAmount addedAmount = amount.add(amount2);
-        assertEquals(Money.of(75, "USD"), addedAmount.nativeAmount());
-        assertEquals(conversion, addedAmount.conversion());
+    void factory_of_withSameCurrency_shouldUseIdentityConversion() {
+        MonetaryAmount amount = MonetaryAmount.of(usd100, USD, BigDecimal.ONE, now);
+        assertEquals(USD, amount.conversion().toCurrency());
+        assertEquals(BigDecimal.ONE.setScale(DecimalPrecision.FOREX.getDecimalPlaces()), amount.conversion().exchangeRate());
     }
 
     @Test
-    void test_Add_InValidConversion() {
-
-    }
-
-    @Test 
-    void test_Add_NegativeAmountShouldThrowException() {
-
-    }
-
-    @Test
-    void test_Multiply_Valid() {
-        MonetaryAmount amount = MonetaryAmount.of(nativeAmountUSD, conversion);
-        MonetaryAmount multipliedAmount = amount.multiply(BigDecimal.valueOf(2));
-        assertEquals(MonetaryAmount.of(Money.of(50, "USD"), conversion), multipliedAmount);
+    void factory_ZERO_singleCurrency_shouldCreateZeroAmount() {
+        MonetaryAmount zero = MonetaryAmount.ZERO(CAD);
+        assertTrue(zero.isZero());
+        assertEquals(CAD, zero.nativeAmount().currency());
+        assertEquals(CAD, zero.conversion().toCurrency());
     }
 
     @Test
-    void test_Multiply_BoundaryMultipleOfZero() {
-        MonetaryAmount amount = MonetaryAmount.of(nativeAmountUSD, conversion);
-        MonetaryAmount multipliedAmount = amount.multiply(BigDecimal.valueOf(0));
-        assertEquals(MonetaryAmount.of(Money.of(0, "USD"), conversion), multipliedAmount);
+    void factory_ZERO_dualCurrency_shouldCreateZeroAmountWithConversion() {
+        MonetaryAmount zero = MonetaryAmount.ZERO(USD, CAD);
+        assertTrue(zero.isZero());
+        assertEquals(USD, zero.nativeAmount().currency());
+        assertEquals(CAD, zero.conversion().toCurrency());
     }
 
     @Test
-    void test_GetConversionAmount() {
-        MonetaryAmount amount = MonetaryAmount.of(nativeAmountUSD, conversion);
-        assertEquals(Money.of(25*1.42, "CAD"), amount.getConversionAmount());
+    void add_shouldSucceedWithMatchingCurrencies() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        MonetaryAmount b = MonetaryAmount.of(usd50, usdToCad);
+
+        MonetaryAmount result = a.add(b);
+        assertEquals(new BigDecimal("150.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), result.nativeAmount().amount());
     }
-    
+
+    @Test
+    void add_shouldFailWithDifferentNativeCurrencies() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        MonetaryAmount b = MonetaryAmount.of(cad100, cadToUsd);
+
+        assertThrows(CurrencyMismatchException.class, () -> a.add(b));
+    }
+
+    @Test
+    void add_shouldFailWithDifferentPortfolioCurrencies() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        MonetaryAmount b = MonetaryAmount.of(usd50, CurrencyConversion.identity(USD));
+
+        assertThrows(CurrencyMismatchException.class, () -> a.add(b));
+    }
+
+    @Test
+    void subtract_shouldSucceedWithMatchingCurrencies() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        MonetaryAmount b = MonetaryAmount.of(usd50, usdToCad);
+
+        MonetaryAmount result = a.subtract(b);
+        assertEquals(new BigDecimal("50.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), result.nativeAmount().amount());
+    }
+
+    @Test
+    void subtract_shouldFailWithDifferentCurrencies() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        MonetaryAmount b = MonetaryAmount.of(cad100, cadToUsd);
+
+        assertThrows(IllegalArgumentException.class, () -> a.subtract(b));
+    }
+
+    @Test
+    void subtract_shouldFailWithDIfferentToCurrencies() {
+        MonetaryAmount a = MonetaryAmount.of(cad100, cadToUsd);
+        MonetaryAmount b = MonetaryAmount.of(cad100, cadToEur);
+
+        assertThrows(IllegalArgumentException.class, () -> a.subtract(b));
+    }
+
+    @Test
+    void multiply_shouldScaleAmount() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        MonetaryAmount result = a.multiply(new BigDecimal("2.5"));
+
+        assertEquals(new BigDecimal("250.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), result.nativeAmount().amount());
+    }
+
+    @Test
+    void multiply_shouldThrowOnNullMultiplier() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        assertThrows(NullPointerException.class, () -> a.multiply(null));
+    }
+
+    @Test
+    void getPortfolioAmount_shouldConvertCorrectly() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        Money converted = a.getPortfolioAmount();
+
+        assertEquals(new BigDecimal("125.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), converted.amount());
+        assertEquals(CAD, converted.currency());
+    }
+
+    @Test
+    void utilityMethods_shouldBehaveCorrectly() {
+        MonetaryAmount a = MonetaryAmount.of(usd100, usdToCad);
+        assertFalse(a.isZero());
+        assertTrue(a.isPositive());
+        assertFalse(a.isNegative());
+        assertTrue(a.isMultiCurrency());
+
+        MonetaryAmount negated = a.negate();
+        assertEquals(new BigDecimal("-100.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), negated.nativeAmount().amount());
+
+        MonetaryAmount abs = negated.abs();
+        assertEquals(new BigDecimal("100.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), abs.nativeAmount().amount());
+        MonetaryAmount b = MonetaryAmount.of(usd100, CurrencyConversion.identity(USD));
+        assertFalse(b.isMultiCurrency());
+        
+    }
 }

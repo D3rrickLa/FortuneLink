@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.Tran
 public class ReversalTransactionDetails extends TransactionDetails {
     private final TransactionId transactionId;
     private final String reason;
+
     protected ReversalTransactionDetails(TransactionId transactionId, String reason, TransactionSource source, String description, List<Fee> fees) {
         super(source, description, fees);
         this.transactionId = Objects.requireNonNull(transactionId, "Transaction id cannot be null.");
@@ -20,11 +21,19 @@ public class ReversalTransactionDetails extends TransactionDetails {
             throw new IllegalArgumentException("Reason cannot be blank");
         }
 
-        if (reason.length() > 250) {
-            throw new IllegalArgumentException("Reason for reversal cannot be greater than 250 characters.");
+        if (reason.length() > 1000) {
+            throw new IllegalArgumentException("Reason for reversal cannot be greater than 1000 characters.");
         }
 
         this.reason = reason;
+    }
+
+    public TransactionId getTransactionId() {
+        return transactionId;
+    }
+
+    public String getReason() {
+        return reason;
     }
     
 }

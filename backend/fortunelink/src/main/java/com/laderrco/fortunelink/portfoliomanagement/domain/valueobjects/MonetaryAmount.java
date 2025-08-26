@@ -38,8 +38,7 @@ public record MonetaryAmount(
         conversion = Objects.requireNonNull(conversion, "Currency conversion cannot be null.");
 
         if (!conversion.fromCurrency().equals(nativeAmount.currency())) {
-            throw new CurrencyMismatchException("Conversion from-currency must match native amount currency.");
-            
+            throw new CurrencyMismatchException("Conversion from-currency must match native amount currency.");  
         }
     }
 
@@ -98,7 +97,7 @@ public record MonetaryAmount(
             throw new IllegalArgumentException(
                 "Cannot subtract amounts with different native currencies");
         }
-        
+
         if (!this.conversion.toCurrency().equals(other.conversion.toCurrency())) {
             throw new IllegalArgumentException(
                 "Cannot subtract amounts with different portfolio currencies");

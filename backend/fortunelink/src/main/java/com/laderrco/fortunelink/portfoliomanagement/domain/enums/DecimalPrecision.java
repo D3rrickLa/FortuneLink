@@ -21,4 +21,8 @@ public enum DecimalPrecision {
     public int getDecimalPlaces() {
         return decimalPlaces;
     }
+
+    public static final int getMoneyDecimalPlaces() {
+        return MONEY.getDecimalPlaces();
+    }
 }

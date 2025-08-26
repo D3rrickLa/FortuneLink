@@ -12,8 +12,10 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.enums.AccountMetadata
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.CashflowType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AccountEffect;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CurrencyConversion;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.MonetaryAmount;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 
 /**
  * This class represents any event related to cashflow (deposits, withdrawals, transfers, etc.)
@@ -32,7 +34,6 @@ public class AccountTransactionDetails extends TransactionDetails {
         validateFeeConsistency(fees, accountEffect);
         validateBusinessRules(accountEffect);        
     }
-
 
     // Factory methods for common transaction types
     public static AccountTransactionDetails createDividendTransaction(
@@ -77,6 +78,40 @@ public class AccountTransactionDetails extends TransactionDetails {
         return new AccountTransactionDetails(effect, source, description, Collections.emptyList());
     }
 
+    public static AccountTransactionDetails createWithdrawalTransaction(
+        TransactionSource source,
+        String description,
+        MonetaryAmount withdrawalAmount,
+        List<Fee> fees) {
+        
+        // Withdrawals are negative impacts
+        MonetaryAmount negativeAmount = withdrawalAmount.negate();
+        
+        AccountEffect effect = new AccountEffect(
+            negativeAmount,
+            negativeAmount, // Assuming no additional fees beyond the fee list
+            CashflowType.WITHDRAWAL,
+            Collections.emptyMap()
+        );
+        
+        return new AccountTransactionDetails(effect, source, description, fees);
+    }
+
+    public static AccountTransactionDetails createInterestTransaction(
+        TransactionSource source,
+        String description,
+        MonetaryAmount interestAmount) {
+        
+        AccountEffect effect = new AccountEffect(
+            interestAmount,
+            interestAmount,
+            CashflowType.INTEREST,
+            Map.of(AccountMetadataKey.TAX_YEAR.getKey(), String.valueOf(LocalDate.now().getYear()))
+        );
+        
+        return new AccountTransactionDetails(effect, source, description, Collections.emptyList());
+    }
+
 
     
     public AccountEffect getAccountEffect() {
@@ -116,7 +151,7 @@ public class AccountTransactionDetails extends TransactionDetails {
     }
 
     // reconciliation with extenral data
-    public boolean matchesExternalAmoutn(MonetaryAmount externalAmount) {
+    public boolean matchesExternalAmount(MonetaryAmount externalAmount) {
         return accountEffect.grossAmount().equals(externalAmount) ||
             accountEffect.netAmount().equals(externalAmount);
     }
@@ -149,15 +184,24 @@ public class AccountTransactionDetails extends TransactionDetails {
     }
 
     private MonetaryAmount convertFeeToMonetaryAmount(Fee fee, Currency targetCurrency) {
-        // Convert Fee to MonetaryAmount - you'll need to implement this based on your Fee structure
-        // This might involve currency conversion if fees are in different currencies
-        throw new UnsupportedOperationException("Fee conversion not implemented yet");        
+        Money feeAmount = fee.amount().nativeAmount();
+        if (feeAmount.currency().equals(targetCurrency)) {
+            return MonetaryAmount.of(feeAmount, CurrencyConversion.identity(targetCurrency));
+        }    
+        else {
+            // Need currency conversion - this requires ExchangeRateService
+            throw new UnsupportedOperationException("Cross-currency fee conversion requires ExchangeRateService");
+        }
     }
 
     private boolean areAmountsEqual(MonetaryAmount a, MonetaryAmount b) {
-        // Helper method that allows for small rounding differences
         MonetaryAmount difference = a.subtract(b).abs();
-        BigDecimal threshold = new BigDecimal("0.01"); // 1 cent tolerance
+        
+        // Better approach - use currency-specific precision
+        Currency currency = a.nativeAmount().currency();
+        int precision = currency.getDefaultFractionDigits();
+        BigDecimal threshold = BigDecimal.ONE.scaleByPowerOfTen(-precision); // 0.01 for USD, 1 for JPY, etc.
+        
         return difference.nativeAmount().amount().compareTo(threshold) <= 0;
     }    
     

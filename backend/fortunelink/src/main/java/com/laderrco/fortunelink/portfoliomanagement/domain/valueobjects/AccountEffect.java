@@ -127,11 +127,7 @@ public record AccountEffect(
         };
     }
     
-    
-    private static void validateAmountsForCashflowType(
-            CashflowType type, 
-            MonetaryAmount gross, 
-            MonetaryAmount net) {
+    private static void validateAmountsForCashflowType(CashflowType type, MonetaryAmount gross, MonetaryAmount net) {
         switch (type) {
             case DIVIDEND, INTEREST, RENTAL_INCOME, OTHER_INCOME -> {
                 if (gross.isNegative() || net.isNegative()) {
@@ -163,7 +159,6 @@ public record AccountEffect(
         }
     }
 
-    
     private Optional<String> getMetadata(AccountMetadataKey key) {
         return Optional.ofNullable(metadata.get(key.getKey()));
     }
