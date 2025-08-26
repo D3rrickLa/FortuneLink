@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.t
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionCategory;
 
+// optional classication of outflow for reporting
 public enum ExpenseType implements TransactionType {
     FEE,
     TAX,

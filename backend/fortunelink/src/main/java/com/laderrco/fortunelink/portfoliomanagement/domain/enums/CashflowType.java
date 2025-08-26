@@ -1,7 +1,7 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.enums;
 
 // track only cash movement, not the reason.
-// this has taken over the role of IncomeType from v3
+// 'How teh accoutn balance is affected'
 public enum CashflowType {
     DEPOSIT,
     WITHDRAWAL,
@@ -13,9 +13,8 @@ public enum CashflowType {
     OTHER_INCOME,
     
     // Outflows (not initiated by usesr)
+    FEE,
     OTHER_OUTFLOW, // USED FOR TAXES/FEES THAT REDUCES THE ACCOUNT BUT ARE NOT WITHDRAWALS INITIATED BY THE USER
-
-
 
     UNKNOWN
 }

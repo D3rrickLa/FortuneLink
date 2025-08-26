@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.t
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionCategory;
 
+// optional classication of inflow for reporting
 public enum IncomeType implements TransactionType {
     INTEREST_INCOME,
     STAKING_REWARD,
