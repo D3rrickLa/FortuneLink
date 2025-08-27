@@ -3,6 +3,9 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
@@ -98,28 +101,40 @@ public class AccountEffectTest {
     }
 
     @Test
-    void validateAmountsForCashflowType_ShouldThrowWhenDIVIDENDGrossIsNegative() {
+    void validateAmountsForCashflowType_ShouldThrowWhenIncomeGrossIsNegative() {
         MonetaryAmount gross = new MonetaryAmount(usd100, conversion).negate();
         MonetaryAmount net = new MonetaryAmount(usd90, conversion);
         assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.DIVIDEND, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.INTEREST, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.RENTAL_INCOME, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.OTHER_INCOME, null));
     }
     @Test
-    void validateAmountsForCashflowType_ShouldThrowWhenDIVIDENDNetIsNegative() {
+    void validateAmountsForCashflowType_ShouldThrowWhenIncomeDNetIsNegative() {
         MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
         MonetaryAmount net = new MonetaryAmount(usd90, conversion).negate();
         assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.DIVIDEND, null));
+            assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.INTEREST, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.RENTAL_INCOME, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.OTHER_INCOME, null));
+
     }
     @Test
-    void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALGrossIsPositive() {
+    void validateAmountsForCashflowType_ShouldThrowWhenExpenseGrossIsPositive() {
         MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
         MonetaryAmount net = new MonetaryAmount(usd90, conversion).negate();
         assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.WITHDRAWAL, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.FEE, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.OTHER_OUTFLOW, null));
     }
+
     @Test
-    void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALNetIsPositive() {
+    void validateAmountsForCashflowType_ShouldThrowWhenExpenseNetIsPositive() {
         MonetaryAmount gross = new MonetaryAmount(usd100, conversion).negate();
         MonetaryAmount net = new MonetaryAmount(usd90, conversion);
         assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.WITHDRAWAL, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.FEE, null));
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.OTHER_OUTFLOW, null));
     }
     @Test
     void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALGrossAndNetIsPositive() {
@@ -155,15 +170,27 @@ public class AccountEffectTest {
     }
  
 
-
-
-
-
-
     @Test
     void validateAmountsForCashflowType_ShouldThrowWhenErrorTypeGiven() {
         MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
         MonetaryAmount net = new MonetaryAmount(usd90, conversion);
         assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.ERROR, null));
+    }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenNullGiven() throws NoSuchMethodException, SecurityException, IllegalAccessException, InvocationTargetException {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        Method validateMethod = AccountEffect.class.getDeclaredMethod("validateAmountsForCashflowType", CashflowType.class, MonetaryAmount.class, MonetaryAmount.class);
+        validateMethod.setAccessible(true);
+        assertThrows(InvocationTargetException.class, ()->
+        validateMethod.invoke(null, null, gross, net)); // null because method is static
+    }
+
+    @Test
+    void validateAmountsForCashflowType_ShouldNotThrowWhenTransfer() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        assertDoesNotThrow(() -> new AccountEffect(gross, net, CashflowType.TRANSFER, null));
+
     }
 }

@@ -18,8 +18,12 @@ public record AccountEffect(
         Objects.requireNonNull(netAmount, "Net amount cannot be null.");
         Objects.requireNonNull(cashflowType, "Cashflow type cannot be null.");
         
+        // Allow zero amounts for specific transaction types that might legitimately have no cash impact
         if (grossAmount.nativeAmount().isZero() && netAmount.nativeAmount().isZero()) {
-            throw new IllegalArgumentException("Both gross and net amount cannot be zero.");
+            if (!allowsZeroAmounts(cashflowType)) {
+                throw new IllegalArgumentException("Transaction type " + cashflowType + 
+                    " cannot have both gross and net amounts as zero.");
+            }
         }
 
         if (!grossAmount.nativeAmount().currency().equals(netAmount.nativeAmount().currency())) {
@@ -47,7 +51,6 @@ public record AccountEffect(
                 }
             }
             case WITHDRAWAL, FEE, OTHER_OUTFLOW -> {
-
                 if (gross.isPositive() || net.isPositive()) {
                     throw new IllegalArgumentException("Expense transactions must have negative amount");
                 }
@@ -61,10 +64,22 @@ public record AccountEffect(
                 // Transfer can be either direction, no validation
             }
             case UNKNOWN -> {
-                // No additional validation - allow any non-zero amounts         
+                // No additional validation - allow any non-zero amounts 
+                // NOTE: original code/validation check was to see if both gross and net where zero
+                // that check is done at the beginning of the constructor so it is not needed        
             }
         
             default -> throw new IllegalArgumentException("Unexpected cashflow type: " + type);
         }
+    }
+
+    private static boolean allowsZeroAmounts(CashflowType type) {
+        return switch (type) {
+            case TRANSFER,           // Stock splits, position transfers
+                 FOREIGN_TAX_WITHHELD, // Tax records without cash movement
+                 UNKNOWN             // Adjustment/correction entries
+                 -> true;
+            default -> false;
+        };
     }
 }

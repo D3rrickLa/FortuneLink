@@ -14,9 +14,10 @@ public enum CashflowType {
     
     // Outflows (not initiated by usesr)
     FEE,
+    FOREIGN_TAX_WITHHELD,
     OTHER_OUTFLOW, // USED FOR TAXES/FEES THAT REDUCES THE ACCOUNT BUT ARE NOT WITHDRAWALS INITIATED BY THE USER
 
     UNKNOWN,
     
-    ERROR
+    ERROR, 
 }
