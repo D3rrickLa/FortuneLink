@@ -46,10 +46,17 @@ class MonetaryAmountTest {
     }
 
     @Test
+    // this uses the pure static factory
     void factory_of_withSameCurrency_shouldUseIdentityConversion() {
         MonetaryAmount amount = MonetaryAmount.of(usd100, USD, BigDecimal.ONE, now);
         assertEquals(USD, amount.conversion().toCurrency());
         assertEquals(BigDecimal.ONE.setScale(DecimalPrecision.FOREX.getDecimalPlaces()), amount.conversion().exchangeRate());
+    }
+    @Test
+    void factory_of_withSameCurrency_shouldCreateNewObjects() {
+        MonetaryAmount amount = MonetaryAmount.of(usd100, CAD, BigDecimal.valueOf(1.25), now);
+        assertEquals(CAD, amount.conversion().toCurrency());
+        assertEquals(BigDecimal.valueOf(1.25).setScale(DecimalPrecision.FOREX.getDecimalPlaces()), amount.conversion().exchangeRate());
     }
 
     @Test
@@ -139,6 +146,7 @@ class MonetaryAmountTest {
 
         assertEquals(new BigDecimal("125.00").setScale(DecimalPrecision.MONEY.getDecimalPlaces()), converted.amount());
         assertEquals(CAD, converted.currency());
+        assertEquals(CAD, a.getConversionAmount().currency());
     }
 
     @Test

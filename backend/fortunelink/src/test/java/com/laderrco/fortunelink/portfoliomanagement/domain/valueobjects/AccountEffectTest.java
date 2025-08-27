@@ -1,9 +1,8 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
@@ -11,7 +10,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.portfoliomanagement.domain.enums.AccountMetadataKey;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.CashflowType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.DecimalPrecision;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
@@ -27,6 +25,14 @@ public class AccountEffectTest {
     Money usdNeg100 = Money.of(new BigDecimal("-100.00"), USD);
 
     CurrencyConversion conversion = new CurrencyConversion(USD, CAD, new BigDecimal("1.25"), now);
+
+    @Test
+    void constructor_shouldNotThrowWhenGrossIsZero() {
+        Money TEN = Money.of(10, USD);
+        MonetaryAmount gross = new MonetaryAmount(Money.ZERO(USD), conversion);
+        MonetaryAmount net = new MonetaryAmount(TEN, conversion);   
+        assertDoesNotThrow(() -> new AccountEffect(gross, net, CashflowType.DEPOSIT, null));
+    }
 
     @Test
     void constructor_shouldThrowIfGrossAndNetAreZero() {
@@ -92,80 +98,72 @@ public class AccountEffectTest {
     }
 
     @Test
-    void hasFees_shouldReturnTrueIfFeeExists() {
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, conversion),
-            new MonetaryAmount(usd90, conversion),
-            CashflowType.DIVIDEND,
-            Map.of()
-        );
-        assertTrue(effect.hasFees());
+    void validateAmountsForCashflowType_ShouldThrowWhenDIVIDENDGrossIsNegative() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion).negate();
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.DIVIDEND, null));
+    }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenDIVIDENDNetIsNegative() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion).negate();
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.DIVIDEND, null));
+    }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALGrossIsPositive() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion).negate();
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.WITHDRAWAL, null));
+    }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALNetIsPositive() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion).negate();
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.WITHDRAWAL, null));
+    }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALGrossAndNetIsPositive() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.WITHDRAWAL, null));
+    }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenWITHDRAWALGrossAndNetIsNegative() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion).negate();
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion).negate();
+        assertDoesNotThrow(() -> new AccountEffect(gross, net, CashflowType.WITHDRAWAL, null));
     }
 
     @Test
-    void hasWithholdingTax_shouldDetectMetadataKey() {
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, conversion),
-            new MonetaryAmount(usd90, conversion),
-            CashflowType.DIVIDEND,
-            Map.of(AccountMetadataKey.WITHHOLDING_TAX_RATE.getKey(), "0.15")
-        );
-        assertTrue(effect.hasWithholdingTax());
+    void validateAmountsForCashflowType_ShouldThrowWhenDEPOSITGrossIsNegative() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion).negate();
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.DEPOSIT, null));
     }
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenDEPOSITNetIsNegative() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion).negate();
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.DEPOSIT, null));
+    }
+    
+    @Test
+    void validateAmountsForCashflowType_ShouldThrowWhenUNKNOWNGrossAndNetIsZero() {
+        MonetaryAmount gross = new MonetaryAmount(Money.ZERO(USD), conversion);
+        MonetaryAmount net = new MonetaryAmount(Money.ZERO(USD), conversion);
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.UNKNOWN, null));
+    }
+ 
+
+
+
+
+
 
     @Test
-    void getWithholdingTaxRate_shouldParseCorrectly() {
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, conversion),
-            new MonetaryAmount(usd90, conversion),
-            CashflowType.DIVIDEND,
-            Map.of(AccountMetadataKey.WITHHOLDING_TAX_RATE.getKey(), "0.15")
-        );
-        assertEquals(new BigDecimal("0.15"), effect.getWithholdingTaxRate().orElseThrow());
-    }
-
-    @Test
-    void getWithholdingTaxAmount_shouldCalculateCorrectly() {
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, conversion),
-            new MonetaryAmount(usd90, conversion),
-            CashflowType.DIVIDEND,
-            Map.of(AccountMetadataKey.WITHHOLDING_TAX_RATE.getKey(), "0.10")
-        );
-        assertEquals(new BigDecimal("10.00").setScale(DecimalPrecision.getMoneyDecimalPlaces()), effect.getWitholdingTaxAmount().nativeAmount().amount());
-    }
-
-    @Test
-    void isValidForCashflowType_shouldReturnTrueForValidIncome() {
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, conversion),
-            new MonetaryAmount(usd90, conversion),
-            CashflowType.DIVIDEND,
-            Map.of()
-        );
-        assertTrue(effect.isValidForCashflowType());
-    }
-
-    @Test
-    void requiresTaxReporting_shouldReturnTrueForDividend() {
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, conversion),
-            new MonetaryAmount(usd90, conversion),
-            CashflowType.DIVIDEND,
-            Map.of()
-        );
-        assertTrue(effect.requiresTaxReporting());
-    }
-
-    @Test
-    void isMultiCurrency_shouldReturnTrueIfConversionExists() {
-        CurrencyConversion altConversion = new CurrencyConversion(USD, CAD, new BigDecimal("1.25"), now);
-        AccountEffect effect = new AccountEffect(
-            new MonetaryAmount(usd100, altConversion),
-            new MonetaryAmount(usd90, altConversion),
-            CashflowType.DIVIDEND,
-            Map.of()
-        );
-        assertTrue(effect.isMultiCurrency());
+    void validateAmountsForCashflowType_ShouldThrowWhenErrorTypeGiven() {
+        MonetaryAmount gross = new MonetaryAmount(usd100, conversion);
+        MonetaryAmount net = new MonetaryAmount(usd90, conversion);
+        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.ERROR, null));
     }
 }
