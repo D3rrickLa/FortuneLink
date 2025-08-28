@@ -10,6 +10,7 @@ public enum TransactionStatus {
     SETTLED,
     CANCELLED,
     CANCELLING,
+    FINALIZED,
     FAILED,
     DECLINED,
     EXPIRED,

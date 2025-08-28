@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -10,7 +11,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.Tran
 public class ReversalTransactionDetails extends TransactionDetails {
     private final TransactionId transactionId;
     private final String reason;
-
+    // NOTE: reversal date is dirved from the Transaction.java class
     protected ReversalTransactionDetails(TransactionId transactionId, String reason, TransactionSource source, String description, List<Fee> fees) {
         super(source, description, fees);
         this.transactionId = Objects.requireNonNull(transactionId, "Transaction id cannot be null.");
@@ -35,5 +36,6 @@ public class ReversalTransactionDetails extends TransactionDetails {
     public String getReason() {
         return reason;
     }
+
     
 }

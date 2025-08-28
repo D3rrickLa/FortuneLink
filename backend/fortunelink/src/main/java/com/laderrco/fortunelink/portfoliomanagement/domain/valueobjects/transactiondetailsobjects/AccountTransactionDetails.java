@@ -236,26 +236,5 @@ public class AccountTransactionDetails extends TransactionDetails {
    private boolean hasWithholdingTax() {
       return accountEffect.metadata().containsKey(AccountMetadataKey.WITHHOLDING_TAX_RATE.getKey());
    } 
-
-   // this is done in Account Effect
-   // private static void validateBusinessRules(AccountEffect effect) {
-   //    switch (effect.cashflowType()) {
-   //       case DIVIDEND, INTEREST, RENTAL_INCOME, OTHER_INCOME, DEPOSIT ->{
-   //          if (effect.netAmount().isNegative()) {
-   //             throw new IllegalArgumentException("Income and deposit transactions must have positive net amounts");
-   //          }
-   //       }
-   //       case WITHDRAWAL, FEE, OTHER_OUTFLOW -> {
-   //          if (effect.netAmount().isPositive()) {
-   //             throw new IllegalArgumentException("Expense transactions must have negative net amounts.");
-   //          }
-   //       }
-   //       case TRANSFER, UNKNOWN -> {
-   //          // DOES NOTHING, can be either direction
-   //       }
-   //       default -> {
-   //          throw new IllegalArgumentException("cashflow type was not recognized.");
-   //       }
-   //    }
-   // }       
+    
 }
