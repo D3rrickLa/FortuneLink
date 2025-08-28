@@ -10,7 +10,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMi
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 
-public abstract class TransactionDetails {
+public sealed abstract class TransactionDetails permits TradeTransactionDetails, AccountTransactionDetails, ReversalTransactionDetails{
     private final TransactionSource source;
     private final String description;
     private final List<Fee> fees;

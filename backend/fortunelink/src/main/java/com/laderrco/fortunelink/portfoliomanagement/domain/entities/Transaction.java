@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.Tr
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.CashTransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TradeType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TransactionType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.TransactionAlreadyReversedException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.MonetaryAmount;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.CorrelationId;
@@ -19,10 +20,10 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transact
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects.TradeTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects.TransactionDetails;
 
+// state management and lifecycle, NOT financial math
 public class Transaction {
     private final TransactionId transactionId;
     private final TransactionId parentTransactionId; // dirved 
-    private TransactionId reversalTransactionId; 
     private final CorrelationId correlationId; // multi-tx events
     private final PortfolioId portfolioId;
 
@@ -40,34 +41,13 @@ public class Transaction {
 
     private final Map<String,String> metadata;
 
+    // TODO need to fix/add more
     private static final Set<TransactionType> REVERSAL_TYPES = Set.of(
         CashTransactionType.REVERSAL
     );
 
     
 
-
-    public Transaction(TransactionId transactionId, TransactionId parentTransactionId,
-            TransactionId reversalTransactionId, CorrelationId correlationId, PortfolioId portfolioId,
-            TransactionType type, TransactionStatus status, TransactionDetails details, Instant transactionDate,
-            Money transactionNetImpact, boolean hidden, int version, Instant createdAt, Instant updatedAt,
-            Map<String, String> metadata) {
-        this.transactionId = transactionId;
-        this.parentTransactionId = parentTransactionId;
-        this.reversalTransactionId = reversalTransactionId;
-        this.correlationId = correlationId;
-        this.portfolioId = portfolioId;
-        this.type = type;
-        this.status = status;
-        this.details = details;
-        this.transactionDate = transactionDate;
-        this.transactionNetImpact = transactionNetImpact;
-        this.hidden = hidden;
-        this.version = version;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.metadata = metadata;
-    }
 
     // delegates net cost calc to details
     // TODO check if this is handling fees or not
@@ -94,7 +74,8 @@ public class Transaction {
     }
 
     public boolean canBeUpdated() {
-        return this.status != TransactionStatus.FINALIZED || this.status != TransactionStatus.CANCELLED;
+        // it's AND not OR
+        return this.status != TransactionStatus.FINALIZED && this.status != TransactionStatus.CANCELLED;
     }
 
     public void updateStatus(TransactionStatus newStatus, Instant updatedAt) {
@@ -122,8 +103,8 @@ public class Transaction {
         if (!canBeUpdated()) {
             throw new IllegalStateException("Cannot reverse a finalized or cancelled transaction.");
         }
-        if (isReversed()) {
-            throw new IllegalArgumentException("Transaction already reversed.");
+        if (this.status == TransactionStatus.REVERSED) {
+            throw new TransactionAlreadyReversedException("Transaction already reversed.");
         }
         reversalTransactionId = Objects.requireNonNull(reversalTransactionId, "Reversal transaction id cannot be null.");
         reversedAt = Objects.requireNonNull(reversedAt, "Reversed at cannot be null.");
