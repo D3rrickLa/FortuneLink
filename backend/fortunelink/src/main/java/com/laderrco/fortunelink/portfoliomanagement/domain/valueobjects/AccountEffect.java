@@ -47,17 +47,17 @@ public record AccountEffect(
         switch (type) {
             case  DIVIDEND, INTEREST, RENTAL_INCOME, OTHER_INCOME -> {
                 if (gross.isNegative() || net.isNegative()) {
-                    throw new IllegalArgumentException("Income transaction must have positive amounts.");
+                    throw new IllegalArgumentException("Income transactions must have positive amounts.");
                 }
             }
             case WITHDRAWAL, FEE, OTHER_OUTFLOW -> {
                 if (gross.isPositive() || net.isPositive()) {
-                    throw new IllegalArgumentException("Expense transactions must have negative amount");
+                    throw new IllegalArgumentException("Expense transactions must have negative amounts.");
                 }
             }
             case DEPOSIT -> {
                 if (gross.isNegative() || net.isNegative()) {
-                    throw new IllegalArgumentException("Deposit transactions must have positive amounts");
+                    throw new IllegalArgumentException("Deposit transactions must have positive amounts.");
                 }               
             }
             case TRANSFER -> {
@@ -65,8 +65,6 @@ public record AccountEffect(
             }
             case UNKNOWN -> {
                 // No additional validation - allow any non-zero amounts 
-                // NOTE: original code/validation check was to see if both gross and net where zero
-                // that check is done at the beginning of the constructor so it is not needed        
             }
         
             default -> throw new IllegalArgumentException("Unexpected cashflow type: " + type);

@@ -30,6 +30,18 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Monetary
  * - TRANSFER
  * - UNKNOWN
  * - FEE
+ * 
+ * 
+ * 
+ * NOTE: we we say net, we are refering to gross - withholding/taxes, THIS EXCLUDES ANY FEES
+// Dividend example:
+// Gross: $100 dividend declared
+// Withholding tax: $15 (external force - IRS)
+// Net in AccountEffect: $85 (what you're entitled to receive)
+// Brokerage fee: $1 (your fee, stored separately in List<Fee>)
+// Actual cash received: $84 (net - fees)
+ * the reason we do this is because the withholding taxes are part fo the transaction itself, you have had that $15 to begin with
+
  */
 public class AccountTransactionDetails extends TransactionDetails {
    private final AccountEffect accountEffect;
@@ -37,7 +49,7 @@ public class AccountTransactionDetails extends TransactionDetails {
    public AccountTransactionDetails(AccountEffect accountEffect, TransactionSource source, String description, List<Fee> fees){
       super(source, description, fees);
       this.accountEffect = Objects.requireNonNull(accountEffect, "Account effect cannot be null.");
-      validateBusinessRules(accountEffect);
+      // validateBusinessRules(accountEffect);
    }
 
    public static AccountTransactionDetails createDividendTransaction(
@@ -90,12 +102,12 @@ public class AccountTransactionDetails extends TransactionDetails {
       Map<String, String> metadata = Map.of(
          AccountMetadataKey.TAX_YEAR.getKey(), String.valueOf(LocalDate.now().getYear()),
          AccountMetadataKey.WITHHOLDING_TAX_RATE.getKey(), "0.00",
-         AccountMetadataKey.GROSS_DIVIDEND.getKey(), netDividendReceived.toString(),
+         AccountMetadataKey.GROSS_DIVIDEND.getKey(), String.format("%s %s", netDividendReceived.nativeAmount().amount().toString(), netDividendReceived.nativeAmount().currency().toString()),
          AccountMetadataKey.WITHHOLDING_UNKNOWN.getKey(), "true" // Flag for later adjustment
       );
 
       AccountEffect effect = new AccountEffect(
-         MonetaryAmount.ZERO(netDividendReceived.nativeAmount().currency()), // No withholding info available
+         MonetaryAmount.ZERO(netDividendReceived.nativeAmount().currency(), netDividendReceived.conversion().toCurrency()), // No withholding info available
          netDividendReceived, 
          CashflowType.DIVIDEND, 
          metadata
@@ -120,7 +132,7 @@ public class AccountTransactionDetails extends TransactionDetails {
       Map<String, String> metadata = Map.of(
          AccountMetadataKey.TAX_YEAR.getKey(), String.valueOf(LocalDate.now().getYear()),
          AccountMetadataKey.SOURCE_COUNTRY.getKey(), sourceCountry,
-         AccountMetadataKey.FOREIGN_TAX_CREDIT_ELIGIBLE.getKey(), taxAmount.abs().toString(),
+         AccountMetadataKey.FOREIGN_TAX_CREDIT_ELIGIBLE.getKey(), String.format("%s %s",taxAmount.abs().nativeAmount().amount().toString(), taxAmount.nativeAmount().currency()),
          AccountMetadataKey.RELATED_TRANSACTION_ID.getKey(), relatedTransactionId,
          AccountMetadataKey.TAX_TYPE.getKey(), "FOREIGN_WITHHOLDING"
       );
@@ -225,24 +237,25 @@ public class AccountTransactionDetails extends TransactionDetails {
       return accountEffect.metadata().containsKey(AccountMetadataKey.WITHHOLDING_TAX_RATE.getKey());
    } 
 
-   private static void validateBusinessRules(AccountEffect effect) {
-      switch (effect.cashflowType()) {
-         case DIVIDEND, INTEREST, RENTAL_INCOME, OTHER_INCOME, DEPOSIT ->{
-            if (effect.netAmount().isNegative()) {
-               throw new IllegalArgumentException("Income and deposit transactions must have positive net amounts");
-            }
-         }
-         case WITHDRAWAL, FEE, OTHER_OUTFLOW -> {
-            if (effect.netAmount().isPositive()) {
-               throw new IllegalArgumentException("Expense transactions must have negative net amounts.");
-            }
-         }
-         case TRANSFER, UNKNOWN -> {
-            // DOES NOTHING, can be either direction
-         }
-         default -> {
-            throw new IllegalArgumentException("cashflow type was not recognized.");
-         }
-      }
-   }       
+   // this is done in Account Effect
+   // private static void validateBusinessRules(AccountEffect effect) {
+   //    switch (effect.cashflowType()) {
+   //       case DIVIDEND, INTEREST, RENTAL_INCOME, OTHER_INCOME, DEPOSIT ->{
+   //          if (effect.netAmount().isNegative()) {
+   //             throw new IllegalArgumentException("Income and deposit transactions must have positive net amounts");
+   //          }
+   //       }
+   //       case WITHDRAWAL, FEE, OTHER_OUTFLOW -> {
+   //          if (effect.netAmount().isPositive()) {
+   //             throw new IllegalArgumentException("Expense transactions must have negative net amounts.");
+   //          }
+   //       }
+   //       case TRANSFER, UNKNOWN -> {
+   //          // DOES NOTHING, can be either direction
+   //       }
+   //       default -> {
+   //          throw new IllegalArgumentException("cashflow type was not recognized.");
+   //       }
+   //    }
+   // }       
 }

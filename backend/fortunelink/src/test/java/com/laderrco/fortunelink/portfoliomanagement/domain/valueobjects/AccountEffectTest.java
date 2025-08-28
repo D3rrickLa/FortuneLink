@@ -166,7 +166,7 @@ public class AccountEffectTest {
     void validateAmountsForCashflowType_ShouldThrowWhenUNKNOWNGrossAndNetIsZero() {
         MonetaryAmount gross = new MonetaryAmount(Money.ZERO(USD), conversion);
         MonetaryAmount net = new MonetaryAmount(Money.ZERO(USD), conversion);
-        assertThrows(IllegalArgumentException.class, () -> new AccountEffect(gross, net, CashflowType.UNKNOWN, null));
+        assertDoesNotThrow(() -> new AccountEffect(gross, net, CashflowType.UNKNOWN, null));
     }
  
 

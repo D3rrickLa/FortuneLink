@@ -9,6 +9,7 @@ import java.util.Objects;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.FeeType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidQuantityException;
 
+// NOTE: a lot of the logic depends on fee holding the portfolio's native currency in MonetaryAmount.conversion
 public record Fee(
     FeeType type, 
     MonetaryAmount amount, // Native currency → Portfolio currency conversion
