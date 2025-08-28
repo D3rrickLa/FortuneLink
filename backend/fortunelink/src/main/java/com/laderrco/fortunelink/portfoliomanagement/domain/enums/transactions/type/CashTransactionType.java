@@ -8,7 +8,11 @@ public enum CashTransactionType implements TransactionType {
     TRANSFER_IN,
     TRANSFER_OUT,
     REFUND,
-    REVERSAL;
+
+    OTHER_CASH_TYPE_REVERSAL,
+    CASH_REVERSAL,
+    DEPOSIT_REVERSAL, 
+    WITHDRAWAL_REVERSAL;
 
     @Override
     public String getCode() {
@@ -18,5 +22,10 @@ public enum CashTransactionType implements TransactionType {
     @Override
     public TransactionCategory getCategory() {
         return TransactionCategory.CASH;
+    }
+
+    @Override
+    public boolean isReversal() {
+        return name().contains("REVERSAL");
     }
 }

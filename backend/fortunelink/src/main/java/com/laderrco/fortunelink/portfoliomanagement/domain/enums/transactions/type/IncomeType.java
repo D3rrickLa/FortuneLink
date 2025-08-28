@@ -8,7 +8,13 @@ public enum IncomeType implements TransactionType {
     STAKING_REWARD,
     BONUS,
     RENTAL_INCOME,
-    GRANT;
+    GRANT,
+
+    OTHER_INCOME_TYPE_REVERSAL,
+    INCOME_REVERSAL, 
+    DIVIDEND_INCOME_REVERSAL, 
+    INTEREST_INCOME_REVERSAL;
+
 
     @Override
     public String getCode() {
@@ -18,5 +24,10 @@ public enum IncomeType implements TransactionType {
     @Override
     public TransactionCategory getCategory() {
         return TransactionCategory.INCOME;
+    }
+
+    @Override
+    public boolean isReversal() {
+        return name().contains("REVERSAL");
     }    
 }

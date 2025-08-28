@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TradeType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidPriceException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
@@ -15,7 +16,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.AssetHoldingId;
 
 // net -> share * price - commission built into price, EXCLUDES FEES
-public class TradeTransactionDetails extends TransactionDetails {
+public final class TradeTransactionDetails extends TransactionDetails {
     private final AssetHoldingId assetHoldingId;
     private final AssetIdentifier assetIdentifier;
     private final BigDecimal quantity;
@@ -51,6 +52,11 @@ public class TradeTransactionDetails extends TransactionDetails {
         this.assetHoldingId = Objects.requireNonNull(assetHoldingId, "Asset holding id cannot be null.");
         this.assetIdentifier = Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null.");
         this.quantity = Objects.requireNonNull(quantity, "Quantity cannot be null.");
+        this.portfolioCurrency = Objects.requireNonNull(portfolioCurrency, "Portfolio currency cannot be null.");;
+        
+        this.realizedGainLoss = realizedGainLoss;
+        this.acbPerUnitAtSale = acbPerUnitAtSale;
+        
         if (quantity.signum() <= 0) {
             throw new IllegalArgumentException("Trade quantity must be positive.");
         }
@@ -59,9 +65,6 @@ public class TradeTransactionDetails extends TransactionDetails {
         if (pricePerUnit.nativeAmount().amount().signum() < 0) {
             throw new InvalidPriceException("Price per unit cannot be negative.");
         }
-        this.realizedGainLoss = realizedGainLoss;
-        this.acbPerUnitAtSale = acbPerUnitAtSale;
-        this.portfolioCurrency = Objects.requireNonNull(portfolioCurrency, "Portfolio currency cannot be null.");;
     }
 
     public static final TradeTransactionDetails buy(
@@ -100,17 +103,24 @@ public class TradeTransactionDetails extends TransactionDetails {
         return getGrossValue().getPortfolioAmount();
     }
 
-    // TransactionType is stored in the Transaction.java class
-    public Money calculateCashImpact(TradeType tradeType) {
-        Money grossValue = getGrossValueInPortfolioCurrency();
+    @Override
+    // for active trades only
+    public Money calculateNetImpact(TransactionType type) {
+        TradeType tradeType = mapToTradeType(type);
+
+        // Gross value in portfolio currency
+        Money gross = getGrossValueInPortfolioCurrency();
+        // Total fees in portfolio currency
         Money totalFees = super.getTotalFeesInCurrency(this.portfolioCurrency);
 
         return switch (tradeType) {
-            case BUY, COVER_SHORT -> grossValue.add(totalFees);
-            case SELL, SHORT_SELL -> grossValue.subtract(totalFees);
-            case OPTIONS_EXERCISED, OPTIONS_ASSIGNED -> grossValue.subtract(totalFees); 
-            case OPTIONS_EXPIRED -> Money.ZERO(this.portfolioCurrency); 
+            case BUY, COVER_SHORT -> gross.add(totalFees);      // Outflow
+            case SELL, SHORT_SELL, OPTIONS_EXERCISED, OPTIONS_ASSIGNED -> gross.subtract(totalFees); // Inflow
+            case OPTIONS_EXPIRED -> Money.ZERO(this.portfolioCurrency);
             case CRYPTO_SWAP -> throw new UnsupportedOperationException("Handle swap logic separately");
+            // Reversal trades have zero net impact themselves
+            case OTHER_TRADE_TYPE_REVERSAL, TRADE_REVERSAL, BUY_REVERSAL, SELL_REVERSAL ->
+                Money.ZERO(this.portfolioCurrency);
         };
     }
 
@@ -124,4 +134,10 @@ public class TradeTransactionDetails extends TransactionDetails {
     public MonetaryAmount getRealizedGainLoss() {return realizedGainLoss;}
     public MonetaryAmount getAcbPerUnitAtSale() {return acbPerUnitAtSale;}
     
+    private TradeType mapToTradeType(TransactionType type) {
+        if(!(type instanceof TradeType)) {
+            throw new IllegalArgumentException("TransactionType must be a TradeType");
+        }
+        return (TradeType) type;
+    }
 }

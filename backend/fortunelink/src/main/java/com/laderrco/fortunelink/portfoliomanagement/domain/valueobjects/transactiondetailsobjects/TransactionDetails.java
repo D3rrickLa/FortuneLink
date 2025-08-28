@@ -6,11 +6,12 @@ import java.util.List;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 
-public sealed abstract class TransactionDetails permits TradeTransactionDetails, AccountTransactionDetails, ReversalTransactionDetails{
+public sealed abstract class TransactionDetails permits TradeTransactionDetails, AccountTransactionDetails, ReversalTransactionDetails  {
     private final TransactionSource source;
     private final String description;
     private final List<Fee> fees;
@@ -41,6 +42,8 @@ public sealed abstract class TransactionDetails permits TradeTransactionDetails,
             })
             .reduce(Money.ZERO(targetCurrency), Money::add); // handles empty fees automatically
     }
+
+    public abstract Money calculateNetImpact(TransactionType type);
 
     public TransactionSource getSource() {return source;}
     public String getDescription() {return description;}

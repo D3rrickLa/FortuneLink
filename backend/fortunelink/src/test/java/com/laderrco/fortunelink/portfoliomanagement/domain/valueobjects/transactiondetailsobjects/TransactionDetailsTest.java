@@ -3,8 +3,6 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transac
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.description;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Currency;
@@ -12,17 +10,19 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.FeeType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.ReversalReason;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.ReversalType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CurrencyConversion;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.MonetaryAmount;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.TransactionId;
 
 public class TransactionDetailsTest {
+
     private List<Fee> fees;
     private Currency CAD = Currency.getInstance("CAD");
     private Currency USD = Currency.getInstance("USD");
@@ -60,9 +60,7 @@ public class TransactionDetailsTest {
         TransactionSource source = TransactionSource.MANUAL;
         String description = "some description";
 
-        TransactionDetails transactionDetails = new TransactionDetails(source, description, fees) {
-            
-        };
+        TransactionDetails transactionDetails = new ReversalTransactionDetails(TransactionId.createRandom(), ReversalReason.DUPLICATE, ReversalType.FULL, EUR, description, Instant.now(), description, source, description, fees);
         assertDoesNotThrow(() ->transactionDetails.getTotalFeesInCurrency(CAD));
     }
 
@@ -71,9 +69,7 @@ public class TransactionDetailsTest {
         TransactionSource source = TransactionSource.MANUAL;
         String description = "some description";
 
-        TransactionDetails transactionDetails = new TransactionDetails(source, description, fees) {
-            
-        };
+        TransactionDetails transactionDetails = new ReversalTransactionDetails(TransactionId.createRandom(), ReversalReason.DUPLICATE, ReversalType.FULL, EUR, description, Instant.now(), description, source, description, fees);
         assertThrows(CurrencyMismatchException.class, () ->transactionDetails.getTotalFeesInCurrency(EUR));
     }
 
@@ -82,9 +78,7 @@ public class TransactionDetailsTest {
         TransactionSource source = TransactionSource.MANUAL;
         String description = "some description";
 
-        TransactionDetails transactionDetails = new TransactionDetails(source, description, fees) {
-            
-        };
+        final TransactionDetails transactionDetails = new ReversalTransactionDetails(TransactionId.createRandom(), ReversalReason.DUPLICATE, ReversalType.FULL, EUR, description, Instant.now(), description, source, description, fees);
         assertDoesNotThrow(() ->transactionDetails.getTotalFeesInCurrency(CAD));
         assertEquals(source, transactionDetails.getSource());
         assertEquals(description, transactionDetails.getDescription());

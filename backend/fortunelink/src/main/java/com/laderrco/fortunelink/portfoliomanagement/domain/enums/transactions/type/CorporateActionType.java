@@ -10,7 +10,13 @@ public enum CorporateActionType implements TransactionType {
     SPIN_OFF,
     RIGHTS_ISSUE,
     LIQUIDATION,
-    OTHER;
+    OTHER,
+    
+    OTHER_CORPORATE_ACTION_TYPE_REVERSAL,
+    CORPORATE_ACTION_REVERSAL, 
+    STOCK_SPLIT_REVERSAL, 
+    DIVIDEND_REVERSAL;
+
 
     @Override
     public String getCode() {
@@ -21,4 +27,9 @@ public enum CorporateActionType implements TransactionType {
     public TransactionCategory getCategory() {
         return TransactionCategory.CORPORATE_ACTION;
     }  
+
+    @Override
+    public boolean isReversal() {
+        return name().contains("REVERSAL");
+    }
 }

@@ -10,7 +10,12 @@ public enum TradeType implements TransactionType {
     OPTIONS_EXERCISED,
     OPTIONS_ASSIGNED,
     OPTIONS_EXPIRED,
-    CRYPTO_SWAP;
+    CRYPTO_SWAP,
+    
+    OTHER_TRADE_TYPE_REVERSAL,
+    TRADE_REVERSAL, 
+    BUY_REVERSAL, 
+    SELL_REVERSAL;
 
     @Override
     public String getCode() {
@@ -20,5 +25,10 @@ public enum TradeType implements TransactionType {
     @Override
     public TransactionCategory getCategory() {
         return TransactionCategory.TRADE;
+    }
+
+    @Override
+    public boolean isReversal() {
+        return name().contains("REVERSAL");
     }
 }

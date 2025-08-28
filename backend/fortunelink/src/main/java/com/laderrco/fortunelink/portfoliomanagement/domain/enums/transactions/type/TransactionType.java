@@ -7,4 +7,5 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.Tr
 public interface TransactionType {
     String getCode();
     TransactionCategory getCategory();
+    boolean isReversal();
 }

@@ -11,9 +11,11 @@ import java.util.Objects;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.AccountMetadataKey;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.CashflowType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AccountEffect;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.MonetaryAmount;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 
 /**
  * This class represents any event related to cashflow (deposits, withdrawals, transfers, etc.)
@@ -43,7 +45,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Monetary
  * the reason we do this is because the withholding taxes are part fo the transaction itself, you have had that $15 to begin with
 
  */
-public class AccountTransactionDetails extends TransactionDetails {
+public final class AccountTransactionDetails extends TransactionDetails {
    private final AccountEffect accountEffect;
 
    public AccountTransactionDetails(AccountEffect accountEffect, TransactionSource source, String description, List<Fee> fees){
@@ -176,6 +178,14 @@ public class AccountTransactionDetails extends TransactionDetails {
    ) {
       AccountEffect effect = new AccountEffect(interestAmount, interestAmount, CashflowType.INTEREST, Collections.emptyMap());
       return new AccountTransactionDetails(effect, source, description, Collections.emptyList());
+   }
+
+
+   @Override
+   public Money calculateNetImpact(TransactionType type) {
+      Money baseImpact = accountEffect.netAmount().getConversionAmount();
+      Money totalFees = super.getTotalFeesInCurrency(baseImpact.currency());
+      return baseImpact.subtract(totalFees);
    }
 
    public AccountEffect getAccountEffect() {

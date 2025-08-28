@@ -1,56 +1,54 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.time.Instant;
+import java.util.Currency;
 
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.ReversalReason;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.ReversalType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TradeType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.TransactionId;
 
 public class ReversalTransactionDetailsTest {
-    
+    Currency currency = Currency.getInstance("CAD");
+
     @Test
     void constructor_isValid() {
         TransactionId id = TransactionId.createRandom();
-        String reason = "some test reason";
-        TransactionSource source = TransactionSource.EXTERNAL;
-        String description = "testing";
+        ReversalReason reason = ReversalReason.ERROR_ENTRY;
+        ReversalType tReversalType = ReversalType.FULL;
+        String init = "User";
+        Instant reverseInstant = Instant.now();
 
-        ReversalTransactionDetails details = new ReversalTransactionDetails(id, reason, source, description, null);
-        assertEquals(id, details.getTransactionId());
+        TransactionSource source = TransactionSource.EXTERNAL;
+        String desc = "something";
+
+        ReversalTransactionDetails details = new ReversalTransactionDetails(id, reason, tReversalType, currency, init, reverseInstant, desc, source, desc, null);
+        assertEquals(id, details.getOriginalTransactionId());
         assertEquals(reason, details.getReason());
+        assertEquals(tReversalType, details.getReversalType());
+        assertEquals(currency, details.getCurrency());
+        assertEquals(init, details.getInitiatedBy());
+        assertEquals(reverseInstant, details.getReversedAt());
+        assertEquals(desc, details.getNote());
     }
 
     @Test
-    void constructor_throwsExceptionWhenReasonIsEmpty() {
+    void calcualateNetImpact_isValid() {
         TransactionId id = TransactionId.createRandom();
-        String reason = "\r\r\r\r\r";
+        ReversalReason reason = ReversalReason.ERROR_ENTRY;
+        ReversalType tReversalType = ReversalType.FULL;
+        String init = "User";
+        Instant reverseInstant = Instant.now();
+
         TransactionSource source = TransactionSource.EXTERNAL;
-        String description = "testing";
+        String desc = "something";
 
-        assertThrows(IllegalArgumentException.class, () ->new ReversalTransactionDetails(id, reason, source, description, null));
+        ReversalTransactionDetails details = new ReversalTransactionDetails(id, reason, tReversalType, currency, init, reverseInstant, desc, source, desc, null);
+        assertEquals(Money.ZERO(currency), details.calculateNetImpact(TradeType.BUY_REVERSAL));
     }
-
-    @Test
-    void constructor_throwsExceptionWhenReasonIsGreaterThanLength1000() {
-        TransactionId id = TransactionId.createRandom();
-        String reason = "a".repeat(10001);
-        TransactionSource source = TransactionSource.EXTERNAL;
-        String description = "testing";
-
-        assertThrows(IllegalArgumentException.class, () ->new ReversalTransactionDetails(id, reason, source, description, null));
-    }
-    @Test
-    void constructor_throwsNotExceptionWhenReasonIsLength1000() {
-        TransactionId id = TransactionId.createRandom();
-        String reason = "a".repeat(1000);
-        TransactionSource source = TransactionSource.EXTERNAL;
-        String description = "testing";
-
-        assertDoesNotThrow(() ->new ReversalTransactionDetails(id, reason, source, description, null));
-    }
-
-
 }

@@ -9,7 +9,12 @@ public enum ExpenseType implements TransactionType {
     INTEREST_EXPENSE,
     MARGIN_INTEREST,
     EXPENSE,
-    OTHER;
+    OTHER,
+
+    OTHER_EXPENSE_TYPE_REVERSAL, 
+    EXPENSE_REVERSAL, 
+    FEE_REVERSAL, 
+    COMMISSION_REVERSAL;
 
     @Override
     public String getCode() {
@@ -19,5 +24,10 @@ public enum ExpenseType implements TransactionType {
     @Override
     public TransactionCategory getCategory() {
         return TransactionCategory.EXPENSE;
+    }
+    
+    @Override
+    public boolean isReversal() {
+        return name().contains("REVERSAL");
     }
 }
