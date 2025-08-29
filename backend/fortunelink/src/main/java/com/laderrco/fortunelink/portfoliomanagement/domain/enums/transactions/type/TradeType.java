@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.t
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionCategory;
 
+// Trade Transaction
 public enum TradeType implements TransactionType {
     BUY,
     SELL,

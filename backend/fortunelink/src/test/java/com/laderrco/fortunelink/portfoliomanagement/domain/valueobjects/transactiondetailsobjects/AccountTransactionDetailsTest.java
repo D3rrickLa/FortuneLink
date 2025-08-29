@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.AccountMetadataKey;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.CashflowType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionSource;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.TransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.AccountEffect;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CurrencyConversion;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Fee;
@@ -175,31 +176,6 @@ public class AccountTransactionDetailsTest {
             assertDoesNotThrow(() -> new AccountTransactionDetails(
                 zeroEffect, testSource, "Test", emptyFees
             ));
-        }
-
-        @Test
-        @DisplayName("Should throw exception for unrecognized cashflow type")
-        void shouldThrowExceptionForUnrecognizedCashflowType() {
-            // This would require adding ERROR to the enum or using reflection/mocking
-            // For now, we'll test with a hypothetical scenario
-            // This test validates the default case in the switch statement
-            
-            // Note: In real implementation, you might add a test-only enum value
-            // or use reflection to create an invalid enum state
-            
-            // For demonstration, let's assume we have a way to trigger the default case
-            // This could be done by adding ERROR enum value as discussed earlier
-            
-            // AccountEffect invalidEffect = new AccountEffect(
-            //     positiveAmount, positiveAmount, CashflowType.ERROR, Map.of()
-            // );
-            // 
-            // IllegalArgumentException exception = assertThrows(
-            //     IllegalArgumentException.class,
-            //     () -> new AccountTransactionDetails(invalidEffect, testSource, "Test", emptyFees)
-            // );
-            // 
-            // assertEquals("cashflow type was not recognized.", exception.getMessage());
         }
     }
 
@@ -445,21 +421,73 @@ public class AccountTransactionDetailsTest {
         @Test
         @DisplayName("Should return correct total fees")
         void shouldReturnCorrectTotalFees() {
+            // Mock a Fee
             Fee mockFee = mock(Fee.class);
             when(mockFee.amount()).thenReturn(MonetaryAmount.of(Money.of(10, USD), conversion));
-            
+
+            // Create AccountEffect for completeness (fees aren't stored there)
             AccountEffect effectWithFees = new AccountEffect(
                 positiveAmount, positiveAmount, CashflowType.DIVIDEND, Map.of()
             );
-            // Note: This assumes AccountEffect has a method to calculate fee amounts
-            // You may need to adjust based on your actual AccountEffect implementation
-            
+
+            // Create transaction with the mocked fee
             AccountTransactionDetails transaction = new AccountTransactionDetails(
-                effectWithFees, testSource, "Test", List.of(mockFee)
+                effectWithFees, testSource, "Test transaction", List.of(mockFee)
             );
 
-            // This test might need adjustment based on how AccountEffect.getFeeAmount() works
-            // For now, assuming it returns the sum of all fees
+            // Call method under test
+            MonetaryAmount totalFees = transaction.getTotalFees();
+
+            // Verify
+            assertNotNull(totalFees);
+            assertEquals(Money.of(0, USD), totalFees.nativeAmount()); // sum of mocked fees
+        }
+
+    }
+    @Nested
+    @DisplayName("Calculate NetImpact Method Tests")
+    class NetImpactTests {
+        private TransactionSource testSource;
+        private CurrencyConversion conversion;
+
+        @BeforeEach
+        void setUp() {
+            testSource = mock(TransactionSource.class);
+            conversion = new CurrencyConversion(USD, CAD, BigDecimal.valueOf(1.32));
+        }
+
+        @Test
+        @DisplayName("calculateNetImpact should subtract all fees correctly")
+        void testCalculateNetImpactWithMultipleFees() {
+            // Base net amount for the account effect
+            MonetaryAmount netAmount = MonetaryAmount.of(Money.of(1000, Currency.getInstance("USD")), conversion);
+            AccountEffect effect = new AccountEffect(netAmount, netAmount, CashflowType.DIVIDEND, Map.of());
+
+            // Create 5 mock fees
+            List<Fee> fees = List.of(
+                    createMockFee(10),
+                    createMockFee(20),
+                    createMockFee(5),
+                    createMockFee(15),
+                    createMockFee(50)
+            );
+
+            // Create transaction details with fees
+            AccountTransactionDetails transaction = new AccountTransactionDetails(effect, testSource, "Test dividend", fees);
+
+            // Calculate expected net: 1000 - (10+20+5+15+50) = 900 -> usd, convert it to cad at 1.32
+            Money expectedNet = Money.of(1188, Currency.getInstance("CAD"));
+
+            Money actualNet = transaction.calculateNetImpact(mock(TransactionType.class));
+
+            assertEquals(expectedNet, actualNet, "Net impact should subtract all fees correctly");
+        }
+
+        private Fee createMockFee(int amount) {
+            Fee fee = mock(Fee.class);
+            MonetaryAmount money = MonetaryAmount.of(Money.of(amount, Currency.getInstance("USD")), conversion);
+            when(fee.amount()).thenReturn(money);
+            return fee;
         }
     }
 
@@ -531,10 +559,42 @@ public class AccountTransactionDetailsTest {
                 withdrawalEffect, testSource, "Test", emptyFees
             );
 
+            // Unknown transaction - either or depending if hasWIthHolding
+            AccountEffect unknownEffect = new AccountEffect(
+                positiveAmount, positiveAmount, CashflowType.UNKNOWN, withholdingMetadata
+            );
+            AccountEffect unknownEffectNoMetadata = new AccountEffect(
+                negativeAmount, negativeAmount, CashflowType.WITHDRAWAL, Map.of()
+            );
+            AccountTransactionDetails unknownTransactionTrue = new AccountTransactionDetails(
+                unknownEffect, testSource, "Test", emptyFees
+            );
+            AccountTransactionDetails unknownTransactionFalse = new AccountTransactionDetails(
+                unknownEffectNoMetadata, testSource, "Test", emptyFees
+            );
+
             assertTrue(dividendTransaction.requiresTaxReporting());
             assertTrue(interestTransaction.requiresTaxReporting());
             assertTrue(otherIncomeTransaction.requiresTaxReporting());
+            assertTrue(unknownTransactionTrue.requiresTaxReporting());
             assertFalse(withdrawalTransaction.requiresTaxReporting());
+            assertFalse(unknownTransactionFalse.requiresTaxReporting());
+        }
+        
+        @Test
+        @DisplayName("Should return false when cashflowtype doesn't equal anything")
+        void shouldReturnFalseWhenCashflowTypeIsNotInSwitchCase() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+            // error -> false
+     
+            AccountEffect errorEffect = new AccountEffect(
+                negativeAmount, negativeAmount, CashflowType.TEST, Map.of()
+            );
+
+            AccountTransactionDetails errorTransaction = new AccountTransactionDetails(
+                errorEffect, testSource, "Test", emptyFees
+            );
+
+            assertFalse(errorTransaction.requiresTaxReporting());
         }
 
         @Test
@@ -569,6 +629,31 @@ public class AccountTransactionDetailsTest {
             assertFalse(singleCurrencyTransaction.isMultiCurrency());
             assertTrue(multiCurrencyTransaction.isMultiCurrency());
         }
+    }
+
+    @Test
+    @DisplayName("Testing isMultiCurrency netAmount branch")
+    void shouldIdentifyMultiCurreancyTransactionNet() {
+        MonetaryAmount grossSingle = mock(MonetaryAmount.class);
+        when(grossSingle.isMultiCurrency()).thenReturn(false);
+        when(grossSingle.nativeAmount()).thenReturn(Money.of(100, USD));
+        when(grossSingle.conversion()).thenReturn(conversion);
+        when(grossSingle.isZero()).thenReturn(false);
+
+        MonetaryAmount netMulti = mock(MonetaryAmount.class);
+        when(netMulti.isMultiCurrency()).thenReturn(true);
+        when(netMulti.nativeAmount()).thenReturn(Money.of(100, USD));
+        when(netMulti.conversion()).thenReturn(conversion);
+        when(netMulti.isZero()).thenReturn(false);
+
+        AccountEffect netMultiEffect = new AccountEffect(
+            grossSingle, netMulti, CashflowType.DIVIDEND, Map.of()
+        );
+        AccountTransactionDetails netMultiTransaction = new AccountTransactionDetails(
+            netMultiEffect, testSource, "Test", emptyFees
+        );
+
+        assertTrue(netMultiTransaction.isMultiCurrency()); // triggers netAmount() branch
     }
 
     @Nested

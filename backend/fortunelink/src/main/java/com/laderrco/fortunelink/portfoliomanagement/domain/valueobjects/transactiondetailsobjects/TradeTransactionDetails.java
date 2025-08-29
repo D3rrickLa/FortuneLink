@@ -97,14 +97,10 @@ public final class TradeTransactionDetails extends TransactionDetails {
         acbPerUnitAtSale = Objects.requireNonNull(acbPerUnitAtSale, "Adjust cost basis cannot be null.");
         return new TradeTransactionDetails(assetHoldingId, assetIdentifier, quantity, pricePerUnit, realizedGainLoss, acbPerUnitAtSale, portfolioCurrency, source, description, fees);
     }
-    public MonetaryAmount getGrossValue() {return pricePerUnit.multiply(quantity);} // Gross value of the trade (without fees)
-    
-    public Money getGrossValueInPortfolioCurrency() {
-        return getGrossValue().getPortfolioAmount();
-    }
+
 
     @Override
-    // for active trades only
+    // for active trades only, we pass type from transaction
     public Money calculateNetImpact(TransactionType type) {
         TradeType tradeType = mapToTradeType(type);
 
@@ -124,8 +120,11 @@ public final class TradeTransactionDetails extends TransactionDetails {
         };
     }
 
-    public boolean isBuy(TradeType tradeType) { return tradeType == TradeType.BUY; }
-    public boolean isSell(TradeType tradeType) { return tradeType == TradeType.SELL; }
+    public boolean isBuy(TradeType tradeType) {return tradeType == TradeType.BUY;}
+    public boolean isSell(TradeType tradeType) {return tradeType == TradeType.SELL;}
+    
+    public MonetaryAmount getGrossValue() {return pricePerUnit.multiply(quantity);} // Gross value of the trade (without fees)
+    public Money getGrossValueInPortfolioCurrency() {return getGrossValue().getPortfolioAmount();}
     
     public AssetHoldingId getAssetHoldingId() {return assetHoldingId;}
     public AssetIdentifier getAssetIdentifier() {return assetIdentifier;}
@@ -133,6 +132,7 @@ public final class TradeTransactionDetails extends TransactionDetails {
     public MonetaryAmount getPricePerUnit() {return pricePerUnit;}
     public MonetaryAmount getRealizedGainLoss() {return realizedGainLoss;}
     public MonetaryAmount getAcbPerUnitAtSale() {return acbPerUnitAtSale;}
+    public Currency getPortfolioCurrency() {return portfolioCurrency;}
     
     private TradeType mapToTradeType(TransactionType type) {
         if(!(type instanceof TradeType)) {

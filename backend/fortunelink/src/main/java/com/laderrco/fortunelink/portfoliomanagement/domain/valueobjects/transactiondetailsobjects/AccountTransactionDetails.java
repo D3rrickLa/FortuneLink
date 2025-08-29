@@ -183,7 +183,7 @@ public final class AccountTransactionDetails extends TransactionDetails {
 
    @Override
    public Money calculateNetImpact(TransactionType type) {
-      Money baseImpact = accountEffect.netAmount().getConversionAmount();
+      Money baseImpact = this.accountEffect.netAmount().getConversionAmount();
       Money totalFees = super.getTotalFeesInCurrency(baseImpact.currency());
       return baseImpact.subtract(totalFees);
    }
@@ -204,6 +204,8 @@ public final class AccountTransactionDetails extends TransactionDetails {
       return accountEffect.netAmount();
    }
    
+   // this is just doing the diff between gross and net
+   // this is in native currency
    public MonetaryAmount getTotalFees() {
       return accountEffect.getFeeAmount();
    }

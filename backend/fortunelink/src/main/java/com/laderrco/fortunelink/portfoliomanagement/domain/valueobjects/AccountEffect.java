@@ -63,7 +63,7 @@ public record AccountEffect(
             case TRANSFER -> {
                 // Transfer can be either direction, no validation
             }
-            case UNKNOWN -> {
+            case UNKNOWN, TEST -> {
                 // No additional validation - allow any non-zero amounts 
             }
         

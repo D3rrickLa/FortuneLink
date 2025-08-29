@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionCategory;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.TransactionStatus;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.CashTransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.CorporateActionType;
@@ -33,6 +34,7 @@ public class Transaction {
     private final PortfolioId portfolioId;
 
     private final TransactionType type; // this is an interface/abstract
+    private final TransactionCategory category;
     private TransactionStatus status;
     private final TransactionDetails details;
     private final Instant transactionDate;
@@ -50,13 +52,14 @@ public class Transaction {
     public Transaction(TransactionId transactionId, TransactionId parentTransactionId, CorrelationId correlationId,
             PortfolioId portfolioId, TransactionType type, TransactionStatus status, TransactionDetails details,
             Instant transactionDate, Money transactionNetImpact, boolean hidden, int version, Instant createdAt,
-            Instant updatedAt, Map<String, String> metadata) {
+            Instant updatedAt, Map<String, String> metadata, TransactionCategory category) {
         this.transactionId = transactionId;
         this.parentTransactionId = parentTransactionId;
         this.correlationId = correlationId;
         this.portfolioId = portfolioId;
         this.type = type;
         this.status = status;
+        this.category = category;
         this.details = details;
         this.transactionDate = transactionDate;
         this.transactionNetImpact = transactionNetImpact;
