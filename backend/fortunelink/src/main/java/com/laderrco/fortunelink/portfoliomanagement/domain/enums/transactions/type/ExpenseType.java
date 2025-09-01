@@ -11,10 +11,12 @@ public enum ExpenseType implements TransactionType {
     EXPENSE,
     OTHER,
 
-    OTHER_EXPENSE_TYPE_REVERSAL, 
-    EXPENSE_REVERSAL, 
-    FEE_REVERSAL, 
-    COMMISSION_REVERSAL;
+    FEE_REVERSAL,
+    TAX_REVERSAL,
+    INTEREST_EXPENSE_REVERSAL,
+    MARGIN_INTEREST_REVERSAL,
+    EXPENSE_REVERSAL,
+    OTHER_REVERSAL;
 
     @Override
     public String getCode() {
@@ -29,5 +31,27 @@ public enum ExpenseType implements TransactionType {
     @Override
     public boolean isReversal() {
         return name().contains("REVERSAL");
+    }
+
+    @Override
+    public TransactionType getReversalType() {
+        switch (this) {
+            case FEE: return FEE_REVERSAL;
+            case TAX: return TAX_REVERSAL;
+            case INTEREST_EXPENSE: return INTEREST_EXPENSE_REVERSAL;
+            case MARGIN_INTEREST: return MARGIN_INTEREST_REVERSAL;
+            case EXPENSE: return EXPENSE_REVERSAL;
+            case OTHER: return OTHER_REVERSAL;
+            case FEE_REVERSAL:
+            case TAX_REVERSAL:
+            case INTEREST_EXPENSE_REVERSAL:
+            case MARGIN_INTEREST_REVERSAL:
+            case EXPENSE_REVERSAL:
+            case OTHER_REVERSAL:
+                throw new UnsupportedOperationException("Reversal transactions cannot be reversed.");
+
+            default:
+                throw new IllegalStateException("Unknown transaction type: " + this);
+        }
     }
 }

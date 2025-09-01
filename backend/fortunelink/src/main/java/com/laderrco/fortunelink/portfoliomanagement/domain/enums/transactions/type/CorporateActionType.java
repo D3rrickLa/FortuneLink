@@ -12,10 +12,14 @@ public enum CorporateActionType implements TransactionType {
     LIQUIDATION,
     OTHER,
     
-    OTHER_CORPORATE_ACTION_TYPE_REVERSAL,
-    CORPORATE_ACTION_REVERSAL, 
-    STOCK_SPLIT_REVERSAL, 
-    DIVIDEND_REVERSAL;
+    DIVIDEND_REVERSAL,
+    STOCK_SPLIT_REVERSAL,
+    REVERSE_STOCK_SPLIT_REVERSAL,
+    MERGER_REVERSAL,
+    SPIN_OFF_REVERSAL,
+    RIGHTS_ISSUE_REVERSAL,
+    LIQUIDATION_REVERSAL,
+    OTHER_REVERSAL;
 
 
     @Override
@@ -31,5 +35,31 @@ public enum CorporateActionType implements TransactionType {
     @Override
     public boolean isReversal() {
         return name().contains("REVERSAL");
+    }
+
+    @Override
+    public TransactionType getReversalType() {
+        switch (this) {
+            case DIVIDEND: return DIVIDEND_REVERSAL;
+            case STOCK_SPLIT: return STOCK_SPLIT_REVERSAL;
+            case REVERSE_STOCK_SPLIT: return REVERSE_STOCK_SPLIT_REVERSAL;
+            case MERGER: return MERGER_REVERSAL;
+            case SPIN_OFF: return SPIN_OFF_REVERSAL;
+            case RIGHTS_ISSUE: return RIGHTS_ISSUE_REVERSAL;
+            case LIQUIDATION: return LIQUIDATION_REVERSAL;
+            case OTHER: return OTHER_REVERSAL;
+            case DIVIDEND_REVERSAL:
+            case STOCK_SPLIT_REVERSAL:
+            case REVERSE_STOCK_SPLIT_REVERSAL:
+            case MERGER_REVERSAL:
+            case SPIN_OFF_REVERSAL:
+            case RIGHTS_ISSUE_REVERSAL:
+            case LIQUIDATION_REVERSAL:
+            case OTHER_REVERSAL:
+                throw new UnsupportedOperationException("Reversal transactions cannot be reversed.");
+
+            default:
+                throw new IllegalStateException("Unknown transaction type: " + this);
+        }
     }
 }

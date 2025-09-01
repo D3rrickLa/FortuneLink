@@ -115,7 +115,8 @@ public final class TradeTransactionDetails extends TransactionDetails {
             case OPTIONS_EXPIRED -> Money.ZERO(this.portfolioCurrency);
             case CRYPTO_SWAP -> throw new UnsupportedOperationException("Handle swap logic separately");
             // Reversal trades have zero net impact themselves
-            case OTHER_TRADE_TYPE_REVERSAL, TRADE_REVERSAL, BUY_REVERSAL, SELL_REVERSAL ->
+            case BUY_REVERSAL, SELL_REVERSAL, SHORT_SELL_REVERSAL, COVER_SHORT_REVERSAL,
+                OPTIONS_EXERCISED_REVERSAL, OPTIONS_ASSIGNED_REVERSAL, OPTIONS_EXPIRED_REVERSAL, CRYPTO_SWAP_REVERSAL ->
                 Money.ZERO(this.portfolioCurrency);
         };
     }

@@ -8,4 +8,5 @@ public interface TransactionType {
     String getCode();
     TransactionCategory getCategory();
     boolean isReversal();
+    TransactionType getReversalType();
 }

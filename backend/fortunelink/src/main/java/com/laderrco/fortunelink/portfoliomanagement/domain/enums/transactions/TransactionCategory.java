@@ -7,6 +7,5 @@ public enum TransactionCategory {
     CASH,
     INCOME,
     EXPENSE,
-    REVERSAL,
     OTHER
 }

@@ -10,10 +10,11 @@ public enum IncomeType implements TransactionType {
     RENTAL_INCOME,
     GRANT,
 
-    OTHER_INCOME_TYPE_REVERSAL,
-    INCOME_REVERSAL, 
-    DIVIDEND_INCOME_REVERSAL, 
-    INTEREST_INCOME_REVERSAL;
+    INTEREST_INCOME_REVERSAL,
+    STAKING_REWARD_REVERSAL,
+    BONUS_REVERSAL,
+    RENTAL_INCOME_REVERSAL,
+    GRANT_REVERSAL;
 
 
     @Override
@@ -29,5 +30,24 @@ public enum IncomeType implements TransactionType {
     @Override
     public boolean isReversal() {
         return name().contains("REVERSAL");
+    }
+
+    @Override
+    public TransactionType getReversalType() {
+        switch (this) {
+            case INTEREST_INCOME: return INTEREST_INCOME_REVERSAL;
+            case STAKING_REWARD: return STAKING_REWARD_REVERSAL;
+            case BONUS: return BONUS_REVERSAL;
+            case RENTAL_INCOME: return RENTAL_INCOME_REVERSAL;
+            case GRANT: return GRANT_REVERSAL;
+            case INTEREST_INCOME_REVERSAL:
+            case STAKING_REWARD_REVERSAL:
+            case BONUS_REVERSAL:
+            case RENTAL_INCOME_REVERSAL:
+            case GRANT_REVERSAL:
+                throw new UnsupportedOperationException("Reversal transaction cannot be reversed.");
+            default:
+                throw new IllegalStateException("Unknown transaction type: " + this);
+        }
     }    
 }

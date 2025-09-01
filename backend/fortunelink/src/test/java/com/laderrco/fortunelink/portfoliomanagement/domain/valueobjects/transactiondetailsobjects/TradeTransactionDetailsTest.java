@@ -149,7 +149,7 @@ public class TradeTransactionDetailsTest {
         assertEquals(Money.of(1008688.41, "CAD"), details.calculateNetImpact(TradeType.BUY));
         assertEquals(Money.of(1008598.5-89.91, "CAD"), details.calculateNetImpact(TradeType.SELL));
         assertEquals(Money.of(0, "CAD"), details.calculateNetImpact(TradeType.OPTIONS_EXPIRED));
-        assertEquals(Money.of(0, "CAD"), details.calculateNetImpact(TradeType.OTHER_TRADE_TYPE_REVERSAL));
+        assertEquals(Money.of(0, "CAD"), details.calculateNetImpact(TradeType.CRYPTO_SWAP_REVERSAL));
         assertThrows(UnsupportedOperationException.class, () -> details.calculateNetImpact(TradeType.CRYPTO_SWAP));
         assertThrows(IllegalArgumentException.class, () -> details.calculateNetImpact(IncomeType.BONUS));
     }

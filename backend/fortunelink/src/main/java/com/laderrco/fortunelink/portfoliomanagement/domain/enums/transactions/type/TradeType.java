@@ -13,10 +13,15 @@ public enum TradeType implements TransactionType {
     OPTIONS_EXPIRED,
     CRYPTO_SWAP,
     
-    OTHER_TRADE_TYPE_REVERSAL,
-    TRADE_REVERSAL, 
-    BUY_REVERSAL, 
-    SELL_REVERSAL;
+    BUY_REVERSAL,
+    SELL_REVERSAL,
+    SHORT_SELL_REVERSAL,
+    COVER_SHORT_REVERSAL,
+    OPTIONS_EXERCISED_REVERSAL,
+    OPTIONS_ASSIGNED_REVERSAL,
+    OPTIONS_EXPIRED_REVERSAL,
+    CRYPTO_SWAP_REVERSAL;
+
 
     @Override
     public String getCode() {
@@ -31,5 +36,31 @@ public enum TradeType implements TransactionType {
     @Override
     public boolean isReversal() {
         return name().contains("REVERSAL");
+    }
+
+    @Override
+    public TransactionType getReversalType() {
+        switch (this) {
+            case BUY: return BUY_REVERSAL;
+            case SELL: return SELL_REVERSAL;
+            case SHORT_SELL: return SHORT_SELL_REVERSAL;
+            case COVER_SHORT: return COVER_SHORT_REVERSAL;
+            case OPTIONS_EXERCISED: return OPTIONS_EXERCISED_REVERSAL;
+            case OPTIONS_ASSIGNED: return OPTIONS_ASSIGNED_REVERSAL;
+            case OPTIONS_EXPIRED: return OPTIONS_EXPIRED_REVERSAL;
+            case CRYPTO_SWAP: return CRYPTO_SWAP_REVERSAL;
+            case BUY_REVERSAL:
+            case SELL_REVERSAL:
+            case SHORT_SELL_REVERSAL:
+            case COVER_SHORT_REVERSAL:
+            case OPTIONS_EXERCISED_REVERSAL:
+            case OPTIONS_ASSIGNED_REVERSAL:
+            case OPTIONS_EXPIRED_REVERSAL:
+            case CRYPTO_SWAP_REVERSAL:
+                throw new UnsupportedOperationException("Reversal transactions cannot be reversed");
+
+            default:
+                throw new IllegalStateException("Unknown tranction type: " + this);
+        }
     }
 }
