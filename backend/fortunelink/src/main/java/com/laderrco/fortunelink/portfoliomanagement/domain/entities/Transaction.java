@@ -226,8 +226,9 @@ public class Transaction {
 
     public void reverse(Transaction reversalTransaction, Instant reversedAt) {
        if (!canBeReversed()) {
-            throw new IllegalStateException("Transaction cannot be reversed in current state");
+            throw new IllegalStateException("Transaction cannot be reversed in current state.");
         }
+        // this can't fire because the check in canBeReversed uses this logic
         if (isReversed()) {
             throw new TransactionAlreadyReversedException("Transaction already reversed.");
         }
@@ -264,7 +265,9 @@ public class Transaction {
     }
 
     public boolean canBeReversed() {
-        return status == TransactionStatus.COMPLETED && !isReversal();    
+        System.out.println(this.status);
+        System.out.println(isReversal());
+        return this.status == TransactionStatus.COMPLETED && !isReversal();    
     }
 
     public boolean canBeUpdated() {
@@ -390,8 +393,6 @@ public class Transaction {
     private void updateVisibility(boolean hidden, Instant updatedAt) {
         Objects.requireNonNull(updatedAt, "Updated at cannot be null");
 
-        System.out.println(updatedAt);
-        System.out.println(this.updatedAt);
         if (updatedAt.isBefore(this.updatedAt)) {
             throw new IllegalArgumentException("New UpdatedAt cannot be before current updatedAt.");
         }

@@ -29,6 +29,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.ty
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.ExpenseType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.IncomeType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.IllegalStatusTransitionException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.TransactionAlreadyReversedException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CurrencyConversion;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.MonetaryAmount;
@@ -627,8 +628,6 @@ class TransactionTest {
 
             // Then
             assertEquals(1, transaction.getVersion());
-            System.out.println(transaction.getUpdatedAt());
-            System.out.println(transaction.getCreatedAt());
             assertTrue(!transaction.getUpdatedAt().isBefore(transaction.getCreatedAt()));
         }
 
@@ -807,6 +806,54 @@ class TransactionTest {
 
             Exception e = assertThrows(IllegalArgumentException.class, () -> transaction.reverse(reversalTransaction, transaction.getUpdatedAt().minusSeconds(3000)));
             assertEquals("New UpdatedAt cannot be before current updatedAt.", e.getLocalizedMessage());
+        }
+
+        @Test
+        void reverseShouldThrowIllegalArgumentExceptionWhenOgTransactionIdIsNotTransactionId() {
+                Transaction transaction = Transaction.createTradeTransaction(
+                        portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
+                transaction.markAsCompleted();
+                ReversalTransactionDetails details = mock(ReversalTransactionDetails.class);
+                when(details.getOriginalTransactionId()).thenReturn(TransactionId.createRandom());
+                Transaction reversalTransaction = Transaction.createReversalTransaction(
+                    portfolioId, transaction.getTransactionId(), TradeType.BUY_REVERSAL, details, amount,
+                    transactionDate);
+                assertThrows(IllegalArgumentException.class, () -> transaction.reverse(reversalTransaction, Instant.now()));
+        }
+        @Test
+        void reverseShouldThrowIllegalArgumentExceptionReversalTypesDoesntMatchRightType() {
+                Transaction transaction = Transaction.createTradeTransaction(
+                        portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
+                transaction.markAsCompleted();
+                ReversalTransactionDetails details = mock(ReversalTransactionDetails.class);
+                when(details.getOriginalTransactionId()).thenReturn(transaction.getTransactionId());
+                Transaction reversalTransaction = Transaction.createReversalTransaction(
+                    portfolioId, transaction.getTransactionId(), TradeType.SELL_REVERSAL, details, amount,
+                    transactionDate);
+                Exception e = assertThrows(IllegalArgumentException.class, () -> transaction.reverse(reversalTransaction, Instant.now()));
+                assertEquals("Reversal transaction type must match expected reversal type.", e.getLocalizedMessage());
+        }
+        @Test
+        void reverseShouldThrowTransactionAlreadyReversedExceptionWhenIsReversedTriggers() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+                Transaction transaction = Transaction.createTradeTransaction(
+                        portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
+                transaction.markAsCompleted();
+                
+                ReversalTransactionDetails details = mock(ReversalTransactionDetails.class);
+                when(details.getOriginalTransactionId()).thenReturn(transaction.getTransactionId());
+                Transaction reversalTransaction = Transaction.createReversalTransaction(
+                    portfolioId, transaction.getTransactionId(), TradeType.BUY_REVERSAL, details, amount,
+                    transactionDate);
+                
+                transaction.reverse(reversalTransaction, Instant.now());
+                Field typeField = transaction.getClass().getDeclaredField("type");
+                typeField.setAccessible(true);
+                typeField.set(transaction, TradeType.BUY);
+                Field statusField = transaction.getClass().getDeclaredField("status");
+                statusField.setAccessible(true);
+                statusField.set(transaction, TransactionStatus.COMPLETED);
+                 
+                assertThrows(TransactionAlreadyReversedException.class, () -> transaction.reverse(transaction, Instant.now()));
         }
     }
 }
