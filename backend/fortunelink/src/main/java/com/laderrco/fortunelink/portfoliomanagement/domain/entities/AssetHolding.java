@@ -131,6 +131,14 @@ public class AssetHolding {
     }
 
     // business operations //
+
+    /**
+     * NOTE: for ACB to be effective and currency handling, we will need to do the fee conversion
+     * in the app layer, passing the fee, in native, to here
+     * @param quantity
+     * @param pricePerUnit -> total cost per hsare including fees
+     * @param transactionDate
+     */
     public void increasePosition(BigDecimal quantity, Money pricePerUnit, Instant transactionDate) {
         Objects.requireNonNull(quantity, "Quantity cannot be null");
         Objects.requireNonNull(pricePerUnit, "Price per unit cannot be null");
@@ -140,6 +148,7 @@ public class AssetHolding {
             throw new InvalidHoldingOperationException("Cannot increase position with zero or negative quantity");
         }
         validateCurrency(pricePerUnit);
+        validatePrice(pricePerUnit);
 
         Money purchaseCost = pricePerUnit.multiply(quantity);
         Money newTotalCostBasis = this.totalCostBasis.add(purchaseCost);
@@ -170,6 +179,7 @@ public class AssetHolding {
         }
 
         validateCurrency(pricePerUnit);
+        validatePrice(pricePerUnit);
 
         Money soldCostBasis = this.averageCostBasis.multiply(quantity);
         Money newTotalCostBasis = this.totalCostBasis.subtract(soldCostBasis);
@@ -201,10 +211,11 @@ public class AssetHolding {
         Objects.requireNonNull(receivedAt, "Received at cannot be null");
 
         if (this.totalQuantity.compareTo(BigDecimal.ZERO) == 0) {
-            throw new InvalidHoldingOperationException("Cannot record dividend for zero quantity holding");
+            throw new InvalidHoldingOperationException("Cannot record dividend for zero quantity holding.");
         }
 
         validateCurrency(dividendAmount);
+        validatePrice(dividendAmount);
 
         addDomainEvent(new DividendReceivedEvent(this.portfolioId, this.assetHoldingId, dividendAmount, receivedAt));
         this.lastTransactionAt = receivedAt;
@@ -220,7 +231,9 @@ public class AssetHolding {
         if (sharesReceived.compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidHoldingOperationException("Shares received must be positive");
         }
+        
         validateCurrency(dividendAmount);
+        validatePrice(pricePerShare);
 
         // For ACB purposes, reinvested dividends increase the cost base
         Money reinvestmentCost = pricePerShare.multiply(sharesReceived);
@@ -250,6 +263,7 @@ public class AssetHolding {
         }
 
         validateCurrency(rocAmount);
+        validatePrice(rocAmount);
 
         // ROC reduces ACB without creating a disposition
         Money newTotalCostBasis = this.totalCostBasis.subtract(rocAmount);
@@ -305,6 +319,8 @@ public class AssetHolding {
 
         validateCurrency(dividendAmount);
         validateCurrency(grossUpAmount);
+        validatePrice(dividendAmount);
+        validatePrice(grossUpAmount);
 
         addDomainEvent(new EligibleDividendReceivedEvent(this.portfolioId, this.assetHoldingId, dividendAmount, grossUpAmount, receivedAt));
         this.lastTransactionAt = receivedAt;
@@ -314,15 +330,23 @@ public class AssetHolding {
     // QUERY METHODS //
     public Money getCurrentMarketValue(Money currentPrice) {
         Objects.requireNonNull(currentPrice, "Current price cannot be null");
+        validateCurrency(currentPrice);
+        validatePrice(currentPrice);
         return currentPrice.multiply(this.totalQuantity); 
     }
 
     public Money getUnrealizedGainLoss(Money currentPrice) {
+        Objects.requireNonNull(currentPrice, "Current price cannot be null.");
+        validateCurrency(currentPrice);
+        validatePrice(currentPrice);
         Money currentValue = getCurrentMarketValue(currentPrice);
         return currentValue.subtract(this.totalCostBasis);
     }
 
     public Percentage getUnrealizedGainLossPercentage(Money currentPrice) {
+        Objects.requireNonNull(currentPrice, "Current price cannot be null.");
+        validateCurrency(currentPrice);
+        validatePrice(currentPrice);
         if (this.totalCostBasis.isZero()) {
             return Percentage.of(0);
         }
@@ -336,6 +360,9 @@ public class AssetHolding {
         if (quantitySold.compareTo(this.totalQuantity) > 0) {
             throw new InvalidHoldingOperationException("Cannot sell more than current holding.");
         }
+
+        validateCurrency(salePrice);
+        validatePrice(salePrice);
 
         Money saleProceeds = salePrice.multiply(quantitySold);
         Money acbOfSoldShares = this.averageCostBasis.multiply(quantitySold);
@@ -451,7 +478,12 @@ public class AssetHolding {
 
     private void validateCurrency(Money money) {
         if (!money.currency().equals(this.totalCostBasis.currency())) {
-            throw new InvalidHoldingOperationException("Currency mismatch");
+            throw new InvalidHoldingOperationException("Currency mismatch.");
+        }
+    }
+    private void validatePrice(Money money) {
+        if (money.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidHoldingOperationException("Price of asset cannot be les than 0.");
         }
     }
     // BUILDER //   
