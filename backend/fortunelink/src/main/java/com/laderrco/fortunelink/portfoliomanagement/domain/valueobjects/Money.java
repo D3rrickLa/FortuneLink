@@ -63,11 +63,11 @@ public record Money(
         validateParameter(multiplier, "Multiplier");
         return new Money(this.amount.multiply(new BigDecimal(String.valueOf(multiplier)), FINANCIAL_MATH_CONTEXT), this.currency); 
     }
-    public Money divided(BigDecimal divisor) {
+    public Money divide(BigDecimal divisor) {
         validateParameter(divisor, "Divisor");
         return new Money(this.amount.divide(divisor, FINANCIAL_MATH_CONTEXT), this.currency); 
     }
-    public Money divided(double divisor) {
+    public Money divide(double divisor) {
         validateParameter(divisor, "Divisor");
         return new Money(this.amount.divide(new BigDecimal(String.valueOf(divisor)), FINANCIAL_MATH_CONTEXT), this.currency); 
     }

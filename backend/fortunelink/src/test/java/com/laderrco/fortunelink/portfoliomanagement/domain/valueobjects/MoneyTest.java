@@ -101,13 +101,13 @@ class MoneyTest {
         @Test
         void divideBigDecimal() {
             Money a = Money.of(10, USD);
-            assertEquals(Money.of(5, USD), a.divided(BigDecimal.valueOf(2)));
+            assertEquals(Money.of(5, USD), a.divide(BigDecimal.valueOf(2)));
         }
 
         @Test
-        void divideDouble() {
+        void divideouble() {
             Money a = Money.of(10, USD);
-            assertEquals(Money.of(2, USD), a.divided(5.0));
+            assertEquals(Money.of(2, USD), a.divide(5.0));
         }
     }
 
@@ -242,7 +242,7 @@ class MoneyTest {
         @Test
         void divideNullThrows() {
             Money a = Money.of(10, USD);
-            assertThrows(NullPointerException.class, () -> a.divided((BigDecimal) null));
+            assertThrows(NullPointerException.class, () -> a.divide((BigDecimal) null));
         }
 
         @Test

@@ -7,7 +7,10 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,17 +28,23 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.events.DomainEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.TransactionCancelledEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.TransactionCompletedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.TransactionReversedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidReversalTransactionException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidTransactionAmountException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidTransactionDateException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidTransactionStateException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidTransactionTypeException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.TransactionAlreadyReversedException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.CashTransactionType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.ExpenseType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.transactions.type.IncomeType;
-import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.IllegalStatusTransitionException;
-import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.TransactionAlreadyReversedException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.Money;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.CurrencyConversion;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.MonetaryAmount;
+import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.CorrelationId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects.TradeTransactionDetails;
+
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects.AccountTransactionDetails;
 import com.laderrco.fortunelink.portfoliomanagement.domain.valueobjects.transactiondetailsobjects.ReversalTransactionDetails;
 
@@ -94,8 +103,8 @@ class TransactionTest {
                     () -> assertEquals(0, transaction.getVersion()),
                     () -> assertNull(transaction.getParentTransactionId()),
                     () -> assertNotNull(transaction.getCorrelationId()),
-                    () -> assertEquals(0, transaction.getDomainEvents().size()),
-                    () -> assertNotNull(transaction.getVALID_TRANSITIONS()),
+                    () -> assertEquals(0, transaction.getUncommittedEvents().size()),
+                    () -> assertEquals(null, transaction.getMetadata()),
 
                     // assert equal, equals method
                     () -> assertEquals(transaction, transaction),
@@ -106,25 +115,73 @@ class TransactionTest {
             // ^^^^ for some reason this is the only way to get 100% in equals method ^^^^
 
             );
+
+            transaction.hide();
+            assertTrue(transaction.isHidden());
+            transaction.show();
+            assertFalse(transaction.isHidden());
+        }
+
+        @Test 
+        @DisplayName("Should return not null for metadata")
+        void shouldCreateWithBuilder() {
+                Map<String, String> metadata = new HashMap<>();
+                metadata.put("COUNTRY", "JAPAN");
+                metadata.put("PROD", "FUNCTION");
+                Instant time = Instant.now();
+
+                Transaction transaction = new Transaction.Builder()
+                        .transactionId(TransactionId.createRandom())
+                        .parentTransactionId(null)
+                        .correlationId(CorrelationId.createRandom())
+                        .portfolioId(portfolioId)
+                        .type(TradeType.BUY)
+                        .status(TransactionStatus.COMPLETED)
+                        .details(mockTradeDetails)
+                        .transactionDate(Instant.now())
+                        .netImpact(amount)
+                        .hidden(false)
+                        .version(1)
+                        .createdAt(time)
+                        .updatedAt(time)
+                        .metadata(metadata)
+                        .build();
+                assertNotNull(transaction.getMetadata());
+                        
         }
 
         @Test
         @DisplayName("Should return ture and or false for those querying methods")
-        void shouldReturnTorFForQueryMethods() {
-            Transaction transaction = Transaction.createTradeTransaction(
-                    portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
+        void shouldReturnTorFForQueryMethods() 
+        {
+            Transaction transaction = Transaction.createTradeTransaction(portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
             assertFalse(transaction.isIncome());
             assertFalse(transaction.isExpense());
+            assertFalse(transaction.isCompleted());
+            assertTrue(transaction.isPending());
+            assertFalse(transaction.affectsPortfolioPerformance());
+            
+            transaction.markAsCompleted();
+            assertTrue(transaction.isCompleted());
+            assertFalse(transaction.isPending());
+            assertTrue(transaction.affectsPortfolioPerformance());
+            assertTrue(transaction.hasUncommittedEvents());
+            transaction.markEventsAsCommitted();
+            assertFalse(transaction.hasUncommittedEvents());
 
             AccountTransactionDetails accountTransactionDetails = mock(AccountTransactionDetails.class);
             Transaction transactionIncome = Transaction.createIncomeTransaction(
                     portfolioId, IncomeType.INTEREST_INCOME, accountTransactionDetails, amount, transactionDate);
             assertTrue(transactionIncome.isIncome());
             assertFalse(transactionIncome.isExpense());
+
             Transaction transactionExpense = Transaction.createExpenseTransaction(
                     portfolioId, ExpenseType.EXPENSE, accountTransactionDetails, amount, transactionDate);
             assertTrue(transactionExpense.isExpense());
             assertFalse(transactionExpense.isIncome());
+            
+
+            // pending and is completed
         }
 
         @Test
@@ -171,7 +228,7 @@ class TransactionTest {
         @DisplayName("Should reject non-reversal type for reversal transaction")
         void shouldRejectNonReversalTypeForReversalTransaction() {
             // When & Then
-            assertThrows(IllegalArgumentException.class, () -> Transaction.createReversalTransaction(
+            assertThrows(InvalidTransactionTypeException.class, () -> Transaction.createReversalTransaction(
                     portfolioId, TransactionId.createRandom(), TradeType.BUY, mockReversalDetails, amount,
                     transactionDate));
         }
@@ -221,7 +278,7 @@ class TransactionTest {
             Instant futureDate = Instant.now().plusSeconds(3600); // 1 hour in future
 
             // When & Then
-            assertThrows(IllegalArgumentException.class, () -> Transaction.createTradeTransaction(portfolioId,
+            assertThrows(InvalidTransactionDateException.class, () -> Transaction.createTradeTransaction(portfolioId,
                     TradeType.BUY, mockTradeDetails, amount, futureDate));
         }
 
@@ -233,7 +290,7 @@ class TransactionTest {
             MonetaryAmount zeroAmount = new MonetaryAmount(zeroMoney, USDtoUSD);
 
             // When & Then
-            assertThrows(IllegalArgumentException.class, () -> Transaction.createTradeTransaction(portfolioId,
+            assertThrows(InvalidTransactionAmountException.class, () -> Transaction.createTradeTransaction(portfolioId,
                     TradeType.BUY, mockTradeDetails, zeroAmount, transactionDate));
         }
     }
@@ -302,8 +359,8 @@ class TransactionTest {
             pendingTransaction.markAsCompleted();
 
             // When & Then
-            assertThrows(IllegalStatusTransitionException.class, () -> pendingTransaction.markAsCompleted());
-            assertThrows(IllegalStatusTransitionException.class, () -> pendingTransaction.cancel("reason"));
+            assertThrows(InvalidTransactionStateException.class, () -> pendingTransaction.markAsCompleted());
+            assertThrows(InvalidTransactionStateException.class, () -> pendingTransaction.cancel("reason"));
         }
     }
 
@@ -356,7 +413,7 @@ class TransactionTest {
 
             // When & Then
             assertFalse(pendingTransaction.canBeReversed());
-            assertThrows(IllegalStateException.class,
+            assertThrows(InvalidTransactionStateException.class,
                     () -> pendingTransaction.reverse(reversalTransaction, Instant.now()));
         }
 
@@ -374,7 +431,7 @@ class TransactionTest {
             completedTransaction.reverse(reversalTransaction, Instant.now());
 
             // When & Then
-            assertThrows(IllegalStateException.class,
+            assertThrows(TransactionAlreadyReversedException.class,
                     () -> completedTransaction.reverse(reversalTransaction, Instant.now()));
         }
 
@@ -457,7 +514,7 @@ class TransactionTest {
                     transactionDate);
 
             // When & Then
-            assertThrows(IllegalStateException.class,
+            assertThrows(InvalidTransactionStateException.class,
                     () -> originalTransaction.reverse(wrongReversalTransaction, Instant.now()));
         }
 
@@ -476,7 +533,7 @@ class TransactionTest {
                     transactionDate);
 
             // When & Then
-            assertThrows(IllegalStateException.class,
+            assertThrows(InvalidTransactionStateException.class,
                     () -> originalTransaction.reverse(wrongReversalTransaction, Instant.now()));
         }
 
@@ -488,7 +545,7 @@ class TransactionTest {
                     portfolioId, TradeType.BUY_REVERSAL, mockTradeDetails, amount, transactionDate);
 
             // When & Then
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(InvalidReversalTransactionException.class,
                     () -> originalTransaction.reverse(invalidReversalTransaction, Instant.now()));
         }
     }
@@ -818,42 +875,21 @@ class TransactionTest {
                 Transaction reversalTransaction = Transaction.createReversalTransaction(
                     portfolioId, transaction.getTransactionId(), TradeType.BUY_REVERSAL, details, amount,
                     transactionDate);
-                assertThrows(IllegalArgumentException.class, () -> transaction.reverse(reversalTransaction, Instant.now()));
+                assertThrows(InvalidReversalTransactionException.class, () -> transaction.reverse(reversalTransaction, Instant.now()));
         }
         @Test
         void reverseShouldThrowIllegalArgumentExceptionReversalTypesDoesntMatchRightType() {
                 Transaction transaction = Transaction.createTradeTransaction(
                         portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
                 transaction.markAsCompleted();
+                assertFalse(transaction.isReversed());
                 ReversalTransactionDetails details = mock(ReversalTransactionDetails.class);
                 when(details.getOriginalTransactionId()).thenReturn(transaction.getTransactionId());
                 Transaction reversalTransaction = Transaction.createReversalTransaction(
                     portfolioId, transaction.getTransactionId(), TradeType.SELL_REVERSAL, details, amount,
                     transactionDate);
-                Exception e = assertThrows(IllegalArgumentException.class, () -> transaction.reverse(reversalTransaction, Instant.now()));
+                Exception e = assertThrows(InvalidReversalTransactionException.class, () -> transaction.reverse(reversalTransaction, Instant.now()));
                 assertEquals("Reversal transaction type must match expected reversal type.", e.getLocalizedMessage());
-        }
-        @Test
-        void reverseShouldThrowTransactionAlreadyReversedExceptionWhenIsReversedTriggers() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-                Transaction transaction = Transaction.createTradeTransaction(
-                        portfolioId, TradeType.BUY, mockTradeDetails, amount, transactionDate);
-                transaction.markAsCompleted();
-                
-                ReversalTransactionDetails details = mock(ReversalTransactionDetails.class);
-                when(details.getOriginalTransactionId()).thenReturn(transaction.getTransactionId());
-                Transaction reversalTransaction = Transaction.createReversalTransaction(
-                    portfolioId, transaction.getTransactionId(), TradeType.BUY_REVERSAL, details, amount,
-                    transactionDate);
-                
-                transaction.reverse(reversalTransaction, Instant.now());
-                Field typeField = transaction.getClass().getDeclaredField("type");
-                typeField.setAccessible(true);
-                typeField.set(transaction, TradeType.BUY);
-                Field statusField = transaction.getClass().getDeclaredField("status");
-                statusField.setAccessible(true);
-                statusField.set(transaction, TransactionStatus.COMPLETED);
-                 
-                assertThrows(TransactionAlreadyReversedException.class, () -> transaction.reverse(transaction, Instant.now()));
         }
     }
 }
