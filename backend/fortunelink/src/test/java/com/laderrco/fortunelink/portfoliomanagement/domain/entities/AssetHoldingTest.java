@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.enums.AssetType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.enums.DecimalPrecision;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.DomainEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientHoldingException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingCostBasisException;
@@ -1255,13 +1256,26 @@ public class AssetHoldingTest {
         Money sellPrice = Money.of(215.57, USD);
         Instant transactionDate = Instant.now();
 
-        assertDoesNotThrow(() -> testHolding.decreasePosition(quantityToSell, sellPrice, transactionDate));
+        testHolding.decreasePosition(quantityToSell, sellPrice, transactionDate);
 
         // Assert: event emitted, holding emptied, cost basis zeroed
         assertEquals(1, testHolding.getUncommittedEvents().size(), "One event should be emitted");
         assertTrue(testHolding.isEmpty(), "Holding should now be empty");
+        assertEquals(BigDecimal.ZERO.setScale(DecimalPrecision.getMoneyDecimalPlaces()), testHolding.getTotalCostBasis().amount());
         assertTrue(testHolding.shouldBeRemoved(), "Empty holding with zero cost basis should be removed");
-        System.out.println(testHolding.getTotalQuantity());
-        System.out.println(testHolding.getTotalCostBasis());
+
+
+        // isEmpty is not empty, should be false
+
+    }
+
+    @Test
+    void shouldBeRemovedIsFalseWhenIsEmptyIsFalse() {       
+        BigDecimal quantityToSell = BigDecimal.valueOf(50);
+        Money sellPrice = Money.of(215.57, USD);
+        Instant transactionDate = Instant.now();
+
+        testHolding.decreasePosition(quantityToSell, sellPrice, transactionDate);
+        assertFalse(testHolding.shouldBeRemoved());
     }
 }
