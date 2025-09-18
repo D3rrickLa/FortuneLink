@@ -2,16 +2,38 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Currency;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Precision;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Rounding;
+/*
+KEY TDD INSIGHTS:
 
+1. START WITH SKELETON: Methods return null/default values just to compile
+2. WRITE FAILING TEST: Test what you want the code to do
+3. HARDCODE IF NEEDED: Sometimes the simplest passing code is hardcoded
+4. ADD MORE TESTS: Force yourself to generalize the implementation
+5. TRIANGULATION: Use multiple test cases to drive toward the right solution
+6. BABY STEPS: Each red-green cycle should be small and focused
+
+The "return null" approach is common because:
+- Gets you started quickly
+- Forces you to write tests first
+- Makes the red phase very obvious
+- Prevents over-engineering before you know the requirements
+*/
 public class MoneyTest {
 
     private Money testMoneyCAD;
@@ -29,37 +51,281 @@ public class MoneyTest {
         testMoneyUSD = new Money(amount, USD);
     }
 
+    @Nested
+    @DisplayName("factory and constructor methods")
+    public class ConstructorAndFactoryTests {
+        @Test
+        @DisplayName("Testing full args constructor")
+        public void givenNone_whenConstructorIsValid_thenReturnNewMoney() {
+            Money testMoney = new Money(amount, CAD);
+            int expectedDecimalPlaces = Precision.getMoneyDecimalPlaces();
+            BigDecimal expectedAmount = amount.setScale(expectedDecimalPlaces, RoundingMode.HALF_EVEN);
 
-    @Test
-    @DisplayName("givenMoney_whenAdd_thenReturnSummedMoney")
-    public void givenMoney_whenAdd_thenReturnSummedMoney() {
-        Money actualSummedMoneyCAD = testMoneyCAD.add(testMoneyCAD); 
-        Money expectedSummedMoney = new Money(amount.multiply(BigDecimal.valueOf(2)), CAD);
-        assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+            assertEquals(expectedAmount, testMoney.amount());
+            assertEquals(expectedDecimalPlaces, testMoney.amount().scale());
+            assertEquals(CAD, testMoney.currency());
+        }
+        
+        @Test
+        @DisplayName("Testing full args constructor, throws error when amount is null")
+        public void givenNullInAmount_whenConstructor_thenThrowNullPointerException() {
+            NullPointerException exception = assertThrows(NullPointerException.class, () -> 
+                new Money(null, CAD)
+            );
+    
+            assertTrue(exception.getLocalizedMessage().equals("amount cannot be null"));
+        }
+
+        @Test
+        @DisplayName("Testing full args constructor, throws error when currency is null")
+        public void givenNullInCurrency_whenConstructor_thenThrowNullPointerException() {
+            NullPointerException exception = assertThrows(NullPointerException.class, () -> 
+                new Money(amount, null)
+            );
+    
+            assertTrue(exception.getLocalizedMessage().equals("currency cannot be null"));
+        }
+
+        @Test 
+        @DisplayName("Passes with Of method")
+        public void givenValidParemeters_whenOf_thenReturnMoney() {
+            Money testMoney = Money.of(amount, CAD);
+            int expectedDecimalPlaces = Precision.getMoneyDecimalPlaces();
+            BigDecimal expectedAmount = amount.setScale(expectedDecimalPlaces, RoundingMode.HALF_EVEN);
+
+            assertEquals(expectedAmount, testMoney.amount());
+            assertEquals(expectedDecimalPlaces, testMoney.amount().scale());
+            assertEquals(CAD, testMoney.currency());
+        }
+
+        @Test 
+        @DisplayName("Passes with Of method")
+        public void givenValidParemeters_whenOfAlternativeOne_thenReturnMoney() {
+            Money testMoney = Money.of(100, "CAD");
+            int expectedDecimalPlaces = Precision.getMoneyDecimalPlaces();
+            BigDecimal expectedAmount = amount.setScale(expectedDecimalPlaces, RoundingMode.HALF_EVEN);
+
+            assertEquals(expectedAmount, testMoney.amount());
+            assertEquals(expectedDecimalPlaces, testMoney.amount().scale());
+            assertEquals(CAD, testMoney.currency());
+        }
+
+        @Test
+        @DisplayName("Passes with ZERO method")
+        public void givenValidParemeters_whenZero_thenReturnMoney() {
+            Money testMoney = Money.ZERO(CAD);
+            int expectedDecimalPlaces = Precision.getMoneyDecimalPlaces();
+            BigDecimal expectedAmount = BigDecimal.ZERO.setScale(expectedDecimalPlaces, RoundingMode.HALF_EVEN);
+
+            assertEquals(expectedAmount, testMoney.amount());
+            assertEquals(expectedDecimalPlaces, testMoney.amount().scale());
+            assertEquals(CAD, testMoney.currency());
+        }
+        @Test
+        @DisplayName("Passes with ZERO method")
+        public void givenValidParemeters_whenZeroAlternativeOne_thenReturnMoney() {
+            Money testMoney = Money.ZERO("CAD");
+            int expectedDecimalPlaces = Precision.getMoneyDecimalPlaces();
+            BigDecimal expectedAmount = BigDecimal.ZERO.setScale(expectedDecimalPlaces, RoundingMode.HALF_EVEN);
+
+            assertEquals(expectedAmount, testMoney.amount());
+            assertEquals(expectedDecimalPlaces, testMoney.amount().scale());
+            assertEquals(CAD, testMoney.currency());
+        }
+        
     }
 
-    @Test
-    @DisplayName("givenZero_whenAdd_thenReturnsSameAmount")
-    public void givenZero_whenAdd_thenReturnsSameAmount() {
-        Money actualSummedMoneyCAD = testMoneyCAD.add(new Money(BigDecimal.ZERO, CAD)); 
-        Money expectedSummedMoney = new Money((BigDecimal.valueOf(100)), CAD);
-        assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+
+    @Nested
+    @DisplayName("add() method tests")
+    class AddTests{
+        @Test
+        @DisplayName("givenMoney_whenAdd_thenReturnSummedMoney")
+        public void givenMoney_whenAdd_thenReturnSummedMoney() {
+            Money actualSummedMoneyCAD = testMoneyCAD.add(testMoneyCAD); 
+            Money expectedSummedMoney = new Money(amount.multiply(BigDecimal.valueOf(2)), CAD);
+            assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+        }
+    
+        @Test
+        @DisplayName("givenZero_whenAdd_thenReturnsSameAmount")
+        public void givenZero_whenAdd_thenReturnsSameAmount() {
+            Money actualSummedMoneyCAD = testMoneyCAD.add(new Money(BigDecimal.ZERO, CAD)); 
+            Money expectedSummedMoney = new Money((BigDecimal.valueOf(100)), CAD);
+            assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+        }
+    
+        @Test 
+        @DisplayName("givenNegativeValue_whenAdd_thenReturnsCorrectAmount")
+        public void givenNegativeValue_whenAdd_thenReturnsCorrectAmount() {
+            Money actualSummedMoneyCAD = testMoneyCAD.add(new Money(BigDecimal.valueOf(-25), CAD)); 
+            Money expectedSummedMoney = new Money((BigDecimal.valueOf(75)), CAD);
+            assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+        }
+    
+        @Test
+        @DisplayName("givenDifferentCurrency_whenAdd_thenThrowsCurrencyException")
+        public void givenDifferentCurrency_whenAdd_thenThrowsCurrencyException() {
+            CurrencyMismatchException cmException = assertThrows(CurrencyMismatchException.class, () -> 
+                testMoneyCAD.add(testMoneyUSD)
+            );
+    
+            assertTrue(cmException.getLocalizedMessage().equals("Cannot add different currencies"));
+        }
+    
+        @Test 
+        @DisplayName("givenNulls_whenAdd_thenThrowsNullPointerException")
+        public void givenNulls_whenAdd_thenThrowsNullPointerException() {
+            NullPointerException exception = assertThrows(NullPointerException.class, () -> 
+                testMoneyCAD.add(null)
+            );
+    
+            assertTrue(exception.getLocalizedMessage().equals("Cannot add null money"));
+        }
     }
 
-    @Test 
-    @DisplayName("givenNegativeValue_whenAdd_thenReturnsSameAmount")
-    public void givenNegativeValue_whenAdd_thenReturnsSameAmount() {
-        Money actualSummedMoneyCAD = testMoneyCAD.add(new Money(BigDecimal.valueOf(-25), CAD)); 
-        Money expectedSummedMoney = new Money((BigDecimal.valueOf(75)), CAD);
-        assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+    @Nested
+    @DisplayName("subtract() method tests")
+    class SubtractTests {
+
+        @Test
+        @DisplayName("givenMoney_whenSubtract_thenReturnSummedMoney")
+        public void givenMoney_whenSubtract_thenReturnSummedMoney() {
+            Money actualSummedMoneyCAD = testMoneyCAD.subtract(testMoneyCAD); 
+            Money expectedSummedMoney = new Money(amount.multiply(BigDecimal.valueOf(0)), CAD);
+            assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+        }
+    
+        @Test
+        @DisplayName("givenZero_whenSubtract_thenReturnsSameAmount")
+        public void givenZero_whenSubtract_thenReturnsSameAmount() {
+            Money actualSummedMoneyCAD = testMoneyCAD.subtract(new Money(BigDecimal.ZERO, CAD)); 
+            Money expectedSummedMoney = new Money((BigDecimal.valueOf(100)), CAD);
+            assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+        }
+    
+        @Test 
+        @DisplayName("givenNegativeValue_whenSubtract_thenReturnsCorrectAmount")
+        public void givenNegativeValue_whenSubtract_thenReturnsCorrectAmount() {
+            Money actualSummedMoneyCAD = testMoneyCAD.subtract(new Money(BigDecimal.valueOf(-25), CAD)); 
+            Money expectedSummedMoney = new Money((BigDecimal.valueOf(125)), CAD);
+            assertEquals(expectedSummedMoney, actualSummedMoneyCAD);
+        }
+    
+        @Test
+        @DisplayName("givenDifferentCurrency_whenSubtract_thenThrowsCurrencyException")
+        public void givenDifferentCurrency_whenSubtract_thenThrowsCurrencyException() {
+            CurrencyMismatchException cmException = assertThrows(CurrencyMismatchException.class, () -> 
+                testMoneyCAD.subtract(testMoneyUSD)
+            );
+    
+            assertTrue(cmException.getLocalizedMessage().equals("Cannot subtract different currencies"));
+        }
+    
+        @Test 
+        @DisplayName("givenNulls_whenSubtract_thenThrowsNullPointerException")
+        public void givenNulls_whenSubtract_thenThrowsNullPointerException() {
+            NullPointerException exception = assertThrows(NullPointerException.class, () -> 
+                testMoneyCAD.subtract(null)
+            );
+    
+            assertTrue(exception.getLocalizedMessage().equals("Cannot subtract null money"));
+        }
     }
 
-    @Test
-    @DisplayName("givenDifferentCurrency_whenAdd_thenThrowsCurrencyException")
-    public void givenDifferentCurrency_whenAdd_thenThrowsCurrencyException() {
-        assertThrows(CurrencyMismatchException.class, () -> 
-            testMoneyCAD.add(testMoneyUSD)
-        );
+    @Nested
+    @DisplayName("multiply() method tests")
+    class MultiplyTests {
+        @Test
+        @DisplayName("givenMoney_whenMultiply_thenReturnProductMoney")
+        public void givenMoney_whenMultiply_thenReturnProductMoney() {
+            Money actualProductMoneyCAD = testMoneyCAD.multiply(testMoneyCAD.amount()); 
+            Money expectedProductMoney = new Money(BigDecimal.valueOf(10000), CAD);
+            assertEquals(expectedProductMoney, actualProductMoneyCAD);
+        }
+    
+        @ParameterizedTest
+        @ValueSource(doubles = {0.00, 0.000, 0}) 
+        @DisplayName("givenZero_whenMultiply_thenReturnsZeroAmount")
+        public void givenZero_whenMultiply_thenReturnsZeroAmount(double zeros) {
+            Money actualProductMoneyCAD = testMoneyCAD.multiply(BigDecimal.valueOf(zeros)); 
+            Money expectedProductMoney = new Money((BigDecimal.valueOf(0.0)), CAD);
+            assertEquals(expectedProductMoney, actualProductMoneyCAD);
+        }
+    
+        @Test
+        @DisplayName("givenNegativeValue_whenMultiply_thenReturnsCorrectAmount")
+        public void givenNegativeValue_whenMultiply_thenReturnsCorrectAmount() {
+            Money actualProductMoneyCAD = testMoneyCAD.multiply(BigDecimal.valueOf(-25)); 
+            Money expectedProductMoney = new Money((BigDecimal.valueOf(-2500)), CAD);
+            assertEquals(expectedProductMoney, actualProductMoneyCAD);
+        }
+
+        @Test
+        @DisplayName("Boundary test, givenMaxDoubleValue_whenMultiply_thenRetunCorrectAmount")
+        public void givenMaxDoubleValue_whenMultiply_thenRetunCorrectAmount() {
+            Money actualProductMoneyCAD = testMoneyCAD.multiply(BigDecimal.valueOf(Double.MAX_VALUE)); 
+            Money expectedProductMoney = new Money((BigDecimal.valueOf(Double.MAX_VALUE).multiply(amount)), CAD);
+            assertEquals(expectedProductMoney, actualProductMoneyCAD);
+
+        }
+    
+        @Test 
+        @DisplayName("givenNulls_whenMultiply_thenThrowsNullPointerException")
+        public void givenNulls_whenSubtract_thenThrowsNullPointerException() {
+            NullPointerException exception = assertThrows(NullPointerException.class, () -> 
+                testMoneyCAD.multiply(null)
+            );
+    
+            assertTrue(exception.getLocalizedMessage().equals("multiply cannot be null"));
+        }   
     }
 
+    @Nested
+    @DisplayName("divide() method tests")
+    class DivideTests {
+        @Test
+        @DisplayName("givenMoney_whenDivide_thenReturnDividedMoney")
+        public void givenMoney_whenDivide_thenReturnDividedMoney() {
+            Money actualDividedMoneyCAD = testMoneyCAD.divide(amount);
+            Money expectedDividedMoneyCAD = new Money(BigDecimal.ONE, CAD);
+            assertEquals(expectedDividedMoneyCAD, actualDividedMoneyCAD);
+        }
+
+        @Test 
+        @DisplayName("Throws Arthimetic Exception when dividing by zero")
+        public void givenZero_whenDivide_thenThrowArthimeticException() {
+            ArithmeticException aException = assertThrows(ArithmeticException.class, () ->  
+                testMoneyCAD.divide(BigDecimal.ZERO)
+            );
+            assertTrue(aException.getLocalizedMessage().equals("Cannot divide by zero"));
+        } 
+        @Test
+        @DisplayName("givenNegativeValue_whenDivide_thenReturnsCorrectAmount")
+        public void givenNegativeValue_whenMultiply_thenReturnsCorrectAmount() {
+            Money actualProductMoneyCAD = testMoneyCAD.divide(BigDecimal.valueOf(-25)); 
+            Money expectedProductMoney = new Money((BigDecimal.valueOf(-4)), CAD);
+            assertEquals(expectedProductMoney, actualProductMoneyCAD);
+        }
+
+        @Test
+        @DisplayName("Boundary test, givenMaxDoubleValue_whenMultiply_thenRetunCorrectAmount")
+        public void givenMaxDoubleValue_whenMultiply_thenRetunCorrectAmount() {
+            Money actualProductMoneyCAD = testMoneyCAD.divide(BigDecimal.valueOf(Double.MAX_VALUE)); 
+            Money expectedProductMoney = new Money((amount.divide(BigDecimal.valueOf(Double.MAX_VALUE), Precision.getMoneyDecimalPlaces(), Rounding.MONEY.getMode())), CAD);
+            assertEquals(expectedProductMoney, actualProductMoneyCAD);
+
+        }
+    
+        @Test 
+        @DisplayName("givenNulls_whenMultiply_thenThrowsNullPointerException")
+        public void givenNulls_whenSubtract_thenThrowsNullPointerException() {
+            NullPointerException exception = assertThrows(NullPointerException.class, () -> 
+                testMoneyCAD.divide(null)
+            );
+    
+            assertTrue(exception.getLocalizedMessage().equals("divide cannot be null"));
+        }   
+    }
+    
 }
