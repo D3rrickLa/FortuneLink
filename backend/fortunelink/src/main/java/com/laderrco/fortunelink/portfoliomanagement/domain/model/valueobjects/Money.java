@@ -70,6 +70,49 @@ public record Money(BigDecimal amount, Currency currency) {
         return new Money(this.amount.divide(divisor, Precision.getMoneyDecimalPlaces(), Rounding.MONEY.getMode()), this.currency);
     }
 
+    // LOGIC FUNCTIONS //
+    public Money negate() {
+        return new Money(this.amount.negate(), this.currency);
+    }
+
+    public Money abs() {
+        return new Money(this.amount.abs(), this.currency);
+    }
+
+    public boolean isPositive() {
+        return this.amount.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public boolean isNegative() {
+        return this.amount.compareTo(BigDecimal.ZERO) < 0;
+    }
+
+    public boolean isZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    public boolean isGreaterThan(Money other) {
+        isCurrencyTheSame(other.currency(), "isGreaterThan");
+        return this.amount.compareTo(other.amount) > 0;
+    } 
+
+    public boolean isLessThan(Money other) {
+        isCurrencyTheSame(other.currency(), "isLessThan");
+        return this.amount.compareTo(other.amount) < 0;
+    }
+
+    public int compareTo(Money other) {
+        return this.amount.compareTo(other.amount());
+    }
+
+    public Money min(Money other) {
+        return null;
+    }
+
+    public Money max(Money other) {
+        return null;
+    }
+
     private void isParemeterNull(Object other, String parameterName) {
         Objects.requireNonNull(other, String.format("%s cannot be null", parameterName));
     }

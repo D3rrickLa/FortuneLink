@@ -1,13 +1,16 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.nullable;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
 
+import org.assertj.core.internal.Doubles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -134,7 +137,6 @@ public class MoneyTest {
         }
         
     }
-
 
     @Nested
     @DisplayName("add() method tests")
@@ -326,6 +328,83 @@ public class MoneyTest {
     
             assertTrue(exception.getLocalizedMessage().equals("divide cannot be null"));
         }   
+    }
+
+    @Nested
+    @DisplayName("logic/other method tests")
+    public class LogicTests {
+        @Test
+        public void givenValidMoney_whenNegate_returnPositiveAmount() {
+            Money actualMoney = testMoneyCAD.negate();
+            Money expectedMoney = Money.of(Double.parseDouble("-100"), "CAD");
+            assertEquals(expectedMoney, actualMoney);
+        } 
+
+        @Test
+        public void givenValidMoney_whenABS_returnPositiveAmount() {
+            Money actualMoney = testMoneyCAD.abs();
+            Money expectedMoney = Money.of(Double.parseDouble("100"), "CAD");
+            assertEquals(expectedMoney, actualMoney);
+        }
+        
+        @ParameterizedTest
+        @ValueSource(doubles = {1, 2, 3, 4, 20, 100, 202, 19.99})
+        public void givenPositiveValues_whenIsPositive_returnTrue(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertTrue(money.isPositive());
+        }
+        @ParameterizedTest
+        @ValueSource(doubles = {0, -1, -2, -3, -4, -20, -100, -202, -19.99})
+        public void givenNegativeValues_whenIsPositive_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertFalse(money.isPositive());
+        }
+        @ParameterizedTest
+        @ValueSource(doubles = {-1, -2, -3, -4, -20, -100, -202, -19.99})
+        public void givenNegativeValues_whenIsNegative_returnTrue(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertTrue(money.isNegative());
+        }
+        @ParameterizedTest
+        @ValueSource(doubles = {0, 1, 2, 3, 4, 20, 100, 202, 19.99})
+        public void givenPositiveValues_whenIsNegative_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertFalse(money.isNegative());
+        }
+
+        @ParameterizedTest
+        @ValueSource(doubles = {0, 0.00, -0.00, 0.000000, 0})
+        public void givenDifferentZeroValues_whenIsZero_returnTrue(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertTrue(money.isZero());
+        }
+
+        @ParameterizedTest
+        @ValueSource(doubles = {-1, -0.01, 0.01, -9.99, Double.MAX_VALUE, Double.MAX_VALUE})
+        public void givenDifferentNonZeroValues_whenIsZero_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertFalse(money.isZero());
+        }
+
+        @ParameterizedTest
+        @ValueSource(doubles = {101, 100.01, 200, 1212, Double.MAX_VALUE})
+        public void givenGreaterValue_whenIsGreaterThan_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertFalse(testMoneyCAD.isGreaterThan(money));
+        }
+        @ParameterizedTest
+        @ValueSource(doubles = {87, 99.99, -200, -1212, Double.MIN_VALUE})
+        public void givenSmallerValue_whenIsGreaterThan_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertTrue(testMoneyCAD.isGreaterThan(money));
+        }
+
+        @Test
+        public void givenNullInput_whenIsGreaterThan_thenThrowsNullPointerException() {
+            assertThrows(NullPointerException.class, () -> 
+                testMoneyCAD.isGreaterThan(null)
+            );
+        }
     }
     
 }
