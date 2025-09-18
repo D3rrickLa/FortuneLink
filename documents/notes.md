@@ -619,3 +619,21 @@ Only if you have a specific need to cache the portfolio conversion for performan
 My Recommendation:
 Drop the MonetaryAmount complexity and just use Money nativeAmount. Convert as needed at the application layer. This is simpler, more flexible, and follows the principle of doing conversions where they're needed rather than preemptively.
 Your current design is over-engineering a solution to a problem that might not exist.
+
+
+
+
+# CLASSES/RECORDS TO CREATE
+## CLASSES
+- Transaction.java
+- Portfolio.java
+- AssetHolding.java
+
+## VALUE OBJECTS
+- AssetIdentifier
+- AccoutnEffect
+- Fee
+- CurrencyConversion
+- MonetaryAmount
+- Money
+- Percentage
