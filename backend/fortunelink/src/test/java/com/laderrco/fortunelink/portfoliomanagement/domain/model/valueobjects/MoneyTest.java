@@ -4,13 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.nullable;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
 
-import org.assertj.core.internal.Doubles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -402,9 +399,97 @@ public class MoneyTest {
         @Test
         public void givenNullInput_whenIsGreaterThan_thenThrowsNullPointerException() {
             assertThrows(NullPointerException.class, () -> 
-                testMoneyCAD.isGreaterThan(null)
+                testMoneyCAD.isLessThan(null)
             );
         }
+
+        @ParameterizedTest
+        @ValueSource(doubles = {87, 99.99, -200, -1212, Double.MIN_VALUE})
+        public void givenGreaterValue_whenIsLessThan_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertFalse(testMoneyCAD.isLessThan(money));
+        }
+
+        @ParameterizedTest
+        @ValueSource(doubles = {101, 100.01, 200, 1212, Double.MAX_VALUE})
+        public void givenSmallerValue_whenIsLessThan_returnFalse(double value) {
+            Money money = new Money(BigDecimal.valueOf(value), CAD);
+            assertTrue(testMoneyCAD.isLessThan(money));
+        }
+
+        @Test
+        public void givenNullInput_whenIsLessThan_thenThrowsNullPointerException() {
+            assertThrows(NullPointerException.class, () -> 
+                testMoneyCAD.isLessThan(null)
+            );
+        }
+
+        @Test
+        public void givenValidMoney_whenCompareTo_thenReturnOne() {
+            Money money = new Money(BigDecimal.valueOf(99), CAD);
+            int actualValue = testMoneyCAD.compareTo(money);
+            assertEquals(1, actualValue);
+
+        }
+        
+        @Test
+        public void givenValidMoney_whenCompareTo_thenReturnZERO() {
+            Money money = new Money(BigDecimal.valueOf(100), CAD);
+            int actualValue = testMoneyCAD.compareTo(money);
+            assertEquals(0, actualValue);
+
+        }
+
+        @Test
+        public void givenValidMoney_whenCompareTo_thenReturnNegativeOne() {
+            Money money = new Money(BigDecimal.valueOf(101), CAD);
+            int actualValue = testMoneyCAD.compareTo(money);
+            assertEquals(-1, actualValue);
+
+        }
+
+        @Test
+        public void givenMoneyDifferentCurrency_whenCompareTo_thenThrowException() {
+            Money money = new Money(BigDecimal.valueOf(101), USD);
+            assertThrows(CurrencyMismatchException.class, () ->testMoneyCAD.compareTo(money));
+        }
+
+        @Test
+        public void givenLargerMoney_whenMax_returnLargerAmount() {
+            Money expectedAmount = new Money(BigDecimal.valueOf(101), CAD);
+            Money actualAmount = testMoneyCAD.max(expectedAmount);
+            assertEquals(expectedAmount, actualAmount);
+        }
+
+        @Test
+        public void givenMoneyWithDifferentCurrency_whenMax_returnException() {
+            Money expectedAmount = new Money(BigDecimal.valueOf(101), USD);
+            assertThrows(CurrencyMismatchException.class, () ->testMoneyCAD.max(expectedAmount));
+        }
+
+        @Test
+        public void givenNull_whenMax_returnException() {
+            assertThrows(NullPointerException.class, () ->testMoneyCAD.max(null));
+        }
+
+        @Test
+        public void givenLargerMoney_whenMin_returnLargerAmount() {
+            Money expectedAmount = new Money(BigDecimal.valueOf(99), CAD);
+            Money actualAmount = testMoneyCAD.min(expectedAmount);
+            assertEquals(expectedAmount, actualAmount);
+        }
+
+        @Test
+        public void givenMoneyWithDifferentCurrency_whenMin_returnException() {
+            Money expectedAmount = new Money(BigDecimal.valueOf(101), USD);
+            assertThrows(CurrencyMismatchException.class, () ->testMoneyCAD.min(expectedAmount));
+        }
+
+        @Test
+        public void givenNull_whenMin_returnException() {
+            assertThrows(NullPointerException.class, () ->testMoneyCAD.min(null));
+        }
+
     }
     
 }

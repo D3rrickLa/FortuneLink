@@ -100,19 +100,24 @@ public record Money(BigDecimal amount, Currency currency) {
         isCurrencyTheSame(other.currency(), "isLessThan");
         return this.amount.compareTo(other.amount) < 0;
     }
-
+    
     public int compareTo(Money other) {
+        isCurrencyTheSame(other.currency(), "compareTo");
         return this.amount.compareTo(other.amount());
     }
 
     public Money min(Money other) {
-        return null;
+        validateMoney(other, "min");
+        BigDecimal minAmount = this.amount.min(other.amount());
+        return new Money(minAmount, this.currency); 
     }
 
     public Money max(Money other) {
-        return null;
+        validateMoney(other, "max");
+        BigDecimal maxAmount = this.amount.max(other.amount());
+        return new Money(maxAmount, this.currency); 
     }
-
+    
     private void isParemeterNull(Object other, String parameterName) {
         Objects.requireNonNull(other, String.format("%s cannot be null", parameterName));
     }
