@@ -631,7 +631,7 @@ Your current design is over-engineering a solution to a problem that might not e
 
 ## VALUE OBJECTS
 - AssetIdentifier
-- AccoutnEffect
+- AccountEffect
 - Fee
 - CurrencyConversion
 - MonetaryAmount

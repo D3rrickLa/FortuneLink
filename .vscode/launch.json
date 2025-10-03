@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-FortunelinkApplication<fortunelink>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.laderrco.fortunelink.FortunelinkApplication",
+            "projectName": "fortunelink",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
