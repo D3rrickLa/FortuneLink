@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.FeeType;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 
 public record Fee(
     FeeType feetype, 

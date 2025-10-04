@@ -621,19 +621,49 @@ Drop the MonetaryAmount complexity and just use Money nativeAmount. Convert as n
 Your current design is over-engineering a solution to a problem that might not exist.
 
 
-
+-- 2025-10-03 --
 
 # CLASSES/RECORDS TO CREATE
 ## CLASSES
 - Transaction.java
 - Portfolio.java
-- AssetHolding.java
+
+- Asset.java
+- Account.java
 
 ## VALUE OBJECTS
-- AssetIdentifier
+- AssetIdentifier [x]
+    - CustomAssetId [x]
+    - MarketSymbol [x]
+- Quantity
+- Price
+- TransactionDate
 - AccountEffect
-- Fee
-- CurrencyConversion
-- MonetaryAmount
-- Money
-- Percentage
+- Fee [x]
+- CurrencyConversion (this is called ExchangeRate) [x]
+- ~~MonetaryAmount~~
+
+this is in the shared
+- Money [x]
+- Percentage [x]
+
+
+
+com.fortunelink
+├── portfolio/              # Bounded Context 1
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/
+├── goals/                  # Bounded Context 2
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/
+├── community/              # Bounded Context 3
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/
+├── auth/                   # External - thin adapter
+│   └── SupabaseAuthAdapter.java
+└── marketdata/             # External - thin adapter
+    ├── MarketDataService.java (interface)
+    └── YahooMarketDataAdapter.java

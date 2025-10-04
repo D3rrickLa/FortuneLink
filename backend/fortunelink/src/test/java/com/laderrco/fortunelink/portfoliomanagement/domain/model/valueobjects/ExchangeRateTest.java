@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Precision;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 
 public class ExchangeRateTest {
     private Currency USD;
@@ -73,6 +74,7 @@ public class ExchangeRateTest {
     @Nested
     public class ConvertTests {
         private ExchangeRate exchangeRate;
+        
         @BeforeEach
         void init() {
             exchangeRate = new ExchangeRate(USD, CAD, rate, date);
@@ -87,7 +89,7 @@ public class ExchangeRateTest {
         public void givenWrongCurrency_whenConvertTo_throwException() {
             Money eurMoney = Money.of(100, "EUR");
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> exchangeRate.convertTo(eurMoney));
-            assertEquals("Currency provided does not match either the `toCurrency` or `fromCurrency`", exception.getMessage());
+            assertEquals("Currency provided does not match `fromCurrency`", exception.getMessage());
         }
         
         @Test
@@ -96,6 +98,26 @@ public class ExchangeRateTest {
             Money cadMoneyConverted = exchangeRate.convertTo(usdMoney);
             Money expectedMoney = Money.of(137, "CAD");
             assertEquals(expectedMoney, cadMoneyConverted);
+        }
+
+        @Test
+        public void givenNull_whenConvertBack_throwExceptions() {
+            assertThrows(NullPointerException.class, () -> exchangeRate.convertBack(null));
+        }
+
+        @Test
+        public void givenWrongCurrency_whenConvertBack_throwException() {
+            Money eurMoney = Money.of(100, "EUR");
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> exchangeRate.convertBack(eurMoney));
+            assertEquals("Currency provided does not match `toCurrency`", exception.getMessage());
+        }
+        
+        @Test
+        public void givenValid_whenConvertBack_returnMoney() {
+            Money cadMoney = Money.of(137, "CAD");
+            Money usdMoneyConverted = exchangeRate.convertBack(cadMoney);
+            Money expectedMoney = Money.of(100, "USD");
+            assertEquals(expectedMoney, usdMoneyConverted);
         }
     }
 }

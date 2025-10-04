@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Precision;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 
 public record ExchangeRate(Currency fromCurrency, Currency toCurrency, BigDecimal rate, Instant exchangeDate) {
     private final static int FOREX_SCALE = Precision.FOREX.getDecimalPlaces();
@@ -34,15 +35,24 @@ public record ExchangeRate(Currency fromCurrency, Currency toCurrency, BigDecima
         if (isIdentity()) {
             return other;
         }
-        else if(!other.currency().equals(this.toCurrency) && !other.currency().equals(this.fromCurrency)) {
-            throw new IllegalArgumentException("Currency provided does not match either the `toCurrency` or `fromCurrency`");
+        else if(!other.currency().equals(this.fromCurrency)) {
+            throw new IllegalArgumentException("Currency provided does not match `fromCurrency`");
         }
 
         return new Money(other.amount().multiply(this.rate), this.toCurrency);
     }
 
     public Money convertBack(Money other) {
-        return null;
+        validateParameter(other, "money");
+        if (isIdentity()) {
+            return other;
+        }
+        else if(!other.currency().equals(this.toCurrency)) {
+            throw new IllegalArgumentException("Currency provided does not match `toCurrency`");
+        }
+
+        BigDecimal nativeAmount = other.amount().divide(this.rate, this.toCurrency.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        return new Money(nativeAmount, this.fromCurrency);
     }
 
     private void validateParameter(Object object, String variableName) {

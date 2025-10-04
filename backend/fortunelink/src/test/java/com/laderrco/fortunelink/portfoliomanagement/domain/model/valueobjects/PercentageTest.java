@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Precision;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Rounding;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Percentage;
 
 public class PercentageTest {
     private BigDecimal percentage25;

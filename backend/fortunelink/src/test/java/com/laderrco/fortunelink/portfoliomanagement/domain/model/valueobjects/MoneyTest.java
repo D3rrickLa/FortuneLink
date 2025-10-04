@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Precision;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Rounding;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 /*
 KEY TDD INSIGHTS:
 
