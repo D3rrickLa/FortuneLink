@@ -20,10 +20,10 @@ public record Quantity(BigDecimal amount) {
     }
     
     public Quantity add(Quantity other) {
-        return new Quantity(amount.add(other.amount));
+        return new Quantity(amount.add(other.amount()));
     }
     
     public Quantity subtract(Quantity other) {
-        return new Quantity(amount.subtract(other.amount));
+        return new Quantity(amount.subtract(other.amount()));
     }
 }

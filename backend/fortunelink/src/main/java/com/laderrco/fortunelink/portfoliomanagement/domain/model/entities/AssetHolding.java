@@ -7,6 +7,8 @@ import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.DomainEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingIncreasedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingCostBasisException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingOperationException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingQuantityException;
@@ -16,7 +18,6 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Pr
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
-import com.laderrco.fortunelink.portfoliomanagement.events.DomainEvent;
 import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 import com.laderrco.fortunelink.shared.domain.valueobjects.Percentage;
 
@@ -55,7 +56,8 @@ public class AssetHolding {
             Instant createdAt,
             Instant lastTransactionAt,
             Instant updatedAt,
-            int version) {
+            int version) 
+    {
         this.assetHoldingId = Objects.requireNonNull(assetHoldingId);
         this.portfolioId = Objects.requireNonNull(portfolioId);
         this.assetIdentifier = Objects.requireNonNull(assetIdentifier);
@@ -68,7 +70,7 @@ public class AssetHolding {
         this.lastTransactionAt = Objects.requireNonNull(lastTransactionAt);
         this.updatedAt = Objects.requireNonNull(updatedAt);
         this.version = version;
-
+        
         validate();
         this.domainEvents = new ArrayList<>();
     }
@@ -91,6 +93,8 @@ public class AssetHolding {
             .totalQuantity(quantity)
             .averageCostBasis(pricePerUnit)
             .totalCostBasis(totalCost)
+            .createdAt(transactionDate)
+            .updatedAt(transactionDate)
             .lastTransactionAt(transactionDate)
             .build();  
     }
@@ -112,8 +116,35 @@ public class AssetHolding {
         return null;
     }
 
+    // For ACB rules in CAD, it's the purchase price PLUS any expense to acquire it
     public void increasePosition(Quantity quantity, Price pricePerUnit, Instant transactionDate) {
-        
+        Objects.requireNonNull(quantity);
+        Objects.requireNonNull(pricePerUnit);
+        Objects.requireNonNull(transactionDate);
+
+
+        validateQuantity(quantity);
+        validateCurrency(pricePerUnit.pricePerUnit());
+
+        Money purchaseCost = pricePerUnit.pricePerUnit().multiply(quantity.amount());
+        Money newTotalCostBasis = this.totalCostBasis.add(purchaseCost);
+        Quantity newTotalQuantity = this.totalQuantity.add(quantity);
+        Money newAverageCostBasis = newTotalCostBasis.divide(newTotalQuantity.amount());
+
+        this.totalQuantity = this.totalQuantity.add(quantity);
+        this.averageCostBasis = new Price(newAverageCostBasis);
+        this.totalCostBasis = newTotalCostBasis;
+        this.lastTransactionAt = transactionDate;
+
+        addDomainEvent(new HoldingIncreasedEvent(
+            this.portfolioId,
+            this.assetHoldingId,
+            quantity,
+            pricePerUnit,
+            transactionDate
+        ));
+        updateMetadata();
+
     }
 
     public void decreasePosition(Quantity quantity, Price pricePerUnit, Instant transactionDate) {
@@ -188,11 +219,11 @@ public class AssetHolding {
 
     // Domain Events //
     public void addDomainEvent(DomainEvent event) {
-
+        this.domainEvents.add(event);
     }
 
     public List<DomainEvent> getUncommittedEvents() {
-        return null;
+        return this.domainEvents;
     }
 
     public void markEventsAsCommitted() {
@@ -200,7 +231,7 @@ public class AssetHolding {
     }
 
     public boolean hasUncommittedEvents() {
-        return false;
+        return this.domainEvents.size() > 0;
     }
 
     
@@ -259,8 +290,8 @@ public class AssetHolding {
 
     // Private Helpers // 
     private void validate() {
-        if (totalQuantity.amount().compareTo(BigDecimal.ZERO) < 0) {
-            throw new InvalidHoldingQuantityException("Quantity cannot be negative");
+        if (totalQuantity.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidHoldingQuantityException("Quantity cannot be less than 0");
         }
         if (averageCostBasis.pricePerUnit().isNegative()) {
             throw new InvalidHoldingCostBasisException("Average cost basis cannot be negative");
@@ -273,9 +304,15 @@ public class AssetHolding {
         }
     }
 
-    private void valideCurrency(Money money) {
+    private void validateCurrency(Money money) {
         if (!money.currency().equals(this.baseCurrency)) {
             throw new InvalidHoldingOperationException(String.format("Currency mismatch. Expected %s but got %s", this.baseCurrency, money.currency()));
+        }
+    }    
+    
+    private void validateQuantity(Quantity quantity) {
+        if (quantity.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidHoldingQuantityException("quantity cannot be less than 0");
         }
     }
 

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfoliomanagement.events;
+package com.laderrco.fortunelink.portfoliomanagement.domain.events;
 
 import java.time.Instant;
 
