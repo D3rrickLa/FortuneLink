@@ -7,7 +7,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Qu
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
 
-public record HoldingIncreasedEvent(PortfolioId portfolioId, AssetHoldingId assetHoldingId, Quantity quantity, Price pricePerUnit, Instant transactionDate) implements DomainEvent {
+public record DividendReceivedEvent(PortfolioId portfolioId, AssetHoldingId assetHoldingId, Quantity quantity, Price dividendAmount, Instant transactionDate) implements DomainEvent {
 
     @Override
     public Instant occuredOn() {
@@ -16,12 +16,12 @@ public record HoldingIncreasedEvent(PortfolioId portfolioId, AssetHoldingId asse
 
     @Override
     public String eventType() {
-        return "Increase position event."; // probably want an enum for this
+        return "Dividend received event.";
     }
 
     @Override
     public String aggregateId() {
         return String.format("{PortfolioId: %s, AssetHoldingId: %s}", this.portfolioId, this.assetHoldingId);
     }
-
+    
 }

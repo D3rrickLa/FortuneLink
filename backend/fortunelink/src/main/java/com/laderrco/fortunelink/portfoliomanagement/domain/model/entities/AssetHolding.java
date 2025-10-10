@@ -125,7 +125,8 @@ public class AssetHolding {
 
         validateQuantity(quantity);
         validateCurrency(pricePerUnit.pricePerUnit());
-
+        validatePricePerUnit(pricePerUnit);
+        
         Money purchaseCost = pricePerUnit.pricePerUnit().multiply(quantity.amount());
         Money newTotalCostBasis = this.totalCostBasis.add(purchaseCost);
         Quantity newTotalQuantity = this.totalQuantity.add(quantity);
@@ -151,7 +152,7 @@ public class AssetHolding {
 
     }
 
-    public void recordDividendRecived(Money dividendAmount, Instant recievedAt) {
+    public void recordDividendReceived(Money dividendAmount, Instant recievedAt) {
 
     }
 
@@ -233,10 +234,9 @@ public class AssetHolding {
     public boolean hasUncommittedEvents() {
         return this.domainEvents.size() > 0;
     }
-
     
     // Getters //
- public AssetHoldingId getAssetHoldingId() {
+    public AssetHoldingId getAssetHoldingId() {
         return assetHoldingId;
     }
 
@@ -290,6 +290,7 @@ public class AssetHolding {
 
     // Private Helpers // 
     private void validate() {
+        // on constructor creation
         if (totalQuantity.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidHoldingQuantityException("Quantity cannot be less than 0");
         }
@@ -316,6 +317,12 @@ public class AssetHolding {
         }
     }
 
+    private void validatePricePerUnit(Price price) {
+        if (price.pricePerUnit().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidHoldingOperationException("price per unit cannot be less than 0");
+        }
+    }
+
     private void requirePosition() {
         if (isEmpty()) {
             throw new InvalidHoldingOperationException("Operation requries an active position");
@@ -326,7 +333,5 @@ public class AssetHolding {
         this.updatedAt = Instant.now();
         this.version++;
     }
-
-   
 
 }

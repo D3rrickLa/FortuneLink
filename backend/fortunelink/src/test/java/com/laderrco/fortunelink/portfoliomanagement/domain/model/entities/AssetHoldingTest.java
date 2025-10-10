@@ -16,7 +16,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.DividendReceivedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingDecreasedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingIncreasedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientHoldingException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidDividendAmountException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingCostBasisException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingOperationException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingQuantityException;
@@ -49,6 +54,17 @@ public class AssetHoldingTest {
 
     private Money cadMoney(String amount) {
         return new Money(decimal(amount), CAD);
+    }
+    private Money usdMoney(String amount) {
+        return new Money(decimal(amount), USD);
+    }
+
+    private Price priceCAD(String value) {
+        return new Price(cadMoney(value));
+    }
+
+    private Price priceUSD(String value) {
+        return new Price(usdMoney(value));
     }
 
     @BeforeEach
@@ -256,7 +272,7 @@ public class AssetHoldingTest {
             assertEquals(purchasePrice, event.pricePerUnit(), "Event should have correct price");
             assertEquals(transactionDate, event.transactionDate(), "Event should have correct timestamp");
             assertEquals(transactionDate, event.occuredOn());
-            assertEquals(String.format("{PortfolioId: %s, AssetHoldingId: $s}", testPortfolioId, testHoldingId), event.aggregateId());
+            assertEquals(String.format("{PortfolioId: %s, AssetHoldingId: %s}", testPortfolioId, testHoldingId), event.aggregateId());
             assertEquals("Increase position event.", event.eventType());
 
         }
@@ -362,8 +378,8 @@ public class AssetHoldingTest {
             );
 
             // Act & Assert
-            InvalidHoldingOperationException exception = assertThrows(
-                InvalidHoldingOperationException.class,
+            InvalidHoldingQuantityException exception = assertThrows(
+                InvalidHoldingQuantityException.class,
                 () -> holding.increasePosition(
                     quantity("0"),          // Zero quantity
                     price("60.00"),
@@ -373,8 +389,7 @@ public class AssetHoldingTest {
             );
             
             assertTrue(
-                exception.getMessage().contains("positive") || 
-                exception.getMessage().contains("zero"),
+                exception.getLocalizedMessage().equals("quantity cannot be less than 0"),
                 "Exception message should mention quantity must be positive"
             );
         }
@@ -393,8 +408,8 @@ public class AssetHoldingTest {
             );
 
             // Act & Assert
-            InvalidHoldingOperationException exception = assertThrows(
-                InvalidHoldingOperationException.class,
+            IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class, // this is illegal arugment, not invalidholdingoperation due to fundamental
                 () -> holding.increasePosition(
                     quantity("-50"),        // Negative quantity
                     price("60.00"),
@@ -404,7 +419,7 @@ public class AssetHoldingTest {
             );
             
             assertTrue(
-                exception.getMessage().contains("positive"),
+                exception.getMessage().contains("negative"),
                 "Exception message should mention quantity must be positive"
             );
         }
@@ -469,7 +484,7 @@ public class AssetHoldingTest {
                 InvalidHoldingOperationException.class,
                 () -> holding.increasePosition(
                     quantity("50"),
-                    price("60.00"),     // USD currency - mismatch!
+                    new Price(usdMoney("60.00")),     // USD currency - mismatch!
                     Instant.now()
                 ),
                 "Should throw exception when currency doesn't match"
@@ -535,59 +550,473 @@ public class AssetHoldingTest {
         // Core Sale Logic
         @Test
         void shouldDecreasePositionAndCalculateRealizedGain() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"),
+                priceCAD("50"),
+                Instant.now());
+
+            holding.decreasePosition(quantity("30"), priceCAD("70"), Instant.now());
+
+            assertEquals(quantity("70"), holding.getTotalQuantity(), "'Should have 70 shares remaining after selling 30");
+            assertEquals(priceCAD("3500"), holding.getTotalCostBasis(), "Total ACB should be reduced by sold shares' ACB");
+            assertEquals(priceCAD("50"), holding.getAverageCostBasis(), "Average ACB should remina unchagned at $50");
+
+            var events = holding.getUncommittedEvents();
+            var decreaseEvent = (HoldingDecreasedEvent) events.get(events.size() - 1);
+            assertEquals(priceCAD("600"), decreaseEvent.realizedGainLoss(), "Realised gain should be $600");
         }
 
         @Test
         void shouldCalculateRealizedLossWhenSellingAtALoss() {
-        }
+            // Arrange - 100 shares @ $50 ACB
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
 
+            // Act - Sell 50 shares @ $30 (below ACB!)
+            holding.decreasePosition(
+                quantity("50"),
+                priceCAD("30.00"),
+                Instant.now()
+            );
+
+            // Assert
+            assertEquals(
+                decimal("50"), 
+                holding.getTotalQuantity(),
+                "Should have 50 shares remaining"
+            );
+            
+            // Remaining ACB: 50 * $50 = $2,500
+            assertEquals(
+                cadMoney("2500.00"), 
+                holding.getTotalCostBasis(),
+                "Remaining ACB should be $2,500"
+            );
+            
+            // Check realized LOSS in event
+            // Sale proceeds: 50 * $30 = $1,500
+            // Sold ACB: 50 * $50 = $2,500
+            // Realized loss: $1,500 - $2,500 = -$1,000
+            var events = holding.getUncommittedEvents();
+            var decreaseEvent = (HoldingDecreasedEvent) events.get(events.size() - 1);
+            assertEquals(
+                priceCAD("-1000.00"), 
+                decreaseEvent.realizedGainLoss(),
+                "Realized loss should be -$1,000"
+            );
+            
+            assertTrue(
+                decreaseEvent.realizedGainLoss().pricePerUnit().isNegative(),
+                "Realized gain/loss should be negative (loss)"
+            );
+            
+        }
+        
         @Test
         void shouldMaintainCorrectACBAfterPartialSale() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"),
+                priceCAD("40"), 
+                Instant.now()
+            );
+    
+            holding.increasePosition(quantity("100"), priceCAD("60"), Instant.now());
+            holding.markEventsAsCommitted();
+            holding.decreasePosition(quantity("75"), priceCAD("80"), Instant.now());
+            
+            // Assert
+            // Remaining: 200 - 75 = 125 shares
+            assertEquals(
+                quantity("125"), 
+                holding.getTotalQuantity(),
+                "Should have 125 shares remaining"
+            );
+            
+            // Sold ACB: 75 * $50 = $3,750
+            // Remaining ACB: $10,000 - $3,750 = $6,250
+            assertEquals(
+                priceCAD("6250.00"), 
+                holding.getTotalCostBasis(),
+                "Remaining total ACB should be $6,250"
+            );
+            
+            // Average ACB: $6,250 / 125 = $50 (unchanged)
+            assertEquals(
+                priceCAD("50.00"), 
+                holding.getAverageCostBasis(),
+                "Average ACB should still be $50"
+            );
         }
-
+        
         @Test
         void shouldZeroOutACBWhenFullySellingPosition() {
+            // Arrange - 100 shares @ $50 ACB
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+    
+            // Act - Sell ALL 100 shares
+            holding.decreasePosition(
+                quantity("100"),
+                priceCAD("60.00"),
+                Instant.now()
+            );
+    
+            // Assert
+            assertTrue(
+                holding.isEmpty(),
+                "Holding should be empty after selling everything"
+            );
+            
+            assertEquals(
+                quantity("0"), 
+                holding.getTotalQuantity(),
+                "Quantity should be zero"
+            );
+            
+            assertEquals(
+                priceCAD("0.00"), 
+                holding.getTotalCostBasis(),
+                "Total ACB should be zero"
+            );
+            
+            assertEquals(
+                priceCAD("0.00"), 
+                holding.getAverageCostBasis(),
+                "Average ACB should be zero"
+            );
+            
+            assertTrue(
+                holding.shouldBeRemoved(),
+                "Holding should be marked for removal when fully liquidated"
+            );
         }
 
         // Domain Events
         @Test
         void shouldEmitHoldingDecreasedEventWithCorrectRealizedGainLoss() {
+            // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+            holding.markEventsAsCommitted();
+
+            // Act
+            Quantity saleQuantity = quantity("25");
+            Price salePrice = priceCAD("80.00");
+            Instant saleDate = Instant.now();
+            
+            holding.decreasePosition(saleQuantity, salePrice, saleDate);
+
+            // Assert
+            assertTrue(
+                holding.hasUncommittedEvents(),
+                "Should have uncommitted events after sale"
+            );
+            
+            assertEquals(
+                1, 
+                holding.getUncommittedEvents().size(),
+                "Should have exactly one event"
+            );
+            
+            assertTrue(
+                holding.getUncommittedEvents().get(0) instanceof HoldingDecreasedEvent,
+                "Event should be HoldingDecreasedEvent"
+            );
+            
+            HoldingDecreasedEvent event = (HoldingDecreasedEvent) holding.getUncommittedEvents().get(0);
+            
+            assertEquals(testPortfolioId, event.portfolioId());
+            assertEquals(testHoldingId, event.assetHoldingId());
+            assertEquals(saleQuantity, event.quantity());
+            assertEquals(salePrice, event.pricePerUnit());
+            assertEquals(saleDate, event.transactionDate());
+            
+            // Realized gain: (25 * $80) - (25 * $50) = $2,000 - $1,250 = $750
+            assertEquals(
+                cadMoney("750.00"), 
+                event.realizedGainLoss(),
+                "Event should contain correct realized gain"
+            );
         }
 
         // Timestamps & Versioning
         @Test
         void shouldUpdateLastTransactionAtTimestampOnDecrease() {
+            Instant initialTime = Instant.parse("2024-01-01T10:00:00Z");
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                initialTime
+            );
+
+            // Act
+            Instant saleTime = Instant.parse("2024-02-15T14:30:00Z");
+            holding.decreasePosition(
+                quantity("30"),
+                priceCAD("70.00"),
+                saleTime
+            );
+
+            // Assert
+            assertEquals(
+                saleTime, 
+                holding.getLastTransactionAt(),
+                "lastTransactionAt should be updated to sale time"
+            );
+            
+            assertNotEquals(
+                initialTime,
+                holding.getLastTransactionAt(),
+                "lastTransactionAt should have changed"
+            );
         }
 
         @Test
         void shouldIncrementVersionNumberOnDecrease() {
+            // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+            
+            int initialVersion = holding.getVersion();
+
+            // Act - First sale
+            holding.decreasePosition(quantity("20"), priceCAD("60.00"), Instant.now());
+            int versionAfterFirstSale = holding.getVersion();
+            
+            // Second sale
+            holding.decreasePosition(quantity("30"), priceCAD("65.00"), Instant.now());
+            int versionAfterSecondSale = holding.getVersion();
+
+            // Assert
+            assertEquals(
+                initialVersion + 1, 
+                versionAfterFirstSale,
+                "Version should increment after first sale"
+            );
+            
+            assertEquals(
+                initialVersion + 2, 
+                versionAfterSecondSale,
+                "Version should increment after each sale"
+            );
         }
 
         // Validation Failures
         @Test
         void shouldFailWhenTryingToSellMoreThanHeld() {
+            // Arrange - Only have 100 shares
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+
+            // Act & Assert - Try to sell 150 shares
+            InsufficientHoldingException exception = assertThrows(
+                InsufficientHoldingException.class,
+                () -> holding.decreasePosition(
+                    quantity("150"),  // More than available!
+                    priceCAD("60.00"),
+                    Instant.now()
+                ),
+                "Should throw exception when selling more than held"
+            );
+            
+            assertTrue(
+                exception.getMessage().contains("150") || 
+                exception.getMessage().contains("100"),
+                "Exception should mention quantity mismatch"
+            );
         }
 
         @Test
         void shouldFailWhenSellingZeroQuantity() {
+                // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+
+            // Act & Assert
+            assertThrows(
+                InvalidHoldingOperationException.class,
+                () -> holding.decreasePosition(
+                    quantity("0"),  // Zero!
+                    priceCAD("60.00"),
+                    Instant.now()
+                ),
+                "Should throw exception when selling zero quantity"
+            );
         }
 
         @Test
         void shouldFailWhenSellingNegativeQuantity() {
+                  // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+
+            // Act & Assert
+            assertThrows(
+                InvalidHoldingOperationException.class,
+                () -> holding.decreasePosition(
+                    quantity("-50"),  // Negative!
+                    priceCAD("60.00"),
+                    Instant.now()
+                ),
+                "Should throw exception when selling negative quantity"
+            );
         }
 
         @Test
         void shouldFailWhenSalePriceIsNegative() {
+                     // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+
+            // Act & Assert
+            assertThrows(
+                InvalidHoldingOperationException.class,
+                () -> holding.decreasePosition(
+                    quantity("50"),
+                    priceCAD("-60.00"),  // Negative price!
+                    Instant.now()
+                ),
+                "Should throw exception when sale price is negative"
+            );
         }
 
         @Test
         void shouldFailWhenCurrencyDoesNotMatchBaseCurrency() {
+                // Arrange - CAD holding
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+
+            // Act & Assert - Try to sell in USD
+            assertThrows(
+                InvalidHoldingOperationException.class,
+                () -> holding.decreasePosition(
+                    quantity("50"),
+                    priceUSD("60.00"),  // Wrong currency!
+                    Instant.now()
+                ),
+                "Should throw exception when currency doesn't match"
+            );
         }
 
         @Test
         void shouldFailWhenAnyParameterIsNull() {
-        }
+                // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
 
+            // Act & Assert - Null quantity
+            assertThrows(
+                NullPointerException.class,
+                () -> holding.decreasePosition(
+                    null,
+                    priceCAD("60.00"),
+                    Instant.now()
+                )
+            );
+            
+            // Null price
+            assertThrows(
+                NullPointerException.class,
+                () -> holding.decreasePosition(
+                    quantity("50"),
+                    null,
+                    Instant.now()
+                )
+            );
+            
+            // Null date
+            assertThrows(
+                NullPointerException.class,
+                () -> holding.decreasePosition(
+                    quantity("50"),
+                    priceCAD("60.00"),
+                    null
+                )
+            );
+        }
+        
     }
 
     @Nested
@@ -595,22 +1024,203 @@ public class AssetHoldingTest {
 
         @Test
         void shouldCorrectlyAverageACBAcrossMultiplePurchases() {
+            // Arrange & Act - Make multiple purchases at different prices
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("40.00"),  // $4,000
+                Instant.now()
+            );
+            
+            holding.increasePosition(quantity("50"), priceCAD("60.00"), Instant.now());  // +$3,000
+            holding.increasePosition(quantity("150"), priceCAD("50.00"), Instant.now()); // +$7,500
+
+            // Assert
+            // Total: 100 + 50 + 150 = 300 shares
+            // Total cost: $4,000 + $3,000 + $7,500 = $14,500
+            // Average: $14,500 / 300 = $48.33
+            
+            assertEquals(decimal("300"), holding.getTotalQuantity());
+            assertEquals(cadMoney("14500.00"), holding.getTotalCostBasis());
+            
+            BigDecimal expectedAvg = new BigDecimal("14500.00")
+                .divide(new BigDecimal("300"), 2, java.math.RoundingMode.HALF_UP);
+            assertEquals(
+                0, 
+                expectedAvg.compareTo(holding.getAverageCostBasis().pricePerUnit().amount()),
+                "Average ACB should be correctly calculated"
+            );
+
         }
 
         @Test
         void shouldMaintainCorrectACBAfterBuySellBuySequence() {
+            // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),  // $5,000 total
+                Instant.now()
+            );
+
+            // Act - Buy, Sell, Buy
+            holding.increasePosition(quantity("100"), priceCAD("60.00"), Instant.now()); // +$6,000
+            // Now: 200 shares, $11,000 total, $55 avg
+            
+            holding.decreasePosition(quantity("50"), priceCAD("70.00"), Instant.now());
+            // Sold ACB: 50 * $55 = $2,750
+            // Remaining: 150 shares, $8,250 total, $55 avg
+            
+            holding.increasePosition(quantity("50"), priceCAD("65.00"), Instant.now()); // +$3,250
+            // Final: 200 shares, $11,500 total
+
+            // Assert
+            assertEquals(quantity("200"), holding.getTotalQuantity());
+            assertEquals(priceCAD("11500.00"), holding.getTotalCostBasis());
+            
+            // Average: $11,500 / 200 = $57.50
+            assertEquals(
+                cadMoney("57.50"), 
+                holding.getAverageCostBasis(),
+                "Average ACB should be $57.50 after buy-sell-buy"
+            );
         }
 
         @Test
         void shouldMaintainCorrectACBAfterBuyBuySellBuySellSequence() {
+                  // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("40.00"),  // $4,000
+                Instant.now()
+            );
+
+            // Act - Complex sequence
+            holding.increasePosition(quantity("50"), priceCAD("50.00"), Instant.now());   // +$2,500
+            // 150 shares, $6,500, avg $43.33
+            
+            holding.increasePosition(quantity("50"), priceCAD("60.00"), Instant.now());   // +$3,000
+            // 200 shares, $9,500, avg $47.50
+            
+            holding.decreasePosition(quantity("75"), priceCAD("80.00"), Instant.now());
+            // Sold: 75 * $47.50 = $3,562.50
+            // 125 shares, $5,937.50, avg $47.50
+            
+            holding.increasePosition(quantity("100"), priceCAD("55.00"), Instant.now());  // +$5,500
+            // 225 shares, $11,437.50
+            
+            holding.decreasePosition(quantity("50"), priceCAD("90.00"), Instant.now());
+            // Sold: 50 * $50.83 = $2,541.67
+            // 175 shares, $8,895.83
+
+            // Assert
+            assertEquals(decimal("175"), holding.getTotalQuantity());
+            
+            // Verify ACB is maintained correctly
+            assertTrue(
+                holding.getTotalCostBasis().amount().compareTo(decimal("8800")) > 0 &&
+                holding.getTotalCostBasis().amount().compareTo(decimal("9000")) < 0,
+                "Total ACB should be approximately $8,900"
+            );
         }
 
         @Test
         void shouldHandleAlternatingBuysAndSellsCorrectly() {
+                   // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+
+            // Act - Alternate buy/sell multiple times
+            holding.increasePosition(quantity("50"), priceCAD("55.00"), Instant.now());
+            holding.decreasePosition(quantity("40"), priceCAD("60.00"), Instant.now());
+            holding.increasePosition(quantity("60"), priceCAD("52.00"), Instant.now());
+            holding.decreasePosition(quantity("30"), priceCAD("58.00"), Instant.now());
+            holding.increasePosition(quantity("40"), priceCAD("54.00"), Instant.now());
+
+            // Assert - Verify quantity is correct
+            // 100 + 50 - 40 + 60 - 30 + 40 = 180 shares
+            assertEquals(
+                quantity("180"), 
+                holding.getTotalQuantity(),
+                "Final quantity should be 180 shares"
+            );
+            
+            // Verify ACB is positive and reasonable
+            assertTrue(
+                holding.getTotalCostBasis().amount().compareTo(BigDecimal.ZERO) > 0,
+                "Total ACB should be positive"
+            );
+            
+            assertTrue(
+                holding.getAverageCostBasis().pricePerUnit().amount().compareTo(decimal("50")) > 0 &&
+                holding.getAverageCostBasis().pricePerUnit().amount().compareTo(decimal("60")) < 0,
+                "Average ACB should be between $50-$60"
+            );
         }
 
         @Test
         void shouldCalculateCorrectTotalACBAfterComplexSequence() {
+                // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("200"),
+                priceCAD("45.00"),  // $9,000
+                Instant.now()
+            );
+
+            // Act - Simulate real trading pattern
+            holding.increasePosition(quantity("100"), priceCAD("48.00"), Instant.now());  // +$4,800
+            // 300 shares, $13,800, avg $46
+            
+            holding.decreasePosition(quantity("150"), priceCAD("52.00"), Instant.now());
+            // Sold: 150 * $46 = $6,900
+            // 150 shares, $6,900, avg $46
+            
+            holding.increasePosition(quantity("200"), priceCAD("50.00"), Instant.now());  // +$10,000
+            // 350 shares, $16,900
+            
+            Money expectedTotalACB = cadMoney("16900.00");
+            BigDecimal expectedAvgACB = new BigDecimal("16900.00")
+                .divide(new BigDecimal("350"), 2, java.math.RoundingMode.HALF_UP);
+
+            // Assert
+            assertEquals(
+                decimal("350"), 
+                holding.getTotalQuantity(),
+                "Should have 350 shares"
+            );
+            
+            assertEquals(
+                expectedTotalACB, 
+                holding.getTotalCostBasis(),
+                "Total ACB should be $16,900"
+            );
+            
+            assertEquals(
+                0,
+                expectedAvgACB.compareTo(holding.getAverageCostBasis().pricePerUnit().amount()),
+                "Average ACB should be correctly calculated"
+            );
         }
 
     }
@@ -619,30 +1229,172 @@ public class AssetHoldingTest {
     public class DividendOperationTests {
         @Test
         void shouldRecordDividendWithoutAffectingACB() {
+               // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+            
+            Money originalTotalACB = holding.getTotalCostBasis();
+            Money originalAvgACB = holding.getAverageCostBasis().pricePerUnit();
+
+            // Act - Record dividend
+            holding.recordDividendReceived(Money.of(250.00, "CAD"), Instant.now());
+
+            // Assert - ACB should be unchanged
+            assertEquals(
+                originalTotalACB, 
+                holding.getTotalCostBasis(),
+                "Total ACB should not change when recording dividend"
+            );
+            
+            assertEquals(
+                originalAvgACB, 
+                holding.getAverageCostBasis(),
+                "Average ACB should not change when recording dividend"
+            );
         }
 
         @Test
         void shouldRecordDividendWithoutAffectingQuantity() {
+              // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+            
+            BigDecimal originalQuantity = holding.getTotalQuantity().amount();
+
+            // Act - Record dividend
+            holding.recordDividendReceived(cadMoney("250.00"), Instant.now());
+
+            // Assert - Quantity should be unchanged
+            assertEquals(
+                originalQuantity, 
+                holding.getTotalQuantity(),
+                "Quantity should not change when recording dividend"
+            );
         }
 
         @Test
         void shouldEmitDividendReceivedEvent() {
+              // Arrange
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                Instant.now()
+            );
+            holding.markEventsAsCommitted();
+
+            // Act
+            Money dividendAmount = cadMoney("250.00");
+            Instant receivedAt = Instant.now();
+            holding.recordDividendReceived(dividendAmount, receivedAt);
+
+            // Assert
+            assertTrue(
+                holding.hasUncommittedEvents(),
+                "Should have uncommitted events after recording dividend"
+            );
+            
+            assertEquals(
+                1, 
+                holding.getUncommittedEvents().size(),
+                "Should have exactly one event"
+            );
+            
+            assertTrue(
+                holding.getUncommittedEvents().get(0) instanceof DividendReceivedEvent,
+                "Event should be DividendReceivedEvent"
+            );
+            
+            DividendReceivedEvent event = (DividendReceivedEvent) holding.getUncommittedEvents().get(0);
+            assertEquals(testPortfolioId, event.portfolioId());
+            assertEquals(testHoldingId, event.assetHoldingId());
+            assertEquals(dividendAmount, event.dividendAmount());
+            assertEquals(receivedAt, event.transactionDate());
         }
 
         @Test
         void shouldUpdateLastTransactionAtTimestamp() {
+             // Arrange
+            Instant initialTime = Instant.parse("2024-01-01T10:00:00Z");
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                initialTime
+            );
+
+            // Act
+            Instant dividendTime = Instant.parse("2024-03-15T09:00:00Z");
+            holding.recordDividendReceived(cadMoney("250.00"), dividendTime);
+
+            // Assert
+            assertEquals(
+                dividendTime, 
+                holding.getLastTransactionAt(),
+                "lastTransactionAt should be updated to dividend received time"
+            );
         }
 
         @Test
         void shouldFailToRecordDividendOnEmptyPosition() {
+            
         }
 
         @Test
         void shouldFailWhenDividendAmountIsNegative() {
+            Instant initialTime = Instant.parse("2024-01-01T10:00:00Z");
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                initialTime
+            ); 
+            Instant dividendTime = Instant.parse("2024-03-15T09:00:00Z");
+
+
+            assertThrows(InvalidDividendAmountException.class, () -> holding.recordDividendReceived(cadMoney("-40"), dividendTime));
         }
 
         @Test
         void shouldFailWhenCurrencyDoesNotMatch() {
+            Instant initialTime = Instant.parse("2024-01-01T10:00:00Z");
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                initialTime
+            ); 
+            Instant dividendTime = Instant.parse("2024-03-15T09:00:00Z");
+
+
+            assertThrows(CurrencyMismatchException.class, () -> holding.recordDividendReceived(usdMoney("40"), dividendTime));
+
         }
 
         @Test
