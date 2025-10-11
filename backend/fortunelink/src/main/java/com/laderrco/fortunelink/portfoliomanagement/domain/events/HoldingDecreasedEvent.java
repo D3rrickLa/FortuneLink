@@ -6,8 +6,9 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Pr
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 
-public record HoldingDecreasedEvent(PortfolioId portfolioId, AssetHoldingId assetHoldingId, Quantity quantity, Price pricePerUnit, Instant transactionDate) implements DomainEvent {
+public record HoldingDecreasedEvent(PortfolioId portfolioId, AssetHoldingId assetHoldingId, Quantity quantity, Price pricePerUnit, Money realizedGainLoss, Instant transactionDate) implements DomainEvent {
 
     @Override
     public Instant occuredOn() {
@@ -22,10 +23,6 @@ public record HoldingDecreasedEvent(PortfolioId portfolioId, AssetHoldingId asse
     @Override
     public String aggregateId() {
         return String.format("{PortfolioId: %s, AssetHoldingId: %s}", this.portfolioId, this.assetHoldingId);
-    }
-
-    public Price realizedGainLoss() {
-        return new Price(pricePerUnit.pricePerUnit().multiply(quantity.amount()));
     }
 
 }

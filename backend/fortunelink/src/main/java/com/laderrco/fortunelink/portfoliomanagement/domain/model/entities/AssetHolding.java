@@ -7,8 +7,13 @@ import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.DividendReceivedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.DomainEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingDecreasedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingIncreasedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientHoldingException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidDividendAmountException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingCostBasisException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingOperationException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingQuantityException;
@@ -148,12 +153,73 @@ public class AssetHolding {
 
     }
 
-    public void decreasePosition(Quantity quantity, Price pricePerUnit, Instant transactionDate) {
+    public void decreasePosition(Quantity quantity, Price salePricePerUnit, Instant transactionDate) {
+        Objects.requireNonNull(quantity, "Quantity cannot be null");
+        Objects.requireNonNull(salePricePerUnit, "Price per unit cannot be null");
+        Objects.requireNonNull(transactionDate, "Transaction date cannot be null");
 
+        if (quantity.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidHoldingQuantityException("Quantity must be positive");
+        }
+
+        if (salePricePerUnit.pricePerUnit().compareTo(Money.ZERO(this.baseCurrency)) <= 0) {
+            throw new InvalidHoldingOperationException("Price per unit must be positive");
+        }
+
+        if (!canSell(quantity)) {
+            throw new InsufficientHoldingException(String.format("Cannot sell %s units. Only %s available", quantity, this.totalQuantity));
+        }
+
+        validateCurrency(salePricePerUnit.pricePerUnit());
+
+        Money soldCostBasis = this.averageCostBasis.pricePerUnit().multiply(quantity.amount());
+        Money saleProceeds = salePricePerUnit.pricePerUnit().multiply(quantity.amount());
+        Money realizedGainLoss = saleProceeds.subtract(soldCostBasis);
+
+        Quantity newTotalQuantity = this.totalQuantity.subtract(quantity);
+        Money newTotalCostBasis = this.totalCostBasis.subtract(soldCostBasis);
+
+        this.totalQuantity = newTotalQuantity;
+        this.totalCostBasis = newTotalCostBasis;
+        this.lastTransactionAt = transactionDate;
+
+        if (isEmpty()) {
+            this.averageCostBasis = new Price(Money.ZERO(this.baseCurrency));
+            this.totalCostBasis = Money.ZERO(this.baseCurrency);
+        }
+        else {
+            this.averageCostBasis = new Price(newTotalCostBasis.divide(newTotalQuantity.amount()));
+        }
+
+        addDomainEvent(new HoldingDecreasedEvent(
+            this.portfolioId, 
+            this.assetHoldingId, 
+            quantity, 
+            salePricePerUnit, 
+            realizedGainLoss,
+            transactionDate
+        ));
+        updateMetadata();
     }
 
     public void recordDividendReceived(Money dividendAmount, Instant recievedAt) {
+        Objects.requireNonNull(dividendAmount);
+        Objects.requireNonNull(recievedAt);
 
+        requirePosition();
+        validateCurrency(dividendAmount);
+
+        if (dividendAmount.isNegative()) {
+            throw new InvalidDividendAmountException("Dividend must be positive");
+        }
+
+        if (!canSell(totalQuantity)) {
+            throw new InvalidHoldingQuantityException("Quantity must be positive");
+        }
+
+        addDomainEvent(new DividendReceivedEvent(this.portfolioId, this.assetHoldingId, dividendAmount, recievedAt));
+        this.lastTransactionAt = recievedAt;
+        updateMetadata();
     }
 
     public void processDividendReinvestment( 
@@ -207,15 +273,15 @@ public class AssetHolding {
     }
 
     public boolean hasPosition() {
-        return false;
+        return !isEmpty();
     }
 
     public boolean canSell(Quantity requestedQuantity) {
-        return false;
+        return hasPosition() && requestedQuantity.amount().compareTo(this.totalQuantity.amount()) <= 0;
     }
 
     public boolean shouldBeRemoved() {
-        return false;
+        return isEmpty() && this.totalCostBasis.isZero();
     }
 
     // Domain Events //
@@ -307,7 +373,7 @@ public class AssetHolding {
 
     private void validateCurrency(Money money) {
         if (!money.currency().equals(this.baseCurrency)) {
-            throw new InvalidHoldingOperationException(String.format("Currency mismatch. Expected %s but got %s", this.baseCurrency, money.currency()));
+            throw new CurrencyMismatchException(String.format("Currency mismatch. Expected %s but got %s", this.baseCurrency, money.currency()));
         }
     }    
     

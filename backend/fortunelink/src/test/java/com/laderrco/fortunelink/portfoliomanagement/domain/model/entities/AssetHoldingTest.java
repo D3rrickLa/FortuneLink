@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.assertj.core.api.Assertions.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Currency;
@@ -34,6 +36,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Qu
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
+
 
 public class AssetHoldingTest {
 
@@ -562,12 +565,12 @@ public class AssetHoldingTest {
             holding.decreasePosition(quantity("30"), priceCAD("70"), Instant.now());
 
             assertEquals(quantity("70"), holding.getTotalQuantity(), "'Should have 70 shares remaining after selling 30");
-            assertEquals(priceCAD("3500"), holding.getTotalCostBasis(), "Total ACB should be reduced by sold shares' ACB");
+            assertEquals(Money.of(3500, "CAD"), holding.getTotalCostBasis(), "Total ACB should be reduced by sold shares' ACB");
             assertEquals(priceCAD("50"), holding.getAverageCostBasis(), "Average ACB should remina unchagned at $50");
 
             var events = holding.getUncommittedEvents();
             var decreaseEvent = (HoldingDecreasedEvent) events.get(events.size() - 1);
-            assertEquals(priceCAD("600"), decreaseEvent.realizedGainLoss(), "Realised gain should be $600");
+            assertEquals(Money.of(600, "CAD"), decreaseEvent.realizedGainLoss(), "Realised gain should be $600");
         }
 
         @Test
@@ -592,7 +595,7 @@ public class AssetHoldingTest {
 
             // Assert
             assertEquals(
-                decimal("50"), 
+                quantity("50"), 
                 holding.getTotalQuantity(),
                 "Should have 50 shares remaining"
             );
@@ -611,13 +614,13 @@ public class AssetHoldingTest {
             var events = holding.getUncommittedEvents();
             var decreaseEvent = (HoldingDecreasedEvent) events.get(events.size() - 1);
             assertEquals(
-                priceCAD("-1000.00"), 
+                Money.of(-1000.00, "CAD"), 
                 decreaseEvent.realizedGainLoss(),
                 "Realized loss should be -$1,000"
             );
             
             assertTrue(
-                decreaseEvent.realizedGainLoss().pricePerUnit().isNegative(),
+                decreaseEvent.realizedGainLoss().isNegative(),
                 "Realized gain/loss should be negative (loss)"
             );
             
@@ -650,7 +653,7 @@ public class AssetHoldingTest {
             // Sold ACB: 75 * $50 = $3,750
             // Remaining ACB: $10,000 - $3,750 = $6,250
             assertEquals(
-                priceCAD("6250.00"), 
+                Money.of(6250.00, "CAD"), 
                 holding.getTotalCostBasis(),
                 "Remaining total ACB should be $6,250"
             );
@@ -696,7 +699,7 @@ public class AssetHoldingTest {
             );
             
             assertEquals(
-                priceCAD("0.00"), 
+                Money.of(0.00, "CAD"), 
                 holding.getTotalCostBasis(),
                 "Total ACB should be zero"
             );
@@ -888,7 +891,7 @@ public class AssetHoldingTest {
 
             // Act & Assert
             assertThrows(
-                InvalidHoldingOperationException.class,
+                InvalidHoldingQuantityException.class,
                 () -> holding.decreasePosition(
                     quantity("0"),  // Zero!
                     priceCAD("60.00"),
@@ -913,7 +916,7 @@ public class AssetHoldingTest {
 
             // Act & Assert
             assertThrows(
-                InvalidHoldingOperationException.class,
+                IllegalArgumentException.class,
                 () -> holding.decreasePosition(
                     quantity("-50"),  // Negative!
                     priceCAD("60.00"),
@@ -925,7 +928,7 @@ public class AssetHoldingTest {
 
         @Test
         void shouldFailWhenSalePriceIsNegative() {
-                     // Arrange
+            // Arrange
             AssetHolding holding = AssetHolding.createInitialHolding(
                 testPortfolioId,
                 testHoldingId,
@@ -1043,11 +1046,11 @@ public class AssetHoldingTest {
             // Total cost: $4,000 + $3,000 + $7,500 = $14,500
             // Average: $14,500 / 300 = $48.33
             
-            assertEquals(decimal("300"), holding.getTotalQuantity());
+            assertEquals(quantity("300"), holding.getTotalQuantity());
             assertEquals(cadMoney("14500.00"), holding.getTotalCostBasis());
             
             BigDecimal expectedAvg = new BigDecimal("14500.00")
-                .divide(new BigDecimal("300"), 2, java.math.RoundingMode.HALF_UP);
+                .divide(new BigDecimal("300"), Precision.getMoneyDecimalPlaces(), java.math.RoundingMode.HALF_EVEN);
             assertEquals(
                 0, 
                 expectedAvg.compareTo(holding.getAverageCostBasis().pricePerUnit().amount()),
@@ -1082,11 +1085,11 @@ public class AssetHoldingTest {
 
             // Assert
             assertEquals(quantity("200"), holding.getTotalQuantity());
-            assertEquals(priceCAD("11500.00"), holding.getTotalCostBasis());
+            assertEquals(Money.of(11500.00, "CAD"), holding.getTotalCostBasis());
             
             // Average: $11,500 / 200 = $57.50
             assertEquals(
-                cadMoney("57.50"), 
+                priceCAD("57.50"), 
                 holding.getAverageCostBasis(),
                 "Average ACB should be $57.50 after buy-sell-buy"
             );
@@ -1124,7 +1127,7 @@ public class AssetHoldingTest {
             // 175 shares, $8,895.83
 
             // Assert
-            assertEquals(decimal("175"), holding.getTotalQuantity());
+            assertEquals(quantity("175"), holding.getTotalQuantity());
             
             // Verify ACB is maintained correctly
             assertTrue(
@@ -1201,11 +1204,11 @@ public class AssetHoldingTest {
             
             Money expectedTotalACB = cadMoney("16900.00");
             BigDecimal expectedAvgACB = new BigDecimal("16900.00")
-                .divide(new BigDecimal("350"), 2, java.math.RoundingMode.HALF_UP);
+                .divide(new BigDecimal("350"), Precision.getMoneyDecimalPlaces(), java.math.RoundingMode.HALF_EVEN);
 
             // Assert
             assertEquals(
-                decimal("350"), 
+                quantity("350"), 
                 holding.getTotalQuantity(),
                 "Should have 350 shares"
             );
@@ -1241,7 +1244,7 @@ public class AssetHoldingTest {
             );
             
             Money originalTotalACB = holding.getTotalCostBasis();
-            Money originalAvgACB = holding.getAverageCostBasis().pricePerUnit();
+            Price originalAvgACB = holding.getAverageCostBasis();
 
             // Act - Record dividend
             holding.recordDividendReceived(Money.of(250.00, "CAD"), Instant.now());
@@ -1273,7 +1276,7 @@ public class AssetHoldingTest {
                 Instant.now()
             );
             
-            BigDecimal originalQuantity = holding.getTotalQuantity().amount();
+            Quantity originalQuantity = holding.getTotalQuantity();
 
             // Act - Record dividend
             holding.recordDividendReceived(cadMoney("250.00"), Instant.now());
@@ -1346,18 +1349,31 @@ public class AssetHoldingTest {
             // Act
             Instant dividendTime = Instant.parse("2024-03-15T09:00:00Z");
             holding.recordDividendReceived(cadMoney("250.00"), dividendTime);
-
+            
             // Assert
             assertEquals(
                 dividendTime, 
                 holding.getLastTransactionAt(),
                 "lastTransactionAt should be updated to dividend received time"
-            );
-        }
-
-        @Test
-        void shouldFailToRecordDividendOnEmptyPosition() {
+                );
+            }
             
+            @Test
+            void shouldFailToRecordDividendOnEmptyPosition() {
+                Instant initialTime = Instant.parse("2024-01-01T10:00:00Z");
+                AssetHolding holding = AssetHolding.createInitialHolding(
+                    testPortfolioId,
+                    testHoldingId,
+                    testAssetIdentifier,
+                    testAssetType,
+                    quantity("100"),
+                    priceCAD("50.00"),
+                    initialTime
+                );
+                holding.decreasePosition(quantity("100"), priceCAD("50"), initialTime);
+                
+                Instant dividendTime = Instant.parse("2024-03-15T09:00:00Z");
+                assertThrows(InvalidHoldingOperationException.class, () -> holding.recordDividendReceived(cadMoney("250.00"), dividendTime));
         }
 
         @Test
@@ -1399,18 +1415,73 @@ public class AssetHoldingTest {
 
         @Test
         void shouldFailWhenAnyParameterIsNull() {
+            Instant initialTime = Instant.parse("2024-01-01T10:00:00Z");
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId,
+                testHoldingId,
+                testAssetIdentifier,
+                testAssetType,
+                quantity("100"),
+                priceCAD("50.00"),
+                initialTime
+            ); 
+            Instant dividendTime = Instant.parse("2024-03-15T09:00:00Z");
+
+
+            assertThrows(NullPointerException.class, () -> holding.recordDividendReceived(null, dividendTime));
+            assertThrows(NullPointerException.class, () -> holding.recordDividendReceived(cadMoney("40"), null));
+
         }
 
     }
 
     @Nested
     public class DividendReinvestmentTests {
+        private AssetHolding holding;
+
+        @BeforeEach
+        void init() {
+            holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"), 
+                priceCAD("20"),
+                Instant.now()
+            );
+        }
         @Test
         void shouldIncreaseACBWhenReinvestingDividends() {
+            Money initialTotalACB = holding.getTotalACB();
+            assertThat(initialTotalACB).isEqualTo(Money.of(2000, "CAD"));
+
+            Money dividendAmount = Money.of(100, "CAD");
+            BigDecimal sharesReceived = BigDecimal.valueOf(5);
+            Money pricePerShare = Money.of(20, "CAD");
+
+            holding.processDividendReinvestment(dividendAmount, quantity(sharesReceived.toString()), new Price(pricePerShare), Instant.now());
+
+            Money expectedTotalACB = Money.of(2100, "CAD");
+            assertThat(holding.getTotalACB()).isEqualTo(expectedTotalACB);
         }
 
         @Test
         void shouldIncreaseQuantityBySharesReceived() {
+            // Given: Initial 100 shares
+            Quantity initialQuantity = holding.getTotalQuantity();
+            assertEquals(initialQuantity, quantity("100"));
+            
+            // When: Reinvesting and receiving 5 shares
+            holding.processDividendReinvestment(
+                Money.of(100, "CAD"),
+                quantity("5"),
+                priceCAD("20"),
+                Instant.now()
+            );
+            
+            // Then: Quantity should be 105 shares
+            assertEquals(holding.getTotalQuantity(), quantity("105"));
         }
 
         @Test

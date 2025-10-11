@@ -2,12 +2,11 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.events;
 
 import java.time.Instant;
 
-import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
-import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
 
-public record DividendReceivedEvent(PortfolioId portfolioId, AssetHoldingId assetHoldingId, Quantity quantity, Price dividendAmount, Instant transactionDate) implements DomainEvent {
+public record DividendReceivedEvent(PortfolioId portfolioId, AssetHoldingId assetHoldingId, Money dividendAmount, Instant transactionDate) implements DomainEvent {
 
     @Override
     public Instant occuredOn() {
