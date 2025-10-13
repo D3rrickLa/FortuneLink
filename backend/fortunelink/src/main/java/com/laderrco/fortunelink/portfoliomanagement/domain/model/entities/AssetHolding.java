@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.DividendReceivedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.DividendReinvestedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.DomainEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingDecreasedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingIncreasedEvent;
@@ -228,15 +229,45 @@ public class AssetHolding {
         Price pricePerShare,
         Instant reinvestmentDate
     ) {
+        Objects.requireNonNull(dividendAmount, "Dividend amount cannot be null");
+        Objects.requireNonNull(sharesReceived, "Shares received cannot be null");
+        Objects.requireNonNull(pricePerShare, "Price per share cannot be null");
+        Objects.requireNonNull(reinvestmentDate, "Reinvestment date cannot be null");
 
+        if (sharesReceived.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidHoldingOperationException("Shares received must be positive");
+        }
+
+        validateCurrency(dividendAmount);
+        validateCurrency(pricePerShare.pricePerUnit()); 
+
+        Money reinvestmentCost = pricePerShare.pricePerUnit().multiply(sharesReceived.amount());
+        Money newTotalCostBasis = this.totalCostBasis.add(reinvestmentCost);
+        Quantity newTotalQuantity = this.totalQuantity.add(sharesReceived);
+        Money newAverageCostBasis = newTotalCostBasis.divide(newTotalQuantity.amount());
+
+        this.totalQuantity = newTotalQuantity;
+        this.averageCostBasis = new Price(newAverageCostBasis);
+        this.totalCostBasis = newTotalCostBasis;
+        this.lastTransactionAt = reinvestmentDate;
+
+        addDomainEvent(new DividendReinvestedEvent(
+            this.portfolioId, 
+            this.assetHoldingId, 
+            dividendAmount, 
+            sharesReceived, 
+            pricePerShare, 
+            reinvestmentDate
+        ));
+        updateMetadata();
     }
 
     public void processReturnOfCapital(Money rocAmount, Instant effectiveDate) {
-
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
     public void processStockSplit(BigDecimal splitRatio, Instant effectiveDate) {
-
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
     // Query Methods // 

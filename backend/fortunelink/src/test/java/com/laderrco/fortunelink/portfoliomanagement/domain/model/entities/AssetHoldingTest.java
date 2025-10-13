@@ -10,8 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.assertj.core.api.Assertions.*;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Currency;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +21,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.DividendReceivedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.DividendReinvestedEvent;
+import com.laderrco.fortunelink.portfoliomanagement.domain.events.DomainEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingDecreasedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.events.HoldingIncreasedEvent;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.CurrencyMismatchException;
@@ -1486,38 +1490,222 @@ public class AssetHoldingTest {
 
         @Test
         void shouldCalculateNewAverageACBCorrectly() {
+            Quantity initialQuantity = holding.getTotalQuantity();
+            assertEquals(initialQuantity, quantity("100"));
+
+            Money initialCostBasis = holding.getTotalCostBasis();
+            Money expectedInitialACB = Money.of(2000, "CAD");
+            assertEquals(expectedInitialACB, initialCostBasis);
+            
+            holding.processDividendReinvestment(
+                Money.of(100, "CAD"),
+                quantity("5"),
+                priceCAD("25"),
+                Instant.now()
+            );  
+                // Assert - Verify new ACB calculation
+            // Old cost basis: $2,000 (100 shares × $20)
+            // New investment: $125 (5 shares × $25)
+            // Total cost basis: $2,125
+            // Total shares: 105
+            // New average ACB per share: $2,125 ÷ 105 = $20.238095...
+            
+            Quantity expectedNewQuantity = quantity("105");
+            Money expectedNewCostBasis = Money.of(2125, "CAD");
+            Money expectedNewACBPerShare = Money.of(20.238095, "CAD");
+            
+            assertEquals(expectedNewQuantity, holding.getTotalQuantity());
+            assertEquals(expectedNewCostBasis, holding.getTotalCostBasis());
+            
+            // Calculate ACB per share
+            Money actualACBPerShare = holding.getACBPerShare();
+            assertEquals(expectedNewACBPerShare, actualACBPerShare);       
         }
 
         @Test
         void shouldEmitDividendReinvestedEvent() {
+            // Arrange
+            Money dividendAmount = Money.of(100, "CAD");
+            Quantity sharesReceived = quantity("5");
+            Price pricePerShare = priceCAD("20");
+            Instant timestamp = Instant.now();
+            
+            // Act
+            holding.processDividendReinvestment(
+                dividendAmount,
+                sharesReceived,
+                pricePerShare,
+                timestamp
+            );
+            
+            // Assert
+            List<DomainEvent> events = holding.getDomainEvents();
+            assertThat(events).hasSize(1);
+            assertThat(events.get(0)).isInstanceOf(DividendReinvestedEvent.class);
+            
+            DividendReinvestedEvent event = (DividendReinvestedEvent) events.get(0);
+            assertThat(event.assetHoldingId()).isEqualTo(holding.getAssetHoldingId());
+            assertThat(event.dividendAmount()).isEqualTo(dividendAmount);
+            assertThat(event.sharesReceived()).isEqualTo(sharesReceived);
+            assertThat(event.pricePerShare()).isEqualTo(pricePerShare);
+            assertThat(event.reinvestmentDate()).isEqualTo(timestamp);
         }
 
         @Test
         void shouldUpdateLastTransactionAtTimestamp() {
+            // Arrange
+            Instant initialTimestamp = holding.getLastTransactionAt();
+            Instant newTimestamp = Instant.now().plus(Duration.ofDays(1));
+            
+            // Act
+            holding.processDividendReinvestment(
+                Money.of(100, "CAD"),
+                quantity("5"),
+                priceCAD("20"),
+                newTimestamp
+            );
+            
+            // Assert
+            assertThat(holding.getLastTransactionAt())
+                .isEqualTo(newTimestamp)
+                .isAfter(initialTimestamp);
         }
 
         @Test
         void shouldFailWhenSharesReceivedIsZero() {
+            // Arrange
+            Quantity zeroShares = quantity("0");
+            
+            // Act & Assert
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    Money.of(100, "CAD"),
+                    zeroShares,
+                    priceCAD("20"),
+                    Instant.now()
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Shares received must be positive")
+                .hasMessageContaining("zero");
         }
 
         @Test
         void shouldFailWhenSharesReceivedIsNegative() {
+            // Arrange
+            Quantity negativeShares = quantity("-5");
+            
+            // Act & Assert
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    Money.of(100, "CAD"),
+                    negativeShares,
+                    priceCAD("20"),
+                    Instant.now()
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Shares received must be positive")
+                .hasMessageContaining("negative");
         }
 
         @Test
         void shouldFailWhenDividendAmountIsNegative() {
+            // Arrange
+            Money negativeDividend = Money.of(-100, "CAD");
+            
+            // Act & Assert
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    negativeDividend,
+                    quantity("5"),
+                    priceCAD("20"),
+                    Instant.now()
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dividend amount cannot be negative");
         }
 
         @Test
         void shouldFailWhenPricePerShareIsNegative() {
+            // Arrange
+            Price negativePrice = priceCAD("-20");
+            
+            // Act & Assert
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    Money.of(100, "CAD"),
+                    quantity("5"),
+                    negativePrice,
+                    Instant.now()
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Price per share cannot be negative");
         }
 
         @Test
         void shouldFailWhenCurrencyDoesNotMatch() {
+            // Arrange - Holding is in CAD, but dividend is in USD
+            Money dividendInUSD = Money.of(100, "USD");
+            Price priceInCAD = priceCAD("20");
+            
+            // Act & Assert
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    dividendInUSD,
+                    quantity("5"),
+                    priceInCAD,
+                    Instant.now()
+                ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Currency mismatch")
+                .hasMessageContaining("USD")
+                .hasMessageContaining("CAD");
         }
 
         @Test
         void shouldFailWhenAnyParameterIsNull() {
+            // Test null dividend amount
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    null,
+                    quantity("5"),
+                    priceCAD("20"),
+                    Instant.now()
+                ))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("Dividend amount cannot be null");
+            
+            // Test null shares received
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    Money.of(100, "CAD"),
+                    null,
+                    priceCAD("20"),
+                    Instant.now()
+                ))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("Shares received cannot be null");
+            
+            // Test null price per share
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    Money.of(100, "CAD"),
+                    quantity("5"),
+                    null,
+                    Instant.now()
+                ))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("Price per share cannot be null");
+            
+            // Test null timestamp
+            assertThatThrownBy(() -> 
+                holding.processDividendReinvestment(
+                    Money.of(100, "CAD"),
+                    quantity("5"),
+                    priceCAD("20"),
+                    null
+                ))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("Timestamp cannot be null");
         }
 
     }
