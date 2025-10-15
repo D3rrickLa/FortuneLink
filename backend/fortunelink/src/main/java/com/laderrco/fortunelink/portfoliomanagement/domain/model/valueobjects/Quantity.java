@@ -6,9 +6,10 @@ import java.util.Objects;
 public record Quantity(BigDecimal amount) {
     public Quantity {
         Objects.requireNonNull(amount);
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Quantity cannot be negative: " + amount);
-        }
+        // this might not be needed because if we do a reversal, we would 'need it to be negative'
+        // if (amount.compareTo(BigDecimal.ZERO) < 0) {
+        //     throw new IllegalArgumentException("Quantity cannot be negative: " + amount);
+        // }
     }
 
     public static Quantity of(double value) {

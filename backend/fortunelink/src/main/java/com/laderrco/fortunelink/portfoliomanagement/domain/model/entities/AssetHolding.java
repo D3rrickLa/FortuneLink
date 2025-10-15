@@ -232,10 +232,18 @@ public class AssetHolding {
         Objects.requireNonNull(dividendAmount, "Dividend amount cannot be null");
         Objects.requireNonNull(sharesReceived, "Shares received cannot be null");
         Objects.requireNonNull(pricePerShare, "Price per share cannot be null");
-        Objects.requireNonNull(reinvestmentDate, "Reinvestment date cannot be null");
+        Objects.requireNonNull(reinvestmentDate, "Timestamp cannot be null");
 
         if (sharesReceived.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidHoldingOperationException("Shares received must be positive");
+        }
+
+        if (dividendAmount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Dividend amount cannot be negative");
+        }
+
+        if (pricePerShare.pricePerUnit().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price per share cannot be negative");
         }
 
         validateCurrency(dividendAmount);
@@ -287,12 +295,12 @@ public class AssetHolding {
         return null;
     }
 
-    public Money getACBPerShare() {
-        return null;
+    public Price getACBPerShare() {
+        return this.averageCostBasis;
     }
 
     public Money getTotalACB() {
-        return null;
+        return this.totalCostBasis;
     }
 
     public Money getCostBasisForQuantity(Quantity quantity) {

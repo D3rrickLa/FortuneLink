@@ -33,6 +33,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHol
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InvalidHoldingQuantityException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Precision;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.Rounding;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.MarketSymbol;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
@@ -40,6 +41,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Qu
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetHoldingId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.shared.domain.valueobjects.Money;
+import com.laderrco.fortunelink.shared.domain.valueobjects.Percentage;
 
 
 public class AssetHoldingTest {
@@ -1512,13 +1514,13 @@ public class AssetHoldingTest {
             
             Quantity expectedNewQuantity = quantity("105");
             Money expectedNewCostBasis = Money.of(2125, "CAD");
-            Money expectedNewACBPerShare = Money.of(20.238095, "CAD");
+            Price expectedNewACBPerShare = new Price(new Money(BigDecimal.valueOf(2125).divide(BigDecimal.valueOf(105), Precision.getMoneyDecimalPlaces(), Rounding.MONEY.getMode()), CAD));
             
             assertEquals(expectedNewQuantity, holding.getTotalQuantity());
             assertEquals(expectedNewCostBasis, holding.getTotalCostBasis());
             
             // Calculate ACB per share
-            Money actualACBPerShare = holding.getACBPerShare();
+            Price actualACBPerShare = holding.getACBPerShare();
             assertEquals(expectedNewACBPerShare, actualACBPerShare);       
         }
 
@@ -1584,9 +1586,8 @@ public class AssetHoldingTest {
                     priceCAD("20"),
                     Instant.now()
                 ))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Shares received must be positive")
-                .hasMessageContaining("zero");
+                .isInstanceOf(InvalidHoldingOperationException.class)
+                .hasMessageContaining("Shares received must be positive");
         }
 
         @Test
@@ -1602,9 +1603,8 @@ public class AssetHoldingTest {
                     priceCAD("20"),
                     Instant.now()
                 ))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Shares received must be positive")
-                .hasMessageContaining("negative");
+                .isInstanceOf(InvalidHoldingOperationException.class)
+                .hasMessageContaining("Shares received must be positive");
         }
 
         @Test
@@ -1655,7 +1655,7 @@ public class AssetHoldingTest {
                     priceInCAD,
                     Instant.now()
                 ))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(CurrencyMismatchException.class)
                 .hasMessageContaining("Currency mismatch")
                 .hasMessageContaining("USD")
                 .hasMessageContaining("CAD");
@@ -1812,23 +1812,52 @@ public class AssetHoldingTest {
 
     @Nested
     public class QueryMethods {
+        private AssetHolding holding;
+        @BeforeEach
+        void init() {
+            holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"), 
+                priceCAD("20"),
+                Instant.now()
+            );
+        }
 
         @Nested
         public class QueryMethodsForMaketValueTests {
             @Test
             void shouldCalculateCurrentMarketValueCorrectly() {
+                Price currentPrice = priceCAD("30");
+                Money marketValue = holding.getCurrentMarketValue(currentPrice.pricePerUnit());
+                assertEquals(Money.of(3000,"CAD"), marketValue);
             }
 
             @Test
             void shouldReturnZeroMarketValueForEmptyPosition() {
+                holding.decreasePosition(quantity("null"), priceCAD("50") , Instant.now());
+
+                Money currentPrice = Money.of(75, "CAD");
+                Money marketValue = holding.getCurrentMarketValue(currentPrice);
+
+                assertEquals(Money.ZERO(CAD), marketValue);
             }
 
             @Test
             void shouldFailWhenCurrentPriceCurrencyDoesNotMatch() {
+                
+                Money currentPrice = Money.of(75, "USD");
+
+                assertThrows(InvalidHoldingOperationException.class, 
+                    () -> holding.getCurrentMarketValue(currentPrice));
             }
 
             @Test
             void shouldFailWhenCurrentPriceIsNull() {
+                assertThrows(NullPointerException.class, 
+                    () -> holding.getCurrentMarketValue(null));
             }
         }
 
@@ -1836,50 +1865,114 @@ public class AssetHoldingTest {
         public class QueryMethodsForCapitalGainLossTests {
             @Test
             void shouldCalculateUnrealizedGainCorrectly() {
+                Money currentPrice = Money.of(75, "CAD");
+                Money unrealizedGain = holding.getUnrealizedGainLoss(currentPrice);
+
+                // Market: 100 * 75 = 7500, ACB: 5000, Gain: 2500
+                assertEquals(Money.of(2500, "CAD"), unrealizedGain);
             }
 
             @Test
             void shouldCalculateUnrealizedLossCorrectly() {
+                 Money currentPrice = Money.of(30, "CAD");
+                Money unrealizedLoss = holding.getUnrealizedGainLoss(currentPrice);
+
+                // Market: 100 * 30 = 3000, ACB: 5000, Loss: -2000
+                assertEquals(Money.of(-2000, "CAD"), unrealizedLoss);
             }
 
             @Test
             void shouldReturnZeroUnrealizedGainLossWhenPriceEqualsACB() {
+                Money currentPrice = Money.of(50, "CAD");
+                Money unrealizedGainLoss = holding.getUnrealizedGainLoss(currentPrice);
+
+                assertEquals(Money.ZERO("CAD"), unrealizedGainLoss);
             }
 
             @Test
             void shouldCalculateUnrealizedGainLossPercentageCorrectly() {
+                Money currentPrice = Money.of(75, "CAD");
+                Percentage percentage = holding.getUnrealizedGainLossPercentage(currentPrice);
+
+                // Gain: 2500, ACB: 5000, Percentage: 50%
+                assertEquals(Percentage.of(50), percentage);
             }
 
             @Test
             void shouldReturnZeroPercentWhenTotalACBIsZero() {
+                // Sell everything and process ROC to zero out ACB
+                holding.decreasePosition(quantity("100"), priceCAD("50"), Instant.now());
+
+                Money currentPrice = Money.of(75, "CAD");
+                Percentage percentage = holding.getUnrealizedGainLossPercentage(currentPrice);
+
+                assertEquals(Percentage.of(0), percentage);
             }
 
             @Test
             void shouldFailWhenCurrentPriceCurrencyDoesNotMatch() {
+                Money currentPrice = Money.of(75, "EUR");
+
+                assertThrows(InvalidHoldingOperationException.class, 
+                    () -> holding.getUnrealizedGainLoss(currentPrice));
             }
 
         }
 
         @Nested
-        public class QueryMethodsFOrHypotheticalCaptialGainLossTests {
+        public class QueryMethodsForHypotheticalCaptialGainLossTests {
             @Test
             void shouldCalculateHypotheticalGainWithoutChangingState() {
+                  Money hypotheticalGain = holding.calculateCapitalGainLoss(
+                    quantity("50"), priceCAD("70")
+                );
+
+                // Sale: 50 * 70 = 3500, ACB: 50 * 50 = 2500, Gain: 1000
+                assertEquals(Money.of(1000, "CAD"), hypotheticalGain);
+                
+                // Verify state unchanged
+                assertEquals(new BigDecimal("100"), holding.getTotalQuantity());
+                assertEquals(Money.of(5000, "CAD"), holding.getTotalACB());
             }
 
             @Test
             void shouldCalculateHypotheticalLossWithoutChangingState() {
+                 Money hypotheticalLoss = holding.calculateCapitalGainLoss(
+                    quantity("50"), priceCAD("30")
+                );
+
+                // Sale: 50 * 30 = 1500, ACB: 50 * 50 = 2500, Loss: -1000
+                assertEquals(Money.of(-1000, "CAD"), hypotheticalLoss);
+                
+                // Verify state unchanged
+                assertEquals(new BigDecimal("100"), holding.getTotalQuantity());
             }
 
             @Test
             void shouldFailWhenQuantityExceedsAvailableShares() {
+                assertThrows(InvalidHoldingOperationException.class, 
+                () -> holding.calculateCapitalGainLoss(
+                    quantity("150"), priceCAD("70")
+                ));
             }
 
             @Test
             void shouldFailWhenSalePriceCurrencyDoesNotMatch() {
+                assertThrows(InvalidHoldingOperationException.class, 
+                () -> holding.calculateCapitalGainLoss(
+                    quantity("50"), priceUSD("70")
+                ));
             }
 
             @Test
             void shouldNotEmitAnyEventsFromQueryMethod() {
+                holding.markEventsAsCommitted(); // Clear initial event
+
+                holding.calculateCapitalGainLoss(
+                    quantity("50"), priceCAD("70")
+                );
+
+                assertFalse(holding.hasUncommittedEvents());
             }
         }
 
@@ -1887,18 +1980,25 @@ public class AssetHoldingTest {
         public class QueryMethodsForACBTests {
             @Test
             void shouldReturnCorrectAverageACBPerShare() {
+                assertEquals(priceCAD("50"), holding.getACBPerShare());
             }
 
             @Test
             void shouldReturnCorrectTotalACB() {
+                assertEquals(Money.of(5000, "CAD"), holding.getTotalACB());
             }
 
             @Test
             void shouldReturnCorrectACBForSpecificQuantity() {
+                Money acbFor50 = holding.getCostBasisForQuantity(quantity("50"));
+
+                assertEquals(Money.of(2500, "CAD"), acbFor50);
             }
 
             @Test
             void shouldFailWhenRequestedQuantityExceedsHolding() {
+                assertThrows(InvalidHoldingOperationException.class, 
+                    () -> holding.getCostBasisForQuantity(quantity("150")));
             }
         }
 
@@ -1906,34 +2006,48 @@ public class AssetHoldingTest {
         public class QueryMethodsForStatusChecksTests {
             @Test
             void shouldReturnTrueForIsEmptyWhenQuantityIsZero() {
+                holding.decreasePosition(quantity("100"), priceCAD("50"), Instant.now());
+
+                assertTrue(holding.isEmpty());
             }
 
             @Test
             void shouldReturnFalseForIsEmptyWhenQuantityIsPositive() {
+                assertFalse(holding.isEmpty());
             }
 
             @Test
             void shouldReturnTrueForHasPositionWhenQuantityIsPositive() {
+                assertTrue(holding.hasPosition());
             }
 
             @Test
             void shouldReturnFalseForHasPositionWhenQuantityIsZero() {
+                holding.decreasePosition(quantity("100"), priceCAD("50"), Instant.now());
+
+                assertFalse(holding.hasPosition());
             }
 
             @Test
             void shouldReturnTrueForCanSellWhenQuantityIsSufficient() {
+                assertTrue(holding.canSell(quantity("50")));
+                assertTrue(holding.canSell(quantity("100")));
             }
 
             @Test
             void shouldReturnFalseForCanSellWhenQuantityIsInsufficient() {
+                assertFalse(holding.canSell(quantity("150")));
             }
 
             @Test
             void shouldReturnTrueForShouldBeRemovedWhenEmptyAndACBIsZero() {
+                holding.decreasePosition(quantity("100"), priceCAD("50"), Instant.now());
+                assertTrue(holding.shouldBeRemoved());
             }
 
             @Test
             void shouldReturnFalseForShouldBeRemovedWhenPositionExists() {
+                assertFalse(holding.shouldBeRemoved());
             }
 
         }
@@ -1942,28 +2056,59 @@ public class AssetHoldingTest {
 
     @Nested
     public class DomainEventTests {
+       private AssetHolding holding;
+        @BeforeEach
+        void init() {
+            holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"), 
+                priceCAD("20"),
+                Instant.now()
+            );
+        }
+
         @Test
         void shouldAccumulateMultipleUncommittedEvents() {
+            holding.increasePosition(quantity("50"), priceCAD("55"), Instant.now());
+            holding.recordDividendReceived(Money.of(100, "CAD"), Instant.now());
+
+            assertEquals(3, holding.getUncommittedEvents().size()); // Initial + Increase + Dividend
         }
 
         @Test
         void shouldReturnAllUncommittedEvents() {
+            holding.increasePosition(quantity("50"), priceCAD("55"), Instant.now());
+
+            var events = holding.getUncommittedEvents();
+            assertEquals(2, events.size());
+            assertTrue(events.stream().anyMatch(e -> e instanceof HoldingIncreasedEvent));
         }
 
         @Test
         void shouldClearEventsWhenMarkedAsCommitted() {
+            holding.markEventsAsCommitted();
+
+            assertEquals(0, holding.getUncommittedEvents().size());
         }
 
         @Test
         void shouldReturnTrueForHasUncommittedEventsWhenEventsExist() {
+            assertTrue(holding.hasUncommittedEvents());
         }
 
         @Test
         void shouldReturnFalseForHasUncommittedEventsAfterMarkingCommitted() {
+            holding.markEventsAsCommitted();
+            assertFalse(holding.hasUncommittedEvents());
         }
 
         @Test
         void shouldNotAllowNullEventsToBeAdded() {
+            assertThrows(NullPointerException.class, 
+                () -> holding.addDomainEvent(null));
         }
 
     }
