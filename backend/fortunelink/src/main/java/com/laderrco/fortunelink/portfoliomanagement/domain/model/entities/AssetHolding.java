@@ -102,7 +102,10 @@ public class AssetHolding {
             .createdAt(transactionDate)
             .updatedAt(transactionDate)
             .lastTransactionAt(transactionDate)
+            .version(0)
             .build();  
+
+            
     }
 
 
@@ -111,15 +114,27 @@ public class AssetHolding {
         AssetHoldingId assetHoldingId,
         AssetIdentifier assetIdentifier,
         AssetType assetType,
-        BigDecimal totalQuantity,
-        Money averageCostBasis,
+        Quantity totalQuantity,
+        Price averageCostBasis,
         Money totalCostBasis,
         Instant lastTransactionAt,
         int version,
         Instant createdAt,
         Instant updatedAt
     ) {
-        return null;
+        return AssetHolding.builder()
+            .portfolioId(portfolioId)
+            .assetHoldingId(assetHoldingId)
+            .assetIdentifier(assetIdentifier)
+            .assetType(assetType)
+            .totalQuantity(totalQuantity)
+            .averageCostBasis(averageCostBasis)
+            .totalCostBasis(totalCostBasis)
+            .lastTransactionAt(lastTransactionAt)
+            .version(version)
+            .createdAt(createdAt)
+            .updatedAt(updatedAt)
+            .build();
     }
 
     // For ACB rules in CAD, it's the purchase price PLUS any expense to acquire it
@@ -280,19 +295,46 @@ public class AssetHolding {
 
     // Query Methods // 
     public Money getCurrentMarketValue(Money currentPrice) {
-        return null;
+        Objects.requireNonNull(currentPrice, "Current price cannot be null");
+        validateCurrency(currentPrice);
+        return currentPrice.multiply(this.totalQuantity.amount());
     }
 
     public Money getUnrealizedGainLoss(Money currentPrice) {
-        return null;
+        Objects.requireNonNull(currentPrice, "Current price cannot be null");
+        validateCurrency(currentPrice);
+        Money currentValue = getCurrentMarketValue(currentPrice);
+        return currentValue.subtract(this.totalCostBasis);
     }
 
     public Percentage getUnrealizedGainLossPercentage(Money currentPrice) {
-        return null;
+        Objects.requireNonNull(currentPrice, "Current price cannot be null");
+        validateCurrency(currentPrice);
+
+        if (this.totalCostBasis.isZero()) {
+            return Percentage.of(0);
+        }
+
+        Money gainLoss = getUnrealizedGainLoss(currentPrice);
+        return Percentage.of(gainLoss.divide(this.totalCostBasis.amount()).amount());
     }
 
     public Money calculateCapitalGainLoss(Quantity quantitySold, Price salePrice) {
-        return null;
+        Objects.requireNonNull(quantitySold, "Quantity sold cannot be null");
+        Objects.requireNonNull(salePrice, "Sale price cannot be null");
+
+        if (!canSell(quantitySold)) {
+            throw new InvalidHoldingOperationException(
+                "Cannot calculate gain/loss for " + quantitySold + " units. Only " + 
+                this.totalQuantity + " available"
+            );
+        }
+
+        validateCurrency(salePrice.pricePerUnit());
+
+        Money saleProceeds = salePrice.pricePerUnit().multiply(quantitySold.amount());
+        Money acbOfSoldShares = this.averageCostBasis.pricePerUnit().multiply(quantitySold.amount());
+        return saleProceeds.subtract(acbOfSoldShares);
     }
 
     public Price getACBPerShare() {
@@ -304,7 +346,12 @@ public class AssetHolding {
     }
 
     public Money getCostBasisForQuantity(Quantity quantity) {
-        return null;
+        if (!canSell(quantity)) {
+            throw new InvalidHoldingOperationException(
+                "Requested quantity " + quantity + " exceeds available " + this.totalQuantity
+            );
+        }
+        return this.averageCostBasis.pricePerUnit().multiply(quantity.amount());
     }
 
     public boolean isEmpty() {
@@ -325,6 +372,7 @@ public class AssetHolding {
 
     // Domain Events //
     public void addDomainEvent(DomainEvent event) {
+        Objects.requireNonNull(event, "Domain object should not be null");
         this.domainEvents.add(event);
     }
 

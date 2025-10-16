@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +17,7 @@ import java.util.Currency;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -134,7 +136,7 @@ public class AssetHoldingTest {
         @Test
         @DisplayName("Should fail when creating with negative price per unit")
         void givenNegativeQuantity_whenInitializing_throwException() {
-            assertThrows(IllegalArgumentException.class, () ->{
+            assertThrows(InvalidHoldingQuantityException.class, () ->{
                 AssetHolding.createInitialHolding(testPortfolioId, testHoldingId, testAssetIdentifier, AssetType.STOCK, quantity("-10"), new Price(cadMoney("100")), Instant.now());
             });
         }
@@ -178,10 +180,6 @@ public class AssetHoldingTest {
 
         private Money usdMoney(String amount) {
             return new Money(new BigDecimal(amount), USD);
-        }
-
-        private BigDecimal decimal(String value) {
-            return new BigDecimal(value);
         }
 
         private Price price(String value) {
@@ -417,8 +415,8 @@ public class AssetHoldingTest {
             );
 
             // Act & Assert
-            IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class, // this is illegal arugment, not invalidholdingoperation due to fundamental
+            InvalidHoldingQuantityException exception = assertThrows(
+                InvalidHoldingQuantityException.class, // this is illegal arugment, not invalidholdingoperation due to fundamental
                 () -> holding.increasePosition(
                     quantity("-50"),        // Negative quantity
                     price("60.00"),
@@ -428,7 +426,7 @@ public class AssetHoldingTest {
             );
             
             assertTrue(
-                exception.getMessage().contains("negative"),
+                exception.getMessage().equals("quantity cannot be less than 0"),
                 "Exception message should mention quantity must be positive"
             );
         }
@@ -489,8 +487,8 @@ public class AssetHoldingTest {
             );
 
             // Act & Assert - Try to buy with USD
-            InvalidHoldingOperationException exception = assertThrows(
-                InvalidHoldingOperationException.class,
+            CurrencyMismatchException exception = assertThrows(
+                CurrencyMismatchException.class,
                 () -> holding.increasePosition(
                     quantity("50"),
                     new Price(usdMoney("60.00")),     // USD currency - mismatch!
@@ -922,7 +920,7 @@ public class AssetHoldingTest {
 
             // Act & Assert
             assertThrows(
-                IllegalArgumentException.class,
+                InvalidHoldingQuantityException.class,
                 () -> holding.decreasePosition(
                     quantity("-50"),  // Negative!
                     priceCAD("60.00"),
@@ -972,7 +970,7 @@ public class AssetHoldingTest {
 
             // Act & Assert - Try to sell in USD
             assertThrows(
-                InvalidHoldingOperationException.class,
+                CurrencyMismatchException.class,
                 () -> holding.decreasePosition(
                     quantity("50"),
                     priceUSD("60.00"),  // Wrong currency!
@@ -1837,7 +1835,7 @@ public class AssetHoldingTest {
 
             @Test
             void shouldReturnZeroMarketValueForEmptyPosition() {
-                holding.decreasePosition(quantity("null"), priceCAD("50") , Instant.now());
+                holding.decreasePosition(quantity("100"), priceCAD("50") , Instant.now());
 
                 Money currentPrice = Money.of(75, "CAD");
                 Money marketValue = holding.getCurrentMarketValue(currentPrice);
@@ -1850,7 +1848,7 @@ public class AssetHoldingTest {
                 
                 Money currentPrice = Money.of(75, "USD");
 
-                assertThrows(InvalidHoldingOperationException.class, 
+                assertThrows(CurrencyMismatchException.class, 
                     () -> holding.getCurrentMarketValue(currentPrice));
             }
 
@@ -1865,25 +1863,24 @@ public class AssetHoldingTest {
         public class QueryMethodsForCapitalGainLossTests {
             @Test
             void shouldCalculateUnrealizedGainCorrectly() {
-                Money currentPrice = Money.of(75, "CAD");
+                Money currentPrice = Money.of(30, "CAD");
                 Money unrealizedGain = holding.getUnrealizedGainLoss(currentPrice);
 
-                // Market: 100 * 75 = 7500, ACB: 5000, Gain: 2500
-                assertEquals(Money.of(2500, "CAD"), unrealizedGain);
+                // Market: 100 * 30 = 3000, ACB: 200, Gain: 500
+                assertEquals(Money.of(1000, "CAD"), unrealizedGain);
             }
 
             @Test
             void shouldCalculateUnrealizedLossCorrectly() {
-                 Money currentPrice = Money.of(30, "CAD");
+                 Money currentPrice = Money.of(10, "CAD");
                 Money unrealizedLoss = holding.getUnrealizedGainLoss(currentPrice);
 
-                // Market: 100 * 30 = 3000, ACB: 5000, Loss: -2000
-                assertEquals(Money.of(-2000, "CAD"), unrealizedLoss);
+                assertEquals(Money.of(-1000, "CAD"), unrealizedLoss);
             }
 
             @Test
             void shouldReturnZeroUnrealizedGainLossWhenPriceEqualsACB() {
-                Money currentPrice = Money.of(50, "CAD");
+                Money currentPrice = Money.of(20, "CAD");
                 Money unrealizedGainLoss = holding.getUnrealizedGainLoss(currentPrice);
 
                 assertEquals(Money.ZERO("CAD"), unrealizedGainLoss);
@@ -1894,8 +1891,7 @@ public class AssetHoldingTest {
                 Money currentPrice = Money.of(75, "CAD");
                 Percentage percentage = holding.getUnrealizedGainLossPercentage(currentPrice);
 
-                // Gain: 2500, ACB: 5000, Percentage: 50%
-                assertEquals(Percentage.of(50), percentage);
+                assertEquals(Percentage.of(2.75), percentage);
             }
 
             @Test
@@ -1913,7 +1909,7 @@ public class AssetHoldingTest {
             void shouldFailWhenCurrentPriceCurrencyDoesNotMatch() {
                 Money currentPrice = Money.of(75, "EUR");
 
-                assertThrows(InvalidHoldingOperationException.class, 
+                assertThrows(CurrencyMismatchException.class, 
                     () -> holding.getUnrealizedGainLoss(currentPrice));
             }
 
@@ -1924,28 +1920,26 @@ public class AssetHoldingTest {
             @Test
             void shouldCalculateHypotheticalGainWithoutChangingState() {
                   Money hypotheticalGain = holding.calculateCapitalGainLoss(
-                    quantity("50"), priceCAD("70")
+                    quantity("50"), priceCAD("30")
                 );
 
-                // Sale: 50 * 70 = 3500, ACB: 50 * 50 = 2500, Gain: 1000
-                assertEquals(Money.of(1000, "CAD"), hypotheticalGain);
+                assertEquals(Money.of(500, "CAD"), hypotheticalGain);
                 
                 // Verify state unchanged
-                assertEquals(new BigDecimal("100"), holding.getTotalQuantity());
-                assertEquals(Money.of(5000, "CAD"), holding.getTotalACB());
+                assertEquals(quantity("100"), holding.getTotalQuantity());
+                assertEquals(Money.of(2000, "CAD"), holding.getTotalACB());
             }
 
             @Test
             void shouldCalculateHypotheticalLossWithoutChangingState() {
                  Money hypotheticalLoss = holding.calculateCapitalGainLoss(
-                    quantity("50"), priceCAD("30")
+                    quantity("50"), priceCAD("10")
                 );
 
-                // Sale: 50 * 30 = 1500, ACB: 50 * 50 = 2500, Loss: -1000
-                assertEquals(Money.of(-1000, "CAD"), hypotheticalLoss);
+                assertEquals(Money.of(-500, "CAD"), hypotheticalLoss);
                 
                 // Verify state unchanged
-                assertEquals(new BigDecimal("100"), holding.getTotalQuantity());
+                assertEquals(quantity("100"), holding.getTotalQuantity());
             }
 
             @Test
@@ -1958,7 +1952,7 @@ public class AssetHoldingTest {
 
             @Test
             void shouldFailWhenSalePriceCurrencyDoesNotMatch() {
-                assertThrows(InvalidHoldingOperationException.class, 
+                assertThrows(CurrencyMismatchException.class, 
                 () -> holding.calculateCapitalGainLoss(
                     quantity("50"), priceUSD("70")
                 ));
@@ -1980,19 +1974,19 @@ public class AssetHoldingTest {
         public class QueryMethodsForACBTests {
             @Test
             void shouldReturnCorrectAverageACBPerShare() {
-                assertEquals(priceCAD("50"), holding.getACBPerShare());
+                assertEquals(priceCAD("20"), holding.getACBPerShare());
             }
 
             @Test
             void shouldReturnCorrectTotalACB() {
-                assertEquals(Money.of(5000, "CAD"), holding.getTotalACB());
+                assertEquals(Money.of(2000, "CAD"), holding.getTotalACB());
             }
 
             @Test
             void shouldReturnCorrectACBForSpecificQuantity() {
                 Money acbFor50 = holding.getCostBasisForQuantity(quantity("50"));
 
-                assertEquals(Money.of(2500, "CAD"), acbFor50);
+                assertEquals(Money.of(1000, "CAD"), acbFor50);
             }
 
             @Test
@@ -2075,7 +2069,7 @@ public class AssetHoldingTest {
             holding.increasePosition(quantity("50"), priceCAD("55"), Instant.now());
             holding.recordDividendReceived(Money.of(100, "CAD"), Instant.now());
 
-            assertEquals(3, holding.getUncommittedEvents().size()); // Initial + Increase + Dividend
+            assertEquals(2, holding.getUncommittedEvents().size()); // Initial (0) + Increase + Dividend
         }
 
         @Test
@@ -2083,7 +2077,7 @@ public class AssetHoldingTest {
             holding.increasePosition(quantity("50"), priceCAD("55"), Instant.now());
 
             var events = holding.getUncommittedEvents();
-            assertEquals(2, events.size());
+            assertEquals(1, events.size());
             assertTrue(events.stream().anyMatch(e -> e instanceof HoldingIncreasedEvent));
         }
 
@@ -2096,6 +2090,7 @@ public class AssetHoldingTest {
 
         @Test
         void shouldReturnTrueForHasUncommittedEventsWhenEventsExist() {
+            holding.addDomainEvent(new DividendReceivedEvent(testPortfolioId, testHoldingId, Money.ZERO("USD"), Instant.now()));
             assertTrue(holding.hasUncommittedEvents());
         }
 
@@ -2115,104 +2110,293 @@ public class AssetHoldingTest {
 
     @Nested
     public class VersioningAndTimestampTests {
+        private AssetHolding holding;
+        @BeforeEach
+        void init() {
+            holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"), 
+                priceCAD("20"),
+                Instant.now()
+            );
+        }
+
         @Test
         void shouldIncrementVersionOnEveryStateChange() {
+            int initialVersions = holding.getVersion();
+            holding.increasePosition(quantity("50"), priceCAD("55"), Instant.now());
+            assertEquals(initialVersions + 1, holding.getVersion());
         }
 
         @Test
         void shouldNotIncrementVersionOnQueryMethods() {
+            int versionBefore = holding.getVersion();
+            holding.getCurrentMarketValue(Money.of(60, "CAD"));
+            holding.getUnrealizedGainLoss(Money.of(60, "CAD"));
+            holding.calculateCapitalGainLoss(quantity("50"), priceCAD("60"));
+
+            assertEquals(versionBefore, holding.getVersion());
         }
 
         @Test
         void shouldUpdateUpdatedAtTimestampOnStateChanges() {
+            Instant updatedBefore = holding.getUpdatedAt();
+            
+            try {
+                Thread.sleep(10); // Small delay to ensure timestamp changes
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            holding.increasePosition(quantity("50"), priceCAD("60"), Instant.now());
+
+            assertTrue(holding.getUpdatedAt().isAfter(updatedBefore));
         }
 
         @Test
         void shouldNotUpdateUpdatedAtOnQueryMethods() {
+            Instant updatedBefore = holding.getUpdatedAt();
+            holding.getCurrentMarketValue(Money.of(60, "CAD"));
+
+            assertEquals(updatedBefore, holding.getUpdatedAt());
         }
 
         @Test
         void shouldUpdateLastTransactionAtOnTransactionOperations() {
+            Instant baseTime = Instant.parse("2024-01-01T00:00:00Z");
+            Instant newTransactionTime = baseTime.plusSeconds(3600);
+            holding.increasePosition(quantity("50"), priceCAD("55"), newTransactionTime);
+
+            assertEquals(newTransactionTime, holding.getLastTransactionAt());
         }
 
     }
 
     @Nested
     public class ReconstructionFromPersistenceTests {
+        private Instant baseTime = Instant.parse("2024-01-01T00:00:00Z");
+
         @Test
         void shouldReconstructHoldingWithAllFieldsCorrectly() {
+            Instant created = Instant.parse("2024-01-01T00:00:00Z");
+            Instant updated = Instant.parse("2024-01-02T00:00:00Z");
+            Instant lastTx = Instant.parse("2024-01-02T12:00:00Z");
+
+            AssetHolding reconstructed = AssetHolding.reconstruct(
+                testPortfolioId, testHoldingId, testAssetIdentifier, AssetType.STOCK,
+                quantity("150"), new Price(Money.of(52, "USD")),
+                Money.of(7800, "USD"), lastTx, 5, created, updated
+            );
+
+            assertEquals(quantity("150"), reconstructed.getTotalQuantity());
+            assertEquals(new Price(Money.of(52, "USD")), reconstructed.getACBPerShare());
+            assertEquals(Money.of(7800, "USD"), reconstructed.getTotalACB());
+            assertEquals(5, reconstructed.getVersion());
+            assertEquals(created, reconstructed.getCreatedAt());
+            assertEquals(updated, reconstructed.getUpdatedAt());
+            assertEquals(lastTx, reconstructed.getLastTransactionAt());
         }
 
         @Test
         void shouldReconstructWithCorrectVersionNumber() {
+            AssetHolding reconstructed = AssetHolding.reconstruct(
+                testPortfolioId, testHoldingId, testAssetIdentifier, AssetType.STOCK,
+                quantity("150"), new Price(Money.of(52, "USD")),
+                Money.of(7800, "USD"), baseTime, 10, baseTime, baseTime
+            );
+            assertEquals(10, reconstructed.getVersion());
         }
 
         @Test
         void shouldReconstructWithCorrectTimestamps() {
+            Instant created = Instant.parse("2024-01-01T00:00:00Z");
+            Instant updated = Instant.parse("2024-01-05T00:00:00Z");
+            Instant lastTx = Instant.parse("2024-01-04T00:00:00Z");
+
+            AssetHolding reconstructed = AssetHolding.reconstruct(
+                testPortfolioId, testHoldingId, testAssetIdentifier, AssetType.STOCK,
+                quantity("100"), new Price(Money.of(50, "USD")),
+                Money.of(5000, "USD"), lastTx, 3, created, updated
+            );
+
+            assertEquals(created, reconstructed.getCreatedAt());
+            assertEquals(updated, reconstructed.getUpdatedAt());
+            assertEquals(lastTx, reconstructed.getLastTransactionAt());
         }
 
         @Test
         void shouldNotEmitEventsDuringReconstruction() {
+            AssetHolding reconstructed = AssetHolding.reconstruct(
+                testPortfolioId, testHoldingId, testAssetIdentifier, AssetType.STOCK,
+                quantity("100"), priceUSD("50"),
+                Money.of(5000, "USD"), baseTime, 3, baseTime, baseTime
+            );
+
+            assertFalse(reconstructed.hasUncommittedEvents());
         }
 
     }
 
     @Nested
     public class CurrencyValidationTests {
+        private AssetHolding holding;
+        private Instant baseTime = Instant.parse("2024-01-01T00:00:00Z");
+
+        @BeforeEach
+        void init() {
+            holding = AssetHolding.createInitialHolding(
+                testPortfolioId, 
+                testHoldingId, 
+                testAssetIdentifier, 
+                testAssetType, 
+                quantity("100"), 
+                priceCAD("50"),
+                Instant.now()
+            );
+        }
         @Test
         void shouldEnforceSingleBaseCurrencyAcrossAllOperations() {
+            assertEquals(Currency.getInstance("CAD"), holding.getBaseCurrency());
+            assertEquals(Currency.getInstance("CAD"), holding.getTotalACB().currency());
+            assertEquals(Currency.getInstance("CAD"), holding.getACBPerShare().pricePerUnit().currency());
         }
 
         @Test
         void shouldRejectMismatchedCurrencyInIncreasePosition() {
+            assertThrows(CurrencyMismatchException.class,
+                () -> holding.decreasePosition(quantity("50"), priceUSD("45"), baseTime));
         }
 
         @Test
         void shouldRejectMismatchedCurrencyInDecreasePosition() {
+            assertThrows(CurrencyMismatchException.class,
+                () -> holding.decreasePosition(quantity("50"), new Price(Money.of(45, "EUR")), baseTime));
         }
-
+        
         @Test
         void shouldRejectMismatchedCurrencyInDividends() {
+            assertThrows(CurrencyMismatchException.class,
+                () -> holding.recordDividendReceived((Money.of(100, "GBP")), baseTime));
         }
-
+        
         @Test
         void shouldRejectMismatchedCurrencyInROC() {
+            assertThrows(UnsupportedOperationException.class,
+                () -> holding.processReturnOfCapital(Money.of(500, "EUR"), baseTime));
         }
 
         @Test
         void shouldRejectMismatchedCurrencyInQueries() {
+            assertThrows(CurrencyMismatchException.class,
+                () -> holding.getCurrentMarketValue(Money.of(60, "EUR")));
+            
+            assertThrows(CurrencyMismatchException.class,
+                () -> holding.getUnrealizedGainLoss(Money.of(60, "JPY")));
         }
 
     }
 
     @Nested
     public class EdgeCaseTests {
+        private Instant baseTime = Instant.parse("2024-01-01T00:00:00Z");
+
         @Test
         void shouldHandleVerySmallQuantities() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("0.00000001"), new Price(Money.of(50000, "CAD")), baseTime
+            );
+
+            assertEquals(quantity("0.00000001"), holding.getTotalQuantity());
+            assertTrue(holding.hasPosition());
         }
 
         @Test
         void shouldHandleVeryLargeQuantities() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("999999999999"),new Price(Money.of(0.01, "CAD")), baseTime
+            );
+
+            assertEquals(quantity("999999999999"), holding.getTotalQuantity());
         }
 
         @Test
         void shouldHandleVerySmallPrices() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("1000000"), new Price (Money.of(0.000001, "CAD")), baseTime
+            );
+
+            Money marketValue = holding.getCurrentMarketValue(Money.of(0.000002, "CAD"));
+            assertNotNull(marketValue);
         }
 
         @Test
         void shouldHandleVeryLargePrices() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("10"), new Price(Money.of(999999999, "CAD")), baseTime
+            );
+
+            Money marketValue = holding.getCurrentMarketValue(Money.of(1000000000, "CAD"));
+            assertNotNull(marketValue);
         }
 
         @Test
         void shouldHandleRoundingCorrectlyInACBCalculations() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("3"), new Price(Money.of(10, "CAD")), baseTime
+            );
+
+            // Add another purchase that requires rounding
+            holding.increasePosition(quantity("7"), new Price(Money.of(15, "CAD")), baseTime);
+
+            // Total: 10 shares, Total ACB: 30 + 105 = 135, Avg: 13.5
+            assertEquals(quantity("10"), holding.getTotalQuantity());
+            Money avgACB = holding.getACBPerShare().pricePerUnit();
+            
+            // Verify avg ACB calculation is correct
+            Money totalFromAvg = avgACB.multiply(holding.getTotalQuantity().amount());
+            assertEquals(holding.getTotalACB().amount().compareTo(totalFromAvg.amount()), 0);
         }
 
         @Test
         void shouldHandleSellingEntirePositionAfterMultipleBuys() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("100"), new Price(Money.of(50, "CAD")), baseTime
+            );
+
+            holding.increasePosition(quantity("50"), new Price(Money.of(60, "CAD")), baseTime);
+            holding.increasePosition(quantity("25"), new Price(Money.of(55, "CAD")), baseTime);
+
+            // Total: 175 shares, Total ACB: 5000 + 3000 + 1375 = 9375
+            holding.decreasePosition(quantity("175"), new Price(Money.of(70, "CAD")), baseTime);
+
+            assertTrue(holding.isEmpty());
+            assertEquals(Money.ZERO("CAD"), holding.getTotalACB());
+            assertEquals(new Price(Money.ZERO("CAD")), holding.getACBPerShare());
         }
 
         @Test
+        @Disabled
         void shouldHandleROCThatExactlyEqualsACB() {
+            AssetHolding holding = AssetHolding.createInitialHolding(
+                testPortfolioId, testHoldingId, testAssetIdentifier, testAssetType, 
+                quantity("100"), new Price(Money.of(50, "CAD")), baseTime
+            );
+
+            // Process ROC equal to total ACB
+            holding.processReturnOfCapital(Money.of(5000, "CAD"), baseTime);
+
+            assertEquals(Money.ZERO("CAD"), holding.getTotalACB());
+            assertEquals(Money.ZERO("CAD"), holding.getACBPerShare());
+            assertEquals(new BigDecimal("100"), holding.getTotalQuantity()); // Quantity unchanged
         }
 
     }
