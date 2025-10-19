@@ -628,17 +628,17 @@ Your current design is over-engineering a solution to a problem that might not e
 - Transaction.java
 - Portfolio.java
 
-- Asset.java
+- Asset.java [x]
 - Account.java
 
 ## VALUE OBJECTS
 - AssetIdentifier [x]
     - CustomAssetId [x]
     - MarketSymbol [x]
-- Quantity
-- Price
-- TransactionDate
-- AccountEffect
+- Quantity [x]
+- Price [x]
+- TransactionDate [x]
+- AccountEffect 
 - Fee [x]
 - CurrencyConversion (this is called ExchangeRate) [x]
 - ~~MonetaryAmount~~
