@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.Objects;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
 import com.laderrco.fortunelink.shared.enums.Currency;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
@@ -68,6 +69,14 @@ public record Money(BigDecimal amount, Currency currency) {
             throw new ArithmeticException("Cannot divide by zero");
         }
         return new Money(this.amount.divide(divisor, Precision.getMoneyPrecision(), Rounding.MONEY.getMode()), this.currency);
+    }
+    
+    public Money divide(Quantity amount) {
+        isParemeterNull(amount, "divide");
+        if (amount.amount().equals(BigDecimal.ZERO)) {
+            throw new ArithmeticException("Cannot divide by zero");
+        }
+        return new Money(this.amount.divide(amount.amount(), Precision.getMoneyPrecision(), Rounding.MONEY.getMode()), this.currency);
     }
 
     // LOGIC FUNCTIONS //

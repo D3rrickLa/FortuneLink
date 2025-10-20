@@ -31,4 +31,9 @@ public record Quantity(BigDecimal amount) {
     public Quantity multiply(BigDecimal other) {
         return new Quantity(this.amount.multiply(other));
     }
+
+    public int compareTo(Quantity quantity) {
+        Objects.requireNonNull(quantity, "Quantity cannot be null");
+        return quantity.amount().compareTo(this.amount);
+    }
 }
