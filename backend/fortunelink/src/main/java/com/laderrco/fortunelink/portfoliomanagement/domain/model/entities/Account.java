@@ -97,32 +97,31 @@ public class Account {
             ));
     }
 
-    public Money calculateTotalValue(MarketDataService marketDataService, ExchangeRateService exchangeRateService) {
-        // the market data, we would need to stream in each 'arraylist item' into it
-        // and sum up the value, but also another point is that we could hold different currenies/assets in different
-        // currencies, so this is a weird one
-        Objects.requireNonNull(marketDataService, "Market data service cannot be null");
-        Objects.requireNonNull(exchangeRateService, "Exchange rate service cannot be null");
+    // just use the service
+    // /**
+    //  * 
+    //  * @param marketDataService
+    //  * @return Money, total value of this account in base Currency
+    //  */
+    // public Money calculateTotalValue(MarketDataService marketDataService) {
+ 
+    //     Objects.requireNonNull(marketDataService, "Market data service cannot be null");
 
-        if (assets.isEmpty()) {
-            return Money.ZERO(baseCurrency);
-        }
+    //     if (assets.isEmpty()) {
+    //         return Money.ZERO(baseCurrency);
+    //     }
 
+    //     return assets.stream()
+    //         .map(asset -> {
+    //             Price currentPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+    //             return asset.calculateCurrentValue(currentPrice);
+    //         })
+    //         .reduce(Money.ZERO(baseCurrency), (acc, money) -> {
+    //             // throws if currencies don't match - forces caller to use service
+    //             return acc.add(money);
+    //         });
 
-        return this.assets.stream()
-            .map(asset -> {
-                Price currentPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
-                Money valueInAssetCurrency = asset.calculateCurrentValue(currentPrice);
-
-                // convert to account base currency if needed
-                if (!valueInAssetCurrency.currency().equals(baseCurrency)) {
-                    ExchangeRate rate = exchangeRateService.getExchangeRate(valueInAssetCurrency.currency(), baseCurrency);
-                    return valueInAssetCurrency.convert(rate);
-                }
-                return valueInAssetCurrency;
-            })
-            .reduce(Money.ZERO(baseCurrency), Money::add);
-    }
+    // }
 
     public AccountId getAccountId() {
         return accountId;
