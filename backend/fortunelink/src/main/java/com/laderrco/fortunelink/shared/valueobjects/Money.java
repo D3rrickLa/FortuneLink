@@ -126,6 +126,11 @@ public record Money(BigDecimal amount, Currency currency) {
         BigDecimal maxAmount = this.amount.max(other.amount());
         return new Money(maxAmount, this.currency); 
     }
+
+    public Money convert(ExchangeRate rate) {
+        isParemeterNull(rate, "convert");
+        return rate.convertTo(this);
+    }
     
     private void isParemeterNull(Object other, String parameterName) {
         Objects.requireNonNull(other, String.format("%s cannot be null", parameterName));

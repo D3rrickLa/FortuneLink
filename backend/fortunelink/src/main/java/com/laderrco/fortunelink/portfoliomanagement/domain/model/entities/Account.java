@@ -2,17 +2,20 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Currency;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfoliomanagement.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.Currency;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class Account {
@@ -98,7 +101,27 @@ public class Account {
         // the market data, we would need to stream in each 'arraylist item' into it
         // and sum up the value, but also another point is that we could hold different currenies/assets in different
         // currencies, so this is a weird one
-        return null;
+        Objects.requireNonNull(marketDataService, "Market data service cannot be null");
+        Objects.requireNonNull(exchangeRateService, "Exchange rate service cannot be null");
+
+        if (assets.isEmpty()) {
+            return Money.ZERO(baseCurrency);
+        }
+
+
+        return this.assets.stream()
+            .map(asset -> {
+                Price currentPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+                Money valueInAssetCurrency = asset.calculateCurrentValue(currentPrice);
+
+                // convert to account base currency if needed
+                if (!valueInAssetCurrency.currency().equals(baseCurrency)) {
+                    ExchangeRate rate = exchangeRateService.getExchangeRate(valueInAssetCurrency.currency(), baseCurrency);
+                    return valueInAssetCurrency.convert(rate);
+                }
+                return valueInAssetCurrency;
+            })
+            .reduce(Money.ZERO(baseCurrency), Money::add);
     }
 
     public AccountId getAccountId() {
@@ -118,7 +141,7 @@ public class Account {
     }
 
     public List<Asset> getAssets() {
-        return assets;
+        return Collections.unmodifiableList(assets);
     }
 
     public Instant getSystemCreationDate() {
