@@ -14,64 +14,163 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 /*
  * DDD -> read only calculation, any state changes goes to the root
+ * Assets are what you own CURRENTLY
  */
 public class Asset {
-    private AssetId assetId;
-    private AssetIdentifier assetIdentifier;
-    private AssetType assetType;
-    private Currency baseCurrency;
+    private final AssetId assetId;
+    private final AssetIdentifier assetIdentifier;
+    private final AssetType assetType;
+    private final Currency baseCurrency;
 
     private Quantity quantity;
     private Money costBasis;  // sum of all costs
 
-    private final Instant accquiredOn;
-    private Instant lastTransactionAt; // for calculating when you last interacted with this asset
+    private final Instant acquiredOn;
+    private Instant lastSystemInteraction; // for calculating when you last interacted with this asset
     private int version;
 
 
-    public void recalculateCostBasis(Price pricePerUnit, Quantity quantity, Money totalFees) {
-        Objects.requireNonNull(pricePerUnit);
+    private Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, Currency baseCurrency,
+            Quantity quantity, Money costBasis, Instant acquiredOn, Instant lastSystemInteraction, int version) {
+        
+        Objects.requireNonNull(assetId);
+        Objects.requireNonNull(assetIdentifier);
+        Objects.requireNonNull(assetType);
+        Objects.requireNonNull(baseCurrency);
         Objects.requireNonNull(quantity);
+        Objects.requireNonNull(costBasis);
+        Objects.requireNonNull(acquiredOn);
+        Objects.requireNonNull(lastSystemInteraction);
 
-        if (quantity.compareTo(this.quantity) <= 0) {
-            throw new IllegalArgumentException();
-        }
-
-        if (pricePerUnit.getAmount().compareTo(BigDecimal.ZERO) <= 0) { // also check if the currency are the same
-            throw new IllegalArgumentException();
-        }
-
-        Money totalCost
+        this.assetId = assetId;
+        this.assetIdentifier = assetIdentifier;
+        this.assetType = assetType;
+        this.baseCurrency = baseCurrency;
+        this.quantity = quantity;
+        this.costBasis = costBasis;
+        this.acquiredOn = acquiredOn;
+        this.lastSystemInteraction = lastSystemInteraction;
+        this.version = version;
     }
 
-    public void increaseQuantity(Quantity quantity) {
-        Objects.requireNonNull(quantity);
-        if (quantity.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Quantity provided must be greater than 0");
+    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, Quantity quantity, Money costBasis, Instant acquiredOn) {
+        this(
+            assetId,
+            assetIdentifier,
+            assetType,
+            costBasis.currency(),
+            quantity,
+            costBasis,
+            acquiredOn,
+            acquiredOn,
+            1
+        );
+
+    }
+
+    // MUTATION METHODS (package-private - only Portfolio can call)
+    void adjustQuantity(Quantity additionalQuantity) {
+        Objects.requireNonNull(additionalQuantity, "Quantity cannot be null");
+        this.quantity = this.quantity.add(additionalQuantity);
+        updateMetadata();
+    }
+
+    void reduceQuantity(Quantity quantityToRemove) {
+        Objects.requireNonNull(quantityToRemove, "Quantity cannot be null");
+        
+        Quantity newQuantity = this.quantity.subtract(quantityToRemove);
+        
+        if (newQuantity.amount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException(
+                "Cannot remove " + quantityToRemove + " from position of " + this.quantity
+            );
         }
         
+        this.quantity = newQuantity;
+        updateMetadata();
     }
 
-    public void decreaseQuantity(Quantity quantity) {
-        Objects.requireNonNull(quantity);
-        if (quantity.compareTo(this.quantity) > 0) {
-            // what about shorting? I know that this isn't MVP, but still... we could have a separate method
-            throw new IllegalArgumentException("Cannot decrease quantity of asset with more than you have");
+    void updateCostBasis(Money newCostBasis) {
+        Objects.requireNonNull(newCostBasis, "Cost basis cannot be null");
+        
+        if (!newCostBasis.currency().equals(baseCurrency)) {
+            throw new IllegalArgumentException(
+                "Cost basis currency must match asset base currency"
+            );
         }
-        this.quantity = this.quantity.subtract(quantity);
+
+        if (newCostBasis.amount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Cost basis cannot be negative");
+        }
+        
+        this.costBasis = newCostBasis;
+        updateMetadata();
     }
 
-    public Price getAverageCostBasis() {
-        return new Price(costBasis.divide(quantity));
+    // QUERY METHODS (public - anyone can call)
+    public Money getAverageCostBasis() {
+        if (quantity.amount().compareTo(BigDecimal.ZERO) == 0) {
+            return Money.ZERO(costBasis.currency());
+        }
+        return costBasis.divide(quantity.amount());
     }
 
-    public Money calculateCurrentValue(Price pricePerUnit) {
-        return null;
+    public Money calculateCurrentValue(Price currentPrice) {
+        Objects.requireNonNull(currentPrice, "Price cannot be null"); 
+        
+        if (!currentPrice.getCurrency().equals(baseCurrency)) {
+            throw new IllegalArgumentException("Price currency " + currentPrice.getCurrency() + " does not match asset currency " + baseCurrency);
+        }
+  
+        return currentPrice.calculateValue(quantity);
     }
 
-    public Money calculateUnrealizedGainLoss(Price pricePerUnit) {
-        return null;
+    public Money calculateUnrealizedGainLoss(Price currentPrice) {
+        Objects.requireNonNull(currentPrice, "Price cannot be null");
+        
+        Money currentValue = calculateCurrentValue(currentPrice);
+        return currentValue.subtract(costBasis);
     }
 
+    public AssetId getAssetId() {
+        return assetId;
+    }
+
+    public AssetIdentifier getAssetIdentifier() {
+        return assetIdentifier;
+    }
+
+    public AssetType getAssetType() {
+        return assetType;
+    }
+
+    public Currency getBaseCurrency() {
+        return baseCurrency;
+    }
+
+    public Quantity getQuantity() {
+        return quantity;
+    }
+
+    public Money getCostBasis() {
+        return costBasis;
+    }
+
+    public Instant getacquiredOn() {
+        return acquiredOn;
+    }
+
+    public Instant getLastSystemInteraction() {
+        return lastSystemInteraction;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    private void updateMetadata() {
+        version++;
+        lastSystemInteraction = Instant.now();
+    }
 
 }
