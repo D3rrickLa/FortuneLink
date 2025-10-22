@@ -34,7 +34,7 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
         return new ExchangeRate(from, to, BigDecimal.valueOf(rate).setScale(FOREX_SCALE), date);
     }
 
-    public Money convertTo(Money other) {
+    public Money convert(Money other) {
         validateParameter(other, "money");
         if (isIdentity()) {
             return other;
@@ -46,7 +46,7 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
         return new Money(other.amount().multiply(this.rate), this.to);
     }
 
-    public Money convertBack(Money other) {
+    public Money invert(Money other) {
         validateParameter(other, "money");
         if (isIdentity()) {
             return other;

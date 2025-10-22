@@ -4,11 +4,6 @@
     "java.debug.settings.onBuildFailureProceed": true,
     "java.configuration.runtimes": [
         {
-            "name": "JavaSE-21",
-            "path": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.8.9-hotspot",
-            "default": true
-        },
-        {
             "name": "JavaSE-25",
             "path": "C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.0.36-hotspot"
         }

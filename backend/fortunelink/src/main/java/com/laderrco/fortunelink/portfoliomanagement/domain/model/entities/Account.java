@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AccountType;
@@ -81,6 +82,7 @@ public class Account {
         }
     }
 
+    // safe lookup
     public Asset getAsset(AssetIdentifier assetIdentifier) {
         Objects.requireNonNull(assetIdentifier, "Asset identifier cannot be null");
         
@@ -90,6 +92,17 @@ public class Account {
             .orElseThrow(() -> new AssetNotFoundException( 
                 "Asset " + assetIdentifier.displayName() + " not found in account"
             ));
+    }
+
+    public Optional<Asset> findAsset(AssetIdentifier assetIdentifier) {
+        return this.assets.stream()
+            .filter(x -> x.getAssetIdentifier().equals(assetIdentifier))
+            .findFirst();
+    }
+
+    public boolean hasAsset(AssetIdentifier assetIdentifier) {
+        return this.assets.stream()
+            .anyMatch(x -> x.getAssetIdentifier().equals(assetIdentifier));
     }
 
     public AccountId getAccountId() {

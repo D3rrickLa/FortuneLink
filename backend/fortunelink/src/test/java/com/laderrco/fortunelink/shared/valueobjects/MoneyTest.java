@@ -167,6 +167,7 @@ public class MoneyTest {
             );
     
             assertTrue(exception.getLocalizedMessage().equals("Cannot add null money"));
+        
         }
     }
 

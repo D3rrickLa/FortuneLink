@@ -12,6 +12,10 @@ public record Quantity(BigDecimal amount) {
         // }
     }
 
+    public static Quantity ZERO() {
+        return new Quantity(BigDecimal.ZERO);
+    }
+
     public static Quantity of(double value) {
         return new Quantity(BigDecimal.valueOf(value));
     }
@@ -36,4 +40,13 @@ public record Quantity(BigDecimal amount) {
         Objects.requireNonNull(quantity, "Quantity cannot be null");
         return quantity.amount().compareTo(this.amount);
     }
+
+    public boolean isZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) == 0;
+    }
+    
+    public boolean isPositive() {
+        return this.amount.compareTo(BigDecimal.ZERO) >= 0;
+    }
+
 }

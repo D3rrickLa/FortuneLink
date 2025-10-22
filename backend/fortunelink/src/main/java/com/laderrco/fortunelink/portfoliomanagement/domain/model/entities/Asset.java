@@ -23,7 +23,7 @@ public class Asset {
     private final Currency baseCurrency;
 
     private Quantity quantity;
-    private Money costBasis;  // sum of all costs
+    private Money costBasis;  // total cost of all purchases (fees included)
 
     private final Instant acquiredOn;
     private Instant lastSystemInteraction; // for calculating when you last interacted with this asset
@@ -130,6 +130,10 @@ public class Asset {
         
         Money currentValue = calculateCurrentValue(currentPrice);
         return currentValue.subtract(costBasis);
+    }
+
+    public boolean hasZeroQuantity() {
+        return this.quantity.isZero();
     }
 
     public AssetId getAssetId() {
