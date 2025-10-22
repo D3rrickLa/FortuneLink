@@ -97,32 +97,6 @@ public class Account {
             ));
     }
 
-    // just use the service
-    // /**
-    //  * 
-    //  * @param marketDataService
-    //  * @return Money, total value of this account in base Currency
-    //  */
-    // public Money calculateTotalValue(MarketDataService marketDataService) {
- 
-    //     Objects.requireNonNull(marketDataService, "Market data service cannot be null");
-
-    //     if (assets.isEmpty()) {
-    //         return Money.ZERO(baseCurrency);
-    //     }
-
-    //     return assets.stream()
-    //         .map(asset -> {
-    //             Price currentPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
-    //             return asset.calculateCurrentValue(currentPrice);
-    //         })
-    //         .reduce(Money.ZERO(baseCurrency), (acc, money) -> {
-    //             // throws if currencies don't match - forces caller to use service
-    //             return acc.add(money);
-    //         });
-
-    // }
-
     public AccountId getAccountId() {
         return accountId;
     }
