@@ -8,6 +8,7 @@ import java.util.Objects;
 import com.laderrco.fortunelink.shared.enums.Currency;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.exception.CurrencyAreTheSameException;
+import com.laderrco.fortunelink.shared.exception.CurrencyMismatchException;
 
 public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant exchangeRateDate) {
     private final static int FOREX_SCALE = Precision.FOREX.getDecimalPlaces();
@@ -39,7 +40,7 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
             return other;
         }
         else if(!other.currency().equals(this.from)) {
-            throw new IllegalArgumentException("Currency provided does not match `from`");
+            throw new CurrencyMismatchException("Currency provided does not match `from`");
         }
 
         return new Money(other.amount().multiply(this.rate), this.to);

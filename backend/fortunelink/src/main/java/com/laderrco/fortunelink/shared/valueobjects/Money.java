@@ -73,10 +73,13 @@ public record Money(BigDecimal amount, Currency currency) {
     
     public Money divide(Quantity amount) {
         isParemeterNull(amount, "divide");
-        if (amount.amount().equals(BigDecimal.ZERO)) {
-            throw new ArithmeticException("Cannot divide by zero");
-        }
-        return new Money(this.amount.divide(amount.amount(), Precision.getMoneyPrecision(), Rounding.MONEY.getMode()), this.currency);
+        return divide(amount.amount());
+        // return Money.ZERO("USD");
+       
+        // if (amount.amount().equals(BigDecimal.ZERO)) {
+        //     throw new ArithmeticException("Cannot divide by zero");
+        // }
+        // return new Money(this.amount.divide(amount.amount(), Precision.getMoneyPrecision(), Rounding.MONEY.getMode()), this.currency);
     }
 
     // LOGIC FUNCTIONS //

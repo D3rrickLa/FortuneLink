@@ -9,14 +9,9 @@ import java.util.Objects;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
-import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetId;
-import com.laderrco.fortunelink.portfoliomanagement.domain.services.ExchangeRateService;
-import com.laderrco.fortunelink.portfoliomanagement.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.Currency;
-import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class Account {
     private final AccountId accountId;
