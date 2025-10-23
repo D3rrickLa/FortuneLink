@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Tr
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class Transaction {
     private final TransactionId transactionId;
@@ -36,5 +37,22 @@ public class Transaction {
         this.notes = notes;
     }
 
-    
+    public static Transaction createBuyTransaction() {
+        return null;
+    }
+
+    public Money calculateTotalCost() {
+        // (price * quantity) + fee
+        return null;
+    }
+
+    public Money calculateNetAmount() {
+        // (price * quantity) - fee
+        return null;
+    }
+
+    public Money calculateGrossAmount() {
+        // price * quantity (before fee)
+        return null;
+    }
 }
