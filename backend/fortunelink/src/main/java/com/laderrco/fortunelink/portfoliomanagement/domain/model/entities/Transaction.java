@@ -19,8 +19,6 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.id
 import com.laderrco.fortunelink.shared.enums.Currency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-import lombok.Builder;
-
 public class Transaction {
     private final TransactionId transactionId;
     private final PortfolioId portfolioId;

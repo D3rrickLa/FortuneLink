@@ -105,6 +105,10 @@ public class Account {
             .anyMatch(x -> x.getAssetIdentifier().equals(assetIdentifier));
     }
 
+    public boolean isEmpty() {
+        return this.assets.isEmpty();
+    }
+
     public AccountId getAccountId() {
         return accountId;
     }
