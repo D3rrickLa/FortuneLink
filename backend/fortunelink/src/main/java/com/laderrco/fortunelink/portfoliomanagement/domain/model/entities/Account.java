@@ -15,9 +15,11 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AccountTy
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.CashAssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetId;
+import com.laderrco.fortunelink.portfoliomanagement.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.Currency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -120,7 +122,7 @@ public class Account {
         }
     }
 
-    public void deductCash(Money amount) {
+    void deductCash(Money amount) {
         Asset cashAsset = findCashAsset()
             .orElseThrow(() -> new InsufficientFundsException("No cash available"));
         
@@ -139,6 +141,8 @@ public class Account {
             assets.remove(cashAsset);
         }
     }
+
+
 
     // asset management //
 
@@ -162,6 +166,19 @@ public class Account {
     public boolean hasAsset(AssetIdentifier assetIdentifier) {
         return this.assets.stream()
             .anyMatch(x -> x.getAssetIdentifier().equals(assetIdentifier));
+    }
+
+    public Money calculateTotalValue(MarketDataService marketDataService, Currency baseCurrency) {
+        return assets.stream()
+            .map(asset -> {
+                if (asset.getAssetType() == AssetType.CASH) {
+                    return asset.getCostBasis(); // Cash = face value
+                } else {
+                    Price currentPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+                    return asset.calculateCurrentValue(currentPrice);
+                }
+            })
+            .reduce(Money.ZERO(baseCurrency), Money::add);
     }
 
     public boolean isEmpty() {

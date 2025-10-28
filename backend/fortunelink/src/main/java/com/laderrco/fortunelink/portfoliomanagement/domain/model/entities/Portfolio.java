@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,6 +22,7 @@ import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.id
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.Currency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class Portfolio {
@@ -241,9 +241,35 @@ public class Portfolio {
     public Money getTotalAssets(MarketDataService marketDataService) {
         Objects.requireNonNull(marketDataService, "marketDataService required");
 
-        Currency baseCurrency;
-        return null;
+        Currency baseCurrency = determineBaseCurrency();
+
+        return accounts.stream()
+            .map(account -> account.calculateTotalValue(marketDataService, baseCurrency))
+            .reduce(Money.ZERO(baseCurrency), Money::add);
+
     }
+
+    public List<Transaction> getTransactionHistory(LocalDateTime startDate, LocalDateTime endDate) {
+        return transactionHistory.stream()
+            .filter(tx -> {
+                LocalDateTime txDate = tx.getTransactionDate().timestamp();
+                return !txDate.isBefore(startDate) && !txDate.isAfter(endDate);
+            })
+            .toList();
+    }
+
+    public List<Transaction> getTransactionsForAccount(AccountId accountId) {
+        return transactionHistory.stream()
+            .filter(tx -> tx.getAccountId().equals(accountId))
+            .toList();
+    }
+
+    public List<Transaction> getTransactionsForAsset(AssetIdentifier assetIdentifier) {
+        return transactionHistory.stream()
+            .filter(tx -> assetIdentifier.equals(tx.getAssetIdentifier()))
+            .toList();
+    }
+
 
     public PortfolioId getPortfolioId() {
         return portfolioId;
@@ -257,7 +283,7 @@ public class Portfolio {
         return Collections.unmodifiableList(accounts);
     }
 
-    public List<Transaction> gettransactionHistory() {
+    public List<Transaction> getTransactionHistory() {
         return Collections.unmodifiableList(transactionHistory);
     }
 
@@ -282,22 +308,35 @@ public class Portfolio {
     }
 
     private void handleDeposit(Account account, Transaction transaction) {
+        // Simply add cash to account
+        account.addCash(transaction.calculateNetAmount());
 
     }
 
     private void handleWithdrawal(Account account, Transaction transaction) {
-
+        // Deduct cash from account
+        account.deductCash(transaction.calculateNetAmount());
     }
 
     private void handleDividend(Account account, Transaction transaction) {
-
+        // Add dividend as cash (reinvesting dividends would be a separate BUY transaction)
+        account.addCash(transaction.calculateNetAmount());
     }
 
     private void handleInterest(Account account, Transaction transaction) {
-
+        // Add interest as cash
+        account.addCash(transaction.calculateNetAmount());
     }
 
     private void updateMetadata() {
         this.lastUpdated = LocalDateTime.now();
+    }
+
+    private Currency determineBaseCurrency() {
+        // Strategy: Use currency of first account, or default to CAD (based on your docs - Canadian focus)
+        return accounts.stream()
+            .findFirst()
+            .map(Account::getBaseCurrency)
+            .orElse(Currency.of("CAD"));
     }
 }

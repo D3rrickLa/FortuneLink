@@ -156,7 +156,20 @@ public class Transaction {
 
     //create interest
     public static Transaction createInterestTransaction(PortfolioId portfolioId, AccountId accountId, AssetIdentifier assetIdentifier, Price amount,  TransactionDate transactionDate, String notes) {
-
+        validateTransaction(TransactionType.INTEREST, assetIdentifier, Quantity.of("1"), amount);
+        return new Transaction(
+            TransactionId.randomId(), 
+            portfolioId, 
+            accountId, 
+            TransactionType.INTEREST, 
+            assetIdentifier, 
+            Quantity.of("1"), 
+            amount, 
+            new ArrayList<>(), 
+            transactionDate, 
+            notes, 
+            Instant.now()
+        );
     }
 
 
