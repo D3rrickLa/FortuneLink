@@ -1,18 +1,28 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AccountType;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.CashAssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AssetId;
+import com.laderrco.fortunelink.portfoliomanagement.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.Currency;
+import com.laderrco.fortunelink.shared.exception.CurrencyMismatchException;
+import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class Account {
     private final AccountId accountId;
@@ -100,13 +110,99 @@ public class Account {
             .findFirst();
     }
 
-    public boolean hasAsset(AssetIdentifier assetIdentifier) {
-        return this.assets.stream()
-            .anyMatch(x -> x.getAssetIdentifier().equals(assetIdentifier));
+    public Money getCashBalance() {
+        return assets.stream()
+            .filter(asset -> asset.getAssetType() == AssetType.CASH)
+            .map(asset -> asset.calculateCurrentValue(Price.of(asset.getCostBasis()))) // For cash, current value = cost basis
+            .reduce(Money.ZERO(baseCurrency), Money::add);
     }
-
+    
+    public void addCash(Money amount) {
+        Objects.requireNonNull(amount, "amount required");
+        
+        if (!amount.currency().equals(baseCurrency)) {
+            throw new CurrencyMismatchException(
+                "Cannot add " + amount.currency() + " to account with base currency " + baseCurrency
+            );
+        }
+        
+        // Find or create cash asset
+        Optional<Asset> cashAsset = assets.stream()
+            .filter(a -> a.getAssetType() == AssetType.CASH)
+            .filter(a -> a.getAssetIdentifier().displayName().equals(baseCurrency.toString()))
+            .findFirst();
+        
+        if (cashAsset.isPresent()) {
+            // Update existing cash holding
+            Asset cash = cashAsset.get();
+            // Cash has quantity of 1 per currency unit, so quantity = amount
+            Quantity additionalQuantity = new Quantity(amount.amount());
+            cash.adjustQuantity(additionalQuantity, amount);
+        } else {
+            // Create new cash asset
+            AssetIdentifier cashIdentifier = new CashAssetIdentifier(UUID.randomUUID(), baseCurrency);
+            Quantity cashQuantity = new Quantity(amount.amount());
+            Asset newCash = Asset.create(
+                cashIdentifier,
+                AssetType.CASH,
+                cashQuantity,
+                amount,
+                LocalDateTime.now()
+            );
+            assets.add(newCash);
+        }
+    }
+    
+    public void deductCash(Money amount) {
+        Objects.requireNonNull(amount, "amount required");
+        
+        Money currentCash = getCashBalance();
+        if (currentCash.isLessThan(amount)) {
+            throw new InsufficientFundsException(
+                "Cannot deduct " + amount + " from account '" + name + 
+                "'. Only " + currentCash + " available"
+            );
+        }
+        
+        Asset cashAsset = assets.stream()
+            .filter(a -> a.getAssetType() == AssetType.CASH)
+            .filter(a -> a.getAssetIdentifier().symbol().equals(baseCurrency.toString()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Cash asset not found"));
+        
+        Quantity deductQuantity = Quantity.of(amount.amount());
+        cashAsset.reduceQuantity(deductQuantity, amount);
+        
+        // Remove cash asset if balance is zero
+        if (cashAsset.getQuantity().isZero()) {
+            assets.remove(cashAsset);
+        }
+    }
+    
+    public boolean hasAsset(AssetIdentifier assetIdentifier) {
+        return assets.stream()
+            .anyMatch(a -> a.getAssetIdentifier().equals(assetIdentifier));
+    }
+    
+    public Money calculateTotalValue(MarketDataService marketDataService, Currency targetCurrency) {
+        return assets.stream()
+            .map(asset -> {
+                if (asset.getAssetType() == AssetType.CASH) {
+                    // Cash value is straightforward
+                    Money cashValue = Money.of(asset.getQuantity().amount(), baseCurrency);
+                    return cashValue.convertTo(targetCurrency, marketDataService);
+                } else {
+                    // Get current market price and calculate value
+                    Price currentPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+                    Money assetValue = asset.calculateCurrentValue(currentPrice);
+                    return assetValue.convertTo(targetCurrency, marketDataService);
+                }
+            })
+            .reduce(Money.ZERO(targetCurrency), Money::add);
+    }
+    
     public boolean isEmpty() {
-        return this.assets.isEmpty();
+        return assets.isEmpty();
     }
 
     public AccountId getAccountId() {

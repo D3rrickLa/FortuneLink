@@ -1,15 +1,23 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 import javax.security.auth.login.AccountNotFoundException;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientAssetsException;
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Fee;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Price;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.Quantity;
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.TransactionDate;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.ids.UserId;
@@ -20,24 +28,24 @@ public class Portfolio {
     private final PortfolioId portfolioId;
     private final UserId userId;
     private List<Account> accounts;
-    private List<Transaction> transctionHistory;
+    private List<Transaction> transactionHistory;
     private LocalDateTime localDateTime;
     private LocalDateTime lastUpdated;
 
     
 
     private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts,
-            List<Transaction> transctionHistory, LocalDateTime localDateTime, LocalDateTime lastUpdated) {
+            List<Transaction> transactionHistory, LocalDateTime localDateTime, LocalDateTime lastUpdated) {
         Objects.requireNonNull(portfolioId);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(accounts);
-        Objects.requireNonNull(transctionHistory);
+        Objects.requireNonNull(transactionHistory);
         Objects.requireNonNull(localDateTime);
         Objects.requireNonNull(lastUpdated);
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.accounts = accounts;
-        this.transctionHistory = transctionHistory;
+        this.transactionHistory = transactionHistory;
         this.localDateTime = localDateTime;
         this.lastUpdated = lastUpdated;
     }
@@ -59,6 +67,7 @@ public class Portfolio {
         }
 
     // account management //
+
     public void addAccount(Account newAccount) {
         Objects.requireNonNull(newAccount, "account required");
         if (this.accounts.stream().anyMatch(a -> a.getAccountId().equals(newAccount.getAccountId()))) {
@@ -81,7 +90,7 @@ public class Portfolio {
             throw new IllegalStateException(String.format("Cannot remvoe account '%s' - it still contains assets or cash", account.getName()));
         }
 
-        boolean hasTransaction = transctionHistory.stream()
+        boolean hasTransaction = transactionHistory.stream()
             .anyMatch(tx -> tx.getAccountId().equals(accountId));
 
         if (hasTransaction) {
@@ -92,9 +101,9 @@ public class Portfolio {
         updateMetadata();
     }
 
-    public void recordTransaction(Transaction transaction) {
+    // public void recordTransaction(Transaction transaction) {
 
-    }
+    // }
 
     public Account getAccount(AccountId accountId) throws AccountNotFoundException {
         return this.accounts.stream()
@@ -111,11 +120,97 @@ public class Portfolio {
             
     }
 
+    // transactoin recording // 
+    public Transaction recordBuyTransaction(AccountId accountId, AssetIdentifier assetIdentifier, Quantity quantity, Price price, List<Fee> fees, TransactionDate transactionDate, String notes) throws AccountNotFoundException {
+
+        Account account = getAccount(accountId);
+
+        if (quantity.isZeroOrNegative()) {
+            throw new IllegalArgumentException("Buy quantity must be positive");
+        }
+
+        if (price.isZeroOrNegative()) {
+            throw new IllegalArgumentException("Buy price must be positive");
+        }
+
+        Transaction transaction = Transaction.createBuyTransaction(portfolioId, accountId, assetIdentifier, quantity, price, fees, transactionDate, notes);
+
+        handleBuy(account, transaction);
+
+        this.transactionHistory.add(transaction);
+        updateMetadata();
+
+        return transaction;
+    }
+
+    public Transaction recordSellTransaction(AccountId accountId, AssetIdentifier assetIdentifier, Quantity quantity, Price price, List<Fee> fees, TransactionDate transactionDate, String notes) throws AccountNotFoundException {
+        
+        Account account = getAccount(accountId);
+
+        // business rule: Can't sell what you don't have
+        Asset asset = account.getAsset(assetIdentifier); // this already throws 
+
+        if (asset.getQuantity().isLessThan(quantity)) {
+            throw new InsufficientAssetsException(String.format("Cannot sell %s of %s. Only %s is available", quantity, assetIdentifier, asset.getQuantity()));
+        }
+
+        Transaction transaction = Transaction.createSellTransaction(portfolioId, accountId, assetIdentifier, quantity, price, fees, transactionDate, notes);
+
+        handleSell(account, transaction);
+        this.transactionHistory.add(transaction);
+        updateMetadata();
+        return transaction;
+    }
+
+    public Transaction recordDepositTransaction(AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) throws AccountNotFoundException {
+        Account account = getAccount(accountId);
+
+        if (amount.pricePerUnit().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be positive");
+        }
+
+        Transaction transaction = Transaction.createDepositTransaction(portfolioId, accountId, amount, fees, transactionDate, notes);
+
+        handleDeposit(account, transaction);
+        this.transactionHistory.add(transaction);
+        updateMetadata();
+
+        return transaction;
+    }
+
+    public Transaction recordWithdrawalTransaction(AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) {
+        
+        Account account = getAccount(accountId);
+        
+        if (amount.pricePerUnit().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Withdrawal amount must be positive");
+        }
+        
+        // Business rule: Can't withdraw more than available cash
+        Money availableCash = account.getCashBalance();
+        if (availableCash.isLessThan(amount.pricePerUnit())) {
+            throw new InsufficientFundsException("Cannot withdraw " + amount + ". Only " + availableCash + " available");
+        }
+        
+        Transaction transaction = Transaction.createWithdrawalTransaction(portfolioId, accountId, amount, fees, transactionDate, notes);
+        
+        handleWithdrawal(account, transaction);
+        this.transactionHistory.add(transaction);
+        updateMetadata();
+        
+        return transaction;
+    }
+
+
     public Money calculateNetWorth(MarketDataService marketDataService) {
-        return null;
+        Objects.requireNonNull(marketDataService, "marketDataService required");
+        return getTotalAssets(marketDataService);
     }
 
     public Money getTotalAssets(MarketDataService marketDataService) {
+        Objects.requireNonNull(marketDataService, "marketDataService required");
+
+        Currency baseCurrency;
         return null;
     }
 
@@ -131,8 +226,8 @@ public class Portfolio {
         return Collections.unmodifiableList(accounts);
     }
 
-    public List<Transaction> getTransctionHistory() {
-        return transctionHistory;
+    public List<Transaction> gettransactionHistory() {
+        return Collections.unmodifiableList(transactionHistory);
     }
 
     public LocalDateTime getLocalDateTime() {
@@ -156,6 +251,10 @@ public class Portfolio {
     }
 
     private void handleDeposit(Account account, Transaction transaction) {
+
+    }
+
+    private void handleWithdrawal(Account account, Transaction transaction) {
 
     }
 

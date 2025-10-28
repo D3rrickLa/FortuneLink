@@ -26,4 +26,13 @@ public record Price(Money pricePerUnit) {
     public BigDecimal getAmount() {
         return this.pricePerUnit.amount();
     }
+
+    public boolean isZero() {
+        return this.pricePerUnit.amount().compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    public boolean isZeroOrNegative() {
+        return this.pricePerUnit.amount().compareTo(BigDecimal.ZERO) <= 0;
+
+    }
 }

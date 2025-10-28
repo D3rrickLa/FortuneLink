@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
@@ -25,13 +26,13 @@ public class Asset {
     private Quantity quantity;
     private Money costBasis;  // total cost of all purchases (fees included)
 
-    private final Instant acquiredOn;
-    private Instant lastSystemInteraction; // for calculating when you last interacted with this asset
+    private final LocalDateTime acquiredOn;
+    private LocalDateTime lastSystemInteraction; // for calculating when you last interacted with this asset
     private int version;
 
 
     private Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, Currency baseCurrency,
-            Quantity quantity, Money costBasis, Instant acquiredOn, Instant lastSystemInteraction, int version) {
+            Quantity quantity, Money costBasis, LocalDateTime acquiredOn, LocalDateTime lastSystemInteraction, int version) {
         
         Objects.requireNonNull(assetId);
         Objects.requireNonNull(assetIdentifier);
@@ -53,7 +54,7 @@ public class Asset {
         this.version = version;
     }
 
-    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, Quantity quantity, Money costBasis, Instant acquiredOn) {
+    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, Quantity quantity, Money costBasis, LocalDateTime acquiredOn) {
         this(
             assetId,
             assetIdentifier,
@@ -66,6 +67,20 @@ public class Asset {
             1
         );
 
+    }
+
+    public static Asset create(AssetIdentifier assetIdentifier, AssetType assetType, Quantity quantity, Money costBasis, LocalDateTime acquiredOn) {
+        return new Asset(
+            AssetId.randomId(),
+            assetIdentifier,
+            assetType,
+            costBasis.currency(),
+            quantity,
+            costBasis,
+            acquiredOn,
+            acquiredOn,
+            1
+        );
     }
 
     // MUTATION METHODS (package-private - only Portfolio can call)
@@ -160,11 +175,11 @@ public class Asset {
         return costBasis;
     }
 
-    public Instant getacquiredOn() {
+    public LocalDateTime getacquiredOn() {
         return acquiredOn;
     }
 
-    public Instant getLastSystemInteraction() {
+    public LocalDateTime getLastSystemInteraction() {
         return lastSystemInteraction;
     }
 
@@ -174,7 +189,7 @@ public class Asset {
 
     private void updateMetadata() {
         version++;
-        lastSystemInteraction = Instant.now();
+        lastSystemInteraction = LocalDateTime.now();
     }
 
 }

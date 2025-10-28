@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -42,7 +41,7 @@ public class Transaction {
         Objects.requireNonNull(portfolioId);
         Objects.requireNonNull(accountId);
         Objects.requireNonNull(transactionType);
-        Objects.requireNonNull(assetIdentifier);
+        // Objects.requireNonNull(assetIdentifier);
         Objects.requireNonNull(quantity);
         Objects.requireNonNull(price);
         Objects.requireNonNull(fees);
@@ -100,35 +99,34 @@ public class Transaction {
     }
 
     // create deposit
-    public static Transaction createDepositTransaction(PortfolioId portfolioId, AccountId accountId, AssetIdentifier assetIdentifier, 
-        Quantity quantity, Price price, List<Fee> fees, TransactionDate transactionDate, String notes) {
-        validateTransaction(TransactionType.DEPOSIT, assetIdentifier, quantity, price);
+    public static Transaction createDepositTransaction(PortfolioId portfolioId, AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) {
+        validateTransaction(TransactionType.DEPOSIT, null, null, amount);
         return new Transaction(
             TransactionId.randomId(),
             portfolioId,
             accountId,
-            TransactionType.BUY,
-            assetIdentifier,
-            quantity,
-            price,
+            TransactionType.DEPOSIT,
+            null,
+            Quantity.ZERO(),
+            amount,
             fees,
             transactionDate,
             notes,
             Instant.now()
         );
     }
+
     // create withdrawal
-    public static Transaction createWithdrawalTransaction(PortfolioId portfolioId, AccountId accountId, AssetIdentifier assetIdentifier, 
-        Quantity quantity, Price price, List<Fee> fees, TransactionDate transactionDate, String notes) {
-        validateTransaction(TransactionType.DEPOSIT, assetIdentifier, quantity, price);
+    public static Transaction createWithdrawalTransaction(PortfolioId portfolioId, AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) {
+        validateTransaction(TransactionType.DEPOSIT, null, null, amount);
         return new Transaction(
             TransactionId.randomId(),
             portfolioId,
             accountId,
             TransactionType.BUY,
-            assetIdentifier,
-            quantity,
-            price,
+            null,
+            Quantity.ZERO(),
+            amount,
             fees,
             transactionDate,
             notes,

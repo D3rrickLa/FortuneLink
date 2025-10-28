@@ -44,9 +44,17 @@ public record Quantity(BigDecimal amount) {
     public boolean isZero() {
         return this.amount.compareTo(BigDecimal.ZERO) == 0;
     }
+
+    public boolean isZeroOrNegative() {
+        return this.amount.compareTo(BigDecimal.ZERO) <= 0;
+    }
     
     public boolean isPositive() {
         return this.amount.compareTo(BigDecimal.ZERO) >= 0;
+    }
+
+    public boolean isLessThan(Quantity quantity) {
+        return this.amount.compareTo(quantity.amount()) < 0;
     }
 
 }
