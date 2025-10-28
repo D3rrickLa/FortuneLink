@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 

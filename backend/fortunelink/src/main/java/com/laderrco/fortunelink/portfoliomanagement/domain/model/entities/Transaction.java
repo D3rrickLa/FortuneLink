@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.entities;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -118,7 +119,7 @@ public class Transaction {
 
     // create withdrawal
     public static Transaction createWithdrawalTransaction(PortfolioId portfolioId, AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) {
-        validateTransaction(TransactionType.DEPOSIT, null, null, amount);
+        validateTransaction(TransactionType.WITHDRAWAL, null, null, amount);
         return new Transaction(
             TransactionId.randomId(),
             portfolioId,
@@ -133,6 +134,31 @@ public class Transaction {
             Instant.now()
         );
     }
+
+    // create dividend 
+    public static Transaction createDividendTransaction(PortfolioId portfolioId, AccountId accountId, AssetIdentifier assetIdentifier, Price amount,  TransactionDate transactionDate, String notes) {
+        validateTransaction(TransactionType.DIVIDEND, assetIdentifier, Quantity.of("1"), amount);
+        return new Transaction(
+            TransactionId.randomId(), 
+            portfolioId, 
+            accountId, 
+            TransactionType.DIVIDEND, 
+            assetIdentifier, 
+            Quantity.of("1"), 
+            amount, 
+            new ArrayList<>(), 
+            transactionDate, 
+            notes, 
+            Instant.now()
+        );
+
+    }
+
+    //create interest
+    public static Transaction createInterestTransaction(PortfolioId portfolioId, AccountId accountId, AssetIdentifier assetIdentifier, Price amount,  TransactionDate transactionDate, String notes) {
+
+    }
+
 
     public Money calculateTotalCost() {
         return switch (transactionType) {
@@ -221,7 +247,7 @@ public class Transaction {
 
     private static void validateTransaction(TransactionType type, AssetIdentifier assetIdentifier, Quantity quantity, Price price) {
         switch (type) {
-            case BUY, SELL -> {
+            case BUY, SELL, DIVIDEND -> {
                 if (assetIdentifier == null) {
                     throw new IllegalArgumentException("Asset required for " + type);
                 }

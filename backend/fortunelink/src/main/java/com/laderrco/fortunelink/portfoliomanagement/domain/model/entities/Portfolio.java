@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import javax.security.auth.login.AccountNotFoundException;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientAssetsException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects.AssetIdentifier;
@@ -33,7 +34,6 @@ public class Portfolio {
     private LocalDateTime lastUpdated;
 
     
-
     private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts,
             List<Transaction> transactionHistory, LocalDateTime localDateTime, LocalDateTime lastUpdated) {
         Objects.requireNonNull(portfolioId);
@@ -100,10 +100,6 @@ public class Portfolio {
         this.accounts.remove(account);
         updateMetadata();
     }
-
-    // public void recordTransaction(Transaction transaction) {
-
-    // }
 
     public Account getAccount(AccountId accountId) throws AccountNotFoundException {
         return this.accounts.stream()
@@ -178,7 +174,7 @@ public class Portfolio {
         return transaction;
     }
 
-    public Transaction recordWithdrawalTransaction(AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) {
+    public Transaction recordWithdrawalTransaction(AccountId accountId, Price amount, List<Fee> fees, TransactionDate transactionDate, String notes) throws AccountNotFoundException {
         
         Account account = getAccount(accountId);
         
@@ -187,7 +183,7 @@ public class Portfolio {
         }
         
         // Business rule: Can't withdraw more than available cash
-        Money availableCash = account.getCashBalance();
+        Money availableCash = account.getCashBalance(); // we don't have this
         if (availableCash.isLessThan(amount.pricePerUnit())) {
             throw new InsufficientFundsException("Cannot withdraw " + amount + ". Only " + availableCash + " available");
         }
@@ -201,6 +197,41 @@ public class Portfolio {
         return transaction;
     }
 
+    public Transaction recordDividendTransaction(AccountId accountId, AssetIdentifier assetIdentifier, Money amount, TransactionDate transactionDate, String notes) throws AccountNotFoundException {
+        Account account = getAccount(accountId);
+
+        if (!account.hasAsset(assetIdentifier)) {
+            throw new AssetNotFoundException(String.format("Cannot record dividend for %s - not owned in this account", assetIdentifier));
+        }
+
+        if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Dividend amount must be positive");
+        }
+
+        Transaction transaction = Transaction.createDividendTransaction(portfolioId, accountId, assetIdentifier, Price.of(amount), transactionDate, notes);
+        handleDividend(account, transaction);
+        this.transactionHistory.add(transaction);
+        updateMetadata();
+
+        return transaction;
+    }
+
+    public Transaction recordInterestTransaction(AccountId accountId, AssetIdentifier assetIdentifier, Money amount, TransactionDate transactionDate, String notes) throws AccountNotFoundException {
+        
+        Account account = getAccount(accountId);
+        
+        if (amount.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Interest amount must be positive");
+        }
+        
+        Transaction transaction = Transaction.createInterestTransaction(portfolioId, accountId, assetIdentifier, Price.of(amount), transactionDate, notes);
+        
+        handleInterest(account, transaction);
+        this.transactionHistory.add(transaction);
+        updateMetadata();
+        
+        return transaction;
+    }
 
     public Money calculateNetWorth(MarketDataService marketDataService) {
         Objects.requireNonNull(marketDataService, "marketDataService required");
@@ -259,6 +290,10 @@ public class Portfolio {
     }
 
     private void handleDividend(Account account, Transaction transaction) {
+
+    }
+
+    private void handleInterest(Account account, Transaction transaction) {
 
     }
 
