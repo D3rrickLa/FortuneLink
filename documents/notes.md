@@ -619,3 +619,51 @@ Only if you have a specific need to cache the portfolio conversion for performan
 My Recommendation:
 Drop the MonetaryAmount complexity and just use Money nativeAmount. Convert as needed at the application layer. This is simpler, more flexible, and follows the principle of doing conversions where they're needed rather than preemptively.
 Your current design is over-engineering a solution to a problem that might not exist.
+
+-----
+October 28th, 2025 goals
+- Build the app
+
+
+~~~
+    type Transaction = {
+        date: Date;
+        ticker: string;      // "AAPL" or "CASH"
+        shares: number;      // positive = buy, negative = sell
+        price: number;       // price per share
+        notes: string;       // "dividend", "sold half position", etc.
+        }
+
+That's it. You can derive EVERYTHING else from this:
+
+ - Current holdings? Sum up shares by ticker
+ - Cost basis? Calculate from historical buys
+ - Realized gains? Compare buy/sell prices
+ - Portfolio value? Multiply current shares × current price
+
+
+Phase 1: The Spike (1 week)
+Build the absolute simplest thing that works:
+
+Hardcode your actual portfolio data in a TypeScript file
+Create a single page that displays it
+Deploy it
+USE IT for tracking your portfolio for 1 week
+
+Phase 2: Learn From Reality (1 week)
+After using it, you'll discover:
+
+"Damn, I need to edit transactions because I made a typo"
+"I want to see my gains on this position"
+"I need to track dividends separately"
+
+These are REAL problems, not hypothetical ones.
+Phase 3: Solve Real Problems (2 weeks)
+Now add features based on what you actually needed:
+
+Add edit functionality
+Add the gains calculation you actually wanted
+Add that dividend tracking
+
+Repeat
+Each cycle, use the app for a week, find the most annoying missing feature, add ONLY that.
