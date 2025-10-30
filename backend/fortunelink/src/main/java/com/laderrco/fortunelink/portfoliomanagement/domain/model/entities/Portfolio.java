@@ -300,10 +300,47 @@ public class Portfolio {
     }
 
     private void handleBuy(Account account, Transaction transaction) {
+        AssetIdentifier assetId = transaction.getAssetIdentifier();
+        Optional<Asset> existingAsset = Optional.ofNullable(account.getAsset(transaction.getAssetIdentifier()));
+        if (existingAsset.isPresent()) {
+            Asset asset = existingAsset.get();
+            Quantity newQuantity = asset.getQuantity().add(transaction.getQuantity());
+            asset.adjustQuantity(newQuantity);
 
+            Money newCostBasis = asset.getCostBasis().add(transaction.calculateGrossAmount());
+            asset.updateCostBasis(newCostBasis);
+        }
+        else {
+            Asset newAsset = Asset.create(
+                transaction.getAssetIdentifier(),
+                assetId.getAssetType(),
+                transaction.getQuantity(),
+                transaction.calculateGrossAmount(),
+                transaction.getTransactionDate().timestamp()
+            );
+            account.addAsset(newAsset);
+        }
+        
+        account.deductCash(transaction.calculateTotalCost());
     }
 
     private void handleSell(Account account, Transaction transaction) {
+        Asset asset = account.getAsset(transaction.getAssetIdentifier()); // already has not found handler inside
+
+        Quantity newQuantity = asset.getQuantity().subtract(transaction.getQuantity());
+        asset.adjustQuantity(newQuantity);
+
+        // update cost basis proportionally
+        Money soldCostBasis = asset.getCostBasis()
+            .multiply(transaction.getQuantity().amount())
+            .divide(asset.getQuantity().amount());
+        asset.updateCostBasis(asset.getCostBasis().subtract(soldCostBasis));
+
+        if (newQuantity.isZero()) {
+            account.removeAsset(asset.getAssetId());
+        }
+
+        account.addCash(transaction.calculateNetAmount());
 
     }
 

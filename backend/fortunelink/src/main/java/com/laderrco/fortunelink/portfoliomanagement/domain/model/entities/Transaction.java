@@ -260,7 +260,7 @@ public class Transaction {
 
     private static void validateTransaction(TransactionType type, AssetIdentifier assetIdentifier, Quantity quantity, Price price) {
         switch (type) {
-            case BUY, SELL, DIVIDEND -> {
+            case BUY, SELL, DIVIDEND, INTEREST -> {
                 if (assetIdentifier == null) {
                     throw new IllegalArgumentException("Asset required for " + type);
                 }

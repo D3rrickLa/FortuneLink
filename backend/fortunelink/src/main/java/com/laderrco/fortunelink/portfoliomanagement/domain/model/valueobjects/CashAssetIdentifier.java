@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.Currency;
 
 public record CashAssetIdentifier(UUID id, Currency currency) implements AssetIdentifier {
@@ -14,6 +15,10 @@ public record CashAssetIdentifier(UUID id, Currency currency) implements AssetId
     @Override
     public String displayName() {
         return currency.toString();
+    }
+    @Override
+    public AssetType getAssetType() {
+        return AssetType.CASH;
     }
 
     

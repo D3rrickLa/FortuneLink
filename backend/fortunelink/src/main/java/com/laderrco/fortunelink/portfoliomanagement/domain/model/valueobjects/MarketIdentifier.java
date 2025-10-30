@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects;
 
 import java.util.Objects;
 
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
+// for stocks
 public record MarketIdentifier(String symbol) implements AssetIdentifier {
     public MarketIdentifier {
         Objects.requireNonNull(symbol);
@@ -13,6 +15,11 @@ public record MarketIdentifier(String symbol) implements AssetIdentifier {
     @Override
     public String displayName() {
         return this.symbol;
+    }
+
+    @Override
+    public AssetType getAssetType() {
+        return AssetType.STOCK;
     }
     
 }

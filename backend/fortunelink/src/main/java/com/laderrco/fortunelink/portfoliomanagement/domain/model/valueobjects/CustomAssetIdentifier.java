@@ -3,7 +3,9 @@ package com.laderrco.fortunelink.portfoliomanagement.domain.model.valueobjects;
 import java.util.Objects;
 import java.util.UUID;
 
-public record CustomAssetIdentifier(UUID id, String name) implements AssetIdentifier {
+import com.laderrco.fortunelink.portfoliomanagement.domain.model.enums.AssetType;
+
+public record CustomAssetIdentifier(UUID id, String name, AssetType assetType) implements AssetIdentifier {
 
     public CustomAssetIdentifier {
         Objects.requireNonNull(id);
@@ -16,6 +18,11 @@ public record CustomAssetIdentifier(UUID id, String name) implements AssetIdenti
     @Override
     public String displayName() {
         return name;
+    }
+
+    @Override
+    public AssetType getAssetType() {
+        return assetType;
     }
     
 }
