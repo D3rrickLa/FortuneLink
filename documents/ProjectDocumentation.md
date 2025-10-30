@@ -391,7 +391,7 @@ Another feasibility that came to mind, algorithms for user content... How does I
 
 ### DevOps
 
-- Git
+- Git - Version Control
 - GitHub – Version control repository
 - GitHub Actions – CI/CD automation pipeline
 - Docker – Containerization and deployment management
@@ -403,10 +403,10 @@ Another feasibility that came to mind, algorithms for user content... How does I
 
 ## Dependencies
 
-- Java JDK – Latest LTS (current or JDK 24, depending on stability)
+- Java JDK – Latest LTS (JDK 25)
 - TypeScript – Typed JavaScript for frontend/backend logic
 - Node.js – Runtime for Next.js and backend processing
-- Supabase – Cloud storage for images, authentication, and database management
+- Supabase – Cloud storage for images, authentication, and database management (Will move to AWS once MVP working)
 - Yahoo API / Other Financial Stock API – Market data for finance-related features
     1. Yahoo API
     2. Alpha Vantage
