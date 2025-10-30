@@ -692,3 +692,19 @@ COMMUNITY & SOCIAL CONTEXT
 - A 'member' (user in social context) creates 'posts'
 - A 'post' can have multiple 'comments'
 - 'comments' can be nested (replies)
+
+
+
+Tomorrow (Sunday):
+Build the frontend:
+
+Create Next.js project (15 min)
+Build transaction form (45 min)
+Connect to your backend (30 min)
+Display transactions in table (30 min)
+
+Total: ~2 hours
+Then deploy both:
+
+Backend → Railway (free tier)
+Frontend → Vercel (free tier)
