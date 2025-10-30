@@ -319,9 +319,9 @@ prices, sectors, descriptions, and other market-related data. this will be consu
 ![alt text](PortfolioAggregate.png)
 
 ## Domain Model Diagrams
-![alt text]((portfolio_domain_diagram.mermaid))
-![alt text]((goals_domain_diagram.mermaid))
-![alt text]((community_domain_diagram.mermaid))
+![alt text]((\diagrams\community_domain_diagram.mermaid))
+![alt text]((\diagrams\goals_domain_diagram.mermaid))
+![alt text]((\diagrams\community_domain_diagram.mermaid))
 
 
 ## Risk
