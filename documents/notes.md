@@ -667,3 +667,28 @@ Add that dividend tracking
 
 Repeat
 Each cycle, use the app for a week, find the most annoying missing feature, add ONLY that.
+
+~~~
+
+Data flow
+
+USER CONTEXT
+- A 'user' has authentication credentials and profile info
+
+PORTFOLIO MANAGEMENT CONTEXT  
+- A 'user' has ONE 'portfolio'
+- A 'portfolio' contains multiple 'accounts'
+- An 'account' holds multiple 'assets'
+- A 'portfolio' records 'transactions'
+- A 'transaction' modifies 'assets' within an 'account'
+- A 'portfolio' can have 'liabilities'
+
+GOALS & FINANCIAL PLANNING CONTEXT
+- A 'user' defines multiple 'goals'
+- A 'goal' can have multiple 'milestones'
+- A 'goal' tracks progress against 'portfolio' value (integration point)
+
+COMMUNITY & SOCIAL CONTEXT
+- A 'member' (user in social context) creates 'posts'
+- A 'post' can have multiple 'comments'
+- 'comments' can be nested (replies)
