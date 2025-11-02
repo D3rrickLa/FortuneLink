@@ -708,3 +708,22 @@ Then deploy both:
 
 Backend → Railway (free tier)
 Frontend → Vercel (free tier)
+
+---
+In Next.js you have:
+```
+app/layout.tsx      (master layout - like app.component)
+app/page.tsx        (home page content)
+```
+
+---
+
+## How Next.js Works (File-based Routing)
+```
+app/
+├── layout.tsx           // Wraps EVERYTHING (navbar, etc.)
+├── page.tsx             // Home page (/)
+├── dashboard/
+│   └── page.tsx         // Dashboard page (/dashboard)
+└── transactions/
+    └── page.tsx         // Transactions page (/transactions)

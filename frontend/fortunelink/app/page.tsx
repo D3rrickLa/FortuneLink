@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 
 export default function Home() {
   const [formData, setFormData] = useState({
@@ -11,7 +11,25 @@ export default function Home() {
     quantity: "",
     amount: ""
   });
+  const [transactions, setTransactions] = useState<any[]>([]);
 
+  // Fetch transactions when page loads
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const response = await fetch(
+        'http://localhost:8080/api/transactions?userId=f8db6ee5-561e-4631-ba62-c4944a9ff983'
+      );
+      const data = await response.json();
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error fetching:', error);
+    }
+  };
+  
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -34,6 +52,8 @@ export default function Home() {
       const data = await response.json();
       console.log('Success:', data);
       alert('Transaction added!');
+      // After successful submit, add this:
+      fetchTransactions(); // Refresh the list
       
     } catch (error) {
       console.error('Error:', error);
@@ -112,6 +132,33 @@ export default function Home() {
           Add Transaction
         </button>
       </form>
+       <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Your Transactions</h2>
+        <table className="w-full border">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 border">Date</th>
+              <th className="p-2 border">Type</th>
+              <th className="p-2 border">Ticker</th>
+              <th className="p-2 border">Quantity</th>
+              <th className="p-2 border">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((txn: any) => (
+              <tr key={txn.id}>
+                <td className="p-2 border">
+                  {new Date(txn.date).toLocaleDateString()}
+                </td>
+                <td className="p-2 border">{txn.type}</td>
+                <td className="p-2 border">{txn.ticker}</td>
+                <td className="p-2 border">{txn.quantity}</td>
+                <td className="p-2 border">${txn.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
