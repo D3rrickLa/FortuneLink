@@ -1,97 +1,238 @@
-erDiagram
-    %% Aggregate Root
-    Portfolio {
-        PortfolioId portfolioId PK
-        UserId userId FK
-        string name
-        Currency currencyPreference
-    }
-    
-    %% Core Entities
-    AssetHolding {
-        AssetHoldingId assetHoldingId PK
-        PortfolioId portfolioId FK
-        AssetIdentifier assetIdentifier
-        decimal quantity
-        Money costBasis
-        date acquisitionDate
-        Money currentMarketPrice
-    }
-    
-    Liability {
-        LiabilityId liabilityId PK
-        PortfolioId portfolioId FK
-        string name
-        Money currentBalance
-        Percentage interestRate
-        date maturityDate
-    }
-    
-    Transaction {
-        TransactionId transactionId PK
-        PortfolioId portfolioId FK
-        TransactionType transactionType
-        Money amount
-        date date
-        string description
-        AssetHoldingId assetHoldingId FK "nullable"
-        LiabilityId liabilityId FK "nullable"
-    }
-    
+classDiagram
     %% Value Objects
-    Money {
-        decimal amount
-        Currency currency
+    class Money {
+        <<Value Object>>
+        -BigDecimal amount
+        -Currency currency
+        +add(Money) Money
+        +subtract(Money) Money
+        +multiply(Percentage) Money
+        +convert(ExchangeRate) Money
     }
-    
-    Percentage {
-        decimal value
+
+    class Currency {
+        <<Enumeration>>
+        USD
+        CAD
+        EUR
+        GBP
     }
-    
-    AssetIdentifier {
-        string tickerSymbol
-        string exchange
-        string cryptoSymbol
-        string assetCommonName
+
+    class Percentage {
+        <<Value Object>>
+        -BigDecimal value
+        +add(Percentage) Percentage
+        +multiply(BigDecimal) Percentage
     }
-    
-    TransactionType {
-        enum type "Buy|Sell|Deposit|Withdrawal|Dividend|Interest|Expense|Fee"
+
+    class Fee {
+        <<Value Object>>
+        -Money amount
+        +apply(Money) Money
     }
-    
-    NetWorthSummary {
-        Money totalAssets
-        Money totalLiabilities
-        Money netWorthValue
+
+    class ExchangeRate {
+        <<Value Object>>
+        -Currency from
+        -Currency to
+        -BigDecimal rate
+        +convert(Money) Money
     }
-    
-    Currency {
-        string code
-        string symbol
+
+    class AssetSymbol {
+        <<Value Object>>
+        -String symbol
+        +validate() boolean
     }
-    
+
+    class Quantity {
+        <<Value Object>>
+        -BigDecimal amount
+        +add(Quantity) Quantity
+        +subtract(Quantity) Quantity
+        +multiply(BigDecimal) Quantity
+    }
+
+    class Price {
+        <<Value Object>>
+        -Money pricePerUnit
+        +calculateValue(Quantity) Money
+    }
+
+    class TransactionDate {
+        <<Value Object>>
+        -LocalDateTime timestamp
+        +isBefore(TransactionDate) boolean
+        +isAfter(TransactionDate) boolean
+    }
+
+    class AccountType {
+        <<Enumeration>>
+        TFSA
+        RRSP
+        NON_REGISTERED
+        INVESTMENT
+        CHEQUING
+        SAVINGS
+    }
+
+    class AssetType {
+        <<Enumeration>>
+        STOCK
+        ETF
+        CRYPTO
+        CASH
+        BOND
+        REAL_ESTATE
+    }
+
+    class TransactionType {
+        <<Enumeration>>
+        BUY
+        SELL
+        DEPOSIT
+        WITHDRAWAL
+        DIVIDEND
+        INTEREST
+        FEE
+        TRANSFER_IN
+        TRANSFER_OUT
+    }
+
+    %% Entities
+    class Asset {
+        <<Entity>>
+        -AssetId id
+        -AssetSymbol symbol
+        -AssetType type
+        -Quantity quantity
+        -Money costBasis
+        -LocalDateTime acquiredDate
+        +updateQuantity(Quantity)
+        +calculateCurrentValue(Price) Money
+        +calculateUnrealizedGain(Price) Money
+    }
+
+    class Transaction {
+        <<Entity>>
+        -TransactionId id
+        -TransactionType type
+        -AssetSymbol symbol
+        -Quantity quantity
+        -Price price
+        -Fee fee
+        -TransactionDate date
+        -String notes
+        +calculateTotalCost() Money
+        +calculateNetAmount() Money
+    }
+
+    class Account {
+        <<Entity>>
+        -AccountId id
+        -String name
+        -AccountType type
+        -Currency baseCurrency
+        -List~Asset~ assets
+        +addAsset(Asset)
+        +removeAsset(AssetId)
+        +getAsset(AssetSymbol) Asset
+        +calculateTotalValue(MarketDataService) Money
+    }
+
+    %% Aggregate Root
+    class Portfolio {
+        <<Aggregate Root>>
+        -PortfolioId id
+        -UserId userId
+        -List~Account~ accounts
+        -List~Transaction~ transactionHistory
+        -LocalDateTime createdDate
+        -LocalDateTime lastUpdated
+        +addAccount(Account)
+        +removeAccount(AccountId)
+        +recordTransaction(Transaction)
+        +getAccount(AccountId) Account
+        +calculateNetWorth(MarketDataService) Money
+        +getTotalAssets(MarketDataService) Money
+        +getTransactionHistory() List~Transaction~
+    }
+
+    %% Domain Services
+    class PortfolioValuationService {
+        <<Domain Service>>
+        +calculateTotalValue(Portfolio, MarketDataService) Money
+        +calculateAssetValue(Asset, MarketDataService) Money
+        +calculateAccountValue(Account, MarketDataService) Money
+    }
+
+    class PerformanceCalculationService {
+        <<Domain Service>>
+        +calculateTotalReturn(Portfolio, MarketDataService) Percentage
+        +calculateRealizedGains(List~Transaction~) Money
+        +calculateUnrealizedGains(Portfolio, MarketDataService) Money
+        +calculateTimeWeightedReturn(Portfolio) Percentage
+    }
+
+    class AssetAllocationService {
+        <<Domain Service>>
+        +calculateAllocationByType(Portfolio) Map~AssetType, Percentage~
+        +calculateAllocationByAccount(Portfolio) Map~AccountType, Percentage~
+        +calculateAllocationByCurrency(Portfolio) Map~Currency, Percentage~
+    }
+
+    %% Repository Interfaces
+    class PortfolioRepository {
+        <<Interface>>
+        +save(Portfolio) Portfolio
+        +findById(PortfolioId) Optional~Portfolio~
+        +findByUserId(UserId) Optional~Portfolio~
+        +delete(PortfolioId)
+    }
+
+    class TransactionRepository {
+        <<Interface>>
+        +save(Transaction) Transaction
+        +findById(TransactionId) Optional~Transaction~
+        +findByPortfolioId(PortfolioId) List~Transaction~
+        +findByDateRange(PortfolioId, LocalDateTime, LocalDateTime) List~Transaction~
+    }
+
+    class MarketDataService {
+        <<Interface>>
+        +getCurrentPrice(AssetSymbol) Price
+        +getHistoricalPrice(AssetSymbol, LocalDateTime) Price
+        +getBatchPrices(List~AssetSymbol~) Map~AssetSymbol, Price~
+    }
+
     %% Relationships
-    Portfolio ||--o{ AssetHolding : "has many"
-    Portfolio ||--o{ Liability : "has many"
-    Portfolio ||--o{ Transaction : "has many"
+    Portfolio "1" *-- "0..*" Account : contains
+    Portfolio "1" *-- "0..*" Transaction : records
+    Account "1" *-- "0..*" Asset : holds
     
-    AssetHolding ||--o| Transaction : "may relate to"
-    Liability ||--o| Transaction : "may relate to"
+    Asset --> AssetSymbol
+    Asset --> AssetType
+    Asset --> Quantity
+    Asset --> Money
     
-    %% Value Object Compositions
-    Portfolio ||--|| Currency : "uses"
-    AssetHolding ||--|| Money : "costBasis"
-    AssetHolding ||--|| Money : "currentMarketPrice"
-    AssetHolding ||--|| AssetIdentifier : "identifies asset"
+    Transaction --> TransactionType
+    Transaction --> AssetSymbol
+    Transaction --> Quantity
+    Transaction --> Price
+    Transaction --> Fee
+    Transaction --> TransactionDate
     
-    Liability ||--|| Money : "currentBalance"
-    Liability ||--|| Percentage : "interestRate"
+    Account --> AccountType
+    Account --> Currency
     
-    Transaction ||--|| Money : "amount"
-    Transaction ||--|| TransactionType : "type"
+    Money --> Currency
+    ExchangeRate --> Currency
     
-    NetWorthSummary ||--|| Money : "totalAssets"
-    NetWorthSummary ||--|| Money : "totalLiabilities"
-    NetWorthSummary ||--|| Money : "netWorthValue"
+    PortfolioValuationService ..> Portfolio
+    PortfolioValuationService ..> MarketDataService
+    PerformanceCalculationService ..> Portfolio
+    PerformanceCalculationService ..> MarketDataService
+    AssetAllocationService ..> Portfolio
     
-    Money ||--|| Currency : "denominated in"
+    PortfolioRepository ..> Portfolio
+    TransactionRepository ..> Transaction

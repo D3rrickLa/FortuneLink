@@ -692,3 +692,45 @@ COMMUNITY & SOCIAL CONTEXT
 - A 'member' (user in social context) creates 'posts'
 - A 'post' can have multiple 'comments'
 - 'comments' can be nested (replies)
+
+
+----------- 
+we can probably break the portfolio_management into smaller parts and work on those each... probably just going to leave it
+
+
+  const [formData, setFormData] = useState({
+    userId: "f8db6ee5-561e-4631-ba62-c4944a9ff983",
+    creationDateTime: "",
+    type: "BUY",
+    ticker: "",
+    quantity: "",
+    amount: ""
+  });
+
+above is a Transaction, we need to make that
+userId -> User
+creationDateTime -> Instant, use that for everything
+type -> Enum Type
+Ticker -> some class that has that as the UUID and probably their identitifer (now thinking about it... if this is for the future,
+need to be flexible in some ways we should call this identifier and branch off from there, but portfolio usually means stock so...
+we should use that number -> ISIN),
+quantity -> BigDecimal
+Amount -> Money
+
+
+Transaction V2
+    AccountId (which has PortfolioId which has UserId)
+    TransactionId
+    creationTimestamp
+    transctionType 
+    AssetIdentifier
+    Quantity
+    PricePerUnit
+    Fee (should be a list)
+    Amount (this can be implied, which is QTY * PPU + FEE), Crypto might be an issue... with how 100 worth of BTC isn't really thanks to NETWORK
+        for FIAT do AssetValue (QTY * PPU) + FEE
+        for Crypto, we would need the original amount spent... or okay we do this, we first get price with no fees, then subtract fees
+            and from there we do the subtract amount / original amount to get the QTY
+
+
+probably not going to do domain events, don't really get them, seems simple to add if needed
