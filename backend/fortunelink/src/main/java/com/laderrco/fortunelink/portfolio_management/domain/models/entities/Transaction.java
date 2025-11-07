@@ -16,14 +16,16 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import lombok.Getter;
 
 @Getter // TODO: Remove this later
+// TODO: we shold look back to version 2 with the diffrence transaction detail objects as we need to cram a lot of stuff in Transaction.java
 public class Transaction implements ClassValidation {
     // TODO: look at and compare if V2 Transaction makes sense of V5_1
     private final TransactionId transacationId;
     private TransactionType transactionType;
-    private AssetIdentifier assetIdentifier;
-    private BigDecimal quantity;
-    private Money pricePerUnit;
+    private AssetIdentifier assetIdentifier; 
+    private BigDecimal quantity; 
+    private Money pricePerUnit; 
     private List<Fee> fees; // fees in original currency with a exchange rate link to the portfolios
+    private Money amount; // Used for cash-only transactions (DEPOSIT, WITHDRAWAL, etc.)
     private Instant transactionDate;
     private String notes;
 

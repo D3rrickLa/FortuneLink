@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,7 +11,6 @@ import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.entities.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
@@ -33,7 +33,7 @@ public class Account implements ClassValidation {
     private AccountType accountType;
     private ValidatedCurrency baseCurrency; // the currency this account is opened in
     private Money cashBalance;
-    private List<Asset> assets; // for NON =cash assets only
+    private List<Asset> assets; // for NON =cash assets only, might need to make this a MAP later
     private List<Transaction> transactions;
 
     private final Instant systemCreationDate;
@@ -72,10 +72,15 @@ public class Account implements ClassValidation {
     void withdraw(Money money) {
         Objects.requireNonNull(money);
         if (!money.currency().equals(this.baseCurrency)) {
+            // TODO: make a currencymistmatch exception
             throw new IllegalArgumentException("Cannot withdraw money with different currency.");
         }
         if (money.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount withdrawn must be greater than 0.");
+        }
+        if (this.cashBalance.isLessThan(money)) {
+            // TODO: make an insufficient funds exception
+            throw new IllegalArgumentException("Insufficient cash balance");
         }
 
         this.cashBalance.subtract(money);
@@ -123,6 +128,7 @@ public class Account implements ClassValidation {
         // Replace the entire asset object
         this.assets.remove(existingAsset.get());
         this.assets.add(updatedAsset);
+        recalculateStateAfterChange();
         updateMetadata();
     }
 
@@ -142,6 +148,7 @@ public class Account implements ClassValidation {
         Objects.requireNonNull(transactionId);
         boolean removed = this.transactions.removeIf(t -> t.getTransacationId().equals(transactionId));
         if (removed) {
+            recalculateStateAfterChange();
             updateMetadata();
         }
     }
@@ -164,6 +171,7 @@ public class Account implements ClassValidation {
 
         this.transactions.remove(existingTransaction.get());
         this.transactions.add(updatedTransaction);
+        recalculateStateAfterChange();
         updateMetadata();
     }
 
@@ -185,7 +193,10 @@ public class Account implements ClassValidation {
 
 
     public Money calculateTotalValue(MarketDataService marketDataService) {
-        return null;
+        Money assteValue = assets.stream()
+            .map(a -> a.calculateCurrentValue(marketDataService.getCurrentPrice(a.getAssetIdentifier())))
+            .reduce(Money.ZERO(baseCurrency), Money::add);
+        return cashBalance.add(assteValue);
     }
 
    private void updateMetadata() {
@@ -200,9 +211,143 @@ public class Account implements ClassValidation {
         
         // Replay all transactions in order
         transactions.stream()
-            .sorted(Comparator.comparing(Transaction::getDate))
+            .sorted(Comparator.comparing(Transaction::getTransactionDate))
             .forEach(this::applyTransaction);
         
+    }
+
+    // business logic fo each transaction type to update the account state
+    // interpreting what eahc type means for accoutn state
+    private void applyTransaction(Transaction transaction) {
+        switch (transaction.getTransactionType()) {
+            case DEPOSIT:
+                this.cashBalance = this.cashBalance.add(transaction.getAmount());
+                break;
+                
+            case WITHDRAWAL:
+                this.cashBalance = this.cashBalance.subtract(transaction.getAmount());
+                break;
+                
+            case BUY:
+                // Reduce cash by purchase amount + fees
+                Money totalCost = transaction.calculateTotalCost(); // price * quantity + fees
+                this.cashBalance = this.cashBalance.subtract(totalCost);
+                
+                // Add or update asset holding
+                addOrUpdateAssetFromBuy(transaction);
+                break;
+                
+            case SELL:
+                // Increase cash by sale proceeds - fees
+                Money netProceeds = transaction.calculateNetAmount(); // price * quantity - fees
+                this.cashBalance = this.cashBalance.add(netProceeds);
+                
+                // Reduce or remove asset holding
+                reduceAssetFromSell(transaction);
+                break;
+                
+            case DIVIDEND:
+            case INTEREST:
+                // Add income to cash balance
+                this.cashBalance = this.cashBalance.add(transaction.getAmount());
+                break;
+                
+            case FEE:
+                // Deduct fee from cash balance
+                this.cashBalance = this.cashBalance.subtract(transaction.getAmount());
+                break;
+                
+            case TRANSFER_IN:
+                // Handle based on what's being transferred
+                if (transaction.getAssetIdentifier() == null) {
+                    // Cash transfer
+                    this.cashBalance = this.cashBalance.add(transaction.getAmount());
+                } else {
+                    // Asset transfer
+                    addOrUpdateAssetFromTransfer(transaction);
+                }
+                break;
+                
+            case TRANSFER_OUT:
+                // Handle based on what's being transferred
+                if (transaction.getAssetIdentifier() == null) {
+                    // Cash transfer
+                    this.cashBalance = this.cashBalance.subtract(transaction.getAmount());
+                } else {
+                    // Asset transfer
+                    reduceAssetFromTransfer(transaction);
+                }
+                break;
+                
+            default:
+                // TODO: add this transaction exception: UnsupportedTransactionTypeException
+                throw new IllegalArgumentException(transaction.getTransactionType().toString());
+        }
+    }
+
+    private void addOrUpdateAssetFromBuy(Transaction transaction) {
+        Optional<Asset> existingAsset = this.assets.stream()
+            .filter(a -> a.getAssetIdentifier().equals(transaction.getAssetIdentifier()))
+            .findFirst();
+        
+        if (existingAsset.isPresent()) {
+            // Update existing holding
+            Asset asset = existingAsset.get();
+            BigDecimal newQuantity = asset.getQuantity().add(transaction.getQuantity());
+            Money newCostBasis = asset.getCostBasis().add(transaction.calculateTotalCost());
+            
+            asset.adjustQuantity(newQuantity);
+            asset.updateCostBasis(newCostBasis);
+        } else {
+            // Create new asset
+            Asset newAsset = new Asset(
+                AssetId.randomId(),
+                transaction.getAssetIdentifier(),
+                transaction.getAssetIdentifier().getAssetType(),
+                transaction.getQuantity(),
+                transaction.calculateTotalCost(),
+                transaction.getTransactionDate()
+            );
+            this.assets.add(newAsset);
+        }
+    }
+
+    private void reduceAssetFromSell(Transaction transaction) {
+        Asset asset = this.assets.stream()
+            .filter(a -> a.getAssetIdentifier().equals(transaction.getAssetIdentifier()))
+            .findFirst()
+            // TODO: new AssetNotFoundException(transaction.getAssetIdentifier())
+            .orElseThrow(() -> new IllegalArgumentException());
+        
+        BigDecimal newQuantity = asset.getQuantity().subtract(transaction.getQuantity());
+        
+        if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
+            // Sold entire position
+            this.assets.remove(asset);
+        } 
+        else if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Cannot sell more than owned");
+        } 
+        else {
+            // Partial sale - update quantity and proportionally reduce cost basis
+            BigDecimal sellRatio = transaction.getQuantity()
+                .divide(asset.getQuantity(), RoundingMode.HALF_UP);
+            Money costBasisReduction = asset.getCostBasis().multiply(sellRatio);
+            
+            asset.adjustQuantity(newQuantity);
+            asset.updateCostBasis(asset.getCostBasis().subtract(costBasisReduction));
+        }
+    }
+
+    private void addOrUpdateAssetFromTransfer(Transaction transaction) {
+        // Similar to addOrUpdateAssetFromBuy but might handle cost basis differently
+        // depending on your business rules for transfers
+        addOrUpdateAssetFromBuy(transaction);
+    }
+
+    private void reduceAssetFromTransfer(Transaction transaction) {
+        // Similar to reduceAssetFromSell
+        reduceAssetFromSell(transaction);
     }
 
     
