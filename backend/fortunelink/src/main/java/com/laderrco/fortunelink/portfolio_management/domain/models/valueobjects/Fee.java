@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
@@ -26,6 +27,21 @@ public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate ex
         }
 
         metadata = metadata == null ? Collections.emptyMap() : Collections.unmodifiableMap(metadata);
+    }
+
+    public Money apply(Money baseAmount) {
+        Objects.requireNonNull(baseAmount);
+        if (!amountInNativeCurrency.currency().equals(baseAmount.currency())) {
+            if (!exchangeRate.to().equals(baseAmount.currency())) {
+                throw new IllegalArgumentException("Fees cannot be subtracted base currency. Fees are not the same currency and or unknown exchange rate");
+            } 
+            else {
+                return baseAmount.subtract(exchangeRate.convert(amountInNativeCurrency));
+            }
+        }
+        else {
+            return baseAmount.subtract(amountInNativeCurrency);
+        }
     }
     
 }

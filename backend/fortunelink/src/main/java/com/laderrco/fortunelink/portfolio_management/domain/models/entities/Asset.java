@@ -61,8 +61,9 @@ public class Asset {
         );
     }
 
-    // TODO: check and see if we should use V2 remove and add Position methods as we can eliminate the updateCOstBasis
-    // MUTATION METHODS (package-private - only Portfolio can call)
+    // TODO: check and see if we should use V2 remove and add Position methods as we can eliminate the updateCostBasis
+
+    // MUTATION METHODS (package-private - only Portfolio can call) //
     void adjustQuantity(BigDecimal additionalQuantity) {
         Objects.requireNonNull(additionalQuantity, "Quantity cannot be null");
         this.quantity = this.quantity.add(additionalQuantity);
@@ -101,9 +102,9 @@ public class Asset {
         updateMetadata();
     }
 
-    // QUERY METHODS (public - anyone can call)
+    // QUERY METHODS (public - anyone can call) //
 
-    // Might name this to adjusted cost basis
+    // TODO: Might name this to adjusted cost basis
     public Money getAverageCostBasis() {
         if (quantity.compareTo(BigDecimal.ZERO) == 0) {
             return Money.ZERO(costBasis.currency());

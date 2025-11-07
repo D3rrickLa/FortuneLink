@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Transac
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -26,10 +27,9 @@ public class Transaction implements ClassValidation {
     private Instant transactionDate;
     private String notes;
 
-    public Transaction(TransactionId transacationId, TransactionType transactionType, AssetIdentifier assetIdentifier,
-            BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes) {
+    public Transaction(TransactionId transacationId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes) {
+        validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
-        
         this.transacationId = ClassValidation.validateParameter(transacationId);
         this.transactionType = ClassValidation.validateParameter(transactionType);
         this.assetIdentifier = ClassValidation.validateParameter(assetIdentifier);
@@ -37,17 +37,68 @@ public class Transaction implements ClassValidation {
         this.pricePerUnit = ClassValidation.validateParameter(pricePerUnit);
         this.fees = fees != null ? fees : Collections.emptyList();
         this.transactionDate = ClassValidation.validateParameter(transactionDate);
-        this.notes = notes.isBlank() ? "" : notes;
+        this.notes = notes.isBlank() ? "" : notes.trim();
     }
 
     public Money calculateTotalCost() {
-        return null; // before fees
+        return switch (transactionType) {
+            case BUY -> calculateGrossAmount().add(calculateTotalFees());
+            case SELL -> calculateGrossAmount().subtract(calculateTotalFees()); // Fees reduce proceeds
+            case DEPOSIT, WITHDRAWAL -> pricePerUnit; // Already in Money form
+            case DIVIDEND, INTEREST -> calculateGrossAmount(); // Usually no fees
+            default -> throw new UnsupportedOperationException("Unsupported type: " + transactionType);
+        };
     }
 
     public Money calculateNetAmount() {
-        return null; // after fees
+        return switch (transactionType) {
+            case BUY -> calculateGrossAmount().subtract(calculateTotalFees()); // Net cash outflow
+            case SELL -> calculateGrossAmount().add(calculateTotalFees()); // Net cash inflow
+            case DEPOSIT -> pricePerUnit;
+            case WITHDRAWAL -> pricePerUnit.negate();
+            // etc.
+            default -> throw new IllegalArgumentException("Unexpected value: " + transactionType);
+        };
     }
 
+   public Money calculateGrossAmount() {
+        // price * quantity (before fee)
+        return pricePerUnit.multiply(quantity);
+    }
 
-    
+    public Money calculateTotalFees() {
+        // assuming that all the fees have been converted properly
+        ValidatedCurrency transactionCurrency = pricePerUnit.currency();
+        return this.fees.stream()
+            .peek(fee -> {
+                if (!fee.amountInNativeCurrency().currency().equals(transactionCurrency)) {
+                    throw new IllegalStateException("Fee currency mistmatch: expected " + transactionCurrency);
+                }
+            })
+            .map(Fee::amountInNativeCurrency)
+            .reduce(Money.ZERO(transactionCurrency), Money::add);
+    }
+
+    private static void validateTransaction(TransactionType type, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price) {
+        switch (type) {
+            case BUY, SELL, DIVIDEND, INTEREST -> {
+                if (assetIdentifier == null) {
+                    throw new IllegalArgumentException("Asset required for " + type);
+                }
+                if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("Invalid quantity");
+                }
+            }
+                
+            case DEPOSIT, WITHDRAWAL -> {
+                // Cash transactions might not need assetIdentifier
+                if (price.isZero()) throw new IllegalArgumentException("Price required");
+        
+            }
+        
+            default -> {
+                break;
+            }
+        }
+    }
 }

@@ -44,19 +44,23 @@ public class Account implements ClassValidation {
     }
     
     void deposit(Money money) {
-        
+        // deposit amount currency must match 
     }
 
     void withdraw(Money money) {
 
     }
 
-    void buyAsset(Asset asset, Money pricePerUnit, BigDecimal quantity) { // validates cash available
+    void addAsset(Asset asset, Money pricePerUnit, BigDecimal quantity) { // validates cash available
 
     }
 
     // add proceeds to cash
-    void sellAsset(AssetId assetId, Money pricePerUnit, BigDecimal quantity) {
+    void removeAsset(AssetId assetId, Money pricePerUnit, BigDecimal quantity) {
+
+    }
+
+    void updateAsset(AssetId assetId, Asset updatedAsset) {
 
     }
 
@@ -68,7 +72,15 @@ public class Account implements ClassValidation {
 
     }
 
+    void updateTransaction(TransactionId transactionId, Transaction updatedTransaction) {
+
+    }
+
     public Asset getAsset(AssetIdentifier assetIdentifierId) {
+        return null;
+    }
+
+    public Transaction getTransaction(Transaction transactionId) {
         return null;
     }
 
@@ -78,6 +90,12 @@ public class Account implements ClassValidation {
 
     public Money calculateTotalValue(MarketDataService marketDataService) {
         return null;
+    }
+
+
+
+    private void recalculateStateAfterChange() {
+        // recalc cash, assets, cost basis, etc.
     }
 
     
