@@ -183,14 +183,6 @@ public class Account implements ClassValidation {
             .orElseThrow(() -> new IllegalArgumentException());
     }
 
-    @Deprecated
-    // we don't need this any more because we have a dedicated cash vairable
-    public Money getCashBalance() {
-        return assets.stream()
-            .filter(asset -> asset.getAssetType() == AssetType.CASH)
-            .map(Asset::getCostBasis)
-            .reduce(Money.ZERO(baseCurrency), Money::add);
-    }
 
     public Money calculateTotalValue(MarketDataService marketDataService) {
         return null;
