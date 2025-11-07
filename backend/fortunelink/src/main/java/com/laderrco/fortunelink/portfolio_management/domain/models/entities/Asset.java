@@ -14,10 +14,9 @@ import lombok.Getter;
 @Getter // TODO: remove this and implement acutal getters later
 public class Asset {
     private final AssetId assetId;
-
     private final AssetIdentifier assetIdentifier;
+    private final AssetType assetType;
     private final ValidatedCurrency currency; // the currency the asset is listed in
-
     private BigDecimal quantity;
     private Money costBasis; // total cost of all purchaes (feed included)
 
@@ -39,6 +38,7 @@ public class Asset {
 
         this.assetId = assetId;
         this.assetIdentifier = assetIdentifier;
+        this.assetType = assetType;
         this.currency = currency;
         this.quantity = quantity;
         this.costBasis = costBasis;

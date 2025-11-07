@@ -668,6 +668,10 @@ Add that dividend tracking
 Repeat
 Each cycle, use the app for a week, find the most annoying missing feature, add ONLY that.
 
+
+if ever in teh ftureu we want brokerage integration
+1. mark transation as soruce: manual vs source: brokerage and only allow editing/deleting for manual, brokerage is read-only
+
 ~~~
 
 Data flow
