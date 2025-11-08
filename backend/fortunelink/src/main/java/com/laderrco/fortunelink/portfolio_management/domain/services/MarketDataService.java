@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.entities;
+package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
