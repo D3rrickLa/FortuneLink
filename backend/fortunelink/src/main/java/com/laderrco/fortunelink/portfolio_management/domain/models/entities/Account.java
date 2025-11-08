@@ -132,6 +132,13 @@ public class Account implements ClassValidation {
         updateMetadata();
     }
 
+    void recordTransaction(Transaction transaction) {
+        Objects.requireNonNull(transaction);
+        addTransaction(transaction);
+        applyTransaction(transaction);
+        updateMetadata();
+    }
+
     void addTransaction(Transaction transaction) {
         Objects.requireNonNull(transaction);
         boolean alreadyExists = this.transactions.stream()
@@ -221,11 +228,11 @@ public class Account implements ClassValidation {
     private void applyTransaction(Transaction transaction) {
         switch (transaction.getTransactionType()) {
             case DEPOSIT:
-                this.cashBalance = this.cashBalance.add(transaction.getAmount());
+                this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
                 break;
                 
             case WITHDRAWAL:
-                this.cashBalance = this.cashBalance.subtract(transaction.getAmount());
+                this.cashBalance = this.cashBalance.subtract(transaction.getPricePerUnit());
                 break;
                 
             case BUY:
@@ -249,19 +256,19 @@ public class Account implements ClassValidation {
             case DIVIDEND:
             case INTEREST:
                 // Add income to cash balance
-                this.cashBalance = this.cashBalance.add(transaction.getAmount());
+                this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
                 break;
                 
             case FEE:
                 // Deduct fee from cash balance
-                this.cashBalance = this.cashBalance.subtract(transaction.getAmount());
+                this.cashBalance = this.cashBalance.subtract(transaction.getPricePerUnit());
                 break;
                 
             case TRANSFER_IN:
                 // Handle based on what's being transferred
                 if (transaction.getAssetIdentifier() == null) {
                     // Cash transfer
-                    this.cashBalance = this.cashBalance.add(transaction.getAmount());
+                    this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
                 } else {
                     // Asset transfer
                     addOrUpdateAssetFromTransfer(transaction);
@@ -272,7 +279,7 @@ public class Account implements ClassValidation {
                 // Handle based on what's being transferred
                 if (transaction.getAssetIdentifier() == null) {
                     // Cash transfer
-                    this.cashBalance = this.cashBalance.subtract(transaction.getAmount());
+                    this.cashBalance = this.cashBalance.subtract(transaction.getPricePerUnit());
                 } else {
                     // Asset transfer
                     reduceAssetFromTransfer(transaction);

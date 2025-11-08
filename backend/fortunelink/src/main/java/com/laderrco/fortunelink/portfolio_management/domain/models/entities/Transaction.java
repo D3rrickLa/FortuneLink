@@ -23,9 +23,8 @@ public class Transaction implements ClassValidation {
     private TransactionType transactionType;
     private AssetIdentifier assetIdentifier; 
     private BigDecimal quantity; 
-    private Money pricePerUnit; 
+    private Money pricePerUnit; // this need to act as both the ppu and an amount for deposit and withdrawal 
     private List<Fee> fees; // fees in original currency with a exchange rate link to the portfolios
-    private Money amount; // Used for cash-only transactions (DEPOSIT, WITHDRAWAL, etc.)
     private Instant transactionDate;
     private String notes;
 
@@ -89,6 +88,9 @@ public class Transaction implements ClassValidation {
                 }
                 if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
                     throw new IllegalArgumentException("Invalid quantity");
+                }
+                if (price.amount().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("Invalid price");
                 }
             }
                 

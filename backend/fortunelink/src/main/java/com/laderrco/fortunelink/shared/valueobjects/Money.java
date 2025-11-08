@@ -111,6 +111,10 @@ public record Money(BigDecimal amount, ValidatedCurrency currency) implements Cl
         ClassValidation.validateParameter(rate, "convert");
         return rate.convert(this);
     }
+
+    public Percentage toPercentage() {
+        return new Percentage(this.amount);
+    }
     
 
     private void validateMoney(Money other, String operation) {

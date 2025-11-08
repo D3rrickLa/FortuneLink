@@ -738,3 +738,62 @@ Transaction V2
 
 
 probably not going to do domain events, don't really get them, seems simple to add if needed
+
+
+-----
+## Summary: Integration Flow
+```
+Controller/API Layer
+    ↓
+Application Service (orchestrates use cases)
+    ↓
+Domain Service (complex business logic)
+    ↓
+Portfolio Aggregate (domain model)
+    ↓
+Repository (persistence)
+
+## The Flow
+```
+Application Service
+    ↓ (calls)
+Domain Service (PortfolioValuationService)
+    ↓ (calls)
+Portfolio.getAccounts()
+    ↓ (iterates and calls)
+Account.calculateTotalValue()
+    ↓ (calls)
+Asset.calculateCurrentValue()
+
+```
+@Configuration
+public class DomainServiceConfiguration {
+    
+    @Bean
+    public PortfolioValuationService portfolioValuationService() {
+        return new PortfolioValuationService();
+    }
+    
+    @Bean
+    public PerformanceCalculationService performanceCalculationService() {
+        return new PerformanceCalculationService();
+    }
+    
+    @Bean
+    public AssetAllocationService assetAllocationService(
+        PortfolioValuationService valuationService
+    ) {
+        return new AssetAllocationService(valuationService);
+    }
+}
+```
+How Domain Services Work
+Domain Services are called by either:
+
+Application Services (use case orchestration)
+Portfolio itself (when Portfolio needs complex calculations)
+Other parts of the domain layer
+
+They don't have their own lifecycle - they're just utility classes with business logic that doesn't naturally belong to a single entity.
+
+
