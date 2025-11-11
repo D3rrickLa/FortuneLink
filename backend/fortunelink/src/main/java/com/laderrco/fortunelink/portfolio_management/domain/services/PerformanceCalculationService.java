@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
+import java.util.Currency;
 import java.util.List;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -9,6 +10,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
+// @Service
 public class PerformanceCalculationService {
   public Percentage calculateTotalReturn(Portfolio portfolio, MarketDataService marketDataService) {
         Money currentValue = calculateCurrentValue(portfolio, marketDataService);
@@ -22,10 +24,12 @@ public class PerformanceCalculationService {
         return Percentage.of(gain.divide(totalInvested.amount()).amount());
     }
     
-    public Money calculateRealizedGains(List<Transaction> transactions) {
+    public Money calculateRealizedGains(Portfolio portfolio, List<Transaction> transactions) {
+        ValidatedCurrency baseCurrency = portfolio.getPortfolioCurrency();
         return transactions.stream()
             .filter(tx -> tx.getTransactionType() == TransactionType.SELL)
             .map(this::calculateSellGain)
+            // we need to make sure that we are adding with the portfolio base currency
             .reduce(Money.ZERO(ValidatedCurrency.USD), Money::add); // TODO: Handle multi-currency
     }
     

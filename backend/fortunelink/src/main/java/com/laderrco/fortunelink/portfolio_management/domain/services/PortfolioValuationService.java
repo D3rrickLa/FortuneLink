@@ -5,6 +5,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asse
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+// @Service
 public class PortfolioValuationService {
     public Money calculateTotalValue(Portfolio portfolio, MarketDataService marketDataService) {
                 return portfolio.getAccounts().stream()
