@@ -16,51 +16,51 @@
 
 ## ✅ Entities
 
- Asset - id, symbol, type, quantity, cost basis, acquired date
+ - [x] Asset - id, symbol, type, quantity, cost basis, acquired date
 
- updateQuantity()
- updateCostBasis()
- calculateCurrentValue(Price)
- calculateUnrealizedGain(Price)
-
-
- Transaction - id, type, symbol, assetType, quantity, price, amount, fee, date, notes
-
- calculateTotalCost() (for BUY)
- calculateNetAmount() (for SELL)
- getAmount() (for cash transactions)
+ - [x] updateQuantity()
+ - [x] updateCostBasis()
+ - [x] calculateCurrentValue(Price)
+ - [x] calculateUnrealizedGain(Price)
 
 
- Account - id, name, type, base currency, cash balance, assets, transactions
+ - [x] Transaction - id, type, symbol, assetType, quantity, price, amount, fee, date, notes
 
- recordTransaction(Transaction) - adds transaction and applies effects
- applyTransaction(Transaction) - updates cash/assets based on transaction type
- addOrUpdateAssetFromBuy(Transaction)
- reduceAssetFromSell(Transaction)
- updateTransaction(TransactionId, Transaction)
- deleteTransaction(TransactionId)
- recalculateStateAfterChange()
- getCashBalance()
- calculateTotalValue(MarketDataService)
- getTransactions()
- Asset management: addAsset(), updateAsset(), deleteAsset()
+ - [x] calculateTotalCost() (for BUY)
+ - [x] calculateNetAmount() (for SELL)
+ - [x] getAmount() (for cash transactions)
+
+
+ - [x] Account - id, name, type, base currency, cash balance, assets, transactions
+
+ - [x] recordTransaction(Transaction) - adds transaction and applies effects
+ - [x] applyTransaction(Transaction) - updates cash/assets based on transaction type
+ - [x] addOrUpdateAssetFromBuy(Transaction)
+ - [x] reduceAssetFromSell(Transaction)
+ - [x] updateTransaction(TransactionId, Transaction)
+ - [x] deleteTransaction(TransactionId)
+ - [x] recalculateStateAfterChange()
+ - [x] getCashBalance()
+ - [x] calculateTotalValue(MarketDataService)
+ - [x] getTransactions()
+ - [x] Asset management: addAsset(), updateAsset(), deleteAsset()
 
 
 
 ## ✅ Aggregate Root
 
- - [] Portfolio - id, userId, accounts, created/updated dates
+ - [x] Portfolio - id, userId, accounts, created/updated dates
 
- - [] addAccount(Account)
- - [] removeAccount(AccountId)
- - [] getAccount(AccountId)
- - [] recordTransaction(AccountId, Transaction) - delegates to account
- - [] updateTransaction(AccountId, TransactionId, Transaction)
- - [] deleteTransaction(AccountId, TransactionId)
- - [] getAllTransactions() - aggregates across accounts
- - [] getTransactionHistory(startDate, endDate) - filtered by date range
- - [] calculateNetWorth(MarketDataService) - aggregates across accounts
- - [] updateMetadata() - updates lastUpdated timestamp
+ - [x] addAccount(Account)
+ - [x] removeAccount(AccountId)
+ - [x] getAccount(AccountId)
+ - [x] recordTransaction(AccountId, Transaction) - delegates to account
+ - [x] updateTransaction(AccountId, TransactionId, Transaction)
+ - [x] deleteTransaction(AccountId, TransactionId)
+ - [x] getAllTransactions() - aggregates across accounts
+ - [x] getTransactionHistory(startDate, endDate) - filtered by date range
+ - [x] calculateNetWorth(MarketDataService) - aggregates across accounts
+ - [x] updateMetadata() - updates lastUpdated timestamp
 
 
 
@@ -72,18 +72,18 @@
     - [x] calculateAccountValue(Account, MarketDataService)
     - [x] calculateAssetValue(Asset, MarketDataService)
 
- - PerformanceCalculationService
+ - [x] PerformanceCalculationService
 
-    - calculateTotalReturn(Portfolio, MarketDataService)
-    - calculateRealizedGains(List<Transaction>)
-    - calculateUnrealizedGains(Portfolio, MarketDataService)
-    - calculateTimeWeightedReturn(Portfolio) (optional for MVP)
+    - [x] calculateTotalReturn(Portfolio, MarketDataService)
+    - [x] calculateRealizedGains(Portfolio, List<Transaction>)
+    - [x] calculateUnrealizedGains(Portfolio, MarketDataService)
+    - [x] calculateTimeWeightedReturn(Portfolio) (optional for MVP)
 
- - AssetAllocationService
+ - [x] AssetAllocationService
 
-    - calculateAllocationByType(Portfolio, MarketDataService)
-    - calculateAllocationByAccount(Portfolio, MarketDataService)
-    - calculateAllocationByCurrency(Portfolio, MarketDataService)
+    - [x] calculateAllocationByType(Portfolio, MarketDataService)
+    - [x] calculateAllocationByAccount(Portfolio, MarketDataService)
+    - [x] calculateAllocationByCurrency(Portfolio, MarketDataService)
 
 
 

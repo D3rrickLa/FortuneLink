@@ -797,3 +797,5 @@ Other parts of the domain layer
 They don't have their own lifecycle - they're just utility classes with business logic that doesn't naturally belong to a single entity.
 
 
+-----
+for the application layser, we use DTOS for input and output
