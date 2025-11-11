@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 // @Service
 public class PortfolioValuationService {
     public Money calculateTotalValue(Portfolio portfolio, MarketDataService marketDataService) {
-                return portfolio.getAccounts().stream()
+        return portfolio.getAccounts().stream()
             .map(account -> calculateAccountValue(account, marketDataService))
             .reduce(Money.ZERO(portfolio.getPortfolioCurrency()), Money::add);
     }

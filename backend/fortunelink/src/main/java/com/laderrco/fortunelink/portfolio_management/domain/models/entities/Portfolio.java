@@ -92,7 +92,7 @@ public class Portfolio implements ClassValidation {
         return this.accounts.stream()
             .filter(a -> a.getAccountId().equals(accountId))
             .findFirst()
-            .orElseThrow();
+            .orElseThrow(); // TODO: account throw not found exception
     } 
 
     public Money getTotalAssets(MarketDataService marketDataService, ExchangeRateService exchangeRateService) {

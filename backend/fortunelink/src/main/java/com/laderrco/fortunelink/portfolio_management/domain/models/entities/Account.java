@@ -187,7 +187,7 @@ public class Account implements ClassValidation {
         return this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(assetIdentifierId))
             .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException());
+            .orElseThrow(() -> new IllegalArgumentException()); // TODO: asset nout found exception
     }
 
     public Transaction getTransaction(TransactionId transactionId) {
