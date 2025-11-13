@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.UnsupportedTransactionTypeException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
@@ -16,6 +19,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -72,15 +76,13 @@ public class Account implements ClassValidation {
     void withdraw(Money money) {
         Objects.requireNonNull(money);
         if (!money.currency().equals(this.baseCurrency)) {
-            // TODO: make a currencymistmatch exception
-            throw new IllegalArgumentException("Cannot withdraw money with different currency.");
+            throw new CurrencyMismatchException("Cannot withdraw money with different currency.");
         }
         if (money.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount withdrawn must be greater than 0.");
         }
         if (this.cashBalance.isLessThan(money)) {
-            // TODO: make an insufficient funds exception
-            throw new IllegalArgumentException("Insufficient cash balance");
+            throw new InsufficientFundsException("Insufficient cash balance");
         }
 
         this.cashBalance.subtract(money);
@@ -187,7 +189,7 @@ public class Account implements ClassValidation {
         return this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(assetIdentifierId))
             .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException()); // TODO: asset nout found exception
+            .orElseThrow(() -> new AssetNotFoundException("Asset cannot be found with identifier, " +assetIdentifierId.getPrimaryId()));
     }
 
     public Transaction getTransaction(TransactionId transactionId) {
@@ -287,8 +289,7 @@ public class Account implements ClassValidation {
                 break;
                 
             default:
-                // TODO: add this transaction exception: UnsupportedTransactionTypeException
-                throw new IllegalArgumentException(transaction.getTransactionType().toString());
+                throw new UnsupportedTransactionTypeException(transaction.getTransactionType().toString() + " is not a supported transaction type");
         }
     }
 
@@ -323,8 +324,7 @@ public class Account implements ClassValidation {
         Asset asset = this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(transaction.getAssetIdentifier()))
             .findFirst()
-            // TODO: new AssetNotFoundException(transaction.getAssetIdentifier())
-            .orElseThrow(() -> new IllegalArgumentException());
+            .orElseThrow(() -> new AssetNotFoundException("Asset can not be found with given identifier, " + transaction.getAssetIdentifier().getPrimaryId()));
         
         BigDecimal newQuantity = asset.getQuantity().subtract(transaction.getQuantity());
         

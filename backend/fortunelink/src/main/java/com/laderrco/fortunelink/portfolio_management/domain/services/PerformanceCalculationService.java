@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import java.util.List;
 
+import javax.security.auth.login.AccountNotFoundException;
+
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -45,12 +47,26 @@ public class PerformanceCalculationService {
      * @param transactions List of all transactions to analyze
      * @return Total money gained (or lost) from all sales in portfolio base currency
      */
-    public Money calculateRealizedGains(Portfolio portfolio, List<Transaction> transactions) {
+    public Money calculateRealizedGains(Portfolio portfolio, List<Transaction> transactions) throws AccountNotFoundException {
         ValidatedCurrency portfolioBaseCurrency = portfolio.getPortfolioCurrency();
-        return transactions.stream()
-            .filter(tx -> tx.getTransactionType() == TransactionType.SELL)
-            .map(tx -> calculateSellGain(tx, portfolio))
-            .reduce(Money.ZERO(portfolioBaseCurrency), Money::add);
+        
+        try {
+            return transactions.stream()
+                .filter(tx -> tx.getTransactionType() == TransactionType.SELL)
+                .map(tx -> {
+                    try {
+                        return calculateSellGain(tx, portfolio);
+                    } catch (AccountNotFoundException e) {
+                        throw new RuntimeException(e); // Wrap in unchecked exception
+                    }
+                })
+                .reduce(Money.ZERO(portfolioBaseCurrency), Money::add);
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof AccountNotFoundException) {
+                throw (AccountNotFoundException) e.getCause(); // Unwrap and rethrow
+            }
+            throw e;
+        }
     }
     /**
      * Calculates total unrealized gains (or losses) across all current holdings.
@@ -139,8 +155,9 @@ public class PerformanceCalculationService {
      * 
      * For tax purposes, users should consult professional advice.
      * TODO: Implement proper ACB calculation in future iteration
+     * @throws AccountNotFoundException 
      */
-    private Money calculateSellGain(Transaction sellTransaction, Portfolio portfolio) {
+    private Money calculateSellGain(Transaction sellTransaction, Portfolio portfolio) throws AccountNotFoundException {
         // Sale proceeds (price * quantity - fees)
         Money saleProceeds = sellTransaction.calculateNetAmount();
         
@@ -151,7 +168,7 @@ public class PerformanceCalculationService {
                     .anyMatch(t -> t.getTransacationId().equals(sellTransaction.getTransacationId())))
                 .map(Account::getAccountId)
                 .findFirst()
-                .orElse(null)
+                .orElseThrow()
         ); // need to stream where account has this id
         Asset asset = account.getAsset(sellTransaction.getAssetIdentifier());
         

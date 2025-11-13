@@ -5,7 +5,7 @@ import java.util.UUID;
 import com.laderrco.fortunelink.shared.valueobjects.GenericId;
 
 public record PortfolioId(UUID portfolioId) implements GenericId {
-        public PortfolioId {
+    public PortfolioId {
         portfolioId = GenericId.validate(portfolioId);
     }
 

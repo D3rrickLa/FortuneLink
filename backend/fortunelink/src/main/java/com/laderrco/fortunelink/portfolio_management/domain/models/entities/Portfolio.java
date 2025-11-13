@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+import javax.security.auth.login.AccountNotFoundException;
+
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
@@ -59,7 +61,7 @@ public class Portfolio implements ClassValidation {
         updateMetadata();    
     }
 
-    public void removeAccount(AccountId accountId) {
+    public void removeAccount(AccountId accountId) throws AccountNotFoundException {
         Objects.requireNonNull(accountId);
         Account account = getAccount(accountId);
 
@@ -80,7 +82,7 @@ public class Portfolio implements ClassValidation {
         updateMetadata();    
     }
 
-    public void recordTransaction(AccountId accountId, Transaction transaction) {
+    public void recordTransaction(AccountId accountId, Transaction transaction) throws AccountNotFoundException {
         Account account = getAccount(accountId);
 
         account.recordTransaction(transaction);
@@ -88,11 +90,11 @@ public class Portfolio implements ClassValidation {
     }
 
     // GET LOGIC
-    public Account getAccount(AccountId accountId) {
+    public Account getAccount(AccountId accountId) throws AccountNotFoundException {
         return this.accounts.stream()
             .filter(a -> a.getAccountId().equals(accountId))
             .findFirst()
-            .orElseThrow(); // TODO: account throw not found exception
+            .orElseThrow(() ->new AccountNotFoundException());
     } 
 
     public Money getTotalAssets(MarketDataService marketDataService, ExchangeRateService exchangeRateService) {

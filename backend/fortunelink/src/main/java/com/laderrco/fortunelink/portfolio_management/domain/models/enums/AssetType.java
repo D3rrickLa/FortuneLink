@@ -21,6 +21,6 @@ public enum AssetType {
     }
 
     public Precision getDefaultQuantityPrecision() {
-        return defaultQuantityPrecision;
+        return this.defaultQuantityPrecision;
     } 
 }

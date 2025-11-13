@@ -126,7 +126,7 @@ public record Money(BigDecimal amount, ValidatedCurrency currency) implements Cl
 
     private void isCurrencyTheSame(ValidatedCurrency otherCurrency, String operation) {
         if (!this.currency.equals(otherCurrency)) {
-            throw new CurrencyMismatchException(String.format("Cannot %s different currencies", operation)); // TODO: IllegalArgumentException.clas
+            throw new CurrencyMismatchException(String.format("Cannot %s different currencies", operation));
         }
     }
 }

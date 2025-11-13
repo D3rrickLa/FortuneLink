@@ -10,6 +10,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -73,7 +75,7 @@ public class Transaction implements ClassValidation {
         return this.fees.stream()
             .peek(fee -> {
                 if (!fee.amountInNativeCurrency().currency().equals(transactionCurrency)) {
-                    throw new IllegalStateException("Fee currency mistmatch: expected " + transactionCurrency);
+                    throw new CurrencyMismatchException("Fee currency mistmatch: expected " + transactionCurrency);
                 }
             })
             .map(Fee::amountInNativeCurrency)
@@ -87,7 +89,7 @@ public class Transaction implements ClassValidation {
                     throw new IllegalArgumentException("Asset required for " + type);
                 }
                 if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalArgumentException("Invalid quantity");
+                    throw new InvalidQuantityException("Invalid quantity");
                 }
                 if (price.amount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw new IllegalArgumentException("Invalid price");

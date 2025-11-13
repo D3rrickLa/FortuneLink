@@ -104,8 +104,7 @@ public class Asset {
 
     // QUERY METHODS (public - anyone can call) //
 
-    // TODO: Might name this to adjusted cost basis
-    public Money getAverageCostBasis() {
+    public Money getCostPerUnit() {
         if (quantity.compareTo(BigDecimal.ZERO) == 0) {
             return Money.ZERO(costBasis.currency());
         }
