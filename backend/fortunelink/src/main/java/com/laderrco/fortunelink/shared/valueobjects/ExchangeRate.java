@@ -6,6 +6,7 @@ import java.time.Instant;
 
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 
 public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDecimal rate, Instant exchangeRateDate, String source) implements ClassValidation {
     private final static int FOREX_SCALE = Precision.FOREX.getDecimalPlaces();
@@ -47,7 +48,7 @@ public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDeci
             return other;
         }
         else if(!other.currency().equals(this.from)) {
-            throw new IllegalArgumentException("Currency provided does not match `from`");
+            throw new CurrencyMismatchException("Currency provided does not match `from`");
         }
 
         return new Money(other.amount().multiply(this.rate), this.to);
@@ -60,7 +61,7 @@ public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDeci
             return other;
         }
         else if(!other.currency().equals(this.to)) {
-            throw new IllegalArgumentException("Currency provided does not match `to`");
+            throw new CurrencyMismatchException("Currency provided does not match `to`");
         }
 
         BigDecimal nativeAmount = other.amount().divide(this.rate, this.to.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);

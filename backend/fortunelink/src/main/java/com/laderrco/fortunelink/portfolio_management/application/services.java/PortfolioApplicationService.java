@@ -10,6 +10,9 @@ import lombok.Data;
 @Service
 @AllArgsConstructor
 @Data
+/*
+ * Orchestrates use cases and coordinates between domain services, repositories, and infrastructure
+ */
 public class PortfolioApplicationService {
     // use case handler
     private final PortfolioRepository portfolioRepository;

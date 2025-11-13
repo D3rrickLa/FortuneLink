@@ -7,6 +7,7 @@ import java.util.Objects;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 
 public record Money(BigDecimal amount, ValidatedCurrency currency) implements ClassValidation {
     private static final MathContext FINANCIAL_MATH_CONTEXT = MathContext.DECIMAL128;
@@ -125,7 +126,7 @@ public record Money(BigDecimal amount, ValidatedCurrency currency) implements Cl
 
     private void isCurrencyTheSame(ValidatedCurrency otherCurrency, String operation) {
         if (!this.currency.equals(otherCurrency)) {
-            throw new IllegalArgumentException(String.format("Cannot %s different currencies", operation)); // TODO: IllegalArgumentException.clas
+            throw new CurrencyMismatchException(String.format("Cannot %s different currencies", operation)); // TODO: IllegalArgumentException.clas
         }
     }
 }

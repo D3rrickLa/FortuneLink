@@ -4,9 +4,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -23,17 +25,40 @@ public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate ex
         feeDate = ClassValidation.validateParameter(feeDate, "Fee Date");
 
         if (amountInNativeCurrency.amount().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Fee amount cannot be negative."); // TODO: InvalidQuantityException.class
+            throw new InvalidQuantityException("Fee amount cannot be negative.");
         }
 
         metadata = metadata == null ? Collections.emptyMap() : Collections.unmodifiableMap(metadata);
     }
 
+    /**
+     * Converts the fee to the target currency using the HISTORICAL exchange rate
+     * stored at the time of the transaction.
+     * 
+     * This ensures ACB and tax calculations use the correct historical rate,
+     * not current market rates.
+     */
+    public Money toBaseCurrency(ValidatedCurrency targetCurrency) {
+        if (amountInNativeCurrency.currency().equals(targetCurrency)) {
+            return amountInNativeCurrency;
+        }
+        
+        if (!exchangeRate.to().equals(targetCurrency)) {
+            throw new CurrencyMismatchException(
+                String.format("Fee exchange rate (%s->%s) doesn't match target currency %s",
+                    exchangeRate.from(), exchangeRate.to(), targetCurrency)
+            );
+        }
+        
+        return exchangeRate.convert(amountInNativeCurrency);
+    }
+    
+
     public Money apply(Money baseAmount) {
-        Objects.requireNonNull(baseAmount);
+        baseAmount = ClassValidation.validateParameter(baseAmount);
         if (!amountInNativeCurrency.currency().equals(baseAmount.currency())) {
             if (!exchangeRate.to().equals(baseAmount.currency())) {
-                throw new IllegalArgumentException("Fees cannot be subtracted base currency. Fees are not the same currency and or unknown exchange rate");
+                throw new CurrencyMismatchException("Fees cannot be subtracted forom base currency. Fees are not the same currency and or unknown exchange rate");
             } 
             else {
                 return baseAmount.subtract(exchangeRate.convert(amountInNativeCurrency));

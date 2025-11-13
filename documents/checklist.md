@@ -107,14 +107,14 @@
 
 ## ✅ Domain Exceptions
 
- - [] PortfolioNotFoundException
- - [] AccountNotFoundException
- - [] AssetNotFoundException
- - [] TransactionNotFoundException
- - [] InsufficientFundsException
- - [] CurrencyMismatchException
- - [] UnsupportedTransactionTypeException
- - [] InvalidAssetSymbolException
+ - [x] PortfolioNotFoundException
+ - [x] AccountNotFoundException
+ - [x] AssetNotFoundException
+ - [x] TransactionNotFoundException
+ - [x] InsufficientFundsException
+ - [x] CurrencyMismatchException
+ - [x] UnsupportedTransactionTypeException
+ - [x] InvalidAssetSymbolException
 
 ## ✅ IDs (Value Objects)
 

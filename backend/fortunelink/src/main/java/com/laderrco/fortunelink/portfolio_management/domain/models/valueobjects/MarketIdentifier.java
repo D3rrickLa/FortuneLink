@@ -20,7 +20,6 @@ public record MarketIdentifier(String primaryId, Map<String, String> secondaryId
         }
     }
 
-
     @Override
     public String getPrimaryId() {
         return this.primaryId;

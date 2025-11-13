@@ -6,6 +6,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Port
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 // @Service
+// ANSWERS THE QUESTION: WHAT IS IT WORTH NOW (STATELESS AND REUSABLE)
 public class PortfolioValuationService {
     public Money calculateTotalValue(Portfolio portfolio, MarketDataService marketDataService) {
         return portfolio.getAccounts().stream()
