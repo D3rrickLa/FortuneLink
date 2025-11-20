@@ -1,0 +1,806 @@
+package com.laderrco.fortunelink.portfolio_management.domain.services;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.MarketDataUnavailableException;
+import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.shared.valueobjects.Percentage;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.ArrayList;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+class PerformanceCalculationServiceTest {
+
+    private PerformanceCalculationService performanceService;
+    private PortfolioId portfolioId1;
+    private UserId userId1;
+    private AssetId assetId1;
+    private AssetId assetId2;
+    private AccountId accountId1;
+    private AccountId accountId2;
+    
+    @Mock
+    private MarketDataService marketDataService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        performanceService = new PerformanceCalculationService();
+        portfolioId1 = PortfolioId.randomId();
+        userId1 = UserId.randomId();
+        assetId1 = AssetId.randomId();
+        assetId2 = AssetId.randomId();
+        accountId1 = AccountId.randomId();
+        accountId2 = AccountId.randomId();
+    }
+
+    @Nested
+    @DisplayName("Total Return Calculation Tests")
+    class TotalReturnTests {
+
+        @Test
+        @DisplayName("Should calculate positive total return correctly")
+        void calculateTotalReturn_PositiveReturn() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            Portfolio portfolio = createPortfolioWithTransactions(usd);
+            
+            // Mock current prices to give us a gain
+            // Asset has 10 shares of AAPL, let's say current price is $180
+            when(marketDataService.getCurrentPrice(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null)))
+                .thenReturn(new Money(new BigDecimal("180"), usd));
+
+            // Act
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+
+            // Assert
+            // Invested: $1500 (10 shares * $150) + $500 deposit = $2000
+            // Current: (10 * $180) + $500 cash = $2300
+            // Return: ($2300 - $2000) / $2000 = 15%
+            assertEquals(new BigDecimal("15.00"), totalReturn.value().setScale(2));
+        }
+
+        @Test
+        @DisplayName("Should calculate negative total return correctly")
+        void calculateTotalReturn_NegativeReturn() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            Portfolio portfolio = createPortfolioWithTransactions(usd);
+            
+            // Mock current prices to give us a loss
+            when(marketDataService.getCurrentPrice(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null)))
+                .thenReturn(new Money(new BigDecimal("120"), usd));
+
+            // Act
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+
+            // Assert
+            // Invested: $2000
+            // Current: (10 * $120) + $500 cash = $1700
+            // Return: ($1700 - $2000) / $2000 = -15%
+            assertEquals(new BigDecimal("-15.00"), totalReturn.value().setScale(2));
+        }
+
+        @Test
+        @DisplayName("Should return 0% when no money invested")
+        void calculateTotalReturn_NoInvestment() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(portfolioId1)
+                .userId(userId1)
+                .accounts(List.of())
+                .portfolioCurrency(usd)
+                .build();
+
+            // Act
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+
+            // Assert
+            assertEquals(Percentage.of(0), totalReturn);
+        }
+
+        @Test
+        @DisplayName("Should calculate return after withdrawal")
+        void calculateTotalReturn_WithWithdrawal() {
+            // Arrange
+            ValidatedCurrency cad = ValidatedCurrency.CAD;
+            AssetSymbol shopSymbol = new AssetSymbol("SHOP");
+            
+            Asset shopStock = createAsset("asset-1", shopSymbol, "20", "2000", cad);
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", shopSymbol, "20", "100", cad));
+            transactions.add(createDepositTransaction("tx-2", "1000", cad));
+            transactions.add(createWithdrawalTransaction("tx-3", "500", cad));
+            
+            Account account = createAccount("account-1", cad, "500", 
+                List.of(shopStock), transactions);
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(cad)
+                .build();
+
+            when(marketDataService.getCurrentPrice(shopSymbol))
+                .thenReturn(new Money(new BigDecimal("120"), cad));
+
+            // Act
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+
+            // Assert
+            // Invested: $2000 (buy) + $1000 (deposit) - $500 (withdrawal) = $2500
+            // Current: (20 * $120) + $500 cash = $2900
+            // Return: ($2900 - $2500) / $2500 = 16%
+            assertEquals(new BigDecimal("16.00"), totalReturn.getValue().setScale(2));
+        }
+    }
+
+    @Nested
+    @DisplayName("Realized Gains Calculation Tests")
+    class RealizedGainsTests {
+
+        @Test
+        @DisplayName("Should calculate realized gain from single sell transaction")
+        void calculateRealizedGains_SingleSell_Profit() throws AccountNotFoundException {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            AssetSymbol teslaSymbol = new AssetSymbol("TSLA");
+            
+            // Bought 100 shares at $200, sold 50 at $250
+            Asset teslaStock = createAsset("asset-1", teslaSymbol, "50", "10000", usd);
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", teslaSymbol, "100", "200", usd));
+            transactions.add(createSellTransaction("tx-2", teslaSymbol, "50", "250", usd));
+            
+            Account account = createAccount("account-1", usd, "12500", 
+                List.of(teslaStock), transactions);
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+
+            // Assert
+            // Average cost per unit: $20,000 / 100 = $200
+            // Cost basis for 50 shares: 50 * $200 = $10,000
+            // Sale proceeds: 50 * $250 = $12,500
+            // Realized gain: $12,500 - $10,000 = $2,500
+            assertEquals(new Money(new BigDecimal("2500"), usd), realizedGains);
+        }
+
+        @Test
+        @DisplayName("Should calculate realized loss from sell transaction")
+        void calculateRealizedGains_SingleSell_Loss() throws AccountNotFoundException {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            AssetSymbol gamestopSymbol = new AssetSymbol("GME");
+            
+            // Bought 100 shares at $300, sold 100 at $150
+            Asset gamestopStock = createAsset("asset-1", gamestopSymbol, "0", "0", usd);
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", gamestopSymbol, "100", "300", usd));
+            transactions.add(createSellTransaction("tx-2", gamestopSymbol, "100", "150", usd));
+            
+            Account account = createAccount("account-1", usd, "15000", 
+                List.of(gamestopStock), transactions);
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+
+            // Assert
+            // Cost basis: 100 * $300 = $30,000
+            // Sale proceeds: 100 * $150 = $15,000
+            // Realized loss: $15,000 - $30,000 = -$15,000
+            assertEquals(new Money(new BigDecimal("-15000"), usd), realizedGains);
+        }
+
+        @Test
+        @DisplayName("Should calculate realized gains from multiple sell transactions")
+        void calculateRealizedGains_MultipleSells() throws AccountNotFoundException {
+            // Arrange
+            ValidatedCurrency cad = ValidatedCurrency.CAD;
+            AssetSymbol appleSymbol = new AssetSymbol("AAPL");
+            
+            // Multiple buys and sells
+            Asset appleStock = createAsset("asset-1", appleSymbol, "20", "3000", cad);
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", appleSymbol, "100", "150", cad));
+            transactions.add(createSellTransaction("tx-2", appleSymbol, "30", "180", cad));
+            transactions.add(createSellTransaction("tx-3", appleSymbol, "50", "200", cad));
+            
+            Account account = createAccount("account-1", cad, "15400", 
+                List.of(appleStock), transactions);
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(cad)
+                .build();
+
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+
+            // Assert
+            // Average cost: $15,000 / 100 = $150
+            // First sell: (30 * $180) - (30 * $150) = $5,400 - $4,500 = $900
+            // Second sell: (50 * $200) - (50 * $150) = $10,000 - $7,500 = $2,500
+            // Total: $900 + $2,500 = $3,400
+            assertEquals(new Money(new BigDecimal("3400"), cad), realizedGains);
+        }
+
+        @Test
+        @DisplayName("Should return zero when no sell transactions")
+        void calculateRealizedGains_NoSells() throws AccountNotFoundException {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            AssetSymbol symbol = new AssetSymbol("MSFT");
+            
+            Asset msftStock = createAsset("asset-1", symbol, "100", "30000", usd);
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", symbol, "100", "300", usd));
+            transactions.add(createDepositTransaction("tx-2", "5000", usd));
+            
+            Account account = createAccount("account-1", usd, "5000", 
+                List.of(msftStock), transactions);
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+
+            // Assert
+            assertEquals(Money.ZERO(usd), realizedGains);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when account not found")
+        void calculateRealizedGains_AccountNotFound() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            AssetSymbol symbol = new AssetSymbol("INVALID");
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createSellTransaction("tx-1", symbol, "10", "100", usd));
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of())
+                .portfolioCurrency(usd)
+                .build();
+
+            // Act & Assert
+            assertThrows(AccountNotFoundException.class, () -> {
+                performanceService.calculateRealizedGains(portfolio, transactions);
+            });
+        }
+    }
+
+    @Nested
+    @DisplayName("Unrealized Gains Calculation Tests")
+    class UnrealizedGainsTests {
+
+        @Test
+        @DisplayName("Should calculate unrealized gains for single asset")
+        void calculateUnrealizedGains_SingleAsset_Gain() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            AssetSymbol nvidiaSymbol = new AssetSymbol("NVDA");
+            
+            // Bought at $400 per share, now worth $500
+            Asset nvidiaStock = Asset.builder()
+                .assetId(new AssetId("asset-1"))
+                .assetIdentifier(nvidiaSymbol)
+                .assetType(AssetType.STOCK)
+                .quantity(new Quantity(new BigDecimal("50")))
+                .costBasis(new Money(new BigDecimal("20000"), usd))
+                .acquiredDate(LocalDateTime.now().minusMonths(3))
+                .build();
+            
+            Account account = createAccount("account-1", usd, "0", 
+                List.of(nvidiaStock), new ArrayList<>());
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            when(marketDataService.getCurrentPrice(nvidiaSymbol))
+                .thenReturn(new Money(new BigDecimal("500"), usd));
+
+            // Act
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(
+                portfolio, marketDataService);
+
+            // Assert
+            // Current value: 50 * $500 = $25,000
+            // Cost basis: $20,000
+            // Unrealized gain: $25,000 - $20,000 = $5,000
+            assertEquals(new Money(new BigDecimal("5000"), usd), unrealizedGains);
+        }
+
+        @Test
+        @DisplayName("Should calculate unrealized losses for asset")
+        void calculateUnrealizedGains_SingleAsset_Loss() {
+            // Arrange
+            ValidatedCurrency cad = ValidatedCurrency.CAD;
+            AssetSymbol symbol = new AssetSymbol("META");
+            
+            // Bought at $350, now worth $250
+            Asset metaStock = Asset.builder()
+                .assetId(new AssetId("asset-1"))
+                .assetIdentifier(symbol)
+                .assetType(AssetType.STOCK)
+                .quantity(new Quantity(new BigDecimal("100")))
+                .costBasis(new Money(new BigDecimal("35000"), cad))
+                .acquiredDate(LocalDateTime.now().minusYears(1))
+                .build();
+            
+            Account account = createAccount("account-1", cad, "0", 
+                List.of(metaStock), new ArrayList<>());
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(cad)
+                .build();
+
+            when(marketDataService.getCurrentPrice(symbol))
+                .thenReturn(new Money(new BigDecimal("250"), cad));
+
+            // Act
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(
+                portfolio, marketDataService);
+
+            // Assert
+            // Current value: 100 * $250 = $25,000
+            // Cost basis: $35,000
+            // Unrealized loss: $25,000 - $35,000 = -$10,000
+            assertEquals(new Money(new BigDecimal("-10000"), cad), unrealizedGains);
+        }
+
+        @Test
+        @DisplayName("Should calculate unrealized gains across multiple assets")
+        void calculateUnrealizedGains_MultipleAssets() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            
+            AssetSymbol googleSymbol = new AssetSymbol("GOOGL");
+            AssetSymbol amazonSymbol = new AssetSymbol("AMZN");
+            
+            // Google: Cost $10,000, now worth $12,000 (gain $2,000)
+            Asset googleStock = Asset.builder()
+                .assetId(new AssetId("asset-1"))
+                .assetIdentifier(googleSymbol)
+                .assetType(AssetType.STOCK)
+                .quantity(new Quantity(new BigDecimal("100")))
+                .costBasis(new Money(new BigDecimal("10000"), usd))
+                .acquiredDate(LocalDateTime.now().minusMonths(6))
+                .build();
+            
+            // Amazon: Cost $15,000, now worth $14,000 (loss $1,000)
+            Asset amazonStock = Asset.builder()
+                .assetId(new AssetId("asset-2"))
+                .assetIdentifier(amazonSymbol)
+                .assetType(AssetType.STOCK)
+                .quantity(new Quantity(new BigDecimal("100")))
+                .costBasis(new Money(new BigDecimal("15000"), usd))
+                .acquiredDate(LocalDateTime.now().minusMonths(4))
+                .build();
+            
+            Account account = createAccount("account-1", usd, "0", 
+                List.of(googleStock, amazonStock), new ArrayList<>());
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            when(marketDataService.getCurrentPrice(googleSymbol))
+                .thenReturn(new Money(new BigDecimal("120"), usd));
+            when(marketDataService.getCurrentPrice(amazonSymbol))
+                .thenReturn(new Money(new BigDecimal("140"), usd));
+
+            // Act
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(
+                portfolio, marketDataService);
+
+            // Assert
+            // Google: (100 * $120) - $10,000 = $2,000
+            // Amazon: (100 * $140) - $15,000 = -$1,000
+            // Total: $2,000 - $1,000 = $1,000
+            assertEquals(new Money(new BigDecimal("1000"), usd), unrealizedGains);
+        }
+
+        @Test
+        @DisplayName("Should calculate unrealized gains across multiple accounts")
+        void calculateUnrealizedGains_MultipleAccounts() {
+            // Arrange
+            ValidatedCurrency cad = ValidatedCurrency.CAD;
+            
+            AssetSymbol tfsaSymbol = new AssetSymbol("VFV");
+            AssetSymbol rrspSymbol = new AssetSymbol("XEQT");
+            
+            // TFSA Account
+            Asset tfsaAsset = Asset.builder()
+                .assetId(new AssetId("asset-1"))
+                .assetIdentifier(tfsaSymbol)
+                .assetType(AssetType.ETF)
+                .quantity(new Quantity(new BigDecimal("100")))
+                .costBasis(new Money(new BigDecimal("10000"), cad))
+                .acquiredDate(LocalDateTime.now().minusYears(2))
+                .build();
+            
+            Account tfsaAccount = createAccount("account-1", cad, "0", 
+                List.of(tfsaAsset), new ArrayList<>());
+            
+            // RRSP Account
+            Asset rrspAsset = Asset.builder()
+                .assetId(new AssetId("asset-2"))
+                .assetIdentifier(rrspSymbol)
+                .assetType(AssetType.ETF)
+                .quantity(new Quantity(new BigDecimal("200")))
+                .costBasis(new Money(new BigDecimal("6000"), cad))
+                .acquiredDate(LocalDateTime.now().minusYears(1))
+                .build();
+            
+            Account rrspAccount = createAccount("account-2", cad, "0", 
+                List.of(rrspAsset), new ArrayList<>());
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(tfsaAccount, rrspAccount))
+                .portfolioCurrency(cad)
+                .build();
+
+            when(marketDataService.getCurrentPrice(tfsaSymbol))
+                .thenReturn(new Money(new BigDecimal("110"), cad));
+            when(marketDataService.getCurrentPrice(rrspSymbol))
+                .thenReturn(new Money(new BigDecimal("32"), cad));
+
+            // Act
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(
+                portfolio, marketDataService);
+
+            // Assert
+            // TFSA: (100 * $110) - $10,000 = $1,000
+            // RRSP: (200 * $32) - $6,000 = $400
+            // Total: $1,400
+            assertEquals(new Money(new BigDecimal("1400"), cad), unrealizedGains);
+        }
+
+        @Test
+        @DisplayName("Should return zero for portfolio with no assets")
+        void calculateUnrealizedGains_NoAssets() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            
+            Account account = createAccount("account-1", usd, "10000", 
+                List.of(), new ArrayList<>());
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            // Act
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(
+                portfolio, marketDataService);
+
+            // Assert
+            assertEquals(Money.ZERO(usd), unrealizedGains);
+            verifyNoInteractions(marketDataService);
+        }
+
+        @Test
+        @DisplayName("Should handle crypto assets correctly")
+        void calculateUnrealizedGains_CryptoAsset() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            AssetSymbol btcSymbol = new AssetSymbol("BTC");
+            
+            // Bought 2 BTC at $30,000 each, now worth $45,000 each
+            Asset bitcoin = Asset.builder()
+                .assetId(new AssetId("asset-1"))
+                .assetIdentifier(btcSymbol)
+                .assetType(AssetType.CRYPTO)
+                .quantity(new Quantity(new BigDecimal("2")))
+                .costBasis(new Money(new BigDecimal("60000"), usd))
+                .acquiredDate(LocalDateTime.now().minusMonths(8))
+                .build();
+            
+            Account account = createAccount("account-1", usd, "0", 
+                List.of(bitcoin), new ArrayList<>());
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .build();
+
+            when(marketDataService.getCurrentPrice(btcSymbol))
+                .thenReturn(new Money(new BigDecimal("45000"), usd));
+
+            // Act
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(
+                portfolio, marketDataService);
+
+            // Assert
+            // Current value: 2 * $45,000 = $90,000
+            // Cost basis: $60,000
+            // Unrealized gain: $30,000
+            assertEquals(new Money(new BigDecimal("30000"), usd), unrealizedGains);
+        }
+    }
+
+    @Nested
+    @DisplayName("Time-Weighted Return Tests")
+    class TimeWeightedReturnTests {
+
+        @Test
+        @DisplayName("Should throw UnsupportedOperationException for TWR calculation")
+        void calculateTimeWeightedReturn_NotImplemented() {
+            // Arrange
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(new PortfolioId("portfolio-1"))
+                .userId(new UserId("user-1"))
+                .accounts(List.of())
+                .portfolioCurrency(ValidatedCurrency.USD)
+                .build();
+
+            // Act & Assert
+            assertThrows(UnsupportedOperationException.class, () -> {
+                performanceService.calculateTimeWeightedReturn(portfolio);
+            });
+        }
+    }
+
+    // Helper Methods for Test Data Creation
+
+    private Portfolio createPortfolioWithTransactions(ValidatedCurrency currency) {
+        AssetSymbol appleSymbol = new AssetSymbol("AAPL");
+        
+        Asset appleStock = createAsset("asset-1", appleSymbol, "10", "1500", currency);
+        
+        List<Transaction> transactions = new ArrayList<>();
+        transactions.add(createBuyTransaction("tx-1", appleSymbol, "10", "150", currency));
+        transactions.add(createDepositTransaction("tx-2", "500", currency));
+        
+        Account account = createAccount("account-1", currency, "500", 
+            List.of(appleStock), transactions);
+        
+        return Portfolio.builder()
+            .portfolioId(new PortfolioId("portfolio-1"))
+            .userId(new UserId("user-1"))
+            .accounts(List.of(account))
+            .portfolioCurrency(currency)
+            .build();
+    }
+
+    private Asset createAsset(String id, AssetIdentifier symbol, String quantity, 
+                             String costBasis, ValidatedCurrency currency) {
+        return Asset.builder()
+            .assetId(new AssetId(id))
+            .assetIdentifier(symbol)
+            .assetType(AssetType.STOCK)
+            .quantity(new BigDecimal(quantity))
+            .costBasis(new Money(new BigDecimal(costBasis), currency))
+            .acquiredOn(LocalDateTime.now().minusMonths(6).toInstant(ZoneOffset.UTC))
+            .build();
+    }
+
+    private Account createAccount(String id, ValidatedCurrency currency, String cashBalance,
+                                 List<Asset> assets, List<Transaction> transactions) {
+        return Account.builder()
+            .accountId(new AccountId(id))
+            .name("Test Account")
+            .accountType(AccountType.NON_REGISTERED)
+            .baseCurrency(currency)
+            .cashBalance(new Money(new BigDecimal(cashBalance), currency))
+            .assets(assets)
+            .transactions(transactions)
+            .build();
+    }
+
+    private Transaction createBuyTransaction(String id, AssetIdentifier symbol, 
+                                            String quantity, String price, 
+                                            ValidatedCurrency currency) {
+        return Transaction.builder()
+            .transactionId(new TransactionId(id))
+            .transactionType(TransactionType.BUY)
+            .assetIdentifier(symbol)
+            .quantity(new Quantity(new BigDecimal(quantity)))
+            .pricePerUnit(new Money(new BigDecimal(price), currency))
+            .fee(Money.ZERO(currency))
+            .transactionDate(LocalDateTime.now().minusMonths(6))
+            .notes("Test buy")
+            .build();
+    }
+
+    private Transaction createSellTransaction(String id, AssetIdentifier symbol, 
+                                             String quantity, String price, 
+                                             ValidatedCurrency currency) {
+        return Transaction.builder()
+            .transactionId(new TransactionId(id))
+            .transactionType(TransactionType.SELL)
+            .assetIdentifier(symbol)
+            .quantity(new Quantity(new BigDecimal(quantity)))
+            .pricePerUnit(new Money(new BigDecimal(price), currency))
+            .fee(Money.ZERO(currency))
+            .transactionDate(LocalDateTime.now().minusMonths(1))
+            .notes("Test sell")
+            .build();
+    }
+
+    private Transaction createDepositTransaction(String id, String amount, 
+                                                 ValidatedCurrency currency) {
+        return Transaction.builder()
+            .transactionId(new TransactionId(id))
+            .transactionType(TransactionType.DEPOSIT)
+            .assetIdentifier(new AssetSymbol("CASH"))
+            .quantity(BigDecimal.ONE)
+            .pricePerUnit(new Money(new BigDecimal(amount), currency))
+            .fee(Money.ZERO(currency))
+            .transactionDate(LocalDateTime.now().minusMonths(5))
+            .notes("Test deposit")
+            .build();
+    }
+
+    private Transaction createWithdrawalTransaction(String id, String amount, 
+                                                   ValidatedCurrency currency) {
+        return Transaction.builder()
+            .transactionId(new TransactionId(id))
+            .transactionType(TransactionType.WITHDRAWAL)
+            .assetIdentifier(new AssetSymbol("CASH"))
+            .quantity(BigDecimal.ONE)
+            .pricePerUnit(new Money(new BigDecimal(amount), currency))
+            .fee(Money.ZERO(currency))
+            .transactionDate(LocalDateTime.now().minusMonths(2))
+            .notes("Test withdrawal")
+            .build();
+    }
+
+    /* OTHER TESTS FOR BUSINESS CASE */
+    @Test
+    @DisplayName("Should handle fractional shares in realized gains calculation")
+    void calculateRealizedGains_FractionalShares() {
+        // Test with crypto or fractional stock purchases
+        // e.g., 0.5 BTC bought at $50,000, sold at $60,000
+    }
+
+    @Test
+    @DisplayName("Should handle multiple currencies correctly")
+    void calculateTotalReturn_MultipleCurrencies() {
+        // When portfolio has accounts in CAD and USD
+        // Ensure proper currency conversion
+    }
+
+    @Test
+    @DisplayName("Should include transaction fees in realized gain calculation")
+    void calculateRealizedGains_WithFees() {
+        // Sale proceeds should be reduced by fees
+        // This tests the calculateNetAmount() method
+    }
+
+    // Integration poitns to mock
+    // test integration between performance calculation service and portfolio valuation service
+    @Test
+    @DisplayName("Should correctly integrate with PortfolioValuationService")
+    void calculateTotalReturn_IntegrationWithValuation() {
+        // This tests the private method calculateCurrentValue()
+        // which instantiates PortfolioValuationService
+    }
+
+    // used simplifed average cost
+    @Test
+    @DisplayName("Should use simple average cost method (not ACB)")
+    void calculateRealizedGains_UsesAverageCostNotACB() {
+        // Document that this doesn't handle:
+        // - Return of Capital (ROC) adjustments
+        // - Superficial loss rules
+        // - Chronological FIFO tracking
+        
+        // Test shows the simplified calculation
+    }   
+
+    // for larger portfolios
+    @Test
+    @DisplayName("Should handle portfolio with many transactions efficiently")
+    void calculateRealizedGains_LargeTransactionHistory() {
+        // Create portfolio with 1000+ transactions
+        // Ensure calculation completes in reasonable time
+    }
+
+    // testing private helpers like cal total invested and cal sell gians - make private-packe for testing
+
+    @ParameterizedTest
+    @CsvSource({
+        "100, 150, 10, 180, 20.00",  // quantity, buy price, quantity, sell price, expected return %
+        "50, 200, 25, 180, -5.00",
+        "200, 50, 100, 75, 25.00"
+    })
+    @DisplayName("Should calculate total return for various scenarios")
+    void calculateTotalReturn_ParameterizedScenarios(
+        BigDecimal buyQty, BigDecimal buyPrice,
+        BigDecimal currentQty, BigDecimal currentPrice,
+        BigDecimal expectedReturn
+    ) {
+        // Test implementation
+    }
+
+    @Test
+    @DisplayName("Should handle MarketDataService failures gracefully")
+    void calculateUnrealizedGains_MarketDataFailure() {
+        when(marketDataService.getCurrentPrice(any()))
+            .thenThrow(new MarketDataUnavailableException(""));
+        
+        // How should the service handle this?
+        // Should it throw? Return partial data? Return zero?
+    }
+
+
+}

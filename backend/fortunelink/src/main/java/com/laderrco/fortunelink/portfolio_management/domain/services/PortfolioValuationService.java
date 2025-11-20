@@ -31,6 +31,7 @@ public class PortfolioValuationService {
         return currentPrice.multiply(asset.getQuantity());
     }
 
+    // honestly think this is wrong... because this really does nothing
     public Money calculateTotalAssets(Portfolio portfolio, MarketDataService marketDataService) {
         // Similar to calculateTotalValue but might exclude liabilities
         return calculateTotalValue(portfolio, marketDataService);

@@ -23,9 +23,11 @@ import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
+@Builder
 public class Account implements ClassValidation {
     /*
     * TODO: Account will hold both transaction and the asset, it makes sense if you think about it. a portoflio can have 1 account,
@@ -43,10 +45,16 @@ public class Account implements ClassValidation {
     private final Instant systemCreationDate;
     private Instant lastSystemInteraction; // for calculating when you last interacted with this asset
     private int version;
-
+    
+    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency,
+            Money cashBalance, List<Asset> assets, List<Transaction> transactions) {
+        this(accountId, name, accountType, baseCurrency, cashBalance, assets, transactions,
+            Instant.now(), Instant.now(), 1);
+    }
 
     public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency,
-            Money cashBalance, List<Asset> asset, List<Transaction> transactions) {
+            Money cashBalance, List<Asset> assets, List<Transaction> transactions,
+            Instant systemCreationDate, Instant lastSystemInteraction, int version) {
         this.accountId = ClassValidation.validateParameter(accountId);
         this.name = ClassValidation.validateParameter(name);
         this.accountType = ClassValidation.validateParameter(accountType);
@@ -54,9 +62,9 @@ public class Account implements ClassValidation {
         this.cashBalance = ClassValidation.validateParameter(cashBalance);
         this.assets = assets != null ? assets : Collections.emptyList();
         this.transactions = transactions != null ? transactions : Collections.emptyList();
-        this.systemCreationDate = Instant.now();
-        this.lastSystemInteraction = this.systemCreationDate;
-        this.version = 1;
+        this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
+        this.lastSystemInteraction = ClassValidation.validateParameter(lastSystemInteraction);
+        this.version = version;
     }
     
     void deposit(Money money) {

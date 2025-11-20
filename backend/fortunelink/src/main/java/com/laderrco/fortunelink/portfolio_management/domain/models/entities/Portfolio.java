@@ -18,9 +18,11 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
+@Builder
 public class Portfolio implements ClassValidation {
     private final PortfolioId portfolioId;
     private final UserId userId;

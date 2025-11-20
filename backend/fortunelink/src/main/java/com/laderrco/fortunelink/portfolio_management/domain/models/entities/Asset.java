@@ -9,9 +9,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter // TODO: remove this and implement acutal getters later
+@Builder // TODO: remove this and implement your own
 public class Asset {
     private final AssetId assetId;
     private final AssetIdentifier assetIdentifier;

@@ -10,12 +10,12 @@ import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 
 public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDecimal rate, Instant exchangeRateDate, String source) implements ClassValidation {
     private final static int FOREX_SCALE = Precision.FOREX.getDecimalPlaces();
-
     public ExchangeRate {
         from = ClassValidation.validateParameter(from);
         to = ClassValidation.validateParameter(to);
         rate = ClassValidation.validateParameter(rate);
         exchangeRateDate = ClassValidation.validateParameter(exchangeRateDate);
+        
 
 
         if (rate.compareTo(BigDecimal.ZERO) <= 0) {
@@ -34,9 +34,10 @@ public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDeci
         rate = rate.setScale(FOREX_SCALE);
     }
 
-        public static ExchangeRate create(String from, String to, double rate, Instant date, String source) {
+    public static ExchangeRate create(String from, String to, double rate, Instant date, String source) {
         return new ExchangeRate(ValidatedCurrency.of(from), ValidatedCurrency.of(to), BigDecimal.valueOf(rate).setScale(FOREX_SCALE), date, source);
     }
+
     public static ExchangeRate create(ValidatedCurrency from, ValidatedCurrency to, double rate, Instant date, String source) {
         return new ExchangeRate(from, to, BigDecimal.valueOf(rate).setScale(FOREX_SCALE), date, source);
     }
