@@ -15,13 +15,17 @@ import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
+@ToString
+@Builder
 @Getter // TODO: Remove this later
 // TODO: we shold look back to version 2 with the diffrence transaction detail objects as we need to cram a lot of stuff in Transaction.java
 public class Transaction implements ClassValidation {
     // TODO: look at and compare if V2 Transaction makes sense of V5_1
-    private final TransactionId transacationId;
+    private final TransactionId transactionId;
     private TransactionType transactionType;
     private AssetIdentifier assetIdentifier; 
     private BigDecimal quantity; 
@@ -30,10 +34,10 @@ public class Transaction implements ClassValidation {
     private Instant transactionDate;
     private String notes;
 
-    public Transaction(TransactionId transacationId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes) {
+    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes) {
         validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
-        this.transacationId = ClassValidation.validateParameter(transacationId);
+        this.transactionId = ClassValidation.validateParameter(transactionId);
         this.transactionType = ClassValidation.validateParameter(transactionType);
         this.assetIdentifier = ClassValidation.validateParameter(assetIdentifier);
         this.quantity = ClassValidation.validateParameter(quantity);

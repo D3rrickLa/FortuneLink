@@ -6,8 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-import javax.security.auth.login.AccountNotFoundException;
-
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
@@ -96,7 +95,7 @@ public class Portfolio implements ClassValidation {
         return this.accounts.stream()
             .filter(a -> a.getAccountId().equals(accountId))
             .findFirst()
-            .orElseThrow(() ->new AccountNotFoundException());
+            .orElseThrow(() ->new AccountNotFoundException("Account cannot be found in portfolio"));
     } 
 
     public Money getTotalAssets(MarketDataService marketDataService, ExchangeRateService exchangeRateService) {

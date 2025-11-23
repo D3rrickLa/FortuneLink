@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -25,7 +26,9 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
+@ToString
 @Getter
 @Builder
 public class Account implements ClassValidation {
@@ -60,8 +63,8 @@ public class Account implements ClassValidation {
         this.accountType = ClassValidation.validateParameter(accountType);
         this.baseCurrency = ClassValidation.validateParameter(baseCurrency);
         this.cashBalance = ClassValidation.validateParameter(cashBalance);
-        this.assets = assets != null ? assets : Collections.emptyList();
-        this.transactions = transactions != null ? transactions : Collections.emptyList();
+        this.assets = assets != null ? new ArrayList<>(assets) : new ArrayList<>(); // Collections.emptyList returns an immutable list
+        this.transactions = transactions != null ? new ArrayList<>(transactions) : new ArrayList<>();
         this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
         this.lastSystemInteraction = ClassValidation.validateParameter(lastSystemInteraction);
         this.version = version;
@@ -152,10 +155,10 @@ public class Account implements ClassValidation {
     void addTransaction(Transaction transaction) {
         Objects.requireNonNull(transaction);
         boolean alreadyExists = this.transactions.stream()
-            .anyMatch(t -> t.getTransacationId().equals(transaction.getTransacationId()));
+            .anyMatch(t -> t.getTransactionId().equals(transaction.getTransactionId()));
 
         if (alreadyExists) {
-            throw new IllegalStateException(String.format("Transaction with id %s already exists in this account", transaction.getTransacationId()));
+            throw new IllegalStateException(String.format("Transaction with id %s already exists in this account", transaction.getTransactionId()));
         }
         this.transactions.add(transaction);
         updateMetadata();
@@ -163,7 +166,7 @@ public class Account implements ClassValidation {
 
     void removeTransaction(TransactionId transactionId) {
         Objects.requireNonNull(transactionId);
-        boolean removed = this.transactions.removeIf(t -> t.getTransacationId().equals(transactionId));
+        boolean removed = this.transactions.removeIf(t -> t.getTransactionId().equals(transactionId));
         if (removed) {
             recalculateStateAfterChange();
             updateMetadata();
@@ -174,12 +177,12 @@ public class Account implements ClassValidation {
         Objects.requireNonNull(transactionId);
         Objects.requireNonNull(updatedTransaction);
 
-        if (!updatedTransaction.getTransacationId().equals(transactionId)) {
+        if (!updatedTransaction.getTransactionId().equals(transactionId)) {
             throw new IllegalArgumentException("Cannot change transaction identity");
         }
 
         Optional<Transaction> existingTransaction = this.transactions.stream()
-            .filter(t -> t.getTransacationId().equals(transactionId))
+            .filter(t -> t.getTransactionId().equals(transactionId))
             .findAny();
 
         if (existingTransaction.isEmpty()) {
@@ -194,16 +197,21 @@ public class Account implements ClassValidation {
 
     public Asset getAsset(AssetIdentifier assetIdentifierId) {
         Objects.requireNonNull(assetIdentifierId);
+        // for (Asset asset : this.assets) {
+        //     System.out.println(asset);
+        // }
+        // System.out.println("\n\n\nend");
+
         return this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(assetIdentifierId))
             .findFirst()
-            .orElseThrow(() -> new AssetNotFoundException("Asset cannot be found with identifier, " +assetIdentifierId.getPrimaryId()));
+            .orElseThrow(() -> new AssetNotFoundException("Asset cannot be found with identifier, " + assetIdentifierId));
     }
 
     public Transaction getTransaction(TransactionId transactionId) {
         Objects.requireNonNull(transactionId);
         return this.transactions.stream()
-            .filter(t -> t.getTransacationId().equals(transactionId))
+            .filter(t -> t.getTransactionId().equals(transactionId))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException());
     }
@@ -236,6 +244,7 @@ public class Account implements ClassValidation {
     // business logic fo each transaction type to update the account state
     // interpreting what eahc type means for accoutn state
     private void applyTransaction(Transaction transaction) {
+        System.out.println(transaction.getTransactionType());
         switch (transaction.getTransactionType()) {
             case DEPOSIT:
                 this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
@@ -326,6 +335,7 @@ public class Account implements ClassValidation {
             );
             this.assets.add(newAsset);
         }
+        System.out.println(this.assets);
     }
 
     private void reduceAssetFromSell(Transaction transaction) {
@@ -338,7 +348,8 @@ public class Account implements ClassValidation {
         
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
             // Sold entire position
-            this.assets.remove(asset);
+            // boolean flag or DTO...
+            // this.assets.remove(asset);
         } 
         else if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException("Cannot sell more than owned");
@@ -352,6 +363,8 @@ public class Account implements ClassValidation {
             asset.adjustQuantity(newQuantity);
             asset.updateCostBasis(asset.getCostBasis().subtract(costBasisReduction));
         }
+
+        System.out.println(this.assets);
     }
 
     private void addOrUpdateAssetFromTransfer(Transaction transaction) {

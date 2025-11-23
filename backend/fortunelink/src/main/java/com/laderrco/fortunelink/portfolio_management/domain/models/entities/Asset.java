@@ -11,7 +11,9 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
+@ToString
 @Getter // TODO: remove this and implement acutal getters later
 @Builder // TODO: remove this and implement your own
 public class Asset {

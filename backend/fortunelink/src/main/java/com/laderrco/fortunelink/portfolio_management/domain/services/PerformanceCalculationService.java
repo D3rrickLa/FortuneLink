@@ -1,9 +1,9 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
-import javax.security.auth.login.AccountNotFoundException;
-
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -49,15 +49,15 @@ public class PerformanceCalculationService {
      */
     public Money calculateRealizedGains(Portfolio portfolio, List<Transaction> transactions) throws AccountNotFoundException {
         ValidatedCurrency portfolioBaseCurrency = portfolio.getPortfolioCurrency();
-        
+
         try {
             return transactions.stream()
                 .filter(tx -> tx.getTransactionType() == TransactionType.SELL)
                 .map(tx -> {
                     try {
                         return calculateSellGain(tx, portfolio);
-                    } catch (AccountNotFoundException e) {
-                        throw new RuntimeException(e); // Wrap in unchecked exception
+                    } catch (NoSuchElementException e) {
+                        throw new AccountNotFoundException(e); // Wrap in unchecked exception
                     }
                 })
                 .reduce(Money.ZERO(portfolioBaseCurrency), Money::add);
@@ -165,13 +165,13 @@ public class PerformanceCalculationService {
         Account account = portfolio.getAccount(
             portfolio.getAccounts().stream()
                 .filter(ac -> ac.getTransactions().stream()
-                    .anyMatch(t -> t.getTransacationId().equals(sellTransaction.getTransacationId())))
+                    .anyMatch(t -> t.getTransactionId().equals(sellTransaction.getTransactionId())))
                 .map(Account::getAccountId)
                 .findFirst()
                 .orElseThrow()
         ); // need to stream where account has this id
         Asset asset = account.getAsset(sellTransaction.getAssetIdentifier());
-        
+    
         // Calculate cost basis for the quantity sold
         // Using simple average cost method for MVP
         Money averageCostPerUnit = asset.getCostBasis().divide(asset.getQuantity());

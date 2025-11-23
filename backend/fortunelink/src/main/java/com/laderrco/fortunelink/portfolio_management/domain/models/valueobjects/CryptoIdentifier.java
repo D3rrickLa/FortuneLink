@@ -6,23 +6,30 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 public record CryptoIdentifier(String primaryId, String name, AssetType assetType, String unitOfTrade, Map<String, String> metadata) implements AssetIdentifier, ClassValidation {
+    public CryptoIdentifier {
+        primaryId = ClassValidation.validateParameter(primaryId, "Primary Id");
+        assetType = ClassValidation.validateParameter(assetType, "Asset Type");
+        name = ClassValidation.validateParameter(name, "Name");
+        unitOfTrade = ClassValidation.validateParameter(unitOfTrade, "Unit of Trade");
 
+        name = name.trim();
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Asset name cannot be blank");
+        }
+    }
     @Override
     public String getPrimaryId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPrimaryId'");
+        return primaryId;
     }
 
     @Override
     public String displayName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'displayName'");
+        return name;
     }
 
     @Override
     public AssetType getAssetType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAssetType'");
+        return AssetType.CRYPTO;
     }
     
 }
