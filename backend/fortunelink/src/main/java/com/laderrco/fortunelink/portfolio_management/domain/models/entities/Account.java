@@ -197,11 +197,6 @@ public class Account implements ClassValidation {
 
     public Asset getAsset(AssetIdentifier assetIdentifierId) {
         Objects.requireNonNull(assetIdentifierId);
-        // for (Asset asset : this.assets) {
-        //     System.out.println(asset);
-        // }
-        // System.out.println("\n\n\nend");
-
         return this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(assetIdentifierId))
             .findFirst()
@@ -244,7 +239,6 @@ public class Account implements ClassValidation {
     // business logic fo each transaction type to update the account state
     // interpreting what eahc type means for accoutn state
     private void applyTransaction(Transaction transaction) {
-        System.out.println(transaction.getTransactionType());
         switch (transaction.getTransactionType()) {
             case DEPOSIT:
                 this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
@@ -335,7 +329,6 @@ public class Account implements ClassValidation {
             );
             this.assets.add(newAsset);
         }
-        System.out.println(this.assets);
     }
 
     private void reduceAssetFromSell(Transaction transaction) {
@@ -349,7 +342,7 @@ public class Account implements ClassValidation {
         if (newQuantity.compareTo(BigDecimal.ZERO) == 0) {
             // Sold entire position
             // boolean flag or DTO...
-            // this.assets.remove(asset);
+            this.assets.remove(asset);
         } 
         else if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException("Cannot sell more than owned");
@@ -363,8 +356,6 @@ public class Account implements ClassValidation {
             asset.adjustQuantity(newQuantity);
             asset.updateCostBasis(asset.getCostBasis().subtract(costBasisReduction));
         }
-
-        System.out.println(this.assets);
     }
 
     private void addOrUpdateAssetFromTransfer(Transaction transaction) {

@@ -16,8 +16,6 @@ public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDeci
         rate = ClassValidation.validateParameter(rate);
         exchangeRateDate = ClassValidation.validateParameter(exchangeRateDate);
         
-
-
         if (rate.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Exchange rate must be positive."); // TODO: add better throw execeptions class
         }
@@ -40,6 +38,10 @@ public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDeci
 
     public static ExchangeRate create(ValidatedCurrency from, ValidatedCurrency to, double rate, Instant date, String source) {
         return new ExchangeRate(from, to, BigDecimal.valueOf(rate).setScale(FOREX_SCALE), date, source);
+    }
+
+    public static ExchangeRate createSingle(ValidatedCurrency fromTo, String source) {
+        return new ExchangeRate(fromTo, fromTo, BigDecimal.ONE, Instant.now(), source);
     }
 
     public Money convert(Money other) {

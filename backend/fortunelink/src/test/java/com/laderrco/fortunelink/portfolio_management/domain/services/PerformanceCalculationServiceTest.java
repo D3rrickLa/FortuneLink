@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -16,10 +17,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Port
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CryptoIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
@@ -28,10 +31,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.MarketDataUnavailableException;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -322,6 +327,10 @@ class PerformanceCalculationServiceTest {
             assertEquals(Money.ZERO(usd), realizedGains);
         }
 
+        // This test is NOT needed anymore, as we bypass the account lookup, we use the transactions
+        // directly
+        @Deprecated
+        @Disabled
         @Test
         @DisplayName("Should throw exception when account not found")
         void calculateRealizedGains_AccountNotFound() {
@@ -664,6 +673,353 @@ class PerformanceCalculationServiceTest {
         }
     }
 
+    /* OTHER TESTS FOR BUSINESS CASE */
+    @Nested
+    @DisplayName("Fractional and Fees Tests")
+    class FractionalAndFeesTests {
+        private TransactionId transactionId1;
+        private TransactionId transactionId2;
+
+        @BeforeEach
+        void setup() {
+            transactionId1 = TransactionId.randomId();
+            transactionId2 = TransactionId.randomId();
+        }
+
+        @Test
+        @DisplayName("Should handle fractional shares in realized gains calculation")
+        void calculateRealizedGains_FractionalShares() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            MarketIdentifier btcSymbol = new MarketIdentifier(
+                "BTC", 
+                null, 
+                AssetType.CRYPTO, 
+                "Bitcoin", 
+                "USD", 
+                null
+            );
+            
+            // Buy 0.5 BTC at $50,000 per BTC = $25,000 total
+            // Sell 0.3 BTC at $60,000 per BTC = $18,000 proceeds
+            // Cost basis for 0.3 BTC: (0.3 / 0.5) * $25,000 = $15,000
+            // Realized gain: $18,000 - $15,000 = $3,000
+            
+            Asset btcAsset = createAsset("asset-1", btcSymbol, "0.2", "10000", usd); // 0.2 remaining
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", btcSymbol, "0.5", "50000", usd));
+            transactions.add(createSellTransaction("tx-2", btcSymbol, "0.3", "60000", usd));
+            
+            Account account = createAccount(
+                "account-1", 
+                usd, 
+                "18000", 
+                List.of(btcAsset), 
+                Collections.emptyList()
+            );
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(portfolioId1)
+                .userId(userId1)
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .systemCreationDate(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+            
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(1));
+            
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+            
+            // Assert
+            assertEquals(new Money(new BigDecimal("3000.00"), usd), realizedGains);
+        }
+    
+        @Test
+        @DisplayName("Should include transaction fees in realized gain calculation")
+        void calculateRealizedGains_WithFees() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            MarketIdentifier appleSymbol = new MarketIdentifier(
+                "AAPL", 
+                null, 
+                AssetType.STOCK, 
+                "Apple Inc.", 
+                "USD", 
+                null
+            );
+            
+            // Buy 100 shares at $150 with $10 fee
+            // Total cost basis: (100 * $150) + $10 = $15,010
+            
+            // Sell 100 shares at $180 with $15 fee
+            // Gross proceeds: 100 * $180 = $18,000
+            // Net proceeds: $18,000 - $15 = $17,985
+            
+            // Realized gain: $17,985 - $15,010 = $2,975
+            
+            Asset appleStock = createAsset("asset-1", appleSymbol, "0", "0", usd);
+            
+            List<Transaction> transactions = new ArrayList<>();
+
+            Fee fee1 = new Fee(FeeType.BROKERAGE, new Money(new BigDecimal("10"), usd), ExchangeRate.createSingle(usd, null), null, Instant.now());
+            Fee fee2 = new Fee(FeeType.TRANSACTION_FEE, new Money(new BigDecimal("15"), usd), ExchangeRate.createSingle(usd, null), null, Instant.now());
+            
+            // Create buy transaction with fee
+            Transaction buyTx = Transaction.builder()
+                .transactionId(transactionId1)
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(appleSymbol)
+                .quantity(new BigDecimal("100"))
+                .pricePerUnit(new Money(new BigDecimal("150"), usd))
+                .fees(List.of(fee1))
+                .transactionDate(Instant.now().minus(Duration.ofDays(30)))
+                .notes("Buy with fee")
+                .build();
+            
+            // Create sell transaction with fee
+            Transaction sellTx = Transaction.builder()
+                .transactionId(transactionId2)
+                .transactionType(TransactionType.SELL)
+                .assetIdentifier(appleSymbol)
+                .quantity(new BigDecimal("100"))
+                .pricePerUnit(new Money(new BigDecimal("180"), usd))
+                .fees(List.of(fee2))
+                .transactionDate(Instant.now())
+                .notes("Sell with fee")
+                .build();
+            
+            transactions.add(buyTx);
+            transactions.add(sellTx);
+            
+            Account account = createAccount(
+                "account-1", 
+                usd, 
+                "17985", 
+                List.of(appleStock), 
+                Collections.emptyList()
+            );
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(portfolioId1)
+                .userId(userId1)
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .systemCreationDate(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+            
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(1));
+            
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+            
+            // Assert
+            // Net gain after fees: $2,975
+            assertEquals(new Money(new BigDecimal("2975.00"), usd), realizedGains);
+        }
+    
+        @Test
+        @DisplayName("Should handle multiple fractional sells from single fractional buy")
+        void calculateRealizedGains_MultipleFractionalSells() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            MarketIdentifier ethSymbol = new MarketIdentifier(
+                "ETH", 
+                null, 
+                AssetType.CRYPTO, 
+                "Ethereum", 
+                "USD", 
+                null
+            );
+            
+            // Buy 2.5 ETH at $2,000 per ETH = $5,000 total cost
+            // Sell 1.0 ETH at $2,500 = $2,500 proceeds, cost basis = $2,000, gain = $500
+            // Sell 1.5 ETH at $3,000 = $4,500 proceeds, cost basis = $3,000, gain = $1,500
+            // Total realized gain: $500 + $1,500 = $2,000
+            
+            Asset ethAsset = createAsset("asset-1", ethSymbol, "0", "0", usd);
+            
+            List<Transaction> transactions = new ArrayList<>();
+            transactions.add(createBuyTransaction("tx-1", ethSymbol, "2.5", "2000", usd));
+            transactions.add(createSellTransaction("tx-2", ethSymbol, "1.0", "2500", usd));
+            transactions.add(createSellTransaction("tx-3", ethSymbol, "1.5", "3000", usd));
+            
+            Account account = createAccount(
+                "account-1", 
+                usd, 
+                "7000", 
+                List.of(ethAsset), 
+                Collections.emptyList()
+            );
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(portfolioId1)
+                .userId(userId1)
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .systemCreationDate(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+            
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(1));
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(2));
+            
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+            
+            // Assert
+            assertEquals(new Money(new BigDecimal("2000.00"), usd), realizedGains);
+        }
+    
+        @Test
+        @DisplayName("Should correctly apply fees to fractional crypto trades")
+        void calculateRealizedGains_FractionalSharesWithFees() {
+            // Arrange
+            ValidatedCurrency usd = ValidatedCurrency.USD;
+            MarketIdentifier btcSymbol = new MarketIdentifier(
+                "BTC", 
+                null, 
+                AssetType.CRYPTO, 
+                "Bitcoin", 
+                "USD", 
+                null
+            );
+            
+            // Buy 0.5 BTC at $50,000 with $25 fee
+            // Total cost: (0.5 * $50,000) + $25 = $25,025
+            
+            // Sell 0.5 BTC at $60,000 with $30 fee
+            // Net proceeds: (0.5 * $60,000) - $30 = $29,970
+            
+            // Realized gain: $29,970 - $25,025 = $4,945
+            
+            Asset btcAsset = createAsset("asset-1", btcSymbol, "0", "0", usd);
+            Fee fee1 = new Fee(FeeType.GAS, new Money(new BigDecimal("25"), usd), ExchangeRate.createSingle(usd, null), null, Instant.now());
+            Fee fee2 = new Fee(FeeType.TRANSACTION_FEE, new Money(new BigDecimal("30"), usd), ExchangeRate.createSingle(usd, null), null, Instant.now());
+
+            
+            List<Transaction> transactions = new ArrayList<>();
+            
+            Transaction buyTx = Transaction.builder()
+                .transactionId(transactionId1)
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(btcSymbol)
+                .quantity(new BigDecimal("0.5"))
+                .pricePerUnit(new Money(new BigDecimal("50000"), usd))
+                .fees(List.of(fee1))
+                .transactionDate(Instant.now().minus(Duration.ofDays(10)))
+                .notes("Buy fractional BTC with fee")
+                .build();
+            
+            Transaction sellTx = Transaction.builder()
+                .transactionId(transactionId2)
+                .transactionType(TransactionType.SELL)
+                .assetIdentifier(btcSymbol)
+                .quantity(new BigDecimal("0.5"))
+                .pricePerUnit(new Money(new BigDecimal("60000"), usd))
+                .fees(List.of(fee2))
+                .transactionDate(Instant.now())
+                .notes("Sell fractional BTC with fee")
+                .build();
+            
+            transactions.add(buyTx);
+            transactions.add(sellTx);
+
+            IO.println(transactions);
+            
+            Account account = createAccount(
+                "account-1", 
+                usd, 
+                "29970", 
+                List.of(btcAsset), 
+                Collections.emptyList()
+            );
+            
+            Portfolio portfolio = Portfolio.builder()
+                .portfolioId(portfolioId1)
+                .userId(userId1)
+                .accounts(List.of(account))
+                .portfolioCurrency(usd)
+                .systemCreationDate(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+            
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
+            portfolio.recordTransaction(account.getAccountId(), transactions.get(1));
+            
+            // Act
+            Money realizedGains = performanceService.calculateRealizedGains(portfolio, transactions);
+            
+            // Assert
+            assertEquals(new Money(new BigDecimal("4945.00"), usd), realizedGains);
+        }
+    }
+
+    // FOR LATER
+    @Disabled
+    @Test
+    @DisplayName("Should handle multiple currencies correctly")
+    void calculateTotalReturn_MultipleCurrencies() {
+        // When portfolio has accounts in CAD and USD
+        // Ensure proper currency conversion
+    }
+
+    // Integration poitns to mock
+    // test integration between performance calculation service and portfolio valuation service
+    // FOR LATER
+    @Test
+    @Disabled
+    @DisplayName("Should correctly integrate with PortfolioValuationService")
+    void calculateTotalReturn_IntegrationWithValuation() {
+        // This tests the private method calculateCurrentValue()
+        // which instantiates PortfolioValuationService
+    }
+
+    // for larger portfolios
+    // FOR LATER
+    @Test
+    @Disabled
+    @DisplayName("Should handle portfolio with many transactions efficiently")
+    void calculateRealizedGains_LargeTransactionHistory() {
+        // Create portfolio with 1000+ transactions
+        // Ensure calculation completes in reasonable time
+    }
+
+    // FOR LATER / COVERRED BY OTHERS
+    @ParameterizedTest
+    @Disabled
+    @CsvSource({
+        "100, 150, 10, 180, 20.00",  // quantity, buy price, quantity, sell price, expected return %
+        "50, 200, 25, 180, -5.00",
+        "200, 50, 100, 75, 25.00"
+    })
+    @DisplayName("Should calculate total return for various scenarios")
+    void calculateTotalReturn_ParameterizedScenarios(
+        BigDecimal buyQty, BigDecimal buyPrice,
+        BigDecimal currentQty, BigDecimal currentPrice,
+        BigDecimal expectedReturn
+    ) {
+        // Test implementation
+    }
+
+    // FOR LATER
+    @Test
+    @Disabled
+    @DisplayName("Should handle MarketDataService failures gracefully")
+    void calculateUnrealizedGains_MarketDataFailure() {
+        when(marketDataService.getCurrentPrice(any()))
+            .thenThrow(new MarketDataUnavailableException(""));
+        
+        // How should the service handle this?
+        // Should it throw? Return partial data? Return zero?
+    }
+
     // Helper Methods for Test Data Creation
 
     private Portfolio createPortfolioWithTransactions(ValidatedCurrency currency) {
@@ -774,84 +1130,4 @@ class PerformanceCalculationServiceTest {
             .notes("Test withdrawal")
             .build();
     }
-
-    /* OTHER TESTS FOR BUSINESS CASE */
-    @Test
-    @DisplayName("Should handle fractional shares in realized gains calculation")
-    void calculateRealizedGains_FractionalShares() {
-        // Test with crypto or fractional stock purchases
-        // e.g., 0.5 BTC bought at $50,000, sold at $60,000
-    }
-
-    @Test
-    @DisplayName("Should handle multiple currencies correctly")
-    void calculateTotalReturn_MultipleCurrencies() {
-        // When portfolio has accounts in CAD and USD
-        // Ensure proper currency conversion
-    }
-
-    @Test
-    @DisplayName("Should include transaction fees in realized gain calculation")
-    void calculateRealizedGains_WithFees() {
-        // Sale proceeds should be reduced by fees
-        // This tests the calculateNetAmount() method
-    }
-
-    // Integration poitns to mock
-    // test integration between performance calculation service and portfolio valuation service
-    @Test
-    @DisplayName("Should correctly integrate with PortfolioValuationService")
-    void calculateTotalReturn_IntegrationWithValuation() {
-        // This tests the private method calculateCurrentValue()
-        // which instantiates PortfolioValuationService
-    }
-
-    // used simplifed average cost
-    @Test
-    @DisplayName("Should use simple average cost method (not ACB)")
-    void calculateRealizedGains_UsesAverageCostNotACB() {
-        // Document that this doesn't handle:
-        // - Return of Capital (ROC) adjustments
-        // - Superficial loss rules
-        // - Chronological FIFO tracking
-        
-        // Test shows the simplified calculation
-    }   
-
-    // for larger portfolios
-    @Test
-    @DisplayName("Should handle portfolio with many transactions efficiently")
-    void calculateRealizedGains_LargeTransactionHistory() {
-        // Create portfolio with 1000+ transactions
-        // Ensure calculation completes in reasonable time
-    }
-
-    // testing private helpers like cal total invested and cal sell gians - make private-packe for testing
-
-    @ParameterizedTest
-    @CsvSource({
-        "100, 150, 10, 180, 20.00",  // quantity, buy price, quantity, sell price, expected return %
-        "50, 200, 25, 180, -5.00",
-        "200, 50, 100, 75, 25.00"
-    })
-    @DisplayName("Should calculate total return for various scenarios")
-    void calculateTotalReturn_ParameterizedScenarios(
-        BigDecimal buyQty, BigDecimal buyPrice,
-        BigDecimal currentQty, BigDecimal currentPrice,
-        BigDecimal expectedReturn
-    ) {
-        // Test implementation
-    }
-
-    @Test
-    @DisplayName("Should handle MarketDataService failures gracefully")
-    void calculateUnrealizedGains_MarketDataFailure() {
-        when(marketDataService.getCurrentPrice(any()))
-            .thenThrow(new MarketDataUnavailableException(""));
-        
-        // How should the service handle this?
-        // Should it throw? Return partial data? Return zero?
-    }
-
-
 }
