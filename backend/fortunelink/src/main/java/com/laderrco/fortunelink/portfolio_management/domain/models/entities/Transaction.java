@@ -47,6 +47,12 @@ public class Transaction implements ClassValidation {
         this.notes = notes.isBlank() ? "" : notes.trim();
     }
 
+    /**
+     * This returns the 'total amount exchanged of the transaction' 
+     * so for a 'buy' order you are buying the stock + any other fees
+     * while for a 'sell' you are getting your money minus any other fees
+     * @return
+     */
     public Money calculateTotalCost() {
         return switch (transactionType) {
             case BUY -> calculateGrossAmount().add(calculateTotalFees());

@@ -163,40 +163,7 @@ public class PerformanceCalculationService {
         return totalDeposits.subtract(totalWithdrawals);
     }
 
-    // Add this comment to your current method
-    /**
-     * MVP LIMITATION: Uses simple average cost method.
-     * Does NOT properly implement Canadian Adjusted Cost Base (ACB) rules.
-     * Missing: ROC adjustments, superficial loss rules, chronological tracking.
-     * 
-     * For tax purposes, users should consult professional advice.
-     * TODO: Implement proper ACB calculation in future iteration
-     * 
-     * @throws AccountNotFoundException
-     */
-    private Money calculateSellGain(Transaction sellTransaction, Portfolio portfolio) throws AccountNotFoundException {
-        // Sale proceeds (price * quantity - fees)
-        Money saleProceeds = sellTransaction.calculateNetAmount();
-
-        // Get the asset to find its average cost basis
-        Account account = portfolio.getAccount(
-                portfolio.getAccounts().stream()
-                        .filter(ac -> ac.getTransactions().stream()
-                                .anyMatch(t -> t.getTransactionId().equals(sellTransaction.getTransactionId())))
-                        .map(Account::getAccountId)
-                        .findFirst()
-                        .orElseThrow()); // need to stream where account has this id
-        Asset asset = account.getAsset(sellTransaction.getAssetIdentifier());
-
-        // Calculate cost basis for the quantity sold
-        // Using simple average cost method for MVP
-        Money averageCostPerUnit = asset.getCostBasis().divide(asset.getQuantity());
-        Money costBasisForSale = averageCostPerUnit.multiply(sellTransaction.getQuantity());
-
-        // Realized gain = proceeds - cost basis
-        return saleProceeds.subtract(costBasisForSale);
-    }
-
+    
     // TODO: Proper ACB calculation
     /*
      * THIS ON MATTERS CALCULATING CAPTIAL GAINS AND LOSSES ON SALE
@@ -215,23 +182,12 @@ public class PerformanceCalculationService {
 
         for (Transaction tx : transactions) {
             if (tx.getTransactionType() == TransactionType.BUY) {
-                // Calculate TOTAL cost including fees
-                Money totalCost = tx.calculateNetAmount();
-                if (tx.calculateTotalFees() != null) {
-                    totalCost = totalCost.add(tx.calculateTotalFees());
-                }
-
-                // Store the ADJUSTED price per unit (includes fee)
+                Money totalCost = tx.calculateTotalCost(); // ✅ Includes fee
                 Money adjustedPricePerUnit = totalCost.divide(tx.getQuantity());
-
-                // Add to cost basis queue
-                costBasisQueue.add(new CostLot(
-                        tx.getQuantity(),
-                        adjustedPricePerUnit)
-                );
+                costBasisQueue.add(new CostLot(tx.getQuantity(), adjustedPricePerUnit));
             } 
             else if (tx.getTransactionType() == TransactionType.SELL) {
-                Money saleProceeds = tx.calculateNetAmount(); // TODO: Fix the logic here, something is wrong about the calc
+                Money saleProceeds = tx.calculateTotalCost(); // TODO: Fix the logic here, something is wrong about the calc
                 BigDecimal remainingToSell = tx.getQuantity();
                 Money totalCostBasis = Money.ZERO(baseCurrency);
 
