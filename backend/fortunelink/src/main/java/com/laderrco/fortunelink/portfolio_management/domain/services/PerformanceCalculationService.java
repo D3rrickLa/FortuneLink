@@ -9,8 +9,6 @@ import java.util.Queue;
 import java.util.stream.Collectors;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
-import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
-import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
@@ -172,6 +170,7 @@ public class PerformanceCalculationService {
      * 
      * !! USE THE SIMPLIFIED ACB, THE CALCULATESELLGAIN FOR DISPLAYING
      */
+    @SuppressWarnings("unused")
     private Money calcualteSellGainWithACB(Transaction sellTransaction, Portfolio portfolio) {
         throw new UnsupportedOperationException("Not yet implemented");
     }

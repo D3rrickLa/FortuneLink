@@ -160,5 +160,16 @@ public class ExchangeRateTest {
             assertThrows(CurrencyMismatchException.class, ()->exchangeRate.convert(usdMoney));
            
         }
+
+        @Test
+        public void givenValid_whenCreateStringInput_returnExchangeRate() {
+            ExchangeRate usdToCad = ExchangeRate.create("USD", "CAD", 1.37, date, null);
+            assertAll(
+                () -> assertEquals(USD, usdToCad.from()),
+                () -> assertEquals(CAD, usdToCad.to()),
+                () -> assertEquals(rate, usdToCad.rate()),
+                () -> assertEquals(date, usdToCad.exchangeRateDate())
+            );
+        }
     }
 }
