@@ -11,6 +11,10 @@ public record CryptoIdentifier(String primaryId, String name, AssetType assetTyp
         assetType = ClassValidation.validateParameter(assetType, "Asset Type");
         name = ClassValidation.validateParameter(name, "Name");
         unitOfTrade = ClassValidation.validateParameter(unitOfTrade, "Unit of Trade");
+        if (!assetType.equals(AssetType.CRYPTO)) {
+            throw new IllegalArgumentException("Asset type not the same for Crypto Identifier");
+        };
+
 
         name = name.trim();
         if (name.isBlank()) {

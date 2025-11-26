@@ -798,4 +798,4 @@ They don't have their own lifecycle - they're just utility classes with business
 
 
 -----
-for the application layser, we use DTOS for input and output
+for the application layer, we use DTOS for input and output

@@ -11,6 +11,7 @@ public record CashIdentifier(String id, ValidatedCurrency currency) implements A
         Objects.requireNonNull(id);
         this.id = id;
         this.currency = ValidatedCurrency.of(id);
+        
     }
 
     public CashIdentifier(String id) {

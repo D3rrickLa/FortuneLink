@@ -28,6 +28,17 @@ public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate ex
             throw new InvalidQuantityException("Fee amount cannot be negative.");
         }
 
+        if (metadata != null && !metadata.isEmpty()) {
+            for (Map.Entry<String, String> entry: metadata.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+
+                if (key.isBlank() || value.isBlank()) {
+                    throw new IllegalArgumentException("Metadata has empty properties in it, please remove");
+                }
+            }
+        }
+
         metadata = metadata == null ? Collections.emptyMap() : Collections.unmodifiableMap(metadata);
     }
 

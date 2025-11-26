@@ -13,6 +13,10 @@ public record MarketIdentifier(String primaryId, Map<String, String> secondaryId
         assetType = ClassValidation.validateParameter(assetType, "Asset Type");
         name = ClassValidation.validateParameter(name, "Name");
         unitOfTrade = ClassValidation.validateParameter(unitOfTrade, "Unit of Trade");
+        // TODO, find a better check system where I DON'T need to list out all the market identifiers
+        // if (!assetType.equals(AssetType.STOCK )) {
+        //     throw new IllegalArgumentException("Asset type not the same for Crypto Identifier");
+        // };
 
         name = name.trim();
         if (name.isBlank()) {
