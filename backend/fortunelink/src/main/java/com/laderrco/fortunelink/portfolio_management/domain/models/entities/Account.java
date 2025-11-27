@@ -79,7 +79,7 @@ public class Account implements ClassValidation {
             throw new IllegalArgumentException("Amount deposited must be greater than 0.");
         }
 
-        this.cashBalance.add(money);
+        this.cashBalance = this.cashBalance.add(money);
         updateMetadata();
     }
 
@@ -95,7 +95,7 @@ public class Account implements ClassValidation {
             throw new InsufficientFundsException("Insufficient cash balance");
         }
 
-        this.cashBalance.subtract(money);
+        this.cashBalance = this.cashBalance.subtract(money);
         updateMetadata();
     }
 
@@ -138,9 +138,12 @@ public class Account implements ClassValidation {
         }
         
         // Replace the entire asset object
+        System.out.println(this.assets.size());
         this.assets.remove(existingAsset.get());
+        System.out.println(this.assets.size());
         this.assets.add(updatedAsset);
-        recalculateStateAfterChange();
+        System.out.println(this.assets.size());
+        recalculateStateAfterChange(); // TODO something about this is causing us to 'lose the asset'
         updateMetadata();
     }
 
@@ -226,7 +229,8 @@ public class Account implements ClassValidation {
     private void recalculateStateAfterChange() {
         // recalc cash, assets, cost basis, etc.
         cashBalance = Money.ZERO(baseCurrency);
-        assets.clear();
+        assets.clear(); // TODO, related to shouldUpdateAssetSuccessfully unit test, this is the problem. Either fix the test or do something else
+            // most likely fix the tests because we need this as we are 'creating a new slate'
         
         // Replay all transactions in order
         transactions.stream()
