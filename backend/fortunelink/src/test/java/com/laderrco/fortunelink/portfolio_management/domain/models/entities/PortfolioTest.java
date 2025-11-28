@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -119,7 +119,10 @@ class PortfolioTest {
                 .name("TFSA Account")
                 .accountType(AccountType.TFSA)
                 .baseCurrency(ValidatedCurrency.CAD)
+                .cashBalance(Money.ZERO("CAD"))
                 .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
                 .build();
             
             account2 = Account.builder()
@@ -127,7 +130,10 @@ class PortfolioTest {
                 .name("RRSP Account")
                 .accountType(AccountType.RRSP)
                 .baseCurrency(ValidatedCurrency.CAD)
+                .cashBalance(Money.ZERO("CAD"))
                 .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
                 .build();
         }
 
@@ -184,7 +190,10 @@ class PortfolioTest {
                 .name("TFSA Account") // Same name as account1
                 .accountType(AccountType.TFSA)
                 .baseCurrency(ValidatedCurrency.CAD)
+                .cashBalance(Money.ZERO("CAD"))
                 .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
                 .build();
 
             // When & Then
@@ -364,8 +373,8 @@ class PortfolioTest {
         @DisplayName("Should calculate total assets for empty portfolio")
         void shouldCalculateTotalAssetsForEmptyPortfolio() {
             // Given
-            when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
-                .thenReturn(Money.ZERO(portfolioCurrency));
+            // this is NOT needed
+            // when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class))).thenReturn(Money.ZERO(portfolioCurrency));
 
             // When
             Money totalAssets = portfolio.getTotalAssets(marketDataService, exchangeRateService);
@@ -384,7 +393,7 @@ class PortfolioTest {
             Money account1Value = Money.of(new BigDecimal("10000"), ValidatedCurrency.CAD);
             Money account2Value = Money.of(new BigDecimal("5000"), ValidatedCurrency.CAD);
 
-            when(marketDataService.getCurrentPrice(any())).thenReturn(mock(Money.class));
+            // when(marketDataService.getCurrentPrice(any())).thenReturn(mock(Money.class));
             when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
                 .thenReturn(account1Value, account2Value);
 
@@ -393,7 +402,7 @@ class PortfolioTest {
 
             // Then
             verify(exchangeRateService, times(2)).convert(any(Money.class), eq(portfolioCurrency));
-            assertEquals(account2Value, totalAssets);
+            assertEquals(account2Value.add(account1Value), totalAssets);
         }
 
         @Test
@@ -700,19 +709,67 @@ class PortfolioTest {
             portfolio = new Portfolio(userId, portfolioCurrency);
         }
 
-        @Test
-        @DisplayName("Should calculate net worth equal to total assets")
+      @Test
+        @DisplayName("Should calculate net worth equal to total assets for portfolio with accounts")
         void shouldCalculateNetWorthEqualToTotalAssets() {
             // Given
-            Money expectedValue = Money.of(new BigDecimal("50000"), portfolioCurrency);
-            when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
-                .thenReturn(expectedValue);
+            Account account1 = spy(createTestAccount("Account 1", AccountType.TFSA));
+            Account account2 = spy(createTestAccount("Account 2", AccountType.RRSP));
+            
+            portfolio.addAccount(account1);
+            portfolio.addAccount(account2);
+
+            Money account1Value = Money.of(new BigDecimal("30000"), ValidatedCurrency.CAD);
+            Money account2Value = Money.of(new BigDecimal("20000"), ValidatedCurrency.CAD);
+            Money expectedTotal = Money.of(new BigDecimal("50000"), portfolioCurrency);
+
+            // Mock the calculateTotalValue for each account
+            when(account1.calculateTotalValue(marketDataService)).thenReturn(account1Value);
+            when(account2.calculateTotalValue(marketDataService)).thenReturn(account2Value);
+
+            // Mock exchange rate service to return the same values (no conversion needed)
+            when(exchangeRateService.convert(account1Value, portfolioCurrency)).thenReturn(account1Value);
+            when(exchangeRateService.convert(account2Value, portfolioCurrency)).thenReturn(account2Value);
 
             // When
             Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
 
             // Then
-            assertThat(netWorth).isEqualTo(expectedValue);
+            assertThat(netWorth.amount()).isEqualByComparingTo(expectedTotal.amount());
+            verify(account1).calculateTotalValue(marketDataService);
+            verify(account2).calculateTotalValue(marketDataService);
+            verify(exchangeRateService, times(2)).convert(any(Money.class), eq(portfolioCurrency));
+        }
+
+        @Test
+        @DisplayName("Should calculate net worth as zero for empty portfolio")
+        void shouldCalculateNetWorthAsZeroForEmptyPortfolio() {
+            // When
+            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
+
+            // Then
+            assertThat(netWorth.amount()).isEqualByComparingTo(BigDecimal.ZERO);
+        }
+
+        @Test
+        @DisplayName("Should handle currency conversion in net worth calculation")
+        void shouldHandleCurrencyConversionInNetWorth() {
+            // Given
+            Account usdAccount = spy(createTestAccount("USD Account", AccountType.INVESTMENT));
+            portfolio.addAccount(usdAccount);
+
+            Money usdValue = Money.of(new BigDecimal("10000"), ValidatedCurrency.USD);
+            Money cadValue = Money.of(new BigDecimal("13500"), ValidatedCurrency.CAD); // Assuming 1.35 exchange rate
+
+            when(usdAccount.calculateTotalValue(marketDataService)).thenReturn(usdValue);
+            when(exchangeRateService.convert(usdValue, portfolioCurrency)).thenReturn(cadValue);
+
+            // When
+            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
+
+            // Then
+            assertThat(netWorth.amount()).isEqualByComparingTo(cadValue.amount());
+            verify(exchangeRateService).convert(usdValue, portfolioCurrency);
         }
     }
 
@@ -723,7 +780,10 @@ class PortfolioTest {
             .name(name)
             .accountType(type)
             .baseCurrency(ValidatedCurrency.CAD)
+            .cashBalance(Money.ZERO("CAD"))
             .assets(new ArrayList<>())
+            .systemCreationDate(Instant.now())
+            .lastSystemInteraction(Instant.now())
             .build();
     }
 
@@ -731,9 +791,12 @@ class PortfolioTest {
         return Asset.builder()
             .assetId(assetId1)
             .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+            .assetType(AssetType.STOCK)
+            .currency(ValidatedCurrency.CAD)
             .quantity((new BigDecimal("10")))
             .costBasis(Money.of(new BigDecimal("1000"), ValidatedCurrency.CAD))
             .acquiredOn(Instant.now())
+            .lastSystemInteraction(Instant.now())
             .build();
     }
 
@@ -745,6 +808,7 @@ class PortfolioTest {
             .quantity((new BigDecimal("10")))
             .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.CAD)))
             .transactionDate(Instant.now())
+            .notes("something here")
             .build();
     }
 
@@ -756,6 +820,7 @@ class PortfolioTest {
             .quantity((new BigDecimal("10")))
             .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.CAD)))
             .transactionDate(date)
+            .notes("something here")
             .build();
     }
 
@@ -767,6 +832,7 @@ class PortfolioTest {
             .quantity((new BigDecimal("10")))
             .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.CAD)))
             .transactionDate(Instant.now())
+            .notes("something here")
             .build();
     }
 
@@ -778,6 +844,7 @@ class PortfolioTest {
             .quantity((new BigDecimal("10")))
             .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.CAD)))
             .transactionDate(date)
+            .notes("something here")
             .build();
     }
 }

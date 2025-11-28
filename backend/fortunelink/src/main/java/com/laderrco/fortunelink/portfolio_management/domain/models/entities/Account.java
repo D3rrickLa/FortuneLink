@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.UnsupportedTransactionTypeException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
@@ -185,7 +186,7 @@ public class Account implements ClassValidation {
             .findAny();
 
         if (existingTransaction.isEmpty()) {
-            throw new IllegalStateException(transactionId.toString());
+            throw new TransactionNotFoundException(String.format("%s cannot be found", transactionId.toString()));
         }
 
         this.transactions.remove(existingTransaction.get());
