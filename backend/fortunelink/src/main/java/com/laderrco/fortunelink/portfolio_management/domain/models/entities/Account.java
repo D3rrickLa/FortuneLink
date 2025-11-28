@@ -138,12 +138,9 @@ public class Account implements ClassValidation {
         }
         
         // Replace the entire asset object
-        System.out.println(this.assets.size());
         this.assets.remove(existingAsset.get());
-        System.out.println(this.assets.size());
         this.assets.add(updatedAsset);
-        System.out.println(this.assets.size());
-        recalculateStateAfterChange(); // TODO something about this is causing us to 'lose the asset'
+        recalculateStateAfterChange(); // TODO something about this is causing us to 'lose the asset' Thinkg this was fixed
         updateMetadata();
     }
 
@@ -231,6 +228,7 @@ public class Account implements ClassValidation {
         cashBalance = Money.ZERO(baseCurrency);
         assets.clear(); // TODO, related to shouldUpdateAssetSuccessfully unit test, this is the problem. Either fix the test or do something else
             // most likely fix the tests because we need this as we are 'creating a new slate'
+        // The tests has been adjusted I'm pretty sure
         
         // Replay all transactions in order
         transactions.stream()
@@ -303,6 +301,7 @@ public class Account implements ClassValidation {
                 break;
                 
             default:
+                // Had to create a new TransactionTypr for this called 'OTHER'
                 throw new UnsupportedTransactionTypeException(transaction.getTransactionType().toString() + " is not a supported transaction type");
         }
     }

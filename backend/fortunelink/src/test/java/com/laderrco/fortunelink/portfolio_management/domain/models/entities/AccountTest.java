@@ -25,10 +25,12 @@ import org.mockito.MockitoAnnotations;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.UnsupportedTransactionTypeException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
@@ -1432,6 +1434,75 @@ class AccountTest {
             assertEquals(new BigDecimal("9000").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
         }
 
+                @Test
+        @DisplayName("Should apply transfer in logic to account")
+        void ShouldAddNewAssetFromTransfer() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            AssetIdentifier assetIdentifier = mock(AssetIdentifier.class);
+            when(assetIdentifier.getPrimaryId()).thenReturn("AAPL");
+
+            TransactionId txId = mock(TransactionId.class);
+            Transaction transaction = mock(Transaction.class);
+
+            when(transaction.getTransactionId()).thenReturn(txId);
+            when(transaction.getTransactionType()).thenReturn(TransactionType.TRANSFER_IN);
+            when(transaction.getAssetIdentifier()).thenReturn(assetIdentifier);
+            when(transaction.getAssetIdentifier().getAssetType()).thenReturn(AssetType.ETF);
+            when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(50));
+            when(transaction.calculateNetAmount()).thenReturn(Money.of(2000, "USD"));
+            when(transaction.calculateTotalCost()).thenReturn(Money.of(20, "USD"));
+            when(transaction.getTransactionDate()).thenReturn(Instant.now());
+
+            account.recordTransaction(transaction);
+
+            assertEquals(1, account.getAssets().size());
+        }
+
+        @Test
+        @DisplayName("Should apply transfer out logic to account")
+        void ShouldRemoveAssetFromTransferOut() {
+            Asset testAAPLAsset = mock(Asset.class);
+            when(testAAPLAsset.getAssetIdentifier()).thenReturn(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
+            when(testAAPLAsset.getQuantity()).thenReturn(BigDecimal.valueOf(50));
+            
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                List.of(testAAPLAsset),
+                null
+            );
+
+            AssetIdentifier assetIdentifier = mock(AssetIdentifier.class);
+            when(assetIdentifier.getPrimaryId()).thenReturn("AAPL");
+
+            TransactionId txId = mock(TransactionId.class);
+            Transaction transaction = mock(Transaction.class);
+
+            when(transaction.getTransactionId()).thenReturn(txId);
+            when(transaction.getTransactionType()).thenReturn(TransactionType.TRANSFER_OUT);
+            when(transaction.getAssetIdentifier()).thenReturn(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
+            when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(50));
+            when(transaction.calculateNetAmount()).thenReturn(Money.of(2000, "USD"));
+            when(transaction.calculateTotalCost()).thenReturn(Money.of(20, "USD"));
+            when(transaction.getTransactionDate()).thenReturn(Instant.now());
+
+            account.recordTransaction(transaction);
+            assertEquals(0, account.getAssets().size());
+
+        }
+
         @Test
         @DisplayName("Should throw AssetNotFoundException when selling non-existent asset")
         void shouldThrowExceptionWhenSellingNonExistentAsset() {
@@ -1463,6 +1534,40 @@ class AccountTest {
                 account.recordTransaction(transaction)
             );
         }
+
+        @Test
+        @DisplayName("Should throw UnsupportedTransactionTypeException when given a non-functional transaction type")
+        void shouldThrowExceptionWhenApplyTransactionIsGivenNonStandardInput() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            AssetIdentifier assetIdentifier = mock(AssetIdentifier.class);
+            when(assetIdentifier.getPrimaryId()).thenReturn("AAPL");
+
+            TransactionId txId = mock(TransactionId.class);
+            Transaction transaction = mock(Transaction.class);
+            Money proceeds = Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD);
+
+            when(transaction.getTransactionId()).thenReturn(txId);
+            when(transaction.getTransactionType()).thenReturn(TransactionType.OTHER);
+            when(transaction.getAssetIdentifier()).thenReturn(assetIdentifier);
+            when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(50));
+            when(transaction.calculateNetAmount()).thenReturn(proceeds);
+            when(transaction.getTransactionDate()).thenReturn(Instant.now());
+
+            assertThrows(UnsupportedTransactionTypeException.class, () ->
+                account.recordTransaction(transaction)
+            );
+        }
+
+
     }
 
     @Nested
