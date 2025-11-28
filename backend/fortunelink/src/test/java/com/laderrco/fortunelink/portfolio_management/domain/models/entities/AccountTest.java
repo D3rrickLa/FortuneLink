@@ -641,12 +641,15 @@ class AccountTest {
             when(updatedTransaction.calculateTotalCost()).thenReturn(newCost);
             when(updatedTransaction.getTransactionDate()).thenReturn(Instant.now());
             
+            // We are not calling update asset directly, but rather we are calling it through the public
             account.updateTransaction(txId, updatedTransaction);
             
             // Asset should still exist with updated cost basis
             assertEquals(1, account.getAssets().size());
             assertEquals(Money.of(new BigDecimal("5500").setScale(Precision.getMoneyPrecision()), ValidatedCurrency.USD), account.getTransactions().get(0).calculateTotalCost());
         }
+
+        // TODO: actually test teh updateAsset method
 
         @Test
         @DisplayName("Should throw exception when asset IDs don't match")

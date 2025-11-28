@@ -140,7 +140,7 @@ public class Account implements ClassValidation {
         // Replace the entire asset object
         this.assets.remove(existingAsset.get());
         this.assets.add(updatedAsset);
-        recalculateStateAfterChange(); // TODO something about this is causing us to 'lose the asset' Thinkg this was fixed
+        recalculateStateAfterChange(); // TODO something about this is causing us to 'lose the asset' Think this was fixed, UPDATE: it's not
         updateMetadata();
     }
 
@@ -229,6 +229,8 @@ public class Account implements ClassValidation {
         assets.clear(); // TODO, related to shouldUpdateAssetSuccessfully unit test, this is the problem. Either fix the test or do something else
             // most likely fix the tests because we need this as we are 'creating a new slate'
         // The tests has been adjusted I'm pretty sure
+        // adding onto this point, we might want to do something similar to the transactions, we can like save the 
+        // assets in a temp or pull this information from the stream transactions to generate the assets
         
         // Replay all transactions in order
         transactions.stream()
