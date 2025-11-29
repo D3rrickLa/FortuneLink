@@ -17,7 +17,7 @@ public record ExchangeRate(ValidatedCurrency from, ValidatedCurrency to, BigDeci
         exchangeRateDate = ClassValidation.validateParameter(exchangeRateDate);
         
         if (rate.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Exchange rate must be positive."); // TODO: add better throw execeptions class
+            throw new IllegalArgumentException("Exchange rate must be positive."); // TODO: add better throw exceptions class
         }
         
         // we have a 'is identity check' we are allowing USD = USD

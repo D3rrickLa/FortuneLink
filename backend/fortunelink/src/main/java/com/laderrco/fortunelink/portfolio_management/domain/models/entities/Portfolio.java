@@ -112,8 +112,6 @@ public class Portfolio implements ClassValidation {
 
     // chronological order
     public List<Transaction> getTransactionHistory(Instant startDate, Instant endDate) {
-        // TODO: logic check so if both are empty, we assume all, and if start date empty, everything 
-        // up until end date. end date can't be empty
         if (endDate == null) {
             throw new IllegalArgumentException("End date cannot be null");
         }

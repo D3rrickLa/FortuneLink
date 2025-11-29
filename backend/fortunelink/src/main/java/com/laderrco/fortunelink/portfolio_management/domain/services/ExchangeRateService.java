@@ -7,8 +7,6 @@ import com.laderrco.fortunelink.shared.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public interface ExchangeRateService {
-    // TODO make this when implemented throw 
-    // Currrency are the same Exception
     public BigDecimal getExchangeRate(ValidatedCurrency from, ValidatedCurrency to) throws CurrencyAreTheSameException; 
     public Money convert(Money amount, ValidatedCurrency targetCurrency);
 }

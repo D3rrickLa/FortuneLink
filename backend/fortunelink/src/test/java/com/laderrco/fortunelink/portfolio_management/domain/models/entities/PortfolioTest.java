@@ -791,7 +791,6 @@ class PortfolioTest {
         return Asset.builder()
             .assetId(assetId1)
             .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
-            .assetType(AssetType.STOCK)
             .currency(ValidatedCurrency.CAD)
             .quantity((new BigDecimal("10")))
             .costBasis(Money.of(new BigDecimal("1000"), ValidatedCurrency.CAD))

@@ -16,7 +16,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.shared.enums.Precision;
@@ -27,7 +26,6 @@ public class AssetTest {
     
     private AssetId assetId;
     private AssetIdentifier assetIdentifier;
-    private AssetType assetType;
     private ValidatedCurrency currency;
     private BigDecimal quantity;
     private Money costBasis;
@@ -37,7 +35,6 @@ public class AssetTest {
     void setUp() {
         assetId = mock(AssetId.class);
         assetIdentifier = mock(AssetIdentifier.class);
-        assetType = AssetType.STOCK;
         currency = ValidatedCurrency.USD;
         quantity = BigDecimal.valueOf(100);
         costBasis = Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD);
@@ -54,7 +51,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 quantity,
                 costBasis,
                 acquiredOn
@@ -63,7 +59,6 @@ public class AssetTest {
             assertNotNull(asset);
             assertEquals(assetId, asset.getAssetId());
             assertEquals(assetIdentifier, asset.getAssetIdentifier());
-            assertEquals(assetType, asset.getAssetType());
             assertEquals(currency, asset.getCurrency());
             assertEquals(quantity, asset.getQuantity());
             assertEquals(costBasis, asset.getCostBasis());
@@ -79,7 +74,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 quantity,
                 cadCostBasis,
                 acquiredOn
@@ -94,7 +88,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 quantity,
                 costBasis,
                 acquiredOn
@@ -110,7 +103,6 @@ public class AssetTest {
                 new Asset(
                     null,
                     assetIdentifier,
-                    assetType,
                     quantity,
                     costBasis,
                     acquiredOn
@@ -124,22 +116,6 @@ public class AssetTest {
             assertThrows(NullPointerException.class, () -> 
                 new Asset(
                     assetId,
-                    null,
-                    assetType,
-                    quantity,
-                    costBasis,
-                    acquiredOn
-                )
-            );
-        }
-
-        @Test
-        @DisplayName("Should throw NullPointerException when assetType is null")
-        void shouldThrowExceptionWhenAssetTypeIsNull() {
-            assertThrows(NullPointerException.class, () -> 
-                new Asset(
-                    assetId,
-                    assetIdentifier,
                     null,
                     quantity,
                     costBasis,
@@ -155,7 +131,6 @@ public class AssetTest {
                 new Asset(
                     assetId,
                     assetIdentifier,
-                    assetType,
                     null,
                     costBasis,
                     acquiredOn
@@ -170,7 +145,6 @@ public class AssetTest {
                 new Asset(
                     assetId,
                     assetIdentifier,
-                    assetType,
                     quantity,
                     null,
                     acquiredOn
@@ -185,7 +159,6 @@ public class AssetTest {
                 new Asset(
                     assetId,
                     assetIdentifier,
-                    assetType,
                     quantity,
                     costBasis,
                     null
@@ -204,7 +177,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -224,7 +196,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -241,7 +212,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -258,7 +228,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 quantity,
                 costBasis,
                 acquiredOn
@@ -275,7 +244,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 quantity,
                 costBasis,
                 acquiredOn
@@ -302,7 +270,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -319,7 +287,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -337,7 +305,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -357,7 +325,6 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
                 quantity,
                 costBasis,
                 acquiredOn
@@ -374,7 +341,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -398,7 +365,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -416,7 +383,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -438,7 +405,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -460,7 +427,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -477,7 +444,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -495,7 +462,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -521,7 +488,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
                 acquiredOn
@@ -539,7 +506,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(33.333),
                 Money.of(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
                 acquiredOn
@@ -557,7 +524,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.ZERO,
                 Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
                 acquiredOn
@@ -579,7 +546,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -597,7 +564,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.ZERO,
                 costBasis,
                 acquiredOn
@@ -615,7 +582,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -638,7 +605,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -655,7 +622,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -678,7 +645,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
                 acquiredOn
@@ -699,7 +666,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
                 acquiredOn
@@ -720,7 +687,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
                 acquiredOn
@@ -738,7 +705,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -760,7 +727,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.ZERO,
                 costBasis,
                 acquiredOn
@@ -775,7 +742,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -792,7 +759,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 BigDecimal.valueOf(100),
                 costBasis,
                 acquiredOn
@@ -815,7 +782,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn
@@ -840,7 +807,7 @@ public class AssetTest {
             Asset asset = new Asset(
                 assetId,
                 assetIdentifier,
-                assetType,
+                
                 quantity,
                 costBasis,
                 acquiredOn

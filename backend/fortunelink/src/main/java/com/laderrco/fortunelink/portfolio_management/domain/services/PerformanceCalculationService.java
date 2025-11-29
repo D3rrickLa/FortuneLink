@@ -181,12 +181,12 @@ public class PerformanceCalculationService {
 
         for (Transaction tx : transactions) {
             if (tx.getTransactionType() == TransactionType.BUY) {
-                Money totalCost = tx.calculateTotalCost(); // ✅ Includes fee
+                Money totalCost = tx.calculateTotalCost(); // Includes fee
                 Money adjustedPricePerUnit = totalCost.divide(tx.getQuantity());
                 costBasisQueue.add(new CostLot(tx.getQuantity(), adjustedPricePerUnit));
             } 
             else if (tx.getTransactionType() == TransactionType.SELL) {
-                Money saleProceeds = tx.calculateTotalCost(); // TODO: Fix the logic here, something is wrong about the calc
+                Money saleProceeds = tx.calculateTotalCost();
                 BigDecimal remainingToSell = tx.getQuantity();
                 Money totalCostBasis = Money.ZERO(baseCurrency);
 

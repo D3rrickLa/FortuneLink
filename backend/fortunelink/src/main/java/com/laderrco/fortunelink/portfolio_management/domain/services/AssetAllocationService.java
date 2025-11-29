@@ -34,7 +34,7 @@ public class AssetAllocationService {
             .flatMap(account -> account.getAssets().stream())
             .forEach(asset -> {
                 Money assetValue = valuationService.calculateAssetValue(asset, marketDataService);
-                valueByType.merge(asset.getAssetType(), assetValue, Money::add);
+                valueByType.merge(asset.getAssetIdentifier().getAssetType(), assetValue, Money::add);
             });
         
         // Convert to percentages

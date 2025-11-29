@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -19,7 +18,6 @@ import lombok.ToString;
 public class Asset {
     private final AssetId assetId;
     private final AssetIdentifier assetIdentifier;
-    private final AssetType assetType;
     private final ValidatedCurrency currency; // the currency the asset is listed in
     private BigDecimal quantity;
     private Money costBasis; // total cost of all purchaes (feed included)
@@ -28,12 +26,11 @@ public class Asset {
     private Instant lastSystemInteraction;
     private int version;
 
-    private Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, ValidatedCurrency currency,
+    private Asset(AssetId assetId, AssetIdentifier assetIdentifier, ValidatedCurrency currency,
             BigDecimal quantity, Money costBasis, Instant acquiredOn, Instant lastSystemInteraction, int version) {
         
         Objects.requireNonNull(assetId);
         Objects.requireNonNull(assetIdentifier);
-        Objects.requireNonNull(assetType);
         Objects.requireNonNull(currency);
         Objects.requireNonNull(quantity);
         Objects.requireNonNull(costBasis);
@@ -42,7 +39,6 @@ public class Asset {
 
         this.assetId = assetId;
         this.assetIdentifier = assetIdentifier;
-        this.assetType = assetType;
         this.currency = currency;
         this.quantity = quantity;
         this.costBasis = costBasis;
@@ -51,11 +47,10 @@ public class Asset {
         this.version = version;
     }
 
-    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, AssetType assetType, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
+    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
         this(
             assetId,
             assetIdentifier,
-            assetType,
             costBasis.currency(),
             quantity,
             costBasis,
@@ -66,6 +61,7 @@ public class Asset {
     }
 
     // TODO: check and see if we should use V2 remove and add Position methods as we can eliminate the updateCostBasis
+    // UPDATE we did some hybrid workflow
 
     // MUTATION METHODS (package-private - only Portfolio can call) //
     void adjustQuantity(BigDecimal additionalQuantity) {

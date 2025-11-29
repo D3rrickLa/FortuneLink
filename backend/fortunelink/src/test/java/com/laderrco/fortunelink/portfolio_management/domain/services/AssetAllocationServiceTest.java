@@ -27,6 +27,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asse
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -565,7 +566,9 @@ public class AssetAllocationServiceTest {
     
     private Asset createAsset(AssetType type) {
         Asset asset = mock(Asset.class);
-        when(asset.getAssetType()).thenReturn(type);
+        AssetIdentifier assetIdentifier = mock(AssetIdentifier.class);
+        when(asset.getAssetIdentifier()).thenReturn(assetIdentifier);
+        when(assetIdentifier.getAssetType()).thenReturn(type);
         return asset;
     }
 }

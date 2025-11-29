@@ -70,7 +70,6 @@ public class PortfolioValuationServiceTest {
         Asset appleStock = Asset.builder()
             .assetId(assetId1)
             .assetIdentifier(appleSymbol)
-            .assetType(AssetType.STOCK)
             .quantity(new BigDecimal("10"))
             .currency(usd)
             .costBasis(new Money(new BigDecimal("1500"), usd))
@@ -114,7 +113,6 @@ public class PortfolioValuationServiceTest {
         verify(marketDataService, times(1)).getCurrentPrice(appleSymbol);
     }
 
-    // TODO: This is a trash test because the method itself is trash, we need to come up with a) a better method and better test
     @Test
     @DisplayName("Should calculate total portfolio value with single account and single asset")
     void calculateTotalAssets_SingleAccountSingleAsset() {
@@ -125,7 +123,6 @@ public class PortfolioValuationServiceTest {
         Asset appleStock = Asset.builder()
             .assetId(assetId1)
             .assetIdentifier(appleSymbol)
-            .assetType(AssetType.STOCK)
             .quantity(new BigDecimal("10"))
             .currency(usd)
             .costBasis(new Money(new BigDecimal("1500"), usd))
@@ -343,7 +340,6 @@ public class PortfolioValuationServiceTest {
         Asset bitcoin = Asset.builder()
             .assetId(assetId1)
             .assetIdentifier(bitcoinSymbol)
-            .assetType(AssetType.CRYPTO)
             .quantity(new BigDecimal("0.5"))
             .costBasis(new Money(new BigDecimal("20000"), usd))
             .currency(usd)
@@ -384,7 +380,6 @@ public class PortfolioValuationServiceTest {
         return Asset.builder()
             .assetId(AssetId.randomId())
             .assetIdentifier(symbol)
-            .assetType(AssetType.STOCK)
             .currency(currency)
             .quantity(new BigDecimal(quantity))
             .costBasis(new Money(BigDecimal.ZERO, ValidatedCurrencyCAD))

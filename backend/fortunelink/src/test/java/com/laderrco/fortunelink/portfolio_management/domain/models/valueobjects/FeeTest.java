@@ -119,7 +119,7 @@ public class FeeTest {
                 .isThrownBy(() -> Fee.builder()
                         .feeType(FeeType.COMMISSION)
                         .amountInNativeCurrency(money(1))
-                        .metadata(Map.of(" ", " ")) // TODO validate this
+                        .metadata(Map.of(" ", " "))
                         .exchangeRate(exchangeRate())
                         .feeDate(Instant.now())
                         .build());
