@@ -29,6 +29,7 @@ import org.mockito.MockitoAnnotations;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.UnsupportedTransactionTypeException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
@@ -655,6 +656,31 @@ class AccountTest {
             assertEquals(1, account.getAssets().size());
             assertEquals(Money.of(new BigDecimal("5500").setScale(Precision.getMoneyPrecision()), ValidatedCurrency.USD), account.getTransactions().get(0).calculateTotalCost());
         }
+
+        @Test
+        @DisplayName("Testing the exception of not found asset")
+        void shouldThrowExceptionWhenTransactionNotFound() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+            // Given
+            TransactionId nonExistentId = TransactionId.randomId();
+            Transaction transaction = mock(Transaction.class);
+            when(transaction.getTransactionId()).thenReturn(nonExistentId);
+            
+            // When & Then
+            assertThatThrownBy(() -> account.updateTransaction(nonExistentId, transaction))
+                .isInstanceOf(TransactionNotFoundException.class)
+                .hasMessageContaining("cannot be found");
+        }
+            
+        
 
         // TODO: actually test the updateAsset method
         public class InnerAccountTestFortestingUpdateAsset {

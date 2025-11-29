@@ -122,7 +122,11 @@ public class Account implements ClassValidation {
         }
     }
 
+    // This might need ot be removed, Think about it, we shouldn't have the ability to 'update the asset'
+    // Thinkg about it, we can't have 2 sources of truths, only we can affect the asset via the transactions
+    @Deprecated
     void updateAsset(AssetId assetId, Asset updatedAsset) {
+        // THIS IS NEVER USED/Should be used
         Objects.requireNonNull(assetId);
         Objects.requireNonNull(updatedAsset);
         // Verify the updatedAsset has the same ID
@@ -228,7 +232,8 @@ public class Account implements ClassValidation {
         // recalc cash, assets, cost basis, etc.
         cashBalance = Money.ZERO(baseCurrency);
         assets.clear(); // TODO, related to shouldUpdateAssetSuccessfully unit test, this is the problem. Either fix the test or do something else
-            // most likely fix the tests because we need this as we are 'creating a new slate'
+            
+        // most likely fix the tests because we need this as we are 'creating a new slate'
         // The tests has been adjusted I'm pretty sure
         // adding onto this point, we might want to do something similar to the transactions, we can like save the 
         // assets in a temp or pull this information from the stream transactions to generate the assets

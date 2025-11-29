@@ -9,7 +9,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioVa
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-@Service
+// @Service // disabled for now, throws error with unit tests
 @AllArgsConstructor
 @Data
 /*

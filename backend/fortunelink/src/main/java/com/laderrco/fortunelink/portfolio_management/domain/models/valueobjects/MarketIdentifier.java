@@ -18,6 +18,9 @@ public record MarketIdentifier(String primaryId, Map<String, String> secondaryId
         //     throw new IllegalArgumentException("Asset type not the same for Crypto Identifier");
         // };
 
+        // we should probably have a ISBN (don't know if that is what it is called, but ir's a unique # for a ticker)
+        
+
         name = name.trim();
         if (name.isBlank()) {
             throw new IllegalArgumentException("Asset name cannot be blank");
