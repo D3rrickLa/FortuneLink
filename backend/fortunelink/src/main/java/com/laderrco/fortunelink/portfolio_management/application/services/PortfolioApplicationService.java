@@ -2,12 +2,15 @@ package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import org.springframework.stereotype.Service;
 
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
+// TODO: we might need a TransactionRepository
 
 // @Service // disabled for now, throws error with unit tests
 @AllArgsConstructor
@@ -52,9 +55,9 @@ public class PortfolioApplicationService {
 
     public void removeTransaction() {}
 
-    public void updateTransation() {}
+    public void updateTransation(/* UpdateTransactionCommand */) {}
 
-    public void createPortfolio() {}
+    public void createPortfolio(/* DeleteTransactionCommand */) {} // create initial portfolio for new user
 
-    public void deletePortfolio() {} // need 'confirmation' to delete all the data
+    public void deletePortfolio(UserId userId) {} // need 'confirmation' to delete all the data
 }
