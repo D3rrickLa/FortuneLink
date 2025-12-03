@@ -799,3 +799,79 @@ They don't have their own lifecycle - they're just utility classes with business
 
 -----
 for the application layer, we use DTOS for input and output
+
+## What to build in the application layer
+1. Use Case Services (Command Handlers)
+Portfolio Management Use Cases
+
+- RecordAssetPurchaseUseCase - Handles buying new assets; orchestrates creating a BUY transaction, updating portfolio holdings, and persisting changes.
+- RecordAssetSaleUseCase - Handles selling assets; creates a SELL transaction, calculates realized gains/losses, updates holdings, and persists.
+- RecordDepositUseCase - Handles cash deposits; creates a DEPOSIT transaction, updates cash holdings in the specified account.
+- RecordWithdrawalUseCase - Handles cash withdrawals; creates a WITHDRAWAL transaction, reduces cash holdings, ensures sufficient balance.
+- RecordDividendIncomeUseCase - Handles dividend/interest income; creates DIVIDEND/INTEREST transaction, increases cash holdings.
+- RecordFeeUseCase - Handles transaction fees; creates FEE transaction, deducts from cash holdings.
+- AddNewAccountUseCase - Creates new accounts (TFSA, RRSP, etc.); validates account type and adds to portfolio.
+- RemoveAccountUseCase - Removes empty accounts; validates account has no assets before deletion.
+
+Query Services (Read Operations)
+
+- ViewNetWorthQuery - Retrieves current net worth; fetches portfolio, queries market data service for current prices, calculates total value.
+- ViewPortfolioPerformanceQuery - Displays performance metrics; uses PerformanceCalculationService to calculate returns, gains/losses over specified period.
+- AnalyzeAssetAllocationQuery - Shows asset distribution; uses AssetAllocationService to breakdown by type, account, or currency.
+- GetTransactionHistoryQuery - Retrieves transaction list; fetches and filters transactions by date range or type.
+- GetAccountSummaryQuery - Shows individual account details; retrieves specific account with holdings and calculated values.
+
+2. Command DTOs (Input Objects)
+
+- RecordPurchaseCommand - Contains userId, accountId, symbol, quantity, price, fee, date, notes; represents all data needed to record a purchase.
+- RecordSaleCommand - Contains userId, accountId, symbol, quantity, price, fee, date, notes; represents all data needed to record a sale.
+- RecordDepositCommand - Contains userId, accountId, amount, currency, date, notes; represents deposit transaction data.
+- RecordWithdrawalCommand - Contains userId, accountId, amount, currency, date, notes; represents withdrawal transaction data.
+- RecordIncomeCommand - Contains userId, accountId, symbol, amount, incomeType (dividend/interest), date; represents passive income.
+- AddAccountCommand - Contains userId, accountName, accountType, baseCurrency; represents new account creation.
+- RemoveAccountCommand - Contains userId, accountId; represents account deletion request.
+
+3. Query DTOs (Input for Queries)
+
+- ViewNetWorthQuery - Contains userId, optional asOfDate; specifies which portfolio and point in time.
+- ViewPerformanceQuery - Contains userId, startDate, endDate, optional accountId; defines performance calculation parameters.
+- AnalyzeAllocationQuery - Contains userId, allocationType (by type/account/currency); specifies how to breakdown allocation.
+- GetTransactionHistoryQuery - Contains userId, optional startDate, endDate, transactionType, accountId; filters transaction list.
+- GetAccountSummaryQuery - Contains userId, accountId; identifies which account to retrieve.
+
+4. Response DTOs (Output Objects)
+
+- PortfolioResponse - Contains portfolioId, userId, accounts[], transactionCount, lastUpdated; represents complete portfolio state.
+- NetWorthResponse - Contains totalAssets, totalLiabilities, netWorth, asOfDate, currency; represents calculated net worth.
+- PerformanceResponse - Contains totalReturn, realizedGains, unrealizedGains, timeWeightedReturn, period; represents performance metrics.
+- AllocationResponse - Contains Map of category → percentage/value; represents asset distribution breakdown.
+- TransactionResponse - Contains transactionId, type, symbol, quantity, price, fee, date, notes; represents single transaction.
+- TransactionHistoryResponse - Contains List<TransactionResponse>, totalCount, dateRange; represents paginated transaction list.
+- AccountResponse - Contains accountId, name, type, assets[], totalValue, currency; represents single account with holdings.
+
+5. Exception Classes
+
+- PortfolioNotFoundException - Thrown when portfolio doesn't exist for given userId; used in all use cases.
+- AccountNotFoundException - Thrown when specified account doesn't exist; used in transaction recording.
+- InsufficientFundsException - Thrown when withdrawal/purchase exceeds available cash; used in withdrawal and purchase use cases.
+- InsufficientHoldingsException - Thrown when selling more shares than owned; used in RecordAssetSaleUseCase.
+- InvalidTransactionException - Thrown when transaction data is invalid; used for business rule violations.
+- AccountNotEmptyException - Thrown when trying to delete account with assets; used in RemoveAccountUseCase.
+
+6. Validation Classes
+
+- CommandValidator - Validates command DTOs before processing; checks for null values, valid dates, positive amounts, valid symbols.
+- QuantityValidator - Validates quantity values; ensures positive non-zero values for purchases/sales.
+- DateValidator - Validates transaction dates; ensures not in future, within reasonable historical range.
+
+7. Mapper Classes
+
+- PortfolioMapper - Converts Portfolio entity → PortfolioResponse DTO; handles nested account and asset conversions.
+- TransactionMapper - Converts Transaction entity → TransactionResponse DTO; maps all transaction fields.
+- AccountMapper - Converts Account entity → AccountResponse DTO; includes asset summaries.
+- AllocationMapper - Converts allocation calculations → AllocationResponse DTO; formats percentages and categories.
+
+8. Application Service Interfaces (Optional but Recommended)
+
+- IPortfolioManagementService - Interface defining all portfolio use cases; allows for easier testing and dependency injection.
+- IPortfolioQueryService - Interface defining all query operations; separates read from write operations (CQRS pattern).

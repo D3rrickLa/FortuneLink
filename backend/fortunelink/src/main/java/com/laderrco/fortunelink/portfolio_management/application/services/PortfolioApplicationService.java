@@ -22,10 +22,39 @@ public class PortfolioApplicationService {
     private final MarketDataService marketDataService;
 
     /*
-     * createPortfolio
-     * addAccount
-     * recordTransaction
-     * getPortfolioSummary
-     * getTRansactionHistory
+     * createPortfolio()
+        addAccount()
+        recordTransaction()
+        updateTransaction()
+        deleteTransaction()
+        getPortfolioSummary() -> other service
+        getTransactionHistory() -> other service
+        getPerformanceReport() -> other service
+        getAssetAllocation() -> other service
      */
+
+    // TODO: change all the 'void' return types to the proper response classes
+    public void recordAssetPurchase(/*RecordPUrchaseCommand */){} // TransactionResponse
+
+    public void recordAssetSale() {}
+
+    public void recordDeposit() {}
+
+    public void recordWithdrawal() {}
+
+    public void recordDividentIncome() {}
+
+    public void recordFee() {} 
+
+    public void addAccount() {} // account response
+
+    public void removeAccount() {}
+
+    public void removeTransaction() {}
+
+    public void updateTransation() {}
+
+    public void createPortfolio() {}
+
+    public void deletePortfolio() {} // need 'confirmation' to delete all the data
 }
