@@ -8,6 +8,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 
-public record RecordSaleCommand(UserId userId, AccountId accountId, String symbol, BigDecimal quantity, List<Fee> fees, Instant transactionDate, String notes) {
-    
+// String symbol is fine, we are just recording the name, not the entity
+// asset symbol - name
+// asset entity - your identifier calss, the acutal holding
+public record RecordPurchaseCommand(UserId userId, AccountId accountId, String symbol, BigDecimal quantity, List<Fee> fees, Instant transactionDate, String notes) {
+
 }

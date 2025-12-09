@@ -1,5 +1,11 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
+import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.NetworthResponse;
@@ -23,11 +29,28 @@ public class PortoflioQueryService {
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioApplicationService portfolioApplicationService;
-    
-    public NetworthResponse getNetWorth(/*ViewNetWorthQuery */) { return null; }
-    public PerformanceResponse getPortfolioPerformance(/*ViewPerformanceQuery*/) { return null; }
-    public AllocationResponse getAssetAllocation(/*AnalyzeAllocationQuery*/) { return null; }
-    public TransactionHistoryResponse getTransactionHistory(/*GetTransactionHistoryQuery*/) { return null; }
-    public AccountResponse getAccountSummary(/*GetAccountSummaryQuery*/) { return null; }
-    public PortfolioResponse getPortfolioSummary(/*GetPortfolioSummaryQuery*/) { return null; }
+
+    public NetworthResponse getNetWorth(ViewNetWorthQuery viewNetWorthQuery) {
+        return null;
+    }
+
+    public PerformanceResponse getPortfolioPerformance(ViewPerformanceQuery viewPerformanceQuery) {
+        return null;
+    }
+
+    public AllocationResponse getAssetAllocation(AnalyzeAllocationQuery analyzeAllocationQuery) {
+        return null;
+    }
+
+    public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery transactionHistoryQuery) {
+        return null;
+    }
+
+    public AccountResponse getAccountSummary(GetAccountSummaryQuery accountSummaryQuery) {
+        return null;
+    }
+
+    public PortfolioResponse getPortfolioSummary(GetPortfolioSummaryQuery portfolioSummaryQuery) {
+        return null;
+    }
 }
