@@ -7,10 +7,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 
 /* 
-    Instant startDate, Instant endDate,
-        TransactionType transactionType, AccountId accountId
-
-        are optional
+    Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are optional
 */
 public record GetTransactionHistoryQuery(UserId userId, Instant startDate, Instant endDate,
         TransactionType transactionType, AccountId accountId, int pageNumber, int pageSize) {
