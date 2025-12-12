@@ -1,8 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
-import java.math.BigDecimal;
-import java.util.Map;
-
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
@@ -24,16 +21,15 @@ import com.laderrco.fortunelink.portfolio_management.application.responses.Portf
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
-import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
@@ -98,21 +94,24 @@ public class PortfolioApplicationService {
         Account account = portfolio.getAccount(command.accountId());
         
         // 5. Create AssetIdentifier with complete market data
-        AssetIdentifier identifier = new MarketIdentifier(
-            command.symbol(),
-            null,
-            assetInfo.getAssetType(),      // STOCK, ETF, CRYPTO, etc.
-            assetInfo.getName(),           // Full asset name
-            assetInfo.getCurrency().getSymbol(),       // Asset's native currency
-            // NYSE, NASDAQ, etc. Technology, Finance, etc.
-            Map.of("Exchange", assetInfo.getExchange(), "Sector", assetInfo.getSector())     
-        );
+        // we aren't doing this anymore, we will be calling the assetInfo toIdentifier() class instead
+        // this is better because we keep the domain pure while the app layer handles orchestration and data 
+        // fetching
+        // AssetIdentifier identifier = new MarketIdentifier(
+        //     command.symbol(),
+        //     null,
+        //     assetInfo.getAssetType(),      // STOCK, ETF, CRYPTO, etc.
+        //     assetInfo.getName(),           // Full asset name
+        //     assetInfo.getCurrency().getSymbol(),       // Asset's native currency
+        //     // NYSE, NASDAQ, etc. Technology, Finance, etc.
+        //     Map.of("Exchange", assetInfo.getExchange(), "Sector", assetInfo.getSector())     
+        // );
         
         // 6. Create transaction entity
         Transaction transaction = new Transaction(
             TransactionId.randomId(),
             TransactionType.BUY,
-            identifier,
+            assetInfo.toIdentifier(),  // Convert to domain value object
             command.quantity(),
             command.price(),               // User's actual purchase price
             command.fees(),
@@ -143,8 +142,45 @@ public class PortfolioApplicationService {
         return TransactionMapper.toResponse(transaction, assetInfo);
     } 
 
-    public TransactionResponse recordAssetSale(RecordSaleCommand recordSaleCommand) {
-        return null;
+    public TransactionResponse recordAssetSale(RecordSaleCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid sale command",
+                validationResult.errors()
+            );
+        }
+
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
+            .orElseThrow(() -> new AssetNotFoundException("Asset nout found: " + command.symbol()));
+
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+
+        Account account = portfolio.getAccount(command.accountId());
+
+        Asset asset = account.getAsset(assetInfo.toIdentifier());
+
+        if (asset.getQuantity().compareTo(command.quantity()) < 0) {
+            throw new InsufficientFundsException(command.symbol(), command.quantity(), asset.getQuantity());
+        }
+
+        Transaction transaction = new Transaction( // should really make a specific constructor where id can gen internally
+            TransactionId.randomId(),
+            TransactionType.SELL,
+            assetInfo.toIdentifier(),  // Convert to domain value object
+            command.quantity(),
+            command.price(),               // User's actual purchase price
+            command.fees(),
+            command.transactionDate(),
+            command.notes()    
+        );
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, assetInfo);
     }
 
     public TransactionResponse recordDeposit(RecordDepositCommand recordDepositCommand) {

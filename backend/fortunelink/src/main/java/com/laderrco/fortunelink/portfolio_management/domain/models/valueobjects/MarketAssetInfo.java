@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects;
 
 import java.util.Currency;
+import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -46,5 +47,15 @@ public class MarketAssetInfo {
         return currentPrice;
     }    
 
+    public MarketIdentifier toIdentifier() {
+        return new MarketIdentifier(
+            this.symbol,
+            null,
+            this.assetType,             // STOCK, ETF, CRYPTO, etc.
+            this.name,                  // Full asset name
+            this.currency.getSymbol(),  // Asset's native currency
+            Map.of("Exchange", this.exchange, "Sector", this.sector)  // NYSE, NASDAQ, etc. Technology, Finance, etc.
+        );
+    }
     
 }
