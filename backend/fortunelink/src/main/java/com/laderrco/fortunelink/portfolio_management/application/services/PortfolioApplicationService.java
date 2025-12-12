@@ -1,5 +1,8 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
+import java.math.BigDecimal;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
@@ -13,21 +16,39 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
+import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
+import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 // TODO: we might need a TransactionRepository
 
 @Service // disabled for now, throws error with unit tests
+@Transactional
 @AllArgsConstructor
 @Data
 /*
@@ -52,10 +73,75 @@ public class PortfolioApplicationService {
         getAssetAllocation() -> other service
      */
 
-    // TODO: change all the 'void' return types to the proper response classes
-    public TransactionResponse recordAssetPurchase(RecordPurchaseCommand recordPurchase){
-        return null;
-    } // TransactionResponse
+    public TransactionResponse recordAssetPurchase(RecordPurchaseCommand command){
+        // 1. Validate command
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid purchase command", 
+                validationResult.errors()
+            );
+        }
+        
+        // 2. Fetch asset information from market data service
+        // This validates the symbol exists and gets all necessary metadata
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
+            .orElseThrow(() -> new AssetNotFoundException(
+                "Asset not found: " + command.symbol()
+            ));
+        
+        // 3. Load portfolio aggregate
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        // 4. Find account within portfolio
+        Account account = portfolio.getAccount(command.accountId());
+        
+        // 5. Create AssetIdentifier with complete market data
+        AssetIdentifier identifier = new MarketIdentifier(
+            command.symbol(),
+            null,
+            assetInfo.getAssetType(),      // STOCK, ETF, CRYPTO, etc.
+            assetInfo.getName(),           // Full asset name
+            assetInfo.getCurrency().getSymbol(),       // Asset's native currency
+            // NYSE, NASDAQ, etc. Technology, Finance, etc.
+            Map.of("Exchange", assetInfo.getExchange(), "Sector", assetInfo.getSector())     
+        );
+        
+        // 6. Create transaction entity
+        Transaction transaction = new Transaction(
+            TransactionId.randomId(),
+            TransactionType.BUY,
+            identifier,
+            command.quantity(),
+            command.price(),               // User's actual purchase price
+            command.fees(),
+            command.transactionDate(),
+            command.notes()
+        );
+        
+        // 7. Calculate total cost (price * quantity + fees)
+        Money totalCost = transaction.calculateTotalCost();
+        
+        // 8. Business rule: Check if account has sufficient cash
+        if (!account.hasSufficientCash(totalCost)) {
+            throw new InsufficientFundsException(
+                totalCost,
+                account.getCashBalance(),
+                command.accountId()
+            );
+        }
+        
+        // 9. Apply transaction to portfolio (domain logic handles asset updates)
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        
+        // 10. Persist changes
+        portfolioRepository.save(portfolio);
+        // transactionRepository.save(transaction);
+        
+        // 11. Map to response DTO
+        return TransactionMapper.toResponse(transaction, assetInfo);
+    } 
 
     public TransactionResponse recordAssetSale(RecordSaleCommand recordSaleCommand) {
         return null;

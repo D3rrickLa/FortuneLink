@@ -223,6 +223,13 @@ public class Account implements ClassValidation {
         return cashBalance.add(assteValue);
     }
 
+    public boolean hasSufficientCash(Money inputAmount){
+        if (inputAmount.amount().compareTo(this.cashBalance.amount()) > 0) {
+           return false; 
+        }
+        return true;
+    }
+
    private void updateMetadata() {
         version++;
         this.lastSystemInteraction = Instant.now();
@@ -371,6 +378,4 @@ public class Account implements ClassValidation {
         // Similar to reduceAssetFromSell
         reduceAssetFromSell(transaction);
     }
-
-    
 }
