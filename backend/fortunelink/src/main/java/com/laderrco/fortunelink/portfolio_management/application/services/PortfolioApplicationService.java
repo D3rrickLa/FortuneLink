@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
+import java.math.BigDecimal;
+
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
@@ -28,6 +30,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asse
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
@@ -92,20 +95,6 @@ public class PortfolioApplicationService {
         
         // 4. Find account within portfolio
         Account account = portfolio.getAccount(command.accountId());
-        
-        // 5. Create AssetIdentifier with complete market data
-        // we aren't doing this anymore, we will be calling the assetInfo toIdentifier() class instead
-        // this is better because we keep the domain pure while the app layer handles orchestration and data 
-        // fetching
-        // AssetIdentifier identifier = new MarketIdentifier(
-        //     command.symbol(),
-        //     null,
-        //     assetInfo.getAssetType(),      // STOCK, ETF, CRYPTO, etc.
-        //     assetInfo.getName(),           // Full asset name
-        //     assetInfo.getCurrency().getSymbol(),       // Asset's native currency
-        //     // NYSE, NASDAQ, etc. Technology, Finance, etc.
-        //     Map.of("Exchange", assetInfo.getExchange(), "Sector", assetInfo.getSector())     
-        // );
         
         // 6. Create transaction entity
         Transaction transaction = new Transaction(
@@ -183,7 +172,31 @@ public class PortfolioApplicationService {
         return TransactionMapper.toResponse(transaction, assetInfo);
     }
 
-    public TransactionResponse recordDeposit(RecordDepositCommand recordDepositCommand) {
+    public TransactionResponse recordDeposit(RecordDepositCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid deposit command",
+                validationResult.errors()
+            );
+        }
+
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        Account account = portfolio.getAccount(command.accountId());
+
+        Transaction transaction = new Transaction( 
+            TransactionId.randomId(),
+            TransactionType.DEPOSIT,
+            new CashIdentifier(command.currency().toString()),  // This mihgt 
+            BigDecimal.ONE,
+            command.amount(),               
+            command.fees(),
+            command.transactionDate(),
+            command.notes()    
+        );     
+
         return null;
     }
 

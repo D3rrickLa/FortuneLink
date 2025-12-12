@@ -23,6 +23,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
@@ -82,8 +83,8 @@ public class TransactionTest {
             Transaction transaction = new Transaction(
                 VALID_ID,
                 TransactionType.DEPOSIT,
-                assetIdentifier,
-                quantity,
+                new CashIdentifier(amount.currency().toString()),
+                BigDecimal.ONE,
                 amount,
                 null,
                 VALID_DATE,
@@ -295,8 +296,8 @@ public class TransactionTest {
             Transaction transaction = new Transaction(
                 VALID_ID,
                 TransactionType.DEPOSIT,
-                assetIdentifier,
-                quantity,
+                new CashIdentifier("USD"),
+                BigDecimal.ONE,
                 amount,
                 null,
                 VALID_DATE,
@@ -414,8 +415,8 @@ public class TransactionTest {
             Transaction transaction = new Transaction(
                 VALID_ID,
                 TransactionType.DEPOSIT,
-                assetIdentifier,
-                quantity,
+                new CashIdentifier("USD"),
+                BigDecimal.ONE,
                 amount,
                 null,
                 VALID_DATE,
@@ -434,8 +435,8 @@ public class TransactionTest {
             Transaction transaction = new Transaction(
                 VALID_ID,
                 TransactionType.WITHDRAWAL,
-                assetIdentifier,
-                quantity,
+                new CashIdentifier("USD"),
+                BigDecimal.ONE,
                 amount,
                 null,
                 VALID_DATE,

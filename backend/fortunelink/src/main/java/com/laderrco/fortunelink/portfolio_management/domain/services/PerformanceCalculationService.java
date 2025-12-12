@@ -76,6 +76,10 @@ public class PerformanceCalculationService {
 
     }
 
+    public Money calculateRealizedGainsCAD_ACB(Portfolio portfolio, List<Transaction> transactions) { // THIS WILL THROW AN ERROR
+        return portfolio == null ? calculateSellGainWithACB(portfolio, transactions) : Money.ZERO("USD");
+    }
+
     /**
      * Calculates total unrealized gains (or losses) across all current holdings.
      * Unrealized gains = paper gains you haven't locked in yet (still holding the
@@ -171,7 +175,7 @@ public class PerformanceCalculationService {
      * !! USE THE SIMPLIFIED ACB, THE CALCULATESELLGAIN FOR DISPLAYING
      */
     @SuppressWarnings("unused")
-    private Money calcualteSellGainWithACB(Transaction sellTransaction, Portfolio portfolio) {
+    private Money calculateSellGainWithACB(Portfolio portfolio, List<Transaction> transactions) {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 

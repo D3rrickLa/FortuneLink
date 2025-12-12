@@ -172,4 +172,50 @@ public class ExchangeRateTest {
             );
         }
     }
+    
+    @Nested
+    public class IdentityTests {
+        private ExchangeRate identityRate;
+        
+        @BeforeEach
+        void init() {
+            identityRate = new ExchangeRate(USD, USD, BigDecimal.ONE.setScale(precision), date, null);
+        }
+        
+        @Test
+        public void givenIdentity_whenConvert_returnSameMoney() {
+            Money usdMoney = Money.of(100, "USD");
+            Money result = identityRate.convert(usdMoney);
+            assertEquals(usdMoney, result);
+        }
+        
+        @Test
+        public void givenIdentity_whenInvert_returnSameMoney() {
+            Money usdMoney = Money.of(100, "USD");
+            Money result = identityRate.invert(usdMoney);
+            assertEquals(usdMoney, result);
+        }
+        
+        @Test
+        public void givenCreateSingle_whenCreated_returnsIdentityExchangeRate() {
+            ExchangeRate singleRate = ExchangeRate.createSingle(USD, "test");
+            Money usdMoney = Money.of(50, "USD");
+            
+            assertAll(
+                () -> assertEquals(USD, singleRate.from()),
+                () -> assertEquals(USD, singleRate.to()),
+                () -> assertEquals(usdMoney, singleRate.convert(usdMoney)),
+                () -> assertEquals(usdMoney, singleRate.invert(usdMoney))
+            );
+        }
+        
+        @Test
+        public void givenSameCurrencyButDifferentRate_whenConvert_returnsConvertedMoney() {
+            ExchangeRate nonIdentity = new ExchangeRate(USD, USD, BigDecimal.valueOf(2).setScale(precision), date, null);
+            Money usdMoney = Money.of(100, "USD");
+            Money result = nonIdentity.convert(usdMoney);
+            Money expected = Money.of(200, "USD");
+            assertEquals(expected, result);
+        }
+    }
 }

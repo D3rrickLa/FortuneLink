@@ -35,6 +35,7 @@ import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -952,6 +953,28 @@ class PerformanceCalculationServiceTest {
             // Assert
             assertEquals(new Money(new BigDecimal("4945.00"), usd), realizedGains);
         }
+    }
+
+    @Nested
+    @DisplayName("Not implmented but need to test")
+    public class TestsCADACBMethod {
+        @Test
+        void calcualteSellGainWithACB_should_throw_not_implemented() {
+            assertDoesNotThrow(() -> {
+                PerformanceCalculationService service = new PerformanceCalculationService();
+     
+                Transaction teTransaction = mock(Transaction.class);
+                Portfolio tePortfolio = mock(Portfolio.class);
+
+                service.calculateRealizedGainsCAD_ACB(tePortfolio, List.of(teTransaction));
+            });
+            assertThrows(UnsupportedOperationException.class, () -> {
+                PerformanceCalculationService service = new PerformanceCalculationService();
+
+                service.calculateRealizedGainsCAD_ACB(null, null);
+            });
+        }
+        
     }
 
     // FOR LATER

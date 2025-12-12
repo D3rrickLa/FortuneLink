@@ -25,6 +25,17 @@ public class MarketAssetInfo {
         this.currentPrice = currentPrice;
     }
 
+    public MarketIdentifier toIdentifier() {
+        return new MarketIdentifier(
+            this.symbol,
+            null,
+            this.assetType,             // STOCK, ETF, CRYPTO, etc.
+            this.name,                  // Full asset name
+            this.currency.getSymbol(),  // Asset's native currency
+            Map.of("Exchange", this.exchange, "Sector", this.sector)  // NYSE, NASDAQ, etc. Technology, Finance, etc.
+        );
+    }
+
     public String getSymbol() {
         return symbol;
     }
@@ -45,17 +56,5 @@ public class MarketAssetInfo {
     }
     public Money getCurrentPrice() {
         return currentPrice;
-    }    
-
-    public MarketIdentifier toIdentifier() {
-        return new MarketIdentifier(
-            this.symbol,
-            null,
-            this.assetType,             // STOCK, ETF, CRYPTO, etc.
-            this.name,                  // Full asset name
-            this.currency.getSymbol(),  // Asset's native currency
-            Map.of("Exchange", this.exchange, "Sector", this.sector)  // NYSE, NASDAQ, etc. Technology, Finance, etc.
-        );
-    }
-    
+    }        
 }
