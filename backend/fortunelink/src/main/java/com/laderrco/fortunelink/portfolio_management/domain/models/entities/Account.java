@@ -42,7 +42,7 @@ public class Account implements ClassValidation {
     private AccountType accountType;
     private ValidatedCurrency baseCurrency; // the currency this account is opened in
     private Money cashBalance;
-    private List<Asset> assets; // for NON =cash assets only, might need to make this a MAP later
+    private List<Asset> assets; // for NON-cash assets only, might need to make this a MAP later
     private List<Transaction> transactions;
 
     private final Instant systemCreationDate;
@@ -70,6 +70,21 @@ public class Account implements ClassValidation {
         this.version = version;
     }
     
+    public Account(AccountId randomId, String accountName, AccountType accountType, ValidatedCurrency baseCurrency) {
+        this(
+            randomId, 
+            accountName, 
+            accountType, 
+            baseCurrency, 
+            Money.ZERO(baseCurrency.getCode()),
+            null,
+            null,
+            Instant.now(),
+            Instant.now(),
+            1
+        );
+    }
+
     void deposit(Money money) {
         // deposit amount currency must match 
         Objects.requireNonNull(money);
@@ -276,10 +291,19 @@ public class Account implements ClassValidation {
                 reduceAssetFromSell(transaction);
                 break;
                 
-            case DIVIDEND:
+            case DIVIDEND: // we might need something here for the asset because you know... that is how it works
             case INTEREST:
-                // Add income to cash balance
-                this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
+                if (transaction.isDrip()) {
+                    /*
+                        DRIP: Reinvest dividend into more shares
+                        Dividend amoutn is sued to buy shares at current price 
+                        // No cash balance chance
+                    */
+                }
+                else{
+                    // Non-DRIP: Add income to cash balance
+                    this.cashBalance = this.cashBalance.add(transaction.getPricePerUnit());
+                }
                 break;
                 
             case FEE:
@@ -335,6 +359,43 @@ public class Account implements ClassValidation {
                 transaction.getAssetIdentifier(),
                 transaction.getQuantity(),
                 transaction.calculateTotalCost(),
+                transaction.getTransactionDate()
+            );
+            this.assets.add(newAsset);
+        }
+    }
+
+    private void addOrUpdateAssetFromDrip(Transaction transaction) {
+        Optional<Asset> existingAsset = this.assets.stream()
+            .filter(a -> a.getAssetIdentifier().equals(transaction.getAssetIdentifier()))
+            .findFirst();
+
+        if (existingAsset.isPresent()) {
+            Asset asset = existingAsset.get();
+
+            // Calculate how many shares the dividend can buy
+            // If transaction.quantity is provided, use it, otherwise =>
+            // dividend amount / current price
+
+            BigDecimal additionalSahres = transaction.getQuantity();
+            Money dividendAmount = transaction.getPricePerUnit();
+
+            // update quantity
+            BigDecimal newQuantity = asset.getQuantity().add(additionalSahres);
+            asset.adjustQuantity(newQuantity);
+
+            // update cost basis
+            Money newCostBasis = asset.getCostBasis().add(dividendAmount);
+            asset.updateCostBasis(newCostBasis);
+        }
+        else {
+            // This shouldn't happen in practice (can't DRIP without owning the asset)
+            // But handle it by creating a new holding
+            Asset newAsset = new Asset(
+                AssetId.randomId(),
+                transaction.getAssetIdentifier(),
+                transaction.getQuantity(),
+                transaction.getPricePerUnit(), // dividend amount becomes initial cost basis
                 transaction.getTransactionDate()
             );
             this.assets.add(newAsset);

@@ -7,7 +7,6 @@ import java.util.List;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -34,8 +33,10 @@ public class Transaction implements ClassValidation {
     private List<Fee> fees; // fees in original currency with a exchange rate link to the portfolios
     private Instant transactionDate;
     private String notes;
+    private boolean isDrip;
 
-    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes) {
+    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, 
+        BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
         validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
         this.transactionId = ClassValidation.validateParameter(transactionId);
@@ -46,6 +47,22 @@ public class Transaction implements ClassValidation {
         this.fees = fees != null ? fees : Collections.emptyList();
         this.transactionDate = ClassValidation.validateParameter(transactionDate);
         this.notes = notes.isBlank() ? "" : notes.trim();
+        this.isDrip = isDrip;
+    }
+
+        // Convenience constructor for non-DRIP transactions (backward compatible)
+    public Transaction(
+        TransactionId transactionId,
+        TransactionType transactionType,
+        AssetIdentifier assetIdentifier,
+        BigDecimal quantity,
+        Money pricePerUnit,
+        List<Fee> fees,
+        Instant transactionDate,
+        String notes
+    ) {
+        this(transactionId, transactionType, assetIdentifier, quantity, 
+             pricePerUnit, fees, transactionDate, notes, false);
     }
 
     /**

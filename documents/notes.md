@@ -875,3 +875,9 @@ Query Services (Read Operations)
 
 - IPortfolioManagementService - Interface defining all portfolio use cases; allows for easier testing and dependency injection.
 - IPortfolioQueryService - Interface defining all query operations; separates read from write operations (CQRS pattern).
+
+
+
+--- Dec 14th --- th DRIP issue
+TLDR: we can't drip when we record a dividend in the application layer
+The solution is to add a isDrip feild in the Transaction.java and impelment logic in the Account.java 

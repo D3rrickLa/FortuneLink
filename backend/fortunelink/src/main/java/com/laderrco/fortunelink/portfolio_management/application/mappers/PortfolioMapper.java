@@ -11,15 +11,15 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 // convertes between portfolio domain entity and DTOs, handles ocmplex nested conversions
 public class PortfolioMapper {
-    public PortfolioResponse toResponse(Portfolio portfolio, MarketDataService marketDataService) {
+    public static PortfolioResponse toResponse(Portfolio portfolio, MarketDataService marketDataService) {
         return null;
     }
 
-    public AccountResponse toAccountResponse(Account account, MarketDataService marketDataService) {
+    public static AccountResponse toAccountResponse(Account account, MarketDataService marketDataService) {
         return null;
     }
 
-    public AssetResponse toAssetResponse (Asset asset, Money price) {
+    public static AssetResponse toAssetResponse (Asset asset, Money price) {
         return null;
     }
     

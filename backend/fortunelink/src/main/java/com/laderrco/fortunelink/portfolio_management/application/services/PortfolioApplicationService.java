@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 import org.springframework.stereotype.Service;
 
@@ -15,8 +16,10 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
@@ -29,15 +32,17 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Acco
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import jakarta.transaction.Transactional;
@@ -87,7 +92,7 @@ public class PortfolioApplicationService {
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
             .orElseThrow(() -> new AssetNotFoundException(
                 "Asset not found: " + command.symbol()
-            ));
+        ));
         
         // 3. Load portfolio aggregate
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -189,7 +194,7 @@ public class PortfolioApplicationService {
         Transaction transaction = new Transaction( 
             TransactionId.randomId(),
             TransactionType.DEPOSIT,
-            new CashIdentifier(command.currency().toString()),  // This mihgt 
+            new CashIdentifier(command.currency().toString()),  
             BigDecimal.ONE,
             command.amount(),               
             command.fees(),
@@ -197,19 +202,128 @@ public class PortfolioApplicationService {
             command.notes()    
         );     
 
-        return null;
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, null); // TODO TransactionMapper need to have logic to allow this
     }
 
-    public TransactionResponse recordWithdrawal(RecordWithdrawalCommand recordWithdrawalCommand) {
-        return null;
+    public TransactionResponse recordWithdrawal(RecordWithdrawalCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid withdrawal command",
+                validationResult.errors()
+            );
+        }
+
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        Account account = portfolio.getAccount(command.accountId());
+
+        Money withdrawalAmount = new Money(command.amount().amount(), command.currency()); // this is stuipd either change it or change the command to be BigDecimal and not Money
+
+        // check sufficient cash
+        if (!account.hasSufficientCash(withdrawalAmount)) {
+            throw new InsufficientFundsException(
+                withdrawalAmount,
+                account.getCashBalance(),
+                command.accountId()
+            );  
+        }
+
+        Transaction transaction = new Transaction( 
+            TransactionId.randomId(),
+            TransactionType.DEPOSIT,
+            new CashIdentifier(command.currency().toString()),  
+            BigDecimal.ONE,
+            withdrawalAmount,               
+            command.fees(),
+            command.transactionDate(),
+            command.notes()    
+        );     
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, null);
+
     }
 
-    public TransactionResponse recordDividendIncome(RecordIncomeCommand recordIncomeCommand) {
-        return null;
+    // this is a bit different to handle, because dividend is tied to a stock for the most part
+    public TransactionResponse recordDividendIncome(RecordIncomeCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid income command",
+                validationResult.errors()
+            );
+        }
+
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+
+        Account account = portfolio.getAccount(command.accountId());
+
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
+            .orElseThrow(() -> new AssetNotFoundException(
+                "Asset not found: " + command.symbol()
+        ));
+
+        // For DRIP: quantity represents shares purchased with the dividend
+        // For non-DRIP: quantity is 1 (tracking the icnome event)
+        BigDecimal quantity = command.isDrip() ? command.sharesRecieved() : BigDecimal.ONE;
+
+        Transaction transaction = new Transaction( 
+            TransactionId.randomId(),
+            TransactionType.DIVIDEND,
+            assetInfo.toIdentifier(),  
+            quantity,
+            command.amount(),               
+            null,
+            command.transactionDate(),
+            command.notes(),
+            command.isDrip() 
+        );  
+        
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+        
+        return TransactionMapper.toResponse(transaction, assetInfo);
     }
     
-    public TransactionResponse recordFee(RecordFeeCommand recordFeeCommand) {
-        return null;
+    public TransactionResponse recordFee(RecordFeeCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if(!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid fee command",
+                validationResult.errors()
+            );    
+        }
+
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+
+        Account account = portfolio.getAccount(command.accountId());
+
+        
+        Transaction transaction = new Transaction( 
+            TransactionId.randomId(),
+            TransactionType.FEE,
+            new CashIdentifier(command.currency().toString()),  
+            BigDecimal.ONE,
+            command.totalAmount(), // total value amount in fees               
+            command.fees(),
+            command.transactionDate(),
+            command.notes()    
+        );     
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, null);
+
     } 
     
     // for updates we need to do the following
@@ -232,12 +346,51 @@ public class PortfolioApplicationService {
     public void deleteTransaction(DeleteTransactionCommand deleteTransactionCommand) {
 
     }
-    public AccountResponse addAccount(AddAccountCommand addAccountCommand) {
-        return null;
-    } // account response
+    public AccountResponse addAccount(AddAccountCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if(!validationResult.isValid()) {
+            throw new InvalidTransactionException(
+                "Invalid add account command",
+                validationResult.errors()
+            );    
+        }
+        
+          Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        // Create new account
+        Account account = new Account(
+            AccountId.randomId(),
+            command.accountName(),
+            command.accountType(),
+            command.baseCurrency()
+        );
+        
+        // Add to portfolio (will check for duplicates)
+        portfolio.addAccount(account);
+        
+        // Persist
+        portfolioRepository.save(portfolio);
+        
+        return PortfolioMapper.toAccountResponse(account, null);
+    } 
 
-    public void removeAccount(RemoveAccountCommand removeAccountCommand) {
-
+    public void removeAccount(RemoveAccountCommand command) {
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        Account account = portfolio.getAccount(command.accountId());
+        
+        // Check if account is empty
+        if (!account.getAssets().isEmpty()) {
+            throw new AccountNotEmptyException(
+                command.accountId(),
+                account.getAssets().size()
+            );
+        }
+        
+        portfolio.removeAccount(command.accountId());
+        portfolioRepository.save(portfolio);
     }
 
     // create initial portfolio for new user

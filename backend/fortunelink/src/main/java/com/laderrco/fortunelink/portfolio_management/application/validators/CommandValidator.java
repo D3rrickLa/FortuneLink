@@ -5,6 +5,8 @@ import java.time.Instant;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordFeeCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
@@ -24,6 +26,14 @@ public class CommandValidator {
     }
 
     public ValidationResult validate(RecordWithdrawalCommand recordWithdrawalCommand) {
+        return null;
+    }
+
+    public ValidationResult validate(RecordIncomeCommand recordDividendCommand) {
+        return null;
+    }
+
+    public ValidationResult validate(RecordFeeCommand recordFeeCommand) {
         return null;
     }
 
