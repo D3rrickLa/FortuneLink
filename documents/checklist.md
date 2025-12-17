@@ -129,16 +129,16 @@
 
  PortfolioManagementService - with all write operations
 
- - [] createPortfolio()
- - [] deletePortfolio()
- - [] recordAssetPurchase()
- - [] recordAssetSale()
- - [] recordDeposit()
- - [] recordWithdrawal()
- - [] recordDividendIncome()
- - [] recordFee()
- - [] addAccount()
- - [] removeAccount()
+ - [x] createPortfolio()
+ - [x] deletePortfolio()
+ - [x] recordAssetPurchase()
+ - [x] recordAssetSale()
+ - [x] recordDeposit()
+ - [x] recordWithdrawal()
+ - [x] recordDividendIncome()
+ - [x] recordFee()
+ - [x] addAccount()
+ - [x] removeAccount()
  - [] updateTransaction()
  - [] deleteTransaction()
 
@@ -146,59 +146,59 @@
 
  PortfolioQueryService - with all read operations
 
- - [] getNetWorth()
- - [] getPortfolioPerformance()
- - [] getAssetAllocation()
- - [] getTransactionHistory()
- - [] getAccountSummary()
- - [] getPortfolioSummary()
+ - [x] getNetWorth()
+ - [x] getPortfolioPerformance()
+ - [x] getAssetAllocation()
+ - [x] getTransactionHistory()
+ - [x] getAccountSummary()
+ - [x] getPortfolioSummary()
 
 
 2. Command Classes (Write DTOs) ✓
 
- - [] CreatePortfolioCommand
- - [] DeletePortfolioCommand
- - [] RecordPurchaseCommand
- - [] RecordSaleCommand
- - [] RecordDepositCommand
- - [] RecordWithdrawalCommand
- - [] RecordIncomeCommand
- - [] RecordFeeCommand
- - [] AddAccountCommand
- - [] RemoveAccountCommand
- - [] UpdateTransactionCommand
- - [] DeleteTransactionCommand
+ - [x] CreatePortfolioCommand
+ - [x] DeletePortfolioCommand
+ - [x] RecordPurchaseCommand
+ - [x] RecordSaleCommand
+ - [x] RecordDepositCommand
+ - [x] RecordWithdrawalCommand
+ - [x] RecordIncomeCommand
+ - [x] RecordFeeCommand
+ - [x] AddAccountCommand
+ - [x] RemoveAccountCommand
+ - [x] UpdateTransactionCommand
+ - [x] DeleteTransactionCommand
 3. Query Classes (Read DTOs) ✓
 
- - [] ViewNetWorthQuery
- - [] ViewPerformanceQuery
- - [] AnalyzeAllocationQuery
- - [] GetTransactionHistoryQuery
- - [] GetAccountSummaryQuery
- - [] GetPortfolioSummaryQuery
+ - [x] ViewNetWorthQuery
+ - [x] ViewPerformanceQuery
+ - [x] AnalyzeAllocationQuery
+ - [x] GetTransactionHistoryQuery
+ - [x] GetAccountSummaryQuery
+ - [x] GetPortfolioSummaryQuery
 
 4. Response Classes (Output DTOs) ✓
 
- - [] PortfolioResponse
- - [] NetWorthResponse
- - [] PerformanceResponse
- - [] AllocationResponse (with nested AllocationDetail)
- - [] TransactionResponse
- - [] TransactionHistoryResponse
- - [] AccountResponse
+ - [x] PortfolioResponse
+ - [x] NetWorthResponse
+ - [x] PerformanceResponse
+ - [x] AllocationResponse (with nested AllocationDetail)
+ - [x] TransactionResponse
+ - [x] TransactionHistoryResponse
+ - [x] AccountResponse
 5. Validator Classes ✓
 
  CommandValidator - with validation methods for all commands
 
- - [] validate(RecordPurchaseCommand)
- - [] validate(RecordSaleCommand)
- - [] validate(RecordDepositCommand)
- - [] validate(RecordWithdrawalCommand)
- - [] validate(AddAccountCommand)
- - [] validateAmount(Money)
- - [] validateQuantity(Quantity)
- - [] validateDate(TransactionDate)
- - [] validateSymbol(AssetSymbol)
+ - [x] validate(RecordPurchaseCommand)
+ - [x] validate(RecordSaleCommand)
+ - [x] validate(RecordDepositCommand)
+ - [x] validate(RecordWithdrawalCommand)
+ - [x] validate(AddAccountCommand)
+ - [x] validateAmount(Money)
+ - [x] validateQuantity(Quantity)
+ - [x] validateDate(TransactionDate)
+ - [x] validateSymbol(AssetSymbol)
 
 
  ValidationResult - holds validation outcome
@@ -206,46 +206,43 @@
 
  PortfolioMapper
 
- - [] toResponse(Portfolio, MarketDataService)
- - [] toAccountResponse(Account, MarketDataService)
+ - [x] toResponse(Portfolio, MarketDataService)
+ - [x] toAccountResponse(Account, MarketDataService)
 
 
  TransactionMapper
 
- - [] toResponse(Transaction)
- - [] toResponseList(List<Transaction>)
+ - [x] toResponse(Transaction)
+ - [x] toResponseList(List<Transaction>)
 
 
  AllocationMapper
 
- - [] toResponse(Map<String, Money>, Money totalValue)
- - [] toAllocationDetail(String category, Money value, Money total)
+ - [x] toResponse(Map<String, Money>, Money totalValue)
+ - [x] toAllocationDetail(String category, Money value, Money total)
 
 
 7. Exception Classes ✓
 
- - [] PortfolioNotFoundException
- - [] AccountNotFoundException
- - [] InsufficientFundsException
- - [] InsufficientHoldingsException
- - [] InvalidTransactionException
- - [] AccountNotEmptyException
+ - [x] PortfolioNotFoundException
+ - [x] AccountNotFoundException
+ - [x] InsufficientFundsException
+ - [x] InsufficientHoldingsException
+ - [x] InvalidTransactionException
+ - [x] AccountNotEmptyException
 8. Utility/Helper Classes ✓
 
  PaginationHelper
 
- - [] calculateOffset()
- - [] validatePageParameters()
- - [] createPageInfo()
+ - [x] calculateOffset()
+ - [x] validatePageParameters()
+ - [x] createPageInfo()
 
 
  DateRangeCalculator
 
- - [] getYearToDate()
- - [] getLastNDays()
- - [] getLastNMonths()
- - [] getLastNYears()
+ - [x] getYearToDate()
+ - [x] getLastNDays()
+ - [x] getLastNMonths()
+ - [x] getLastNYears()
 
- TODO
- - Mapper classes
- - 

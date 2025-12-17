@@ -20,10 +20,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Account
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 @Component
-public class CommandValidator {
+public class CommandValidator implements ClassValidation {
    public ValidationResult validate(RecordPurchaseCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -74,6 +76,7 @@ public class CommandValidator {
     }
     
     public ValidationResult validate(RecordSaleCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -115,6 +118,7 @@ public class CommandValidator {
     }
     
     public ValidationResult validate(RecordDepositCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -145,6 +149,7 @@ public class CommandValidator {
     }
     
     public ValidationResult validate(RecordWithdrawalCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -175,6 +180,7 @@ public class CommandValidator {
     }
     
     public ValidationResult validate(RecordIncomeCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -210,6 +216,7 @@ public class CommandValidator {
     }
     
     public ValidationResult validate(RecordFeeCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -240,6 +247,7 @@ public class CommandValidator {
     }
     
     public ValidationResult validate(AddAccountCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
@@ -270,6 +278,7 @@ public class CommandValidator {
     }
 
     public ValidationResult validate(CreatePortfolioCommand command) {
+        ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {

@@ -6,6 +6,7 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,7 @@ public class PortoflioQueryService {
     private final AllocationMapper allocationMapper;
 
     public NetworthResponse getNetWorth(ViewNetWorthQuery query) {
+        Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -80,6 +82,7 @@ public class PortoflioQueryService {
     }
 
     public PerformanceResponse getPortfolioPerformance(ViewPerformanceQuery query) {
+        Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -121,6 +124,7 @@ public class PortoflioQueryService {
     }
 
     public AllocationResponse getAssetAllocation(AnalyzeAllocationQuery query) {
+        Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
@@ -158,6 +162,7 @@ public class PortoflioQueryService {
     }
 
     public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {
+        Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -225,6 +230,7 @@ public class PortoflioQueryService {
     }
 
     public AccountResponse getAccountSummary(GetAccountSummaryQuery query) {
+        Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -234,6 +240,7 @@ public class PortoflioQueryService {
     }
 
     public PortfolioResponse getPortfolioSummary(GetPortfolioSummaryQuery query) {
+        Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -241,6 +248,8 @@ public class PortoflioQueryService {
     }
 
     private Money convertPercentageToMoney(Percentage percentage, Portfolio portfolio) {
+        Objects.requireNonNull(percentage);
+        Objects.requireNonNull(portfolio);
         Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
         return totalValue.multiply(percentage.toPercentage());
     }

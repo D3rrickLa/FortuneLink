@@ -44,6 +44,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -66,6 +67,7 @@ import lombok.Data;
 public class PortfolioApplicationService {
     // use case handler
     private final PortfolioRepository portfolioRepository;
+    private final TransactionQueryRepository transactionQueryRepository; 
     private final PortfolioValuationService portfolioValuationService;
     private final MarketDataService marketDataService;
     private final CommandValidator commandValidator;
@@ -331,7 +333,14 @@ public class PortfolioApplicationService {
      * BUY/SELL transaction
      * - Historical Impact - affects subsequent calculations
      */
-    public TransactionResponse updateTransation(UpdateTransactionCommand updateTransactionCommand) {
+    public TransactionResponse updateTransation(UpdateTransactionCommand command) {
+        // if we think about htis, this is wrong, because what we are saying here is find the portfolio by a user id... which 
+        // if we have more than 1, will return n amounts, sure whatever, but an issue
+        // even if 
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+
+        Transaction existingTransaction;
         return null;
     }
 
