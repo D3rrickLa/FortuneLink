@@ -9,6 +9,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Tran
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 
+// pageable -> Spring data interface handling pagination and sortinf for DB queries
+// setting it to null = load all at once
 public interface TransactionQueryRepository {
     List<Transaction> findByPortfolioId(PortfolioId portfolioId, Pageable pageable);
     List<Transaction> findByDateRange(PortfolioId portfolioId, LocalDateTime start, LocalDateTime end, Pageable pageable);

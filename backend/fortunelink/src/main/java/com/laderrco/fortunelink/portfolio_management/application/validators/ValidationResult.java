@@ -10,4 +10,8 @@ public record ValidationResult(boolean isValid, List<String> errors) {
     public static ValidationResult failure(List<String> errors) {
         return new ValidationResult(false, errors);
     } 
+
+    public static ValidationResult failure(String error) {
+        return new ValidationResult(false, List.of(error));
+    }
 }

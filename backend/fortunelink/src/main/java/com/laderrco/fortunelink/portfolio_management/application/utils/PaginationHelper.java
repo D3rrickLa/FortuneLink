@@ -1,7 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.utils;
 
 public class PaginationHelper {
-    public int calculateOffset(int pageNumber, int pageSize) {
+    public static int calculateOffset(int pageNumber, int pageSize) {
         return -1;
     }
 
