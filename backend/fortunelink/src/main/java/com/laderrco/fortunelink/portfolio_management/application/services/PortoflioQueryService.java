@@ -169,12 +169,12 @@ public class PortoflioQueryService {
                 portfolio.getPortfolioId(),
                 LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC),
                 LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC),
-                null // TODO: implement pagination properly
+                Pageable.unpaged() // TODO: implement pagination properly
             );
         } else {
             allTransactions = transactionRepository.findByPortfolioId(
                 portfolio.getPortfolioId(), 
-                null // TODO: implement pagination properly
+                Pageable.unpaged() // TODO: implement pagination properly
             );
         }
         
@@ -237,7 +237,7 @@ public class PortoflioQueryService {
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
-        return PortfolioMapper.toResponse(portfolio, marketDataService);
+        return portfolioMapper.toResponse(portfolio, marketDataService);
     }
 
     private Money convertPercentageToMoney(Percentage percentage, Portfolio portfolio) {

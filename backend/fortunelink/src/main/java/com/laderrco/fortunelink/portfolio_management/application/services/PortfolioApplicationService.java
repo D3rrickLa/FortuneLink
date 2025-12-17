@@ -53,6 +53,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 // TODO: we might need a TransactionRepository
+// UPDATE ^ we have one, git it is called the transactionqueryrepo, not used here, but somewhere else.
 
 @Service // disabled for now, throws error with unit tests
 @Transactional
@@ -68,6 +69,7 @@ public class PortfolioApplicationService {
     private final PortfolioValuationService portfolioValuationService;
     private final MarketDataService marketDataService;
     private final CommandValidator commandValidator;
+    private final PortfolioMapper portfolioMapper;
 
     /*
      * createPortfolio()
@@ -416,7 +418,7 @@ public class PortfolioApplicationService {
         // persist using repo - JPA will happen in the infra layer
         Portfolio savePortfolio = portfolioRepository.save(portfolio);
 
-        return PortfolioMapper.toResponse(savePortfolio, marketDataService);
+        return portfolioMapper.toResponse(savePortfolio, marketDataService);
     }
 
     // this either soft deletes or permanently removes
