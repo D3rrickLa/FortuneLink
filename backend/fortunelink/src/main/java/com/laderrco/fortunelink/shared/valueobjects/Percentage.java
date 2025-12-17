@@ -47,4 +47,11 @@ public record Percentage(BigDecimal value) implements ClassValidation {
     public Percentage multiplyPercentage(Percentage other) {
         return new Percentage(this.value.multiply(other.value()));
     }
+
+    public Percentage annualize(double years) {
+        if (years  <= 0) {
+            throw new IllegalArgumentException("Years cannot be negative or 0.");
+        }
+        return new Percentage(this.value.divide(BigDecimal.valueOf(years)));
+    }
 }

@@ -1,8 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Currency;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -45,11 +43,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
-import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import jakarta.transaction.Transactional;

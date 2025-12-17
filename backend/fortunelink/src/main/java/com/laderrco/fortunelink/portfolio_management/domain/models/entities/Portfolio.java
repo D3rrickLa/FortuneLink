@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -43,6 +44,20 @@ public class Portfolio implements ClassValidation {
         this.updatedAt = ClassValidation.validateParameter(updatedAt);
     }
 
+    // Constructor for reconstitution from repository
+    // this will be a problem, i don't know where the transactions live without a function to 'place them' 
+    // in the right account
+    // public Portfolio(PortfolioId id, UserId userId, List<Account> accounts, 
+    //                 List<Transaction> transactionHistory, LocalDateTime createdDate, 
+    //                 LocalDateTime lastUpdated) {
+    //     this.portfolioId = Objects.requireNonNull(id, "PortfolioId cannot be null");
+    //     this.userId = Objects.requireNonNull(userId, "UserId cannot be null");
+    //     this.accounts = new ArrayList<>(accounts);
+    //     this.transactionHistory = new ArrayList<>(transactionHistory);
+    //     this.createdDate = createdDate;
+    //     this.lastUpdated = lastUpdated;
+    // }
+
     public Portfolio(UserId userId, ValidatedCurrency portfolioCurrency) {
         this(PortfolioId.randomId(), userId, new ArrayList<>(), portfolioCurrency, Instant.now(), Instant.now());
     }
@@ -70,7 +85,7 @@ public class Portfolio implements ClassValidation {
             throw new IllegalStateException(String.format("Cannot remove account '%s' - it still contains assets or cash", account.getName()));
         }
 
-        // this makes no sense if you thinkg about it... you should be able to, but what about history, what do we do with it?
+        // this makes no sense if you think about it... you should be able to, but what about history, what do we do with it?
         
         // boolean hasTransaction = transactionHistory.stream()
         //     .anyMatch(tx -> tx.getAccountId().equals(accountId));
