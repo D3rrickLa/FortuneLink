@@ -160,6 +160,10 @@ public class Portfolio implements ClassValidation {
         return getTotalAssets(marketDataService, exchangeRateService);
     }
 
+    public boolean isEmpty() {
+        return this.getAccounts().isEmpty();
+    }
+
     private void updateMetadata() {
         this.updatedAt = Instant.now();
     }

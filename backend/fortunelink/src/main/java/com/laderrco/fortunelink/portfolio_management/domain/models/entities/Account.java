@@ -296,9 +296,11 @@ public class Account implements ClassValidation {
                 if (transaction.isDrip()) {
                     /*
                         DRIP: Reinvest dividend into more shares
-                        Dividend amoutn is sued to buy shares at current price 
+                        Dividend amount is sued to buy shares at current price 
                         // No cash balance chance
+                        
                     */
+                   addOrUpdateAssetFromDrip(transaction);
                 }
                 else{
                     // Non-DRIP: Add income to cash balance

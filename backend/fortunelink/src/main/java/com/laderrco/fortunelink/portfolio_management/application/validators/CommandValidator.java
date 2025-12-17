@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
@@ -40,6 +41,11 @@ public class CommandValidator {
     public ValidationResult validate(AddAccountCommand addAccountCommand) {
         return null;
     }
+
+    public ValidationResult validate(CreatePortfolioCommand command) {
+        return null;
+    }
+
     public ValidationResult validateAmount(Money money) {
         return null;
     }
@@ -52,4 +58,5 @@ public class CommandValidator {
     public ValidationResult validateSymbol(String assetSymbol) {
         return null;
     }
+
 }
