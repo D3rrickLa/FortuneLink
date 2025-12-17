@@ -5,11 +5,19 @@ import java.time.Instant;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 /* 
     Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are optional
 */
-public record GetTransactionHistoryQuery(UserId userId, Instant startDate, Instant endDate,
-        TransactionType transactionType, AccountId accountId, int pageNumber, int pageSize) {
-
+public record GetTransactionHistoryQuery(UserId userId, Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId, int pageNumber, int pageSize) implements ClassValidation {
+    public GetTransactionHistoryQuery {
+        ClassValidation.validateParameter(userId);
+        ClassValidation.validateParameter(startDate);
+        ClassValidation.validateParameter(endDate);
+        ClassValidation.validateParameter(transactionType);
+        ClassValidation.validateParameter(accountId);
+        ClassValidation.validateParameter(pageNumber);
+        ClassValidation.validateParameter(pageSize);
+    }
 }

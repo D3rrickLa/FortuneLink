@@ -15,7 +15,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class TransactionMapper {
     private TransactionMapper() { }
-    public static TransactionResponse toResponse(Transaction transaction, MarketAssetInfo assetInfo) {
+    public static TransactionResponse toResponse(Transaction transaction, MarketAssetInfo assetInfo) { // we have assetinfo for future use where we can 'append more to the response'
         if (transaction == null) {
             return null;
         }

@@ -5,21 +5,36 @@ import java.time.Instant;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
+import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 public record AssetResponse(
-    AssetId assetId,
-    String symbol,
-    AssetType type,
-    BigDecimal quantity,
-    Money costBasis,
-    Money averageCostPerUnit,
-    Money currentPrice,
-    Money currentValue,
-    Money unrealizedGain,
-    Percentage unrealizedGainPercentage,
-    Instant acquiredDate,
-    Instant lastUpdated
-) {
+        AssetId assetId,
+        String symbol,
+        AssetType type,
+        BigDecimal quantity,
+        Money costBasis,
+        Money averageCostPerUnit,
+        Money currentPrice,
+        Money currentValue,
+        Money unrealizedGain,
+        Percentage unrealizedGainPercentage,
+        Instant acquiredDate,
+        Instant lastUpdated) {
+    public AssetResponse {
+        
+        ClassValidation.validateParameter(assetId);
+        ClassValidation.validateParameter(symbol);
+        ClassValidation.validateParameter(type);
+        ClassValidation.validateParameter(quantity);
+        ClassValidation.validateParameter(costBasis);
+        ClassValidation.validateParameter(averageCostPerUnit);
+        ClassValidation.validateParameter(currentPrice);
+        ClassValidation.validateParameter(currentValue);
+        ClassValidation.validateParameter(unrealizedGain);
+        ClassValidation.validateParameter(unrealizedGainPercentage);
+        ClassValidation.validateParameter(acquiredDate);
+        ClassValidation.validateParameter(lastUpdated);
+    }
 }
