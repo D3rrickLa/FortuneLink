@@ -11,6 +11,6 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 // for the services
 // Single transaction representation; contains all transaction details
-// TODO: check if the 'symbol' is what we really want and not assetidentifier
+// TODO: check if the 'symbol' is what we really want and not assetidentifier UPDATE: this this is fine, keeping as it
 public record TransactionResponse(TransactionId transactionId, TransactionType type, String symbol, BigDecimal quantity, Money price, List<Fee> fees, Money totalCost, Instant date, String notes) {
 }

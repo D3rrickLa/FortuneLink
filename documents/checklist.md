@@ -123,3 +123,129 @@
  - [x] AssetId
  - [x] TransactionId
  - [x] UserId (or reference from Auth context)
+
+---- dec 17th ----
+1. Core Application Services ✓
+
+ PortfolioManagementService - with all write operations
+
+ - [] createPortfolio()
+ - [] deletePortfolio()
+ - [] recordAssetPurchase()
+ - [] recordAssetSale()
+ - [] recordDeposit()
+ - [] recordWithdrawal()
+ - [] recordDividendIncome()
+ - [] recordFee()
+ - [] addAccount()
+ - [] removeAccount()
+ - [] updateTransaction()
+ - [] deleteTransaction()
+
+
+
+ PortfolioQueryService - with all read operations
+
+ - [] getNetWorth()
+ - [] getPortfolioPerformance()
+ - [] getAssetAllocation()
+ - [] getTransactionHistory()
+ - [] getAccountSummary()
+ - [] getPortfolioSummary()
+
+
+2. Command Classes (Write DTOs) ✓
+
+ - [] CreatePortfolioCommand
+ - [] DeletePortfolioCommand
+ - [] RecordPurchaseCommand
+ - [] RecordSaleCommand
+ - [] RecordDepositCommand
+ - [] RecordWithdrawalCommand
+ - [] RecordIncomeCommand
+ - [] RecordFeeCommand
+ - [] AddAccountCommand
+ - [] RemoveAccountCommand
+ - [] UpdateTransactionCommand
+ - [] DeleteTransactionCommand
+3. Query Classes (Read DTOs) ✓
+
+ - [] ViewNetWorthQuery
+ - [] ViewPerformanceQuery
+ - [] AnalyzeAllocationQuery
+ - [] GetTransactionHistoryQuery
+ - [] GetAccountSummaryQuery
+ - [] GetPortfolioSummaryQuery
+
+4. Response Classes (Output DTOs) ✓
+
+ - [] PortfolioResponse
+ - [] NetWorthResponse
+ - [] PerformanceResponse
+ - [] AllocationResponse (with nested AllocationDetail)
+ - [] TransactionResponse
+ - [] TransactionHistoryResponse
+ - [] AccountResponse
+5. Validator Classes ✓
+
+ CommandValidator - with validation methods for all commands
+
+ - [] validate(RecordPurchaseCommand)
+ - [] validate(RecordSaleCommand)
+ - [] validate(RecordDepositCommand)
+ - [] validate(RecordWithdrawalCommand)
+ - [] validate(AddAccountCommand)
+ - [] validateAmount(Money)
+ - [] validateQuantity(Quantity)
+ - [] validateDate(TransactionDate)
+ - [] validateSymbol(AssetSymbol)
+
+
+ ValidationResult - holds validation outcome
+6. Mapper Classes ✓
+
+ PortfolioMapper
+
+ - [] toResponse(Portfolio, MarketDataService)
+ - [] toAccountResponse(Account, MarketDataService)
+
+
+ TransactionMapper
+
+ - [] toResponse(Transaction)
+ - [] toResponseList(List<Transaction>)
+
+
+ AllocationMapper
+
+ - [] toResponse(Map<String, Money>, Money totalValue)
+ - [] toAllocationDetail(String category, Money value, Money total)
+
+
+7. Exception Classes ✓
+
+ - [] PortfolioNotFoundException
+ - [] AccountNotFoundException
+ - [] InsufficientFundsException
+ - [] InsufficientHoldingsException
+ - [] InvalidTransactionException
+ - [] AccountNotEmptyException
+8. Utility/Helper Classes ✓
+
+ PaginationHelper
+
+ - [] calculateOffset()
+ - [] validatePageParameters()
+ - [] createPageInfo()
+
+
+ DateRangeCalculator
+
+ - [] getYearToDate()
+ - [] getLastNDays()
+ - [] getLastNMonths()
+ - [] getLastNYears()
+
+ TODO
+ - Mapper classes
+ - 

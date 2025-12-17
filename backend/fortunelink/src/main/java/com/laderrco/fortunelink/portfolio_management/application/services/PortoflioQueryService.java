@@ -215,7 +215,7 @@ public class PortoflioQueryService {
             ? query.startDate() + " to " + query.endDate()
             : "All time";
         
-        return new TransactionHistoryResponse( // this might be a problem as we have TransactionHistoryResponse returning a List of itself, recursion
+        return new TransactionHistoryResponse(
             transactionResponses,
             totalCount,
             query.pageNumber(),

@@ -881,3 +881,11 @@ Query Services (Read Operations)
 --- Dec 14th --- th DRIP issue
 TLDR: we can't drip when we record a dividend in the application layer
 The solution is to add a isDrip feild in the Transaction.java and impelment logic in the Account.java 
+
+
+--- dec 17th --- updates
+- fixed drip
+- did both the services layer code, need to check if i impelmented the other stuff
+- unit test after
+
+- THEN ONTO INFRA

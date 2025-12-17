@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.application.responses;
 
-import java.time.Instant;
-
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
