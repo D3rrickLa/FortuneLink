@@ -60,8 +60,8 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-// TODO: we might need a TransactionRepository
-// UPDATE ^ we have one, git it is called the transactionqueryrepo, not used here, but somewhere else.
+// TODO: right now we are using findByUserId -> assumes 1 portoflio per user for MVP, multi-portfolio for layer
+// for transaction edits/deletes -> no recalculations, atleast not here, in domain yes there is a method, no cascade effect, and hard delete, also no ocmpatibility checks
 
 @Service // disabled for now, throws error with unit tests
 @Transactional
