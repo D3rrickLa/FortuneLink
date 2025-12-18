@@ -139,8 +139,8 @@
  - [x] recordFee()
  - [x] addAccount()
  - [x] removeAccount()
- - [] updateTransaction()
- - [] deleteTransaction()
+ - [x] updateTransaction()
+ - [x] deleteTransaction()
 
 
 
