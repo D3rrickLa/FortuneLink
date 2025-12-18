@@ -1,8 +1,13 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
@@ -33,12 +38,14 @@ import com.laderrco.fortunelink.portfolio_management.application.validators.Comm
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
@@ -334,14 +341,67 @@ public class PortfolioApplicationService {
      * - Historical Impact - affects subsequent calculations
      */
     public TransactionResponse updateTransation(UpdateTransactionCommand command) {
-        // if we think about htis, this is wrong, because what we are saying here is find the portfolio by a user id... which 
-        // if we have more than 1, will return n amounts, sure whatever, but an issue
-        // even if 
+        // 1. Validate command
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid update command");
+        }
+        
+        // 2. Get all transactions for the account
+        List<Transaction> accountTransactions = transactionQueryRepository
+                .findByAccountId(command.accountId(), Pageable.unpaged());
+        
+        // 3. Find the specific transaction to update
+        Transaction existingTransaction = accountTransactions.stream()
+                .filter(t -> t.getTransactionId().equals(command.transactionId()))
+                .findFirst()
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
+        
+        // // 4. Basic validations
+        // if (command.date().isAfter(Instant.now())) {
+        //     throw new IllegalArgumentException("Transaction date cannot be in the future");
+        // }
+        
+        // if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
+        //     throw new IllegalArgumentException("Quantity must be positive");
+        // }
+        
+        // if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
+        //     throw new IllegalArgumentException("Price must be positive");
+        // }
+        
+        // 5. ONLY critical validation: can't sell more than you own
+        if (command.type() == TransactionType.SELL) {
+            List<Transaction> assetTransactions = accountTransactions.stream()
+                    .filter(t -> t.getAssetIdentifier().equals(command.identifier()))
+                    .sorted((t1, t2) -> t1.getTransactionDate().compareTo(t2.getTransactionDate()))
+                    .collect(Collectors.toList());
+            
+            validateSellTransaction(
+                command.identifier(),
+                command.quantity(),
+                command.date(),
+                assetTransactions,
+                existingTransaction.getTransactionId()
+            );
+        }
+        
+        // 6. Create updated transaction
+        Transaction updatedTransaction = createUpdatedTransaction(existingTransaction, command);
+        
+        // 7. Get portfolio by userId (assume user has only 1 portfolio for MVP)
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
-
-        Transaction existingTransaction;
-        return null;
+        
+        // 8. Update transaction in portfolio
+        portfolio.updateTransaction(command.accountId(), command.transactionId(), updatedTransaction); // we need also the accoutn id and transaction id
+        
+        // 9. Save portfolio (this saves the updated transaction through aggregate)
+        portfolioRepository.save(portfolio);
+        
+        // 10. Return response
+        return TransactionMapper.toResponse(updatedTransaction, null);
+        
     }
 
     /*
@@ -350,8 +410,32 @@ public class PortfolioApplicationService {
      * audit - consider soft dletes idntead of hard
      * validation -> check if deleting htis transaction would create inconsistencies
      */
-    public void deleteTransaction(DeleteTransactionCommand deleteTransactionCommand) {
-
+    public void deleteTransaction(DeleteTransactionCommand command) {
+        // 1. Validate command
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid delete command");
+        }
+        
+        // 2. Get all transactions for the account
+        List<Transaction> accountTransactions = transactionQueryRepository
+                .findByAccountId(command.accountId(), Pageable.unpaged());
+        
+        // 3. Find the transaction to delete
+        Transaction transaction = accountTransactions.stream()
+                .filter(t -> t.getTransactionId().equals(command.transactionId()))
+                .findFirst()
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
+        
+        // 4. Get portfolio
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        // 5. Remove transaction from portfolio
+        portfolio.removeTransaction(command.accountId(), transaction.getTransactionId()); // we need also the accoutn id and transaction id
+        
+        // 6. Save portfolio
+        portfolioRepository.save(portfolio);
     }
 
     public AccountResponse addAccount(AddAccountCommand command) {
@@ -462,5 +546,59 @@ public class PortfolioApplicationService {
         //     portfolioRepository.delete(portfolio.getPortfolioId());
         // }
         portfolioRepository.delete(portfolio.getPortfolioId());
+    }
+    
+    /**
+     * Validates that a SELL transaction has sufficient holdings at that point in time.
+     */
+    private void validateSellTransaction(
+            AssetIdentifier symbol,
+            BigDecimal sellQuantity,
+            Instant sellDate,
+            List<Transaction> assetTransactions,
+            TransactionId excludeTransactionId) {
+        
+        BigDecimal holdings = BigDecimal.ZERO;
+        
+        // Calculate holdings up to the sell date, excluding the transaction being updated
+        for (Transaction t : assetTransactions) {
+            if (t.getTransactionId().equals(excludeTransactionId)) {
+                continue; // Skip the transaction being updated
+            }
+            
+            if (t.getTransactionDate().isAfter(sellDate)) {
+                break; // Stop at transactions after the sell date
+            }
+            
+            if (t.getTransactionType() == TransactionType.BUY) {
+                holdings = holdings.add(t.getQuantity());
+            } else if (t.getTransactionType() == TransactionType.SELL) {
+                holdings = holdings.subtract(t.getQuantity());
+            }
+        }
+        
+        // Check if we have enough shares to sell
+        if (holdings.compareTo(sellQuantity) < 0) {
+            throw new IllegalStateException(
+                "Insufficient holdings at " + sellDate + ". " +
+                "Available: " + holdings + ", Attempting to sell: " + sellQuantity
+            );
+        }
+    }
+    
+    /**
+     * Creates an updated transaction from existing transaction and command.
+     */
+    private Transaction createUpdatedTransaction(Transaction existing, UpdateTransactionCommand command) {
+        return new Transaction(
+            existing.getTransactionId(), // Keep same ID
+            command.type(),
+            command.identifier(),
+            command.quantity(),
+            command.price(),
+            command.fee(),
+            command.date(),
+            command.notes()
+        );
     }
 }

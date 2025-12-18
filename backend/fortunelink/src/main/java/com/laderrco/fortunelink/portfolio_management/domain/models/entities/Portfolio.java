@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNo
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
@@ -95,6 +96,25 @@ public class Portfolio implements ClassValidation {
 
         this.accounts.remove(account);
         updateMetadata();    
+    }
+
+    public void updateTransaction(AccountId accountId, TransactionId transactionId, Transaction updatedTransaction) {
+        Account existingAccount = this.accounts.stream()
+            .filter(a -> a.getAccountId().equals(accountId))
+            .findFirst()
+            .orElseThrow(() -> new AccountNotFoundException("Account not found when trying to update this transaction"));
+    
+        existingAccount.updateTransaction(transactionId, updatedTransaction);
+
+    }
+
+    public void removeTransaction(AccountId accountId, TransactionId transactionId) {
+        Account existingAccount = this.accounts.stream()
+            .filter(a -> a.getAccountId().equals(accountId))
+            .findFirst()
+            .orElseThrow(() -> new AccountNotFoundException("Account not found when trying to remove this transaction"));
+
+        existingAccount.removeTransaction(transactionId);
     }
 
     public void recordTransaction(AccountId accountId, Transaction transaction) throws AccountNotFoundException {

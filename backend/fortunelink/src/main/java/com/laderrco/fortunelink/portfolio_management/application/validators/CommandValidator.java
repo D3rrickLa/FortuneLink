@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.validators;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -10,12 +11,14 @@ import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
@@ -245,6 +248,61 @@ public class CommandValidator implements ClassValidation {
             ? ValidationResult.success() 
             : ValidationResult.failure(errors);
     }
+
+    public ValidationResult validate(UpdateTransactionCommand command) {
+        ClassValidation.validateParameter(command);
+        List<String> errors = new ArrayList<>();
+        if (command.userId() == null) {
+            errors.add("UserId is requried");
+        }
+        if(command.date() == null) {
+            errors.add("UpdateDate is required");
+        }
+
+        if (command.accountId() == null) {
+            errors.add("AccountId is required");
+        }
+
+        if (command.type() == null) {
+           errors.add("TransactionType is required");
+        }
+
+        if (command.quantity() == null) {
+            errors.add("Quantity is required");
+        }
+
+        if (command.price() == null) {
+            errors.add("Price is required");
+        }
+        
+        if(command.fee() == null) {
+            errors.add("Fee is required");
+        }
+
+        if (command.date() == null) {
+            errors.add("Date is required");
+        }
+
+        if (command.date().isAfter(Instant.now())) {
+            errors.add("Date cannot be in the future");
+        }
+
+        if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
+            errors. add("Quantity must be positive");
+        }
+
+        if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add("Price must be positive");
+        }
+
+        return errors.isEmpty() 
+            ? ValidationResult.success()
+            : ValidationResult.failure(errors);
+    }
+    public ValidationResult validate(DeleteTransactionCommand command) {
+        return null;
+    }
+
     
     public ValidationResult validate(AddAccountCommand command) {
         ClassValidation.validateParameter(command);
