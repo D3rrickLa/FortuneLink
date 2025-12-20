@@ -174,7 +174,7 @@ public class PerformanceCalculationService {
      * 
      * !! USE THE SIMPLIFIED ACB, THE CALCULATESELLGAIN FOR DISPLAYING
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings("Unused")
     private Money calculateSellGainWithACB(Portfolio portfolio, List<Transaction> transactions) {
         throw new UnsupportedOperationException("Not yet implemented");
     }

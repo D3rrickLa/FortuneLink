@@ -70,6 +70,7 @@ public class Account implements ClassValidation {
         this.version = version;
     }
     
+    // generic, account, nothing in it
     public Account(AccountId randomId, String accountName, AccountType accountType, ValidatedCurrency baseCurrency) {
         this(
             randomId, 

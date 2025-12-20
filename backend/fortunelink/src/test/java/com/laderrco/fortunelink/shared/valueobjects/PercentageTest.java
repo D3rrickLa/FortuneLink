@@ -1,12 +1,18 @@
 package com.laderrco.fortunelink.shared.valueobjects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 
 public class PercentageTest {
     private Percentage testPercentage;
@@ -73,4 +79,20 @@ public class PercentageTest {
         Percentage actualPercentage = testPercentage.multiplyPercentage(percentageTest01);
         assertEquals(expectedValue, actualPercentage);
     }
+
+    @ParameterizedTest
+    @ValueSource(doubles  = {2, 1, 12})
+    void testAnnualize(double years){
+        Percentage expectedValue = new Percentage(BigDecimal.valueOf(1).divide(BigDecimal.valueOf(years), Precision.PERCENTAGE.getDecimalPlaces(), Rounding.PERCENTAGE.getMode()));
+        Percentage actual = new Percentage(BigDecimal.valueOf(1)).annualize(years);
+        assertEquals(expectedValue, actual);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles  = {0, -0, -12, Double.NEGATIVE_INFINITY})
+    void testAnnualizeThrowErrorsForNegativeAndZero(double years){
+        Percentage testPercentage = new Percentage(BigDecimal.valueOf(1));
+        assertThrows(IllegalArgumentException.class, () -> testPercentage.annualize(years));
+    }
+
 }

@@ -52,6 +52,6 @@ public record Percentage(BigDecimal value) implements ClassValidation {
         if (years  <= 0) {
             throw new IllegalArgumentException("Years cannot be negative or 0.");
         }
-        return new Percentage(this.value.divide(BigDecimal.valueOf(years)));
+        return new Percentage(this.value.divide(BigDecimal.valueOf(years), SCALE, MODE));
     }
 }

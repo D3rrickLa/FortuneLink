@@ -3,8 +3,10 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeCategory;
@@ -19,6 +21,11 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import static org.assertj.core.api.Assertions.*;
 
 public class FeeTest {
+    // Mock/Stub data for the required parameters
+    private final FeeType mockType = FeeType.ACCOUNT_MAINTENANCE; // Replace with your actual enum/class
+    private final Money mockAmount = new Money(BigDecimal.valueOf(10.0), ValidatedCurrency.USD); 
+    private final ExchangeRate mockRate = new ExchangeRate(ValidatedCurrency.USD, ValidatedCurrency.USD, BigDecimal.valueOf(1), Instant.now(), null);
+    private final Instant mockDate = Instant.now();
 
     // --- Canonical Constructor Tests ---
     @Test
@@ -63,6 +70,81 @@ public class FeeTest {
         assertThatNullPointerException()
                 .isThrownBy(() -> new Fee(FeeType.BROKERAGE, money(1), exchangeRate(), Collections.emptyMap(), null))
                 .withMessageContaining("Fee Date cannot be null");
+    }
+    // testing the branch in the canonical constructor
+    @Test
+    @DisplayName("Should throw exception when metadata contains a blank key")
+    void constructor_WithBlankMetadataKey_ThrowsException() {
+        Map<String, String> invalidMetadata = Map.of(" ", "validValue");
+
+        assertThatThrownBy(() -> 
+            new Fee(mockType, mockAmount, mockRate, invalidMetadata, mockDate))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Metadata has empty properties in it");
+    }
+
+    @Test
+    @DisplayName("Should throw exception when metadata contains a blank value")
+    void constructor_WithBlankMetadataValue_ThrowsException() {
+        Map<String, String> invalidMetadata = Map.of("validKey", "");
+
+        assertThatThrownBy(() -> 
+            new Fee(mockType, mockAmount, mockRate, invalidMetadata, mockDate))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Metadata has empty properties in it");
+    }
+
+    @Test
+    @DisplayName("Should handle null metadata by converting it to an empty unmodifiable map")
+    void constructor_WithNullMetadata_SetsEmptyMap() {
+        Fee fee = new Fee(mockType, mockAmount, mockRate, null, mockDate);
+
+        assertThat(fee.metadata()).isEmpty();
+        // Verify it is unmodifiable
+        assertThatThrownBy(() -> fee.metadata().put("new", "key"))
+            .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("Should make valid metadata unmodifiable")
+    void constructor_WithValidMetadata_MakesItUnmodifiable() {
+        Map<String, String> mutableMetadata = new HashMap<>();
+        mutableMetadata.put("source", "web");
+
+        Fee fee = new Fee(mockType, mockAmount, mockRate, mutableMetadata, mockDate);
+
+        assertThat(fee.metadata()).containsEntry("source", "web");
+        
+        // Ensure the record holds a copy or unmodifiable view, not the original mutable map
+        assertThatThrownBy(() -> fee.metadata().put("fail", "here"))
+            .isInstanceOf(UnsupportedOperationException.class);
+    }    
+
+    @Test
+    @DisplayName("Path 1: Metadata is null (skips loop)")
+    void constructor_NullMetadata_ShouldNotThrow() {
+        // This triggers: metadata != null -> FALSE
+        Fee fee = new Fee(mockType, mockAmount, mockRate, null, mockDate);
+        assertThat(fee.metadata()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Path 2: Metadata is empty (skips loop)")
+    void constructor_EmptyMetadata_ShouldNotThrow() {
+        // This triggers: metadata != null -> TRUE, !metadata.isEmpty() -> FALSE
+        Fee fee = new Fee(mockType, mockAmount, mockRate, Map.of(), mockDate);
+        assertThat(fee.metadata()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Path 3: Metadata is blank (enters loop and fails)")
+    void constructor_BlankMetadata_ShouldThrow() {
+        // This triggers: metadata != null -> TRUE, !metadata.isEmpty() -> TRUE
+        Map<String, String> brokenMap = Map.of(" ", "value");
+        
+        assertThatThrownBy(() -> 
+            new Fee(mockType, mockAmount, mockRate, brokenMap, mockDate))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     // @Test

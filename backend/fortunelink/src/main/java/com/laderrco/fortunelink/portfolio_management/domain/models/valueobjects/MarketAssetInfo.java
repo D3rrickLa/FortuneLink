@@ -1,21 +1,24 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects;
 
-import java.util.Currency;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.EqualsAndHashCode;
+
+@EqualsAndHashCode // TODO: make your own
 public class MarketAssetInfo {
     private final String symbol;
     private final String name;
     private final AssetType assetType;
     private final String exchange;
-    private final Currency currency;
+    private final ValidatedCurrency currency;
     private final String sector;
     private final Money currentPrice;
 
-    public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, Currency currency, String sector, Money currentPrice) {
+    public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, ValidatedCurrency currency, String sector, Money currentPrice) {
         this.symbol = symbol;
         this.name = name;
         this.assetType = assetType;
@@ -48,7 +51,7 @@ public class MarketAssetInfo {
     public String getExchange() {
         return exchange;
     }
-    public Currency getCurrency() {
+    public ValidatedCurrency getCurrency() {
         return currency;
     }
     public String getSector() {

@@ -28,7 +28,9 @@ public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate ex
             throw new InvalidQuantityException("Fee amount cannot be negative.");
         }
 
-        if (metadata != null && !metadata.isEmpty()) {
+        // normalize metadata
+        metadata = metadata == null ? Map.of() : metadata;
+        if (!metadata.isEmpty()) {
             for (Map.Entry<String, String> entry: metadata.entrySet()) {
                 String key = entry.getKey();
                 String value = entry.getValue();
@@ -39,7 +41,7 @@ public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate ex
             }
         }
 
-        metadata = metadata == null ? Collections.emptyMap() : Collections.unmodifiableMap(metadata);
+        metadata = Collections.unmodifiableMap(metadata);
     }
 
     /**
