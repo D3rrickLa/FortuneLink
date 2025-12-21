@@ -9,6 +9,7 @@ import java.util.Objects;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
@@ -137,6 +138,10 @@ public class Portfolio implements ClassValidation {
         existingAccount.removeTransaction(transactionId);
     }
 
+    public void removeAsset(AccountId accountId, AssetId assetId) {
+        Account account = getAccount(accountId);
+        account.removeAsset(assetId);
+    }
 
     // Querying Methods STARTS //
     

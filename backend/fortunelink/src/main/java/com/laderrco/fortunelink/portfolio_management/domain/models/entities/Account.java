@@ -127,32 +127,32 @@ public class Account implements ClassValidation {
         }
     }
 
-    // This might need to be removed, Think about it, we shouldn't have the ability to 'update the asset'
-    // We can't have 2 sources of truths, only we can affect the asset via the transactions
-    @Deprecated
-    void updateAsset(AssetId assetId, Asset updatedAsset) {
-        // THIS IS NEVER USED/Should never be used
-        ClassValidation.validateParameter(assetId);
-        ClassValidation.validateParameter(updatedAsset);
-        // Verify the updatedAsset has the same ID
-        if (!updatedAsset.getAssetId().equals(assetId)) {
-            throw new IllegalArgumentException("Cannot change asset identity");
-        }
+    // // This might need to be removed, Think about it, we shouldn't have the ability to 'update the asset'
+    // // We can't have 2 sources of truths, only we can affect the asset via the transactions
+    // @Deprecated
+    // void updateAsset(AssetId assetId, Asset updatedAsset) {
+    //     // THIS IS NEVER USED/Should never be used
+    //     ClassValidation.validateParameter(assetId);
+    //     ClassValidation.validateParameter(updatedAsset);
+    //     // Verify the updatedAsset has the same ID
+    //     if (!updatedAsset.getAssetId().equals(assetId)) {
+    //         throw new IllegalArgumentException("Cannot change asset identity");
+    //     }
 
-        Optional<Asset> existingAsset = this.assets.stream()
-            .filter(a -> a.getAssetId().equals(assetId))
-            .findFirst();
+    //     Optional<Asset> existingAsset = this.assets.stream()
+    //         .filter(a -> a.getAssetId().equals(assetId))
+    //         .findFirst();
 
-        if (existingAsset.isEmpty()) {
-            throw new IllegalStateException(assetId.toString());
-        }
+    //     if (existingAsset.isEmpty()) {
+    //         throw new IllegalStateException(assetId.toString());
+    //     }
         
-        // Replace the entire asset object
-        this.assets.remove(existingAsset.get());
-        this.assets.add(updatedAsset);
-        recalculateStateAfterChange();
-        updateMetadata();
-    }
+    //     // Replace the entire asset object
+    //     this.assets.remove(existingAsset.get());
+    //     this.assets.add(updatedAsset);
+    //     recalculateStateAfterChange();
+    //     updateMetadata();
+    // }
 
     void recordTransaction(Transaction transaction) {
         ClassValidation.validateParameter(transaction);
@@ -195,7 +195,7 @@ public class Account implements ClassValidation {
         updateMetadata();
     }
 
-    public Asset getAsset(AssetIdentifier assetIdentifierId) {
+    public Asset getAsset(AssetIdentifier assetIdentifierId) throws AssetNotFoundException {
         ClassValidation.validateParameter(assetIdentifierId);
         return this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(assetIdentifierId))

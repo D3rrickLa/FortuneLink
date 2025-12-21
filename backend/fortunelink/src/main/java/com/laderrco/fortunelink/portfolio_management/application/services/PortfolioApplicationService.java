@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CorrectAssetTickerCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
@@ -259,8 +260,7 @@ public class PortfolioApplicationService {
 
     }
 
-    // this is a bit different to handle, because dividend is tied to a stock for
-    // the most part
+    // this is a bit different to handle, because dividend is tied to a stock for the most part
     public TransactionResponse recordDividendIncome(RecordIncomeCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
@@ -481,6 +481,55 @@ public class PortfolioApplicationService {
 
         portfolio.removeAccount(command.accountId());
         portfolioRepository.save(portfolio);
+    }
+
+    @Transactional
+    public void correctAssetTicket(CorrectAssetTickerCommand command) {
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+
+        Account account = portfolio.getAccount(command.accountId());
+
+        Asset wrongAsset = account.getAsset(command.wrongAssetIdentifier());
+
+        if (wrongAsset.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            Transaction sellWrongTransaction = new Transaction(
+                TransactionId.randomId(),
+                TransactionType.SELL,
+                wrongAsset.getAssetIdentifier(),
+                wrongAsset.getQuantity(),
+                wrongAsset.getCostPerUnit(),
+                Money.ZERO(wrongAsset.getCurrency()),
+                null,
+                Instant.now(),
+                "Correction: Wrong ticker entered",
+                false
+            );
+
+            portfolio.recordTransaction(account.getAccountId(), sellWrongTransaction);
+
+            Transaction buyCorrectTransaction = new Transaction(
+                TransactionId.randomId(),
+                TransactionType.BUY,
+                command.correctAssetIdentifier(),
+                wrongAsset.getQuantity(),
+                wrongAsset.getCostPerUnit(),
+                Money.ZERO(wrongAsset.getCurrency()),
+                null,
+                Instant.now(),
+                "Correction: Applied correct ticker",
+                false
+            );
+
+            portfolio.recordTransaction(account.getAccountId(), buyCorrectTransaction);
+
+            portfolioRepository.save(portfolio);
+        }
+        else {
+            portfolio.removeAsset(account.getAccountId(), wrongAsset.getAssetId());
+        }
+
+
     }
 
     // create initial portfolio for new user
