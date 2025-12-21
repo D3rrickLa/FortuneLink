@@ -126,9 +126,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of())
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act

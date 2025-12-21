@@ -79,11 +79,11 @@ class PortfolioTest {
             // Then
             assertThat(portfolio).isNotNull();
             assertThat(portfolio.getUserId()).isEqualTo(userId);
-            assertThat(portfolio.getPortfolioCurrency()).isEqualTo(portfolioCurrency);
+            assertThat(portfolio.getPortfolioCurrencyPreference()).isEqualTo(portfolioCurrency);
             assertThat(portfolio.getAccounts()).isEmpty();
             assertThat(portfolio.getPortfolioId()).isNotNull();
             assertThat(portfolio.getSystemCreationDate()).isNotNull();
-            assertThat(portfolio.getUpdatedAt()).isNotNull();
+            assertThat(portfolio.getLastUpdatedAt()).isNotNull();
         }
 
         @Test
@@ -206,14 +206,14 @@ class PortfolioTest {
         @DisplayName("Should update metadata when adding account")
         void shouldUpdateMetadataWhenAddingAccount() throws InterruptedException {
             // Given
-            Instant initialUpdatedAt = portfolio.getUpdatedAt();
+            Instant initialUpdatedAt = portfolio.getLastUpdatedAt();
             Thread.sleep(10); // Ensure time difference
 
             // When
             portfolio.addAccount(account1);
 
             // Then
-            assertThat(portfolio.getUpdatedAt()).isAfter(initialUpdatedAt);
+            assertThat(portfolio.getLastUpdatedAt()).isAfter(initialUpdatedAt);
         }
 
         @Test
@@ -286,7 +286,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account.getAccountId(), transaction);
 
             // Then
-            List<Transaction> transactions = portfolio.getTransactionsForAccount(account.getAccountId());
+            List<Transaction> transactions = portfolio.getTransactionsFromAccount(account.getAccountId());
             assertThat(transactions).hasSize(1);
             assertThat(transactions).contains(transaction);
         }
@@ -306,14 +306,14 @@ class PortfolioTest {
         @DisplayName("Should update metadata when recording transaction")
         void shouldUpdateMetadataWhenRecordingTransaction() throws Exception {
             // Given
-            Instant initialUpdatedAt = portfolio.getUpdatedAt();
+            Instant initialUpdatedAt = portfolio.getLastUpdatedAt();
             Thread.sleep(10);
 
             // When
             portfolio.recordTransaction(account.getAccountId(), transaction);
 
             // Then
-            assertThat(portfolio.getUpdatedAt()).isAfter(initialUpdatedAt);
+            assertThat(portfolio.getLastUpdatedAt()).isAfter(initialUpdatedAt);
         }
     }
 
@@ -377,7 +377,7 @@ class PortfolioTest {
             // when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class))).thenReturn(Money.ZERO(portfolioCurrency));
 
             // When
-            Money totalAssets = portfolio.getTotalAssets(marketDataService, exchangeRateService);
+            Money totalAssets = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
 
             // Then
             assertThat(totalAssets.amount()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -398,7 +398,7 @@ class PortfolioTest {
                 .thenReturn(account1Value, account2Value);
 
             // When
-            Money totalAssets = portfolio.getTotalAssets(marketDataService, exchangeRateService);
+            Money totalAssets = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
 
             // Then
             verify(exchangeRateService, times(2)).convert(any(Money.class), eq(portfolioCurrency));
@@ -409,7 +409,7 @@ class PortfolioTest {
         @DisplayName("Should throw exception when marketDataService is null")
         void shouldThrowExceptionWhenMarketDataServiceIsNull() {
             // When & Then
-            assertThatThrownBy(() -> portfolio.getTotalAssets(null, exchangeRateService))
+            assertThatThrownBy(() -> portfolio.getAssetsTotalValue(null, exchangeRateService))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("marketDataService");
         }
@@ -418,7 +418,7 @@ class PortfolioTest {
         @DisplayName("Should throw exception when exchangeRateService is null")
         void shouldThrowExceptionWhenExchangeRateServiceIsNull() {
             // When & Then
-            assertThatThrownBy(() -> portfolio.getTotalAssets(marketDataService, null))
+            assertThatThrownBy(() -> portfolio.getAssetsTotalValue(marketDataService, null))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("exchangeRateService");
         }
@@ -525,7 +525,7 @@ class PortfolioTest {
 
     @Nested
     @DisplayName("Get Transactions For Account Tests")
-    class GetTransactionsForAccountTests {
+    class getTransactionsFromAccountTests {
 
         private Portfolio portfolio;
         private Account account1;
@@ -550,7 +550,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account2.getAccountId(), tx2);
 
             // When
-            List<Transaction> account1Transactions = portfolio.getTransactionsForAccount(account1.getAccountId());
+            List<Transaction> account1Transactions = portfolio.getTransactionsFromAccount(account1.getAccountId());
 
             // Then
             assertThat(account1Transactions).hasSize(1);
@@ -565,14 +565,14 @@ class PortfolioTest {
             AccountId nonExistentId = AccountId.randomId();
 
             // When & Then
-            assertThatThrownBy(() -> portfolio.getTransactionsForAccount(nonExistentId))
+            assertThatThrownBy(() -> portfolio.getTransactionsFromAccount(nonExistentId))
                 .isInstanceOf(Exception.class);
         }
     }
 
     @Nested
     @DisplayName("Get Transactions For Asset Tests")
-    class GetTransactionsForAssetTests {
+    class getTransactionsFromAssetTests {
 
         private Portfolio portfolio;
         private Account account;
@@ -601,7 +601,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account.getAccountId(), tx3);
 
             // When
-            List<Transaction> assetTransactions = portfolio.getTransactionsForAsset(assetId1);
+            List<Transaction> assetTransactions = portfolio.getTransactionsFromAsset(assetId1);
 
             // Then
             assertThat(assetTransactions).hasSize(2);
@@ -615,7 +615,7 @@ class PortfolioTest {
             AssetIdentifier unusedAsset = new MarketIdentifier("TSLA", null, AssetType.STOCK, "TESLA", "USD", null);
 
             // When
-            List<Transaction> transactions = portfolio.getTransactionsForAsset(unusedAsset);
+            List<Transaction> transactions = portfolio.getTransactionsFromAsset(unusedAsset);
 
             // Then
             assertThat(transactions).isEmpty();

@@ -11,7 +11,7 @@ public class PortfolioValuationService {
     public Money calculateTotalValue(Portfolio portfolio, MarketDataService marketDataService) {
         return portfolio.getAccounts().stream()
             .map(account -> calculateAccountValue(account, marketDataService))
-            .reduce(Money.ZERO(portfolio.getPortfolioCurrency()), Money::add);
+            .reduce(Money.ZERO(portfolio.getPortfolioCurrencyPreference()), Money::add);
     }
 
     public Money calculateAccountValue(Account account, MarketDataService marketDataService) {

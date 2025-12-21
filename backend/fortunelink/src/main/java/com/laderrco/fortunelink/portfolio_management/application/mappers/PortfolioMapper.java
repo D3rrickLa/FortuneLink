@@ -46,7 +46,7 @@ public class PortfolioMapper {
             // totalAssets,
             portfolio.getTransactionCount(),
             portfolio.getSystemCreationDate(),
-            portfolio.getUpdatedAt()
+            portfolio.getLastUpdatedAt()
         );
     }
 

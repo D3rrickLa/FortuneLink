@@ -23,14 +23,12 @@ import lombok.ToString;
 @ToString
 @Builder
 @Getter // TODO: Remove this later
-// TODO: we shold look back to version 2 with the diffrence transaction detail objects as we need to cram a lot of stuff in Transaction.java
 public class Transaction implements ClassValidation {
-    // TODO: look at and compare if V2 Transaction makes sense of V5_1
     private final TransactionId transactionId;
     private TransactionType transactionType;
     private AssetIdentifier assetIdentifier; 
     private BigDecimal quantity; 
-    private Money pricePerUnit; // this need to act as both the ppu and an amount for deposit and withdrawal 
+    private Money pricePerUnit;
     private Money dividendAmount; // NEW: Store the actual dividend amount for DRIP
     private List<Fee> fees; // fees in original currency with a exchange rate link to the portfolios
     private Instant transactionDate;
@@ -38,12 +36,7 @@ public class Transaction implements ClassValidation {
     private boolean isDrip;
 
     // Main constructor
-    // TODO make this private so we can only enforce those specfic constructor
-    public Transaction(TransactionId transactionId, TransactionType transactionType, 
-        AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, 
-        Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, 
-        boolean isDrip) {
-        
+    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
         validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
         this.transactionId = ClassValidation.validateParameter(transactionId);
@@ -62,8 +55,7 @@ public class Transaction implements ClassValidation {
     public Transaction(TransactionId transactionId, TransactionType transactionType,
         AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit,
         List<Fee> fees, Instant transactionDate, String notes) {
-        this(transactionId, transactionType, assetIdentifier, quantity, 
-            pricePerUnit, null, fees, transactionDate, notes, false);
+        this(transactionId, transactionType, assetIdentifier, quantity, pricePerUnit, null, fees, transactionDate, notes, false);
     }
 
     // **NEW: Static factory method for DRIP transactions**

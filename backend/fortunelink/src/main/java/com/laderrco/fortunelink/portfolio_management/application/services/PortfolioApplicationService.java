@@ -284,15 +284,17 @@ public class PortfolioApplicationService {
         BigDecimal quantity = command.isDrip() ? command.sharesRecieved() : BigDecimal.ONE;
 
         Transaction transaction = new Transaction(
-                TransactionId.randomId(),
-                TransactionType.DIVIDEND,
-                assetInfo.toIdentifier(),
-                quantity,
-                command.amount(),
-                null,
-                command.transactionDate(),
-                command.notes(),
-                command.isDrip());
+            TransactionId.randomId(),
+            TransactionType.DIVIDEND,
+            assetInfo.toIdentifier(),
+            quantity,
+            command.amount().divide(command.sharesRecieved()),
+            command.amount(),
+            null,
+            command.transactionDate(),
+            command.notes(),
+            command.isDrip()
+        );
 
         portfolio.recordTransaction(account.getAccountId(), transaction);
         portfolioRepository.save(portfolio);
@@ -529,7 +531,7 @@ public class PortfolioApplicationService {
         // check if portfolio can be deleted
 
         // check 1: portfolio must be empty
-        if (!portfolio.isEmpty()) {
+        if (!portfolio.containsAccounts()) {
             throw new PortfolioNotEmptyException(
                     "Cannot delete portfolio with existing accounts/transactions. " +
                             "Portfolio has " + portfolio.getAccounts().size() + " account(s)");

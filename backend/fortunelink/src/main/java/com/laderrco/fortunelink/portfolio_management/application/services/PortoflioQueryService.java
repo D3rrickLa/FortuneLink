@@ -26,7 +26,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNet
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.NetworthResponse;
+import com.laderrco.fortunelink.portfolio_management.application.responses.NetWorthResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PerformanceResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
@@ -62,7 +62,7 @@ public class PortoflioQueryService {
     private final TransactionMapper transactionMapper;
     private final AllocationMapper allocationMapper;
 
-    public NetworthResponse getNetWorth(ViewNetWorthQuery query) {
+    public NetWorthResponse getNetWorth(ViewNetWorthQuery query) {
         Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
@@ -70,7 +70,7 @@ public class PortoflioQueryService {
         Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
 
         // TODO: When Loan Management context is implemented, fetch liabilities 
-        Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrency()); // placeholder
+        Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrencyPreference()); // placeholder
 
         Money netWorth = totalAssets.subtract(totalLiabilities);
 
@@ -78,7 +78,7 @@ public class PortoflioQueryService {
             ? query.asOfDate()
             : Instant.now();
             
-        return new NetworthResponse(totalAssets, totalLiabilities, netWorth, asOfDate, totalAssets.currency());
+        return new NetWorthResponse(totalAssets, totalLiabilities, netWorth, asOfDate, totalAssets.currency());
     }
 
     public PerformanceResponse getPortfolioPerformance(ViewPerformanceQuery query) {

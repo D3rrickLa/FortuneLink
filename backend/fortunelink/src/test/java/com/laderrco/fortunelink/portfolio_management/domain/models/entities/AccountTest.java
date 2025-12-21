@@ -1284,7 +1284,7 @@ class AccountTest {
             );
 
             Transaction transaction = createMockTransaction(TransactionType.DEPOSIT);
-            account.addTransaction(transaction);
+            account.recordTransaction(transaction);
 
             assertEquals(1, account.getTransactions().size());
             assertTrue(account.getTransactions().contains(transaction));
@@ -1314,7 +1314,7 @@ class AccountTest {
             when(transaction1.getTransactionId()).thenReturn(testTransactionId);
             when(transaction2.getTransactionId()).thenReturn(testTransactionId);
             assertThrows(IllegalStateException.class, () ->
-                account.addTransaction(transaction2)
+                account.recordTransaction(transaction2)
             );
         }
 
