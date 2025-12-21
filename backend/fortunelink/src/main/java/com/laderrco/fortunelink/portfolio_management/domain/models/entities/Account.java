@@ -139,7 +139,7 @@ public class Account implements ClassValidation {
     }
 
     // This might need ot be removed, Think about it, we shouldn't have the ability to 'update the asset'
-    // Thinkg about it, we can't have 2 sources of truths, only we can affect the asset via the transactions
+    // Think about it, we can't have 2 sources of truths, only we can affect the asset via the transactions
     @Deprecated
     void updateAsset(AssetId assetId, Asset updatedAsset) {
         // THIS IS NEVER USED/Should be used
@@ -380,15 +380,19 @@ public class Account implements ClassValidation {
             // If transaction.quantity is provided, use it, otherwise =>
             // dividend amount / current price
 
-            BigDecimal additionalSahres = transaction.getQuantity();
+            // TODO, clean this up, we don't need a lot of ther variables
+            // this is also wrong, usually with dividends we get a value, say $1000, from there that will lead to how many shares based on factors
+            // we are using price per unit as the 'total dividend amount' and need to calculate this thing internally, as in here
+            BigDecimal additionalShares = transaction.getQuantity();
             Money dividendAmount = transaction.getPricePerUnit();
 
             // update quantity
-            BigDecimal newQuantity = asset.getQuantity().add(additionalSahres);
+            BigDecimal newQuantity = additionalShares;
             asset.adjustQuantity(newQuantity);
 
             // update cost basis
-            Money newCostBasis = asset.getCostBasis().add(dividendAmount);
+            // TODO, double check if cost basis is right here and in Asset.java
+            Money newCostBasis = asset.getCostBasis().add(dividendAmount); 
             asset.updateCostBasis(newCostBasis);
         }
         else {
@@ -398,7 +402,7 @@ public class Account implements ClassValidation {
                 AssetId.randomId(),
                 transaction.getAssetIdentifier(),
                 transaction.getQuantity(),
-                transaction.getPricePerUnit(), // dividend amount becomes initial cost basis
+                transaction.getPricePerUnit().multiply(transaction.getQuantity()), 
                 transaction.getTransactionDate()
             );
             this.assets.add(newAsset);

@@ -1726,6 +1726,105 @@ class AccountTest {
         }
 
         @Test
+        @DisplayName("Should record DIVIDEND transaction with DRIP")
+        void shouldRecordDividendTransactionWithDRIP() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            TransactionId txId = mock(TransactionId.class);
+            Transaction transaction = mock(Transaction.class);
+            Money dividendAmount = Money.of(BigDecimal.valueOf(250), ValidatedCurrency.USD);
+            AssetIdentifier markAssetIdentifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
+
+            when(transaction.getTransactionId()).thenReturn(txId);
+            when(transaction.getTransactionType()).thenReturn(TransactionType.DIVIDEND);
+            when(transaction.isDrip()).thenReturn(true);
+            when(transaction.getPricePerUnit()).thenReturn(dividendAmount);
+            when(transaction.getAssetIdentifier()).thenReturn(markAssetIdentifier);
+            when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(200));
+            when(transaction.getPricePerUnit()).thenReturn(Money.of(215, "USD"));
+            when(transaction.getTransactionDate()).thenReturn(Instant.now());
+
+            account.recordTransaction(transaction);
+
+            assertEquals(1, account.getTransactions().size());
+            assertEquals(new BigDecimal("10000").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
+
+            Asset expectedAsset = account.getAssets()
+                .stream()
+                .filter(a -> a.getAssetIdentifier().getPrimaryId().equals(markAssetIdentifier.getPrimaryId())).findFirst()
+                .orElseThrow();
+            assertEquals(expectedAsset.getQuantity(), BigDecimal.valueOf(200));
+            assertEquals(expectedAsset.getCostBasis(), Money.of(215, "USD"));
+        }
+        @Test
+        @DisplayName("Should record DIVIDEND transaction with DRIP on existing")
+        void shouldRecordDividendTransactionWithDRIPOnExisting() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            TransactionId txId = mock(TransactionId.class);
+            Transaction transaction = mock(Transaction.class);
+            AssetIdentifier markAssetIdentifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
+
+            when(transaction.getTransactionId()).thenReturn(txId);
+            when(transaction.getTransactionType()).thenReturn(TransactionType.DIVIDEND);
+            when(transaction.isDrip()).thenReturn(true);
+            when(transaction.getAssetIdentifier()).thenReturn(markAssetIdentifier);
+            when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(200));
+            when(transaction.getPricePerUnit()).thenReturn(Money.of(215, "USD"));
+            when(transaction.getTransactionDate()).thenReturn(Instant.now());
+
+            account.recordTransaction(transaction);
+
+            assertEquals(1, account.getTransactions().size());
+            assertEquals(new BigDecimal("10000").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
+
+            Asset expectedAsset = account.getAssets()
+                .stream()
+                .filter(a -> a.getAssetIdentifier().getPrimaryId().equals(markAssetIdentifier.getPrimaryId())).findFirst()
+                .orElseThrow();
+            assertEquals(expectedAsset.getQuantity(), BigDecimal.valueOf(200));
+            assertEquals(expectedAsset.getCostBasis(), Money.of(43000, "USD"));
+
+            IO.print(expectedAsset.getQuantity());
+            IO.print(account.getAsset(markAssetIdentifier).getQuantity());
+
+
+            // some time later we buyg it again, we 'run it back'
+            Transaction transaction2 = mock(Transaction.class);
+            when(transaction2.getTransactionId()).thenReturn(TransactionId.randomId());
+            when(transaction2.getTransactionType()).thenReturn(TransactionType.DIVIDEND);
+            when(transaction2.isDrip()).thenReturn(true);
+            when(transaction2.getAssetIdentifier()).thenReturn(markAssetIdentifier);
+            when(transaction2.getQuantity()).thenReturn(BigDecimal.valueOf(200));
+            when(transaction2.getPricePerUnit()).thenReturn(Money.of(245, "USD"));
+            when(transaction2.getTransactionDate()).thenReturn(Instant.now());
+
+            account.recordTransaction(transaction2);
+            assertEquals(2, account.getTransactions().size());
+            assertEquals(new BigDecimal("10000").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
+            assertEquals(expectedAsset.getQuantity(), BigDecimal.valueOf(400));
+            assertEquals(expectedAsset.getCostBasis(), Money.of(43000, "USD"));
+
+
+        }
+
+        @Test
         @DisplayName("Should record INTEREST transaction")
         void shouldRecordInterestTransaction() {
             Account account = new Account(
@@ -2181,5 +2280,42 @@ class AccountTest {
             assertTrue(secondInteraction.isAfter(firstInteraction) || 
                        secondInteraction.equals(firstInteraction));
         }
+    }
+
+
+    @Nested
+    public class TestSufficientCash {
+        @Test
+        void testIfHasSufficientCashIsSuccess() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            Money inputtedAmount = Money.of(5000, "USD");
+            assertTrue(account.hasSufficientCash(inputtedAmount));
+        }
+        
+        @Test
+        void testIfHasSufficientCashIsFail() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            Money inputtedAmount = Money.of(500000, "USD");
+            assertFalse(account.hasSufficientCash(inputtedAmount));
+        }
+        
     }
 }
