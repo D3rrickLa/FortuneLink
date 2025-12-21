@@ -227,21 +227,7 @@ public class Portfolio implements ClassValidation {
             }) 
             .reduce(Money.ZERO(this.portfolioCurrencyPreference), Money::add);
     }
-
-    @Deprecated
-    // In the far future when we do the liabilities, we don't calculate it here but in the application layer so this isn't needed
-    /**
-     * So this method is techincally incomplete, it is totalAssets subtract total Liabilities
-     * @param marketDataService
-     * @param exchangeRateService
-     * @return
-     */
-    public Money calculateNetWorth(MarketDataService marketDataService, ExchangeRateService exchangeRateService) {
-        // For MVP: Net Worth = Total Assets (no liabilities tracked yet)
-        // TODO: Integrate with Loan Management context when implemented
-        return getAssetsTotalValue(marketDataService, exchangeRateService);
-    }
-
+    
     // Querying Methods ENDS //
 
     // PRIVATE HELPER STARTS //
