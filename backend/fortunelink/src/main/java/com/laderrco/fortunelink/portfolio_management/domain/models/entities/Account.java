@@ -19,6 +19,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
@@ -138,11 +140,11 @@ public class Account implements ClassValidation {
         }
     }
 
-    // This might need ot be removed, Think about it, we shouldn't have the ability to 'update the asset'
-    // Think about it, we can't have 2 sources of truths, only we can affect the asset via the transactions
+    // This might need to be removed, Think about it, we shouldn't have the ability to 'update the asset'
+    // We can't have 2 sources of truths, only we can affect the asset via the transactions
     @Deprecated
     void updateAsset(AssetId assetId, Asset updatedAsset) {
-        // THIS IS NEVER USED/Should be used
+        // THIS IS NEVER USED/Should never be used
         Objects.requireNonNull(assetId);
         Objects.requireNonNull(updatedAsset);
         // Verify the updatedAsset has the same ID
@@ -376,23 +378,19 @@ public class Account implements ClassValidation {
         if (existingAsset.isPresent()) {
             Asset asset = existingAsset.get();
 
-            // Calculate how many shares the dividend can buy
-            // If transaction.quantity is provided, use it, otherwise =>
-            // dividend amount / current price
+            // For DRIP: dividend amount divided by price per share = shares purchased
+            Money dividendAmount = transaction.getDividendAmount(); // or however you store this
+            Money pricePerShare = transaction.getPricePerUnit(); // market price at reinvestment
+            
+            BigDecimal additionalShares = dividendAmount.amount()
+                .divide(pricePerShare.amount(), Precision.getMoneyPrecision(), Rounding.MONEY.getMode());
 
-            // TODO, clean this up, we don't need a lot of ther variables
-            // this is also wrong, usually with dividends we get a value, say $1000, from there that will lead to how many shares based on factors
-            // we are using price per unit as the 'total dividend amount' and need to calculate this thing internally, as in here
-            BigDecimal additionalShares = transaction.getQuantity();
-            Money dividendAmount = transaction.getPricePerUnit();
+            // Update quantity
+            asset.adjustQuantity(additionalShares);
 
-            // update quantity
-            BigDecimal newQuantity = additionalShares;
-            asset.adjustQuantity(newQuantity);
-
-            // update cost basis
-            // TODO, double check if cost basis is right here and in Asset.java
-            Money newCostBasis = asset.getCostBasis().add(dividendAmount); 
+            // Update cost basis - the dividend amount becomes part of your cost basis
+            // because you're "buying" more shares with that dividend
+            Money newCostBasis = asset.getCostBasis().add(dividendAmount);
             asset.updateCostBasis(newCostBasis);
         }
         else {

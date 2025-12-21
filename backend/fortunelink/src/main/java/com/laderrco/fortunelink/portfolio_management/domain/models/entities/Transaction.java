@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -30,13 +31,19 @@ public class Transaction implements ClassValidation {
     private AssetIdentifier assetIdentifier; 
     private BigDecimal quantity; 
     private Money pricePerUnit; // this need to act as both the ppu and an amount for deposit and withdrawal 
+    private Money dividendAmount; // NEW: Store the actual dividend amount for DRIP
     private List<Fee> fees; // fees in original currency with a exchange rate link to the portfolios
     private Instant transactionDate;
     private String notes;
     private boolean isDrip;
 
-    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, 
-        BigDecimal quantity, Money pricePerUnit, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
+    // Main constructor
+    // TODO make this private so we can only enforce those specfic constructor
+    public Transaction(TransactionId transactionId, TransactionType transactionType, 
+        AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, 
+        Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, 
+        boolean isDrip) {
+        
         validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
         this.transactionId = ClassValidation.validateParameter(transactionId);
@@ -44,25 +51,46 @@ public class Transaction implements ClassValidation {
         this.assetIdentifier = ClassValidation.validateParameter(assetIdentifier);
         this.quantity = ClassValidation.validateParameter(quantity);
         this.pricePerUnit = ClassValidation.validateParameter(pricePerUnit);
+        this.dividendAmount = dividendAmount; // can be null for non-DRIP
         this.fees = fees != null ? fees : Collections.emptyList();
         this.transactionDate = ClassValidation.validateParameter(transactionDate);
-        this.notes = notes.isBlank() ? "" : notes.trim();
+        this.notes = notes == null || notes.isBlank() ? "" : notes.trim();
         this.isDrip = isDrip;
     }
 
-        // Convenience constructor for non-DRIP transactions (backward compatible)
-    public Transaction(
+    // Backward compatible constructor
+    public Transaction(TransactionId transactionId, TransactionType transactionType,
+        AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit,
+        List<Fee> fees, Instant transactionDate, String notes) {
+        this(transactionId, transactionType, assetIdentifier, quantity, 
+            pricePerUnit, null, fees, transactionDate, notes, false);
+    }
+
+    // **NEW: Static factory method for DRIP transactions**
+    public static Transaction createDripTransaction(
         TransactionId transactionId,
-        TransactionType transactionType,
         AssetIdentifier assetIdentifier,
-        BigDecimal quantity,
-        Money pricePerUnit,
-        List<Fee> fees,
+        Money dividendAmount,
+        Money pricePerShare, // market price at time of reinvestment
         Instant transactionDate,
         String notes
     ) {
-        this(transactionId, transactionType, assetIdentifier, quantity, 
-             pricePerUnit, fees, transactionDate, notes, false);
+        // Calculate quantity from dividend amount and price
+        BigDecimal sharesPurchased = dividendAmount.amount()
+            .divide(pricePerShare.amount(), 10, RoundingMode.HALF_UP); //TODO: we have to change this
+
+        return new Transaction(
+            transactionId,
+            TransactionType.DIVIDEND, // or BUY with isDrip=true
+            assetIdentifier,
+            sharesPurchased,
+            pricePerShare,
+            dividendAmount, // store the original dividend amount
+            Collections.emptyList(), // DRIP usually has no fees
+            transactionDate,
+            notes,
+            true // isDrip flag
+        );
     }
 
     /**
@@ -92,8 +120,11 @@ public class Transaction implements ClassValidation {
         };
     }
 
-   public Money calculateGrossAmount() {
+    public Money calculateGrossAmount() {
         // price * quantity (before fee)
+        if (isDrip && dividendAmount != null) {
+            return dividendAmount;
+        }
         return pricePerUnit.multiply(quantity);
     }
 
@@ -109,6 +140,15 @@ public class Transaction implements ClassValidation {
             .map(Fee::amountInNativeCurrency)
             .reduce(Money.ZERO(transactionCurrency), Money::add);
     }
+
+    // Helper method to get dividend amount (for DRIP transactions)
+    public Money getDividendAmount() {
+        if (!isDrip || dividendAmount == null) {
+            throw new IllegalStateException("This is not a DRIP transaction");
+        }
+        return dividendAmount;
+    }
+
 
     private static void validateTransaction(TransactionType type, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price) {
         switch (type) {

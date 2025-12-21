@@ -102,10 +102,13 @@ public class Asset {
 
     // QUERY METHODS (public - anyone can call) //
 
+    // we hsould really rename this
+    // call it getAverageCostPerShare
     public Money getCostPerUnit() {
         if (quantity.compareTo(BigDecimal.ZERO) == 0) {
             return Money.ZERO(costBasis.currency());
         }
+
         return costBasis.divide(quantity);
     }
 

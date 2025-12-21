@@ -1,6 +1,8 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import java.time.Instant;
+import java.time.InstantSource;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +26,42 @@ import lombok.Getter;
 @Getter
 @Builder
 public class Portfolio implements ClassValidation {
+    private final PortfolioId portfolioId;
+    private final UserId userId;
+    private List<Account> accounts;
+    private ValidatedCurrency portfolioCurrency;
+
+    private final Instant systemCreationDate;
+    private Instant lastUpdatedAt;
+
+    private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts, ValidatedCurrency portfolioCurrency, Instant systemCreationDate, Instant updatedAt) {
+        this.portfolioId = ClassValidation.validateParameter(portfolioId);
+        this.userId = ClassValidation.validateParameter(userId);
+        this.accounts = ClassValidation.validateParameter(accounts);
+        this.portfolioCurrency = ClassValidation.validateParameter(portfolioCurrency);
+        this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
+        this.lastUpdatedAt = ClassValidation.validateParameter(updatedAt);
+    }
+    
+    // Constructor for new portfolio
+    public Portfolio(UserId userId, ValidatedCurrency currency) {
+        this(PortfolioId.randomId(), Objects.requireNonNull(userId, "UserId cannot be null"), new ArrayList<>(), currency, Instant.now(), Instant.now());
+    }
+
+    // Constructor for reconstitution from repository
+    public Portfolio(PortfolioId id, UserId userId, List<Account> accounts, List<Transaction> transactionHistory, Instant createdDate, Instant lastUpdated) {
+        this(
+            Objects.requireNonNull(id, "PortfolioId cannot be null"),
+            Objects.requireNonNull(userId, "UserId cannot be null"),
+            new ArrayList<>(accounts),
+            ValidatedCurrency.USD, // default portfolio currency preference
+            createdDate,
+            lastUpdated
+        );
+    }
+}
+
+public class Portfolio2 implements ClassValidation {
     private final PortfolioId portfolioId;
     private final UserId userId;
     private List<Account> accounts; 

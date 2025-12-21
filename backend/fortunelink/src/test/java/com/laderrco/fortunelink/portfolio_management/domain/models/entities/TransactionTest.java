@@ -51,6 +51,18 @@ public class TransactionTest {
     @DisplayName("Constructor Validation Tests")
     class ConstructorValidationTests {
 
+        @Test
+        @DisplayName("Should create dedicated dividend transaction")
+        void shouldCreateDedicatedDividendTransaction() {
+            Money price = Money.of(BigDecimal.valueOf(100), ValidatedCurrency.USD);
+            Money divMoney = Money.of(200, "USD");
+            BigDecimal quantity = BigDecimal.valueOf(2).setScale(2);
+            Transaction transaction = Transaction.createDripTransaction(VALID_ID, assetIdentifier, divMoney, price, VALID_DATE, null);
+            assertNotNull(transaction);
+            assertEquals(TransactionType.DIVIDEND, transaction.getTransactionType());
+            assertEquals(quantity, transaction.getQuantity().setScale(2));
+            assertEquals(price, transaction.getPricePerUnit());
+        }
 
         @Test
         @DisplayName("Should create valid BUY transaction")
@@ -492,6 +504,65 @@ public class TransactionTest {
             Money grossAmount = transaction.calculateGrossAmount();
             assertEquals(new BigDecimal("1015.00").setScale(Precision.getMoneyPrecision()), grossAmount.amount());
         }
+
+        @Test
+        @DisplayName("Should calcualte gross amount with the div branch correctly")
+        void shouldCalculateGrossAmountWihtDividendBranch() {
+            Money price = Money.of(BigDecimal.valueOf(100), ValidatedCurrency.USD);
+            Money divMoney = Money.of(200, "USD");
+            Transaction transaction = Transaction.createDripTransaction(VALID_ID, assetIdentifier, divMoney, price, VALID_DATE, null);
+            Money actualGrossAmount = transaction.calculateGrossAmount();
+            assertEquals(new BigDecimal("200.00").setScale(Precision.getMoneyPrecision()), actualGrossAmount.amount());
+        }
+
+        @Test
+        @DisplayName("Should calculate gross amount correctly, when isDrip = false")
+        void shouldCalculateGrossAmountWhenIsDripIsFalse() {
+            Money price = Money.of(BigDecimal.valueOf(50.75), ValidatedCurrency.USD);
+            BigDecimal quantity = BigDecimal.valueOf(20);
+
+            Transaction transaction = new Transaction(
+                VALID_ID,
+                TransactionType.BUY,
+                VALID_ASSET,
+                quantity,
+                price,
+                Money.of(BigDecimal.valueOf(10), ValidatedCurrency.USD),
+                null,
+                VALID_DATE,
+                "",
+                false
+            );
+
+            // Gross = 50.75 * 20 = 1015.00
+            Money grossAmount = transaction.calculateGrossAmount();
+            assertEquals(new BigDecimal("1015.00").setScale(Precision.getMoneyPrecision()), grossAmount.amount());
+        }
+
+        // this technically shouldn't even happen....
+        @Test
+        @DisplayName("Should calculate gross amount correctly, when dividendAmount = null")
+        void shouldCalculateGrossAmountWhenDividendIsNull() {
+            Money price = Money.of(BigDecimal.valueOf(50.75), ValidatedCurrency.USD);
+            BigDecimal quantity = BigDecimal.valueOf(20);
+
+            Transaction transaction = new Transaction(
+                VALID_ID,
+                TransactionType.BUY,
+                VALID_ASSET,
+                quantity,
+                price,
+               null,
+                null,
+                VALID_DATE,
+                "",
+                true
+            );
+
+            // Gross = 50.75 * 20 = 1015.00
+            Money grossAmount = transaction.calculateGrossAmount();
+            assertEquals(new BigDecimal("1015.00").setScale(Precision.getMoneyPrecision()), grossAmount.amount());
+        }
     }
 
     @Nested
@@ -572,6 +643,61 @@ public class TransactionTest {
                 transaction.calculateTotalFees()
             );
         }
+    }
+
+    @Nested
+    @DisplayName("Testing getDividendAmount")
+    public class GetDividendAMountTests {
+        @Test
+        void testGetDividendAmountSuccess() {
+            Money price = Money.of(BigDecimal.valueOf(100), ValidatedCurrency.USD);
+            Money divMoney = Money.of(200, "USD");
+            Transaction transaction = Transaction.createDripTransaction(VALID_ID, assetIdentifier, divMoney, price, VALID_DATE, null); 
+            assertEquals(divMoney, transaction.getDividendAmount());
+        }
+
+        @Test
+        void testGetDividendAmountFailsWhenIsDripIsFalse() {
+            Money price = Money.of(BigDecimal.valueOf(50.75), ValidatedCurrency.USD);
+            BigDecimal quantity = BigDecimal.valueOf(20);
+
+            Transaction transaction = new Transaction(
+                VALID_ID,
+                TransactionType.BUY,
+                VALID_ASSET,
+                quantity,
+                price,
+                Money.of(BigDecimal.valueOf(10), ValidatedCurrency.USD),
+                null,
+                VALID_DATE,
+                "",
+                false
+            );
+
+            assertThrows(IllegalStateException.class, ()->transaction.getDividendAmount());
+        }
+
+        @Test
+        void testGetDividendAmountFailsWhenIsDividendAmountIsNull() {
+            Money price = Money.of(BigDecimal.valueOf(50.75), ValidatedCurrency.USD);
+            BigDecimal quantity = BigDecimal.valueOf(20);
+
+            Transaction transaction = new Transaction(
+                VALID_ID,
+                TransactionType.BUY,
+                VALID_ASSET,
+                quantity,
+                price,
+               null,
+                null,
+                VALID_DATE,
+                "",
+                true
+            );
+
+            assertThrows(IllegalStateException.class, ()->transaction.getDividendAmount());
+        }
+        
     }
 
     @Nested
