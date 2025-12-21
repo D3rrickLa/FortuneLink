@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -7,9 +8,9 @@ import java.util.List;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
@@ -48,12 +49,13 @@ public class Portfolio implements ClassValidation {
     }
 
     // Constructor for reconstitution from repository
-    public Portfolio(PortfolioId id, UserId userId, List<Account> accounts, List<Transaction> transactionHistory, Instant createdDate, Instant lastUpdated) {
+    // don't know if i need the list<Transaction> because the account should have it, probably don't
+    public Portfolio(PortfolioId id, UserId userId, ValidatedCurrency currencyPreference, List<Account> accounts, Instant createdDate, Instant lastUpdated) {
         this(
             Objects.requireNonNull(id, "PortfolioId cannot be null"),
             Objects.requireNonNull(userId, "UserId cannot be null"),
             new ArrayList<>(accounts),
-            ValidatedCurrency.USD, // default portfolio currency preference
+            currencyPreference, // default portfolio currency preference
             createdDate,
             lastUpdated
         );
@@ -97,13 +99,14 @@ public class Portfolio implements ClassValidation {
             throw new IllegalStateException("Account cannot be removed, please close the account first");
         }
 
-        if (!account.getAssets().isEmpty()) {
-            throw new IllegalStateException(String.format("Cannot remove account'%s'. Account has existing assets, %d asset(s).", accountId.accountId(), account.getAssets().size()));
-        }
+        // we don't need this, this is taking place inside the 'close' method in account
+        // if (!account.getAssets().isEmpty()) {
+        //     throw new IllegalStateException(String.format("Cannot remove account '%s'. Account has existing assets, %d asset(s).", account.getName(), account.getAssets().size()));
+        // }
 
         boolean hasTransaction  = account.getTransactions().isEmpty();
 
-        if (hasTransaction) {
+        if (!hasTransaction) {
         throw new IllegalStateException(
             String.format("Cannot remove account '%s'. Account has transaction history. Closed accounts with history must be retained for audit purposes.",account.getName()));
         }
@@ -138,10 +141,55 @@ public class Portfolio implements ClassValidation {
         existingAccount.removeTransaction(transactionId);
     }
 
-    public void removeAsset(AccountId accountId, AssetId assetId) {
+    public void correctAssetTicker(AccountId accountId, AssetIdentifier wrongTicker, AssetIdentifier correctTicker) {
         Account account = getAccount(accountId);
-        account.removeAsset(assetId);
+        Asset wrongAsset = account.getAsset(wrongTicker);
+        
+        if (wrongAsset.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
+            // Asset exists but has no quantity - just remove it
+            account.removeAsset(wrongAsset.getAssetId());
+            updateMetadata();
+            return;
+        }
+        
+        // Asset has quantity - need to swap via transactions
+        Transaction sellWrong = new Transaction(
+            TransactionId.randomId(),
+            TransactionType.SELL,
+            wrongAsset.getAssetIdentifier(),
+            wrongAsset.getQuantity(),
+            wrongAsset.getCostPerUnit(),
+            Money.ZERO(wrongAsset.getCurrency()),
+            null,
+            Instant.now(),
+            "Correction: Wrong ticker entered",
+            false
+        );
+        
+        recordTransaction(accountId, sellWrong);
+        
+        Transaction buyCorrect = new Transaction(
+            TransactionId.randomId(),
+            TransactionType.BUY,
+            correctTicker,
+            wrongAsset.getQuantity(),
+            wrongAsset.getCostPerUnit(),
+            Money.ZERO(wrongAsset.getCurrency()),
+            null,
+            Instant.now(),
+            "Correction: Applied correct ticker",
+            false
+        );
+    
+        recordTransaction(accountId, buyCorrect);
     }
+
+    // Update Portfolio Info STARTS //
+    public void updateCurrencyPreference(ValidatedCurrency updatedCurrency) {
+        ClassValidation.validateParameter(updatedCurrency);
+        this.portfolioCurrencyPreference = updatedCurrency;
+    }
+    // Update Portfolio Info ENDS //
 
     // Querying Methods STARTS //
     
@@ -152,8 +200,8 @@ public class Portfolio implements ClassValidation {
             .orElseThrow(() -> new AccountNotFoundException(String.format("Account with id '%s' not found in this portfolio.", accountId.accountId())));
     }
     
-    public boolean containsAccounts() { // named as isEmpty before
-        return this.getAccounts().isEmpty();
+    public boolean containsAccounts() {
+        return !this.getAccounts().isEmpty();
     }
     
     /**

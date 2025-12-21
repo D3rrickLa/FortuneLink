@@ -487,47 +487,14 @@ public class PortfolioApplicationService {
     public void correctAssetTicket(CorrectAssetTickerCommand command) {
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
-
-        Account account = portfolio.getAccount(command.accountId());
-
-        Asset wrongAsset = account.getAsset(command.wrongAssetIdentifier());
-
-        if (wrongAsset.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            Transaction sellWrongTransaction = new Transaction(
-                TransactionId.randomId(),
-                TransactionType.SELL,
-                wrongAsset.getAssetIdentifier(),
-                wrongAsset.getQuantity(),
-                wrongAsset.getCostPerUnit(),
-                Money.ZERO(wrongAsset.getCurrency()),
-                null,
-                Instant.now(),
-                "Correction: Wrong ticker entered",
-                false
-            );
-
-            portfolio.recordTransaction(account.getAccountId(), sellWrongTransaction);
-
-            Transaction buyCorrectTransaction = new Transaction(
-                TransactionId.randomId(),
-                TransactionType.BUY,
-                command.correctAssetIdentifier(),
-                wrongAsset.getQuantity(),
-                wrongAsset.getCostPerUnit(),
-                Money.ZERO(wrongAsset.getCurrency()),
-                null,
-                Instant.now(),
-                "Correction: Applied correct ticker",
-                false
-            );
-
-            portfolio.recordTransaction(account.getAccountId(), buyCorrectTransaction);
-
-            portfolioRepository.save(portfolio);
-        }
-        else {
-            portfolio.removeAsset(account.getAccountId(), wrongAsset.getAssetId());
-        }
+        
+        portfolio.correctAssetTicker(
+            command.accountId(),
+            command.wrongAssetIdentifier(),
+            command.correctAssetIdentifier()
+        );
+        
+        portfolioRepository.save(portfolio);
 
 
     }

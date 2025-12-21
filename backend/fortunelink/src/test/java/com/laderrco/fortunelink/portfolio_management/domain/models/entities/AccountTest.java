@@ -18,8 +18,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -747,8 +745,6 @@ class AccountTest {
         public class InnerAccountTestFortestingUpdateAsset {
             private Account account;
             private ValidatedCurrency currency;
-            private AssetId assetId1 = AssetId.randomId();
-            private AssetId assetId2 = AssetId.randomId();
 
             @BeforeEach
             void setUp() {
@@ -957,20 +953,6 @@ class AccountTest {
             }
 
             // Helper methods
-            private Asset createTestAsset() {
-                return Asset.builder()
-                    .assetId(AssetId.randomId())
-                    .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
-                    .quantity((new BigDecimal("10")))
-                    .costBasis(Money.of(new BigDecimal("1000"), currency))
-                    .acquiredOn(Instant.now())
-                    .build();
-            }
-
-            private Transaction createBuyTransaction(AssetIdentifier assetIdentifier, String quantity, String price) {
-                return createBuyTransactionWithDate(assetIdentifier, quantity, price, Instant.now());
-            }
-
             private Transaction createBuyTransactionWithDate(AssetIdentifier assetIdentifier, String quantity, String price, Instant date) {
                 return Transaction.builder()
                     .transactionId(TransactionId.randomId())
@@ -1033,11 +1015,6 @@ class AccountTest {
             private static Money money(double amount) {
                 Money ma = Money.of(amount, "USD");
                 return ma;
-            }
-
-            private static ExchangeRate exchangeRate() {
-                ExchangeRate conversion = ExchangeRate.create("USD", "CAD", 1.42, Instant.now(), null);
-                return conversion;
             }
 
             private static List<Fee> ZERO(ValidatedCurrency currency) {
