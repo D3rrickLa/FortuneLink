@@ -47,7 +47,8 @@ public class Asset {
         this.version = version;
     }
 
-    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
+    // package-private, only Accoutn can create
+    Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
         this(
             assetId,
             assetIdentifier,
@@ -61,7 +62,7 @@ public class Asset {
     }
 
     // MUTATION METHODS (package-private - only Portfolio can call) //
-    void adjustQuantity(BigDecimal additionalQuantity) {
+    void addQuantity(BigDecimal additionalQuantity) {
         Objects.requireNonNull(additionalQuantity, "Quantity cannot be null");
         
         this.quantity = this.quantity.add(additionalQuantity);

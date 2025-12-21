@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
@@ -381,7 +380,7 @@ public class Account implements ClassValidation {
             BigDecimal newQuantity = asset.getQuantity().add(transaction.getQuantity());
             Money newCostBasis = asset.getCostBasis().add(transaction.calculateTotalCost());
             
-            asset.adjustQuantity(newQuantity);
+            asset.addQuantity(newQuantity);
             asset.updateCostBasis(newCostBasis);
         } else {
             // Create new asset
@@ -412,7 +411,7 @@ public class Account implements ClassValidation {
                 .divide(pricePerShare.amount(), Precision.getMoneyPrecision(), Rounding.MONEY.getMode());
 
             // Update quantity
-            asset.adjustQuantity(additionalShares);
+            asset.addQuantity(additionalShares);
 
             // Update cost basis - the dividend amount becomes part of your cost basis
             // because you're "buying" more shares with that dividend
@@ -455,7 +454,7 @@ public class Account implements ClassValidation {
                 .divide(asset.getQuantity(), RoundingMode.HALF_UP);
             Money costBasisReduction = asset.getCostBasis().multiply(sellRatio);
             
-            asset.adjustQuantity(newQuantity);
+            asset.addQuantity(newQuantity);
             asset.updateCostBasis(asset.getCostBasis().subtract(costBasisReduction));
         }
     }

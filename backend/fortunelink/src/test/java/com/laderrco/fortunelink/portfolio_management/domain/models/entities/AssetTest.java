@@ -169,7 +169,7 @@ public class AssetTest {
 
     @Nested
     @DisplayName("Adjust Quantity Tests")
-    class AdjustQuantityTests {
+    class addQuantityTests {
 
         @Test
         @DisplayName("Should increase quantity when adding positive amount")
@@ -183,7 +183,7 @@ public class AssetTest {
             );
 
             int initialVersion = asset.getVersion();
-            asset.adjustQuantity(BigDecimal.valueOf(50));
+            asset.addQuantity(BigDecimal.valueOf(50));
 
             assertEquals(BigDecimal.valueOf(150), asset.getQuantity());
             assertEquals(initialVersion + 1, asset.getVersion());
@@ -201,7 +201,7 @@ public class AssetTest {
                 acquiredOn
             );
 
-            asset.adjustQuantity(BigDecimal.valueOf(-30));
+            asset.addQuantity(BigDecimal.valueOf(-30));
 
             assertEquals(BigDecimal.valueOf(70), asset.getQuantity());
         }
@@ -217,7 +217,7 @@ public class AssetTest {
                 acquiredOn
             );
 
-            asset.adjustQuantity(BigDecimal.ZERO);
+            asset.addQuantity(BigDecimal.ZERO);
 
             assertEquals(BigDecimal.valueOf(100), asset.getQuantity());
         }
@@ -234,7 +234,7 @@ public class AssetTest {
             );
 
             assertThrows(NullPointerException.class, () -> 
-                asset.adjustQuantity(null)
+                asset.addQuantity(null)
             );
         }
 
@@ -252,7 +252,7 @@ public class AssetTest {
             int initialVersion = asset.getVersion();
             Instant initialInteraction = asset.getLastSystemInteraction();
 
-            asset.adjustQuantity(BigDecimal.TEN);
+            asset.addQuantity(BigDecimal.TEN);
 
             assertEquals(initialVersion + 1, asset.getVersion());
             assertTrue(asset.getLastSystemInteraction().isAfter(initialInteraction) || 
@@ -765,8 +765,8 @@ public class AssetTest {
                 acquiredOn
             );
 
-            // Artificially create negative through adjustQuantity
-            asset.adjustQuantity(BigDecimal.valueOf(-150));
+            // Artificially create negative through addQuantity
+            asset.addQuantity(BigDecimal.valueOf(-150));
 
             assertFalse(asset.hasZeroQuantity());
         }
@@ -790,7 +790,7 @@ public class AssetTest {
 
             assertEquals(1, asset.getVersion());
 
-            asset.adjustQuantity(BigDecimal.TEN);
+            asset.addQuantity(BigDecimal.TEN);
             assertEquals(2, asset.getVersion());
 
             asset.reduceQuantity(BigDecimal.ONE);
@@ -818,7 +818,7 @@ public class AssetTest {
             // Small delay to ensure timestamp difference
             Thread.sleep(10);
             
-            asset.adjustQuantity(BigDecimal.TEN);
+            asset.addQuantity(BigDecimal.TEN);
             Instant secondInteraction = asset.getLastSystemInteraction();
             
             assertTrue(secondInteraction.isAfter(firstInteraction) || 

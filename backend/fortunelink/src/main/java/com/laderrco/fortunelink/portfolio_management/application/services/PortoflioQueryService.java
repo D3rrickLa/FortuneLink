@@ -58,6 +58,7 @@ public class PortoflioQueryService {
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioValuationService portfolioValuationService;
+    // LiabilityQueryService liabilityQueryService // ACL interface <- for the future when we have this context
     private final PortfolioMapper portfolioMapper;
     private final TransactionMapper transactionMapper;
     private final AllocationMapper allocationMapper;
@@ -70,6 +71,7 @@ public class PortoflioQueryService {
         Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
 
         // TODO: When Loan Management context is implemented, fetch liabilities 
+        // Money totalLiabilities = liabilityQueryService.getTotalLiabilities(query.userId(), portoflio.getPortfolioCurrencyPreference();
         Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrencyPreference()); // placeholder
 
         Money netWorth = totalAssets.subtract(totalLiabilities);

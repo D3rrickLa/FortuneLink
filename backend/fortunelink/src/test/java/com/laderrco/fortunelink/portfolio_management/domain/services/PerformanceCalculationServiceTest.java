@@ -159,9 +159,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(cad)
+                .portfolioCurrencyPreference(cad)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             when(marketDataService.getCurrentPrice(shopifySymbol))
@@ -203,9 +203,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act
@@ -241,9 +241,9 @@ class PerformanceCalculationServiceTest {
             .portfolioId(portfolioId1)
             .userId(userId1)
             .accounts(List.of(account))
-            .portfolioCurrency(usd)
+            .portfolioCurrencyPreference(usd)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();            
             portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
             portfolio.recordTransaction(account.getAccountId(), transactions.get(1));
@@ -280,9 +280,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(cad)
+                .portfolioCurrencyPreference(cad)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act
@@ -316,9 +316,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act
@@ -346,9 +346,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of())
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act & Assert
@@ -387,9 +387,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             when(marketDataService.getCurrentPrice(nvidiaSymbol))
@@ -431,9 +431,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(cad)
+                .portfolioCurrencyPreference(cad)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             when(marketDataService.getCurrentPrice(symbol))
@@ -488,9 +488,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             when(marketDataService.getCurrentPrice(googleSymbol))
@@ -550,9 +550,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(tfsaAccount, rrspAccount))
-                .portfolioCurrency(cad)
+                .portfolioCurrencyPreference(cad)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             when(marketDataService.getCurrentPrice(tfsaSymbol))
@@ -584,9 +584,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act
@@ -623,9 +623,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             when(marketDataService.getCurrentPrice(btcSymbol))
@@ -655,9 +655,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of())
-                .portfolioCurrency(ValidatedCurrency.USD)
+                .portfolioCurrencyPreference(ValidatedCurrency.USD)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
 
             // Act & Assert
@@ -717,9 +717,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
             
             portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
@@ -801,9 +801,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
             
             portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
@@ -855,9 +855,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
             
             portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
@@ -939,9 +939,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
-                .portfolioCurrency(usd)
+                .portfolioCurrencyPreference(usd)
                 .systemCreationDate(Instant.now())
-                .updatedAt(Instant.now())
+                .lastUpdatedAt(Instant.now())
                 .build();
             
             portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
@@ -1054,9 +1054,9 @@ class PerformanceCalculationServiceTest {
             .portfolioId(portfolioId1)
             .userId(userId1)
             .accounts(List.of(account))
-            .portfolioCurrency(currency)
+            .portfolioCurrencyPreference(currency)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();
     }
 

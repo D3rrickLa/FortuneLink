@@ -1,8 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import java.time.Instant;
-import java.time.InstantSource;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -227,7 +225,7 @@ public class Portfolio implements ClassValidation {
             }) 
             .reduce(Money.ZERO(this.portfolioCurrencyPreference), Money::add);
     }
-    
+
     // Querying Methods ENDS //
 
     // PRIVATE HELPER STARTS //

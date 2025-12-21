@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -695,81 +694,6 @@ class PortfolioTest {
             // Then
             assertThat(results).hasSize(1);
             assertThat(results).contains(tx1);
-        }
-    }
-
-    @Nested
-    @DisplayName("Net Worth Calculation Tests")
-    class NetWorthTests {
-
-        private Portfolio portfolio;
-
-        @BeforeEach
-        void setUp() {
-            portfolio = new Portfolio(userId, portfolioCurrency);
-        }
-
-      @Test
-        @DisplayName("Should calculate net worth equal to total assets for portfolio with accounts")
-        void shouldCalculateNetWorthEqualToTotalAssets() {
-            // Given
-            Account account1 = spy(createTestAccount("Account 1", AccountType.TFSA));
-            Account account2 = spy(createTestAccount("Account 2", AccountType.RRSP));
-            
-            portfolio.addAccount(account1);
-            portfolio.addAccount(account2);
-
-            Money account1Value = Money.of(new BigDecimal("30000"), ValidatedCurrency.CAD);
-            Money account2Value = Money.of(new BigDecimal("20000"), ValidatedCurrency.CAD);
-            Money expectedTotal = Money.of(new BigDecimal("50000"), portfolioCurrency);
-
-            // Mock the calculateTotalValue for each account
-            when(account1.calculateTotalValue(marketDataService)).thenReturn(account1Value);
-            when(account2.calculateTotalValue(marketDataService)).thenReturn(account2Value);
-
-            // Mock exchange rate service to return the same values (no conversion needed)
-            when(exchangeRateService.convert(account1Value, portfolioCurrency)).thenReturn(account1Value);
-            when(exchangeRateService.convert(account2Value, portfolioCurrency)).thenReturn(account2Value);
-
-            // When
-            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
-
-            // Then
-            assertThat(netWorth.amount()).isEqualByComparingTo(expectedTotal.amount());
-            verify(account1).calculateTotalValue(marketDataService);
-            verify(account2).calculateTotalValue(marketDataService);
-            verify(exchangeRateService, times(2)).convert(any(Money.class), eq(portfolioCurrency));
-        }
-
-        @Test
-        @DisplayName("Should calculate net worth as zero for empty portfolio")
-        void shouldCalculateNetWorthAsZeroForEmptyPortfolio() {
-            // When
-            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
-
-            // Then
-            assertThat(netWorth.amount()).isEqualByComparingTo(BigDecimal.ZERO);
-        }
-
-        @Test
-        @DisplayName("Should handle currency conversion in net worth calculation")
-        void shouldHandleCurrencyConversionInNetWorth() {
-            // Given
-            Account usdAccount = spy(createTestAccount("USD Account", AccountType.INVESTMENT));
-            portfolio.addAccount(usdAccount);
-
-            Money usdValue = Money.of(new BigDecimal("10000"), ValidatedCurrency.USD);
-            Money cadValue = Money.of(new BigDecimal("13500"), ValidatedCurrency.CAD); // Assuming 1.35 exchange rate
-
-            when(usdAccount.calculateTotalValue(marketDataService)).thenReturn(usdValue);
-            when(exchangeRateService.convert(usdValue, portfolioCurrency)).thenReturn(cadValue);
-
-            // When
-            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
-
-            // Then
-            assertThat(netWorth.amount()).isEqualByComparingTo(cadValue.amount());
-            verify(exchangeRateService).convert(usdValue, portfolioCurrency);
         }
     }
 

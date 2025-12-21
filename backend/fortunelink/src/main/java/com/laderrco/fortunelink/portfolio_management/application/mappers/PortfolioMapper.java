@@ -34,16 +34,15 @@ public class PortfolioMapper {
             .map(account -> toAccountResponse(account, marketDataService))
             .collect(Collectors.toList());
 
-        Money netWorth = portfolio.calculateNetWorth(marketDataService, this.exchangeRateService);
+        // Money netWorth = portfolio.calculateNetWorth(marketDataService, this.exchangeRateService);
 
-        // Money totalAssets = portfolio.getTotalAssets(marketDataService, exchangeRateService);
+        Money totalAssetsValue = portfolio.getAssetsTotalValue(marketDataService, this.exchangeRateService);
 
         return new PortfolioResponse(
             portfolio.getPortfolioId(),
             portfolio.getUserId(),
             accountResponses,
-            netWorth,
-            // totalAssets,
+            totalAssetsValue,
             portfolio.getTransactionCount(),
             portfolio.getSystemCreationDate(),
             portfolio.getLastUpdatedAt()
