@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.application.validators;
 
-import org.h2.engine.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -10,7 +9,9 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CorrectAssetTickerCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordFeeCommand;
@@ -18,6 +19,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
@@ -32,6 +34,8 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -40,7 +44,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @DisplayName("CommandValidator Tests")
@@ -191,59 +197,81 @@ class CommandValidatorTest {
             assertThat(result.errors()).anyMatch(e -> e.contains("Amount"));
         }
         
-        // // this test can never happen technically
-        // @Test
-        // @DisplayName("Should fail when currency is null")
-        // void shouldFailWhenCurrencyIsNull() {
-        //     assertThrows(NullPointerException.class, ()->{
-        //         RecordPurchaseCommand command = new RecordPurchaseCommand(
-        //             UserId.randomId(),
-        //             AccountId.randomId(),
-        //             "AAPL",
-        //             BigDecimal.TEN,
-        //             new Money(BigDecimal.valueOf(150), null),
-        //             Collections.emptyList(),
-        //             Instant.now().minus(Duration.ofHours(35)),
-        //             "notes"
-        //         );
-                
-        //         ValidationResult result = validator.validate(command);
-                
-        //         assertThat(result.isValid()).isFalse();
-        //         assertThat(result.errors()).contains("Currency is required");
-        //     });
-        // }
+        // this test can never happen technically
+        // but we're doing it via mock
+        @Test
+        @DisplayName("Should fail when currency is null")
+        void shouldFailWhenCurrencyIsNull() {
+            Money money = mock(Money.class);
+            RecordPurchaseCommand command = new RecordPurchaseCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                "AAPL",
+                BigDecimal.TEN,
+                money,
+                Collections.emptyList(),
+                Instant.now().minus(Duration.ofHours(35)),
+                "notes"
+            );
+            
+            when(money.currency()).thenReturn(null);
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Currency is required");
+            
+        }
+
+        @Test
+        @DisplayName("Should fail when currency code is invalid")
+        void shouldFailWhenCurrencyCodeIsInvalid() {
+            Money money = mock(Money.class);
+            RecordPurchaseCommand command = new RecordPurchaseCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                "AAPL",
+                BigDecimal.TEN,
+                money,
+                Collections.emptyList(),
+                Instant.now().minus(Duration.ofHours(35)),
+                "notes"
+            );
+            
+            when(money.currency()).thenReturn(mock(ValidatedCurrency.class));
+            when(money.currency().getCode()).thenReturn("null");
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Invalid currency code");
+            
+        }
         
-        // // this also can't happen as fees itself has a way to protect this
-        // @Test
-        // @DisplayName("Should validate fees correctly")
-        // void shouldValidateFeesCorrectly() {
-        //     assertThrows(InvalidQuantityException.class, () -> {
-        //         Fee invalidFee = new Fee(
-        //             FeeType.ACCOUNT_MAINTENANCE,
-        //             new Money(BigDecimal.valueOf(-5), ValidatedCurrency.USD), 
-        //             ExchangeRate.createSingle(ValidatedCurrency.USD, "test"),
-        //             null,
-        //             Instant.now()
-        //         );
-                
-        //         RecordPurchaseCommand command = new RecordPurchaseCommand(
-        //             UserId.randomId(),
-        //             AccountId.randomId(),
-        //             "AAPL",
-        //             BigDecimal.TEN,
-        //             new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
-        //             List.of(invalidFee),
-        //             Instant.now(),
-        //             "notes"
-        //         );
-                
-        //         ValidationResult result = validator.validate(command);
-                
-        //         assertThat(result.isValid()).isFalse();
-        //         assertThat(result.errors()).anyMatch(e -> e.contains("fee"));
-        //     });
-        // }
+        // this also can't happen as fees itself has a way to protect this
+        @Test
+        @DisplayName("Should validate fees correctly")
+        void shouldValidateFeesCorrectly() {    
+            Fee invalidFee = mock(Fee.class);
+            Money money = mock(Money.class);
+            RecordPurchaseCommand command = new RecordPurchaseCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                "AAPL",
+                BigDecimal.TEN,
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
+                List.of(invalidFee, invalidFee),
+                Instant.now(),
+                "notes"
+            );
+            
+            when(invalidFee.amountInNativeCurrency()).thenReturn(money);
+            when(invalidFee.amountInNativeCurrency().amount()).thenReturn(null);
+
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).anyMatch(e -> e.contains("fee"));
+            
+        }
         
         @Test
         @DisplayName("Should fail when transaction date is in future")
@@ -266,13 +294,20 @@ class CommandValidatorTest {
         }
         
         private RecordPurchaseCommand createValidPurchaseCommand() {
+            Fee validFee = new Fee(
+                FeeType.ACCOUNT_MAINTENANCE,
+                new Money(BigDecimal.valueOf(5), ValidatedCurrency.USD), 
+                ExchangeRate.createSingle(ValidatedCurrency.USD, "test"),
+                null,
+                Instant.now()
+            );
             return new RecordPurchaseCommand(
                 UserId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
                 new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                Collections.emptyList(),
+                List.of(validFee),
                 Instant.now().minus(Duration.ofHours(20)),
                 "Test purchase"
             );
@@ -375,6 +410,29 @@ class CommandValidatorTest {
         }
 
         @Test
+        @DisplayName("Should fail when currency is null")
+        void shouldFailWhenCurrencyIsNull() {
+            Money money = mock(Money.class);
+            RecordSaleCommand command = new RecordSaleCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                null,
+                BigDecimal.TEN,
+                money,
+                null,
+                Instant.now(),
+                "notes"
+            );
+            
+            when(money.currency()).thenReturn(null);
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Currency is required");
+            
+        }
+
+        @Test
         @DisplayName("Should fail when symbol is invalid Wrong Format")
         void shouldFailWhenSymbolIsInvalidTooLong() {
             RecordSaleCommand command = new RecordSaleCommand(
@@ -433,29 +491,6 @@ class CommandValidatorTest {
             assertThat(result.isValid()).isFalse();
             assertThat(result.errors()).contains("Quantity must be greater than zero");
         }
-        
-        @Test
-        @DisplayName("Should fail when currency is null")
-        void shouldFailWhenCurrencyIsNull() {
-            ValidatedCurrency currency = mock(ValidatedCurrency.class);
-            RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
-                AccountId.randomId(),
-                "AAPL",
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(160), currency),
-                null,
-                Instant.now().minus(Duration.ofDays(1)),
-                "notes"
-            );
-            
-            ValidationResult result = validator.validate(command);
-            
-            assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Currency is required");
-        }
-        
-
 
         private RecordSaleCommand createValidSaleCommand() {
             Fee validFee = new Fee(
@@ -1370,6 +1405,50 @@ class CommandValidatorTest {
             );
         }
     }
+
+    
+    @Nested
+    @DisplayName("RemoveAccountCommand Validation Tests")
+    class RemoveAccountCommandTests {
+        @Test
+        @DisplayName("Should pass validation for valid delete command")
+        void shouldPassValidationForValidCommand() {
+            RemoveAccountCommand command = createValidRemoveAccountCommand();
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isTrue();
+            assertThat(result.errors()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should fail when userId is null")
+        void shouldFailWhenUserIdIsNull() {
+            RemoveAccountCommand command = new RemoveAccountCommand(null, AccountId.randomId());
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("UserId is required");
+        }
+        
+        @Test
+        @DisplayName("Should fail when accountId is null")
+        void shouldFailWhenAccountIdIsNull() {
+                        RemoveAccountCommand command = new RemoveAccountCommand(UserId.randomId(), null);
+
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("AccountId is required");
+        }
+        
+
+        private RemoveAccountCommand createValidRemoveAccountCommand() {
+            return new RemoveAccountCommand(UserId.randomId(), AccountId.randomId());
+        }
+    }
+
     @Nested
     @DisplayName("DeleteTransactionCommand Validation Tests")
     class DeleteTransactionCommandTests {
@@ -1519,6 +1598,160 @@ class CommandValidatorTest {
                 UserId.randomId(),
                 ValidatedCurrency.of("USD"),
                 true
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("DeletePortfolioCommand Validation Tests")
+    class DeletePortfolioCommandTests {
+        @Test
+        @DisplayName("Should pass validation for valid portfolio command")
+        void shouldPassValidationForValidCommand() {
+            DeletePortfolioCommand command =  new DeletePortfolioCommand(
+                UserId.randomId(),
+                true,
+                false
+            );
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isTrue();
+            assertThat(result.errors()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should pass validation for valid portfolio command")
+        void shouldPassValidationForValidCommandPart2() {
+            DeletePortfolioCommand command = createValidDeletePortfolioCommand();
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isTrue();
+            assertThat(result.errors()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should fail when userId is null")
+        void shouldFailWhenUserIdIsNull() {
+            DeletePortfolioCommand command = new DeletePortfolioCommand(
+                null,
+                false,
+                false
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("UserId is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when not confirmed but soft delete is null")
+        void shouldFailWhenSoftDeleteConfirmAndConfirmedNot() {
+            DeletePortfolioCommand command = new DeletePortfolioCommand(
+                UserId.randomId(),
+                false,
+                true
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Cannot soft delete without confirming");
+        }
+
+        private DeletePortfolioCommand createValidDeletePortfolioCommand() {
+            return new DeletePortfolioCommand(
+                UserId.randomId(),
+                true,
+                true
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("CorrectAssetTickerCommand Validation Tests")
+    public class CorrectAssetTickerCommandTests {
+        @Test
+        @DisplayName("Should pass validation for valid portfolio command")
+        void shouldPassValidationForValidCommand() {
+            CorrectAssetTickerCommand command = createValidCorrectAssetTickerCommand();
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isTrue();
+            assertThat(result.errors()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should fail when userId is null")
+        void shouldFailWhenUserIdIsNull() {
+            CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
+                null,
+                AccountId.randomId(),
+                new CashIdentifier("USD"),
+                new CashIdentifier("CAD")
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("UserId is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when accountId is null")
+        void shouldFailWhenAccountIdIsNull() {
+            CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
+                UserId.randomId(),
+                null,
+                new CashIdentifier("USD"),
+                new CashIdentifier("CAD")
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("AccountId is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when wrong id is null")
+        void shouldFailWhenWrongIdIsNull() {
+            CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                null,
+                new CashIdentifier("CAD")
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Wrong AssetIdentifier is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when rightId is null")
+        void shouldFailWhenRightIdIsNull() {
+            CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                new CashIdentifier("USD"),
+                null
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Correct AssetIdentifier is required");
+        }
+
+        private CorrectAssetTickerCommand createValidCorrectAssetTickerCommand() {
+            return new CorrectAssetTickerCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                new CashIdentifier("USD"),
+                new CashIdentifier("CAD")
             );
         }
     }
@@ -1743,6 +1976,28 @@ class CommandValidatorTest {
                 assertThat(result1.isValid()).isTrue();
                 assertThat(result2.isValid()).isTrue();
             }
+
+            @Test
+            void isValidSymbolPaths() throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+                
+                CommandValidator validator = new CommandValidator();
+                Method method = CommandValidator.class.getDeclaredMethod("isValidSymbol", String.class);
+                method.setAccessible(true);
+
+                // Path: Null
+                assertFalse((boolean) method.invoke(validator, (Object) null));
+
+                // Path: Too Long (> 10 chars)
+                assertFalse((boolean) method.invoke(validator, "LONGSTOCKSYMBOL"));
+
+                // Path: Invalid Characters (Lower case)
+                assertFalse((boolean) method.invoke(validator, "aapl"));
+
+                // Path: Valid Symbols
+                assertTrue((boolean) method.invoke(validator, "AAPL"));
+                assertTrue((boolean) method.invoke(validator, "BRK.B"));
+                assertTrue((boolean) method.invoke(validator, "123-A"));
+            }
         }
     }
 
@@ -1750,7 +2005,7 @@ class CommandValidatorTest {
     @DisplayName("Edge Cases and Integration Tests")
     class EdgeCasesTests {
         
-        // not possiblr with Money checks built in
+        // not possible with Money checks built in
         // @Test
         // @DisplayName("Should accumulate multiple validation errors")
         // void shouldAccumulateMultipleErrors() {

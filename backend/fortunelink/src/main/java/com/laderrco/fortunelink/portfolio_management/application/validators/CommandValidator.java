@@ -10,7 +10,9 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CorrectAssetTickerCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordFeeCommand;
@@ -18,9 +20,11 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
@@ -55,21 +59,20 @@ public class CommandValidator implements ClassValidation {
             errors.addAll(priceValidation.errors());
         }
 
-        // these can't validate because the classes themselves already validate
-        // for (Fee fee : command.fees()) {
-        //     ValidationResult feeValidation = validateAmount(fee.amountInNativeCurrency().amount());
-        //     if (!feeValidation.isValid()) {
-        //         errors.add("Invalid fee: " + String.join(", ", feeValidation.errors()));
-        //     }
+        for (Fee fee : command.fees()) {
+            ValidationResult feeValidation = validateAmount(fee.amountInNativeCurrency().amount());
+            if (!feeValidation.isValid()) {
+                errors.add("Invalid fee: " + String.join(", ", feeValidation.errors()));
+            }
             
-        // }
+        }
         
-        // if (command.price().currency() == null) {
-        //     errors.add("Currency is required");
-        // } 
-        // else if (!isValidCurrency(command.price().currency().getCode())) {
-        //     errors.add("Invalid currency code");
-        // }
+        if (command.price().currency() == null) {
+            errors.add("Currency is required");
+        } 
+        else if (!isValidCurrency(command.price().currency().getCode())) {
+            errors.add("Invalid currency code");
+        }
         
         ValidationResult dateValidation = validateDate(LocalDateTime.ofInstant(command.transactionDate(), ZoneOffset.UTC));
         if (!dateValidation.isValid()) {
@@ -109,7 +112,6 @@ public class CommandValidator implements ClassValidation {
             errors.addAll(priceValidation.errors());
         }
         
-        IO.print(command.price().currency());
         if (command.price().currency() == null) {
             errors.add("Currency is required");
         }
@@ -352,6 +354,24 @@ public class CommandValidator implements ClassValidation {
             : ValidationResult.failure(errors);
     }
 
+    public ValidationResult validate(RemoveAccountCommand command) {
+        ClassValidation.validateParameter(command);
+        List<String> errors = new ArrayList<>();
+        
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+        
+        if (command.accountId() == null) {
+            errors.add("AccountId is required");
+        }
+        
+        return errors.isEmpty() 
+            ? ValidationResult.success() 
+            : ValidationResult.failure(errors);
+
+    }
+
     public ValidationResult validate(CreatePortfolioCommand command) {
         ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
@@ -368,7 +388,48 @@ public class CommandValidator implements ClassValidation {
             ? ValidationResult.success() 
             : ValidationResult.failure(errors);
     }
+
+    public ValidationResult validate(DeletePortfolioCommand command) {
+        ClassValidation.validateParameter(command);
+        List<String> errors = new ArrayList<>();
+        
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+        
+        if (command.confirmed() == false && command.softDelete()) {
+            errors.add("Cannot soft delete without confirming");
+        }
+
+        return errors.isEmpty() 
+            ? ValidationResult.success() 
+            : ValidationResult.failure(errors);
+    }
     
+    public ValidationResult validate(CorrectAssetTickerCommand command) {
+        ClassValidation.validateParameter(command);
+        List<String> errors = new ArrayList<>();
+        
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+        
+        if (command.accountId() == null) {
+            errors.add("AccountId is required");
+        }
+
+        if (command.wrongAssetIdentifier() == null) {
+            errors.add("Wrong AssetIdentifier is required");
+        }
+
+        if (command.correctAssetIdentifier() == null) {
+            errors.add("Correct AssetIdentifier is required");
+        }
+
+        return errors.isEmpty() 
+            ? ValidationResult.success() 
+            : ValidationResult.failure(errors);
+    }
     // Helper validation methods
     public ValidationResult validateAmount(BigDecimal amount) {
         if (amount == null) {
@@ -408,8 +469,6 @@ public class CommandValidator implements ClassValidation {
         }
         
         if (date.isAfter(LocalDateTime.now())) {
-            IO.println(date);
-            IO.println(LocalDateTime.now());
             return ValidationResult.failure("Transaction date cannot be in the future");
         }
         

@@ -60,7 +60,7 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-// TODO: right now we are using findByUserId -> assumes 1 portoflio per user for MVP, multi-portfolio for layer
+// TODO: right now we are using findByUserId -> assumes 1 portoflio per user for MVP, multi-portfolio for later
 // for transaction edits/deletes -> no recalculations, atleast not here, in domain yes there is a method, no cascade effect, and hard delete, also no ocmpatibility checks
 
 @Service // disabled for now, throws error with unit tests
