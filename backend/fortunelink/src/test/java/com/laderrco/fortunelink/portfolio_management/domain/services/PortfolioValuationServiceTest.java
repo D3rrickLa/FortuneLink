@@ -92,9 +92,9 @@ public class PortfolioValuationServiceTest {
             .portfolioId(portfolioId1)
             .userId(userId1)
             .accounts(List.of(investmentAccount))
-            .portfolioCurrency(usd)
+            .portfolioCurrencyPreference(usd)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();
 
         // Mock market data service to return current price
@@ -145,9 +145,9 @@ public class PortfolioValuationServiceTest {
             .portfolioId(portfolioId1)
             .userId(userId1)
             .accounts(List.of(investmentAccount))
-            .portfolioCurrency(usd)
+            .portfolioCurrencyPreference(usd)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();
 
         // Mock market data service to return current price
@@ -209,9 +209,9 @@ public class PortfolioValuationServiceTest {
             .portfolioId(portfolioId1)
             .userId(UserId.randomId())
             .accounts(List.of(tfsaAccount, rrspAccount))
-            .portfolioCurrency(cad)
+            .portfolioCurrencyPreference(cad)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();
 
         // Mock market prices
@@ -259,9 +259,9 @@ public class PortfolioValuationServiceTest {
             .portfolioId(portfolioId1)
             .userId(UserId.randomId())
             .accounts(List.of(cashAccount))
-            .portfolioCurrency(usd)
+            .portfolioCurrencyPreference(usd)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();
 
         // Act
@@ -283,9 +283,9 @@ public class PortfolioValuationServiceTest {
             .portfolioId(portfolioId1)
             .userId(UserId.randomId())
             .accounts(List.of())
-            .portfolioCurrency(ValidatedCurrency.USD)
+            .portfolioCurrencyPreference(ValidatedCurrency.USD)
             .systemCreationDate(Instant.now())
-            .updatedAt(Instant.now())
+            .lastUpdatedAt(Instant.now())
             .build();
 
         // Act

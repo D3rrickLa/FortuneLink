@@ -20,7 +20,7 @@ public class Asset {
     private final AssetIdentifier assetIdentifier;
     private final ValidatedCurrency currency; // the currency the asset is listed in
     private BigDecimal quantity;
-    private Money costBasis; // total cost of all purchaes (feed included)
+    private Money costBasis; // total cost of all purchaes (feed included) E.i (pricePerUnit * quantity) + fees
 
     private final Instant acquiredOn;
     private Instant lastSystemInteraction;
@@ -47,7 +47,8 @@ public class Asset {
         this.version = version;
     }
 
-    public Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
+    // package-private, only Accoutn can create
+    Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
         this(
             assetId,
             assetIdentifier,
@@ -60,12 +61,10 @@ public class Asset {
         );
     }
 
-    // TODO: check and see if we should use V2 remove and add Position methods as we can eliminate the updateCostBasis
-    // UPDATE we did some hybrid workflow
-
     // MUTATION METHODS (package-private - only Portfolio can call) //
-    void adjustQuantity(BigDecimal additionalQuantity) {
+    void addQuantity(BigDecimal additionalQuantity) {
         Objects.requireNonNull(additionalQuantity, "Quantity cannot be null");
+        
         this.quantity = this.quantity.add(additionalQuantity);
         updateMetadata();
     }
@@ -74,7 +73,7 @@ public class Asset {
         Objects.requireNonNull(quantityToRemove, "Quantity cannot be null");
         
         BigDecimal newQuantity = this.quantity.subtract(quantityToRemove);
-        
+
         if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException(
                 "Cannot remove " + quantityToRemove + " from position of " + this.quantity
@@ -104,10 +103,13 @@ public class Asset {
 
     // QUERY METHODS (public - anyone can call) //
 
+    // we hsould really rename this
+    // call it getAverageCostPerShare
     public Money getCostPerUnit() {
         if (quantity.compareTo(BigDecimal.ZERO) == 0) {
             return Money.ZERO(costBasis.currency());
         }
+
         return costBasis.divide(quantity);
     }
 

@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-public record PortfolioResponse(PortfolioId portfolioId, UserId userId, List<AccountResponse> accounts, Money totalValue, int transactionCount, Instant createDate, Instant lastUpdated) implements ClassValidation {
+public record PortfolioResponse(PortfolioId portfolioId, UserId userId, List<AccountResponse> accounts, Money totalValue, long transactionCount, Instant createDate, Instant lastUpdated) implements ClassValidation {
     public PortfolioResponse {
         ClassValidation.validateParameter(portfolioId);
         ClassValidation.validateParameter(userId);

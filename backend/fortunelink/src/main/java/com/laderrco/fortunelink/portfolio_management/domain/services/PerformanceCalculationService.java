@@ -56,7 +56,7 @@ public class PerformanceCalculationService {
      */
     public Money calculateRealizedGains(Portfolio portfolio, List<Transaction> transactions)
             throws AccountNotFoundException {
-        ValidatedCurrency portfolioBaseCurrency = portfolio.getPortfolioCurrency();
+        ValidatedCurrency portfolioBaseCurrency = portfolio.getPortfolioCurrencyPreference();
 
         Map<AssetIdentifier, List<Transaction>> txByAsset = transactions.stream()
                 .collect(Collectors.groupingBy(Transaction::getAssetIdentifier));
@@ -93,7 +93,7 @@ public class PerformanceCalculationService {
      * @return Total paper gains/losses across all assets in portfolio base currency
      */
     public Money calculateUnrealizedGains(Portfolio portfolio, MarketDataService marketDataService) {
-        ValidatedCurrency baseCurrency = portfolio.getPortfolioCurrency();
+        ValidatedCurrency baseCurrency = portfolio.getPortfolioCurrencyPreference();
 
         return portfolio.getAccounts().stream()
                 .flatMap(account -> account.getAssets().stream())
@@ -145,7 +145,7 @@ public class PerformanceCalculationService {
      * @return Net amount of money contributed to portfolio
      */
     private Money calculateTotalInvested(Portfolio portfolio) {
-        ValidatedCurrency baseCurrency = portfolio.getPortfolioCurrency();
+        ValidatedCurrency baseCurrency = portfolio.getPortfolioCurrencyPreference();
 
         Money totalDeposits = portfolio.getAccounts().stream()
                 .flatMap(account -> account.getTransactions().stream())
@@ -174,7 +174,7 @@ public class PerformanceCalculationService {
      * 
      * !! USE THE SIMPLIFIED ACB, THE CALCULATESELLGAIN FOR DISPLAYING
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings("Unused")
     private Money calculateSellGainWithACB(Portfolio portfolio, List<Transaction> transactions) {
         throw new UnsupportedOperationException("Not yet implemented");
     }

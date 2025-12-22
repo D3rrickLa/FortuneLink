@@ -3,9 +3,11 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.spy;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,10 +31,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Account
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CryptoIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
@@ -79,11 +83,11 @@ class PortfolioTest {
             // Then
             assertThat(portfolio).isNotNull();
             assertThat(portfolio.getUserId()).isEqualTo(userId);
-            assertThat(portfolio.getPortfolioCurrency()).isEqualTo(portfolioCurrency);
+            assertThat(portfolio.getPortfolioCurrencyPreference()).isEqualTo(portfolioCurrency);
             assertThat(portfolio.getAccounts()).isEmpty();
             assertThat(portfolio.getPortfolioId()).isNotNull();
             assertThat(portfolio.getSystemCreationDate()).isNotNull();
-            assertThat(portfolio.getUpdatedAt()).isNotNull();
+            assertThat(portfolio.getLastUpdatedAt()).isNotNull();
         }
 
         @Test
@@ -101,6 +105,28 @@ class PortfolioTest {
             assertThatThrownBy(() -> new Portfolio(userId, null))
                 .isInstanceOf(NullPointerException.class);
         }
+
+        @Test 
+        @DisplayName("Should create portfolio using repo specific constructor")
+        void testRepoConstructorIsSucess() {
+            List<Account> accounts = List.of(createTestAccount("TEST 1", AccountType.CHEQUING), createTestAccount("RRSP", AccountType.INVESTMENT));
+            Portfolio portfolio = new Portfolio(PortfolioId.randomId(), userId, portfolioCurrency, accounts, Instant.now(), Instant.now());
+            assertEquals(accounts, portfolio.getAccounts());
+            assertEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());
+        }
+    }
+
+    @Nested
+    @DisplayName("Random Misc. Tests")
+    public class InnerPortfolioTest {
+        @Test
+        void testUpdatingCurrencyPref() {
+            Portfolio portfolio = new Portfolio(userId, portfolioCurrency);
+            ValidatedCurrency newCur = ValidatedCurrency.GBP;
+            portfolio.updateCurrencyPreference(newCur);
+            assertEquals(newCur, portfolio.getPortfolioCurrencyPreference());
+        }
+        
     }
 
     @Nested
@@ -123,6 +149,7 @@ class PortfolioTest {
                 .assets(new ArrayList<>())
                 .systemCreationDate(Instant.now())
                 .lastSystemInteraction(Instant.now())
+                .isActive(true)
                 .build();
             
             account2 = Account.builder()
@@ -134,6 +161,7 @@ class PortfolioTest {
                 .assets(new ArrayList<>())
                 .systemCreationDate(Instant.now())
                 .lastSystemInteraction(Instant.now())
+                .isActive(true)
                 .build();
         }
 
@@ -198,7 +226,7 @@ class PortfolioTest {
 
             // When & Then
             assertThatThrownBy(() -> portfolio.addAccount(duplicateNameAccount))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("already exists");
         }
 
@@ -206,14 +234,14 @@ class PortfolioTest {
         @DisplayName("Should update metadata when adding account")
         void shouldUpdateMetadataWhenAddingAccount() throws InterruptedException {
             // Given
-            Instant initialUpdatedAt = portfolio.getUpdatedAt();
+            Instant initialUpdatedAt = portfolio.getLastUpdatedAt();
             Thread.sleep(10); // Ensure time difference
 
             // When
             portfolio.addAccount(account1);
 
             // Then
-            assertThat(portfolio.getUpdatedAt()).isAfter(initialUpdatedAt);
+            assertThat(portfolio.getLastUpdatedAt()).isAfter(initialUpdatedAt);
         }
 
         @Test
@@ -221,26 +249,41 @@ class PortfolioTest {
         void shouldRemoveEmptyAccount() throws AccountNotFoundException {
             // Given
             portfolio.addAccount(account1);
-
+            account1.getAssets().removeIf(a -> true);
+            
             // When
+            account1.close();
             portfolio.removeAccount(account1.getAccountId());
 
             // Then
             assertThat(portfolio.getAccounts()).isEmpty();
+            assertFalse(portfolio.containsAccounts());
         }
 
         @Test
-        @DisplayName("Should throw exception when removing account with assets")
-        void shouldThrowExceptionWhenRemovingAccountWithAssets() {
-            // Given
+        @DisplayName("Should throw exception when removing without closing the account first")
+        void shouldThrowExceptionWhenRemovingIfAccountIsActive() {
             Asset asset = createTestAsset();
             account1.getAssets().add(asset);
             portfolio.addAccount(account1);
 
-            // When & Then
             assertThatThrownBy(() -> portfolio.removeAccount(account1.getAccountId()))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("still contains assets");
+                .hasMessage("Account cannot be removed, please close the account first");
+        }
+
+        @Test
+        void shouldThrowExceptionWhenRemovingAccountWithTransactionsInIt() {
+            Transaction transaction = createTestTransaction();
+            portfolio.addAccount(account1);
+            portfolio.recordTransaction(account1.getAccountId(), transaction);
+            account1.getAssets().clear();
+            portfolio.closeAccount(account1.getAccountId());
+
+            assertThatThrownBy(() -> portfolio.removeAccount(account1.getAccountId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Cannot remove account");
+
         }
 
         @Test
@@ -286,7 +329,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account.getAccountId(), transaction);
 
             // Then
-            List<Transaction> transactions = portfolio.getTransactionsForAccount(account.getAccountId());
+            List<Transaction> transactions = portfolio.getTransactionsFromAccount(account.getAccountId());
             assertThat(transactions).hasSize(1);
             assertThat(transactions).contains(transaction);
         }
@@ -306,15 +349,140 @@ class PortfolioTest {
         @DisplayName("Should update metadata when recording transaction")
         void shouldUpdateMetadataWhenRecordingTransaction() throws Exception {
             // Given
-            Instant initialUpdatedAt = portfolio.getUpdatedAt();
+            Instant initialUpdatedAt = portfolio.getLastUpdatedAt();
             Thread.sleep(10);
 
             // When
             portfolio.recordTransaction(account.getAccountId(), transaction);
 
             // Then
-            assertThat(portfolio.getUpdatedAt()).isAfter(initialUpdatedAt);
+            assertThat(portfolio.getLastUpdatedAt()).isAfter(initialUpdatedAt);
         }
+
+        @Test
+        @DisplayName("Should update transaction successfully")
+        void testUpdateTransactionShouldBeSuccessful() {
+            portfolio.recordTransaction(account.getAccountId(), transaction);
+            Transaction updatedTransaction = Transaction.builder()
+                .transactionId(transaction.getTransactionId())
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+                .quantity((new BigDecimal("100")))
+                .pricePerUnit((Money.of(new BigDecimal("350"), ValidatedCurrency.CAD)))
+                .transactionDate(Instant.now())
+                .notes("something here 2")
+                .build();
+
+            portfolio.updateTransaction(account.getAccountId(), transaction.getTransactionId(), updatedTransaction);
+            assertEquals(account.getTransaction(transaction.getTransactionId()), updatedTransaction);
+        }
+
+        @Test
+        @DisplayName("Should remove transaction successfully")
+        void testRemoveTransactionShouldBeSuccessful() {
+            portfolio.recordTransaction(account.getAccountId(), transaction);
+            assertTrue(portfolio.containsAccounts());
+            assertTrue(portfolio.getTransactionCount() == 1);
+            
+            portfolio.removeTransaction(account.getAccountId(), transaction.getTransactionId());
+            assertTrue(portfolio.getTransactionCount() == 0);
+            
+        }
+    }
+
+    @Nested
+    @DisplayName("Correcting Asset Ticker Tests")
+    public class CorrectAssetTickerTests {
+        private Portfolio portfolio;
+        private Account account1;
+
+        @BeforeEach
+        void setUp() {
+            portfolio = new Portfolio(userId, ValidatedCurrency.USD);
+            account1 = Account.builder()
+                .accountId(AccountId.randomId())
+                .name("TFSA Account")
+                .accountType(AccountType.TFSA)
+                .baseCurrency(ValidatedCurrency.USD)
+                .cashBalance(Money.ZERO("USD"))
+                .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .isActive(true)
+                .build();
+        }
+
+        @Test
+        @DisplayName("Should swap wrong ticker for correct ticker via transactions when quantity > 0")
+        void shouldSwapTickersViaTransactions() {
+            // Given
+            AssetIdentifier wrongTicker = new MarketIdentifier("FB", null, AssetType.STOCK, "Facebook", "USD", null); // Old Facebook ticker
+            AssetIdentifier correctTicker = new MarketIdentifier("META", null, AssetType.STOCK, "META", "USD", null);
+            BigDecimal quantity = new BigDecimal("10");
+            
+            // Setup an account with the "wrong" asset already in it
+            // Note: Assuming recordTransaction or a setup method adds the initial asset
+            Asset initialAsset = Asset.builder()
+                .assetId(assetId1)
+                .assetIdentifier(wrongTicker)
+                .currency(ValidatedCurrency.USD)
+                .quantity(quantity)
+                .costBasis(Money.of(new BigDecimal("1000"), ValidatedCurrency.USD))
+                .acquiredOn(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .build();
+
+            account1.addAsset(initialAsset); 
+            portfolio.addAccount(account1);
+
+            // When
+            portfolio.correctAssetTicker(account1.getAccountId(), wrongTicker, correctTicker);
+
+            // Then
+            // 1. The old asset should be gone (or have 0 quantity depending on your logic)
+            assertThat(account1.getAssets()).noneMatch(a -> a.getAssetIdentifier().equals(wrongTicker));
+            
+            // 2. The new asset should exist with the correct quantity
+            Asset newAsset = account1.getAsset(correctTicker);
+            assertThat(newAsset.getQuantity()).isEqualByComparingTo(quantity);
+
+            // 3. Two correction transactions should have been recorded
+            List<Transaction> history = account1.getTransactions();
+            assertThat(history).hasSize(2);
+            assertThat(history.get(0).getTransactionType()).isEqualTo(TransactionType.SELL);
+            assertThat(history.get(1).getTransactionType()).isEqualTo(TransactionType.BUY);
+            assertThat(history.get(1).getAssetIdentifier()).isEqualTo(correctTicker);
+        }
+
+        @Test
+        @DisplayName("Should simply remove asset if quantity is zero")
+        void shouldRemoveAssetDirectlyIfQuantityIsZero() {
+            // Given
+            AssetIdentifier wrongTicker = new CashIdentifier("USD");
+            AssetIdentifier correctTicker = new CashIdentifier("JPY");
+            
+            // Asset exists but quantity is 0
+            Asset zeroAsset = Asset.builder()
+                .assetId(assetId1)
+                .assetIdentifier(wrongTicker)
+                .currency(ValidatedCurrency.USD)
+                .quantity(BigDecimal.ZERO)
+                .costBasis(Money.of(new BigDecimal("0"), ValidatedCurrency.USD))
+                .acquiredOn(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .build();
+
+            account1.addAsset(zeroAsset);
+            portfolio.addAccount(account1);
+
+            // When
+            portfolio.correctAssetTicker(account1.getAccountId(), wrongTicker, correctTicker);
+
+            // Then
+            assertThat(account1.getAssets()).isEmpty();
+            assertThat(account1.getTransactions()).isEmpty(); // No transactions should be recorded for 0 quantity
+        }
+        
     }
 
     @Nested
@@ -350,7 +518,7 @@ class PortfolioTest {
             // When & Then
             assertThatThrownBy(() -> portfolio.getAccount(nonExistentId))
                 .isInstanceOf(AccountNotFoundException.class)
-                .hasMessageContaining("cannot be found");
+                .hasMessageContaining("not found in this portfolio");
         }
     }
 
@@ -377,7 +545,7 @@ class PortfolioTest {
             // when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class))).thenReturn(Money.ZERO(portfolioCurrency));
 
             // When
-            Money totalAssets = portfolio.getTotalAssets(marketDataService, exchangeRateService);
+            Money totalAssets = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
 
             // Then
             assertThat(totalAssets.amount()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -398,7 +566,7 @@ class PortfolioTest {
                 .thenReturn(account1Value, account2Value);
 
             // When
-            Money totalAssets = portfolio.getTotalAssets(marketDataService, exchangeRateService);
+            Money totalAssets = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
 
             // Then
             verify(exchangeRateService, times(2)).convert(any(Money.class), eq(portfolioCurrency));
@@ -409,7 +577,7 @@ class PortfolioTest {
         @DisplayName("Should throw exception when marketDataService is null")
         void shouldThrowExceptionWhenMarketDataServiceIsNull() {
             // When & Then
-            assertThatThrownBy(() -> portfolio.getTotalAssets(null, exchangeRateService))
+            assertThatThrownBy(() -> portfolio.getAssetsTotalValue(null, exchangeRateService))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("marketDataService");
         }
@@ -418,7 +586,7 @@ class PortfolioTest {
         @DisplayName("Should throw exception when exchangeRateService is null")
         void shouldThrowExceptionWhenExchangeRateServiceIsNull() {
             // When & Then
-            assertThatThrownBy(() -> portfolio.getTotalAssets(marketDataService, null))
+            assertThatThrownBy(() -> portfolio.getAssetsTotalValue(marketDataService, null))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("exchangeRateService");
         }
@@ -502,7 +670,7 @@ class PortfolioTest {
         void shouldThrowExceptionWhenEndDateIsNull() {
             // When & Then
             assertThatThrownBy(() -> portfolio.getTransactionHistory(baseDate, null))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("End date cannot be null");
         }
 
@@ -521,11 +689,73 @@ class PortfolioTest {
             // Then
             assertThat(history).isEmpty();
         }
+
+        @Test
+        @DisplayName("Should return all transactions up to endDate when startDate is null")
+        void shouldReturnTransactionsUpToEndDateWhenStartDateIsNull() {
+            // Given
+            Instant farPast = Instant.parse("2020-01-01T00:00:00Z");
+            Instant yesterday = Instant.now().minus(1, ChronoUnit.DAYS);
+            Instant today = Instant.now();
+            Instant tomorrow = Instant.now().plus(1, ChronoUnit.DAYS);
+
+            // Setup: Two different accounts
+            Account accountA = Account.builder()
+                .accountId(AccountId.randomId())
+                .name("Account A")
+                .accountType(AccountType.INVESTMENT)
+                .baseCurrency(ValidatedCurrency.USD)
+                .cashBalance(Money.ZERO("USD"))
+                .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .build();
+
+            Account accountB = Account.builder()
+                .accountId(AccountId.randomId())
+                .name("Account B")
+                .accountType(AccountType.INVESTMENT)
+                .baseCurrency(ValidatedCurrency.USD)
+                .cashBalance(Money.ZERO("USD"))
+                .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .build();
+
+            portfolio.addAccount(accountA);
+            portfolio.addAccount(accountB);
+
+            // Transaction 1: Far past (Account A)
+            Transaction tx1 = createTx(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null), farPast);
+            portfolio.recordTransaction(accountA.getAccountId(), tx1);
+
+            // Transaction 2: Yesterday (Account B)
+            Transaction tx2 = createTx(new MarketIdentifier("TSLA", null, AssetType.STOCK, "Tesla", "USD", null), yesterday);
+            portfolio.recordTransaction(accountB.getAccountId(), tx2);
+
+            // Transaction 3: Tomorrow (Should be excluded)
+            Transaction tx3 = createTx(new MarketIdentifier("GOOGL", null, AssetType.STOCK, "Google", "USD", null), tomorrow);
+            portfolio.recordTransaction(accountA.getAccountId(), tx3);
+
+            // When: Querying with startDate = null and endDate = today
+            List<Transaction> history = portfolio.getTransactionHistory(null, today);
+
+            // Then
+            // 1. Should only contain tx1 and tx2 (because tx3 is after 'today')
+            assertThat(history).hasSize(2);
+            
+            // 2. Should be sorted chronologically (tx1 then tx2)
+            assertThat(history).containsExactly(tx1, tx2);
+            
+            // 3. Verify specifically that the earliest transaction was included
+            assertThat(history).extracting(Transaction::getTransactionDate)
+                .contains(farPast);
+        }
     }
 
     @Nested
     @DisplayName("Get Transactions For Account Tests")
-    class GetTransactionsForAccountTests {
+    class getTransactionsFromAccountTests {
 
         private Portfolio portfolio;
         private Account account1;
@@ -550,7 +780,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account2.getAccountId(), tx2);
 
             // When
-            List<Transaction> account1Transactions = portfolio.getTransactionsForAccount(account1.getAccountId());
+            List<Transaction> account1Transactions = portfolio.getTransactionsFromAccount(account1.getAccountId());
 
             // Then
             assertThat(account1Transactions).hasSize(1);
@@ -565,14 +795,14 @@ class PortfolioTest {
             AccountId nonExistentId = AccountId.randomId();
 
             // When & Then
-            assertThatThrownBy(() -> portfolio.getTransactionsForAccount(nonExistentId))
+            assertThatThrownBy(() -> portfolio.getTransactionsFromAccount(nonExistentId))
                 .isInstanceOf(Exception.class);
         }
     }
 
     @Nested
     @DisplayName("Get Transactions For Asset Tests")
-    class GetTransactionsForAssetTests {
+    class getTransactionsFromAssetTests {
 
         private Portfolio portfolio;
         private Account account;
@@ -601,7 +831,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account.getAccountId(), tx3);
 
             // When
-            List<Transaction> assetTransactions = portfolio.getTransactionsForAsset(assetId1);
+            List<Transaction> assetTransactions = portfolio.getTransactionsFromAsset(assetId1);
 
             // Then
             assertThat(assetTransactions).hasSize(2);
@@ -615,7 +845,7 @@ class PortfolioTest {
             AssetIdentifier unusedAsset = new MarketIdentifier("TSLA", null, AssetType.STOCK, "TESLA", "USD", null);
 
             // When
-            List<Transaction> transactions = portfolio.getTransactionsForAsset(unusedAsset);
+            List<Transaction> transactions = portfolio.getTransactionsFromAsset(unusedAsset);
 
             // Then
             assertThat(transactions).isEmpty();
@@ -632,13 +862,40 @@ class PortfolioTest {
         private AssetIdentifier assetId;
         private Instant baseDate;
 
+        private Instant now = Instant.now();
+        private Instant yesterday = now.minus(1, ChronoUnit.DAYS);
+        private Instant tomorrow = now.plus(1, ChronoUnit.DAYS);
+        private AccountId accountId;
+
         @BeforeEach
         void setUp() {
-            portfolio = new Portfolio(userId, portfolioCurrency);
-            account1 = createTestAccount("Account 1", AccountType.TFSA);
-            account2 = createTestAccount("Account 2", AccountType.RRSP);
+            portfolio = new Portfolio(userId, ValidatedCurrency.USD);
+            account1 = Account.builder()
+                .accountId(AccountId.randomId())
+                .name("TFSA Account")
+                .accountType(AccountType.TFSA)
+                .baseCurrency(ValidatedCurrency.USD)
+                .cashBalance(Money.ZERO("USD"))
+                .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .isActive(true)
+                .build();
+            
+            account2 = Account.builder()
+                .accountId(AccountId.randomId())
+                .name("RRSP Account")
+                .accountType(AccountType.RRSP)
+                .baseCurrency(ValidatedCurrency.USD)
+                .cashBalance(Money.ZERO("USD"))
+                .assets(new ArrayList<>())
+                .systemCreationDate(Instant.now())
+                .lastSystemInteraction(Instant.now())
+                .isActive(true)
+                .build();
             portfolio.addAccount(account1);
             portfolio.addAccount(account2);
+            accountId = account1.getAccountId();
             
             assetId = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
             baseDate = Instant.now();
@@ -648,7 +905,16 @@ class PortfolioTest {
         @DisplayName("Should query transactions with all parameters")
         void shouldQueryTransactionsWithAllParameters() throws Exception {
             // Given
-            Transaction tx1 = createTransactionWithAssetAndDate(assetId, baseDate.minus(1, ChronoUnit.DAYS));
+            Transaction tx1 = Transaction.builder()
+                .transactionId(TransactionId.randomId())
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(assetId)
+                .quantity((new BigDecimal("10")))
+                .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.USD)))
+                .transactionDate(baseDate.minus(1, ChronoUnit.DAYS))
+                .notes("something here")
+                .build();
+            
             portfolio.recordTransaction(account1.getAccountId(), tx1);
 
             // When
@@ -668,8 +934,26 @@ class PortfolioTest {
         @DisplayName("Should query transactions with null parameters returning all")
         void shouldQueryTransactionsWithNullParameters() throws Exception {
             // Given
-            Transaction tx1 = createTestTransaction();
-            Transaction tx2 = createTestTransaction();
+            Transaction tx1 = Transaction.builder()
+                .transactionId(transactionId1)
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+                .quantity((new BigDecimal("10")))
+                .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.USD)))
+                .transactionDate(Instant.now())
+                .notes("something here")
+                .build();
+                
+            Transaction tx2 = Transaction.builder()
+                .transactionId(transactionId1)
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+                .quantity((new BigDecimal("10")))
+                .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.USD)))
+                .transactionDate(Instant.now())
+                .notes("something here")
+                .build();
+
             portfolio.recordTransaction(account1.getAccountId(), tx1);
             portfolio.recordTransaction(account2.getAccountId(), tx2);
 
@@ -684,8 +968,26 @@ class PortfolioTest {
         @DisplayName("Should filter by account only")
         void shouldFilterByAccountOnly() throws Exception {
             // Given
-            Transaction tx1 = createTestTransaction();
-            Transaction tx2 = createTestTransaction();
+            Transaction tx1 = Transaction.builder()
+                .transactionId(transactionId1)
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+                .quantity((new BigDecimal("10")))
+                .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.USD)))
+                .transactionDate(Instant.now())
+                .notes("something here")
+                .build();
+                
+            Transaction tx2 = Transaction.builder()
+                .transactionId(transactionId1)
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+                .quantity((new BigDecimal("10")))
+                .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.USD)))
+                .transactionDate(Instant.now())
+                .notes("something here")
+                .build();
+
             portfolio.recordTransaction(account1.getAccountId(), tx1);
             portfolio.recordTransaction(account2.getAccountId(), tx2);
 
@@ -696,80 +998,71 @@ class PortfolioTest {
             assertThat(results).hasSize(1);
             assertThat(results).contains(tx1);
         }
-    }
 
-    @Nested
-    @DisplayName("Net Worth Calculation Tests")
-    class NetWorthTests {
-
-        private Portfolio portfolio;
-
-        @BeforeEach
-        void setUp() {
-            portfolio = new Portfolio(userId, portfolioCurrency);
-        }
-
-      @Test
-        @DisplayName("Should calculate net worth equal to total assets for portfolio with accounts")
-        void shouldCalculateNetWorthEqualToTotalAssets() {
-            // Given
-            Account account1 = spy(createTestAccount("Account 1", AccountType.TFSA));
-            Account account2 = spy(createTestAccount("Account 2", AccountType.RRSP));
+        @Test
+        @DisplayName("Should filter by AssetIdentifier and ignore others")
+        void shouldFilterByAssetIdentifier() {
+            // Given: Account with two different assets
+            AssetIdentifier apple = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
+            AssetIdentifier tesla = new MarketIdentifier("TSLA", null, AssetType.STOCK, "Tesla", "USD", null);
             
-            portfolio.addAccount(account1);
-            portfolio.addAccount(account2);
+            portfolio.recordTransaction(accountId, createTx(apple, now));
+            portfolio.recordTransaction(accountId, createTx(tesla, now));
 
-            Money account1Value = Money.of(new BigDecimal("30000"), ValidatedCurrency.CAD);
-            Money account2Value = Money.of(new BigDecimal("20000"), ValidatedCurrency.CAD);
-            Money expectedTotal = Money.of(new BigDecimal("50000"), portfolioCurrency);
-
-            // Mock the calculateTotalValue for each account
-            when(account1.calculateTotalValue(marketDataService)).thenReturn(account1Value);
-            when(account2.calculateTotalValue(marketDataService)).thenReturn(account2Value);
-
-            // Mock exchange rate service to return the same values (no conversion needed)
-            when(exchangeRateService.convert(account1Value, portfolioCurrency)).thenReturn(account1Value);
-            when(exchangeRateService.convert(account2Value, portfolioCurrency)).thenReturn(account2Value);
-
-            // When
-            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
+            // When: Querying specifically for Apple
+            List<Transaction> results = portfolio.queryTransactions(accountId, apple, null, null);
 
             // Then
-            assertThat(netWorth.amount()).isEqualByComparingTo(expectedTotal.amount());
-            verify(account1).calculateTotalValue(marketDataService);
-            verify(account2).calculateTotalValue(marketDataService);
-            verify(exchangeRateService, times(2)).convert(any(Money.class), eq(portfolioCurrency));
+            assertThat(results).hasSize(1);
+            assertThat(results.get(0).getAssetIdentifier()).isEqualTo(apple);
         }
 
         @Test
-        @DisplayName("Should calculate net worth as zero for empty portfolio")
-        void shouldCalculateNetWorthAsZeroForEmptyPortfolio() {
-            // When
-            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
+        @DisplayName("Should return all assets when AssetIdentifier is null")
+        void shouldReturnAllAssetsWhenIdentifierIsNull() {
+            portfolio.recordTransaction(accountId, createTx(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null), now));
+            portfolio.recordTransaction(accountId, createTx(new MarketIdentifier("STLA", null, AssetType.STOCK, "Tesla", "USD", null), now));
 
-            // Then
-            assertThat(netWorth.amount()).isEqualByComparingTo(BigDecimal.ZERO);
+            List<Transaction> results = portfolio.queryTransactions(accountId, null, null, null);
+
+            assertThat(results).hasSize(2);
         }
 
         @Test
-        @DisplayName("Should handle currency conversion in net worth calculation")
-        void shouldHandleCurrencyConversionInNetWorth() {
-            // Given
-            Account usdAccount = spy(createTestAccount("USD Account", AccountType.INVESTMENT));
-            portfolio.addAccount(usdAccount);
+        @DisplayName("Should respect inclusive date boundaries (Edge Cases)")
+        void shouldRespectDateBoundaries() {
+            AssetIdentifier id = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);;
+            
+            // 1. Transaction exactly on the startDate
+            portfolio.recordTransaction(accountId, createTx(id, yesterday)); 
+            // 2. Transaction exactly on the endDate
+            portfolio.recordTransaction(accountId, createTx(id, tomorrow));
+            // 3. Transaction outside range (too early)
+            portfolio.recordTransaction(accountId, createTx(id, yesterday.minusSeconds(10)));
 
-            Money usdValue = Money.of(new BigDecimal("10000"), ValidatedCurrency.USD);
-            Money cadValue = Money.of(new BigDecimal("13500"), ValidatedCurrency.CAD); // Assuming 1.35 exchange rate
+            // When: Querying the exact window
+            List<Transaction> results = portfolio.queryTransactions(accountId, id, yesterday, tomorrow);
 
-            when(usdAccount.calculateTotalValue(marketDataService)).thenReturn(usdValue);
-            when(exchangeRateService.convert(usdValue, portfolioCurrency)).thenReturn(cadValue);
+            // Then: Should find the 2 transactions on the boundaries
+            assertThat(results).hasSize(2);
+        }
 
-            // When
-            Money netWorth = portfolio.calculateNetWorth(marketDataService, exchangeRateService);
+        @Test
+        @DisplayName("Should filter using only startDate or only endDate")
+        void shouldFilterWithOpenEndedRange() {
+            AssetIdentifier id = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);;
+            portfolio.recordTransaction(accountId, createTx(id, yesterday));
+            portfolio.recordTransaction(accountId, createTx(id, tomorrow));
 
-            // Then
-            assertThat(netWorth.amount()).isEqualByComparingTo(cadValue.amount());
-            verify(exchangeRateService).convert(usdValue, portfolioCurrency);
+            // Only start date provided
+            List<Transaction> sinceYesterday = portfolio.queryTransactions(accountId, id, now, null);
+            assertThat(sinceYesterday).hasSize(1);
+            assertThat(sinceYesterday.get(0).getTransactionDate()).isEqualTo(tomorrow);
+
+            // Only end date provided
+            List<Transaction> untilNow = portfolio.queryTransactions(accountId, id, null, now);
+            assertThat(untilNow).hasSize(1);
+            assertThat(untilNow.get(0).getTransactionDate()).isEqualTo(yesterday);
         }
     }
 
@@ -835,15 +1128,28 @@ class PortfolioTest {
             .build();
     }
 
-    private Transaction createTransactionWithAssetAndDate(AssetIdentifier assetIdentifier, Instant date) {
-        return Transaction.builder()
-            .transactionId(TransactionId.randomId())
-            .transactionType(TransactionType.BUY)
-            .assetIdentifier(assetIdentifier)
-            .quantity((new BigDecimal("10")))
-            .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.CAD)))
-            .transactionDate(date)
-            .notes("something here")
-            .build();
+    // private Transaction createTransactionWithAssetAndDate(AssetIdentifier assetIdentifier, Instant date) {
+    //     return Transaction.builder()
+    //         .transactionId(TransactionId.randomId())
+    //         .transactionType(TransactionType.BUY)
+    //         .assetIdentifier(assetIdentifier)
+    //         .quantity((new BigDecimal("10")))
+    //         .pricePerUnit((Money.of(new BigDecimal("150"), ValidatedCurrency.CAD)))
+    //         .transactionDate(date)
+    //         .notes("something here")
+    //         .build();
+    // }
+
+    private Transaction createTx(AssetIdentifier assetIdentifier, Instant time) {
+        return new Transaction(
+            TransactionId.randomId(),
+            TransactionType.BUY,
+            assetIdentifier,
+            BigDecimal.ONE,               // Quantity
+            Money.of(10, "USD"),               // Price
+            null,                    // Fee
+            time,                         // The date we are testing
+            "Query Test Transaction"
+        );
     }
 }

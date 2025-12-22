@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
@@ -19,6 +18,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
@@ -32,11 +33,6 @@ import lombok.ToString;
 @Getter
 @Builder
 public class Account implements ClassValidation {
-    /*
-    * TODO: Account will hold both transaction and the asset, it makes sense if you think about it. a portoflio can have 1 account,
-    * but that is the thing with the transaction, not the portfolio. Portfolio will be an aggregate to collect and display data
-    */
-
     private final AccountId accountId;
     private String name;
     private AccountType accountType;
@@ -45,19 +41,14 @@ public class Account implements ClassValidation {
     private List<Asset> assets; // for NON-cash assets only, might need to make this a MAP later
     private List<Transaction> transactions;
 
+    private boolean isActive;
+    private Instant closedDate;
+
     private final Instant systemCreationDate;
     private Instant lastSystemInteraction; // for calculating when you last interacted with this asset
     private int version;
     
-    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency,
-            Money cashBalance, List<Asset> assets, List<Transaction> transactions) {
-        this(accountId, name, accountType, baseCurrency, cashBalance, assets, transactions,
-            Instant.now(), Instant.now(), 1);
-    }
-
-    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency,
-            Money cashBalance, List<Asset> assets, List<Transaction> transactions,
-            Instant systemCreationDate, Instant lastSystemInteraction, int version) {
+    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, Money cashBalance, List<Asset> assets, List<Transaction> transactions, boolean isActive, Instant closedDate, Instant systemCreationDate, Instant lastSystemInteraction, int version) {
         this.accountId = ClassValidation.validateParameter(accountId);
         this.name = ClassValidation.validateParameter(name);
         this.accountType = ClassValidation.validateParameter(accountType);
@@ -65,29 +56,26 @@ public class Account implements ClassValidation {
         this.cashBalance = ClassValidation.validateParameter(cashBalance);
         this.assets = assets != null ? new ArrayList<>(assets) : new ArrayList<>(); // Collections.emptyList returns an immutable list
         this.transactions = transactions != null ? new ArrayList<>(transactions) : new ArrayList<>();
+        this.isActive = isActive;
+        this.closedDate = closedDate;
         this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
         this.lastSystemInteraction = ClassValidation.validateParameter(lastSystemInteraction);
         this.version = version;
     }
+
+    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, Money cashBalance, List<Asset> assets, List<Transaction> transactions) {
+        this(accountId, name, accountType, baseCurrency, cashBalance, assets, transactions, true, Instant.now(), Instant.now(), Instant.now(), 1);
+    }
     
+    // generic, account, nothing in it
     public Account(AccountId randomId, String accountName, AccountType accountType, ValidatedCurrency baseCurrency) {
-        this(
-            randomId, 
-            accountName, 
-            accountType, 
-            baseCurrency, 
-            Money.ZERO(baseCurrency.getCode()),
-            null,
-            null,
-            Instant.now(),
-            Instant.now(),
-            1
-        );
+        this(randomId, accountName, accountType, baseCurrency, Money.ZERO(baseCurrency.getCode()),null,null);
     }
 
     void deposit(Money money) {
+        ClassValidation.validateParameter(money);
+        
         // deposit amount currency must match 
-        Objects.requireNonNull(money);
         if (!money.currency().equals(this.baseCurrency)) {
             throw new IllegalArgumentException("Cannot deposit money with different currency.");
         }
@@ -100,7 +88,8 @@ public class Account implements ClassValidation {
     }
 
     void withdraw(Money money) {
-        Objects.requireNonNull(money);
+        ClassValidation.validateParameter(money);
+
         if (!money.currency().equals(this.baseCurrency)) {
             throw new CurrencyMismatchException("Cannot withdraw money with different currency.");
         }
@@ -115,86 +104,51 @@ public class Account implements ClassValidation {
         updateMetadata();
     }
 
-    void addAsset(Asset asset) { // validates cash available
-        Objects.requireNonNull(asset);
-        boolean alreadyExists = this.assets.stream()
-            .anyMatch(a -> a.getAssetIdentifier().getPrimaryId().equals(a.getAssetIdentifier().getPrimaryId()));
+    void addAsset(Asset asset) { // validates cash available <- think we mean that hte account should have money in it before we add a full asset
+        ClassValidation.validateParameter(asset);
+        
+        boolean alreadyExists = this.assets.stream().anyMatch(a -> a.getAssetIdentifier().getPrimaryId().equals(a.getAssetIdentifier().getPrimaryId()));
 
         if (alreadyExists) {
             throw new IllegalStateException(String.format("Asset with identifier %s already exists in this account", asset.getAssetIdentifier().getPrimaryId()));
         }
+
         this.assets.add(asset);
         updateMetadata();
-
     }
 
-    // add proceeds to cash
-    void removeAsset(AssetId assetId) {
-        Objects.requireNonNull(assetId);
+    void removeAsset(AssetId assetId) { // add proceeds to cash <- no idea what i meant to say here
+        ClassValidation.validateParameter(assetId);
+
         boolean removed = this.assets.removeIf(a -> a.getAssetId().equals(assetId));
+
         if (removed) {
             updateMetadata();
         }
     }
 
-    // This might need ot be removed, Think about it, we shouldn't have the ability to 'update the asset'
-    // Thinkg about it, we can't have 2 sources of truths, only we can affect the asset via the transactions
-    @Deprecated
-    void updateAsset(AssetId assetId, Asset updatedAsset) {
-        // THIS IS NEVER USED/Should be used
-        Objects.requireNonNull(assetId);
-        Objects.requireNonNull(updatedAsset);
-        // Verify the updatedAsset has the same ID
-        if (!updatedAsset.getAssetId().equals(assetId)) {
-            throw new IllegalArgumentException("Cannot change asset identity");
-        }
-
-        Optional<Asset> existingAsset = this.assets.stream()
-            .filter(a -> a.getAssetId().equals(assetId))
-            .findFirst();
-
-        if (existingAsset.isEmpty()) {
-            throw new IllegalStateException(assetId.toString());
-        }
-        
-        // Replace the entire asset object
-        this.assets.remove(existingAsset.get());
-        this.assets.add(updatedAsset);
-        recalculateStateAfterChange();
-        updateMetadata();
-    }
-
     void recordTransaction(Transaction transaction) {
-        Objects.requireNonNull(transaction);
+        ClassValidation.validateParameter(transaction);
         addTransaction(transaction);
         applyTransaction(transaction);
         updateMetadata();
     }
 
-    void addTransaction(Transaction transaction) {
-        Objects.requireNonNull(transaction);
-        boolean alreadyExists = this.transactions.stream()
-            .anyMatch(t -> t.getTransactionId().equals(transaction.getTransactionId()));
-
-        if (alreadyExists) {
-            throw new IllegalStateException(String.format("Transaction with id %s already exists in this account", transaction.getTransactionId()));
-        }
-        this.transactions.add(transaction);
-        updateMetadata();
-    }
-
     void removeTransaction(TransactionId transactionId) {
-        Objects.requireNonNull(transactionId);
+        ClassValidation.validateParameter(transactionId);
         boolean removed = this.transactions.removeIf(t -> t.getTransactionId().equals(transactionId));
         if (removed) {
             recalculateStateAfterChange();
             updateMetadata();
         }
+        else {
+            // TODO add a method throw here maybe or some sort of response saying hey it didn't work
+        }
     }
 
     void updateTransaction(TransactionId transactionId, Transaction updatedTransaction) {
-        Objects.requireNonNull(transactionId);
-        Objects.requireNonNull(updatedTransaction);
+        ClassValidation.validateParameter(transactionId);
+        ClassValidation.validateParameter(updatedTransaction);
 
         if (!updatedTransaction.getTransactionId().equals(transactionId)) {
             throw new IllegalArgumentException("Cannot change transaction identity");
@@ -214,8 +168,8 @@ public class Account implements ClassValidation {
         updateMetadata();
     }
 
-    public Asset getAsset(AssetIdentifier assetIdentifierId) {
-        Objects.requireNonNull(assetIdentifierId);
+    public Asset getAsset(AssetIdentifier assetIdentifierId) throws AssetNotFoundException {
+        ClassValidation.validateParameter(assetIdentifierId);
         return this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(assetIdentifierId))
             .findFirst()
@@ -223,13 +177,12 @@ public class Account implements ClassValidation {
     }
 
     public Transaction getTransaction(TransactionId transactionId) {
-        Objects.requireNonNull(transactionId);
+        ClassValidation.validateParameter(transactionId);
         return this.transactions.stream()
             .filter(t -> t.getTransactionId().equals(transactionId))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException());
     }
-
 
     public Money calculateTotalValue(MarketDataService marketDataService) {
         Money assteValue = assets.stream()
@@ -245,7 +198,15 @@ public class Account implements ClassValidation {
         return true;
     }
 
-   private void updateMetadata() {
+    public void close() {
+        if (this.assets.isEmpty() != true) {
+            throw new IllegalStateException("Cannot close account with remaining assets");
+        }
+        this.isActive = false;
+        this.closedDate = Instant.now();
+    }
+    
+    private void updateMetadata() {
         version++;
         this.lastSystemInteraction = Instant.now();
     }
@@ -263,6 +224,35 @@ public class Account implements ClassValidation {
 
     // business logic fo each transaction type to update the account state
     // interpreting what eahc type means for accoutn state
+    // TODO clean up the switch statement, ref code below
+    /*
+        private void applyTransactionToAccount(Transaction transaction, Account account) {
+        switch (transaction.getType()) {
+            case BUY:
+                handleBuyTransaction(transaction, account);
+                break;
+            case SELL:
+                handleSellTransaction(transaction, account);
+                break;
+            case DEPOSIT:
+                handleDepositTransaction(transaction, account);
+                break;
+            case WITHDRAWAL:
+                handleWithdrawalTransaction(transaction, account);
+                break;
+            case DIVIDEND:
+            case INTEREST:
+                handleIncomeTransaction(transaction, account);
+                break;
+            case FEE:
+                handleFeeTransaction(transaction, account);
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported transaction type: " + transaction.getType());
+        }
+    }
+    
+    */
     private void applyTransaction(Transaction transaction) {
         switch (transaction.getTransactionType()) {
             case DEPOSIT:
@@ -341,6 +331,17 @@ public class Account implements ClassValidation {
         }
     }
 
+    private void addTransaction(Transaction transaction) { // might need to make this private as we can call recordTransaction, or unless we are saying to just add it 
+        ClassValidation.validateParameter(transaction);
+        boolean alreadyExists = this.transactions.stream()
+            .anyMatch(t -> t.getTransactionId().equals(transaction.getTransactionId()));
+
+        if (alreadyExists) {
+            throw new IllegalStateException(String.format("Transaction with id %s already exists in this account", transaction.getTransactionId()));
+        }
+        this.transactions.add(transaction);
+    }
+
     private void addOrUpdateAssetFromBuy(Transaction transaction) {
         Optional<Asset> existingAsset = this.assets.stream()
             .filter(a -> a.getAssetIdentifier().equals(transaction.getAssetIdentifier()))
@@ -352,7 +353,7 @@ public class Account implements ClassValidation {
             BigDecimal newQuantity = asset.getQuantity().add(transaction.getQuantity());
             Money newCostBasis = asset.getCostBasis().add(transaction.calculateTotalCost());
             
-            asset.adjustQuantity(newQuantity);
+            asset.addQuantity(newQuantity);
             asset.updateCostBasis(newCostBasis);
         } else {
             // Create new asset
@@ -375,18 +376,18 @@ public class Account implements ClassValidation {
         if (existingAsset.isPresent()) {
             Asset asset = existingAsset.get();
 
-            // Calculate how many shares the dividend can buy
-            // If transaction.quantity is provided, use it, otherwise =>
-            // dividend amount / current price
+            // For DRIP: dividend amount divided by price per share = shares purchased
+            Money dividendAmount = transaction.getDividendAmount(); // or however you store this
+            Money pricePerShare = transaction.getPricePerUnit(); // market price at reinvestment
+            
+            BigDecimal additionalShares = dividendAmount.amount()
+                .divide(pricePerShare.amount(), Precision.getMoneyPrecision(), Rounding.MONEY.getMode());
 
-            BigDecimal additionalSahres = transaction.getQuantity();
-            Money dividendAmount = transaction.getPricePerUnit();
+            // Update quantity
+            asset.addQuantity(additionalShares);
 
-            // update quantity
-            BigDecimal newQuantity = asset.getQuantity().add(additionalSahres);
-            asset.adjustQuantity(newQuantity);
-
-            // update cost basis
+            // Update cost basis - the dividend amount becomes part of your cost basis
+            // because you're "buying" more shares with that dividend
             Money newCostBasis = asset.getCostBasis().add(dividendAmount);
             asset.updateCostBasis(newCostBasis);
         }
@@ -397,7 +398,7 @@ public class Account implements ClassValidation {
                 AssetId.randomId(),
                 transaction.getAssetIdentifier(),
                 transaction.getQuantity(),
-                transaction.getPricePerUnit(), // dividend amount becomes initial cost basis
+                transaction.getPricePerUnit().multiply(transaction.getQuantity()), 
                 transaction.getTransactionDate()
             );
             this.assets.add(newAsset);
@@ -422,11 +423,10 @@ public class Account implements ClassValidation {
         } 
         else {
             // Partial sale - update quantity and proportionally reduce cost basis
-            BigDecimal sellRatio = transaction.getQuantity()
-                .divide(asset.getQuantity(), RoundingMode.HALF_UP);
+            BigDecimal sellRatio = transaction.getQuantity().divide(asset.getQuantity(), RoundingMode.HALF_UP);
             Money costBasisReduction = asset.getCostBasis().multiply(sellRatio);
             
-            asset.adjustQuantity(newQuantity);
+            asset.addQuantity(newQuantity);
             asset.updateCostBasis(asset.getCostBasis().subtract(costBasisReduction));
         }
     }

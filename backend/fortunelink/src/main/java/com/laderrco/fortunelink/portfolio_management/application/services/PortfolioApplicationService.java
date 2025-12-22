@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -11,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CorrectAssetTickerCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
@@ -60,8 +60,8 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-// TODO: we might need a TransactionRepository
-// UPDATE ^ we have one, git it is called the transactionqueryrepo, not used here, but somewhere else.
+// TODO: right now we are using findByUserId -> assumes 1 portoflio per user for MVP, multi-portfolio for layer
+// for transaction edits/deletes -> no recalculations, atleast not here, in domain yes there is a method, no cascade effect, and hard delete, also no ocmpatibility checks
 
 @Service // disabled for now, throws error with unit tests
 @Transactional
@@ -260,8 +260,7 @@ public class PortfolioApplicationService {
 
     }
 
-    // this is a bit different to handle, because dividend is tied to a stock for
-    // the most part
+    // this is a bit different to handle, because dividend is tied to a stock for the most part
     public TransactionResponse recordDividendIncome(RecordIncomeCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
@@ -284,15 +283,17 @@ public class PortfolioApplicationService {
         BigDecimal quantity = command.isDrip() ? command.sharesRecieved() : BigDecimal.ONE;
 
         Transaction transaction = new Transaction(
-                TransactionId.randomId(),
-                TransactionType.DIVIDEND,
-                assetInfo.toIdentifier(),
-                quantity,
-                command.amount(),
-                null,
-                command.transactionDate(),
-                command.notes(),
-                command.isDrip());
+            TransactionId.randomId(),
+            TransactionType.DIVIDEND,
+            assetInfo.toIdentifier(),
+            quantity,
+            command.amount().divide(command.sharesRecieved()),
+            command.amount(),
+            null,
+            command.transactionDate(),
+            command.notes(),
+            command.isDrip()
+        );
 
         portfolio.recordTransaction(account.getAccountId(), transaction);
         portfolioRepository.save(portfolio);
@@ -482,6 +483,22 @@ public class PortfolioApplicationService {
         portfolioRepository.save(portfolio);
     }
 
+    @Transactional
+    public void correctAssetTicket(CorrectAssetTickerCommand command) {
+        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        
+        portfolio.correctAssetTicker(
+            command.accountId(),
+            command.wrongAssetIdentifier(),
+            command.correctAssetIdentifier()
+        );
+        
+        portfolioRepository.save(portfolio);
+
+
+    }
+
     // create initial portfolio for new user
     public PortfolioResponse createPortfolio(CreatePortfolioCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
@@ -529,7 +546,7 @@ public class PortfolioApplicationService {
         // check if portfolio can be deleted
 
         // check 1: portfolio must be empty
-        if (!portfolio.isEmpty()) {
+        if (!portfolio.containsAccounts()) {
             throw new PortfolioNotEmptyException(
                     "Cannot delete portfolio with existing accounts/transactions. " +
                             "Portfolio has " + portfolio.getAccounts().size() + " account(s)");
