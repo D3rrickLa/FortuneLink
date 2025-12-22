@@ -608,7 +608,6 @@ class AccountTest {
         }
     }
 
-    //TODO These tests technically don't need to exists because this can never happen
     @Nested
     @DisplayName("Update Asset Tests")
     class UpdateAssetTests {
@@ -738,11 +737,7 @@ class AccountTest {
                 .hasMessageContaining("Cannot change");
         } 
         
-
-        // TODO: actually test the updateAsset method
-        //UPDATE ^ remove this
-        // TODO REMOVE THIS
-        public class InnerAccountTestFortestingUpdateAsset {
+        public class InnerAccountTestForTestingUpdateAsset {
             private Account account;
             private ValidatedCurrency currency;
 
@@ -804,48 +799,6 @@ class AccountTest {
                     assertThat(cashBalance.amount()).isGreaterThanOrEqualTo(new BigDecimal("-1000"));
                 }
 
-                // @Test
-                // @DisplayName("Should clear and rebuild all assets from transactions")
-                // void shouldClearAndRebuildAllAssetsFromTransactions() throws Exception {
-                //     // Given
-                //     AssetIdentifier apple = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
-                //     AssetIdentifier tesla = new MarketIdentifier("TSLA", null, AssetType.STOCK, "TESLA", "USD", null);
-                //     Instant baseDate = Instant.now().minus(30, ChronoUnit.DAYS);
-                    
-                //     // Record transactions for multiple assets
-                //     account.recordTransaction(createBuyTransactionWithDate(apple, "10", "150", baseDate));
-                //     account.recordTransaction(createBuyTransactionWithDate(tesla, "5", "200", baseDate.plus(5, ChronoUnit.DAYS)));
-                    
-                //     // Verify initial state
-                //     assertThat(account.getAssets()).hasSize(2);
-                //     Asset initialApple = account.getAsset(apple);
-                //     AssetId appleAssetId = initialApple.getAssetId();
-                    
-                //     // Create an updated asset to trigger recalculation
-                //     Asset updatedApple = Asset.builder()
-                //         .assetId(appleAssetId)
-                //         .assetIdentifier(apple)
-                //         .quantity((new BigDecimal("999"))) // This will be overwritten by recalculation
-                //         .costBasis(Money.of(new BigDecimal("999999"), currency))
-                //         .acquiredOn(baseDate)
-                //         .build();
-                    
-                //     // When - Update triggers recalculateStateAfterChange
-                //     account.updateAsset(appleAssetId, updatedApple);
-                    
-                //     // Then - State should be recalculated from transactions, not the updated values
-                //     assertThat(account.getAssets()).hasSize(2);
-                //     Asset recalculatedApple = account.getAsset(apple);
-                //     Asset recalculatedTesla = account.getAsset(tesla);
-                    
-                //     // Apple should have values from transaction, not from updatedApple
-                //     assertThat(recalculatedApple.getQuantity()).isEqualByComparingTo(new BigDecimal("10"));
-                //     assertThat(recalculatedApple.getCostBasis().amount()).isEqualByComparingTo(new BigDecimal("1500"));
-                    
-                //     // Tesla should remain unchanged
-                //     assertThat(recalculatedTesla.getQuantity()).isEqualByComparingTo(new BigDecimal("5"));
-                // }
-
                 @Test
                 @DisplayName("Should recalculate cash balance from all transactions")
                 void shouldRecalculateCashBalanceFromAllTransactions() throws Exception {
@@ -895,61 +848,6 @@ class AccountTest {
                     assertThat(asset.getQuantity()).isEqualByComparingTo(new BigDecimal("12"));
                 }
 
-                // @Test
-                // @DisplayName("Should reset to zero state before replaying transactions")
-                // void shouldResetToZeroStateBeforeReplayingTransactions() throws Exception {
-                //     // Given
-                //     AssetIdentifier stock = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
-                    
-                //     // Record a transaction
-                //     account.recordTransaction(createBuyTransaction(stock, "10", "150"));
-                    
-                //     // Manually set cash balance to something else (simulating corruption)
-                //     // This would be overwritten by recalculation
-                    
-                //     Asset originalAsset = account.getAsset(stock);
-                    
-                //     // Create updated asset to trigger recalculation
-                //     Asset updatedAsset = Asset.builder()
-                //         .assetId(originalAsset.getAssetId())
-                //         .assetIdentifier(stock)
-                //         .quantity((new BigDecimal("999")))
-                //         .costBasis(Money.of(new BigDecimal("999999"), currency))
-                //         .acquiredOn(Instant.now())
-                //         .build();
-                    
-                //     // When
-                //     account.updateAsset(originalAsset.getAssetId(), updatedAsset);
-                    
-                //     // Then - Should be recalculated from scratch, not corrupted
-                //     Asset recalculatedAsset = account.getAsset(stock);
-                //     assertThat(recalculatedAsset.getQuantity()).isEqualByComparingTo(new BigDecimal("10"));
-                // }
-
-                // @Test
-                // @DisplayName("Should handle empty transaction list")
-                // void shouldHandleEmptyTransactionList() throws Exception {
-                //     // Given - Account with no transactions
-                //     AssetIdentifier stock = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
-                    
-                //     // Manually add an asset (this would normally come from transactions)
-                //     Asset manualAsset = Asset.builder()
-                //         .assetId(AssetId.randomId())
-                //         .assetIdentifier(stock)
-                //         .quantity((new BigDecimal("10")))
-                //         .costBasis(Money.of(new BigDecimal("1500"), currency))
-                //         .acquiredOn(Instant.now())
-                //         .build();
-                    
-                //     account.getAssets().add(manualAsset);
-                    
-                //     // When - Update triggers recalculation with no transactions
-                //     account.updateAsset(manualAsset.getAssetId(), manualAsset);
-                    
-                //     // Then - Should clear everything since no transactions exist
-                //     assertThat(account.getAssets()).isEmpty();
-                //     assertThat(account.getCashBalance().amount()).isEqualByComparingTo(BigDecimal.ZERO);
-                // }
             }
 
             // Helper methods
@@ -1021,83 +919,6 @@ class AccountTest {
                 return List.of(new Fee(FeeType.OTHER, money(0), ExchangeRate.createSingle(currency, null), null, Instant.now()));
             }
         }
-     
-        // @Test
-        // @DisplayName("Should throw exception when asset IDs don't match")
-        // void shouldThrowExceptionWhenAssetIdsDontMatch() {
-        //     AssetId assetId1 = mock(AssetId.class);
-        //     AssetId assetId2 = mock(AssetId.class);
-            
-        //     Asset originalAsset = mock(Asset.class);
-        //     Asset updatedAsset = mock(Asset.class);
-            
-        //     when(originalAsset.getAssetId()).thenReturn(assetId1);
-        //     when(updatedAsset.getAssetId()).thenReturn(assetId2);
-
-        //     List<Asset> assets = new ArrayList<>();
-        //     assets.add(originalAsset);
-
-        //     Account account = new Account(
-        //         accountId,
-        //         accountName,
-        //         accountType,
-        //         baseCurrency,
-        //         initialCashBalance,
-        //         assets,
-        //         null
-        //     );
-
-        //     assertThrows(IllegalArgumentException.class, () ->
-        //         account.updateAsset(assetId1, updatedAsset)
-        //     );
-        // }
-
-        // @Test
-        // @DisplayName("Should throw exception when asset doesn't exist")
-        // void shouldThrowExceptionWhenAssetDoesntExist() {
-        //     AssetId assetId = mock(AssetId.class);
-        //     Asset updatedAsset = mock(Asset.class);
-        //     when(updatedAsset.getAssetId()).thenReturn(assetId);
-
-        //     Account account = new Account(
-        //         accountId,
-        //         accountName,
-        //         accountType,
-        //         baseCurrency,
-        //         initialCashBalance,
-        //         null,
-        //         null
-        //     );
-
-        //     assertThrows(IllegalStateException.class, () ->
-        //         account.updateAsset(assetId, updatedAsset)
-        //     );
-        // }
-
-        // @Test
-        // @DisplayName("Should throw exception when parameters are null")
-        // void shouldThrowExceptionWhenParametersAreNull() {
-        //     Account account = new Account(
-        //         accountId,
-        //         accountName,
-        //         accountType,
-        //         baseCurrency,
-        //         initialCashBalance,
-        //         null,
-        //         null
-        //     );
-
-        //     AssetId assetId = mock(AssetId.class);
-        //     Asset asset = mock(Asset.class);
-
-        //     assertThrows(NullPointerException.class, () ->
-        //         account.updateAsset(null, asset)
-        //     );
-
-        //     assertThrows(NullPointerException.class, () ->
-        //         account.updateAsset(assetId, null)
-        //     );
-        // }
     }
 
     @Nested
@@ -1118,6 +939,7 @@ class AccountTest {
             );
 
             Transaction transaction = createMockTransaction(TransactionType.DEPOSIT);
+            when(transaction.getPricePerUnit()).thenReturn(Money.of(100, "USD"));
             account.recordTransaction(transaction);
 
             assertEquals(1, account.getTransactions().size());
@@ -1610,6 +1432,49 @@ class AccountTest {
             when(transaction.getTransactionType()).thenReturn(TransactionType.SELL);
             when(transaction.getAssetIdentifier()).thenReturn(assetIdentifier);
             when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(100));
+            when(transaction.calculateNetAmount()).thenReturn(netProceeds);
+            when(transaction.getTransactionDate()).thenReturn(Instant.now());
+
+            account.recordTransaction(transaction);
+
+            assertEquals(1, account.getTransactions().size());
+            assertEquals(new BigDecimal("11000").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
+        }
+
+        @Test
+        @DisplayName("Should record SELL transaction that is partial")
+        void shouldRecordPartialSellTransaction() {
+            // First create an asset position
+            AssetIdentifier assetIdentifier = mock(AssetIdentifier.class);
+            Asset asset = mock(Asset.class);
+            AssetId assetId = mock(AssetId.class);
+
+            when(asset.getAssetId()).thenReturn(assetId);
+            when(asset.getAssetIdentifier()).thenReturn(assetIdentifier);
+            when(asset.getQuantity()).thenReturn(BigDecimal.valueOf(100));
+            when(asset.getCostBasis()).thenReturn(Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD));
+
+            List<Asset> assets = new ArrayList<>();
+            assets.add(asset);
+
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
+                assets,
+                null
+            );
+
+            TransactionId txId = mock(TransactionId.class);
+            Transaction transaction = mock(Transaction.class);
+            Money netProceeds = Money.of(BigDecimal.valueOf(6000), ValidatedCurrency.USD);
+
+            when(transaction.getTransactionId()).thenReturn(txId);
+            when(transaction.getTransactionType()).thenReturn(TransactionType.SELL);
+            when(transaction.getAssetIdentifier()).thenReturn(assetIdentifier);
+            when(transaction.getQuantity()).thenReturn(BigDecimal.valueOf(50));
             when(transaction.calculateNetAmount()).thenReturn(netProceeds);
             when(transaction.getTransactionDate()).thenReturn(Instant.now());
 
@@ -2248,7 +2113,7 @@ class AccountTest {
 
 
     @Nested
-    public class TestSufficientCash {
+    public class TestSufficientCashAndCloseMethod {
         @Test
         void testIfHasSufficientCashIsSuccess() {
             Account account = new Account(
@@ -2279,6 +2144,40 @@ class AccountTest {
 
             Money inputtedAmount = Money.of(500000, "USD");
             assertFalse(account.hasSufficientCash(inputtedAmount));
+        }
+
+        @Test
+        void testCloseIsSucess() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+
+            account.close();
+            assertFalse(account.isActive());
+        }
+
+        @Test
+        void testCloseIsFailThrowsExceptionWhenAssetsNotEmpty() {
+            Account account = new Account(
+                accountId,
+                accountName,
+                accountType,
+                baseCurrency,
+                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                null
+            );
+            Asset asset = mock(Asset.class);
+            account.addAsset(asset);
+
+            assertThrows(IllegalStateException.class, ()->account.close());
+
         }
         
     }

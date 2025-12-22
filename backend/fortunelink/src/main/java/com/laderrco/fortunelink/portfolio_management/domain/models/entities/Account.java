@@ -423,8 +423,7 @@ public class Account implements ClassValidation {
         } 
         else {
             // Partial sale - update quantity and proportionally reduce cost basis
-            BigDecimal sellRatio = transaction.getQuantity()
-                .divide(asset.getQuantity(), RoundingMode.HALF_UP);
+            BigDecimal sellRatio = transaction.getQuantity().divide(asset.getQuantity(), RoundingMode.HALF_UP);
             Money costBasisReduction = asset.getCostBasis().multiply(sellRatio);
             
             asset.addQuantity(newQuantity);

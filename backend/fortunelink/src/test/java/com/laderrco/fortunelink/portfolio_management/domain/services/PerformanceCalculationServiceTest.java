@@ -923,8 +923,6 @@ class PerformanceCalculationServiceTest {
             
             transactions.add(buyTx);
             transactions.add(sellTx);
-
-            IO.println(transactions);
             
             Account account = createAccount(
                 "account-1", 
