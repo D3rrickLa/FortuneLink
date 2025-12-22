@@ -684,12 +684,11 @@ class PerformanceCalculationServiceTest {
         void calculateRealizedGains_FractionalShares() {
             // Arrange
             ValidatedCurrency usd = ValidatedCurrency.USD;
-            MarketIdentifier btcSymbol = new MarketIdentifier(
+            AssetIdentifier btcSymbol = new CryptoIdentifier(
                 "BTC", 
-                null, 
+                "Bitcoin", 
                 AssetType.CRYPTO, 
                 "Bitcoin", 
-                "USD", 
                 null
             );
             
@@ -821,11 +820,10 @@ class PerformanceCalculationServiceTest {
         void calculateRealizedGains_MultipleFractionalSells() {
             // Arrange
             ValidatedCurrency usd = ValidatedCurrency.USD;
-            MarketIdentifier ethSymbol = new MarketIdentifier(
+            AssetIdentifier ethSymbol = new CryptoIdentifier(
                 "ETH", 
-                null, 
-                AssetType.CRYPTO, 
                 "Ethereum", 
+                AssetType.CRYPTO,  
                 "USD", 
                 null
             );
@@ -875,11 +873,10 @@ class PerformanceCalculationServiceTest {
         void calculateRealizedGains_FractionalSharesWithFees() {
             // Arrange
             ValidatedCurrency usd = ValidatedCurrency.USD;
-            MarketIdentifier btcSymbol = new MarketIdentifier(
+            AssetIdentifier btcSymbol = new CryptoIdentifier(
                 "BTC", 
-                null, 
-                AssetType.CRYPTO, 
                 "Bitcoin", 
+                AssetType.CRYPTO, 
                 "USD", 
                 null
             );

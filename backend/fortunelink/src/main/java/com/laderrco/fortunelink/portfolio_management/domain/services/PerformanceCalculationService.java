@@ -17,8 +17,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
-// @Service
-// ANSWERS THE QUESTION: HOW IS IT PERFORMING (COMPLEX ,USES VALUATION + HISTORY)
+// ANSWERS THE QUESTION: HOW IS IT PERFORMING (COMPLEX, USES VALUATION + HISTORY)
 public class PerformanceCalculationService {
     /**
      * Calculates the total return percentage of the portfolio.

@@ -1023,9 +1023,7 @@ class AccountTest {
                 transactions
             );
 
-            account.removeTransaction(TransactionId.randomId());
-
-            assertFalse(account.getTransactions().isEmpty());
+            assertThrows(TransactionNotFoundException.class, ()->account.removeTransaction(TransactionId.randomId()));
         }
 
         @Test

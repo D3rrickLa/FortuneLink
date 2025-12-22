@@ -363,7 +363,7 @@ public class PortfolioValuationServiceTest {
     @DisplayName("Should throw exception when market data service fails")
     void calculateAssetValue_MarketDataServiceFails() {
         // Arrange
-        MarketIdentifier symbol = new MarketIdentifier("INVALID", null, AssetType.OTHER, "INVALID", "INVALID", null);
+        MarketIdentifier symbol = new MarketIdentifier("INVALID", null, AssetType.STOCK, "INVALID", "INVALID", null);
         Asset asset = createAsset("asset-1", symbol, "10", ValidatedCurrencyCAD);
 
         when(marketDataService.getCurrentPrice(symbol))

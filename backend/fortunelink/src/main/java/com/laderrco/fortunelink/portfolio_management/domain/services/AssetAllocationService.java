@@ -10,7 +10,6 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
-// TODO: add @Service to all services
 public class AssetAllocationService {
     private final PortfolioValuationService valuationService;
     

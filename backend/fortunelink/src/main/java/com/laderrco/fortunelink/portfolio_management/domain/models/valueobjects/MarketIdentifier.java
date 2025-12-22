@@ -13,12 +13,12 @@ public record MarketIdentifier(String primaryId, Map<String, String> secondaryId
         assetType = ClassValidation.validateParameter(assetType, "Asset Type");
         name = ClassValidation.validateParameter(name, "Name");
         unitOfTrade = ClassValidation.validateParameter(unitOfTrade, "Unit of Trade");
-        // TODO, find a better check system where I DON'T need to list out all the market identifiers
-        // if (!assetType.equals(AssetType.STOCK )) {
-        //     throw new IllegalArgumentException("Asset type not the same for Crypto Identifier");
-        // };
-
-        // we should probably have a ISBN (don't know if that is what it is called, but ir's a unique # for a ticker)
+        if (!assetType.isMarketTraded()) {
+            throw new IllegalArgumentException(
+                "MarketIdentifier only supports market-traded assets. " +
+                assetType + " (" + assetType.getCategory() + ") is not valid."
+            );
+        }
         
 
         name = name.trim();

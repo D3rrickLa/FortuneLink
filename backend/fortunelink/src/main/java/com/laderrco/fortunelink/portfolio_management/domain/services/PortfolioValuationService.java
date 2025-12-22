@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asse
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-// @Service
 // ANSWERS THE QUESTION: WHAT IS IT WORTH NOW (STATELESS AND REUSABLE)
 public class PortfolioValuationService {
     public Money calculateTotalValue(Portfolio portfolio, MarketDataService marketDataService) {
