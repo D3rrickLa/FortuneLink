@@ -213,8 +213,7 @@ public class PortfolioApplicationService {
         portfolio.recordTransaction(account.getAccountId(), transaction);
         portfolioRepository.save(portfolio);
 
-        return TransactionMapper.toResponse(transaction, null); // TODO TransactionMapper need to have logic to allow
-                                                                // this
+        return TransactionMapper.toResponse(transaction, null); // TODO TransactionMapper need to have logic to allow this UPDATE it does, assetInfo is optional
     }
 
     public TransactionResponse recordWithdrawal(RecordWithdrawalCommand command) {

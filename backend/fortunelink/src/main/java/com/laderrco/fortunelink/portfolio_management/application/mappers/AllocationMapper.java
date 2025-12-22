@@ -143,8 +143,8 @@ public class AllocationMapper {
         
         // Calculate percentage: (value / total) * 100
         BigDecimal percentageValue = value.amount()
-                .divide(total.amount(), Precision.PERCENTAGE.getDecimalPlaces(), Rounding.PERCENTAGE.getMode()) // change this to proper scaling
-                .multiply(BigDecimal.valueOf(100));
+            .divide(total.amount(), Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode())
+            .multiply(BigDecimal.valueOf(100));
         
         return new Percentage(percentageValue);
     }

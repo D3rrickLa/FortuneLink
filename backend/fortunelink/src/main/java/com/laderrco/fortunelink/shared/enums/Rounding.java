@@ -4,7 +4,8 @@ import java.math.RoundingMode;
 
 public enum Rounding {
     MONEY(RoundingMode.HALF_EVEN), 
-    PERCENTAGE(RoundingMode.HALF_UP);
+    PERCENTAGE(RoundingMode.HALF_UP),
+    DIVISION(RoundingMode.HALF_UP);
 
     private final RoundingMode mode;
 

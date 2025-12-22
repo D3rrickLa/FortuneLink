@@ -227,8 +227,6 @@ public class AssetAllocationServiceTest {
         void shouldCalculateCorrectAllocationForMultipleAccountTypes() {
             // Arrange
             Portfolio portfolio = createPortfolioWithMultipleAccounts();
-            // TODO: NOTE the mock is not working properly we either need to 'fake it or actually impelment data'
-            // Portfolio portfolio = mock(Portfolio.class);
             Money totalValue = Money.of(new BigDecimal("100000.00"), ValidatedCurrency.USD);
             
             Account tfsaAccount = createAccount(AccountType.TFSA);

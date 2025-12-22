@@ -10,7 +10,8 @@ public enum Precision {
     FOREX(6),
     MONEY(MathContext.DECIMAL128.getPrecision()), // 34 digits of precision, not necessarily decimal places
     PERCENTAGE(8),
-    STOCK(6);
+    STOCK(6),
+    DIVISION(10); // for non-money division use this
 
     private final int precision;
 

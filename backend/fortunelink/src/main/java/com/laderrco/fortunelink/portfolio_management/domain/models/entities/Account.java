@@ -142,7 +142,7 @@ public class Account implements ClassValidation {
             updateMetadata();
         }
         else {
-            // TODO add a method throw here maybe or some sort of response saying hey it didn't work
+            throw new TransactionNotFoundException(String.format("Transaction id, %s cannot be found and deleted.", transactionId.transactionId()));
         }
     }
 

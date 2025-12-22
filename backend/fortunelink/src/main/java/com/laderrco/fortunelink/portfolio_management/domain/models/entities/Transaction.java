@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -10,6 +9,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Transac
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
@@ -69,7 +70,7 @@ public class Transaction implements ClassValidation {
     ) {
         // Calculate quantity from dividend amount and price
         BigDecimal sharesPurchased = dividendAmount.amount()
-            .divide(pricePerShare.amount(), 10, RoundingMode.HALF_UP); //TODO: we have to change this
+            .divide(pricePerShare.amount(), Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode());
 
         return new Transaction(
             transactionId,
