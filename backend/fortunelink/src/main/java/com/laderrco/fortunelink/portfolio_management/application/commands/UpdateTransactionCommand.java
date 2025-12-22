@@ -26,15 +26,16 @@ public record UpdateTransactionCommand(
     String notes
 )implements ClassValidation {
     public UpdateTransactionCommand {
-        ClassValidation.validateParameter(userId);
-        ClassValidation.validateParameter(transactionId);
-        ClassValidation.validateParameter(accountId);
-        ClassValidation.validateParameter(type);
-        ClassValidation.validateParameter(identifier);
-        ClassValidation.validateParameter(quantity);
-        ClassValidation.validateParameter(price);
-        ClassValidation.validateParameter(fee);
-        ClassValidation.validateParameter(date);
-        ClassValidation.validateParameter(notes);
+        // The validator class will handle this stuff
+        // ClassValidation.validateParameter(userId);
+        // ClassValidation.validateParameter(transactionId);
+        // ClassValidation.validateParameter(accountId);
+        // ClassValidation.validateParameter(type);
+        // ClassValidation.validateParameter(identifier);
+        // ClassValidation.validateParameter(quantity);
+        // ClassValidation.validateParameter(price);
+        // ClassValidation.validateParameter(fee);
+        // ClassValidation.validateParameter(date);
+        // ClassValidation.validateParameter(notes);
     }
 }

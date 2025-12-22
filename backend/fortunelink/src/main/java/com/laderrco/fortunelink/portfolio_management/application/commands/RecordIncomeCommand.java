@@ -12,7 +12,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 public record RecordIncomeCommand(UserId userId, AccountId accountId, String symbol, Money amount, TransactionType type, boolean isDrip, BigDecimal sharesRecieved, Instant transactionDate, String notes) {
     public RecordIncomeCommand {
         if (isDrip && (sharesRecieved == null || sharesRecieved.compareTo(BigDecimal.ZERO) <= 0)) {
-            throw new IllegalArgumentException("Shares recieved msut be provided for DRIP transaction");
+            throw new IllegalArgumentException("Shares recieved must be provided for DRIP transaction");
         }
     }
 }

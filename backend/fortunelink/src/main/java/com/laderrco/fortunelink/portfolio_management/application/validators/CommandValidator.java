@@ -21,7 +21,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
+import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
@@ -54,19 +54,22 @@ public class CommandValidator implements ClassValidation {
         if (!priceValidation.isValid()) {
             errors.addAll(priceValidation.errors());
         }
-        for (Fee fee : command.fees()) {
-            ValidationResult feeValidation = validateAmount(fee.amountInNativeCurrency().amount());
-            if (!feeValidation.isValid()) {
-                errors.add("Invalid fee: " + String.join(", ", feeValidation.errors()));
-            }
+
+        // these can't validate because the classes themselves already validate
+        // for (Fee fee : command.fees()) {
+        //     ValidationResult feeValidation = validateAmount(fee.amountInNativeCurrency().amount());
+        //     if (!feeValidation.isValid()) {
+        //         errors.add("Invalid fee: " + String.join(", ", feeValidation.errors()));
+        //     }
             
-        }
+        // }
         
-        if (command.price().currency() == null) {
-            errors.add("Currency is required");
-        } else if (!isValidCurrency(command.price().currency().getSymbol())) {
-            errors.add("Invalid currency code");
-        }
+        // if (command.price().currency() == null) {
+        //     errors.add("Currency is required");
+        // } 
+        // else if (!isValidCurrency(command.price().currency().getCode())) {
+        //     errors.add("Invalid currency code");
+        // }
         
         ValidationResult dateValidation = validateDate(LocalDateTime.ofInstant(command.transactionDate(), ZoneOffset.UTC));
         if (!dateValidation.isValid()) {
@@ -106,6 +109,7 @@ public class CommandValidator implements ClassValidation {
             errors.addAll(priceValidation.errors());
         }
         
+        IO.print(command.price().currency());
         if (command.price().currency() == null) {
             errors.add("Currency is required");
         }
@@ -270,9 +274,15 @@ public class CommandValidator implements ClassValidation {
         if (command.quantity() == null) {
             errors.add("Quantity is required");
         }
+        else if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
+            errors. add("Quantity must be positive");
+        }
 
         if (command.price() == null) {
             errors.add("Price is required");
+        }
+        else if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add("Price must be positive");
         }
         
         if(command.fee() == null) {
@@ -282,28 +292,33 @@ public class CommandValidator implements ClassValidation {
         if (command.date() == null) {
             errors.add("Date is required");
         }
-
-        if (command.date().isAfter(Instant.now())) {
+        else if (command.date().isAfter(Instant.now())) {
             errors.add("Date cannot be in the future");
-        }
-
-        if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
-            errors. add("Quantity must be positive");
-        }
-
-        if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
-            errors.add("Price must be positive");
         }
 
         return errors.isEmpty() 
             ? ValidationResult.success()
             : ValidationResult.failure(errors);
     }
+
     public ValidationResult validate(DeleteTransactionCommand command) {
-        return null;
+        ClassValidation.validateParameter(command);
+        List<String> errors = new ArrayList<>();
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+        if (command.accountId() == null) {
+            errors.add("AccountId is required");
+        }
+        if (command.transactionId() == null) {
+            errors.add("TransactionId is required");
+        }
+
+        return errors.isEmpty() 
+            ? ValidationResult.success()
+            : ValidationResult.failure(errors);
     }
 
-    
     public ValidationResult validate(AddAccountCommand command) {
         ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
@@ -320,13 +335,15 @@ public class CommandValidator implements ClassValidation {
         
         if (command.accountType() == null) {
             errors.add("Account type is required");
-        } else if (!isValidAccountType(command.accountType().name())) {
+        } 
+        else if (!isValidAccountType(command.accountType().name())) {
             errors.add("Invalid account type");
         }
         
         if (command.baseCurrency() == null) {
             errors.add("Base currency is required");
-        } else if (!isValidCurrency(command.baseCurrency().getSymbol())) {
+        } 
+        else if (!isValidCurrency(command.baseCurrency().getCode())) {
             errors.add("Invalid currency code");
         }
         
@@ -362,8 +379,8 @@ public class CommandValidator implements ClassValidation {
             return ValidationResult.failure("Amount cannot be negative");
         }
         
-        if (amount.scale() > 2) {
-            return ValidationResult.failure("Amount can have at most 2 decimal places");
+        if (amount.scale() > Precision.getMoneyPrecision()) {
+            return ValidationResult.failure("Amount can have at most 34 decimal places. Scale is " + amount.scale());
         }
         
         return ValidationResult.success();
@@ -391,6 +408,8 @@ public class CommandValidator implements ClassValidation {
         }
         
         if (date.isAfter(LocalDateTime.now())) {
+            IO.println(date);
+            IO.println(LocalDateTime.now());
             return ValidationResult.failure("Transaction date cannot be in the future");
         }
         
