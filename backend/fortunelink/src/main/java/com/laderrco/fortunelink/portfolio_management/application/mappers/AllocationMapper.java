@@ -22,51 +22,26 @@ public class AllocationMapper {
     }
 
     public AllocationResponse toResponse(Map<String, Money> allocation, Money totalValue, Instant asOfDate) {
-        // if (allocation == null || allocation.isEmpty()) {
-        //     return new AllocationResponse(
-        //         new HashMap<>(),
-        //         totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-        //         Instant.now()
-        //     );
-        // }
-        
-        // // Convert each allocation entry to AllocationDetail
-        // Map<String, AllocationDetail> allocationDetails = allocation.entrySet().stream()
-        //         .collect(Collectors.toMap(
-        //             Map.Entry::getKey,
-        //             entry -> toAllocationDetail(entry.getKey(), entry.getValue(), totalValue)
-        //         ));
-        
-        // return new AllocationResponse(
-        //     allocationDetails,
-        //     totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-        //     Instant.now()
-        // );
         Instant responseDate = asOfDate != null ? asOfDate : Instant.now();
 
         if (allocation == null || allocation.isEmpty()) {
             return new AllocationResponse(
                 new HashMap<>(),
                 totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-                Instant.now()
+                responseDate
             );
         }
 
         // Convert each allocation entry to AllocationDetail
         Map<String, AllocationDetail> allocationDetails = allocation.entrySet().stream()
-                .collect(Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry -> toAllocationDetail(entry.getKey(), entry.getValue(), totalValue)
-                ));
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> toAllocationDetail(entry.getKey(), entry.getValue(), totalValue)
+            ));
         
-        return new AllocationResponse(
-            allocationDetails,
-            totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-            responseDate
-        );
-
+        return new AllocationResponse(allocationDetails, totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null), responseDate);
     }
-
+    
     public AllocationDetail toAllocationDetail(String category, Money value, Money total) {
         if (category == null || value == null) {
             throw new IllegalArgumentException("Category and value cannot be null");
@@ -95,12 +70,13 @@ public class AllocationMapper {
      * @param totalValue Total portfolio value for percentage calculations
      * @return AllocationResponse with formatted allocations and percentages
      */
-    public static AllocationResponse toResponseFromAssetType(Map<AssetType, Money> allocation, Money totalValue) {
+    public static AllocationResponse toResponseFromAssetType(Map<AssetType, Money> allocation, Money totalValue, Instant asOfDate) {
+        Instant responseDate = asOfDate != null ? asOfDate : Instant.now();
         if (allocation == null || allocation.isEmpty()) {
             return new AllocationResponse(
                 new HashMap<>(),
                 totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-                Instant.now()
+                responseDate
             );
         }
         
@@ -114,7 +90,7 @@ public class AllocationMapper {
         return new AllocationResponse(
             allocationDetails,
             totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-            Instant.now()
+            responseDate
         );
     }
     
@@ -132,10 +108,7 @@ public class AllocationMapper {
             throw new IllegalArgumentException("AssetType and value cannot be null");
         }
         
-        // Calculate percentage
-        Percentage percentage = calculatePercentage(value, total);
-        
-        return new AllocationDetail(assetType, value, percentage);
+        return new AllocationDetail(assetType, value, calculatePercentage(value, total));
     }
     
     /**
@@ -147,25 +120,19 @@ public class AllocationMapper {
      * @return Percentage object representing (value / total) * 100
      */
     private static Percentage calculatePercentage(Money value, Money total) {
-        // Handle null or zero total
         if (total == null || total.amount().compareTo(BigDecimal.ZERO) == 0) {
             return new Percentage(BigDecimal.ZERO);
         }
         
-        // Handle null value
         if (value == null) {
             return new Percentage(BigDecimal.ZERO);
         }
         
-        // Ensure currencies match (or handle conversion if needed)
-        if (!value.currency().equals(total.currency())) {
-            throw new IllegalArgumentException(
-                "Currency mismatch: value is " + value.currency() + 
-                " but total is " + total.currency()
-            );
+        // Currency validation (Crucial for multi-currency portfolios)
+        if (value.currency() != null && total.currency() != null && !value.currency().equals(total.currency())) {
+             throw new IllegalArgumentException("Currency mismatch during allocation: " + value.currency() + " vs " + total.currency());
         }
         
-        // Calculate percentage: (value / total) * 100
         BigDecimal percentageValue = value.amount()
             .divide(total.amount(), Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode())
             .multiply(BigDecimal.valueOf(100));

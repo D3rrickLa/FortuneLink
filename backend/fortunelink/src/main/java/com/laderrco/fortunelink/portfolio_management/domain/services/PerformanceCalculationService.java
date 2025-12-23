@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -126,7 +127,7 @@ public class PerformanceCalculationService {
         // we are going to use the PortfolioEvaluationService.java for calculation
         // rather than a direct implementation
         PortfolioValuationService portfolioValuationService = new PortfolioValuationService();
-        return portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
+        return portfolioValuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
     }
 
     /**
