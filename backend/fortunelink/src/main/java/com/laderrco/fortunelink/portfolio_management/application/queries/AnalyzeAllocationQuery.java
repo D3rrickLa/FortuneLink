@@ -5,9 +5,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 // new item -> BY_TYPE, BY_ACCOUNT, BY_CURRENCY
-public record AnalyzeAllocationQuery(UserId userId, AllocationType alloactionType) implements ClassValidation {
+public record AnalyzeAllocationQuery(UserId userId, AllocationType allocationType) implements ClassValidation {
     public AnalyzeAllocationQuery {
         ClassValidation.validateParameter(userId);
-        ClassValidation.validateParameter(alloactionType);
+        ClassValidation.validateParameter(allocationType);
     }
 }

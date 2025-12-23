@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
+import java.time.Instant;
+
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -34,5 +36,11 @@ public class PortfolioValuationService {
     public Money calculateTotalAssets(Portfolio portfolio, MarketDataService marketDataService) {
         // Similar to calculateTotalValue but might exclude liabilities
         return calculateTotalValue(portfolio, marketDataService);
+    }
+
+    public Money calculateHistoricalValue(Portfolio portfolio, MarketDataService marketDataService,
+            Instant calculationDate) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'calculateHistoricalValue'");
     }
 }
