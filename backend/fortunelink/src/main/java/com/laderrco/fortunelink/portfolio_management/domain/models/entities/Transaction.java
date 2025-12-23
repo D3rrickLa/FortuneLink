@@ -18,12 +18,10 @@ import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.Builder;
-import lombok.Getter;
 import lombok.ToString;
 
 @ToString
 @Builder
-@Getter // TODO: Remove this later
 public class Transaction implements ClassValidation {
     private final TransactionId transactionId;
     private TransactionType transactionType;
@@ -142,6 +140,41 @@ public class Transaction implements ClassValidation {
         return dividendAmount;
     }
 
+    public TransactionId getTransactionId() {
+        return transactionId;
+    }
+
+    public TransactionType getTransactionType() {
+        return transactionType;
+    }
+
+    public AssetIdentifier getAssetIdentifier() {
+        return assetIdentifier;
+    }
+
+    public BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    public Money getPricePerUnit() {
+        return pricePerUnit;
+    }
+
+    public List<Fee> getFees() {
+        return fees;
+    }
+
+    public Instant getTransactionDate() {
+        return transactionDate;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public boolean isDrip() {
+        return isDrip;
+    }   
 
     private static void validateTransaction(TransactionType type, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price) {
         switch (type) {

@@ -9,11 +9,9 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.Builder;
-import lombok.Getter;
 import lombok.ToString;
 
 @ToString
-@Getter // TODO: remove this and implement acutal getters later
 @Builder // TODO: remove this and implement your own
 public class Asset {
     private final AssetId assetId;
@@ -102,8 +100,39 @@ public class Asset {
     }
 
     // QUERY METHODS (public - anyone can call) //
+    public AssetId getAssetId() {
+        return assetId;
+    }
 
-    // we hsould really rename this
+    public AssetIdentifier getAssetIdentifier() {
+        return assetIdentifier;
+    }
+
+    public ValidatedCurrency getCurrency() {
+        return currency;
+    }
+
+    public BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    public Money getCostBasis() {
+        return costBasis;
+    }
+
+    public Instant getAcquiredOn() {
+        return acquiredOn;
+    }
+
+    public Instant getLastSystemInteraction() {
+        return lastSystemInteraction;
+    }
+
+    public int getVersion() {
+        return version;
+    }  
+
+    // we should really rename this
     // call it getAverageCostPerShare
     public Money getCostPerUnit() {
         if (quantity.compareTo(BigDecimal.ZERO) == 0) {
@@ -138,4 +167,6 @@ public class Asset {
         version++;
         lastSystemInteraction = Instant.now();
     }
+
+
 }
