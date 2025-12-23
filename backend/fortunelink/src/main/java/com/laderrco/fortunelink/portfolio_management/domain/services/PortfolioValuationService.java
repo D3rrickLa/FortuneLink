@@ -55,11 +55,6 @@ public class PortfolioValuationService {
             .reduce(Money.ZERO(portfolio.getPortfolioCurrencyPreference()), Money::add);
     }
 
-    // for backwards compatiability 
-    public Money calculateTotalValue(Portfolio portfolio, MarketDataService marketDataService) {
-        return calculateTotalValue(portfolio, marketDataService, Instant.now());
-    }
-
     public Money calculateAccountValue(Account account, MarketDataService marketDataService, Instant asOfDate) {
         Money cashBalance = account.getCashBalance();
 

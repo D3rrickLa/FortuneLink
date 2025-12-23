@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -81,12 +82,12 @@ public class AssetAllocationServiceTest {
             
             when(valuationService.calculateTotalValue(portfolio, marketDataService))
                 .thenReturn(totalValue);
-            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService)))
+            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService), any(Instant.class)))
                 .thenReturn(stockValue);
             
             // Act
-            Map<AssetType, Percentage> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService);
+            Map<AssetType, Money> result = assetAllocationService
+                .calculateAllocationByType(portfolio, marketDataService, Instant.now());
             
             // Assert
             assertNotNull(result);
@@ -111,19 +112,19 @@ public class AssetAllocationServiceTest {
 
 
 
-            when(valuationService.calculateTotalValue(portfolio, marketDataService))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
                 .thenReturn(totalValue);
-            when(valuationService.calculateAssetValue(stockAsset, marketDataService))
+            when(valuationService.calculateAssetValue(stockAsset, marketDataService, Instant.now()))
                 .thenReturn(Money.of(new BigDecimal("6000.00"), ValidatedCurrency.USD));
-            when(valuationService.calculateAssetValue(etfAsset, marketDataService))
+            when(valuationService.calculateAssetValue(etfAsset, marketDataService, Instant.now()))
                 .thenReturn(Money.of(new BigDecimal("3000.00"), ValidatedCurrency.USD));
-            when(valuationService.calculateAssetValue(cryptoAsset, marketDataService))
+            when(valuationService.calculateAssetValue(cryptoAsset, marketDataService, Instant.now()))
                 .thenReturn(Money.of(new BigDecimal("1000.00"), ValidatedCurrency.USD));
             
             // Act
             when(portfolio.getAccounts()).thenReturn(List.of(tfsaAccount));
-            Map<AssetType, Percentage> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService);
+            Map<AssetType, Money> result = assetAllocationService
+                .calculateAllocationByType(portfolio, marketDataService, Instant.now());
             
             // Assert
             assertNotNull(result);
@@ -140,14 +141,14 @@ public class AssetAllocationServiceTest {
             Portfolio portfolio = createPortfolioWithMultipleAssetsOfSameType();
             Money totalValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
             
-            when(valuationService.calculateTotalValue(portfolio, marketDataService))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
                 .thenReturn(totalValue);
-            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService)))
+            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService), any(Instant.class)))
                 .thenReturn(Money.of(new BigDecimal("2500.00"), ValidatedCurrency.USD));
             
             // Act
-            Map<AssetType, Percentage> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService);
+            Map<AssetType, Money> result = assetAllocationService
+                .calculateAllocationByType(portfolio, marketDataService, Instant.now());
             
             // Assert
             assertNotNull(result);
