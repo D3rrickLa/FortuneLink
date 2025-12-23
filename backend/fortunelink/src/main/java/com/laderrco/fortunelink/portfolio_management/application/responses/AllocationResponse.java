@@ -6,9 +6,9 @@ import java.util.Objects;
 
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 public class AllocationResponse {
     private final Map<String, AllocationDetail> allocations;
     private final Money totalValue;
