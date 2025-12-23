@@ -125,45 +125,12 @@ public class PortoflioQueryService {
     }
 
     public AllocationResponse getAssetAllocation(AnalyzeAllocationQuery query) {
-        // Objects.requireNonNull(query);
-        // Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
-        //     .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
-        // Instant asOfDate = query.asOfDate() != null ? query.asOfDate() : Instant.now();
-        // Map<String, Money> allocations;
-        // switch (query.allocationType()) {
-        //     case BY_TYPE:
-        //         allocations = assetAllocationService.calculateAllocationByType(portfolio, marketDataService)
-        //             .entrySet()
-        //             .stream()
-        //             .collect(Collectors.toMap(e -> e.getKey().name(), e -> convertPercentageToMoney(e.getValue(), portfolio)));    
-        //         break;
-
-        //     case BY_ACCOUNT:
-        //         allocations = assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService)
-        //             .entrySet()
-        //             .stream()
-        //             .collect(Collectors.toMap(e -> e.getKey().name(), e -> convertPercentageToMoney(e.getValue(), portfolio)));
-        //             break;
-                    
-        //     case BY_CURRENCY:
-        //         allocations = assetAllocationService.calculateAllocationByCurrency(portfolio, marketDataService)
-        //             .entrySet()
-        //             .stream()
-        //             .collect(Collectors.toMap(e -> e.getKey().getSymbol(), e -> convertPercentageToMoney(e.getValue(), portfolio)));
-        //         break;
-                
-        //     default:
-        //         throw new IllegalArgumentException("Unsupported allocation type: " + query.allocationType()); // this shouldn't fire with the current implementation
-        //     }
-
-        // Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
-
-        // return allocationMapper.toResponse(allocations, totalValue);
         Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
         Instant asOfDate = query.asOfDate() != null ? query.asOfDate() : Instant.now();
+        
         Map<String, Money> allocations = switch (query.allocationType()) {
             case BY_TYPE -> assetAllocationService.calculateAllocationByType(portfolio, marketDataService, asOfDate)
                 .entrySet().stream().collect(Collectors.toMap(e -> e.getKey().name(), Map.Entry::getValue));
@@ -177,7 +144,7 @@ public class PortoflioQueryService {
 
         Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
 
-        return allocationMapper.toResponse(allocations, totalValue);
+        return allocationMapper.toResponse(allocations, totalValue, asOfDate);
     }
 
     public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {

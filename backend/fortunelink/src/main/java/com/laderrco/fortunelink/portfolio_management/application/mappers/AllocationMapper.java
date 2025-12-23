@@ -21,7 +21,29 @@ public class AllocationMapper {
         // to prevent instantiation 
     }
 
-    public AllocationResponse toResponse(Map<String, Money> allocation, Money totalValue) {
+    public AllocationResponse toResponse(Map<String, Money> allocation, Money totalValue, Instant asOfDate) {
+        // if (allocation == null || allocation.isEmpty()) {
+        //     return new AllocationResponse(
+        //         new HashMap<>(),
+        //         totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
+        //         Instant.now()
+        //     );
+        // }
+        
+        // // Convert each allocation entry to AllocationDetail
+        // Map<String, AllocationDetail> allocationDetails = allocation.entrySet().stream()
+        //         .collect(Collectors.toMap(
+        //             Map.Entry::getKey,
+        //             entry -> toAllocationDetail(entry.getKey(), entry.getValue(), totalValue)
+        //         ));
+        
+        // return new AllocationResponse(
+        //     allocationDetails,
+        //     totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
+        //     Instant.now()
+        // );
+        Instant responseDate = asOfDate != null ? asOfDate : Instant.now();
+
         if (allocation == null || allocation.isEmpty()) {
             return new AllocationResponse(
                 new HashMap<>(),
@@ -29,7 +51,7 @@ public class AllocationMapper {
                 Instant.now()
             );
         }
-        
+
         // Convert each allocation entry to AllocationDetail
         Map<String, AllocationDetail> allocationDetails = allocation.entrySet().stream()
                 .collect(Collectors.toMap(
@@ -40,8 +62,9 @@ public class AllocationMapper {
         return new AllocationResponse(
             allocationDetails,
             totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
-            Instant.now()
+            responseDate
         );
+
     }
 
     public AllocationDetail toAllocationDetail(String category, Money value, Money total) {
@@ -63,7 +86,8 @@ public class AllocationMapper {
         
         return new AllocationDetail(assetType, value, percentage);
     }
-        /**
+    
+    /**
      * Converts a map of AssetType allocations to an AllocationResponse.
      * This is a type-safe alternative when working with AssetType enums directly.
      * 
