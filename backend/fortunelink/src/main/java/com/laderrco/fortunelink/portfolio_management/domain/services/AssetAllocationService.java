@@ -16,36 +16,15 @@ public class AssetAllocationService {
     private final PortfolioValuationService valuationService;
     
     public Map<AssetType, Money> calculateAllocationByType(Portfolio portfolio, MarketDataService marketDataService, Instant asOfDate) {
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
-        
-        if (totalValue.isZero()) {
-            return Map.of();
-        }
-        
         Map<AssetType, Money> valueByType = new HashMap<>();
-        
-        // portfolio.getAccounts().stream()
-        //     .flatMap(account -> account.getAssets().stream())
-        //     .forEach(asset -> {
-        //         Money assetValue = valuationService.calculateAssetValue(asset, marketDataService, asOfDate);
-        //         valueByType.merge(asset.getAssetIdentifier().getAssetType(), assetValue, Money::add);
-        //     });
-        
-        // // Convert to percentages
-        // Map<AssetType, Percentage> allocation = new HashMap<>();
-        // valueByType.forEach((type, value) -> {
-        //     Percentage percentage = value.divide(totalValue.amount()).toPercentage();
-        //     allocation.put(type, percentage);
-        // });
-        
-        // return allocation;
-
+            
         portfolio.getAccounts().stream()
             .flatMap(account -> account.getAssets().stream())
             .forEach(asset -> {
                 Money assetValue = valuationService.calculateAssetValue(asset, marketDataService, asOfDate);
                 valueByType.merge(asset.getAssetIdentifier().getAssetType(), assetValue, Money::add);
             });
+            
         return valueByType;
     }
     
@@ -57,17 +36,6 @@ public class AssetAllocationService {
         }
         
         Map<AccountType, Money> valueByAccount = new HashMap<>();
-        
-        // portfolio.getAccounts().forEach(account -> {
-        //     Money accountValue = valuationService.calculateAccountValue(account, marketDataService, asOfDate);
-        //     valueByAccount.merge(account.getAccountType(), accountValue, Money::add);
-        // });
-        
-        // Map<AccountType, Percentage> allocation = new HashMap<>();
-        // valueByAccount.forEach((type, value) -> {
-        //     Percentage percentage = value.divide(totalValue.amount()).toPercentage();
-        //     allocation.put(type, percentage);
-        // });
 
         portfolio.getAccounts().forEach(account -> {
             Money accountValue = valuationService.calculateAccountValue(account, marketDataService, asOfDate);
@@ -91,12 +59,6 @@ public class AssetAllocationService {
             valueByCurrency.merge(account.getBaseCurrency(), accountValue, Money::add);
         });
         
-        // Map<ValidatedCurrency, Percentage> allocation = new HashMap<>();
-        // valueByCurrency.forEach((currency, value) -> {
-        //     // Convert to portfolio base currency first if needed
-        //     Percentage percentage = value.divide(totalValue.amount()).toPercentage();
-        //     allocation.put(currency, percentage);
-        // });
         
         return valueByCurrency;
     }   

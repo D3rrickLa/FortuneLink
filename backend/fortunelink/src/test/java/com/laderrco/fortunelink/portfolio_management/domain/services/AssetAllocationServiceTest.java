@@ -34,18 +34,21 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class AssetAllocationServiceTest {
-        @Mock
+    @Mock
     private PortfolioValuationService valuationService;
     
     @Mock
     private MarketDataService marketDataService;
     
     private AssetAllocationService assetAllocationService;
+
+    private Instant time;
     
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         assetAllocationService = new AssetAllocationService(valuationService);
+        time = Instant.now();
     }
     
     @Nested
@@ -59,16 +62,17 @@ public class AssetAllocationServiceTest {
             Portfolio portfolio = createMockPortfolio();
             Money zeroMoney = Money.of(BigDecimal.ZERO, ValidatedCurrency.USD);
             
-            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
                 .thenReturn(zeroMoney);
             
             // Act
             Map<AssetType, Money> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService, Instant.now()); // this as well
+                .calculateAllocationByType(portfolio, marketDataService, time); // this as well
             
             // Assert
             assertTrue(result.isEmpty());
-            verify(valuationService).calculateTotalValue(portfolio, marketDataService, Instant.now());
+            // NOT NEEDED ANYMORE
+            // verify(valuationService).calculateTotalValue(portfolio, marketDataService, time);
         }
         
         @Test
@@ -79,21 +83,42 @@ public class AssetAllocationServiceTest {
             Money totalValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
             Money stockValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
             
-            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
                 .thenReturn(totalValue);
-            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService), any(Instant.class)))
+            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService), eq(time)))
                 .thenReturn(stockValue);
             
             // Act
             Map<AssetType, Money> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService, Instant.now());
+                .calculateAllocationByType(portfolio, marketDataService, time);
             
             // Assert
             assertNotNull(result);
             assertEquals(1, result.size());
             assertTrue(result.containsKey(AssetType.STOCK));
-            assertEquals(new BigDecimal("100.00").setScale(Precision.PERCENTAGE.getDecimalPlaces()), result.get(AssetType.STOCK).toPercentage());
+            
+            // Change: Assert the MONEY value, not the percentage
+            assertEquals(stockValue, result.get(AssetType.STOCK));
         }
+
+        @Test
+        @DisplayName("Service should group values by AssetType correctly")
+        void serviceShouldGroupByAssetType() {
+            // Act
+            Portfolio portfolio = createPortfolioWithSingleAssetType();
+            Money totalValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
+            Money stockValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
+                .thenReturn(totalValue);
+            when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService), eq(time)))
+                .thenReturn(stockValue);
+            Map<AssetType, Money> result = assetAllocationService
+                .calculateAllocationByType(portfolio, marketDataService, time);
+            
+            // Assert
+            assertEquals(Money.of(10000,"USD"), result.get(AssetType.STOCK));
+        }
+        
         
         @Test
         @DisplayName("Should calculate correct allocation for multiple asset types")
@@ -111,26 +136,26 @@ public class AssetAllocationServiceTest {
 
 
 
-            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
                 .thenReturn(totalValue);
-            when(valuationService.calculateAssetValue(stockAsset, marketDataService, Instant.now()))
+            when(valuationService.calculateAssetValue(stockAsset, marketDataService,time))
                 .thenReturn(Money.of(new BigDecimal("6000.00"), ValidatedCurrency.USD));
-            when(valuationService.calculateAssetValue(etfAsset, marketDataService, Instant.now()))
+            when(valuationService.calculateAssetValue(etfAsset, marketDataService, time))
                 .thenReturn(Money.of(new BigDecimal("3000.00"), ValidatedCurrency.USD));
-            when(valuationService.calculateAssetValue(cryptoAsset, marketDataService, Instant.now()))
+            when(valuationService.calculateAssetValue(cryptoAsset, marketDataService, time))
                 .thenReturn(Money.of(new BigDecimal("1000.00"), ValidatedCurrency.USD));
             
             // Act
             when(portfolio.getAccounts()).thenReturn(List.of(tfsaAccount));
             Map<AssetType, Money> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService, Instant.now());
+                .calculateAllocationByType(portfolio, marketDataService, time);
             
             // Assert
             assertNotNull(result);
             assertEquals(3, result.size());
-            assertEquals(new BigDecimal("60.00").setScale(Precision.PERCENTAGE.getDecimalPlaces()), result.get(AssetType.STOCK).toPercentage());
-            assertEquals(new BigDecimal("30.00").setScale(Precision.PERCENTAGE.getDecimalPlaces()), result.get(AssetType.ETF).toPercentage());
-            assertEquals(new BigDecimal("10.00").setScale(Precision.PERCENTAGE.getDecimalPlaces()), result.get(AssetType.CRYPTO).toPercentage());
+            assertEquals(Money.of(6000, "USD"), result.get(AssetType.STOCK));
+            assertEquals(Money.of(3000, "USD"), result.get(AssetType.ETF));
+            assertEquals(Money.of(1000, "USD"), result.get(AssetType.CRYPTO));
         }
         
         @Test
@@ -140,21 +165,22 @@ public class AssetAllocationServiceTest {
             Portfolio portfolio = createPortfolioWithMultipleAssetsOfSameType();
             Money totalValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
             
-            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
                 .thenReturn(totalValue);
             when(valuationService.calculateAssetValue(any(Asset.class), eq(marketDataService), any(Instant.class)))
                 .thenReturn(Money.of(new BigDecimal("2500.00"), ValidatedCurrency.USD));
             
             // Act
             Map<AssetType, Money> result = assetAllocationService
-                .calculateAllocationByType(portfolio, marketDataService, Instant.now());
+                .calculateAllocationByType(portfolio, marketDataService, time);
             
             // Assert
             assertNotNull(result);
             assertEquals(1, result.size());
             assertTrue(result.containsKey(AssetType.STOCK));
-            // 4 assets * 2500 = 10000, so 100%
-            assertEquals(new BigDecimal("100.00").setScale(Precision.PERCENTAGE.getDecimalPlaces()), result.get(AssetType.STOCK).toPercentage());
+            // // 4 assets * 2500 = 10000, so 100%
+            // assertEquals(new BigDecimal("100.00").setScale(Precision.PERCENTAGE.getDecimalPlaces()), result.get(AssetType.STOCK).toPercentage());
+            assertEquals(Money.of(10000, "USD"), result.get(AssetType.STOCK));
         }
         
         @Test
@@ -164,11 +190,11 @@ public class AssetAllocationServiceTest {
             Portfolio portfolio = createEmptyPortfolio();
             Money totalValue = Money.of(BigDecimal.ZERO, ValidatedCurrency.USD);
             
-            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
                 .thenReturn(totalValue);
             
             // Act
-            Map<AssetType, Money> result = assetAllocationService.calculateAllocationByType(portfolio, marketDataService, Instant.now()); // this as well
+            Map<AssetType, Money> result = assetAllocationService.calculateAllocationByType(portfolio, marketDataService, time); // this as well
             
             // Assert
             assertTrue(result.isEmpty());
@@ -186,11 +212,11 @@ public class AssetAllocationServiceTest {
             Portfolio portfolio = createMockPortfolio();
             Money zeroMoney = Money.of(BigDecimal.ZERO, ValidatedCurrency.USD);
             
-            when(valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()))
+            when(valuationService.calculateTotalValue(portfolio, marketDataService, time))
                 .thenReturn(zeroMoney);
             
             // Act
-            Map<AccountType, Money> result = assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService, Instant.now());
+            Map<AccountType, Money> result = assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService, time);
             
             // Assert
             assertTrue(result.isEmpty());

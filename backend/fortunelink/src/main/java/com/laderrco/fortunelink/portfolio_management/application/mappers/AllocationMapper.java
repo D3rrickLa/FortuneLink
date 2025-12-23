@@ -21,45 +21,45 @@ public class AllocationMapper {
         // to prevent instantiation 
     }
 
-    public AllocationResponse toResponse(Map<String, Money> allocation, Money totalValue, Instant asOfDate) {
+    public static AllocationResponse toResponse(Map<String, Money> allocation, Money totalValue, Instant asOfDate) {
         Instant responseDate = asOfDate != null ? asOfDate : Instant.now();
 
         if (allocation == null || allocation.isEmpty()) {
             return new AllocationResponse(
                 new HashMap<>(),
-                totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null),
+                // Use a helper or ensure consistent zero handling
+                // for default, will just use USD
+                totalValue != null ? totalValue : Money.ZERO("USD"), 
                 responseDate
             );
         }
 
-        // Convert each allocation entry to AllocationDetail
         Map<String, AllocationDetail> allocationDetails = allocation.entrySet().stream()
             .collect(Collectors.toMap(
                 Map.Entry::getKey,
                 entry -> toAllocationDetail(entry.getKey(), entry.getValue(), totalValue)
             ));
         
-        return new AllocationResponse(allocationDetails, totalValue != null ? totalValue : new Money(BigDecimal.ZERO, null), responseDate);
+        return new AllocationResponse(
+            allocationDetails, 
+            totalValue != null ? totalValue : Money.ZERO("USD"), 
+            responseDate
+        );
     }
     
-    public AllocationDetail toAllocationDetail(String category, Money value, Money total) {
+    public static AllocationDetail toAllocationDetail(String category, Money value, Money total) {
         if (category == null || value == null) {
             throw new IllegalArgumentException("Category and value cannot be null");
         }
         
-        // Parse category string to AssetType enum
         AssetType assetType;
         try {
             assetType = AssetType.valueOf(category.toUpperCase());
         } catch (IllegalArgumentException e) {
-            // Default to a generic type if parsing fails, or handle differently
             throw new IllegalArgumentException("Invalid asset type category: " + category, e);
         }
         
-        // Calculate percentage
-        Percentage percentage = calculatePercentage(value, total);
-        
-        return new AllocationDetail(assetType, value, percentage);
+        return new AllocationDetail(assetType, value, calculatePercentage(value, total));
     }
     
     /**
