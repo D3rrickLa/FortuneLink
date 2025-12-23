@@ -144,7 +144,7 @@ public class PortoflioQueryService {
 
         Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
 
-        return allocationMapper.toResponse(allocations, totalValue, asOfDate);
+        return AllocationMapper.toResponse(allocations, totalValue, asOfDate);
     }
 
     public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {
