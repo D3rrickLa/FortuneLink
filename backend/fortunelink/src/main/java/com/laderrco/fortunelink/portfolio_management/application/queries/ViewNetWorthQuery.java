@@ -9,6 +9,6 @@ import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 public record ViewNetWorthQuery(UserId userId, Instant asOfDate) implements ClassValidation {
     public ViewNetWorthQuery {
         ClassValidation.validateParameter(userId);
-        ClassValidation.validateParameter(asOfDate);
+        // ClassValidation.validateParameter(asOfDate);
     }
 }

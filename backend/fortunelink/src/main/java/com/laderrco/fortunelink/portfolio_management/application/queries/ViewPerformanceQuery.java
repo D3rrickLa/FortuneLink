@@ -7,7 +7,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 // account id optional
-public record ViewPerformanceQuery(UserId userId, Instant startDate, Instant endDate, AccountId accountId) implements ClassValidation {
+public record ViewPerformanceQuery(UserId userId, AccountId accountId, Instant startDate, Instant endDate) implements ClassValidation {
     public ViewPerformanceQuery {
         ClassValidation.validateParameter(userId);
         ClassValidation.validateParameter(startDate);

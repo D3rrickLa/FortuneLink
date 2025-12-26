@@ -8,6 +8,7 @@ import java.util.List;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
@@ -24,6 +25,7 @@ import lombok.ToString;
 @Builder
 public class Transaction implements ClassValidation {
     private final TransactionId transactionId;
+    private final AccountId accountId;
     private TransactionType transactionType;
     private AssetIdentifier assetIdentifier; 
     private BigDecimal quantity; 
@@ -35,10 +37,11 @@ public class Transaction implements ClassValidation {
     private boolean isDrip;
 
     // Main constructor
-    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
+    public Transaction(TransactionId transactionId, AccountId accountId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
         validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
         this.transactionId = ClassValidation.validateParameter(transactionId);
+        this.accountId = ClassValidation.validateParameter(accountId);
         this.transactionType = ClassValidation.validateParameter(transactionType);
         this.assetIdentifier = ClassValidation.validateParameter(assetIdentifier);
         this.quantity = ClassValidation.validateParameter(quantity);
@@ -51,15 +54,16 @@ public class Transaction implements ClassValidation {
     }
 
     // Backward compatible constructor
-    public Transaction(TransactionId transactionId, TransactionType transactionType,
+    public Transaction(TransactionId transactionId, AccountId accountId, TransactionType transactionType,
         AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit,
         List<Fee> fees, Instant transactionDate, String notes) {
-        this(transactionId, transactionType, assetIdentifier, quantity, pricePerUnit, null, fees, transactionDate, notes, false);
+        this(transactionId, accountId, transactionType, assetIdentifier, quantity, pricePerUnit, null, fees, transactionDate, notes, false);
     }
 
     // **NEW: Static factory method for DRIP transactions**
     public static Transaction createDripTransaction(
         TransactionId transactionId,
+        AccountId accountId,
         AssetIdentifier assetIdentifier,
         Money dividendAmount,
         Money pricePerShare, // market price at time of reinvestment
@@ -72,6 +76,7 @@ public class Transaction implements ClassValidation {
 
         return new Transaction(
             transactionId,
+            accountId,
             TransactionType.DIVIDEND, // or BUY with isDrip=true
             assetIdentifier,
             sharesPurchased,
@@ -142,6 +147,10 @@ public class Transaction implements ClassValidation {
 
     public TransactionId getTransactionId() {
         return transactionId;
+    }
+
+    public AccountId getAccountId() {
+        return accountId;
     }
 
     public TransactionType getTransactionType() {

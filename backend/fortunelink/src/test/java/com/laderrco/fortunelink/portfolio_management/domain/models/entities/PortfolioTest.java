@@ -1142,6 +1142,7 @@ class PortfolioTest {
     private Transaction createTx(AssetIdentifier assetIdentifier, Instant time) {
         return new Transaction(
             TransactionId.randomId(),
+            AccountId.randomId(),
             TransactionType.BUY,
             assetIdentifier,
             BigDecimal.ONE,               // Quantity

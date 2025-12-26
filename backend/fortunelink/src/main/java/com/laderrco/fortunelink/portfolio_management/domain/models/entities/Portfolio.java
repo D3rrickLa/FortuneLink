@@ -155,6 +155,7 @@ public class Portfolio implements ClassValidation {
         // Asset has quantity - need to swap via transactions
         Transaction sellWrong = new Transaction(
             TransactionId.randomId(),
+            account.getAccountId(),
             TransactionType.SELL,
             wrongAsset.getAssetIdentifier(),
             wrongAsset.getQuantity(),
@@ -170,6 +171,7 @@ public class Portfolio implements ClassValidation {
         
         Transaction buyCorrect = new Transaction(
             TransactionId.randomId(),
+            account.getAccountId(),
             TransactionType.BUY,
             correctTicker,
             wrongAsset.getQuantity(),

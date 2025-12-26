@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -117,6 +118,7 @@ public class PortfolioApplicationService {
         // 6. Create transaction entity
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.BUY,
                 assetInfo.toIdentifier(), // Convert to domain value object
                 command.quantity(),
@@ -169,9 +171,9 @@ public class PortfolioApplicationService {
             throw new InsufficientFundsException(command.symbol(), command.quantity(), asset.getQuantity());
         }
 
-        Transaction transaction = new Transaction( // should really make a specific constructor where id can gen
-                                                   // internally
+        Transaction transaction = new Transaction( // should really make a specific constructor where id can gen internally
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.SELL,
                 assetInfo.toIdentifier(), // Convert to domain value object
                 command.quantity(),
@@ -202,6 +204,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.DEPOSIT,
                 new CashIdentifier(command.currency().toString()),
                 BigDecimal.ONE,
@@ -244,6 +247,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.DEPOSIT,
                 new CashIdentifier(command.currency().toString()),
                 BigDecimal.ONE,
@@ -283,6 +287,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
             TransactionId.randomId(),
+            account.getAccountId(),
             TransactionType.DIVIDEND,
             assetInfo.toIdentifier(),
             quantity,
@@ -315,6 +320,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.FEE,
                 new CashIdentifier(command.currency().toString()),
                 BigDecimal.ONE,
@@ -348,7 +354,7 @@ public class PortfolioApplicationService {
         }
         
         // 2. Get all transactions for the account
-        List<Transaction> accountTransactions = transactionQueryRepository
+        Page<Transaction> accountTransactions = transactionQueryRepository
                 .findByAccountId(command.accountId(), Pageable.unpaged());
         
         // 3. Find the specific transaction to update
@@ -418,7 +424,7 @@ public class PortfolioApplicationService {
         }
         
         // 2. Get all transactions for the account
-        List<Transaction> accountTransactions = transactionQueryRepository
+        Page<Transaction> accountTransactions = transactionQueryRepository
                 .findByAccountId(command.accountId(), Pageable.unpaged());
         
         // 3. Find the transaction to delete
@@ -462,7 +468,7 @@ public class PortfolioApplicationService {
         // Persist
         portfolioRepository.save(portfolio);
 
-        return PortfolioMapper.toAccountResponse(account, null);
+        return portfolioMapper.toAccountResponse(account, null);
     }
 
     public void removeAccount(RemoveAccountCommand command) {
@@ -608,6 +614,7 @@ public class PortfolioApplicationService {
     private Transaction createUpdatedTransaction(Transaction existing, UpdateTransactionCommand command) {
         return new Transaction(
             existing.getTransactionId(), // Keep same ID
+            existing.getAccountId(),
             command.type(),
             command.identifier(),
             command.quantity(),

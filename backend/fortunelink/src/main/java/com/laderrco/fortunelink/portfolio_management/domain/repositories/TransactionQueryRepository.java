@@ -17,9 +17,10 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 // Read-only queries only - NO save() method    
 public interface TransactionQueryRepository {
     List<Transaction> findByPortfolioId(PortfolioId portfolioId, Pageable pageable);
+    Page<Transaction> findByAccountId(AccountId accountId, Pageable pageable);
     List<Transaction> findByDateRange(PortfolioId portfolioId, LocalDateTime start, LocalDateTime end, Pageable pageable);
-    List<Transaction> findByAccountId(AccountId accountId, Pageable pageable);
     long countByPortfolioId(PortfolioId portfolioId);
+    long countByAccountId(AccountId accountId);
 
     // Add filtering support
     Page<Transaction> findByPortfolioIdAndTransactionType(PortfolioId portfolioId, TransactionType transactionType, Pageable pageable);
@@ -29,6 +30,43 @@ public interface TransactionQueryRepository {
         LocalDateTime startDate,        // nullable
         LocalDateTime endDate,          // nullable
         Set<String> assetSymbols,      // nullable - for account filtering
+        Pageable pageable
+    );
+    
+    /**
+     * Finds transactions for a portfolio with optional filters and pagination.
+     * 
+     * @param portfolioId the portfolio ID
+     * @param transactionType optional transaction type filter
+     * @param startDate optional start date filter (inclusive)
+     * @param endDate optional end date filter (inclusive)
+     * @param pageable pagination and sorting information
+     * @return a page of filtered transactions
+     */
+    Page<Transaction> findByPortfolioIdAndFilters(
+        PortfolioId portfolioId,
+        TransactionType transactionType,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        Pageable pageable
+    );
+    
+    /**
+     * Finds transactions for a specific account with optional filters and pagination.
+     * This method leverages the direct relationship between Transaction and Account.
+     * 
+     * @param accountId the account ID
+     * @param transactionType optional transaction type filter
+     * @param startDate optional start date filter (inclusive)
+     * @param endDate optional end date filter (inclusive)
+     * @param pageable pagination and sorting information
+     * @return a page of filtered transactions
+     */
+    Page<Transaction> findByAccountIdAndFilters(
+        AccountId accountId,
+        TransactionType transactionType,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
         Pageable pageable
     );
 }
