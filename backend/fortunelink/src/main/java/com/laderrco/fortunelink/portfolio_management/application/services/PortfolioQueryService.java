@@ -6,7 +6,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,12 +34,15 @@ import com.laderrco.fortunelink.portfolio_management.application.responses.Trans
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
@@ -125,23 +127,27 @@ public class PortfolioQueryService {
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
-        Instant asOfDate = query.asOfDate() != null ? query.asOfDate() : Instant.now();
+        Instant asOfDate = query.asOfDate() != null ? query.asOfDate() : Instant.now(); // query as of date doesn't need a check 
 
         Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
         
-        Map<String, Money> allocations = switch (query.allocationType()) {
-            case BY_TYPE -> assetAllocationService.calculateAllocationByType(portfolio, marketDataService, asOfDate)
-                .entrySet().stream().collect(Collectors.toMap(e -> e.getKey().name(), Map.Entry::getValue));
-                
-            case BY_ACCOUNT -> assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService, asOfDate)
-                .entrySet().stream().collect(Collectors.toMap(e -> e.getKey().name().toString(), Map.Entry::getValue));
-                
-            case BY_CURRENCY -> assetAllocationService.calculateAllocationByCurrency(portfolio, marketDataService, asOfDate)
-                .entrySet().stream().collect(Collectors.toMap(e -> e.getKey().getSymbol(), Map.Entry::getValue));
+        return switch (query.allocationType()) {
+            case BY_TYPE -> {
+                Map<AssetType, Money> allocations = assetAllocationService
+                    .calculateAllocationByType(portfolio, marketDataService, asOfDate);
+                yield AllocationMapper.toResponseFromAssetType(allocations, totalValue, asOfDate);
+            }
+            case BY_ACCOUNT -> {
+                Map<AccountType, Money> allocations = assetAllocationService
+                    .calculateAllocationByAccount(portfolio, marketDataService, asOfDate);
+                yield AllocationMapper.toResponseFromAccountType(allocations, totalValue, asOfDate);
+            }
+            case BY_CURRENCY -> {
+                Map<ValidatedCurrency, Money> allocations = assetAllocationService
+                    .calculateAllocationByCurrency(portfolio, marketDataService, asOfDate);
+                yield AllocationMapper.toResponseFromCurrency(allocations, totalValue, asOfDate);
+            }
         };
-
-
-        return AllocationMapper.toResponse(allocations, totalValue, asOfDate);
     }
 
     public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {
@@ -166,7 +172,6 @@ public class PortfolioQueryService {
         
         // Use database-level filtering with proper pagination
         Page<Transaction> transactionPage;
-        
         if (query.accountId() != null) {
             // Filter by account - much simpler now with direct relationship
             transactionPage = transactionRepository.findByAccountIdAndFilters(

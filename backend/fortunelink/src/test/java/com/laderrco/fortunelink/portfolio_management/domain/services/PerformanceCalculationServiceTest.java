@@ -52,6 +52,7 @@ class PerformanceCalculationServiceTest {
 
     private PerformanceCalculationService performanceService;
     private PortfolioId portfolioId1;
+    private AccountId accountId1;
     private UserId userId1;
     private AssetId assetId1;
     private AssetId assetId2;
@@ -67,6 +68,7 @@ class PerformanceCalculationServiceTest {
         userId1 = UserId.randomId();
         assetId1 = AssetId.randomId();
         assetId2 = AssetId.randomId();
+        accountId1 = AccountId.randomId();
     }
 
     @Nested
@@ -151,7 +153,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createDepositTransaction("tx-2", "1000", cad));
             transactions.add(createWithdrawalTransaction("tx-3", "500", cad));
             
-            Account account = createAccount("account-1", cad, "500", 
+            Account account = createAccount(AccountId.randomId(), cad, "500", 
                 List.of(shopStock), transactions);
             
             Portfolio portfolio = Portfolio.builder()
@@ -195,7 +197,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createBuyTransaction("tx-1", teslaSymbol, "100", "200", usd));
             transactions.add(createSellTransaction("tx-2", teslaSymbol, "50", "250", usd));
             
-            Account account = createAccount("account-1", usd, "12500", 
+            Account account = createAccount(AccountId.randomId(), usd, "12500", 
                 List.of(teslaStock), transactions);
             
             Portfolio portfolio = Portfolio.builder()
@@ -232,7 +234,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createBuyTransaction("tx-1", gamestopSymbol, "100", "300", usd));
             transactions.add(createSellTransaction("tx-2", gamestopSymbol, "100", "150", usd));
             
-            Account account = createAccount("account-1", usd, "15000", 
+            Account account = createAccount(AccountId.randomId(), usd, "15000", 
                 List.of(gamestopStock), Collections.emptyList());
 
               
@@ -272,7 +274,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createSellTransaction("tx-2", appleSymbol, "30", "180", cad));
             transactions.add(createSellTransaction("tx-3", appleSymbol, "50", "200", cad));
             
-            Account account = createAccount("account-1", cad, "15400", 
+            Account account = createAccount(AccountId.randomId(), cad, "15400", 
                 List.of(appleStock), transactions);
             
             Portfolio portfolio = Portfolio.builder()
@@ -308,7 +310,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createBuyTransaction("tx-1", symbol, "100", "300", usd));
             transactions.add(createDepositTransaction("tx-2", "5000", usd));
             
-            Account account = createAccount("account-1", usd, "5000", 
+            Account account = createAccount(AccountId.randomId(), usd, "5000", 
                 List.of(msftStock), transactions);
             
             Portfolio portfolio = Portfolio.builder()
@@ -379,7 +381,7 @@ class PerformanceCalculationServiceTest {
                 .lastSystemInteraction(Instant.now())
                 .build();
             
-            Account account = createAccount("account-1", usd, "0", 
+            Account account = createAccount(AccountId.randomId(), usd, "0", 
                 List.of(nvidiaStock), new ArrayList<>());
             
             Portfolio portfolio = Portfolio.builder()
@@ -423,7 +425,7 @@ class PerformanceCalculationServiceTest {
                 .lastSystemInteraction(Instant.now())
                 .build();
             
-            Account account = createAccount("account-1", cad, "0", 
+            Account account = createAccount(AccountId.randomId(), cad, "0", 
                 List.of(metaStock), new ArrayList<>());
             
             Portfolio portfolio = Portfolio.builder()
@@ -480,7 +482,7 @@ class PerformanceCalculationServiceTest {
                 .lastSystemInteraction(Instant.now())
                 .build();
             
-            Account account = createAccount("account-1", usd, "0", 
+            Account account = createAccount(AccountId.randomId(), usd, "0", 
                 List.of(googleStock, amazonStock), new ArrayList<>());
             
             Portfolio portfolio = Portfolio.builder()
@@ -528,7 +530,7 @@ class PerformanceCalculationServiceTest {
                 .lastSystemInteraction(Instant.now())
                 .build();
             
-            Account tfsaAccount = createAccount("account-1", cad, "0", 
+            Account tfsaAccount = createAccount(AccountId.randomId(), cad, "0", 
                 List.of(tfsaAsset), new ArrayList<>());
             
             // RRSP Account
@@ -542,7 +544,7 @@ class PerformanceCalculationServiceTest {
                 .lastSystemInteraction(Instant.now())
                 .build();
             
-            Account rrspAccount = createAccount("account-2", cad, "0", 
+            Account rrspAccount = createAccount(AccountId.randomId(), cad, "0", 
                 List.of(rrspAsset), new ArrayList<>());
             
             Portfolio portfolio = Portfolio.builder()
@@ -576,7 +578,7 @@ class PerformanceCalculationServiceTest {
             // Arrange
             ValidatedCurrency usd = ValidatedCurrency.USD;
             
-            Account account = createAccount("account-1", usd, "10000", 
+            Account account = createAccount(AccountId.randomId(), usd, "10000", 
                 List.of(), new ArrayList<>());
             
             Portfolio portfolio = Portfolio.builder()
@@ -615,7 +617,7 @@ class PerformanceCalculationServiceTest {
                 .lastSystemInteraction(Instant.now())
                 .build();
             
-            Account account = createAccount("account-1", usd, "0", 
+            Account account = createAccount(AccountId.randomId(), usd, "0", 
                 List.of(bitcoin), new ArrayList<>());
             
             Portfolio portfolio = Portfolio.builder()
@@ -704,7 +706,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createSellTransaction("tx-2", btcSymbol, "0.3", "60000", usd));
             
             Account account = createAccount(
-                "account-1", 
+                AccountId.randomId(), 
                 usd, 
                 "18000", 
                 List.of(btcAsset), 
@@ -763,6 +765,7 @@ class PerformanceCalculationServiceTest {
             // Create buy transaction with fee
             Transaction buyTx = Transaction.builder()
                 .transactionId(transactionId1)
+                .accountId(accountId1)
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(appleSymbol)
                 .quantity(new BigDecimal("100"))
@@ -775,6 +778,7 @@ class PerformanceCalculationServiceTest {
             // Create sell transaction with fee
             Transaction sellTx = Transaction.builder()
                 .transactionId(transactionId2)
+                .accountId(accountId1)
                 .transactionType(TransactionType.SELL)
                 .assetIdentifier(appleSymbol)
                 .quantity(new BigDecimal("100"))
@@ -788,7 +792,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(sellTx);
             
             Account account = createAccount(
-                "account-1", 
+                AccountId.randomId(), 
                 usd, 
                 "17985", 
                 List.of(appleStock), 
@@ -841,7 +845,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(createSellTransaction("tx-3", ethSymbol, "1.5", "3000", usd));
             
             Account account = createAccount(
-                "account-1", 
+                AccountId.randomId(), 
                 usd, 
                 "7000", 
                 List.of(ethAsset), 
@@ -898,6 +902,7 @@ class PerformanceCalculationServiceTest {
             
             Transaction buyTx = Transaction.builder()
                 .transactionId(transactionId1)
+                .accountId(accountId1)
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(btcSymbol)
                 .quantity(new BigDecimal("0.5"))
@@ -909,6 +914,7 @@ class PerformanceCalculationServiceTest {
             
             Transaction sellTx = Transaction.builder()
                 .transactionId(transactionId2)
+                .accountId(accountId1)
                 .transactionType(TransactionType.SELL)
                 .assetIdentifier(btcSymbol)
                 .quantity(new BigDecimal("0.5"))
@@ -922,7 +928,7 @@ class PerformanceCalculationServiceTest {
             transactions.add(sellTx);
             
             Account account = createAccount(
-                "account-1", 
+                AccountId.randomId(), 
                 usd, 
                 "29970", 
                 List.of(btcAsset), 
@@ -1041,7 +1047,7 @@ class PerformanceCalculationServiceTest {
         transactions.add(createBuyTransaction("tx-1", appleSymbol, "10", "150", currency));
         transactions.add(createDepositTransaction("tx-2", "500", currency));
         
-        Account account = createAccount("account-1", currency, "500", 
+        Account account = createAccount(accountId1, currency, "500", 
             List.of(appleStock), transactions);
         
         return Portfolio.builder()
@@ -1068,10 +1074,10 @@ class PerformanceCalculationServiceTest {
             .build();
     }
 
-    private Account createAccount(String id, ValidatedCurrency currency, String cashBalance,
+    private Account createAccount(AccountId id, ValidatedCurrency currency, String cashBalance,
                                  List<Asset> assets, List<Transaction> transactions) {
         return Account.builder()
-            .accountId(AccountId.randomId())
+            .accountId(id)
             .name("Test Account")
             .accountType(AccountType.NON_REGISTERED)
             .baseCurrency(currency)
@@ -1088,6 +1094,7 @@ class PerformanceCalculationServiceTest {
                                             ValidatedCurrency currency) {
         return Transaction.builder()
             .transactionId(TransactionId.randomId())
+            .accountId(accountId1)
             .transactionType(TransactionType.BUY)
             .assetIdentifier(symbol)
             .quantity(new BigDecimal(quantity))
@@ -1103,6 +1110,7 @@ class PerformanceCalculationServiceTest {
                                              ValidatedCurrency currency) {
         return Transaction.builder()
             .transactionId(TransactionId.randomId())
+            .accountId(accountId1)
             .transactionType(TransactionType.SELL)
             .assetIdentifier(symbol)
             .quantity(new BigDecimal(quantity))
@@ -1117,6 +1125,7 @@ class PerformanceCalculationServiceTest {
                                                  ValidatedCurrency currency) {
         return Transaction.builder()
             .transactionId(TransactionId.randomId())
+            .accountId(accountId1)
             .transactionType(TransactionType.DEPOSIT)
             .assetIdentifier(new CashIdentifier(currency.getCode()))
             .quantity(BigDecimal.ONE)       
@@ -1131,6 +1140,7 @@ class PerformanceCalculationServiceTest {
                                                    ValidatedCurrency currency) {
         return Transaction.builder()
             .transactionId(TransactionId.randomId())
+            .accountId(accountId1)
             .transactionType(TransactionType.WITHDRAWAL)
             .assetIdentifier(new CashIdentifier(currency.getCode()))
             .quantity(BigDecimal.ONE)

@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
@@ -18,6 +17,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -37,6 +39,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
@@ -51,6 +54,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetTran
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
+import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationDetail;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.NetWorthResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PerformanceResponse;
@@ -65,8 +69,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Account
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
@@ -305,32 +312,31 @@ class PortfolioQueryServiceTest {
         );
         
         Map<AssetType, Money> allocationMap = Map.of(
-            AssetType.STOCK, new Money(new BigDecimal("60.00"), ValidatedCurrency.USD),
-            AssetType.BOND, new Money(new BigDecimal("30.00"), ValidatedCurrency.USD),
-            AssetType.CASH, new Money(new BigDecimal("10.00"), ValidatedCurrency.USD)
+            AssetType.STOCK, new Money(new BigDecimal("60000.00"), testCurrency),
+            AssetType.BOND, new Money(new BigDecimal("30000.00"), testCurrency),
+            AssetType.CASH, new Money(new BigDecimal("10000.00"), testCurrency)
         );
         
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
-        AllocationResponse expectedResponse = mock(AllocationResponse.class);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         when(assetAllocationService.calculateAllocationByType(portfolio, marketDataService, time))
             .thenReturn(allocationMap);
         when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, time))
             .thenReturn(totalValue);
-        when(AllocationMapper.toResponse(anyMap(), eq(totalValue), any(Instant.class)))
-            .thenReturn(expectedResponse);
         
         // Act
         AllocationResponse response = queryService.getAssetAllocation(query);
         
         // Assert
         assertNotNull(response);
-        assertEquals(expectedResponse, response);
+        assertEquals(time, response.getAsOfDate());
+        // Verify the allocations are present and have correct percentages
+        assertNotNull(response.getAllocations());
+        assertEquals(3, response.getAllocations().size());
         
         verify(portfolioRepository).findByUserId(userId);
         verify(assetAllocationService).calculateAllocationByType(portfolio, marketDataService, time);
-        // Should only calculate total value once now (optimization applied)
         verify(portfolioValuationService, times(1)).calculateTotalValue(portfolio, marketDataService, time);
     }
     
@@ -349,22 +355,29 @@ class PortfolioQueryServiceTest {
         );
         
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
-        AllocationResponse expectedResponse = mock(AllocationResponse.class);
+        // AllocationResponse expectedResponse = mock(AllocationResponse.class);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         when(assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService, time))
             .thenReturn(allocationMap);
         when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, time))
             .thenReturn(totalValue);
-        when(AllocationMapper.toResponse(anyMap(), eq(totalValue), any(Instant.class)))
-            .thenReturn(expectedResponse);
+        // when(AllocationMapper.toResponse(anyMap(), eq(totalValue), eq(time)))
+        //     .thenReturn(expectedResponse);
         
         // Act
         AllocationResponse response = queryService.getAssetAllocation(query);
-        
+    
         // Assert
         assertNotNull(response);
-        assertEquals(expectedResponse, response);
+        assertNotNull(response.getAllocations());
+        assertEquals(2, response.getAllocations().size());
+        
+        // Verify specific allocations
+        AllocationDetail tfsaDetail = response.getAllocations().get("TFSA");
+        assertNotNull(tfsaDetail);
+        assertEquals("TFSA", tfsaDetail.getCategory());
+        assertEquals("Account Type", tfsaDetail.getCategoryType());
         
         verify(assetAllocationService).calculateAllocationByAccount(portfolio, marketDataService, time);
     }
@@ -378,28 +391,42 @@ class PortfolioQueryServiceTest {
             time
         );
         
+        // All values should be in the base currency (USD) for percentage calculations
         Map<ValidatedCurrency, Money> allocationMap = Map.of(
-            ValidatedCurrency.USD, new Money(new BigDecimal("70.00"), ValidatedCurrency.USD),
-            ValidatedCurrency.CAD, new Money(new BigDecimal("30.00"), ValidatedCurrency.CAD)
+            ValidatedCurrency.USD, new Money(new BigDecimal("70000.00"), ValidatedCurrency.USD),
+            ValidatedCurrency.CAD, new Money(new BigDecimal("30000.00"), ValidatedCurrency.USD)
         );
         
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
-        AllocationResponse expectedResponse = mock(AllocationResponse.class);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         when(assetAllocationService.calculateAllocationByCurrency(portfolio, marketDataService, time))
             .thenReturn(allocationMap);
         when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, time))
             .thenReturn(totalValue);
-        when(AllocationMapper.toResponse(anyMap(), eq(totalValue), eq(time)))
-            .thenReturn(expectedResponse);
         
         // Act
         AllocationResponse response = queryService.getAssetAllocation(query);
         
         // Assert
         assertNotNull(response);
-        assertEquals(expectedResponse, response);
+        assertNotNull(response.getAllocations());
+        assertEquals(2, response.getAllocations().size());
+        
+        // Check if it's using the currency symbol or something else as the key
+        // Try getting with the actual keys
+        assertTrue(response.getAllocations().containsKey("USD"), "Should contain USD key");
+        assertTrue(response.getAllocations().containsKey("CAD"), "Should contain CAD key");
+        
+        AllocationDetail usdDetail = response.getAllocations().get("USD");
+        assertNotNull(usdDetail, "USD detail should not be null");
+        assertEquals("USD", usdDetail.getCategory());
+        assertEquals("Currency", usdDetail.getCategoryType());
+        
+        AllocationDetail cadDetail = response.getAllocations().get("CAD");
+        assertNotNull(cadDetail, "CAD detail should not be null");
+        assertEquals("CAD", cadDetail.getCategory());
+        assertEquals("Currency", cadDetail.getCategoryType());
         
         verify(assetAllocationService).calculateAllocationByCurrency(portfolio, marketDataService, time);
     }
@@ -427,25 +454,45 @@ class PortfolioQueryServiceTest {
         Instant startDate = Instant.now().minusSeconds(86400 * 30);
         Instant endDate = Instant.now();
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-            userId, accountId, startDate, endDate, mock(TransactionType.class), 1, 10
+            userId, accountId, startDate, endDate, null, 1, 10
         );
         
         List<Transaction> transactions = createMockTransactions(5);
         if (transactions.isEmpty()) {
             fail("Something is wrong, can't have empty transactions for the next step");
         }
-        Page<Transaction> transactionPage = new PageImpl<>(transactions, 
-            org.springframework.data.domain.PageRequest.of(0, 10), 5);
-        List<TransactionResponse> transactionResponses = new ArrayList<>();
+
+        Page<Transaction> transactionPage = new PageImpl<>(
+            transactions, 
+            PageRequest.of(0, 10), 
+            5
+        );
+        
+        List<TransactionResponse> transactionResponses = transactions.stream()
+            .map(t -> new TransactionResponse(
+                TransactionId.randomId(),
+                TransactionType.BUY,
+                "AAPL",
+                BigDecimal.ONE,
+                Money.of(20, "USD"),
+                t.getFees(),
+                Money.of(20000, "USD"), 
+                time, 
+                t.getNotes()
+            ))
+            .toList();
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByPortfolioIdAndFilters(
-            eq(portfolioId),
-            isNull(),
+        
+        // Since accountId is NOT null, stub findByAccountIdAndFilters instead!
+        when(transactionRepository.findByAccountIdAndFilters(
+            eq(accountId),
+            isNull(),  // transactionType is null
             any(LocalDateTime.class),
             any(LocalDateTime.class),
             any(Pageable.class)
         )).thenReturn(transactionPage);
+        
         when(transactionMapper.toResponseList(anyList())).thenReturn(transactionResponses);
         
         // Act
@@ -459,7 +506,14 @@ class PortfolioQueryServiceTest {
         assertNotNull(response.dateRange());
         
         verify(portfolioRepository).findByUserId(userId);
-        verify(transactionRepository).findByPortfolioIdAndFilters(any(), any(), any(), any(), any());
+        verify(transactionRepository).findByAccountIdAndFilters(
+            eq(accountId),
+            isNull(),
+            any(LocalDateTime.class),
+            any(LocalDateTime.class),
+            any(Pageable.class)
+        );
+        verify(transactionMapper).toResponseList(transactions);
     }
     
     @Test
@@ -584,7 +638,7 @@ class PortfolioQueryServiceTest {
     void getTransactionHistory_Success_Pagination() {
         // Arrange
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-            userId,  mock(AccountId.class), mock(Instant.class), mock(Instant.class), mock(TransactionType.class), 2, 5
+            userId,  null,null, null, null, 2, 5
         );
         
         List<Transaction> pageTransactions = createMockTransactions(5);
@@ -616,7 +670,7 @@ class PortfolioQueryServiceTest {
     void getTransactionHistory_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-            userId, mock(AccountId.class), mock(Instant.class), mock(Instant.class), mock(TransactionType.class), 1, 10
+            userId,null, null, null,null, 1, 10
         );
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
         
@@ -628,7 +682,7 @@ class PortfolioQueryServiceTest {
     // ==================== getAccountSummary Tests ====================
     
     @Test
-    void getAccountSummary_Success() {
+    void getAccountSummary_Success() throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         // Arrange
         GetAccountSummaryQuery query = new GetAccountSummaryQuery(userId, accountId);
         
@@ -699,51 +753,81 @@ class PortfolioQueryServiceTest {
     // ==================== Helper Methods ====================
     
     private List<Transaction> createMockTransactions(int count) {
+        AssetIdentifier assetIdentifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "APPLE", "USD", null);
+
         List<Transaction> transactions = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            Transaction transaction = mock(Transaction.class);
-            when(transaction.getTransactionDate())
-                .thenReturn(LocalDateTime.ofInstant(time, ZoneOffset.UTC).minusDays(i).toInstant(ZoneOffset.UTC));
-            when(transaction.getTransactionType()).thenReturn(TransactionType.BUY);
-            when(transaction.getAccountId()).thenReturn(accountId);
-            
-            AssetIdentifier identifier = mock(AssetIdentifier.class);
-            when(identifier.getPrimaryId()).thenReturn("AAPL");
-            when(transaction.getAssetIdentifier()).thenReturn(identifier);
-            
+            // Create real Transaction objects instead of mocks
+            Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                accountId,
+                TransactionType.BUY,
+                assetIdentifier,
+                new BigDecimal("10"),
+                Money.of(150, "USD"),
+                null, // fees
+                LocalDateTime.ofInstant(time, ZoneOffset.UTC).minusDays(i).toInstant(ZoneOffset.UTC),
+                "Test transaction " + i
+            );
             transactions.add(transaction);
         }
         return transactions;
     }
     
     private List<Transaction> createMockTransactionsWithAccount(AccountId accountId, int count) {
+        AssetIdentifier assetIdentifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "APPLE", "USD", null);
         List<Transaction> transactions = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            Transaction transaction = mock(Transaction.class);
-            when(transaction.getTransactionDate())
-                .thenReturn(LocalDateTime.ofInstant(time, ZoneOffset.UTC).minusDays(i).toInstant(ZoneOffset.UTC)); 
-            when(transaction.getTransactionType()).thenReturn(TransactionType.BUY);
-            when(transaction.getAccountId()).thenReturn(accountId);
-            
-            AssetIdentifier identifier = mock(AssetIdentifier.class);
-            when(identifier.getPrimaryId()).thenReturn("AAPL");
-            when(transaction.getAssetIdentifier()).thenReturn(identifier);
-            
+            Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                accountId,
+                TransactionType.BUY,
+                assetIdentifier,
+                new BigDecimal("10"),
+                Money.of(150, "USD"),
+                null, // fees
+                LocalDateTime.ofInstant(time, ZoneOffset.UTC).minusDays(i).toInstant(ZoneOffset.UTC),
+                "Test transaction " + i
+
+            );
             transactions.add(transaction);
         }
         return transactions;
     }
-    
-    private Account createMockAccount(AccountId accountId) {
-        Account account = mock(Account.class);
-        when(account.getAccountId()).thenReturn(accountId);
-        
-        Asset asset = mock(Asset.class);
-        AssetIdentifier identifier = mock(AssetIdentifier.class);
-        when(identifier.getPrimaryId()).thenReturn("AAPL");
-        when(asset.getAssetIdentifier()).thenReturn(identifier);
-        
-        when(account.getAssets()).thenReturn(List.of(asset));
+
+    private Account createMockAccount(AccountId accountId) throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        AssetIdentifier assetIdentifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "APPLE", "USD", null);
+
+        // 1. Get the constructor for Asset
+        // You must match the parameter types exactly as defined in the Asset class
+        Constructor<Asset> constructor = Asset.class.getDeclaredConstructor(
+            AssetId.class, 
+            AssetIdentifier.class, 
+            BigDecimal.class, 
+            Money.class, 
+            Instant.class
+        );
+
+        // 2. Make the constructor accessible
+        constructor.setAccessible(true);
+
+        // 3. Instantiate the Asset
+        Asset asset = constructor.newInstance(
+            AssetId.randomId(),
+            assetIdentifier,
+            new BigDecimal("10"),
+            Money.of(1500, "USD"),
+            Instant.now()
+        );
+
+        Account account = new Account(accountId, "Test Name", AccountType.INVESTMENT, ValidatedCurrency.USD);
+
+        Method addMethod = account.getClass().getDeclaredMethod("addAsset", Asset.class);
+        addMethod.setAccessible(true);
+
+        // WRONG: addMethod.invoke(addMethod, asset); 
+        // RIGHT: Pass the 'account' instance as the first argument
+        addMethod.invoke(account, asset);
         
         return account;
     }

@@ -58,7 +58,7 @@ public class AllocationMapperTest {
         
         // This is where your percentage check now lives
         assertEquals(new BigDecimal("100.00").setScale(PRECISION), stockDetail.getPercentage().value());
-        assertEquals(AssetType.STOCK, stockDetail.getCategory());
+        assertEquals(AssetType.STOCK, AssetType.valueOf(stockDetail.getCategory()));
         assertEquals(TEST_TIME, response.getAsOfDate());
     }
 

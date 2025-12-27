@@ -45,7 +45,7 @@ public class Asset {
         this.version = version;
     }
 
-    // package-private, only Accoutn can create
+    // package-private, only Account can create
     Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
         this(
             assetId,
