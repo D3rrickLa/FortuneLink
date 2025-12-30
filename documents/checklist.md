@@ -246,3 +246,39 @@
  - [x] getLastNMonths()
  - [x] getLastNYears()
 
+-----------------------
+Dec 30th 
+🏗️ Infrastructure Layer - Persistence First
+
+Set up PostgreSQL database
+Create JPA entities
+Implement repositories
+Test with integration tests
+
+
+🌐 Infrastructure Layer - External Services
+
+Implement MarketDataService with Yahoo Finance API
+Add caching layer
+
+
+🎮 Infrastructure Layer - REST Controllers
+
+Create controllers
+Wire everything together
+Test with Postman/curl
+
+
+🔐 Authentication & Security
+
+Integrate Supabase auth
+Secure endpoints
+
+
+📚 Documentation & Polish
+
+API docs
+Error handling refinement
+
+
+🚀 Deploy & Test End-to-End

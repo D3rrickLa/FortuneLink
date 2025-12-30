@@ -889,3 +889,14 @@ The solution is to add a isDrip feild in the Transaction.java and impelment logi
 - unit test after
 
 - THEN ONTO INFRA
+
+--- finished testing on dec 30th --- 
+we will now work on infra
+
+phase 1 -> db/presistence layer (db config)
+phase 2 -> create the db
+phase 3 -> set up the Entities
+phase 4-> set up JPA repo interfaces
+phase 5 -> create an entity mapper (domain to jpa entity)
+phase 6 -> implement repo interfaces (from domain layer)
+phase 7 -> integration test with full persitence layer
