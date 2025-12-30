@@ -42,7 +42,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.AllocationMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
@@ -61,6 +60,7 @@ import com.laderrco.fortunelink.portfolio_management.application.responses.Perfo
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;

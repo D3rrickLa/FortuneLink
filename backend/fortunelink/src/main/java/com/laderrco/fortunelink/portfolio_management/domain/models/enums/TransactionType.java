@@ -8,7 +8,8 @@ public enum TransactionType {
     DIVIDEND,
     INTEREST,
     FEE, 
+    RETURN_OF_CAPITAL,
     TRANSFER_IN,
     TRANSFER_OUT,
-    OTHER
+    OTHER, REINVESTED_CAPITAL_GAIN
 }

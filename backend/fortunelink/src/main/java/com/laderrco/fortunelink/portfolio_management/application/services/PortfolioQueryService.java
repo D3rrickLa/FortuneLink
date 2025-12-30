@@ -14,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.AllocationMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
@@ -31,6 +30,7 @@ import com.laderrco.fortunelink.portfolio_management.application.responses.Perfo
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;

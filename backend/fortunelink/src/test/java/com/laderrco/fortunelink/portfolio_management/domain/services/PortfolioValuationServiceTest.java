@@ -2,12 +2,18 @@ package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -15,6 +21,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -43,7 +50,6 @@ public class PortfolioValuationServiceTest {
     private PortfolioId portfolioId1;
     private UserId userId1;
     private AssetId assetId1;
-    // private AssetId assetId2;
     
     @Mock
     private MarketDataService marketDataService;
@@ -57,7 +63,6 @@ public class PortfolioValuationServiceTest {
         portfolioId1 = PortfolioId.randomId();
         userId1 = UserId.randomId();
         assetId1 = AssetId.randomId();
-        // assetId2 = AssetId.randomId();
     }
 
     @Test
@@ -373,6 +378,88 @@ public class PortfolioValuationServiceTest {
         assertThrows(MarketDataNotFoundException.class, () -> {
             valuationService.calculateAssetValue(asset, marketDataService, Instant.now());
         });
+    }
+
+    @Test
+    @DisplayName("Should call getHistoricalPrice when asOfDate is in the past")
+    void testCalculateAssetValue_HistoricalPath() {
+        // 1. Setup
+        PortfolioValuationService service = new PortfolioValuationService();
+        MarketDataService marketDataService = mock(MarketDataService.class);
+        
+        Asset mockAsset = mock(Asset.class);
+        AssetIdentifier assetId = mock(AssetIdentifier.class);
+        
+        // Set a date well in the past (e.g., 10 days ago)
+        Instant historicalInstant = Instant.now().minus(Duration.ofDays(10));
+        LocalDateTime expectedLdt = LocalDateTime.ofInstant(historicalInstant, ZoneOffset.UTC);
+        
+        when(mockAsset.getAssetIdentifier()).thenReturn(assetId);
+        when(mockAsset.getQuantity()).thenReturn(new BigDecimal("10"));
+        
+        // Mock the historical price response
+        Money historicalPrice = Money.of(150.00, "CAD");
+        when(marketDataService.getHistoricalPrice(eq(assetId), eq(expectedLdt)))
+            .thenReturn(historicalPrice);
+
+        // 2. Execute
+        Money result = service.calculateAssetValue(mockAsset, marketDataService, historicalInstant);
+
+        // 3. Verify
+        // Ensure the result is Price (150) * Quantity (10) = 1500
+        assertEquals(new BigDecimal("1500.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
+        
+        // Verify that the historical method was the one actually called
+        verify(marketDataService, times(1)).getHistoricalPrice(any(), any());
+        verify(marketDataService, never()).getCurrentPrice(any());
+    }
+    
+    @Nested
+    @DisplayName("Tests for current price path (the 'if' branch)")
+    class CurrentPriceTests {
+
+        @Test
+        @DisplayName("Should call getCurrentPrice when asOfDate is null")
+        void testCalculateAssetValue_NullDate() {
+            PortfolioValuationService service = new PortfolioValuationService();
+            MarketDataService marketDataService = mock(MarketDataService.class);
+            Asset mockAsset = mock(Asset.class);
+            AssetIdentifier assetId = mock(AssetIdentifier.class);
+
+            when(mockAsset.getAssetIdentifier()).thenReturn(assetId);
+            when(mockAsset.getQuantity()).thenReturn(new BigDecimal("5"));
+            when(marketDataService.getCurrentPrice(assetId)).thenReturn(Money.of(100, "CAD"));
+
+            // Act: Pass null for asOfDate
+            Money result = service.calculateAssetValue(mockAsset, marketDataService, null);
+
+            // Assert: 100 * 5 = 500
+            assertEquals(new BigDecimal("500.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
+            verify(marketDataService).getCurrentPrice(assetId);
+            verify(marketDataService, never()).getHistoricalPrice(any(), any());
+        }
+
+        @Test
+        @DisplayName("Should call getCurrentPrice when asOfDate is very recent (e.g., 1 second ago)")
+        void testCalculateAssetValue_RecentDate() {
+            PortfolioValuationService service = new PortfolioValuationService();
+            MarketDataService marketDataService = mock(MarketDataService.class);
+            Asset mockAsset = mock(Asset.class);
+            AssetIdentifier assetId = mock(AssetIdentifier.class);
+
+            // Set date to 1 second ago (well within the 5-second threshold)
+            Instant recentInstant = Instant.now().minusSeconds(1);
+
+            when(mockAsset.getAssetIdentifier()).thenReturn(assetId);
+            when(mockAsset.getQuantity()).thenReturn(new BigDecimal("2"));
+            when(marketDataService.getCurrentPrice(assetId)).thenReturn(Money.of(50, "CAD"));
+
+            // Act
+            service.calculateAssetValue(mockAsset, marketDataService, recentInstant);
+
+            // Assert
+            verify(marketDataService).getCurrentPrice(assetId);
+        }
     }
 
     // Helper method to create assets for tests

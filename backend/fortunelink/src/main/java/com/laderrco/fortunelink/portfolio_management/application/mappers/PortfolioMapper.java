@@ -15,30 +15,41 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Port
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-// convertes between portfolio domain entity and DTOs, handles ocmplex nested conversions
-@AllArgsConstructor
+/**
+ * Mapper for converting Portfolio domain objects to response DTOs
+ * Uses ExchangeRateService for currency conversions
+ */
+@RequiredArgsConstructor
 @Component
 public class PortfolioMapper {
-    private ExchangeRateService exchangeRateService;
+    
+    private final ExchangeRateService exchangeRateService;
 
+    /**
+     * Converts Portfolio domain object to PortfolioResponse DTO
+     * 
+     * @param portfolio The portfolio domain object
+     * @param marketDataService Service to fetch current market prices
+     * @return PortfolioResponse DTO or null if portfolio is null
+     */
     public PortfolioResponse toResponse(Portfolio portfolio, MarketDataService marketDataService) {
         if (portfolio == null) {
             return null;
         }
 
-        // convert all accounts with market data
         List<AccountResponse> accountResponses = portfolio.getAccounts().stream()
             .map(account -> toAccountResponse(account, marketDataService))
             .collect(Collectors.toList());
 
-        // Money netWorth = portfolio.calculateNetWorth(marketDataService, this.exchangeRateService);
-
-        Money totalAssetsValue = portfolio.getAssetsTotalValue(marketDataService, this.exchangeRateService);
+        Money totalAssetsValue = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
 
         return new PortfolioResponse(
             portfolio.getPortfolioId(),
@@ -51,23 +62,20 @@ public class PortfolioMapper {
         );
     }
 
+    /**
+     * Converts Account domain object to AccountResponse DTO
+     * 
+     * @param account The account domain object
+     * @param marketDataService Service to fetch current market prices
+     * @return AccountResponse DTO or null if account is null
+     */
     public AccountResponse toAccountResponse(Account account, MarketDataService marketDataService) {
         if (account == null) {
             return null;
         }
         
-       // Calculate total account value using domain method
         Money totalValue = account.calculateTotalValue(marketDataService);
-        
-        // Calculate cash balance by finding all CASH type assets
-        Money cashBalance = account.getAssets().stream()
-                .filter(asset -> asset.getAssetIdentifier().getAssetType() == AssetType.CASH)
-                .map(asset -> {
-                    // For cash assets, the cost basis represents the cash amount
-                    return asset.getCostBasis();
-                })
-                .reduce(Money::add)
-                .orElse(new Money(BigDecimal.ZERO, account.getBaseCurrency()));
+        Money cashBalance = calculateCashBalance(account);
         
         return new AccountResponse(
             account.getAccountId(),
@@ -80,25 +88,47 @@ public class PortfolioMapper {
         );
     }
 
-    public static AssetResponse toAssetResponse (Asset asset, Money currentPrice) {
+    /**
+     * Calculates total cash balance in an account by summing all CASH type assets
+     * 
+     * @param account The account to calculate cash balance for
+     * @return Total cash balance in account's base currency
+     */
+    private Money calculateCashBalance(Account account) {
+        return account.getAssets().stream()
+            .filter(asset -> asset.getAssetIdentifier().getAssetType() == AssetType.CASH)
+            .map(Asset::getCostBasis)
+            .reduce(Money::add)
+            .orElse(Money.ZERO(account.getBaseCurrency()));
+    }
+
+    /**
+     * Converts Asset domain object to AssetResponse DTO
+     * Static method as it doesn't require ExchangeRateService
+     * 
+     * @param asset The asset domain object
+     * @param currentPrice Current market price for the asset
+     * @return AssetResponse DTO or null if asset is null
+     */
+    public static AssetResponse toAssetResponse(Asset asset, Money currentPrice) {
         if (asset == null) {
             return null;
         }
         
-        // Calculate current value if price is available
-        Money currentValue = null;
-        Money unrealizedGain = null;
+        Money currentValue;
+        Money unrealizedGain;
+        Percentage unrealizedGainPercentage;
         
         if (currentPrice != null) {
-            // Convert Money to Price value object for calculation
-            // Price price = new Price(currentPrice);
             currentValue = asset.calculateCurrentValue(currentPrice);
             unrealizedGain = asset.calculateUnrealizedGainLoss(currentPrice);
-        }
-        else {
-            // fail safe
-            currentValue = Money.ZERO(asset.getCurrency());
-            unrealizedGain = Money.ZERO(asset.getCurrency());
+            unrealizedGainPercentage = calculateGainPercentage(unrealizedGain, asset.getCostBasis());
+        } else {
+            // Fallback to safe zero values
+            ValidatedCurrency currency = asset.getCurrency();
+            currentValue = Money.ZERO(currency);
+            unrealizedGain = Money.ZERO(currency);
+            unrealizedGainPercentage = Percentage.of(0);
         }
         
         return new AssetResponse(
@@ -111,10 +141,29 @@ public class PortfolioMapper {
             currentPrice,
             currentValue,
             unrealizedGain,
-            Percentage.of(unrealizedGain.amount()),
+            unrealizedGainPercentage,
             asset.getAcquiredOn(),
             asset.getLastSystemInteraction()
         );
     }
     
+    /**
+     * Calculates gain/loss percentage
+     * Handles edge cases for zero cost basis
+     * 
+     * @param gain The gain or loss amount
+     * @param costBasis The original cost basis
+     * @return Percentage gain/loss
+     */
+    private static Percentage calculateGainPercentage(Money gain, Money costBasis) {
+        if (costBasis == null || costBasis.amount().compareTo(BigDecimal.ZERO) == 0) {
+            return Percentage.of(0);
+        }
+        
+        BigDecimal percentageValue = gain.amount()
+            .divide(costBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(), Rounding.PERCENTAGE.getMode())
+            .multiply(BigDecimal.valueOf(100));
+        
+        return new Percentage(percentageValue);
+    }
 }
