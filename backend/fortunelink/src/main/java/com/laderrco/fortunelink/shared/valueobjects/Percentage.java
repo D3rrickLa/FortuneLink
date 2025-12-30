@@ -9,12 +9,13 @@ import com.laderrco.fortunelink.shared.enums.Rounding;
 public record Percentage(BigDecimal value) implements ClassValidation {
     private final static int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
     private final static RoundingMode MODE  = Rounding.PERCENTAGE.getMode();
+    public final static Percentage ZERO = Percentage.of(0);
     
     public Percentage {
         ClassValidation.validateParameter(value, "Value cannot be null");
         value = value.setScale(SCALE, MODE);
     }
-
+    
     public static Percentage of(BigDecimal value) {
         return new Percentage(value);
     }

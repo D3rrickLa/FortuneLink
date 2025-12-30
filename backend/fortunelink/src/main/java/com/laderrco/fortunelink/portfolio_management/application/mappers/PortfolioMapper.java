@@ -126,6 +126,7 @@ public class PortfolioMapper {
         } else {
             // Fallback to safe zero values
             ValidatedCurrency currency = asset.getCurrency();
+            currentPrice = Money.ZERO(currency);
             currentValue = Money.ZERO(currency);
             unrealizedGain = Money.ZERO(currency);
             unrealizedGainPercentage = Percentage.of(0);
