@@ -1,14 +1,12 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects;
 
 import java.util.Map;
+import java.util.Objects;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-import lombok.EqualsAndHashCode;
-
-@EqualsAndHashCode // TODO: make your own
 public class MarketAssetInfo {
     private final String symbol;
     private final String name;
@@ -59,5 +57,30 @@ public class MarketAssetInfo {
     }
     public Money getCurrentPrice() {
         return currentPrice;
-    }        
+    }  
+    
+    @Override
+    public boolean equals(Object o) {
+        // 1. Identity check
+        if (this == o) return true;
+        
+        // 2. Null and Class check
+        if (o == null || getClass() != o.getClass()) return false;
+        
+        // 3. Cast and field comparison
+        MarketAssetInfo that = (MarketAssetInfo) o;
+        return Objects.equals(symbol, that.symbol) && 
+               Objects.equals(name, that.name) && 
+               assetType == that.assetType && 
+               Objects.equals(exchange, that.exchange) && 
+               Objects.equals(currency, that.currency) && 
+               Objects.equals(sector, that.sector) && 
+               Objects.equals(currentPrice, that.currentPrice);
+    }
+
+    @Override
+    public int hashCode() {
+        // Generates a hash based on all fields to ensure distribution
+        return Objects.hash(symbol, name, assetType, exchange, currency, sector, currentPrice);
+    }
 }

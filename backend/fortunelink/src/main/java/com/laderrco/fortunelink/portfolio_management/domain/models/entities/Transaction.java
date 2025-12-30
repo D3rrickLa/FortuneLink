@@ -8,6 +8,7 @@ import java.util.List;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
@@ -18,14 +19,13 @@ import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.Builder;
-import lombok.Getter;
 import lombok.ToString;
 
 @ToString
 @Builder
-@Getter // TODO: Remove this later
 public class Transaction implements ClassValidation {
     private final TransactionId transactionId;
+    private final AccountId accountId;
     private TransactionType transactionType;
     private AssetIdentifier assetIdentifier; 
     private BigDecimal quantity; 
@@ -37,10 +37,11 @@ public class Transaction implements ClassValidation {
     private boolean isDrip;
 
     // Main constructor
-    public Transaction(TransactionId transactionId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
+    public Transaction(TransactionId transactionId, AccountId accountId, TransactionType transactionType, AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit, Money dividendAmount, List<Fee> fees, Instant transactionDate, String notes, boolean isDrip) {
         validateTransaction(transactionType, assetIdentifier, quantity, pricePerUnit);
 
         this.transactionId = ClassValidation.validateParameter(transactionId);
+        this.accountId = ClassValidation.validateParameter(accountId);
         this.transactionType = ClassValidation.validateParameter(transactionType);
         this.assetIdentifier = ClassValidation.validateParameter(assetIdentifier);
         this.quantity = ClassValidation.validateParameter(quantity);
@@ -53,15 +54,16 @@ public class Transaction implements ClassValidation {
     }
 
     // Backward compatible constructor
-    public Transaction(TransactionId transactionId, TransactionType transactionType,
+    public Transaction(TransactionId transactionId, AccountId accountId, TransactionType transactionType,
         AssetIdentifier assetIdentifier, BigDecimal quantity, Money pricePerUnit,
         List<Fee> fees, Instant transactionDate, String notes) {
-        this(transactionId, transactionType, assetIdentifier, quantity, pricePerUnit, null, fees, transactionDate, notes, false);
+        this(transactionId, accountId, transactionType, assetIdentifier, quantity, pricePerUnit, null, fees, transactionDate, notes, false);
     }
 
     // **NEW: Static factory method for DRIP transactions**
     public static Transaction createDripTransaction(
         TransactionId transactionId,
+        AccountId accountId,
         AssetIdentifier assetIdentifier,
         Money dividendAmount,
         Money pricePerShare, // market price at time of reinvestment
@@ -74,6 +76,7 @@ public class Transaction implements ClassValidation {
 
         return new Transaction(
             transactionId,
+            accountId,
             TransactionType.DIVIDEND, // or BUY with isDrip=true
             assetIdentifier,
             sharesPurchased,
@@ -96,7 +99,7 @@ public class Transaction implements ClassValidation {
         return switch (transactionType) {
             case BUY -> calculateGrossAmount().add(calculateTotalFees());
             case SELL -> calculateGrossAmount().subtract(calculateTotalFees()); // Fees reduce proceeds
-            case DEPOSIT, WITHDRAWAL -> pricePerUnit; // Already in Money form
+            case DEPOSIT, WITHDRAWAL, FEE -> pricePerUnit; // Already in Money form, got FEE we are taking the 'total in native pretty sure
             case DIVIDEND, INTEREST -> calculateGrossAmount(); // Usually no fees
             default -> throw new UnsupportedOperationException("Unsupported type: " + transactionType);
         };
@@ -142,6 +145,45 @@ public class Transaction implements ClassValidation {
         return dividendAmount;
     }
 
+    public TransactionId getTransactionId() {
+        return transactionId;
+    }
+
+    public AccountId getAccountId() {
+        return accountId;
+    }
+
+    public TransactionType getTransactionType() {
+        return transactionType;
+    }
+
+    public AssetIdentifier getAssetIdentifier() {
+        return assetIdentifier;
+    }
+
+    public BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    public Money getPricePerUnit() {
+        return pricePerUnit;
+    }
+
+    public List<Fee> getFees() {
+        return fees;
+    }
+
+    public Instant getTransactionDate() {
+        return transactionDate;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public boolean isDrip() {
+        return isDrip;
+    }   
 
     private static void validateTransaction(TransactionType type, AssetIdentifier assetIdentifier, BigDecimal quantity, Money price) {
         switch (type) {

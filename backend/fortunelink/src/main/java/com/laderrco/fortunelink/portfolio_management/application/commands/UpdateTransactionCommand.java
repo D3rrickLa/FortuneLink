@@ -15,8 +15,8 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public record UpdateTransactionCommand(
     UserId userId,
-    TransactionId transactionId,
     AccountId accountId,
+    TransactionId transactionId,
     TransactionType type,
     AssetIdentifier identifier,
     BigDecimal quantity,

@@ -26,6 +26,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -36,6 +37,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 public class TransactionTest {
     
     private static final TransactionId VALID_ID = mock(TransactionId.class);
+    private static final AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
     private static final AssetIdentifier VALID_ASSET = mock(AssetIdentifier.class);
     private static final Instant VALID_DATE = Instant.now();
     private AssetIdentifier assetIdentifier;
@@ -57,7 +59,7 @@ public class TransactionTest {
             Money price = Money.of(BigDecimal.valueOf(100), ValidatedCurrency.USD);
             Money divMoney = Money.of(200, "USD");
             BigDecimal quantity = BigDecimal.valueOf(2).setScale(2);
-            Transaction transaction = Transaction.createDripTransaction(VALID_ID, assetIdentifier, divMoney, price, VALID_DATE, null);
+            Transaction transaction = Transaction.createDripTransaction(VALID_ID, VAL_ACCOUNT_ID, assetIdentifier, divMoney, price, VALID_DATE, null);
             assertNotNull(transaction);
             assertEquals(TransactionType.DIVIDEND, transaction.getTransactionType());
             assertEquals(quantity, transaction.getQuantity().setScale(2));
@@ -72,6 +74,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -94,6 +97,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.DEPOSIT,
                 new CashIdentifier(amount.currency().toString()),
                 BigDecimal.ONE,
@@ -116,6 +120,7 @@ public class TransactionTest {
             assertThrows(IllegalArgumentException.class, () -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     TransactionType.BUY,
                     null, // Missing asset
                     quantity,
@@ -135,6 +140,7 @@ public class TransactionTest {
             assertThrows(InvalidQuantityException.class, () -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     TransactionType.BUY,
                     VALID_ASSET,
                     BigDecimal.ZERO, // Invalid quantity
@@ -154,6 +160,7 @@ public class TransactionTest {
             assertThrows(InvalidQuantityException.class, () -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     TransactionType.BUY,
                     VALID_ASSET,
                     BigDecimal.valueOf(-5), // Negative quantity
@@ -174,6 +181,7 @@ public class TransactionTest {
             assertThrows(IllegalArgumentException.class, () -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     TransactionType.BUY,
                     VALID_ASSET,
                     quantity,
@@ -193,6 +201,7 @@ public class TransactionTest {
             assertThrows(IllegalArgumentException.class, () -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     TransactionType.DEPOSIT,
                     null,
                     null,
@@ -212,6 +221,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -233,6 +243,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -261,6 +272,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -286,6 +298,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.SELL,
                 VALID_ASSET,
                 quantity,
@@ -307,6 +320,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.DEPOSIT,
                 new CashIdentifier("USD"),
                 BigDecimal.ONE,
@@ -328,6 +342,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.DIVIDEND,
                 VALID_ASSET,
                 quantity,
@@ -350,6 +365,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.TRANSFER_IN,
                 VALID_ASSET,
                 quantity,
@@ -380,6 +396,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -405,6 +422,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.SELL,
                 VALID_ASSET,
                 quantity,
@@ -426,6 +444,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.DEPOSIT,
                 new CashIdentifier("USD"),
                 BigDecimal.ONE,
@@ -446,6 +465,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.WITHDRAWAL,
                 new CashIdentifier("USD"),
                 BigDecimal.ONE,
@@ -466,6 +486,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.TRANSFER_IN,
                 assetIdentifier,
                 quantity,
@@ -491,6 +512,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -510,7 +532,7 @@ public class TransactionTest {
         void shouldCalculateGrossAmountWihtDividendBranch() {
             Money price = Money.of(BigDecimal.valueOf(100), ValidatedCurrency.USD);
             Money divMoney = Money.of(200, "USD");
-            Transaction transaction = Transaction.createDripTransaction(VALID_ID, assetIdentifier, divMoney, price, VALID_DATE, null);
+            Transaction transaction = Transaction.createDripTransaction(VALID_ID, VAL_ACCOUNT_ID, assetIdentifier, divMoney, price, VALID_DATE, null);
             Money actualGrossAmount = transaction.calculateGrossAmount();
             assertEquals(new BigDecimal("200.00").setScale(Precision.getMoneyPrecision()), actualGrossAmount.amount());
         }
@@ -523,6 +545,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -548,11 +571,12 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
                 price,
-               null,
+                null,
                 null,
                 VALID_DATE,
                 "",
@@ -584,6 +608,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -605,6 +630,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -630,6 +656,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -652,7 +679,7 @@ public class TransactionTest {
         void testGetDividendAmountSuccess() {
             Money price = Money.of(BigDecimal.valueOf(100), ValidatedCurrency.USD);
             Money divMoney = Money.of(200, "USD");
-            Transaction transaction = Transaction.createDripTransaction(VALID_ID, assetIdentifier, divMoney, price, VALID_DATE, null); 
+            Transaction transaction = Transaction.createDripTransaction(VALID_ID, VAL_ACCOUNT_ID, assetIdentifier, divMoney, price, VALID_DATE, null); 
             assertEquals(divMoney, transaction.getDividendAmount());
         }
 
@@ -663,6 +690,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -684,6 +712,7 @@ public class TransactionTest {
 
             Transaction transaction = new Transaction(
                 VALID_ID,
+                VAL_ACCOUNT_ID,
                 TransactionType.BUY,
                 VALID_ASSET,
                 quantity,
@@ -714,6 +743,7 @@ public class TransactionTest {
             assertThrows(IllegalArgumentException.class, () -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     type,
                     null, // Missing asset
                     quantity,
@@ -734,6 +764,7 @@ public class TransactionTest {
             assertDoesNotThrow(() -> 
                 new Transaction(
                     VALID_ID,
+                    VAL_ACCOUNT_ID,
                     type,
                     assetIdentifier, // No asset needed
                     quantity,

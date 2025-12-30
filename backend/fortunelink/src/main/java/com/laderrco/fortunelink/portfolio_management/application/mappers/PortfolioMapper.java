@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AssetResponse;
@@ -21,6 +22,7 @@ import lombok.AllArgsConstructor;
 
 // convertes between portfolio domain entity and DTOs, handles ocmplex nested conversions
 @AllArgsConstructor
+@Component
 public class PortfolioMapper {
     private ExchangeRateService exchangeRateService;
 
@@ -49,7 +51,7 @@ public class PortfolioMapper {
         );
     }
 
-    public static AccountResponse toAccountResponse(Account account, MarketDataService marketDataService) {
+    public AccountResponse toAccountResponse(Account account, MarketDataService marketDataService) {
         if (account == null) {
             return null;
         }

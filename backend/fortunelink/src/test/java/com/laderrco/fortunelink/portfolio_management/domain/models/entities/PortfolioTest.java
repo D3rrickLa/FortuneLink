@@ -59,6 +59,7 @@ class PortfolioTest {
     private ValidatedCurrency portfolioCurrency;
     private TransactionId transactionId1;
     private AssetId assetId1;
+    private AccountId accountId1;
 
 
     @BeforeEach
@@ -67,6 +68,7 @@ class PortfolioTest {
         portfolioCurrency = ValidatedCurrency.CAD;
         transactionId1 = TransactionId.randomId();
         assetId1 = AssetId.randomId();
+        accountId1 = AccountId.randomId();
     }
 
     @Nested
@@ -364,6 +366,7 @@ class PortfolioTest {
             portfolio.recordTransaction(account.getAccountId(), transaction);
             Transaction updatedTransaction = Transaction.builder()
                 .transactionId(transaction.getTransactionId())
+                .accountId(account.getAccountId())
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
                 .quantity((new BigDecimal("100")))
@@ -906,6 +909,7 @@ class PortfolioTest {
             // Given
             Transaction tx1 = Transaction.builder()
                 .transactionId(TransactionId.randomId())
+                .accountId(AccountId.randomId())
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(assetId)
                 .quantity((new BigDecimal("10")))
@@ -935,6 +939,7 @@ class PortfolioTest {
             // Given
             Transaction tx1 = Transaction.builder()
                 .transactionId(transactionId1)
+                .accountId(accountId1)
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
                 .quantity((new BigDecimal("10")))
@@ -945,6 +950,7 @@ class PortfolioTest {
                 
             Transaction tx2 = Transaction.builder()
                 .transactionId(transactionId1)
+                .accountId(accountId1)
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
                 .quantity((new BigDecimal("10")))
@@ -969,6 +975,7 @@ class PortfolioTest {
             // Given
             Transaction tx1 = Transaction.builder()
                 .transactionId(transactionId1)
+                .accountId(accountId1)
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
                 .quantity((new BigDecimal("10")))
@@ -979,6 +986,7 @@ class PortfolioTest {
                 
             Transaction tx2 = Transaction.builder()
                 .transactionId(transactionId1)
+                .accountId(accountId1)
                 .transactionType(TransactionType.BUY)
                 .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
                 .quantity((new BigDecimal("10")))
@@ -1094,6 +1102,7 @@ class PortfolioTest {
     private Transaction createTestTransaction() {
         return Transaction.builder()
             .transactionId(transactionId1)
+            .accountId(accountId1)
             .transactionType(TransactionType.BUY)
             .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
             .quantity((new BigDecimal("10")))
@@ -1106,6 +1115,7 @@ class PortfolioTest {
     private Transaction createTransactionWithDate(Instant date) {
         return Transaction.builder()
             .transactionId(TransactionId.randomId())
+            .accountId(AccountId.randomId())
             .transactionType(TransactionType.BUY)
             .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
             .quantity((new BigDecimal("10")))
@@ -1118,6 +1128,7 @@ class PortfolioTest {
     private Transaction createTransactionWithAsset(AssetIdentifier assetIdentifier) {
         return Transaction.builder()
             .transactionId(TransactionId.randomId())
+            .accountId(AccountId.randomId())
             .transactionType(TransactionType.BUY)
             .assetIdentifier(assetIdentifier)
             .quantity((new BigDecimal("10")))
@@ -1142,6 +1153,7 @@ class PortfolioTest {
     private Transaction createTx(AssetIdentifier assetIdentifier, Instant time) {
         return new Transaction(
             TransactionId.randomId(),
+            AccountId.randomId(),
             TransactionType.BUY,
             assetIdentifier,
             BigDecimal.ONE,               // Quantity

@@ -11,7 +11,7 @@ public record PerformanceResponse(Percentage totalReturns, Percentage annualized
         ClassValidation.validateParameter(realizedGains);
         ClassValidation.validateParameter(unrealizedGains);
         ClassValidation.validateParameter(timeWeightedReturn);
-        ClassValidation.validateParameter(moneyWeightedReturn);
+        // ClassValidation.validateParameter(moneyWeightedReturn);
         ClassValidation.validateParameter(period);
     }
 }

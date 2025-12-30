@@ -968,7 +968,9 @@ class AccountTest {
             // need to have the same 'id'
             TransactionId testTransactionId = TransactionId.randomId();
             when(transaction1.getTransactionId()).thenReturn(testTransactionId);
+            when(transaction1.getPricePerUnit()).thenReturn(initialCashBalance);
             when(transaction2.getTransactionId()).thenReturn(testTransactionId);
+            when(transaction2.getPricePerUnit()).thenReturn(initialCashBalance);
             assertThrows(IllegalStateException.class, () ->
                 account.recordTransaction(transaction2)
             );

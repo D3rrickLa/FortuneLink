@@ -1117,8 +1117,8 @@ class CommandValidatorTest {
         void shouldFailWhenUserIdIsNull() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                 null,
-                TransactionId.randomId(),
                 AccountId.randomId(),
+                TransactionId.randomId(),
                 TransactionType.BUY,
                 mock(AssetIdentifier.class),
                 BigDecimal.TEN,
@@ -1139,8 +1139,8 @@ class CommandValidatorTest {
         void shouldFailWhenDateIsInFuture() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                 UserId.randomId(),
-                TransactionId.randomId(),
                 AccountId.randomId(),
+                TransactionId.randomId(),
                 TransactionType.BUY,
                 mock(AssetIdentifier.class),
                 BigDecimal.TEN,
@@ -1161,8 +1161,8 @@ class CommandValidatorTest {
         void shouldFailWhenQuantityIsZeroOrNegative() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                 UserId.randomId(),
-                TransactionId.randomId(),
                 AccountId.randomId(),
+                TransactionId.randomId(),
                 TransactionType.BUY,
                 mock(AssetIdentifier.class),
                 BigDecimal.ZERO,
@@ -1183,8 +1183,8 @@ class CommandValidatorTest {
         void shouldFailWhenPriceIsZeroOrNegative() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                 UserId.randomId(),
-                TransactionId.randomId(),
                 AccountId.randomId(),
+                TransactionId.randomId(),
                 TransactionType.BUY,
                 mock(AssetIdentifier.class),
                 BigDecimal.TEN,
@@ -1233,8 +1233,8 @@ class CommandValidatorTest {
             AssetIdentifier cAssetIdentifier = new CashIdentifier("USD");
             return new UpdateTransactionCommand(
                 UserId.randomId(),
-                TransactionId.randomId(),
                 AccountId.randomId(),
+                TransactionId.randomId(),
                 TransactionType.BUY,
                 cAssetIdentifier,
                 BigDecimal.TEN,

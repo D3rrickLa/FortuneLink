@@ -103,7 +103,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(currentPrice);
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService);
+        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
 
         // Assert
         // 10 shares * $180 = $1800 + $500 cash = $2300
@@ -156,7 +156,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(currentPrice);
 
         // Act
-        Money totalValue = valuationService.calculateTotalAssets(portfolio, marketDataService);
+        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()); // this was total assets before
 
         // Assert
         // 10 shares * $180 = $1800 + $500 cash = $2300
@@ -223,7 +223,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(new Money(new BigDecimal("100"), cad));
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService);
+        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
 
         // Assert
         // TFSA: (50 * $80) + (100 * $120) + $1000 = $4000 + $12000 + $1000 = $17000
@@ -265,7 +265,7 @@ public class PortfolioValuationServiceTest {
             .build();
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService);
+        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
 
         // Assert
         Money expectedValue = new Money(new BigDecimal("5000"), usd);
@@ -289,7 +289,7 @@ public class PortfolioValuationServiceTest {
             .build();
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService);
+        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
 
         // Assert
         Money expectedValue = Money.ZERO(ValidatedCurrency.USD);
@@ -322,7 +322,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(new Money(new BigDecimal("250"), usd));
 
         // Act
-        Money accountValue = valuationService.calculateAccountValue(account, marketDataService);
+        Money accountValue = valuationService.calculateAccountValue(account, marketDataService, Instant.now());
 
         // Assert
         // 25 shares * $250 + $3000 cash = $9250
@@ -351,7 +351,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(new Money(new BigDecimal("50000"), usd));
 
         // Act
-        Money assetValue = valuationService.calculateAssetValue(bitcoin, marketDataService);
+        Money assetValue = valuationService.calculateAssetValue(bitcoin, marketDataService, Instant.now());
 
         // Assert
         // 0.5 BTC * $50000 = $25000
@@ -371,7 +371,7 @@ public class PortfolioValuationServiceTest {
 
         // Act & Assert
         assertThrows(MarketDataNotFoundException.class, () -> {
-            valuationService.calculateAssetValue(asset, marketDataService);
+            valuationService.calculateAssetValue(asset, marketDataService, Instant.now());
         });
     }
 

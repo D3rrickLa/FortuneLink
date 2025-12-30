@@ -3,14 +3,14 @@ package com.laderrco.fortunelink.portfolio_management.application.services;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,16 +31,18 @@ import com.laderrco.fortunelink.portfolio_management.application.responses.Perfo
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
-import com.laderrco.fortunelink.portfolio_management.application.utils.PaginationHelper;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
@@ -51,7 +53,7 @@ import lombok.Getter;
 @Getter
 @Service
 @Transactional(readOnly = true)
-public class PortoflioQueryService {
+public class PortfolioQueryService {
     private final PortfolioRepository portfolioRepository;
     private final TransactionQueryRepository transactionRepository;
     private final MarketDataService marketDataService;
@@ -64,56 +66,51 @@ public class PortoflioQueryService {
     private final AllocationMapper allocationMapper;
 
     public NetWorthResponse getNetWorth(ViewNetWorthQuery query) {
-        Objects.requireNonNull(query);
+        Objects.nonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
-        Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
+        Instant calculationDate = query.asOfDate() != null ? query.asOfDate() : Instant.now();
+
+        Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, calculationDate);
 
         // TODO: When Loan Management context is implemented, fetch liabilities 
-        // Money totalLiabilities = liabilityQueryService.getTotalLiabilities(query.userId(), portoflio.getPortfolioCurrencyPreference();
-        Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrencyPreference()); // placeholder
+        // Example: Money totalLiabilities = liabilitiesQueryService.getTotalLiabilities(quer.userId(), portfolio.getPortfolioCurrencyPreference());
+        Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrencyPreference()); // place holder
 
         Money netWorth = totalAssets.subtract(totalLiabilities);
 
-        Instant asOfDate = query.asOfDate() != null 
-            ? query.asOfDate()
-            : Instant.now();
-            
-        return new NetWorthResponse(totalAssets, totalLiabilities, netWorth, asOfDate, totalAssets.currency());
+        return new NetWorthResponse(totalAssets, totalLiabilities, netWorth, calculationDate, totalAssets.currency());
+
     }
 
     public PerformanceResponse getPortfolioPerformance(ViewPerformanceQuery query) {
         Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
-        
-        // Get transactions in date range
+
         List<Transaction> transactions = transactionRepository.findByDateRange(
-            portfolio.getPortfolioId(),
-            LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC),
-            LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC),
-            Pageable.unpaged() // need all for performance, we could simplify this even further since we have start and end dates
+            portfolio.getPortfolioId(), 
+            LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC), 
+            LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC), 
+            Pageable.unpaged()
         );
-        
-        // Calculate performance metrics
+
+        // Calculate perofrmance metrics 
         Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio, marketDataService);
         
-        Money realizedGains = performanceCalculationService.calculateRealizedGains(portfolio,transactions);
+        Money realizedGains = performanceCalculationService.calculateRealizedGains(portfolio, transactions);
         
         Money unrealizedGains = performanceCalculationService.calculateUnrealizedGains(portfolio, marketDataService);
         
-        Percentage timeWeightedReturn = performanceCalculationService.calculateTimeWeightedReturn(
-            portfolio
-        );
-        
+        Percentage timeWeightedReturn = performanceCalculationService.calculateTimeWeightedReturn(portfolio);
+
         // Calculate annualized return
         long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(query.startDate(), query.endDate());
         double years = daysBetween / 365.25;
         Percentage annualizedReturn = totalReturn.annualize(years);
-        
         String period = query.startDate() + " to " + query.endDate();
-        
+
         return new PerformanceResponse(
             totalReturn,
             annualizedReturn,
@@ -122,7 +119,7 @@ public class PortoflioQueryService {
             timeWeightedReturn,
             null, // moneyWeightedReturn - to be implemented
             period
-        );     
+        ); 
     }
 
     public AllocationResponse getAssetAllocation(AnalyzeAllocationQuery query) {
@@ -130,37 +127,27 @@ public class PortoflioQueryService {
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
-        Map<String, Money> allocations;
-        switch (query.alloactionType()) {
-            case BY_TYPE:
-                allocations = assetAllocationService.calculateAllocationByType(portfolio, marketDataService)
-                    .entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(e -> e.getKey().name(), e -> convertPercentageToMoney(e.getValue(), portfolio)));    
-                break;
+        Instant asOfDate = query.asOfDate() != null ? query.asOfDate() : Instant.now(); // query as of date doesn't need a check 
 
-            case BY_ACCOUNT:
-                allocations = assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService)
-                    .entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(e -> e.getKey().name(), e -> convertPercentageToMoney(e.getValue(), portfolio)));
-                    break;
-                    
-            case BY_CURRENCY:
-                allocations = assetAllocationService.calculateAllocationByCurrency(portfolio, marketDataService)
-                    .entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(e -> e.getKey().getSymbol(), e -> convertPercentageToMoney(e.getValue(), portfolio)));
-                break;
-                
-            default:
-                throw new IllegalArgumentException("Unsupported allocation type: " + query.alloactionType()); // this shouldn't fire with the current implementation
-                
+        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
+        
+        return switch (query.allocationType()) {
+            case BY_TYPE -> {
+                Map<AssetType, Money> allocations = assetAllocationService
+                    .calculateAllocationByType(portfolio, marketDataService, asOfDate);
+                yield AllocationMapper.toResponseFromAssetType(allocations, totalValue, asOfDate);
             }
-
-        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
-
-        return allocationMapper.toResponse(allocations, totalValue);
+            case BY_ACCOUNT -> {
+                Map<AccountType, Money> allocations = assetAllocationService
+                    .calculateAllocationByAccount(portfolio, marketDataService, asOfDate);
+                yield AllocationMapper.toResponseFromAccountType(allocations, totalValue, asOfDate);
+            }
+            case BY_CURRENCY -> {
+                Map<ValidatedCurrency, Money> allocations = assetAllocationService
+                    .calculateAllocationByCurrency(portfolio, marketDataService, asOfDate);
+                yield AllocationMapper.toResponseFromCurrency(allocations, totalValue, asOfDate);
+            }
+        };
     }
 
     public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {
@@ -168,54 +155,45 @@ public class PortoflioQueryService {
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
-        // Get transactions with filters
-        List<Transaction> allTransactions;
+        // Prepare filtering parameters
+        LocalDateTime startDate = query.startDate() != null 
+            ? LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC) 
+            : null;
+        LocalDateTime endDate = query.endDate() != null 
+            ? LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC) 
+            : null;
         
-        if (query.startDate() != null && query.endDate() != null) {
-            allTransactions = transactionRepository.findByDateRange(
-                portfolio.getPortfolioId(),
-                LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC),
-                LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC),
-                Pageable.unpaged() // TODO: implement pagination properly
+        // Create pageable with sorting (Spring uses 0-based indexing)
+        Pageable pageable = PageRequest.of(
+            query.pageNumber() - 1,
+            query.pageSize(),
+            Sort.by(Sort.Direction.DESC, "transactionDate")
+        );
+        
+        // Use database-level filtering with proper pagination
+        Page<Transaction> transactionPage;
+        if (query.accountId() != null) {
+            // Filter by account - much simpler now with direct relationship
+            transactionPage = transactionRepository.findByAccountIdAndFilters(
+                query.accountId(),
+                query.transactionType(),
+                startDate,
+                endDate,
+                pageable
             );
         } else {
-            allTransactions = transactionRepository.findByPortfolioId(
-                portfolio.getPortfolioId(), 
-                Pageable.unpaged() // TODO: implement pagination properly
+            // All transactions for the portfolio
+            transactionPage = transactionRepository.findByPortfolioIdAndFilters(
+                portfolio.getPortfolioId(),
+                query.transactionType(),
+                startDate,
+                endDate,
+                pageable
             );
         }
         
-        // Get asset identifier primary
-        Set<String> accountAssetSymbols = null;
-        if (query.accountId() != null) {
-            Account account = portfolio.getAccount(query.accountId());
-            accountAssetSymbols = account.getAssets().stream()
-                .map(e -> e.getAssetIdentifier().getPrimaryId())
-                .collect(Collectors.toSet());
-        }
-        
-        // Apply filters
-        final Set<String> finalAccountAssetSymbols = accountAssetSymbols;
-        List<Transaction> filteredTransactions = allTransactions.stream()
-            .filter(t -> query.transactionType() == null || 
-                        t.getTransactionType().equals(query.transactionType()))
-            .filter(t -> query.accountId() == null || 
-                        (finalAccountAssetSymbols != null && 
-                        finalAccountAssetSymbols.contains(t.getAssetIdentifier().getPrimaryId())))
-            .sorted(Comparator.comparing(Transaction::getTransactionDate).reversed())
-            .collect(Collectors.toList());
-        
-        // Apply pagination
-        int offset = PaginationHelper.calculateOffset(query.pageNumber(), query.pageSize());
-        int totalCount = filteredTransactions.size();
-        
-        List<Transaction> paginatedTransactions = filteredTransactions.stream()
-            .skip(offset)
-            .limit(query.pageSize())
-            .collect(Collectors.toList());
-        
         List<TransactionResponse> transactionResponses = transactionMapper.toResponseList(
-            paginatedTransactions
+            transactionPage.getContent()
         );
         
         String dateRange = query.startDate() != null && query.endDate() != null
@@ -224,7 +202,7 @@ public class PortoflioQueryService {
         
         return new TransactionHistoryResponse(
             transactionResponses,
-            totalCount,
+            (int) transactionPage.getTotalElements(),
             query.pageNumber(),
             query.pageSize(),
             dateRange
@@ -238,7 +216,7 @@ public class PortoflioQueryService {
         
         Account account = portfolio.getAccount(query.accountId());
         
-        return PortfolioMapper.toAccountResponse(account, marketDataService);
+        return portfolioMapper.toAccountResponse(account, marketDataService);
     }
 
     public PortfolioResponse getPortfolioSummary(GetPortfolioSummaryQuery query) {
@@ -247,12 +225,5 @@ public class PortoflioQueryService {
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
         return portfolioMapper.toResponse(portfolio, marketDataService);
-    }
-
-    private Money convertPercentageToMoney(Percentage percentage, Portfolio portfolio) {
-        Objects.requireNonNull(percentage);
-        Objects.requireNonNull(portfolio);
-        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService);
-        return totalValue.multiply(percentage.toPercentage());
     }
 }

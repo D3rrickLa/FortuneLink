@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -117,6 +118,7 @@ public class PortfolioApplicationService {
         // 6. Create transaction entity
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.BUY,
                 assetInfo.toIdentifier(), // Convert to domain value object
                 command.quantity(),
@@ -150,13 +152,11 @@ public class PortfolioApplicationService {
     public TransactionResponse recordAssetSale(RecordSaleCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException(
-                    "Invalid sale command",
-                    validationResult.errors());
+            throw new InvalidTransactionException("Invalid sale command",validationResult.errors());
         }
 
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
-                .orElseThrow(() -> new AssetNotFoundException("Asset nout found: " + command.symbol()));
+                .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
@@ -169,9 +169,9 @@ public class PortfolioApplicationService {
             throw new InsufficientFundsException(command.symbol(), command.quantity(), asset.getQuantity());
         }
 
-        Transaction transaction = new Transaction( // should really make a specific constructor where id can gen
-                                                   // internally
+        Transaction transaction = new Transaction( // should really make a specific constructor where id can gen internally
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.SELL,
                 assetInfo.toIdentifier(), // Convert to domain value object
                 command.quantity(),
@@ -190,9 +190,7 @@ public class PortfolioApplicationService {
     public TransactionResponse recordDeposit(RecordDepositCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException(
-                    "Invalid deposit command",
-                    validationResult.errors());
+            throw new InvalidTransactionException("Invalid deposit command", validationResult.errors());
         }
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -202,6 +200,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.DEPOSIT,
                 new CashIdentifier(command.currency().toString()),
                 BigDecimal.ONE,
@@ -219,9 +218,7 @@ public class PortfolioApplicationService {
     public TransactionResponse recordWithdrawal(RecordWithdrawalCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException(
-                    "Invalid withdrawal command",
-                    validationResult.errors());
+            throw new InvalidTransactionException("Invalid withdrawal command",validationResult.errors());
         }
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -244,6 +241,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.DEPOSIT,
                 new CashIdentifier(command.currency().toString()),
                 BigDecimal.ONE,
@@ -263,9 +261,7 @@ public class PortfolioApplicationService {
     public TransactionResponse recordDividendIncome(RecordIncomeCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException(
-                    "Invalid income command",
-                    validationResult.errors());
+            throw new InvalidTransactionException("Invalid income command", validationResult.errors());
         }
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -274,8 +270,7 @@ public class PortfolioApplicationService {
         Account account = portfolio.getAccount(command.accountId());
 
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
-                .orElseThrow(() -> new AssetNotFoundException(
-                        "Asset not found: " + command.symbol()));
+            .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
         // For DRIP: quantity represents shares purchased with the dividend
         // For non-DRIP: quantity is 1 (tracking the icnome event)
@@ -283,6 +278,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
             TransactionId.randomId(),
+            account.getAccountId(),
             TransactionType.DIVIDEND,
             assetInfo.toIdentifier(),
             quantity,
@@ -303,9 +299,7 @@ public class PortfolioApplicationService {
     public TransactionResponse recordFee(RecordFeeCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException(
-                    "Invalid fee command",
-                    validationResult.errors());
+            throw new InvalidTransactionException("Invalid fee command", validationResult.errors());
         }
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -315,6 +309,7 @@ public class PortfolioApplicationService {
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
+                account.getAccountId(),
                 TransactionType.FEE,
                 new CashIdentifier(command.currency().toString()),
                 BigDecimal.ONE,
@@ -348,7 +343,7 @@ public class PortfolioApplicationService {
         }
         
         // 2. Get all transactions for the account
-        List<Transaction> accountTransactions = transactionQueryRepository
+        Page<Transaction> accountTransactions = transactionQueryRepository
                 .findByAccountId(command.accountId(), Pageable.unpaged());
         
         // 3. Find the specific transaction to update
@@ -358,24 +353,24 @@ public class PortfolioApplicationService {
                 .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
         
         // // 4. Basic validations
-        // if (command.date().isAfter(Instant.now())) {
-        //     throw new IllegalArgumentException("Transaction date cannot be in the future");
-        // }
+        if (command.date().isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Transaction date cannot be in the future");
+        }
         
-        // if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
-        //     throw new IllegalArgumentException("Quantity must be positive");
-        // }
+        if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
         
-        // if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
-        //     throw new IllegalArgumentException("Price must be positive");
-        // }
+        if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price must be positive");
+        }
         
         // 5. ONLY critical validation: can't sell more than you own
         if (command.type() == TransactionType.SELL) {
             List<Transaction> assetTransactions = accountTransactions.stream()
-                    .filter(t -> t.getAssetIdentifier().equals(command.identifier()))
-                    .sorted((t1, t2) -> t1.getTransactionDate().compareTo(t2.getTransactionDate()))
-                    .collect(Collectors.toList());
+                .filter(t -> t.getAssetIdentifier().equals(command.identifier()))
+                .sorted((t1, t2) -> t1.getTransactionDate().compareTo(t2.getTransactionDate()))
+                .collect(Collectors.toList());
             
             validateSellTransaction(
                 command.identifier(),
@@ -418,7 +413,7 @@ public class PortfolioApplicationService {
         }
         
         // 2. Get all transactions for the account
-        List<Transaction> accountTransactions = transactionQueryRepository
+        Page<Transaction> accountTransactions = transactionQueryRepository
                 .findByAccountId(command.accountId(), Pageable.unpaged());
         
         // 3. Find the transaction to delete
@@ -441,9 +436,7 @@ public class PortfolioApplicationService {
     public AccountResponse addAccount(AddAccountCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException(
-                    "Invalid add account command",
-                    validationResult.errors());
+            throw new InvalidTransactionException("Invalid add account command", validationResult.errors());
         }
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -462,7 +455,7 @@ public class PortfolioApplicationService {
         // Persist
         portfolioRepository.save(portfolio);
 
-        return PortfolioMapper.toAccountResponse(account, null);
+        return portfolioMapper.toAccountResponse(account, null);
     }
 
     public void removeAccount(RemoveAccountCommand command) {
@@ -533,6 +526,11 @@ public class PortfolioApplicationService {
     // this either soft deletes or permanently removes
     // need 'confirmation' to delete all the data
     public void deletePortfolio(DeletePortfolioCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidCommandException("Invalid delete portfolio command", validationResult.errors());
+        }
+    
         // ensures deletion flag is set
         if (!command.confirmed()) {
             throw new PortfolioDeletionRequiresConfirmationException(
@@ -545,10 +543,10 @@ public class PortfolioApplicationService {
         // check if portfolio can be deleted
 
         // check 1: portfolio must be empty
-        if (!portfolio.containsAccounts()) {
+        if (portfolio.containsAccounts()) {
             throw new PortfolioNotEmptyException(
-                    "Cannot delete portfolio with existing accounts/transactions. " +
-                            "Portfolio has " + portfolio.getAccounts().size() + " account(s)");
+                "Cannot delete portfolio with existing accounts/transactions. " +
+                "Portfolio has " + portfolio.getAccounts().size() + " account(s)");
         }
 
         // two other options, either soft delete or hard delete, based on the command
@@ -588,7 +586,8 @@ public class PortfolioApplicationService {
             
             if (t.getTransactionType() == TransactionType.BUY) {
                 holdings = holdings.add(t.getQuantity());
-            } else if (t.getTransactionType() == TransactionType.SELL) {
+            } 
+            else if (t.getTransactionType() == TransactionType.SELL) {
                 holdings = holdings.subtract(t.getQuantity());
             }
         }
@@ -608,6 +607,7 @@ public class PortfolioApplicationService {
     private Transaction createUpdatedTransaction(Transaction existing, UpdateTransactionCommand command) {
         return new Transaction(
             existing.getTransactionId(), // Keep same ID
+            existing.getAccountId(),
             command.type(),
             command.identifier(),
             command.quantity(),
