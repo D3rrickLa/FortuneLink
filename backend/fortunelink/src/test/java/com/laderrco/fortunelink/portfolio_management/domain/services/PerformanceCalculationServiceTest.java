@@ -36,8 +36,10 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -861,8 +863,11 @@ class PerformanceCalculationServiceTest {
                 .lastUpdatedAt(Instant.now())
                 .build();
             
+
             portfolio.recordTransaction(account.getAccountId(), transactions.get(0));
-            portfolio.recordTransaction(account.getAccountId(), transactions.get(1));
+            
+            portfolio.recordTransaction(account.getAccountId(), createSellTransaction("tx-2", ethSymbol, "1.0", "2500", usd));
+            
             portfolio.recordTransaction(account.getAccountId(), transactions.get(2));
             
             // Act
@@ -959,20 +964,44 @@ class PerformanceCalculationServiceTest {
     @DisplayName("Not implmented but need to test")
     public class TestsCADACBMethod {
         @Test
-        void calcualteSellGainWithACB_should_throw_not_implemented() {
-            assertDoesNotThrow(() -> {
-                PerformanceCalculationService service = new PerformanceCalculationService();
-     
-                Transaction teTransaction = mock(Transaction.class);
-                Portfolio tePortfolio = mock(Portfolio.class);
+        void calculateSellGainWithACB_shouldReturnZeroWhenPortoflioIsNull() {
+            PerformanceCalculationService service = new PerformanceCalculationService();
+            ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
 
-                service.calculateRealizedGainsCAD_ACB(tePortfolio, List.of(teTransaction));
-            });
-            assertThrows(UnsupportedOperationException.class, () -> {
-                PerformanceCalculationService service = new PerformanceCalculationService();
+            // Path 1: Valid portfolio should trigger the (currently unimplemented) ACB logic
+            Money test = service.calculateRealizedGainsCAD_ACB(null, exchangeRateService, List.of());
+            assertEquals(Money.ZERO("CAD"), test);
+        }
 
-                service.calculateRealizedGainsCAD_ACB(null, null);
-            });
+        @Test
+        @DisplayName("Should calculate simple ACB gain for two buys and one sell")
+        void testCalculateRealizedGainsCAD_ACB_Success() {
+            PerformanceCalculationService service = new PerformanceCalculationService();
+            ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            
+            TransactionId VALID_ID = mock(TransactionId.class);
+            AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
+            AssetIdentifier VALID_ASSET = mock(AssetIdentifier.class);
+            Instant VALID_DATE = Instant.now();
+            
+            // Setup transactions: 
+            // 1. Buy 10 shares @ $10 CAD
+            // 2. Buy 10 shares @ $20 CAD (New ACB = $15)
+            // 3. Sell 10 shares @ $25 CAD (Gain = $25 - $15 = $10 per share = $100 total)
+            List<Transaction> txs = List.of(
+                new Transaction(VALID_ID,VAL_ACCOUNT_ID,TransactionType.BUY,VALID_ASSET,BigDecimal.TEN, Money.of(10, "CAD"),null,VALID_DATE,"Test note"),
+                new Transaction(VALID_ID,VAL_ACCOUNT_ID,TransactionType.BUY,VALID_ASSET,BigDecimal.TEN, Money.of(20, "CAD"),null,VALID_DATE.plus(Duration.ofDays(1)),"Test note"),
+                new Transaction(VALID_ID,VAL_ACCOUNT_ID,TransactionType.SELL,VALID_ASSET,BigDecimal.TEN, Money.of(25, "CAD"),null,VALID_DATE.plus(Duration.ofDays(2)),"Test note")
+            );
+
+            when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class))).thenAnswer(
+                invocation -> invocation.getArgument(0)
+            );
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            
+            assertEquals(new BigDecimal("100.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
+            assertEquals(ValidatedCurrency.CAD, result.currency());
         }
         
     }
@@ -1099,6 +1128,7 @@ class PerformanceCalculationServiceTest {
             .assetIdentifier(symbol)
             .quantity(new BigDecimal(quantity))
             .pricePerUnit(new Money(new BigDecimal(price), currency))
+            .isDrip(false)
             .fees(Collections.emptyList())
             .transactionDate(LocalDateTime.now().minusMonths(6).toInstant(ZoneOffset.UTC))
             .notes("Test buy")
@@ -1114,6 +1144,7 @@ class PerformanceCalculationServiceTest {
             .transactionType(TransactionType.SELL)
             .assetIdentifier(symbol)
             .quantity(new BigDecimal(quantity))
+            .isDrip(false)
             .pricePerUnit(new Money(new BigDecimal(price), currency))
             .fees(Collections.emptyList())
             .transactionDate(LocalDateTime.now().minusMonths(1).toInstant(ZoneOffset.UTC))

@@ -99,7 +99,7 @@ public class Transaction implements ClassValidation {
         return switch (transactionType) {
             case BUY -> calculateGrossAmount().add(calculateTotalFees());
             case SELL -> calculateGrossAmount().subtract(calculateTotalFees()); // Fees reduce proceeds
-            case DEPOSIT, WITHDRAWAL -> pricePerUnit; // Already in Money form
+            case DEPOSIT, WITHDRAWAL, FEE -> pricePerUnit; // Already in Money form, got FEE we are taking the 'total in native pretty sure
             case DIVIDEND, INTEREST -> calculateGrossAmount(); // Usually no fees
             default -> throw new UnsupportedOperationException("Unsupported type: " + transactionType);
         };

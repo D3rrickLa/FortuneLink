@@ -129,8 +129,8 @@ public class Account implements ClassValidation {
 
     void recordTransaction(Transaction transaction) {
         ClassValidation.validateParameter(transaction);
-        addTransaction(transaction);
         applyTransaction(transaction);
+        addTransaction(transaction); // adds Transactions to the list
         updateMetadata();
     }
 
@@ -426,7 +426,7 @@ public class Account implements ClassValidation {
             BigDecimal sellRatio = transaction.getQuantity().divide(asset.getQuantity(), RoundingMode.HALF_UP);
             Money costBasisReduction = asset.getCostBasis().multiply(sellRatio);
             
-            asset.addQuantity(newQuantity);
+            asset.reduceQuantity(transaction.getQuantity());
             asset.updateCostBasis(asset.getCostBasis().subtract(costBasisReduction));
         }
     }

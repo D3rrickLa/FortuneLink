@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -76,8 +77,12 @@ public class PerformanceCalculationService {
 
     }
 
-    public Money calculateRealizedGainsCAD_ACB(Portfolio portfolio, List<Transaction> transactions) { // THIS WILL THROW AN ERROR
-        return portfolio == null ? calculateSellGainWithACB(portfolio, transactions) : Money.ZERO("USD");
+    public Money calculateRealizedGainsCAD_ACB(Portfolio portfolio, ExchangeRateService exchangeRateService, List<Transaction> transactions) {
+        if (portfolio == null) {
+            return Money.ZERO("CAD"); 
+        }
+        
+        return calculateSellGainWithACB(portfolio, exchangeRateService, transactions);
     }
 
     /**
@@ -174,9 +179,40 @@ public class PerformanceCalculationService {
      * 
      * !! USE THE SIMPLIFIED ACB, THE CALCULATESELLGAIN FOR DISPLAYING
      */
-    @SuppressWarnings("Unused")
-    private Money calculateSellGainWithACB(Portfolio portfolio, List<Transaction> transactions) {
-        throw new UnsupportedOperationException("Not yet implemented");
+    private Money calculateSellGainWithACB(Portfolio portfolio, ExchangeRateService exchangeRateService, List<Transaction> transactions) {
+        BigDecimal runningTotalShares = BigDecimal.ZERO;
+        BigDecimal runningTotalCostCAD = BigDecimal.ZERO;
+        BigDecimal totalRealizedGainCAD = BigDecimal.ZERO;
+
+        // Transactions must be sorted by date for ACB to be accurate
+        List<Transaction> sortedTransactions = transactions.stream()
+                .sorted(Comparator.comparing(Transaction::getTransactionDate))
+                .toList();
+
+        for (Transaction tx : sortedTransactions) {
+            BigDecimal txShares = tx.getQuantity();
+            // Ensure we have the CAD value at the time of transaction
+            BigDecimal txPriceCAD = exchangeRateService.convert(tx.getPricePerUnit(), portfolio.getPortfolioCurrencyPreference()).amount(); 
+
+            if (tx.getTransactionType() == TransactionType.BUY) {
+                runningTotalShares = runningTotalShares.add(txShares);
+                runningTotalCostCAD = runningTotalCostCAD.add(txShares.multiply(txPriceCAD));
+            } 
+            else if (tx.getTransactionType() == TransactionType.SELL) {
+                // ACB per share = Total Cost / Total Shares
+                BigDecimal acbPerShare = runningTotalCostCAD.divide(runningTotalShares, 10, RoundingMode.HALF_UP);
+                
+                // Gain = (Sell Price - ACB per share) * Shares Sold
+                BigDecimal gain = txPriceCAD.subtract(acbPerShare).multiply(txShares);
+                totalRealizedGainCAD = totalRealizedGainCAD.add(gain);
+
+                // Reduce total cost by the proportion of shares sold
+                runningTotalShares = runningTotalShares.subtract(txShares);
+                runningTotalCostCAD = runningTotalCostCAD.subtract(acbPerShare.multiply(txShares));
+            }
+        }
+
+        return new Money(totalRealizedGainCAD, portfolio.getPortfolioCurrencyPreference());
     }
 
     private Money calculateFifoGainsForAsset(List<Transaction> transactions, ValidatedCurrency baseCurrency) {
