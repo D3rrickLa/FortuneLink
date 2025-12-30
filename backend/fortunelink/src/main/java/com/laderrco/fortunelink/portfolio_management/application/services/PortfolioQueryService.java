@@ -192,7 +192,7 @@ public class PortfolioQueryService {
             );
         }
         
-        List<TransactionResponse> transactionResponses = transactionMapper.toResponseList(
+        List<TransactionResponse> transactionResponses = TransactionMapper.toResponseList(
             transactionPage.getContent()
         );
         

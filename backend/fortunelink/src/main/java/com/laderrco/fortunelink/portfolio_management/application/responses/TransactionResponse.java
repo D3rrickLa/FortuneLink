@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio_management.application.responses;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;

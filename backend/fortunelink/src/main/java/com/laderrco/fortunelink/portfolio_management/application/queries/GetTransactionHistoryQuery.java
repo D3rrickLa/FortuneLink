@@ -19,12 +19,15 @@ public record GetTransactionHistoryQuery(UserId userId, AccountId accountId, Ins
         // transactionType can be null (means all types)
         
         // Validate pagination
-        if (pageNumber < 0) {
-            throw new IllegalArgumentException("Page number cannot be negative");
+        // Use Spring's built-in validation by attempting to create a PageRequest
+        // This automatically handles negative page numbers and non-positive page sizes
+        try {
+            org.springframework.data.domain.PageRequest.of(pageNumber, pageSize);
+        } 
+        catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid pagination parameters: " + e.getMessage());
         }
-        if (pageSize <= 0) {
-            throw new IllegalArgumentException("Page size must be positive");
-        }
+
         if (pageSize > 100) {
             throw new IllegalArgumentException("Page size cannot exceed 100");
         }
@@ -35,5 +38,9 @@ public record GetTransactionHistoryQuery(UserId userId, AccountId accountId, Ins
         this(userId, null, null, null, null, 0, 20);
     }
 
+    // update this if you want sorting later
+    public org.springframework.data.domain.Pageable toPageable() {
+        return org.springframework.data.domain.PageRequest.of(pageNumber, pageSize);
+    }
     
 }

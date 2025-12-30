@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
@@ -59,7 +58,6 @@ import com.laderrco.fortunelink.portfolio_management.application.responses.NetWo
 import com.laderrco.fortunelink.portfolio_management.application.responses.PerformanceResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -467,21 +465,7 @@ class PortfolioQueryServiceTest {
             PageRequest.of(0, 10), 
             5
         );
-        
-        List<TransactionResponse> transactionResponses = transactions.stream()
-            .map(t -> new TransactionResponse(
-                TransactionId.randomId(),
-                TransactionType.BUY,
-                "AAPL",
-                BigDecimal.ONE,
-                Money.of(20, "USD"),
-                t.getFees(),
-                Money.of(20000, "USD"), 
-                time, 
-                t.getNotes()
-            ))
-            .toList();
-        
+                
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         
         // Since accountId is NOT null, stub findByAccountIdAndFilters instead!
@@ -493,7 +477,7 @@ class PortfolioQueryServiceTest {
             any(Pageable.class)
         )).thenReturn(transactionPage);
         
-        when(transactionMapper.toResponseList(anyList())).thenReturn(transactionResponses);
+        // when(TransactionMapper.toResponseList(anyList())).thenReturn(transactionResponses);
         
         // Act
         TransactionHistoryResponse response = queryService.getTransactionHistory(query);
@@ -513,7 +497,7 @@ class PortfolioQueryServiceTest {
             any(LocalDateTime.class),
             any(Pageable.class)
         );
-        verify(transactionMapper).toResponseList(transactions);
+
     }
     
     @Test
@@ -535,7 +519,6 @@ class PortfolioQueryServiceTest {
             org.springframework.data.domain.PageRequest.of(0, 10), 
             15
         );
-        List<TransactionResponse> transactionResponses = new ArrayList<>();
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         when(transactionRepository.findByPortfolioIdAndFilters(
@@ -545,7 +528,7 @@ class PortfolioQueryServiceTest {
             isNull(),
             any(Pageable.class)
         )).thenReturn(transactionPage);
-        when(transactionMapper.toResponseList(anyList())).thenReturn(transactionResponses);
+        // when(TransactionMapper.toResponseList(anyList())).thenReturn(transactionResponses);
         
         // Act
         TransactionHistoryResponse response = queryService.getTransactionHistory(query);
@@ -580,7 +563,7 @@ class PortfolioQueryServiceTest {
             isNull(),
             any(Pageable.class)
         )).thenReturn(transactionPage);
-        when(transactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());
+        // when(TransactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());
         
         // Act
         TransactionHistoryResponse response = queryService.getTransactionHistory(query);
@@ -616,7 +599,7 @@ class PortfolioQueryServiceTest {
             isNull(),
             any(Pageable.class)
         )).thenReturn(transactionPage);
-        when(transactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());
+        // when(TransactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());
         
         // Act
         TransactionHistoryResponse response = queryService.getTransactionHistory(query);
@@ -655,7 +638,7 @@ class PortfolioQueryServiceTest {
         when(transactionRepository.findByPortfolioIdAndFilters(
             any(), any(), any(), any(), any()
         )).thenReturn(transactionPage);
-        when(transactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());
+        // when(TransactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());
         
         // Act
         TransactionHistoryResponse response = queryService.getTransactionHistory(query);
