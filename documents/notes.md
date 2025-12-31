@@ -894,9 +894,24 @@ The solution is to add a isDrip feild in the Transaction.java and impelment logi
 we will now work on infra
 
 phase 1 -> db/presistence layer (db config)
-phase 2 -> create the db
-phase 3 -> set up the Entities
-phase 4-> set up JPA repo interfaces
-phase 5 -> create an entity mapper (domain to jpa entity)
-phase 6 -> implement repo interfaces (from domain layer)
-phase 7 -> integration test with full persitence layer
+step 1 -> create the db
+step 2 -> set up the Entities
+step 4-> set up JPA repo interfaces
+step 4 -> create an entity mapper (domain to jpa entity)
+step 5 -> implement repo interfaces (from domain layer)
+step 6 -> integration test with full persitence layer
+
+
+^ this is all under step one
+
+new note, we will be using flyway, basically from what i read it is a dev tool used in conjuction with JPA.
+Flyway will run first to ensure the tables exist, this is the standard table, as in this is what we expect.
+Then JPA will look for an entity, and see that if it matches or not.
+
+But what is Flyway? -> git for DB, we don't manually run SQL commands to creating or updating tables, we
+ write 'migrations script' and Flyway auto executes them in order when your app starts
+
+
+2: External API integration (MarketDataService)
+3: REST Controllers (HTTP endpoints)
+4: Authentication (Supabase integration)
