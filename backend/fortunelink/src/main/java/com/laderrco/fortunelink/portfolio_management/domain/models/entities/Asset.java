@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
+
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -43,6 +44,14 @@ public class Asset {
         this.acquiredOn = acquiredOn;
         this.lastSystemInteraction = lastSystemInteraction;
         this.version = version;
+    }
+
+    // RECONSTITUTION: Used by the REpo to restore state
+    public static Asset reconstitute(AssetId id, AssetIdentifier identifier, String currencyCode,BigDecimal quantity, 
+        BigDecimal cbAmount, String cbCurrency, Instant acquiredOn, Instant lastInteraction, int version
+    ) {
+        Money recoCbMoney = new Money(cbAmount, ValidatedCurrency.of(cbCurrency));
+        return new Asset(id, identifier, ValidatedCurrency.of(currencyCode), quantity, recoCbMoney, acquiredOn, lastInteraction, version);
     }
 
     // package-private, only Account can create
