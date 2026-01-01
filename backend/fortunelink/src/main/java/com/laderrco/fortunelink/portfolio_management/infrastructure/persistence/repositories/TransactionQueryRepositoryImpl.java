@@ -40,13 +40,14 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
     
     @Override
     public Page<Transaction> findByAccountId(AccountId accountId, Pageable pageable) {
+        Objects.requireNonNull(pageable);
         Page<TransactionEntity> entityPage = jpaRepository.findByAccountId(
             accountId.accountId(), 
             pageable
         );
-        List<Transaction> transactions = entityPage.getContent().stream()
+        List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
             .map(mapper::toDomain)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
         
         return new PageImpl<>(
             transactions, 
@@ -90,7 +91,8 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
             PortfolioId portfolioId, 
             TransactionType transactionType, 
             Pageable pageable) {
-        
+        Objects.requireNonNull(pageable);
+
         Page<TransactionEntity> entityPage = jpaRepository.findByPortfolioIdWithFilters(
             portfolioId.portfolioId(),
             transactionType.name(),
@@ -99,9 +101,9 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
             pageable
         );
         
-        List<Transaction> transactions = entityPage.getContent().stream()
+        List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
             .map(mapper::toDomain)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
         
         return new PageImpl<>(
             transactions, 
@@ -146,13 +148,8 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
     }
     
     @Override
-    public Page<Transaction> findByPortfolioIdAndFilters(
-            PortfolioId portfolioId,
-            TransactionType transactionType,
-            LocalDateTime startDate,
-            LocalDateTime endDate,
-            Pageable pageable) {
-        
+    public Page<Transaction> findByPortfolioIdAndFilters(PortfolioId portfolioId, TransactionType transactionType, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
+        Objects.requireNonNull(pageable);
         Page<TransactionEntity> entityPage = jpaRepository.findByPortfolioIdWithFilters(
             portfolioId.portfolioId(),
             transactionType != null ? transactionType.name() : null,
@@ -161,9 +158,9 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
             pageable
         );
         
-        List<Transaction> transactions = entityPage.getContent().stream()
+        List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
             .map(mapper::toDomain)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
         
         return new PageImpl<>(
             transactions, 
@@ -179,7 +176,7 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
             LocalDateTime startDate,
             LocalDateTime endDate,
             Pageable pageable) {
-        
+        Objects.requireNonNull(pageable); 
         Page<TransactionEntity> entityPage = jpaRepository.findByAccountIdWithFilters(
             accountId.accountId(),
             transactionType != null ? transactionType.name() : null,
@@ -188,9 +185,9 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
             pageable
         );
         
-        List<Transaction> transactions = entityPage.getContent().stream()
+        List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
             .map(mapper::toDomain)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
         
         return new PageImpl<>(
             transactions, 

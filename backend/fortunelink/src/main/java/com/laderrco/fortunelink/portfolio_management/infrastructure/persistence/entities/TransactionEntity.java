@@ -65,16 +65,11 @@ public class TransactionEntity {
     // Add these for DRIP support
     private BigDecimal dividendAmount; 
     private String dividendCurrency;
-
-    private BigDecimal feeAmount;
-    private String feeCurrency;
-
-    private Instant transactionDate;
-    private String notes;
     private Boolean isDrip; // Use primitive boolean or handle nulls in mapper
 
 
-
+    private Instant transactionDate;
+    private String notes;
 
     @Version
     private Integer version;

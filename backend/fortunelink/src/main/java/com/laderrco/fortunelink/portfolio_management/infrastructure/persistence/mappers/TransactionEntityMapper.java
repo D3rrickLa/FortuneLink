@@ -67,27 +67,61 @@ public class TransactionEntityMapper {
     public TransactionEntity toEntity(Transaction domain) {
         TransactionEntity entity = new TransactionEntity();
         entity.setId(domain.getTransactionId().transactionId());
-        // ... map other fields ...
+        entity.setAccountId(domain.getAccountId().accountId());
+        entity.setTransactionType(domain.getTransactionType().toString());
+        
+        
+        entity.setQuantity(domain.getQuantity());
+        entity.setPriceAmount(domain.getPricePerUnit().amount());
+        entity.setPriceCurrency(domain.getPricePerUnit().currency().getSymbol());
+        // Map the flattened identifier fields
+        mapIdentifierToEntity(entity, domain.getAssetIdentifier());
 
-        List<TransactionFeeEntity> feeEntities = domain.getFees().stream().map(f -> {
-            TransactionFeeEntity feeEntity = new TransactionFeeEntity();
-            feeEntity.setFeeType(f.feeType());
-            feeEntity.setAmount(f.amountInNativeCurrency().amount());
-            feeEntity.setCurrency(f.amountInNativeCurrency().currency().getCode());
-            
-            if (f.exchangeRate() != null) {
-                feeEntity.setRate(f.exchangeRate().rate());
-                feeEntity.setFromCurrency(f.exchangeRate().from().getCode());
-                feeEntity.setToCurrency(f.exchangeRate().to().getCode());
-            }
-            
-            feeEntity.setMetadata(f.metadata());
-            feeEntity.setFeeDate(f.feeDate());
-            return feeEntity;
-        }).toList();
+        if (domain.getFees() != null) {
+            List<TransactionFeeEntity> feeEntities = domain.getFees().stream()
+                .map(this::mapFeeToEntity)
+                .toList();
+    
+            entity.setFees(feeEntities);
+        }
 
-        entity.setFees(feeEntities);
+        if (domain.getTransactionType() == TransactionType.DIVIDEND) {
+            entity.setDividendAmount(domain.getDividendAmount().amount());
+            entity.setDividendCurrency(domain.getDividendAmount().currency().getSymbol());
+            entity.setIsDrip(domain.isDrip());
+        }
+
+        entity.setTransactionDate(domain.getTransactionDate());
+        entity.setNotes(domain.getNotes());
+
         return entity;
+    }
+
+    private void mapIdentifierToEntity(TransactionEntity entity, AssetIdentifier identifier) {
+        if (identifier == null) return;
+
+        switch (identifier) {
+            case MarketIdentifier m -> {
+                entity.setAssetType("MARKET");
+                entity.setPrimaryId(m.getPrimaryId());
+                entity.setSecondaryIds(m.secondaryIds());
+                entity.setDisplayName(m.name());
+                entity.setUnitOfTrade(m.unitOfTrade());
+                entity.setMetadata(m.metadata());
+            }
+            case CashIdentifier c -> {
+                entity.setAssetType("CASH");
+                entity.setPrimaryId(c.getPrimaryId());
+            }
+            case CryptoIdentifier cr -> {
+                entity.setAssetType("CRYPTO");
+                entity.setPrimaryId(cr.getPrimaryId());
+                entity.setDisplayName(cr.displayName());
+                entity.setUnitOfTrade(cr.unitOfTrade());
+                entity.setMetadata(cr.metadata());
+            }
+            default -> throw new IllegalArgumentException("Unknown identifier type: " + identifier.getClass());
+        }
     }
 
     private AssetIdentifier mapSnapshotToIdentifier(TransactionEntity entity) {
@@ -105,7 +139,7 @@ public class TransactionEntityMapper {
             );
             case "CASH" -> new CashIdentifier(
                 entity.getPrimaryId(), 
-                ValidatedCurrency.of(entity.getPrimaryId()) // Use .of() factory if available
+                ValidatedCurrency.of(entity.getPrimaryId())
             );
             case "CRYPTO" -> new CryptoIdentifier(
                 entity.getPrimaryId(), 
@@ -116,6 +150,23 @@ public class TransactionEntityMapper {
             );
             default -> throw new IllegalArgumentException("Unsupported asset snapshot type: " + type);
         };
+    }
+    
+    private TransactionFeeEntity mapFeeToEntity(Fee f) {
+        TransactionFeeEntity feeEntity = new TransactionFeeEntity();
+        feeEntity.setFeeType(f.feeType());
+        feeEntity.setAmount(f.amountInNativeCurrency().amount());
+        feeEntity.setCurrency(f.amountInNativeCurrency().currency().getCode());
+        
+        if (f.exchangeRate() != null) {
+            feeEntity.setRate(f.exchangeRate().rate());
+            feeEntity.setFromCurrency(f.exchangeRate().from().getCode());
+            feeEntity.setToCurrency(f.exchangeRate().to().getCode());
+        }
+        
+        feeEntity.setMetadata(f.metadata());
+        feeEntity.setFeeDate(f.feeDate());
+        return feeEntity;
     }
 
     private Fee mapFeeToDomain(TransactionFeeEntity f) {

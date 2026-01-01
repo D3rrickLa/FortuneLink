@@ -48,6 +48,8 @@ public class PortfolioEntity {
         this.id = id;
         this.userId = userId;
         this.accounts = new ArrayList<>();
-        
+        this.currencyPreference = null;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 }
