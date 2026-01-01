@@ -83,7 +83,7 @@ public class MarketAssetInfoTest {
         assertFalse(asset1.equals(null), "Object should not be equal to null");
         
         // Not equal to different type
-        assertFalse(asset1.equals("Not an Asset object"), "Object should not be equal to a String");
+        assertFalse(asset1.equals(new Object()), "Object should not be equal to a String");
         
         // Not equal to a different object
         assertFalse(asset1.equals(assetDifferent), "Objects with different symbols should not be equal");

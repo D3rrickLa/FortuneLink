@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,7 +13,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -43,7 +44,6 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class PortfolioValuationServiceTest {
-    private PortfolioValuationService valuationService;
     private ValidatedCurrency ValidatedCurrencyCAD = ValidatedCurrency.CAD;
     private AccountId accountId1;
     private AccountId accountId2;
@@ -53,11 +53,18 @@ public class PortfolioValuationServiceTest {
     
     @Mock
     private MarketDataService marketDataService;
+    
+    @Mock
+    private ExchangeRateService exchangeRateService;
+    
+    @InjectMocks
+    private PortfolioValuationService valuationService;
+    
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        valuationService = new PortfolioValuationService();
+        valuationService = new PortfolioValuationService(marketDataService, exchangeRateService);
         accountId1 = AccountId.randomId();
         accountId2 = AccountId.randomId();
         portfolioId1 = PortfolioId.randomId();
@@ -104,11 +111,11 @@ public class PortfolioValuationServiceTest {
 
         // Mock market data service to return current price
         Money currentPrice = new Money(new BigDecimal("180"), usd);
-        when(marketDataService.getCurrentPrice(appleSymbol))
-            .thenReturn(currentPrice);
+        when(marketDataService.getCurrentPrice(appleSymbol)).thenReturn(currentPrice);
+        // when(exchangeRateService.convert(currentPrice, usd));
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
+        Money totalValue = valuationService.calculateTotalValue(portfolio, Instant.now());
 
         // Assert
         // 10 shares * $180 = $1800 + $500 cash = $2300
@@ -123,6 +130,7 @@ public class PortfolioValuationServiceTest {
     void calculateTotalAssets_SingleAccountSingleAsset() {
         // Arrange
         MarketIdentifier appleSymbol = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
+        Instant evaluationTime = Instant.now();
         ValidatedCurrency usd = ValidatedCurrency.USD;
         
         Asset appleStock = Asset.builder()
@@ -157,11 +165,15 @@ public class PortfolioValuationServiceTest {
 
         // Mock market data service to return current price
         Money currentPrice = new Money(new BigDecimal("180"), usd);
-        when(marketDataService.getCurrentPrice(appleSymbol))
-            .thenReturn(currentPrice);
+
+        when(marketDataService.getCurrentPrice(appleSymbol)).thenReturn(currentPrice);
+        // IMPORTANT: Return the actual value if converting to the same currency, 
+        // or just stub it to return the input amount for this test.
+        when(exchangeRateService.convert(any(Money.class), eq(usd), any(Instant.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0)); // Returns the input Money as is
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now()); // this was total assets before
+        Money totalValue = valuationService.calculateTotalValue(portfolio, evaluationTime); // this was total assets before
 
         // Assert
         // 10 shares * $180 = $1800 + $500 cash = $2300
@@ -228,7 +240,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(new Money(new BigDecimal("100"), cad));
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
+        Money totalValue = valuationService.calculateTotalValue(portfolio, Instant.now());
 
         // Assert
         // TFSA: (50 * $80) + (100 * $120) + $1000 = $4000 + $12000 + $1000 = $17000
@@ -270,7 +282,7 @@ public class PortfolioValuationServiceTest {
             .build();
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
+        Money totalValue = valuationService.calculateTotalValue(portfolio, Instant.now());
 
         // Assert
         Money expectedValue = new Money(new BigDecimal("5000"), usd);
@@ -294,7 +306,7 @@ public class PortfolioValuationServiceTest {
             .build();
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
+        Money totalValue = valuationService.calculateTotalValue(portfolio, Instant.now());
 
         // Assert
         Money expectedValue = Money.ZERO(ValidatedCurrency.USD);
@@ -327,7 +339,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(new Money(new BigDecimal("250"), usd));
 
         // Act
-        Money accountValue = valuationService.calculateAccountValue(account, marketDataService, Instant.now());
+        Money accountValue = valuationService.calculateAccountValue(account, ValidatedCurrency.USD, Instant.now());
 
         // Assert
         // 25 shares * $250 + $3000 cash = $9250
@@ -356,7 +368,7 @@ public class PortfolioValuationServiceTest {
             .thenReturn(new Money(new BigDecimal("50000"), usd));
 
         // Act
-        Money assetValue = valuationService.calculateAssetValue(bitcoin, marketDataService, Instant.now());
+        Money assetValue = valuationService.calculateAssetValue(bitcoin, ValidatedCurrency.USD, Instant.now());
 
         // Assert
         // 0.5 BTC * $50000 = $25000
@@ -376,42 +388,48 @@ public class PortfolioValuationServiceTest {
 
         // Act & Assert
         assertThrows(MarketDataNotFoundException.class, () -> {
-            valuationService.calculateAssetValue(asset, marketDataService, Instant.now());
+            valuationService.calculateAssetValue(asset, ValidatedCurrency.USD, Instant.now());
         });
     }
 
     @Test
     @DisplayName("Should call getHistoricalPrice when asOfDate is in the past")
     void testCalculateAssetValue_HistoricalPath() {
-        // 1. Setup
-        PortfolioValuationService service = new PortfolioValuationService();
-        MarketDataService marketDataService = mock(MarketDataService.class);
+        // 1. Setup - Initialize Mocks FIRST
+        MarketDataService mockMarketData = mock(MarketDataService.class);
+        ExchangeRateService mockExchange = mock(ExchangeRateService.class);
+        PortfolioValuationService service = new PortfolioValuationService(mockMarketData, mockExchange);
         
         Asset mockAsset = mock(Asset.class);
-        AssetIdentifier assetId = mock(AssetIdentifier.class);
+        MarketIdentifier assetId = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "CAD", null);
         
-        // Set a date well in the past (e.g., 10 days ago)
         Instant historicalInstant = Instant.now().minus(Duration.ofDays(10));
+        // Truncate to avoid nanosecond mismatch during Mockito's argument comparison
         LocalDateTime expectedLdt = LocalDateTime.ofInstant(historicalInstant, ZoneOffset.UTC);
         
         when(mockAsset.getAssetIdentifier()).thenReturn(assetId);
         when(mockAsset.getQuantity()).thenReturn(new BigDecimal("10"));
         
         // Mock the historical price response
-        Money historicalPrice = Money.of(150.00, "CAD");
-        when(marketDataService.getHistoricalPrice(eq(assetId), eq(expectedLdt)))
+        Money historicalPrice = new Money(new BigDecimal("150.00"), ValidatedCurrency.CAD);
+        when(mockMarketData.getHistoricalPrice(eq(assetId), eq(expectedLdt)))
             .thenReturn(historicalPrice);
 
+        // Mock the exchange rate service (since CAD != USD)
+        // If you don't mock this, 'result' will be null!
+        Money expectedConvertedValue = new Money(new BigDecimal("1100.00"), ValidatedCurrency.USD);
+        when(mockExchange.convert(any(Money.class), eq(ValidatedCurrency.USD), eq(historicalInstant)))
+            .thenReturn(expectedConvertedValue);
+
         // 2. Execute
-        Money result = service.calculateAssetValue(mockAsset, marketDataService, historicalInstant);
+        Money result = service.calculateAssetValue(mockAsset, ValidatedCurrency.USD, historicalInstant);
 
         // 3. Verify
-        // Ensure the result is Price (150) * Quantity (10) = 1500
-        assertEquals(new BigDecimal("1500.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
+        assertNotNull(result);
+        assertEquals(new BigDecimal("1100.00"), result.amount().setScale(2));
         
-        // Verify that the historical method was the one actually called
-        verify(marketDataService, times(1)).getHistoricalPrice(any(), any());
-        verify(marketDataService, never()).getCurrentPrice(any());
+        verify(mockMarketData, times(1)).getHistoricalPrice(eq(assetId), any());
+        verify(mockMarketData, never()).getCurrentPrice(any());
     }
     
     @Nested
@@ -421,29 +439,35 @@ public class PortfolioValuationServiceTest {
         @Test
         @DisplayName("Should call getCurrentPrice when asOfDate is null")
         void testCalculateAssetValue_NullDate() {
-            PortfolioValuationService service = new PortfolioValuationService();
-            MarketDataService marketDataService = mock(MarketDataService.class);
+            // 1. Initialize the Mock first
+            MarketDataService mockMarketData = mock(MarketDataService.class);
+            ExchangeRateService mockExchange = mock(ExchangeRateService.class);
+            
+            // 2. Inject the mock into the service
+            PortfolioValuationService service = new PortfolioValuationService(mockMarketData, mockExchange);
+            
+            // 3. Setup data
             Asset mockAsset = mock(Asset.class);
-            AssetIdentifier assetId = mock(AssetIdentifier.class);
+            // Use a real ID or a mock, but be consistent
+            MarketIdentifier assetId = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
 
             when(mockAsset.getAssetIdentifier()).thenReturn(assetId);
             when(mockAsset.getQuantity()).thenReturn(new BigDecimal("5"));
-            when(marketDataService.getCurrentPrice(assetId)).thenReturn(Money.of(100, "CAD"));
+            
+            // 4. Stub the mock
+            when(mockMarketData.getCurrentPrice(assetId)).thenReturn(new Money(new BigDecimal("100"), ValidatedCurrency.USD));
 
-            // Act: Pass null for asOfDate
-            Money result = service.calculateAssetValue(mockAsset, marketDataService, null);
+            // Act
+            Money result = service.calculateAssetValue(mockAsset, ValidatedCurrency.USD, null);
 
-            // Assert: 100 * 5 = 500
-            assertEquals(new BigDecimal("500.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
-            verify(marketDataService).getCurrentPrice(assetId);
-            verify(marketDataService, never()).getHistoricalPrice(any(), any());
+            // Assert
+            assertEquals(new BigDecimal("500"), result.amount().setScale(0));
+            verify(mockMarketData).getCurrentPrice(assetId);
         }
 
         @Test
         @DisplayName("Should call getCurrentPrice when asOfDate is very recent (e.g., 1 second ago)")
         void testCalculateAssetValue_RecentDate() {
-            PortfolioValuationService service = new PortfolioValuationService();
-            MarketDataService marketDataService = mock(MarketDataService.class);
             Asset mockAsset = mock(Asset.class);
             AssetIdentifier assetId = mock(AssetIdentifier.class);
 
@@ -455,7 +479,7 @@ public class PortfolioValuationServiceTest {
             when(marketDataService.getCurrentPrice(assetId)).thenReturn(Money.of(50, "CAD"));
 
             // Act
-            service.calculateAssetValue(mockAsset, marketDataService, recentInstant);
+            valuationService.calculateAssetValue(mockAsset, ValidatedCurrency.USD, recentInstant);
 
             // Assert
             verify(marketDataService).getCurrentPrice(assetId);

@@ -111,7 +111,7 @@ class PortfolioTest {
         @DisplayName("Should create portfolio using repo specific constructor")
         void testRepoConstructorIsSucess() {
             List<Account> accounts = List.of(createTestAccount("TEST 1", AccountType.CHEQUING), createTestAccount("RRSP", AccountType.INVESTMENT));
-            Portfolio portfolio = new Portfolio(PortfolioId.randomId(), userId, portfolioCurrency, accounts, Instant.now(), Instant.now());
+            Portfolio portfolio =  Portfolio.reconstitute(PortfolioId.randomId(), userId, accounts, portfolioCurrency, Instant.now(), Instant.now());
             assertEquals(accounts, portfolio.getAccounts());
             assertEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());
         }

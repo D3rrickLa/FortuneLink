@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,9 +17,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
 @Table(name = "portfolios")
 public class PortfolioEntity {
     @Id
@@ -29,6 +31,23 @@ public class PortfolioEntity {
     @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AccountEntity> accounts;
 
+    @Column(name = "portfolio_currency_preference", length = 3)
+    private String currencyPreference;
+    
+    @Column(name = "created_at")
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
     @Version
     private Integer version;
+
+
+    public PortfolioEntity(UUID id, UUID userId) {
+        this.id = id;
+        this.userId = userId;
+        this.accounts = new ArrayList<>();
+        
+    }
 }

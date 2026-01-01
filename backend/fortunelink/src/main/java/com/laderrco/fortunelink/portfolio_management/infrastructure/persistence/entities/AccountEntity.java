@@ -18,8 +18,10 @@ import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -44,6 +46,12 @@ public class AccountEntity {
 
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AssetEntity> assets = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TransactionEntity> transactions = new ArrayList<>();
+
+    private Instant createdAt;
+    private Instant lastUpdated;
 
     @Version
     private Integer version;    

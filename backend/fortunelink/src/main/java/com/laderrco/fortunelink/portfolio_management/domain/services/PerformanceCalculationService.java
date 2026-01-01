@@ -30,8 +30,8 @@ public class PerformanceCalculationService {
      * @return Percentage representing total portfolio return (e.g., 20% gain or -5%
      *         loss)
      */
-    public Percentage calculateTotalReturn(Portfolio portfolio, MarketDataService marketDataService) {
-        Money currentValue = calculateCurrentValue(portfolio, marketDataService);
+    public Percentage calculateTotalReturn(Portfolio portfolio, MarketDataService marketDataService, ExchangeRateService exchangeRateService) {
+        Money currentValue = calculateCurrentValue(portfolio, marketDataService, exchangeRateService);
         Money totalInvested = calculateTotalInvested(portfolio);
 
         if (totalInvested.isZero()) {
@@ -128,11 +128,11 @@ public class PerformanceCalculationService {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    private Money calculateCurrentValue(Portfolio portfolio, MarketDataService marketDataService) {
+    private Money calculateCurrentValue(Portfolio portfolio, MarketDataService marketDataService, ExchangeRateService exchangeRateService) {
         // we are going to use the PortfolioEvaluationService.java for calculation
         // rather than a direct implementation
-        PortfolioValuationService portfolioValuationService = new PortfolioValuationService();
-        return portfolioValuationService.calculateTotalValue(portfolio, marketDataService, Instant.now());
+        PortfolioValuationService portfolioValuationService = new PortfolioValuationService(marketDataService, exchangeRateService);
+        return portfolioValuationService.calculateTotalValue(portfolio, Instant.now());
     }
 
     /**

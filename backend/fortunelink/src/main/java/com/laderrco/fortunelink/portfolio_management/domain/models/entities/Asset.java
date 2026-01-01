@@ -47,7 +47,7 @@ public class Asset {
     }
 
     // RECONSTITUTION: Used by the REpo to restore state
-    public static Asset reconstitute(AssetId id, AssetIdentifier identifier, String currencyCode,BigDecimal quantity, 
+    public static Asset reconstitute(AssetId id, AssetIdentifier identifier, String currencyCode, BigDecimal quantity, 
         BigDecimal cbAmount, String cbCurrency, Instant acquiredOn, Instant lastInteraction, int version
     ) {
         Money recoCbMoney = new Money(cbAmount, ValidatedCurrency.of(cbCurrency));

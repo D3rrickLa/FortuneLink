@@ -74,7 +74,7 @@ class AccountTest {
         @Test
         @DisplayName("Should create valid account with all required fields")
         void shouldCreateValidAccount() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -90,7 +90,6 @@ class AccountTest {
             assertEquals(accountType, account.getAccountType());
             assertEquals(baseCurrency, account.getBaseCurrency());
             assertEquals(initialCashBalance, account.getCashBalance());
-            assertEquals(1, account.getVersion());
             assertNotNull(account.getAssets());
             assertNotNull(account.getTransactions());
             assertTrue(account.getAssets().isEmpty());
@@ -100,7 +99,7 @@ class AccountTest {
         @Test
         @DisplayName("Should create an account with generic constructor")
         void shouldCreateValidGenericConstructor() {
-            Account account = new Account(accountId, accountName, accountType, baseCurrency);
+            Account account = Account.createNew(accountId, accountName, accountType, baseCurrency);
             assertEquals(accountId, account.getAccountId());
             assertEquals(accountName, account.getName());
             assertEquals(accountType, account.getAccountType());
@@ -112,7 +111,7 @@ class AccountTest {
         @Test
         @DisplayName("Should initialize empty lists when assets and transactions are null")
         void shouldInitializeEmptyLists() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -134,7 +133,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             List<Transaction> transactions = new ArrayList<>();
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -156,7 +155,7 @@ class AccountTest {
         @DisplayName("Should throw exception when accountId is null")
         void shouldThrowExceptionWhenAccountIdIsNull() {
             assertThrows(NullPointerException.class, () ->
-                new Account(
+                Account.createAccount(
                     null,
                     accountName,
                     accountType,
@@ -172,7 +171,7 @@ class AccountTest {
         @DisplayName("Should throw exception when name is null")
         void shouldThrowExceptionWhenNameIsNull() {
             assertThrows(NullPointerException.class, () ->
-                new Account(
+                Account.createAccount(
                     accountId,
                     null,
                     accountType,
@@ -188,7 +187,7 @@ class AccountTest {
         @DisplayName("Should throw exception when accountType is null")
         void shouldThrowExceptionWhenAccountTypeIsNull() {
             assertThrows(NullPointerException.class, () ->
-                new Account(
+                Account.createAccount(
                     accountId,
                     accountName,
                     null,
@@ -204,7 +203,7 @@ class AccountTest {
         @DisplayName("Should throw exception when baseCurrency is null")
         void shouldThrowExceptionWhenBaseCurrencyIsNull() {
             assertThrows(NullPointerException.class, () ->
-                new Account(
+                Account.createAccount(
                     accountId,
                     accountName,
                     accountType,
@@ -220,7 +219,7 @@ class AccountTest {
         @DisplayName("Should throw exception when cashBalance is null")
         void shouldThrowExceptionWhenCashBalanceIsNull() {
             assertThrows(NullPointerException.class, () ->
-                new Account(
+                Account.createAccount(
                     accountId,
                     accountName,
                     accountType,
@@ -240,7 +239,7 @@ class AccountTest {
         @Test
         @DisplayName("Should deposit money successfully")
         void shouldDepositMoneySuccessfully() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -251,18 +250,16 @@ class AccountTest {
             );
 
             Money depositAmount = Money.of(BigDecimal.valueOf(500), ValidatedCurrency.USD);
-            int initialVersion = account.getVersion();
 
             account.deposit(depositAmount);
 
             assertEquals(new BigDecimal("1500").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
-            assertEquals(initialVersion + 1, account.getVersion());
         }
 
         @Test
         @DisplayName("Should throw exception when depositing with different currency")
         void shouldThrowExceptionWhenDepositingDifferentCurrency() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -282,7 +279,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when depositing zero amount")
         void shouldThrowExceptionWhenDepositingZero() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -302,7 +299,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when depositing negative amount")
         void shouldThrowExceptionWhenDepositingNegative() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -322,7 +319,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when deposit is null")
         void shouldThrowExceptionWhenDepositIsNull() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -345,7 +342,7 @@ class AccountTest {
         @Test
         @DisplayName("Should withdraw money successfully")
         void shouldWithdrawMoneySuccessfully() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -356,18 +353,16 @@ class AccountTest {
             );
 
             Money withdrawAmount = Money.of(BigDecimal.valueOf(300), ValidatedCurrency.USD);
-            int initialVersion = account.getVersion();
 
             account.withdraw(withdrawAmount);
 
             assertEquals(new BigDecimal("700").setScale(Precision.getMoneyPrecision()), account.getCashBalance().amount());
-            assertEquals(initialVersion + 1, account.getVersion());
         }
 
         @Test
         @DisplayName("Should throw exception when withdrawing with different currency")
         void shouldThrowExceptionWhenWithdrawingDifferentCurrency() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -387,7 +382,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when withdrawing more than balance")
         void shouldThrowExceptionWhenInsufficientFunds() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -407,7 +402,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when withdrawing zero amount")
         void shouldThrowExceptionWhenWithdrawingZero() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -427,7 +422,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when withdrawing negative amount")
         void shouldThrowExceptionWhenWithdrawingNegative() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -447,7 +442,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when withdraw is null")
         void shouldThrowExceptionWhenWithdrawIsNull() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -470,7 +465,7 @@ class AccountTest {
         @Test
         @DisplayName("Should add asset successfully")
         void shouldAddAssetSuccessfully() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -481,19 +476,17 @@ class AccountTest {
             );
 
             Asset asset = createMockAsset("AAPL");
-            int initialVersion = account.getVersion();
 
             account.addAsset(asset);
 
             assertEquals(1, account.getAssets().size());
             assertTrue(account.getAssets().contains(asset));
-            assertEquals(initialVersion + 1, account.getVersion());
         }
 
         @Test
         @DisplayName("Should throw exception when adding duplicate asset")
         void shouldThrowExceptionWhenAddingDuplicateAsset() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -516,7 +509,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when asset is null")
         void shouldThrowExceptionWhenAssetIsNull() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -554,7 +547,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             assets.add(asset);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -564,17 +557,15 @@ class AccountTest {
                 null
             );
 
-            int initialVersion = account.getVersion();
             account.removeAsset(assetId);
 
             assertTrue(account.getAssets().isEmpty());
-            assertEquals(initialVersion + 1, account.getVersion());
         }
 
         @Test
         @DisplayName("Should not throw exception when removing non-existent asset")
         void shouldNotThrowWhenRemovingNonExistentAsset() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -592,7 +583,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when assetId is null")
         void shouldThrowExceptionWhenAssetIdIsNull() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -615,7 +606,7 @@ class AccountTest {
         @Test
         @DisplayName("Should update asset successfully")
         void shouldUpdateAssetSuccessfullyWorkAround() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -669,7 +660,7 @@ class AccountTest {
         @Test
         @DisplayName("Testing the exception of not found asset")
         void shouldThrowExceptionWhenTransactionNotFound() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -692,7 +683,7 @@ class AccountTest {
         @Test
         @DisplayName("Testing the exception of changing identity")
         void shouldThrowExceptionWhenTransactionChangesIdentity() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -928,7 +919,7 @@ class AccountTest {
         @Test
         @DisplayName("Should add transaction successfully")
         void shouldAddTransactionSuccessfully() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -955,7 +946,7 @@ class AccountTest {
             List<Transaction> transactions = new ArrayList<>();
             transactions.add(transaction1);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -988,7 +979,7 @@ class AccountTest {
             List<Transaction> transactions = new ArrayList<>();
             transactions.add(transaction);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1015,7 +1006,7 @@ class AccountTest {
             List<Transaction> transactions = new ArrayList<>();
             transactions.add(transaction);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1045,7 +1036,7 @@ class AccountTest {
             List<Transaction> transactions = new ArrayList<>();
             transactions.add(originalTransaction);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1085,7 +1076,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             assets.add(asset);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1103,7 +1094,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when asset not found")
         void shouldThrowExceptionWhenAssetNotFound() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1123,7 +1114,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when identifier is null")
         void shouldThrowExceptionWhenIdentifierIsNull() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1153,7 +1144,7 @@ class AccountTest {
             List<Transaction> transactions = new ArrayList<>();
             transactions.add(transaction);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1171,7 +1162,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when transaction not found")
         void shouldThrowExceptionWhenTransactionNotFound() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1191,7 +1182,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception when transaction id is null")
         void shouldThrowExceptionWhenTransactionIdIsNull() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1214,7 +1205,7 @@ class AccountTest {
         @Test
         @DisplayName("Should calculate total value with cash only")
         void shouldCalculateTotalValueWithCashOnly() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1245,7 +1236,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             assets.add(asset);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1288,7 +1279,7 @@ class AccountTest {
             assets.add(asset1);
             assets.add(asset2);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1312,7 +1303,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record DEPOSIT transaction")
         void shouldRecordDepositTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1340,7 +1331,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record WITHDRAWAL transaction")
         void shouldRecordWithdrawalTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1368,7 +1359,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record BUY transaction")
         void shouldRecordBuyTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1414,7 +1405,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             assets.add(asset);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1457,7 +1448,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             assets.add(asset);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1487,7 +1478,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record DIVIDEND transaction")
         void shouldRecordDividendTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1515,7 +1506,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record DIVIDEND transaction with DRIP")
         void shouldRecordDividendTransactionWithDRIP() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1554,7 +1545,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record DIVIDEND transaction with DRIP on existing")
         void shouldRecordDividendTransactionWithDRIPOnExisting() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1614,7 +1605,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record INTEREST transaction")
         void shouldRecordInterestTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1642,7 +1633,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record FEE transaction")
         void shouldRecordFeeTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1670,7 +1661,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record TRANSFER_IN cash transaction")
         void shouldRecordTransferInCashTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1699,7 +1690,7 @@ class AccountTest {
         @Test
         @DisplayName("Should record TRANSFER_OUT cash transaction")
         void shouldRecordTransferOutCashTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1728,7 +1719,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw exception for null transaction")
         void shouldThrowExceptionForNullTransaction() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1751,7 +1742,7 @@ class AccountTest {
         @Test
         @DisplayName("Should accumulate quantity when buying same asset twice")
         void shouldAccumulateQuantityWhenBuyingSameAssetTwice() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1802,7 +1793,7 @@ class AccountTest {
                 @Test
         @DisplayName("Should apply transfer in logic to account")
         void ShouldAddNewAssetFromTransfer() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1839,7 +1830,7 @@ class AccountTest {
             when(testAAPLAsset.getAssetIdentifier()).thenReturn(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
             when(testAAPLAsset.getQuantity()).thenReturn(BigDecimal.valueOf(50));
             
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1871,7 +1862,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw AssetNotFoundException when selling non-existent asset")
         void shouldThrowExceptionWhenSellingNonExistentAsset() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1916,7 +1907,7 @@ class AccountTest {
             List<Asset> assets = new ArrayList<>();
             assets.add(asset);
 
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1945,7 +1936,7 @@ class AccountTest {
         @Test
         @DisplayName("Should throw UnsupportedTransactionTypeException when given a non-functional transaction type")
         void shouldThrowExceptionWhenApplyTransactionIsGivenNonStandardInput() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -1984,7 +1975,7 @@ class AccountTest {
         @Test
         @DisplayName("Should recalculate state when transaction is removed")
         void shouldRecalculateStateWhenTransactionRemoved() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -2015,7 +2006,7 @@ class AccountTest {
         @Test
         @DisplayName("Should recalculate state when transaction is updated")
         void shouldRecalculateStateWhenTransactionUpdated() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -2056,40 +2047,40 @@ class AccountTest {
     @DisplayName("Version and Metadata Tests")
     class VersionAndMetadataTests {
 
-        @Test
-        @DisplayName("Should increment version on mutations")
-        void shouldIncrementVersionOnMutations() {
-            Account account = new Account(
-                accountId,
-                accountName,
-                accountType,
-                baseCurrency,
-                Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
-                null,
-                null
-            );
+        // @Test
+        // @DisplayName("Should increment version on mutations")
+        // void shouldIncrementVersionOnMutations() {
+        //     Account account = Account.createAccount(
+        //         accountId,
+        //         accountName,
+        //         accountType,
+        //         baseCurrency,
+        //         Money.of(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+        //         null,
+        //         null
+        //     );
 
-            int initialVersion = account.getVersion();
+        //     int initialVersion = account.getVersion();
 
-            account.deposit(Money.of(BigDecimal.valueOf(500), ValidatedCurrency.USD));
-            assertEquals(initialVersion + 1, account.getVersion());
+        //     account.deposit(Money.of(BigDecimal.valueOf(500), ValidatedCurrency.USD));
+        //     assertEquals(initialVersion + 1, account.getVersion());
 
-            account.withdraw(Money.of(BigDecimal.valueOf(200), ValidatedCurrency.USD));
-            assertEquals(initialVersion + 2, account.getVersion());
+        //     account.withdraw(Money.of(BigDecimal.valueOf(200), ValidatedCurrency.USD));
+        //     assertEquals(initialVersion + 2, account.getVersion());
 
-            Asset asset = mock(Asset.class);
-            AssetIdentifier identifier = mock(AssetIdentifier.class);
-            when(identifier.getPrimaryId()).thenReturn("AAPL");
-            when(asset.getAssetIdentifier()).thenReturn(identifier);
+        //     Asset asset = mock(Asset.class);
+        //     AssetIdentifier identifier = mock(AssetIdentifier.class);
+        //     when(identifier.getPrimaryId()).thenReturn("AAPL");
+        //     when(asset.getAssetIdentifier()).thenReturn(identifier);
 
-            account.addAsset(asset);
-            assertEquals(initialVersion + 3, account.getVersion());
-        }
+        //     account.addAsset(asset);
+        //     assertEquals(initialVersion + 3, account.getVersion());
+        // }
 
         @Test
         @DisplayName("Should update lastSystemInteraction on mutations")
         void shouldUpdateLastSystemInteractionOnMutations() throws InterruptedException {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -2116,7 +2107,7 @@ class AccountTest {
     public class TestSufficientCashAndCloseMethod {
         @Test
         void testIfHasSufficientCashIsSuccess() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -2132,7 +2123,7 @@ class AccountTest {
         
         @Test
         void testIfHasSufficientCashIsFail() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -2148,7 +2139,7 @@ class AccountTest {
 
         @Test
         void testCloseIsSucess() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,
@@ -2164,7 +2155,7 @@ class AccountTest {
 
         @Test
         void testCloseIsFailThrowsExceptionWhenAssetsNotEmpty() {
-            Account account = new Account(
+            Account account = Account.createAccount(
                 accountId,
                 accountName,
                 accountType,

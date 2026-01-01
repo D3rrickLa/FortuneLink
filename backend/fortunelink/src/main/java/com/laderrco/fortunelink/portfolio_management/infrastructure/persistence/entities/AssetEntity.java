@@ -46,9 +46,9 @@ import lombok.NoArgsConstructor;
 */
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "assets")
 public class AssetEntity {
     @Id
@@ -64,6 +64,8 @@ public class AssetEntity {
 
     // Identifier Data
     private String primaryId; // part of ALL, NOTE: cash Id gives only the Symbol as we can build the record from there
+
+    private String currency;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -83,6 +85,7 @@ public class AssetEntity {
     private String costBasisCurrency;
 
     private Instant acquiredDate;
+    private Instant lastInteraction;
     
     @Version
     private Integer version;

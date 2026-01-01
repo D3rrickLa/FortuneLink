@@ -76,6 +76,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
+import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
@@ -94,6 +95,9 @@ class PortfolioQueryServiceTest {
     
     @Mock
     private MarketDataService marketDataService;
+
+    @Mock
+    private ExchangeRateService exchangeRateService;
     
     @Mock
     private PerformanceCalculationService performanceCalculationService;
@@ -154,7 +158,7 @@ class PortfolioQueryServiceTest {
         // Money totalLiabilities = new Money(new BigDecimal("20000.00"), testCurrency);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate))
+        when(portfolioValuationService.calculateTotalValue(portfolio, asOfDate))
             .thenReturn(totalAssets);
         
         // Act
@@ -169,7 +173,7 @@ class PortfolioQueryServiceTest {
         assertEquals(testCurrency, response.currency());
         
         verify(portfolioRepository).findByUserId(userId);
-        verify(portfolioValuationService).calculateTotalValue(portfolio, marketDataService, asOfDate);
+        verify(portfolioValuationService).calculateTotalValue(portfolio, asOfDate);
     }
     
     @Test
@@ -184,7 +188,7 @@ class PortfolioQueryServiceTest {
         // Use any(Instant.class) since we don't know the exact timestamp the service will use
         when(portfolioValuationService.calculateTotalValue(
                 eq(portfolio), 
-                eq(marketDataService), 
+                // eq(marketDataService), 
                 any(Instant.class)))
             .thenReturn(totalAssets);
         
@@ -204,7 +208,7 @@ class PortfolioQueryServiceTest {
         verify(portfolioRepository).findByUserId(userId);
         verify(portfolioValuationService).calculateTotalValue(
                 eq(portfolio), 
-                eq(marketDataService), 
+                // eq(marketDataService), 
                 any(Instant.class));
     }
     
@@ -250,7 +254,7 @@ class PortfolioQueryServiceTest {
             any(Pageable.class)
         )).thenReturn(transactions);
         
-        when(performanceCalculationService.calculateTotalReturn(portfolio, marketDataService))
+        when(performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService))
             .thenReturn(totalReturn);
         when(performanceCalculationService.calculateRealizedGains(portfolio, transactions))
             .thenReturn(realizedGains);
@@ -318,9 +322,9 @@ class PortfolioQueryServiceTest {
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(assetAllocationService.calculateAllocationByType(portfolio, marketDataService, time))
+        when(assetAllocationService.calculateAllocationByType(portfolio, time))
             .thenReturn(allocationMap);
-        when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, time))
+        when(portfolioValuationService.calculateTotalValue(portfolio, time))
             .thenReturn(totalValue);
         
         // Act
@@ -334,8 +338,8 @@ class PortfolioQueryServiceTest {
         assertEquals(3, response.getAllocations().size());
         
         verify(portfolioRepository).findByUserId(userId);
-        verify(assetAllocationService).calculateAllocationByType(portfolio, marketDataService, time);
-        verify(portfolioValuationService, times(1)).calculateTotalValue(portfolio, marketDataService, time);
+        verify(assetAllocationService).calculateAllocationByType(portfolio, time);
+        verify(portfolioValuationService, times(1)).calculateTotalValue(portfolio, time);
     }
     
     @Test
@@ -356,9 +360,9 @@ class PortfolioQueryServiceTest {
         // AllocationResponse expectedResponse = mock(AllocationResponse.class);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(assetAllocationService.calculateAllocationByAccount(portfolio, marketDataService, time))
+        when(assetAllocationService.calculateAllocationByAccount(portfolio, time))
             .thenReturn(allocationMap);
-        when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, time))
+        when(portfolioValuationService.calculateTotalValue(portfolio, time))
             .thenReturn(totalValue);
         // when(AllocationMapper.toResponse(anyMap(), eq(totalValue), eq(time)))
         //     .thenReturn(expectedResponse);
@@ -377,7 +381,7 @@ class PortfolioQueryServiceTest {
         assertEquals("TFSA", tfsaDetail.getCategory());
         assertEquals("Account Type", tfsaDetail.getCategoryType());
         
-        verify(assetAllocationService).calculateAllocationByAccount(portfolio, marketDataService, time);
+        verify(assetAllocationService).calculateAllocationByAccount(portfolio, time);
     }
     
     @Test
@@ -398,9 +402,9 @@ class PortfolioQueryServiceTest {
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(assetAllocationService.calculateAllocationByCurrency(portfolio, marketDataService, time))
+        when(assetAllocationService.calculateAllocationByCurrency(portfolio, time))
             .thenReturn(allocationMap);
-        when(portfolioValuationService.calculateTotalValue(portfolio, marketDataService, time))
+        when(portfolioValuationService.calculateTotalValue(portfolio, time))
             .thenReturn(totalValue);
         
         // Act
@@ -426,7 +430,7 @@ class PortfolioQueryServiceTest {
         assertEquals("CAD", cadDetail.getCategory());
         assertEquals("Currency", cadDetail.getCategoryType());
         
-        verify(assetAllocationService).calculateAllocationByCurrency(portfolio, marketDataService, time);
+        verify(assetAllocationService).calculateAllocationByCurrency(portfolio, time);
     }
     
     @Test
@@ -803,7 +807,7 @@ class PortfolioQueryServiceTest {
             Instant.now()
         );
 
-        Account account = new Account(accountId, "Test Name", AccountType.INVESTMENT, ValidatedCurrency.USD);
+        Account account = Account.createNew(accountId, "Test Name", AccountType.INVESTMENT, ValidatedCurrency.USD);
 
         Method addMethod = account.getClass().getDeclaredMethod("addAsset", Asset.class);
         addMethod.setAccessible(true);

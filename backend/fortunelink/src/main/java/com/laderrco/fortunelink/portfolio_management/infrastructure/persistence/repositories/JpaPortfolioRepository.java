@@ -1,6 +1,8 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.stereotype.Repository;
 
@@ -8,6 +10,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Port
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -16,30 +19,51 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JpaPortfolioRepository implements PortfolioRepository {
 
-    private final SpringDataPortfolioRepository springRepo;
-    private final PortfolioEntityMapper mapper;
-    @Override
-    public Portfolio save(Portfolio portfolio) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'save'");
-    }
+private final SpringDataPortfolioRepository jpaRepo; // The standard JpaRepository<PortfolioEntity, UUID>
+    private final PortfolioEntityMapper portfolioMapper;
 
     @Override
     public Optional<Portfolio> findById(PortfolioId id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findById'");
+        UUID portfolioUuid = id.portfolioId();
+        Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
+        return jpaRepo.findById(portfolioUuid)
+                .map(portfolioMapper::toDomain);
     }
 
     @Override
     public Optional<Portfolio> findByUserId(UserId userId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findByUserId'");
+        return jpaRepo.findByUserId(userId.userId())
+                .map(portfolioMapper::toDomain);
+    }
+
+    @Override
+    public Portfolio save(Portfolio portfolio) {
+        UUID portfolioUuid = portfolio.getPortfolioId().portfolioId();
+        Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
+        // 1. Load existing or create fresh
+        PortfolioEntity entity = jpaRepo.findById(portfolioUuid)
+            .orElseGet(() -> {
+                PortfolioEntity newEntity = new PortfolioEntity();
+                newEntity.setId(portfolio.getPortfolioId().portfolioId());
+                // Set the mandatory userId immediately
+                newEntity.setUserId(portfolio.getUserId().userId());
+                return newEntity;
+            }
+        );
+        Objects.requireNonNull(entity, "Entity canno be null");
+        // 2. Map Domain state onto the Entity
+        portfolioMapper.updateEntityFromDomain(portfolio, entity);
+
+        // 3. Save and return the mapped result
+        PortfolioEntity saved = jpaRepo.save(entity);
+        return portfolioMapper.toDomain(saved);
     }
 
     @Override
     public void delete(PortfolioId id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'delete'");
+        UUID portfolioUuid = id.portfolioId();
+        Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
+        jpaRepo.deleteById(portfolioUuid);
     }
     
 }

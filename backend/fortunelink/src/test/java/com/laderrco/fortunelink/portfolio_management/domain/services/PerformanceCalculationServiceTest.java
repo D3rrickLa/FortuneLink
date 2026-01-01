@@ -62,6 +62,9 @@ class PerformanceCalculationServiceTest {
 
     @Mock
     private MarketDataService marketDataService;
+    
+    @Mock 
+    private ExchangeRateService exchangeRateService;
 
     @BeforeEach
     void setUp() {
@@ -92,7 +95,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("180"), usd));
 
             // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
 
             // Assert
             // Invested: $1500 (10 shares * $150) + $500 deposit = $2000
@@ -114,7 +117,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("120"), usd));
 
             // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
 
             // Assert
             // Invested: $2000
@@ -138,7 +141,7 @@ class PerformanceCalculationServiceTest {
                     .build();
 
             // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
 
             // Assert
             assertEquals(Percentage.of(0), totalReturn);
@@ -175,7 +178,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("120"), cad));
 
             // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
 
             // Assert
             // Invested: $2000 (buy) + $1000 (deposit) - $500 (withdrawal) = $2500

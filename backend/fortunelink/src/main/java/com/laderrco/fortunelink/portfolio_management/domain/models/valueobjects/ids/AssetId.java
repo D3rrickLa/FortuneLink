@@ -4,9 +4,9 @@ import java.util.UUID;
 
 import com.laderrco.fortunelink.shared.valueobjects.GenericId;
 
-public record AssetId(UUID accountId) implements GenericId {
+public record AssetId(UUID assetId) implements GenericId {
     public AssetId {
-        accountId = GenericId.validate(accountId);
+        assetId = GenericId.validate(assetId);
     }
     
     public static AssetId randomId() {

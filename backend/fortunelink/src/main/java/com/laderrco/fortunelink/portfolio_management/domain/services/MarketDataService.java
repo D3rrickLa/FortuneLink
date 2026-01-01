@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public interface MarketDataService {
@@ -24,4 +25,5 @@ public interface MarketDataService {
      * Batch fetch for multiple symbols
      */
     public Map<String, MarketAssetInfo> getAssetInfoBatch(List<String> symbols);
+    public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier);
 }

@@ -88,6 +88,35 @@ public class Transaction implements ClassValidation {
             true // isDrip flag
         );
     }
+    public static Transaction reconstitute(
+        TransactionId transactionId,
+        AccountId accountId,
+        TransactionType transactionType,
+        AssetIdentifier assetIdentifier,
+        BigDecimal quantity,
+        Money pricePerUnit,
+        Money dividendAmount,
+        List<Fee> fees,
+        Instant transactionDate,
+        String notes,
+        boolean isDrip
+    ) {
+        // We call the private constructor directly to bypass "new creation" logic
+        // but still maintain basic null/integrity checks.
+        return new Transaction(
+            transactionId,
+            accountId,
+            transactionType,
+            assetIdentifier,
+            quantity,
+            pricePerUnit,
+            dividendAmount,
+            fees,
+            transactionDate,
+            notes,
+            isDrip
+        );
+    }
 
     /**
      * This returns the 'total amount exchanged of the transaction' 

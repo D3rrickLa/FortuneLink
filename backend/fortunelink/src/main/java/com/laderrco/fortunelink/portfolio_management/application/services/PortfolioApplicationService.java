@@ -443,11 +443,12 @@ public class PortfolioApplicationService {
                 .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
 
         // Create new account
-        Account account = new Account(
-                AccountId.randomId(),
-                command.accountName(),
-                command.accountType(),
-                command.baseCurrency());
+        Account account = Account.createNew(
+            AccountId.randomId(),
+            command.accountName(),
+            command.accountType(),
+            command.baseCurrency()
+        );
 
         // Add to portfolio (will check for duplicates)
         portfolio.addAccount(account);
@@ -505,15 +506,16 @@ public class PortfolioApplicationService {
         }
 
         // create portfolio (domain logic)
-        Portfolio portfolio = new Portfolio(command.userId(), command.defaultCurrency());
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency());
 
         // add a default account if specified in command
         if (command.createDefaultAccount()) {
-            Account defaultAccount = new Account(
-                    AccountId.randomId(),
-                    "Default Account",
-                    AccountType.NON_REGISTERED,
-                    command.defaultCurrency());
+            Account defaultAccount = Account.createNew(
+                AccountId.randomId(),
+                "Default Account",
+                AccountType.NON_REGISTERED,
+                command.defaultCurrency()
+            );
             portfolio.addAccount(defaultAccount);
         }
 

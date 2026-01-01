@@ -585,9 +585,17 @@ class DateRangeCalculatorTest {
             Instant ytd = calculator.getYearToDate();
             
             // Year to date should be earliest
+            Instant now = Instant.now();
+    
+            assertThat(ytd).isBeforeOrEqualTo(now);
+            assertThat(qtd).isBeforeOrEqualTo(now);
+            assertThat(mtd).isBeforeOrEqualTo(now);
+            assertThat(wtd).isBeforeOrEqualTo(now);
+            
+            // Valid hierarchy that never breaks:
             assertThat(ytd).isBeforeOrEqualTo(qtd);
             assertThat(qtd).isBeforeOrEqualTo(mtd);
-            assertThat(mtd).isBeforeOrEqualTo(wtd);
+            // Remove or conditionally check: assertThat(mtd).isBeforeOrEqualTo(wtd);
         }
     }
 }

@@ -39,6 +39,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
+import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
@@ -60,6 +61,7 @@ public class PortfolioQueryService {
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioValuationService portfolioValuationService;
+    private final ExchangeRateService exchangeRateService;
     // LiabilityQueryService liabilityQueryService // ACL interface <- for the future when we have this context
     private final PortfolioMapper portfolioMapper;
     private final TransactionMapper transactionMapper;
@@ -72,7 +74,7 @@ public class PortfolioQueryService {
         
         Instant calculationDate = query.asOfDate() != null ? query.asOfDate() : Instant.now();
 
-        Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, calculationDate);
+        Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, calculationDate);
 
         // TODO: When Loan Management context is implemented, fetch liabilities 
         // Example: Money totalLiabilities = liabilitiesQueryService.getTotalLiabilities(quer.userId(), portfolio.getPortfolioCurrencyPreference());
@@ -97,7 +99,7 @@ public class PortfolioQueryService {
         );
 
         // Calculate perofrmance metrics 
-        Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio, marketDataService);
+        Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
         
         Money realizedGains = performanceCalculationService.calculateRealizedGains(portfolio, transactions);
         
@@ -129,22 +131,22 @@ public class PortfolioQueryService {
 
         Instant asOfDate = query.asOfDate() != null ? query.asOfDate() : Instant.now(); // query as of date doesn't need a check 
 
-        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, marketDataService, asOfDate);
+        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, asOfDate);
         
         return switch (query.allocationType()) {
             case BY_TYPE -> {
                 Map<AssetType, Money> allocations = assetAllocationService
-                    .calculateAllocationByType(portfolio, marketDataService, asOfDate);
+                    .calculateAllocationByType(portfolio, asOfDate);
                 yield AllocationMapper.toResponseFromAssetType(allocations, totalValue, asOfDate);
             }
             case BY_ACCOUNT -> {
                 Map<AccountType, Money> allocations = assetAllocationService
-                    .calculateAllocationByAccount(portfolio, marketDataService, asOfDate);
+                    .calculateAllocationByAccount(portfolio, asOfDate);
                 yield AllocationMapper.toResponseFromAccountType(allocations, totalValue, asOfDate);
             }
             case BY_CURRENCY -> {
                 Map<ValidatedCurrency, Money> allocations = assetAllocationService
-                    .calculateAllocationByCurrency(portfolio, marketDataService, asOfDate);
+                    .calculateAllocationByCurrency(portfolio, asOfDate);
                 yield AllocationMapper.toResponseFromCurrency(allocations, totalValue, asOfDate);
             }
         };

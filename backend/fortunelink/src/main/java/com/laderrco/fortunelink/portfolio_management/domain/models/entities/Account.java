@@ -46,9 +46,8 @@ public class Account implements ClassValidation {
 
     private final Instant systemCreationDate;
     private Instant lastSystemInteraction; // for calculating when you last interacted with this asset
-    private int version;
     
-    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, Money cashBalance, List<Asset> assets, List<Transaction> transactions, boolean isActive, Instant closedDate, Instant systemCreationDate, Instant lastSystemInteraction, int version) {
+    private Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, Money cashBalance, List<Asset> assets, List<Transaction> transactions, boolean isActive, Instant closedDate, Instant systemCreationDate, Instant lastSystemInteraction) {
         this.accountId = ClassValidation.validateParameter(accountId);
         this.name = ClassValidation.validateParameter(name);
         this.accountType = ClassValidation.validateParameter(accountType);
@@ -60,16 +59,52 @@ public class Account implements ClassValidation {
         this.closedDate = closedDate;
         this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
         this.lastSystemInteraction = ClassValidation.validateParameter(lastSystemInteraction);
-        this.version = version;
     }
 
-    public Account(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, Money cashBalance, List<Asset> assets, List<Transaction> transactions) {
-        this(accountId, name, accountType, baseCurrency, cashBalance, assets, transactions, true, Instant.now(), Instant.now(), Instant.now(), 1);
+    // RECONSTITUTE FACTORY (For Repository/Mappers)
+    public static Account reconstitute(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, 
+        Money cashBalance, List<Asset> assets, List<Transaction> transactions, boolean isActive, Instant closedDate, 
+        Instant systemCreationDate, Instant lastSystemInteraction
+    ) {
+        return new Account(accountId, name, accountType, baseCurrency, cashBalance, 
+                           assets, transactions, isActive, closedDate, systemCreationDate, 
+                           lastSystemInteraction);
     }
-    
-    // generic, account, nothing in it
-    public Account(AccountId randomId, String accountName, AccountType accountType, ValidatedCurrency baseCurrency) {
-        this(randomId, accountName, accountType, baseCurrency, Money.ZERO(baseCurrency.getCode()),null,null);
+
+    // CREATE NEW FACTORY (For Domain/Application Logic)
+    public static Account createNew(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency) {
+        Instant now = Instant.now();
+        return new Account(
+            accountId, 
+            name, 
+            accountType, 
+            baseCurrency, 
+            Money.ZERO(baseCurrency.getCode()), // Initial balance is zero
+            new ArrayList<>(), 
+            new ArrayList<>(), 
+            true,   // New accounts are active
+            null,   // No closed date
+            now,    // systemCreationDate
+            now     // lastInteraction
+        );
+    }
+
+    // creation from existing data -> could be used for imports
+    public static Account createAccount(AccountId accountId, String name, AccountType accountType, ValidatedCurrency baseCurrency, Money initialAmount, List<Asset> assets, List<Transaction> transactions) {
+        Instant now = Instant.now();
+        return new Account(
+            accountId, 
+            name, 
+            accountType, 
+            baseCurrency, 
+            initialAmount, 
+            assets, 
+            transactions, 
+            true,   // New accounts are active
+            null,   // No closed date
+            now,    // systemCreationDate
+            now     // lastInteraction
+        );
     }
 
     void deposit(Money money) {
@@ -207,7 +242,6 @@ public class Account implements ClassValidation {
     }
     
     private void updateMetadata() {
-        version++;
         this.lastSystemInteraction = Instant.now();
     }
 

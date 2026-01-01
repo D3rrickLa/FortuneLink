@@ -120,7 +120,7 @@ class PortfolioApplicationServiceTest {
         
         // Create portfolio with account
         portfolio = new Portfolio(userId, ValidatedCurrency.USD);
-        account = new Account(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
+        account = Account.createNew(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
         portfolio.addAccount(account);
         
         // Add initial cash
@@ -273,7 +273,7 @@ class PortfolioApplicationServiceTest {
         void setUp() {
             // Create a fresh portfolio for this test to ensure clean state
             portfolio = new Portfolio(userId, ValidatedCurrency.USD);
-            account = new Account(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
+            account = Account.createNew(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
             portfolio.addAccount(account);
             
             // Add initial cash
@@ -749,7 +749,7 @@ class PortfolioApplicationServiceTest {
         void shouldRecordFeeWithDifferentCurrencies() {
             // Given - create account with CAD currency
             AccountId cadAccountId = AccountId.randomId();
-            Account cadAccount = new Account(
+            Account cadAccount = Account.createNew(
                 cadAccountId, 
                 "CAD Account", 
                 AccountType.NON_REGISTERED, 
@@ -1974,7 +1974,7 @@ class PortfolioApplicationServiceTest {
         void shouldRemoveEmptyAccount() {
             // Given
             AccountId newAccountId = AccountId.randomId();
-            Account emptyAccount = new Account(newAccountId, "Empty", AccountType.TFSA, ValidatedCurrency.CAD);
+            Account emptyAccount = Account.createNew(newAccountId, "Empty", AccountType.TFSA, ValidatedCurrency.CAD);
             emptyAccount.close();
             portfolio.addAccount(emptyAccount);
             

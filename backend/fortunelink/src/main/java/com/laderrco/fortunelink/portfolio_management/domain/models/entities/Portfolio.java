@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.UUID;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
@@ -45,19 +45,30 @@ public class Portfolio implements ClassValidation {
     
     // Constructor for new portfolio
     public Portfolio(UserId userId, ValidatedCurrency currency) {
-        this(PortfolioId.randomId(), Objects.requireNonNull(userId, "UserId cannot be null"), new ArrayList<>(), currency, Instant.now(), Instant.now());
+        this(PortfolioId.randomId(), ClassValidation.validateParameter(userId, "UserId cannot be null"), new ArrayList<>(), currency, Instant.now(), Instant.now());
     }
 
-    // Constructor for reconstitution from repository
-    // don't know if i need the list<Transaction> because the account should have it, probably don't
-    public Portfolio(PortfolioId id, UserId userId, ValidatedCurrency currencyPreference, List<Account> accounts, Instant createdDate, Instant lastUpdated) {
-        this(
-            Objects.requireNonNull(id, "PortfolioId cannot be null"),
-            Objects.requireNonNull(userId, "UserId cannot be null"),
-            new ArrayList<>(accounts),
-            currencyPreference, // default portfolio currency preference
-            createdDate,
-            lastUpdated
+    // Static Factory for Reconstitution (used by Mappers/Repositories)
+    public static Portfolio reconstitute(
+        PortfolioId id, 
+        UserId userId, 
+        List<Account> accounts, 
+        ValidatedCurrency currency, 
+        Instant created, 
+        Instant updated
+    ) {
+        return new Portfolio(id, userId, accounts, currency, created, updated);
+    }
+
+    // Static Factory for NEW Portfolios (used by Application Services)
+    public static Portfolio createNew(UserId userId, ValidatedCurrency currency) {
+        return new Portfolio(
+            new PortfolioId(UUID.randomUUID()), 
+            userId, 
+            new ArrayList<>(), 
+            currency, 
+            Instant.now(), 
+            Instant.now()
         );
     }
 
