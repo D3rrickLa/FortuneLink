@@ -8,10 +8,16 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Port
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
+
+import lombok.RequiredArgsConstructor;
 
 @Repository
+@RequiredArgsConstructor
 public class JpaPortfolioRepository implements PortfolioRepository {
 
+    private final SpringDataPortfolioRepository springRepo;
+    private final PortfolioEntityMapper mapper;
     @Override
     public Portfolio save(Portfolio portfolio) {
         // TODO Auto-generated method stub
