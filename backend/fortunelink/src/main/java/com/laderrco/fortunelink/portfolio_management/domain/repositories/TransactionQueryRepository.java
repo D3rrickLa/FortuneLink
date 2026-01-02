@@ -16,11 +16,16 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 // setting it to null = load all at once
 // Read-only queries only - NO save() method    
 public interface TransactionQueryRepository {
-    List<Transaction> findByPortfolioId(PortfolioId portfolioId, Pageable pageable);
+    // Primary queries - by Account (since Account owns Transactions)
     Page<Transaction> findByAccountId(AccountId accountId, Pageable pageable);
-    List<Transaction> findByDateRange(PortfolioId portfolioId, LocalDateTime start, LocalDateTime end, Pageable pageable);
-    long countByPortfolioId(PortfolioId portfolioId);
+    List<Transaction> findByAccountIdAndDateRange(AccountId accountId, LocalDateTime start, LocalDateTime end, Pageable pageable);
     long countByAccountId(AccountId accountId);
+    
+    // Portfolio-level queries for aggregate reporting
+    // (These would join through Portfolio -> Accounts -> Transactions)
+    List<Transaction> findByPortfolioId(PortfolioId portfolioId, Pageable pageable);
+    List<Transaction> findByPortfolioIdAndDateRange(PortfolioId portfolioId, LocalDateTime start, LocalDateTime end, Pageable pageable);
+    long countByPortfolioId(PortfolioId portfolioId);
 
     // Add filtering support
     Page<Transaction> findByPortfolioIdAndTransactionType(PortfolioId portfolioId, TransactionType transactionType, Pageable pageable);

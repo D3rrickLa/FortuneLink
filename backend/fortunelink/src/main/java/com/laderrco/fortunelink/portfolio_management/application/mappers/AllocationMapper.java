@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Component;
+
 import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationDetail;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
@@ -17,6 +19,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
+@Component
 public class AllocationMapper {
 
     private AllocationMapper() {

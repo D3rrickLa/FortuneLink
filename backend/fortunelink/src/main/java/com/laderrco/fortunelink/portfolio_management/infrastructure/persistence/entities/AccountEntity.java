@@ -47,7 +47,7 @@ public class AccountEntity {
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AssetEntity> assets = new ArrayList<>();
     
-    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransactionEntity> transactions = new ArrayList<>();
 
     private Instant createdAt;

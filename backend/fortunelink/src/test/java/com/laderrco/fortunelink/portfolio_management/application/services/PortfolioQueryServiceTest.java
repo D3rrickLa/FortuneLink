@@ -247,7 +247,7 @@ class PortfolioQueryServiceTest {
         Percentage timeWeightedReturn = new Percentage(new BigDecimal("14.80"));
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByDateRange(
+        when(transactionRepository.findByPortfolioIdAndDateRange(
             eq(portfolioId),
             any(LocalDateTime.class),
             any(LocalDateTime.class),
@@ -276,7 +276,7 @@ class PortfolioQueryServiceTest {
         assertNotNull(response.period());
         
         verify(portfolioRepository).findByUserId(userId);
-        verify(transactionRepository).findByDateRange(any(), any(), any(), any());
+        verify(transactionRepository).findByPortfolioIdAndDateRange(any(), any(), any(), any());
     }
     
     @Test

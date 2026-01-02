@@ -91,7 +91,7 @@ public class PortfolioQueryService {
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
-        List<Transaction> transactions = transactionRepository.findByDateRange(
+        List<Transaction> transactions = transactionRepository.findByPortfolioIdAndDateRange(
             portfolio.getPortfolioId(), 
             LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC), 
             LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC), 

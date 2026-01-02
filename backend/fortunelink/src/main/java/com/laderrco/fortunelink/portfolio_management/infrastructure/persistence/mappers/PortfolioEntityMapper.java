@@ -99,8 +99,8 @@ public class PortfolioEntityMapper {
 
         // Map Transactions (Crucial missing piece)
         List<TransactionEntity> txEntities = account.getTransactions().stream()
-            .map(tx -> txMapper.toEntity(tx)) // Assuming txMapper has toEntity
-            .peek(txEnt -> txEnt.setAccountId(entity.getId())) // Ensure FK link
+            .map(tx -> txMapper.toEntity(tx, entity)) // Assuming txMapper has toEntity
+            // .peek(txEnt -> txEnt.setAccount(entity)) // Ensure FK link
             .collect(Collectors.toList());
         entity.setTransactions(txEntities);
 

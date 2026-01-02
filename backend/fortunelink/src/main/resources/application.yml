@@ -1,14 +1,9 @@
+# src/main/resources/application.yml
 spring:
   application:
     name: fortunelink
-  config:
-    import: optional:file:.env
-  datasource:
-    url: jdbc:postgresql://localhost:5432/${DB_NAME}
-    driverClassName: org.postgresql.Driver
-    username: ${DB_NAME}
-    password: ${DB_PASSWORD}
-
+  profiles:
+    active: local # Default to local so it works out-of-the-box for you
   jpa:
     hibernate:
     ddl-auto: validate # Good for testing - recreates schema each run, change to validate when using flyway

@@ -10,13 +10,19 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
@@ -32,45 +38,77 @@ public class TransactionEntity {
     @Id
     private UUID id;
 
-    private UUID portfolioId;
-    private UUID accountId;
-    private String transactionType;
+    // Bidirectional relationship to Account (the owner)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", nullable = false)
+    private AccountEntity account;
 
-    // Snapshot of the asset at time of transaction
-    // this is needed because we have asset identifier in it, which needs to be flatten
-    private String primaryId; // part of ALL, NOTE: cash Id gives only the Symbol as we can build the record from there
+    // Denormalized portfolio reference for query performance
+    @Column(name = "portfolio_id", nullable = false)
+    private UUID portfolioId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_type", nullable = false)
+    private TransactionType transactionType;
+
+    // Asset snapshot fields
+    @Column(name = "primary_id", nullable = false)
+    private String primaryId;
+    
+    @Column(name = "asset_type", nullable = false)
     private String assetType;
+    
+    @Column(name = "display_name")
     private String displayName;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "secondary_ids", columnDefinition = "jsonb")
     private Map<String, String> secondaryIds;
     
+    @Column(name = "unit_of_trade")
     private String unitOfTrade;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, String> metadata; // part of MI, CI
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    private Map<String, String> metadata;
 
-    // //
-
+    // Transaction details
+    @Column(nullable = false)
     private BigDecimal quantity;
-    private BigDecimal priceAmount; // price per unit
+    
+    @Column(name = "price_amount", nullable = false)
+    private BigDecimal priceAmount;
+    
+    @Column(name = "price_currency", nullable = false)
     private String priceCurrency;
 
-
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "transaction_id") // Creates the foreign key in transaction_fees table
+    @JoinColumn(name = "transaction_id")
     private List<TransactionFeeEntity> fees = new ArrayList<>();
 
-    // Add these for DRIP support
-    private BigDecimal dividendAmount; 
+    // DRIP support
+    @Column(name = "dividend_amount")
+    private BigDecimal dividendAmount;
+    
+    @Column(name = "dividend_currency")
     private String dividendCurrency;
-    private Boolean isDrip; // Use primitive boolean or handle nulls in mapper
+    
+    @Column(name = "is_drip")
+    private Boolean isDrip;
 
-
+    @Column(name = "transaction_date", nullable = false)
     private Instant transactionDate;
+
     private String notes;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     @Version
     private Integer version;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+    }
 }

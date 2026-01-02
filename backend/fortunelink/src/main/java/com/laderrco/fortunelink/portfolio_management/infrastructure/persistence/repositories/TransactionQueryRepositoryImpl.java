@@ -57,7 +57,7 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
     }
     
     @Override
-    public List<Transaction> findByDateRange(
+    public List<Transaction> findByPortfolioIdAndDateRange(
             PortfolioId portfolioId, 
             LocalDateTime start, 
             LocalDateTime end, 
@@ -194,6 +194,21 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
             pageable, 
             entityPage.getTotalElements()
         );
+    }
+
+    @Override
+    public List<Transaction> findByAccountIdAndDateRange(AccountId accountId, LocalDateTime start, LocalDateTime end, Pageable pageable) {
+        Page<TransactionEntity> entityPage = jpaRepository.findByAccountIdWithFilters(
+            accountId.accountId(),
+            null, // no type filter
+            start,
+            end,
+            pageable
+        );
+        
+        return entityPage.getContent().stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
     }
     
 }

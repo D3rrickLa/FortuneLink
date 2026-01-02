@@ -38,10 +38,10 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
     );
     
     // Filtered queries for account
-    @Query("SELECT t FROM TransactionEntity t WHERE t.accountId = :accountId " +
-           "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
-           "AND (:startDate IS NULL OR t.transactionDate >= :startDate) " +
-           "AND (:endDate IS NULL OR t.transactionDate <= :endDate)")
+    @Query("SELECT t FROM TransactionEntity t WHERE t.account.id = :accountId " +
+        "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
+        "AND (:startDate IS NULL OR t.transactionDate >= :startDate) " +
+        "AND (:endDate IS NULL OR t.transactionDate <= :endDate)")
     Page<TransactionEntity> findByAccountIdWithFilters(
         @Param("accountId") UUID accountId,
         @Param("transactionType") String transactionType,

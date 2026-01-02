@@ -20,6 +20,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 // ANSWERS THE QUESTION: HOW IS IT PERFORMING (COMPLEX, USES VALUATION + HISTORY)
+// TODO: make the services DI
 public class PerformanceCalculationService {
     /**
      * Calculates the total return percentage of the portfolio.

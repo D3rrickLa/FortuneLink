@@ -16,6 +16,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionFeeEntity;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -48,11 +49,13 @@ public class TransactionEntityMapper {
             fees.add(mapFeeToDomain(fee));
         }
 
+        AccountId accountId = new AccountId(entity.getAccount().getId());
+
         // 2. Use the reconstitution factory
         return Transaction.reconstitute(
             new TransactionId(entity.getId()),
-            new AccountId(entity.getAccountId()),
-            TransactionType.valueOf(entity.getTransactionType()),
+            accountId,
+            entity.getTransactionType(),
             identifier,
             entity.getQuantity(),
             price,
@@ -64,11 +67,12 @@ public class TransactionEntityMapper {
         );
     }
 
-    public TransactionEntity toEntity(Transaction domain) {
+    public TransactionEntity toEntity(Transaction domain, AccountEntity accountEntity) {
         TransactionEntity entity = new TransactionEntity();
         entity.setId(domain.getTransactionId().transactionId());
-        entity.setAccountId(domain.getAccountId().accountId());
-        entity.setTransactionType(domain.getTransactionType().toString());
+        entity.setAccount(accountEntity);
+        entity.setPortfolioId(accountEntity.getId()); 
+        entity.setTransactionType(domain.getTransactionType());
         
         
         entity.setQuantity(domain.getQuantity());

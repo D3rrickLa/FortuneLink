@@ -45,26 +45,26 @@ classDiagram
         +validate() boolean
     }
 
-    class Quantity {
-        <<Value Object>>
-        -BigDecimal amount
-        +add(Quantity) Quantity
-        +subtract(Quantity) Quantity
-        +multiply(BigDecimal) Quantity
-    }
+    %% class Quantity {
+    %%     <<Value Object>>
+    %%     -BigDecimal amount
+    %%     +add(Quantity) Quantity
+    %%     +subtract(Quantity) Quantity
+    %%     +multiply(BigDecimal) Quantity
+    %% }
 
-    class Price {
-        <<Value Object>>
-        -Money pricePerUnit
-        +calculateValue(Quantity) Money
-    }
+    %% class Price {
+    %%     <<Value Object>>
+    %%     -Money pricePerUnit
+    %%     +calculateValue(Quantity) Money
+    %% }
 
-    class TransactionDate {
-        <<Value Object>>
-        -LocalDateTime timestamp
-        +isBefore(TransactionDate) boolean
-        +isAfter(TransactionDate) boolean
-    }
+    %% class TransactionDate {
+    %%     <<Value Object>>
+    %%     -LocalDateTime timestamp
+    %%     +isBefore(TransactionDate) boolean
+    %%     +isAfter(TransactionDate) boolean
+    %% }
 
     class AccountType {
         <<Enumeration>>
@@ -146,7 +146,7 @@ classDiagram
         -PortfolioId id
         -UserId userId
         -List~Account~ accounts
-        -List~Transaction~ transactionHistory
+        %% -List~Transaction~ transactionHistory
         -LocalDateTime createdDate
         -LocalDateTime lastUpdated
         +addAccount(Account)
@@ -190,13 +190,13 @@ classDiagram
         +delete(PortfolioId)
     }
 
-    class TransactionRepository {
-        <<Interface>>
-        +save(Transaction) Transaction
-        +findById(TransactionId) Optional~Transaction~
-        +findByPortfolioId(PortfolioId) List~Transaction~
-        +findByDateRange(PortfolioId, LocalDateTime, LocalDateTime) List~Transaction~
-    }
+    %% class TransactionRepository {
+    %%     <<Interface>>
+    %%     +save(Transaction) Transaction
+    %%     +findById(TransactionId) Optional~Transaction~
+    %%     +findByPortfolioId(PortfolioId) List~Transaction~
+    %%     +findByDateRange(PortfolioId, LocalDateTime, LocalDateTime) List~Transaction~
+    %% }
 
     class MarketDataService {
         <<Interface>>
@@ -207,7 +207,7 @@ classDiagram
 
     %% Relationships
     Portfolio "1" *-- "0..*" Account : contains
-    Portfolio "1" *-- "0..*" Transaction : records
+    Account "1" *-- "0..*" Transaction : records
     Account "1" *-- "0..*" Asset : holds
     
     Asset --> AssetSymbol
