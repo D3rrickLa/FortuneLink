@@ -51,6 +51,9 @@ public class TransactionEntityMapper {
 
         AccountId accountId = new AccountId(entity.getAccount().getId());
 
+        // Pre-validation: Catch data corruption early
+        validateEntityConsistency(entity, identifier);
+
         // 2. Use the reconstitution factory
         return Transaction.reconstitute(
             new TransactionId(entity.getId()),
@@ -77,7 +80,7 @@ public class TransactionEntityMapper {
         
         entity.setQuantity(domain.getQuantity());
         entity.setPriceAmount(domain.getPricePerUnit().amount());
-        entity.setPriceCurrency(domain.getPricePerUnit().currency().getSymbol());
+        entity.setPriceCurrency(domain.getPricePerUnit().currency().getCode());
         // Map the flattened identifier fields
         mapIdentifierToEntity(entity, domain.getAssetIdentifier());
 
@@ -91,7 +94,7 @@ public class TransactionEntityMapper {
 
         if (domain.getTransactionType() == TransactionType.DIVIDEND) {
             entity.setDividendAmount(domain.getDividendAmount().amount());
-            entity.setDividendCurrency(domain.getDividendAmount().currency().getSymbol());
+            entity.setDividendCurrency(domain.getDividendAmount().currency().getCode());
             entity.setIsDrip(domain.isDrip());
         }
 
@@ -106,7 +109,16 @@ public class TransactionEntityMapper {
 
         switch (identifier) {
             case MarketIdentifier m -> {
-                entity.setAssetType("MARKET");
+                // entity.setAssetType("MARKET"); // this is a problem technically
+                if (identifier.getAssetType() == AssetType.STOCK) {
+                    entity.setAssetType("STOCK"); 
+                }
+                else if (identifier.getAssetType() == AssetType.ETF) {
+                    entity.setAssetType("ETF"); 
+                }
+                else {
+                    throw new IllegalArgumentException("identifier must have a 'Market' style of AssetType");
+                }
                 entity.setPrimaryId(m.getPrimaryId());
                 entity.setSecondaryIds(m.secondaryIds());
                 entity.setDisplayName(m.name());
@@ -133,7 +145,7 @@ public class TransactionEntityMapper {
         if (type == null) return null;
 
         return switch (type.toUpperCase()) {
-            case "MARKET" -> new MarketIdentifier(
+            case "STOCK", "ETF" -> new MarketIdentifier(
                 entity.getPrimaryId(), 
                 entity.getSecondaryIds(),
                 AssetType.valueOf(entity.getAssetType()), 
@@ -194,5 +206,25 @@ public class TransactionEntityMapper {
             f.getMetadata() != null ? f.getMetadata() : Collections.emptyMap(),
             f.getFeeDate()
         );
+    }
+
+    // This is technically a stuipd check becasue everything needs one
+    private void validateEntityConsistency(TransactionEntity entity, AssetIdentifier identifier) {
+        TransactionType type = entity.getTransactionType();
+        
+        if (requiresAssetIdentifier(type) && identifier == null) {
+            throw new IllegalStateException(
+                "Data integrity violation: Transaction " + entity.getId() + 
+                " of type " + type + " has no asset identifier. " +
+                "This indicates corrupted database state."
+            );
+        }
+    }
+
+    private boolean requiresAssetIdentifier(TransactionType type) {
+        return type == TransactionType.BUY || 
+            type == TransactionType.SELL || 
+            type == TransactionType.DIVIDEND || 
+            type == TransactionType.INTEREST;
     }
 }

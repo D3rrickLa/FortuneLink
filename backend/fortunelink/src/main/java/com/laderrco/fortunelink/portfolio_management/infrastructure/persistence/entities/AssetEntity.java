@@ -65,8 +65,6 @@ public class AssetEntity {
     // Identifier Data
     private String primaryId; // part of ALL, NOTE: cash Id gives only the Symbol as we can build the record from there
 
-    private String currency;
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, String> secondaryIds; // part of MI
@@ -82,7 +80,7 @@ public class AssetEntity {
     // Financials
     private BigDecimal quantity;
     private BigDecimal costBasisAmount;
-    private String costBasisCurrency;
+    private String costBasisCurrency; // we are reusing this currency
 
     private Instant acquiredDate;
     private Instant lastInteraction;

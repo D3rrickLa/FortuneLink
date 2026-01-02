@@ -22,7 +22,7 @@ public class MarketIdentifierTest {
         Id = "AAPL";
         assetType = AssetType.STOCK;
         name = "Apple";
-        uOt = "USD";
+        uOt = "$US";
         testIdentifier = new MarketIdentifier(Id, null, assetType, name, uOt, null);
     }
 

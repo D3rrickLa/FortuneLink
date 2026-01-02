@@ -915,3 +915,9 @@ But what is Flyway? -> git for DB, we don't manually run SQL commands to creatin
 2: External API integration (MarketDataService)
 3: REST Controllers (HTTP endpoints)
 4: Authentication (Supabase integration)
+
+
+--- jan 02  2026
+Repositories	@DataJpaTest	SQL/HQL correctness, Filters, Pagination.
+Mappers	        JUnit 5	        Field matching, List conversion, Null handling.
+Entities	    JUnit 5	        Validation rules, ID equality, Basic constraints

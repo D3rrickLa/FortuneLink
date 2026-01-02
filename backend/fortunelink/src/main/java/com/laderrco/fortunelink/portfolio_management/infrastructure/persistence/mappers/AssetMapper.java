@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers;
 
+import java.util.Collections;
+
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -13,6 +15,7 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AssetEntity;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
+// TODO: NUll checks
 @Component
 public class AssetMapper {
 
@@ -28,7 +31,7 @@ public class AssetMapper {
         
         // Version is usually managed by JPA @Version, 
         // but we set it here for the initial state if needed
-        entity.setVersion(domain.getVersion());
+        entity.setVersion(entity.getVersion() != null ? entity.getVersion().intValue() : 0);
         
         return entity;
     }
@@ -46,18 +49,26 @@ public class AssetMapper {
         entity.setAssetType(iden.getAssetType().name());
 
         // Fill polymorphic "bucket" columns based on implementation
-        if (iden instanceof MarketIdentifier m) {
-            entity.setSecondaryIds(m.secondaryIds());
-            entity.setUnitOfTrade(m.unitOfTrade());
-            entity.setMetadata(m.metadata());
-        } else if (iden instanceof CryptoIdentifier c) {
-            entity.setUnitOfTrade(c.unitOfTrade());
-            entity.setMetadata(c.metadata());
-        } else if (iden instanceof CashIdentifier) {
-            // Cash typically only uses primaryId (USD, EUR)
-            entity.setSecondaryIds(null);
-            entity.setUnitOfTrade(null);
-            entity.setMetadata(null);
+        switch (iden) {
+            case MarketIdentifier m -> {
+                entity.setSecondaryIds(m.secondaryIds() != null ? m.secondaryIds() : Collections.emptyMap());
+                entity.setUnitOfTrade(m.unitOfTrade());
+                entity.setMetadata(m.metadata() != null ? m.metadata() : Collections.emptyMap());
+            }
+            case CryptoIdentifier c -> {
+                entity.setSecondaryIds(Collections.emptyMap());
+                entity.setUnitOfTrade(c.unitOfTrade());
+                entity.setMetadata(c.metadata() != null ? c.metadata() : Collections.emptyMap());
+            }
+            case CashIdentifier _ -> {
+                // Cash only uses primaryId (USD, EUR)
+                entity.setSecondaryIds(Collections.emptyMap());
+                entity.setUnitOfTrade(null);
+                entity.setMetadata(Collections.emptyMap());
+            }
+
+            default -> {throw new IllegalArgumentException("Provided identitfer not recognized");}
+
         }
         
         // Financials
@@ -75,7 +86,7 @@ public class AssetMapper {
         return Asset.reconstitute(
             new AssetId(entity.getId()),
             toIdentifier(entity),
-            entity.getCurrency(),
+            entity.getCostBasisCurrency(),
             entity.getQuantity(),
             entity.getCostBasisAmount(),
             entity.getCostBasisCurrency(),
@@ -114,9 +125,11 @@ public class AssetMapper {
      * Determines the String discriminator for the database column
      */
     private String determineIdentifierType(AssetIdentifier identifier) {
-        if (identifier instanceof MarketIdentifier) return "MARKET";
-        if (identifier instanceof CashIdentifier) return "CASH";
-        if (identifier instanceof CryptoIdentifier) return "CRYPTO";
-        throw new IllegalArgumentException("Unknown identifier implementation: " + identifier.getClass());
+        return switch (identifier) {
+            case MarketIdentifier _ -> "MARKET";
+            case CashIdentifier _ -> "CASH";
+            case CryptoIdentifier _ -> "CRYPTO";
+            default -> throw new IllegalArgumentException("Unknown identifier implementation: " + identifier.getClass().getName());
+        };
     }
 }
