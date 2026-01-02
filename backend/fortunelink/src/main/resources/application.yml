@@ -1,19 +1,21 @@
 spring:
   application:
     name: fortunelink
-  datasource: 
-    url: jdbc:h2:mem:testdb
-    driverClassName: org.h2.Driver
-    username: sa
-    password: password
+  config:
+    import: optional:file:.env
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${DB_NAME}
+    driverClassName: org.postgresql.Driver
+    username: ${DB_NAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
-    ddl-auto: create-drop # Good for testing - recreates schema each run, change to validate when using flyway
+    ddl-auto: validate # Good for testing - recreates schema each run, change to validate when using flyway
     show-sql: true           # Helpful to see generated SQL during development
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true     # Makes SQL output readable
 
   # Enable H2 Console
@@ -23,6 +25,10 @@ spring:
       path: /h2-console
 
   flyway:
-    enabled: true
+    enabled: false # doesn't suuport latest 17 postgres
     baseline-on-migrate: true
     locations: classpath:db/migration
+
+logging:
+  level:
+    org.springframework.boot.context.config: DEBUG
