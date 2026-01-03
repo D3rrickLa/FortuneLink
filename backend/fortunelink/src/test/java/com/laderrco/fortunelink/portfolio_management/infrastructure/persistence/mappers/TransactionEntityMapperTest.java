@@ -702,19 +702,4 @@ class TransactionEntityMapperTest {
 
         return entity;
     }
-
-    private Transaction createBasicDomainTransaction(TransactionType type) {
-        return Transaction.reconstitute(
-                new TransactionId(UUID.randomUUID()),
-                new AccountId(testAccountEntity.getId()),
-                type,
-                null,
-                new BigDecimal("10"),
-                new Money(new BigDecimal("150.00"), ValidatedCurrency.of("USD")),
-                null,
-                Collections.emptyList(),
-                testDate,
-                "Test notes",
-                false);
-    }
 }

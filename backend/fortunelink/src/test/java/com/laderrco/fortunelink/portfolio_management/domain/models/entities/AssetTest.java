@@ -63,7 +63,6 @@ public class AssetTest {
             assertEquals(quantity, asset.getQuantity());
             assertEquals(costBasis, asset.getCostBasis());
             assertEquals(acquiredOn, asset.getAcquiredOn());
-            assertEquals(1, asset.getVersion());
         }
 
         @Test
@@ -182,11 +181,9 @@ public class AssetTest {
                 acquiredOn
             );
 
-            int initialVersion = asset.getVersion();
             asset.addQuantity(BigDecimal.valueOf(50));
 
             assertEquals(BigDecimal.valueOf(150), asset.getQuantity());
-            assertEquals(initialVersion + 1, asset.getVersion());
             assertTrue(asset.getLastSystemInteraction().isAfter(acquiredOn));
         }
 
@@ -249,12 +246,10 @@ public class AssetTest {
                 acquiredOn
             );
 
-            int initialVersion = asset.getVersion();
             Instant initialInteraction = asset.getLastSystemInteraction();
 
             asset.addQuantity(BigDecimal.TEN);
 
-            assertEquals(initialVersion + 1, asset.getVersion());
             assertTrue(asset.getLastSystemInteraction().isAfter(initialInteraction) || 
                        asset.getLastSystemInteraction().equals(initialInteraction));
         }
@@ -347,10 +342,8 @@ public class AssetTest {
                 acquiredOn
             );
 
-            int initialVersion = asset.getVersion();
             asset.reduceQuantity(BigDecimal.valueOf(20));
 
-            assertEquals(initialVersion + 1, asset.getVersion());
             assertTrue(asset.getLastSystemInteraction().isAfter(acquiredOn));
         }
     }
@@ -468,12 +461,10 @@ public class AssetTest {
                 acquiredOn
             );
 
-            int initialVersion = asset.getVersion();
             Money newCostBasis = Money.of(BigDecimal.valueOf(7000), ValidatedCurrency.USD);
             
             asset.updateCostBasis(newCostBasis);
 
-            assertEquals(initialVersion + 1, asset.getVersion());
             assertTrue(asset.getLastSystemInteraction().isAfter(acquiredOn));
         }
     }
@@ -776,30 +767,30 @@ public class AssetTest {
     @DisplayName("Version and Metadata Tests")
     class VersionAndMetadataTests {
 
-        @Test
-        @DisplayName("Should increment version on each mutation")
-        void shouldIncrementVersionOnMutations() {
-            Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
+        // @Test
+        // @DisplayName("Should increment version on each mutation")
+        // void shouldIncrementVersionOnMutations() {
+        //     Asset asset = new Asset(
+        //         assetId,
+        //         assetIdentifier,
                 
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+        //         quantity,
+        //         costBasis,
+        //         acquiredOn
+        //     );
 
-            assertEquals(1, asset.getVersion());
+        //     assertEquals(1, asset.getVersion());
 
-            asset.addQuantity(BigDecimal.TEN);
-            assertEquals(2, asset.getVersion());
+        //     asset.addQuantity(BigDecimal.TEN);
+        //     assertEquals(2, asset.getVersion());
 
-            asset.reduceQuantity(BigDecimal.ONE);
-            assertEquals(3, asset.getVersion());
+        //     asset.reduceQuantity(BigDecimal.ONE);
+        //     assertEquals(3, asset.getVersion());
 
-            Money newCostBasis = Money.of(BigDecimal.valueOf(6000), ValidatedCurrency.USD);
-            asset.updateCostBasis(newCostBasis);
-            assertEquals(4, asset.getVersion());
-        }
+        //     Money newCostBasis = Money.of(BigDecimal.valueOf(6000), ValidatedCurrency.USD);
+        //     asset.updateCostBasis(newCostBasis);
+        //     assertEquals(4, asset.getVersion());
+        // }
 
         @Test
         @DisplayName("Should update lastSystemInteraction on each mutation")

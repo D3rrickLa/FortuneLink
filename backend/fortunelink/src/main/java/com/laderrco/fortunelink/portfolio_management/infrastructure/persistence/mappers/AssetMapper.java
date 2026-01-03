@@ -14,24 +14,27 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AssetEntity;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 // TODO: NUll checks
 @Component
-public class AssetMapper {
+public class AssetMapper implements ClassValidation {
 
     /**
      * Maps Domain -> Entity (for creating new records)
      */
     public AssetEntity toEntity(Asset domain, AccountEntity accountEntity) {
+        ClassValidation.validateParameter(domain, "Domain asset cannot be null");
+        ClassValidation.validateParameter(accountEntity, "Account entity cannot be null");
+        
         AssetEntity entity = new AssetEntity();
         entity.setId(domain.getAssetId().assetId());
-        entity.setAccount(accountEntity); // Essential for JPA relationship
+        entity.setAccount(accountEntity);
         
         updateEntityFromDomain(domain, entity);
         
-        // Version is usually managed by JPA @Version, 
-        // but we set it here for the initial state if needed
-        entity.setVersion(entity.getVersion() != null ? entity.getVersion().intValue() : 0);
+        // Version is managed by JPA @Version - DO NOT set it manually
+        // JPA will initialize it to 0 on first persist
         
         return entity;
     }
@@ -40,8 +43,10 @@ public class AssetMapper {
      * Updates an existing Entity with Domain state (for updates)
      */
     public void updateEntityFromDomain(Asset domain, AssetEntity entity) {
+        ClassValidation.validateParameter(domain, "Domain asset cannot be null");
+        ClassValidation.validateParameter(entity, "Entity cannot be null");
         AssetIdentifier iden = domain.getAssetIdentifier();
-        
+
         // Flatten Identifier to Entity columns
         entity.setIdentifierType(determineIdentifierType(iden));
         entity.setPrimaryId(iden.getPrimaryId());
@@ -67,10 +72,12 @@ public class AssetMapper {
                 entity.setMetadata(Collections.emptyMap());
             }
 
-            default -> {throw new IllegalArgumentException("Provided identitfer not recognized");}
+            default -> {
+                throw new IllegalArgumentException("Provided unknown Identifier");
+            }
 
         }
-        
+
         // Financials
         entity.setQuantity(domain.getQuantity());
         entity.setCostBasisAmount(domain.getCostBasis().amount());
@@ -83,53 +90,56 @@ public class AssetMapper {
      * Maps Entity -> Domain (Reconstitution)
      */
     public Asset toDomain(AssetEntity entity) {
+        ClassValidation.validateParameter(entity, "Entity cannot be null");
         return Asset.reconstitute(
-            new AssetId(entity.getId()),
-            toIdentifier(entity),
-            entity.getCostBasisCurrency(),
-            entity.getQuantity(),
-            entity.getCostBasisAmount(),
-            entity.getCostBasisCurrency(),
-            entity.getAcquiredDate(),
-            entity.getLastInteraction(),
-            entity.getVersion() != null ? entity.getVersion().intValue() : 0
-        );
-    }
+                new AssetId(entity.getId()),
+                toIdentifier(entity),
+                entity.getCostBasisCurrency(),
+                entity.getQuantity(),
+                entity.getCostBasisAmount(),
+                entity.getCostBasisCurrency(),
+                entity.getAcquiredDate(),
+                entity.getLastInteraction());
+        }
 
     public AssetIdentifier toIdentifier(AssetEntity entity) {
+        ClassValidation.validateParameter(entity, "Entity cannot be null");
+        String identifierType = entity.getIdentifierType();
+        if (identifierType == null) {
+            throw new IllegalStateException(
+                    "Asset " + entity.getId() + " has null identifier type");
+        }
         return switch (entity.getIdentifierType()) {
             case "MARKET" -> new MarketIdentifier(
-                entity.getPrimaryId(),
-                entity.getSecondaryIds(),
-                AssetType.valueOf(entity.getAssetType()),
-                entity.getName(),
-                entity.getUnitOfTrade(),
-                entity.getMetadata()
-            );
+                    entity.getPrimaryId(),
+                    entity.getSecondaryIds(),
+                    AssetType.valueOf(entity.getAssetType()),
+                    entity.getName(),
+                    entity.getUnitOfTrade(),
+                    entity.getMetadata());
             case "CASH" -> new CashIdentifier(
-                entity.getPrimaryId(),
-                ValidatedCurrency.of(entity.getPrimaryId())
-            );
+                    entity.getPrimaryId(),
+                    ValidatedCurrency.of(entity.getPrimaryId()));
             case "CRYPTO" -> new CryptoIdentifier(
-                entity.getPrimaryId(),
-                entity.getName(),
-                AssetType.valueOf(entity.getAssetType()),
-                entity.getUnitOfTrade(),
-                entity.getMetadata()
-            );
-            default -> throw new IllegalStateException("Unknown identifier type: " + entity.getIdentifierType());
+                    entity.getPrimaryId(),
+                    entity.getName(),
+                    AssetType.valueOf(entity.getAssetType()),
+                    entity.getUnitOfTrade(),
+                    entity.getMetadata());
+            default -> throw new IllegalStateException(String.format("Unknown identifier type '%s'",  entity.getIdentifierType().toString()));
         };
     }
 
     /**
      * Determines the String discriminator for the database column
      */
-    private String determineIdentifierType(AssetIdentifier identifier) {
+    protected String determineIdentifierType(AssetIdentifier identifier) {
         return switch (identifier) {
             case MarketIdentifier _ -> "MARKET";
             case CashIdentifier _ -> "CASH";
             case CryptoIdentifier _ -> "CRYPTO";
-            default -> throw new IllegalArgumentException("Unknown identifier implementation: " + identifier.getClass().getName());
+            default -> throw new IllegalArgumentException(
+                    "Unknown identifier implementation: " + identifier.getClass().getName());
         };
     }
 }

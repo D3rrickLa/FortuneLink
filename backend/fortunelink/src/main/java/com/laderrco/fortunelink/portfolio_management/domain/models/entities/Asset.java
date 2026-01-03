@@ -23,10 +23,9 @@ public class Asset {
 
     private final Instant acquiredOn;
     private Instant lastSystemInteraction;
-    private int version;
 
     private Asset(AssetId assetId, AssetIdentifier assetIdentifier, ValidatedCurrency currency,
-            BigDecimal quantity, Money costBasis, Instant acquiredOn, Instant lastSystemInteraction, int version) {
+            BigDecimal quantity, Money costBasis, Instant acquiredOn, Instant lastSystemInteraction) {
         
         Objects.requireNonNull(assetId);
         Objects.requireNonNull(assetIdentifier);
@@ -43,15 +42,14 @@ public class Asset {
         this.costBasis = costBasis;
         this.acquiredOn = acquiredOn;
         this.lastSystemInteraction = lastSystemInteraction;
-        this.version = version;
     }
 
     // RECONSTITUTION: Used by the REpo to restore state
     public static Asset reconstitute(AssetId id, AssetIdentifier identifier, String currencyCode, BigDecimal quantity, 
-        BigDecimal cbAmount, String cbCurrency, Instant acquiredOn, Instant lastInteraction, int version
+        BigDecimal cbAmount, String cbCurrency, Instant acquiredOn, Instant lastInteraction
     ) {
         Money recoCbMoney = new Money(cbAmount, ValidatedCurrency.of(cbCurrency));
-        return new Asset(id, identifier, ValidatedCurrency.of(currencyCode), quantity, recoCbMoney, acquiredOn, lastInteraction, version);
+        return new Asset(id, identifier, ValidatedCurrency.of(currencyCode), quantity, recoCbMoney, acquiredOn, lastInteraction);
     }
 
     // package-private, only Account can create
@@ -63,8 +61,7 @@ public class Asset {
             quantity,
             costBasis,
             acquiredOn,
-            acquiredOn,
-            1
+            acquiredOn
         );
     }
 
@@ -137,10 +134,6 @@ public class Asset {
         return lastSystemInteraction;
     }
 
-    public int getVersion() {
-        return version;
-    }  
-
     // we should really rename this
     // call it getAverageCostPerShare
     public Money getCostPerUnit() {
@@ -173,7 +166,6 @@ public class Asset {
     }
 
     private void updateMetadata() {
-        version++;
         lastSystemInteraction = Instant.now();
     }
 
