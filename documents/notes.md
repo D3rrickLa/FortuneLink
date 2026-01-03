@@ -921,3 +921,64 @@ But what is Flyway? -> git for DB, we don't manually run SQL commands to creatin
 Repositories	@DataJpaTest	SQL/HQL correctness, Filters, Pagination.
 Mappers	        JUnit 5	        Field matching, List conversion, Null handling.
 Entities	    JUnit 5	        Validation rules, ID equality, Basic constraints
+
+
+
+----
+org.hibernate.exception.SQLGrammarException: could not prepare statement [Table "ADMIN_TRANSACTIONS" not found; SQL statement:
+insert into admin_transactions (account_id,asset_type,created_at,display_name,dividend_amount,dividend_currency,is_drip,metadata,notes,portfolio_id,price_amount,price_currency,primary_id,quantity,secondary_ids,transaction_date,transaction_type,unit_of_trade,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) [42102-232]] [insert into admin_transactions (account_id,asset_type,created_at,display_name,dividend_amount,dividend_currency,is_drip,metadata,notes,portfolio_id,price_amount,price_currency,primary_id,quantity,secondary_ids,transaction_date,transaction_type,unit_of_trade,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)]
+ at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:66)
+ at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:58)
+ at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:108)
+ at org.hibernate.engine.jdbc.internal.MutationStatementPreparerImpl$StatementPreparationTemplate.prepareStatement(MutationStatementPreparerImpl.java:117)
+ at org.hibernate.engine.jdbc.internal.MutationStatementPreparerImpl.prepareStatement(MutationStatementPreparerImpl.java:38)
+ at org.hibernate.engine.jdbc.mutation.internal.ModelMutationHelper.standardStatementPreparation(ModelMutationHelper.java:141)
+ at org.hibernate.engine.jdbc.mutation.internal.ModelMutationHelper.lambda$standardPreparation$0(ModelMutationHelper.java:122)
+ at org.hibernate.engine.jdbc.mutation.internal.PreparedStatementDetailsStandard.resolveStatement(PreparedStatementDetailsStandard.java:87)
+ at org.hibernate.engine.jdbc.mutation.internal.JdbcValueBindingsImpl.lambda$beforeStatement$0(JdbcValueBindingsImpl.java:88)
+ at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+ at org.hibernate.engine.jdbc.mutation.spi.BindingGroup.forEachBinding(BindingGroup.java:51)
+ at org.hibernate.engine.jdbc.mutation.internal.JdbcValueBindingsImpl.beforeStatement(JdbcValueBindingsImpl.java:85)
+ at org.hibernate.engine.jdbc.mutation.internal.AbstractMutationExecutor.performNonBatchedMutation(AbstractMutationExecutor.java:130)
+ at org.hibernate.engine.jdbc.mutation.internal.MutationExecutorSingleNonBatched.performNonBatchedOperations(MutationExecutorSingleNonBatched.java:55)
+ at org.hibernate.engine.jdbc.mutation.internal.AbstractMutationExecutor.execute(AbstractMutationExecutor.java:55)
+ at org.hibernate.persister.entity.mutation.InsertCoordinatorStandard.doStaticInserts(InsertCoordinatorStandard.java:194)
+ at org.hibernate.persister.entity.mutation.InsertCoordinatorStandard.coordinateInsert(InsertCoordinatorStandard.java:132)
+ at org.hibernate.persister.entity.mutation.InsertCoordinatorStandard.insert(InsertCoordinatorStandard.java:104)
+ at org.hibernate.action.internal.EntityInsertAction.execute(EntityInsertAction.java:110)
+ at org.hibernate.engine.spi.ActionQueue.executeActions(ActionQueue.java:644)
+ at org.hibernate.engine.spi.ActionQueue.executeActions(ActionQueue.java:511)
+ at org.hibernate.event.internal.AbstractFlushingEventListener.performExecutions(AbstractFlushingEventListener.java:414)
+ at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:41)
+ at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:127)
+ at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1429)
+ at org.hibernate.internal.SessionImpl.flush(SessionImpl.java:1415)
+ at org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager.flush(TestEntityManager.java:171)
+ at org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager.persistAndFlush(TestEntityManager.java:131)
+ at com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories.TransactionQueryRepositoryImplTest.persistTransaction(TransactionQueryRepositoryImplTest.java:220)
+ at com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories.TransactionQueryRepositoryImplTest.findByAccountAndType_filtersCorrectly(TransactionQueryRepositoryImplTest.java:101)
+ at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+ at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+Caused by: org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "ADMIN_TRANSACTIONS" not found; SQL statement:
+insert into admin_transactions (account_id,asset_type,created_at,display_name,dividend_amount,dividend_currency,is_drip,metadata,notes,portfolio_id,price_amount,price_currency,primary_id,quantity,secondary_ids,transaction_date,transaction_type,unit_of_trade,version,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) [42102-232]
+ at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+ at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+ at org.h2.message.DbException.get(DbException.java:223)
+ at org.h2.message.DbException.get(DbException.java:199)
+ at org.h2.command.Parser.getTableOrViewNotFoundDbException(Parser.java:7945)
+ at org.h2.command.Parser.getTableOrViewNotFoundDbException(Parser.java:7916)
+ at org.h2.command.Parser.readTableOrView(Parser.java:7895)
+ at org.h2.command.Parser.readTableOrView(Parser.java:7857)
+ at org.h2.command.Parser.parseInsert(Parser.java:1521)
+ at org.h2.command.Parser.parsePrepared(Parser.java:698)
+ at org.h2.command.Parser.parse(Parser.java:581)
+ at org.h2.command.Parser.parse(Parser.java:556)
+ at org.h2.command.Parser.prepareCommand(Parser.java:484)
+ at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:645)
+ at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:561)
+ at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1164)
+ at org.h2.jdbc.JdbcPreparedStatement.(JdbcPreparedStatement.java:93)
+ at org.h2.jdbc.JdbcConnection.prepareStatement(JdbcConnection.java:315)
+ at org.hibernate.engine.jdbc.internal.MutationStatementPreparerImpl$1.doPrepare(MutationStatementPreparerImpl.java:48)
+ at org.hibernate.engine.jdbc.internal.MutationStatementPreparerImpl$StatementPreparationTemplate.prepareStatement(MutationStatementPreparerImpl.java:106)
+ ... 29 more

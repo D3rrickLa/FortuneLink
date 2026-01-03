@@ -49,7 +49,7 @@ public class TransactionEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
-    private TransactionType transactionType;
+    private TransactionType transactionType; // TODO: find out if this should be TransactionType or String
 
     // Asset snapshot fields
     @Column(name = "primary_id", nullable = false)
@@ -62,14 +62,14 @@ public class TransactionEntity {
     private String displayName;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "secondary_ids", columnDefinition = "jsonb")
+    @Column(name = "secondary_ids")
     private Map<String, String> secondaryIds;
     
     @Column(name = "unit_of_trade")
     private String unitOfTrade;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata", columnDefinition = "jsonb")
+    @Column(name = "metadata") // columnDefinition = "JSONB"
     private Map<String, String> metadata;
 
     // Transaction details

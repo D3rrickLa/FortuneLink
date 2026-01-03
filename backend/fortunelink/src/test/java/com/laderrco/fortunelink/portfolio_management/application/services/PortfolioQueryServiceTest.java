@@ -24,7 +24,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -107,6 +106,9 @@ class PortfolioQueryServiceTest {
     
     @Mock
     private PortfolioValuationService portfolioValuationService;
+
+    @Mock
+    private TransactionQueryService transactionQueryService;
     
     @Mock
     private PortfolioMapper portfolioMapper;
@@ -240,14 +242,14 @@ class PortfolioQueryServiceTest {
         Instant endDate = Instant.now();
         ViewPerformanceQuery query = new ViewPerformanceQuery(userId, accountId, startDate, endDate);
         
-        List<Transaction> transactions = Collections.emptyList();
+        Page<Transaction> transactions = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10), 0);
         Percentage totalReturn = new Percentage(new BigDecimal("15.50"));
         Money realizedGains = new Money(new BigDecimal("1000.00"), testCurrency);
         Money unrealizedGains = new Money(new BigDecimal("500.00"), testCurrency);
         Percentage timeWeightedReturn = new Percentage(new BigDecimal("14.80"));
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByPortfolioIdAndDateRange(
+        when(transactionQueryService.getPortfolioTransactionsByDateRange(
             eq(portfolioId),
             any(LocalDateTime.class),
             any(LocalDateTime.class),
@@ -256,7 +258,7 @@ class PortfolioQueryServiceTest {
         
         when(performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService))
             .thenReturn(totalReturn);
-        when(performanceCalculationService.calculateRealizedGains(portfolio, transactions))
+        when(performanceCalculationService.calculateRealizedGains(portfolio, transactions.getContent()))
             .thenReturn(realizedGains);
         when(performanceCalculationService.calculateUnrealizedGains(portfolio, marketDataService))
             .thenReturn(unrealizedGains);
@@ -276,7 +278,7 @@ class PortfolioQueryServiceTest {
         assertNotNull(response.period());
         
         verify(portfolioRepository).findByUserId(userId);
-        verify(transactionRepository).findByPortfolioIdAndDateRange(any(), any(), any(), any());
+        verify(transactionQueryService).getPortfolioTransactionsByDateRange(any(), any(), any(), any());
     }
     
     @Test
@@ -473,7 +475,7 @@ class PortfolioQueryServiceTest {
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         
         // Since accountId is NOT null, stub findByAccountIdAndFilters instead!
-        when(transactionRepository.findByAccountIdAndFilters(
+        when(transactionQueryService.findByAccountIdAndFilters(
             eq(accountId),
             isNull(),  // transactionType is null
             any(LocalDateTime.class),
@@ -494,7 +496,7 @@ class PortfolioQueryServiceTest {
         assertNotNull(response.dateRange());
         
         verify(portfolioRepository).findByUserId(userId);
-        verify(transactionRepository).findByAccountIdAndFilters(
+        verify(transactionQueryService).findByAccountIdAndFilters(
             eq(accountId),
             isNull(),
             any(LocalDateTime.class),
@@ -525,7 +527,7 @@ class PortfolioQueryServiceTest {
         );
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByPortfolioIdAndFilters(
+        when(transactionQueryService.findByPortfolioIdAndFilters(
             eq(portfolioId), 
             isNull(),
             isNull(),
@@ -542,7 +544,7 @@ class PortfolioQueryServiceTest {
         assertEquals(15, response.totalCount());
         assertEquals("All time", response.dateRange());
         
-        verify(transactionRepository).findByPortfolioIdAndFilters(any(), any(), any(), any(), any());
+        verify(transactionQueryService).findByPortfolioIdAndFilters(any(), any(), any(), any(), any());
     }
     
     @Test
@@ -560,7 +562,7 @@ class PortfolioQueryServiceTest {
             org.springframework.data.domain.PageRequest.of(0, 10), 5);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByAccountIdAndFilters(
+        when(transactionQueryService.findByAccountIdAndFilters(
             eq(accountId),
             isNull(),
             isNull(),
@@ -577,8 +579,8 @@ class PortfolioQueryServiceTest {
         assertEquals(5, response.totalCount());
         
         // Verify that account-specific method was called (not portfolio method)
-        verify(transactionRepository).findByAccountIdAndFilters(any(), any(), any(), any(), any());
-        verify(transactionRepository, never()).findByPortfolioIdAndFilters(any(), any(), any(), any(), any());
+        verify(transactionQueryService).findByAccountIdAndFilters(any(), any(), any(), any(), any());
+        verify(transactionQueryService, never()).findByPortfolioIdAndFilters(any(), any(), any(), any(), any());
     }
     
     @Test
@@ -596,7 +598,7 @@ class PortfolioQueryServiceTest {
             org.springframework.data.domain.PageRequest.of(0, 10), 8);
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByPortfolioIdAndFilters(
+        when(transactionQueryService.findByPortfolioIdAndFilters(
             eq(portfolioId),
             eq(TransactionType.BUY),
             isNull(),
@@ -612,7 +614,7 @@ class PortfolioQueryServiceTest {
         assertNotNull(response);
         assertEquals(8, response.totalCount());
         
-        verify(transactionRepository).findByPortfolioIdAndFilters(
+        verify(transactionQueryService).findByPortfolioIdAndFilters(
             any(), 
             eq(TransactionType.BUY), 
             any(), 
@@ -639,7 +641,7 @@ class PortfolioQueryServiceTest {
         );
         
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(transactionRepository.findByPortfolioIdAndFilters(
+        when(transactionQueryService.findByPortfolioIdAndFilters(
             any(), any(), any(), any(), any()
         )).thenReturn(transactionPage);
         // when(TransactionMapper.toResponseList(anyList())).thenReturn(new ArrayList<>());

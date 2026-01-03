@@ -67,6 +67,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.TransactionQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
@@ -117,36 +118,34 @@ class PortfolioApplicationServiceTest {
     void setUp() {
         userId = UserId.randomId();
         accountId = AccountId.randomId();
-        
+
         // Create portfolio with account
         portfolio = new Portfolio(userId, ValidatedCurrency.USD);
         account = Account.createNew(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
         portfolio.addAccount(account);
-        
+
         // Add initial cash
         Transaction depositTx = new Transaction(
-            TransactionId.randomId(),
-            accountId,
-            TransactionType.DEPOSIT,
-            new CashIdentifier("USD"),
-            BigDecimal.ONE,
-            new Money(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
-            null,
-            Instant.now(),
-            "Initial deposit"
-        );
+                TransactionId.randomId(),
+                accountId,
+                TransactionType.DEPOSIT,
+                new CashIdentifier("USD"),
+                BigDecimal.ONE,
+                new Money(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                null,
+                Instant.now(),
+                "Initial deposit");
         portfolio.recordTransaction(accountId, depositTx);
-        
+
         // Setup asset info
         assetInfo = new MarketAssetInfo(
-            "AAPL",
-            "Apple Inc.",
-            AssetType.STOCK,
-            "NASDAQ",
-            ValidatedCurrency.USD,
-            "Technology",
-            Money.of(215, "USD")
-        );
+                "AAPL",
+                "Apple Inc.",
+                AssetType.STOCK,
+                "NASDAQ",
+                ValidatedCurrency.USD,
+                "Technology",
+                Money.of(215, "USD"));
 
         identifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
     }
@@ -160,15 +159,14 @@ class PortfolioApplicationServiceTest {
         @BeforeEach
         void setUp() {
             command = new RecordPurchaseCommand(
-                userId,
-                accountId,
-                "AAPL",
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now(),
-                "Test purchase"
-            );
+                    userId,
+                    accountId,
+                    "AAPL",
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Test purchase");
         }
 
         @Test
@@ -187,12 +185,12 @@ class PortfolioApplicationServiceTest {
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
             verify(marketDataService).getAssetInfo("AAPL");
-            
+
             // Verify portfolio state
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
             Portfolio savedPortfolio = captor.getValue();
-            
+
             Account savedAccount = savedPortfolio.getAccount(accountId);
             assertThat(savedAccount.getAssets()).hasSize(1);
         }
@@ -202,13 +200,13 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenValidationFails() {
             // Given
             when(commandValidator.validate(command))
-                .thenReturn(ValidationResult.failure(List.of("Invalid quantity")));
+                    .thenReturn(ValidationResult.failure(List.of("Invalid quantity")));
 
             // When/Then
             assertThatThrownBy(() -> service.recordAssetPurchase(command))
-                .isInstanceOf(InvalidTransactionException.class)
-                .hasMessageContaining("Invalid purchase command");
-            
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("Invalid purchase command");
+
             verify(portfolioRepository, never()).save(any());
         }
 
@@ -221,8 +219,8 @@ class PortfolioApplicationServiceTest {
 
             // When/Then
             assertThatThrownBy(() -> service.recordAssetPurchase(command))
-                .isInstanceOf(AssetNotFoundException.class)
-                .hasMessageContaining("Asset not found: AAPL");
+                    .isInstanceOf(AssetNotFoundException.class)
+                    .hasMessageContaining("Asset not found: AAPL");
         }
 
         @Test
@@ -235,7 +233,7 @@ class PortfolioApplicationServiceTest {
 
             // When/Then
             assertThatThrownBy(() -> service.recordAssetPurchase(command))
-                .isInstanceOf(PortfolioNotFoundException.class);
+                    .isInstanceOf(PortfolioNotFoundException.class);
         }
 
         @Test
@@ -243,23 +241,22 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenInsufficientFunds() {
             // Given
             RecordPurchaseCommand largeCommand = new RecordPurchaseCommand(
-                userId,
-                accountId,
-                "AAPL",
-                BigDecimal.valueOf(1000), // Too many shares
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now(),
-                "Large purchase"
-            );
-            
+                    userId,
+                    accountId,
+                    "AAPL",
+                    BigDecimal.valueOf(1000), // Too many shares
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Large purchase");
+
             when(commandValidator.validate(largeCommand)).thenReturn(ValidationResult.success());
             when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.recordAssetPurchase(largeCommand))
-                .isInstanceOf(InsufficientFundsException.class);
+                    .isInstanceOf(InsufficientFundsException.class);
         }
     }
 
@@ -269,51 +266,48 @@ class PortfolioApplicationServiceTest {
 
         private RecordSaleCommand command;
 
-      @BeforeEach
+        @BeforeEach
         void setUp() {
             // Create a fresh portfolio for this test to ensure clean state
             portfolio = new Portfolio(userId, ValidatedCurrency.USD);
             account = Account.createNew(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
             portfolio.addAccount(account);
-            
+
             // Add initial cash
             Transaction depositTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.DEPOSIT,
-                new CashIdentifier("USD"),
-                BigDecimal.ONE,
-                new Money(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200),
-                "Initial deposit"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.DEPOSIT,
+                    new CashIdentifier("USD"),
+                    BigDecimal.ONE,
+                    new Money(BigDecimal.valueOf(10000), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200),
+                    "Initial deposit");
             portfolio.recordTransaction(accountId, depositTx);
-            
+
             // Buy assets that we'll later sell - using the ACTUAL domain logic
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(), // Use the same identifier that will be used in the sale
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Buy for test"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(), // Use the same identifier that will be used in the sale
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Buy for test");
             portfolio.recordTransaction(accountId, buyTx);
-            
+
             command = new RecordSaleCommand(
-                userId,
-                accountId,
-                "AAPL",
-                BigDecimal.valueOf(5),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now(),
-                "Test sale"
-            );
+                    userId,
+                    accountId,
+                    "AAPL",
+                    BigDecimal.valueOf(5),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Test sale");
         }
 
         @Test
@@ -324,8 +318,6 @@ class PortfolioApplicationServiceTest {
             when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
-
-
 
             // Verify the asset exists before selling (for debugging)
             Account accountBeforeSale = portfolio.getAccount(accountId);
@@ -341,7 +333,7 @@ class PortfolioApplicationServiceTest {
             // Then
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
-            
+
             // Verify the sale reduced the asset quantity
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
@@ -359,24 +351,23 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenSellingMoreThanOwned() {
             // Given - we only own 10 shares from setUp
             RecordSaleCommand largeCommand = new RecordSaleCommand(
-                userId,
-                accountId,
-                "AAPL",
-                BigDecimal.valueOf(100), // Trying to sell 100, but only own 10
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now(),
-                "Large sale"
-            );
-            
+                    userId,
+                    accountId,
+                    "AAPL",
+                    BigDecimal.valueOf(100), // Trying to sell 100, but only own 10
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Large sale");
+
             when(commandValidator.validate(largeCommand)).thenReturn(ValidationResult.success());
             when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.recordAssetSale(largeCommand))
-                .isInstanceOf(InsufficientFundsException.class);
-            
+                    .isInstanceOf(InsufficientFundsException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -389,8 +380,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.recordAssetSale(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -405,15 +396,14 @@ class PortfolioApplicationServiceTest {
         void shouldRecordDeposit() {
             // Given
             RecordDepositCommand command = new RecordDepositCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Deposit"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Deposit");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -434,8 +424,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.recordDeposit(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -450,15 +440,14 @@ class PortfolioApplicationServiceTest {
         void shouldRecordWithdrawal() {
             // Given
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Withdrawal"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Withdrawal");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -476,21 +465,20 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenInsufficientCash() {
             // Given
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(50000), ValidatedCurrency.USD), // More than available
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Large withdrawal"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(50000), ValidatedCurrency.USD), // More than available
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Large withdrawal");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.recordWithdrawal(command))
-                .isInstanceOf(InsufficientFundsException.class);
+                    .isInstanceOf(InsufficientFundsException.class);
         }
 
         @Test
@@ -501,8 +489,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.recordWithdrawal(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -516,16 +504,15 @@ class PortfolioApplicationServiceTest {
         void setUp() {
             // Add stock position first
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                identifier,
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Buy for dividend test"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    identifier,
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Buy for dividend test");
             portfolio.recordTransaction(accountId, buyTx);
         }
 
@@ -534,17 +521,16 @@ class PortfolioApplicationServiceTest {
         void shouldRecordDividendWithoutDrip() {
             // Given
             RecordIncomeCommand command = new RecordIncomeCommand(
-                userId,
-                accountId,
-                "AAPL",
-                new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
-                TransactionType.DIVIDEND,
-                false,
-                BigDecimal.ONE,
-                Instant.now(),
-                "Dividend"
-            );
-            
+                    userId,
+                    accountId,
+                    "AAPL",
+                    new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
+                    TransactionType.DIVIDEND,
+                    false,
+                    BigDecimal.ONE,
+                    Instant.now(),
+                    "Dividend");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
@@ -563,17 +549,16 @@ class PortfolioApplicationServiceTest {
         void shouldRecordDividendWithDrip() {
             // Given
             RecordIncomeCommand command = new RecordIncomeCommand(
-                userId,
-                accountId,
-                "AAPL",
-                new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
-                TransactionType.DIVIDEND,
-                true,
-                BigDecimal.valueOf(0.5), // Bought 0.5 shares
-                Instant.now(),
-                "DRIP Dividend"
-            );
-            
+                    userId,
+                    accountId,
+                    "AAPL",
+                    new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
+                    TransactionType.DIVIDEND,
+                    true,
+                    BigDecimal.valueOf(0.5), // Bought 0.5 shares
+                    Instant.now(),
+                    "DRIP Dividend");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
@@ -595,8 +580,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.recordDividendIncome(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -606,23 +591,22 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionsWhenAssetInfoIsNotFound() {
             // Given
             RecordIncomeCommand command = new RecordIncomeCommand(
-                userId,
-                accountId,
-                null,
-                new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
-                TransactionType.DIVIDEND,
-                true,
-                BigDecimal.valueOf(0.5), // Bought 0.5 shares
-                Instant.now(),
-                "DRIP Dividend"
-            );
-            
+                    userId,
+                    accountId,
+                    null,
+                    new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
+                    TransactionType.DIVIDEND,
+                    true,
+                    BigDecimal.valueOf(0.5), // Bought 0.5 shares
+                    Instant.now(),
+                    "DRIP Dividend");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             assertThatThrownBy(() -> service.recordDividendIncome(command))
-                .isInstanceOf(AssetNotFoundException.class);
-            
+                    .isInstanceOf(AssetNotFoundException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -638,15 +622,14 @@ class PortfolioApplicationServiceTest {
 
             // Given
             RecordFeeCommand command = new RecordFeeCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(25.50), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Account maintenance fee"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(25.50), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Account maintenance fee");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -659,14 +642,14 @@ class PortfolioApplicationServiceTest {
             // Then
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
-            
+
             // Verify fee reduced cash balance
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
             Portfolio savedPortfolio = captor.getValue();
             Account savedAccount = savedPortfolio.getAccount(accountId);
             Money cashAfterFee = savedAccount.getCashBalance();
-            
+
             assertThat(cashAfterFee.amount()).isLessThan(cashBeforeFee.amount());
         }
 
@@ -675,23 +658,22 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenValidationFails() {
             // Given
             RecordFeeCommand command = new RecordFeeCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(-10), ValidatedCurrency.USD), // Invalid negative amount
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Invalid fee"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(-10), ValidatedCurrency.USD), // Invalid negative amount
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Invalid fee");
+
             when(commandValidator.validate(command))
-                .thenReturn(ValidationResult.failure(List.of("Fee amount must be positive")));
+                    .thenReturn(ValidationResult.failure(List.of("Fee amount must be positive")));
 
             // When/Then
             assertThatThrownBy(() -> service.recordFee(command))
-                .isInstanceOf(InvalidTransactionException.class)
-                .hasMessageContaining("Invalid fee command");
-            
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("Invalid fee command");
+
             verify(portfolioRepository, never()).save(any());
         }
 
@@ -700,22 +682,21 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenPortfolioNotFound() {
             // Given
             RecordFeeCommand command = new RecordFeeCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(25), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Fee"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(25), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Fee");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
             // When/Then
             assertThatThrownBy(() -> service.recordFee(command))
-                .isInstanceOf(PortfolioNotFoundException.class);
-            
+                    .isInstanceOf(PortfolioNotFoundException.class);
+
             verify(portfolioRepository, never()).save(any());
         }
 
@@ -725,22 +706,21 @@ class PortfolioApplicationServiceTest {
             // Given
             AccountId nonExistentAccountId = AccountId.randomId();
             RecordFeeCommand command = new RecordFeeCommand(
-                userId,
-                nonExistentAccountId,
-                new Money(BigDecimal.valueOf(25), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Fee"
-            );
-            
+                    userId,
+                    nonExistentAccountId,
+                    new Money(BigDecimal.valueOf(25), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Fee");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.recordFee(command))
-                .isInstanceOf(AccountNotFoundException.class);
-            
+                    .isInstanceOf(AccountNotFoundException.class);
+
             verify(portfolioRepository, never()).save(any());
         }
 
@@ -750,37 +730,34 @@ class PortfolioApplicationServiceTest {
             // Given - create account with CAD currency
             AccountId cadAccountId = AccountId.randomId();
             Account cadAccount = Account.createNew(
-                cadAccountId, 
-                "CAD Account", 
-                AccountType.NON_REGISTERED, 
-                ValidatedCurrency.CAD
-            );
+                    cadAccountId,
+                    "CAD Account",
+                    AccountType.NON_REGISTERED,
+                    ValidatedCurrency.CAD);
             portfolio.addAccount(cadAccount);
-            
+
             // Add CAD cash
             Transaction cadDeposit = new Transaction(
-                TransactionId.randomId(),
-                cadAccountId,
-                TransactionType.DEPOSIT,
-                new CashIdentifier("CAD"),
-                BigDecimal.ONE,
-                new Money(BigDecimal.valueOf(5000), ValidatedCurrency.CAD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "CAD deposit"
-            );
+                    TransactionId.randomId(),
+                    cadAccountId,
+                    TransactionType.DEPOSIT,
+                    new CashIdentifier("CAD"),
+                    BigDecimal.ONE,
+                    new Money(BigDecimal.valueOf(5000), ValidatedCurrency.CAD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "CAD deposit");
             portfolio.recordTransaction(cadAccountId, cadDeposit);
-            
+
             RecordFeeCommand command = new RecordFeeCommand(
-                userId,
-                cadAccountId,
-                new Money(BigDecimal.valueOf(15.75), ValidatedCurrency.CAD),
-                ValidatedCurrency.CAD,
-                null,
-                Instant.now(),
-                "Foreign exchange fee"
-            );
-            
+                    userId,
+                    cadAccountId,
+                    new Money(BigDecimal.valueOf(15.75), ValidatedCurrency.CAD),
+                    ValidatedCurrency.CAD,
+                    null,
+                    Instant.now(),
+                    "Foreign exchange fee");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -797,17 +774,18 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should record fee with additional fees")
         void shouldRecordFeeWithAdditionalFees() {
             // Given
-            Fee additionalFees = new Fee(FeeType.ACCOUNT_MAINTENANCE, new Money(BigDecimal.valueOf(2.50), ValidatedCurrency.USD), ExchangeRate.createSingle(ValidatedCurrency.USD, "null"), null, Instant.now());
+            Fee additionalFees = new Fee(FeeType.ACCOUNT_MAINTENANCE,
+                    new Money(BigDecimal.valueOf(2.50), ValidatedCurrency.USD),
+                    ExchangeRate.createSingle(ValidatedCurrency.USD, "null"), null, Instant.now());
             RecordFeeCommand command = new RecordFeeCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(25), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                List.of(additionalFees),
-                Instant.now(),
-                "Transfer fee with processing charge"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(25), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    List.of(additionalFees),
+                    Instant.now(),
+                    "Transfer fee with processing charge");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -818,7 +796,7 @@ class PortfolioApplicationServiceTest {
             // Then
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
-            
+
             // Verify both total amount and additional fees were recorded
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
@@ -829,25 +807,23 @@ class PortfolioApplicationServiceTest {
         void shouldRecordMultipleFeesInSequence() {
             // Given
             RecordFeeCommand fee1 = new RecordFeeCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(10), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now(),
-                "Monthly fee"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(10), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now(),
+                    "Monthly fee");
+
             RecordFeeCommand fee2 = new RecordFeeCommand(
-                userId,
-                accountId,
-                new Money(BigDecimal.valueOf(5), ValidatedCurrency.USD),
-                ValidatedCurrency.USD,
-                null,
-                Instant.now().plusSeconds(60),
-                "Transaction fee"
-            );
-            
+                    userId,
+                    accountId,
+                    new Money(BigDecimal.valueOf(5), ValidatedCurrency.USD),
+                    ValidatedCurrency.USD,
+                    null,
+                    Instant.now().plusSeconds(60),
+                    "Transaction fee");
+
             when(commandValidator.validate(any(RecordFeeCommand.class))).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -873,20 +849,19 @@ class PortfolioApplicationServiceTest {
         @BeforeEach
         void setUp() {
             transactionId = TransactionId.randomId();
-            
+
             // Create existing transaction
             existingTransaction = new Transaction(
-                transactionId,
-                accountId,
-                TransactionType.BUY,
-                identifier,
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Original purchase"
-            );
-            
+                    transactionId,
+                    accountId,
+                    TransactionType.BUY,
+                    identifier,
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Original purchase");
+
             portfolio.recordTransaction(accountId, existingTransaction);
         }
 
@@ -895,27 +870,26 @@ class PortfolioApplicationServiceTest {
         void shouldUpdateTransaction() {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                transactionId,
-                TransactionType.BUY,
-                identifier,
-                BigDecimal.valueOf(15), // Changed quantity
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated purchase"
-            );
-            
+                    userId,
+                    accountId,
+                    transactionId,
+                    TransactionType.BUY,
+                    identifier,
+                    BigDecimal.valueOf(15), // Changed quantity
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated purchase");
+
             List<Transaction> transactions = List.of(existingTransaction);
             if (transactions.isEmpty()) {
                 fail("Something wrong, transactions are empty here");
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -927,39 +901,37 @@ class PortfolioApplicationServiceTest {
             verify(portfolioRepository).save(any(Portfolio.class));
         }
 
-
         @Test
         @DisplayName("Should throw exception when updating transaction date to future")
         void shouldThrowExceptionWhenDateInFuture() {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                transactionId,
-                TransactionType.BUY,
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().plusSeconds(86400), // Future date
-                "Future purchase"
-            );
-            
+                    userId,
+                    accountId,
+                    transactionId,
+                    TransactionType.BUY,
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().plusSeconds(86400), // Future date
+                    "Future purchase");
+
             List<Transaction> transactions = List.of(existingTransaction);
             if (transactions.isEmpty()) {
                 fail("Something went wrong");
             }
 
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Transaction date cannot be in the future");
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Transaction date cannot be in the future");
         }
 
         @Test
@@ -967,87 +939,84 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenNegativeQuantity() {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                transactionId,
-                TransactionType.BUY,
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
-                BigDecimal.valueOf(-5), // Negative quantity
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Invalid quantity"
-            );
+                    userId,
+                    accountId,
+                    transactionId,
+                    TransactionType.BUY,
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
+                    BigDecimal.valueOf(-5), // Negative quantity
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Invalid quantity");
             List<Transaction> transactions = List.of(existingTransaction);
             if (transactions.isEmpty()) {
                 fail("Something went wrong");
             }
 
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Quantity must be positive");
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Quantity must be positive");
         }
+
         @Test
         @DisplayName("Should successfully update SELL transaction with sufficient holdings")
         void shouldUpdateSellTransactionWithSufficientHoldings() {
             // Given - Setup: Buy 100 shares, then sell 50
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Initial buy"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Initial buy");
             portfolio.recordTransaction(accountId, buyTx);
-            
+
             TransactionId sellTxId = TransactionId.randomId();
             Transaction sellTx = new Transaction(
-                sellTxId,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "Original sell"
-            );
+                    sellTxId,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "Original sell");
             portfolio.recordTransaction(accountId, sellTx);
-            
+
             // Now update the sell to 60 shares (still within the 100 we own)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sellTxId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(60), // Increase sell from 50 to 60
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated sell"
-            );
-            
+                    userId,
+                    accountId,
+                    sellTxId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(60), // Increase sell from 50 to 60
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated sell");
+
             List<Transaction> transactions = List.of(buyTx, sellTx);
             if (transactions.isEmpty()) {
                 fail("something went wrong");
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1064,61 +1033,58 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenUpdatingSellExceedsHoldings() {
             // Given - Setup: Buy 100 shares, then sell 50
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Initial buy"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Initial buy");
             portfolio.recordTransaction(accountId, buyTx);
-            
+
             TransactionId sellTxId = TransactionId.randomId();
             Transaction sellTx = new Transaction(
-                sellTxId,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "Original sell"
-            );
+                    sellTxId,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "Original sell");
             portfolio.recordTransaction(accountId, sellTx);
-            
+
             // Try to update sell to 150 shares (more than the 100 we own)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sellTxId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(150), // Try to sell 150, but only own 100
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Invalid updated sell"
-            );
-            
+                    userId,
+                    accountId,
+                    sellTxId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(150), // Try to sell 150, but only own 100
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Invalid updated sell");
+
             List<Transaction> transactions = List.of(buyTx, sellTx);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Insufficient holdings");
-            
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Insufficient holdings");
+
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
 
@@ -1128,71 +1094,67 @@ class PortfolioApplicationServiceTest {
             // Given - Complex scenario: Multiple buys and sells
             TransactionId buy1Id = TransactionId.randomId();
             Transaction buy1 = new Transaction(
-                buy1Id,
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(140), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(10800), // 3 hours ago
-                "First buy"
-            );
+                    buy1Id,
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(140), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(10800), // 3 hours ago
+                    "First buy");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             TransactionId buy2Id = TransactionId.randomId();
             Transaction buy2 = new Transaction(
-                buy2Id,
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(145), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Second buy"
-            );
+                    buy2Id,
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(145), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Second buy");
             portfolio.recordTransaction(accountId, buy2);
-            
+
             TransactionId sell1Id = TransactionId.randomId();
             Transaction sell1 = new Transaction(
-                sell1Id,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "First sell"
-            );
+                    sell1Id,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "First sell");
             portfolio.recordTransaction(accountId, sell1);
-            
+
             // Now update the sell to 70 shares
             // Holdings: 50 + 50 - 30 = 70 shares at time of sale
             // So selling 70 should be exactly at the limit
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sell1Id,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(70), // Update to sell exactly all holdings
-                new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated sell - all shares"
-            );
-            
+                    userId,
+                    accountId,
+                    sell1Id,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(70), // Update to sell exactly all holdings
+                    new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated sell - all shares");
+
             List<Transaction> transactions = List.of(buy1, buy2, sell1);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1209,57 +1171,56 @@ class PortfolioApplicationServiceTest {
         void shouldExcludeUpdatedTransactionFromValidation() {
             // Given - Buy 100 shares, then sell 100 shares
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200),
-                "Buy 100"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200),
+                    "Buy 100");
             portfolio.recordTransaction(accountId, buyTx);
-            
+
             TransactionId sellTxId = TransactionId.randomId();
             Transaction sellTx = new Transaction(
-                sellTxId,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Sell all 100"
-            );
+                    sellTxId,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Sell all 100");
             portfolio.recordTransaction(accountId, sellTx);
-            
-            // Update the sell to 90 shares (should work because we exclude the original 100 sell)
-            // Without exclusion: holdings would be 100 (buy) - 100 (old sell) = 0, can't sell 90
+
+            // Update the sell to 90 shares (should work because we exclude the original 100
+            // sell)
+            // Without exclusion: holdings would be 100 (buy) - 100 (old sell) = 0, can't
+            // sell 90
             // With exclusion: holdings = 100 (buy), can sell 90
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sellTxId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(90), // Reduce sell from 100 to 90
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated sell to 90"
-            );
-            
+                    userId,
+                    accountId,
+                    sellTxId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(90), // Reduce sell from 100 to 90
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated sell to 90");
+
             List<Transaction> transactions = List.of(buyTx, sellTx);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1270,23 +1231,23 @@ class PortfolioApplicationServiceTest {
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
         }
+
         @Test
         @DisplayName("Should throw exception when updating with negative price")
         void shouldThrowExceptionWhenNegativePrice() {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                transactionId,
-                TransactionType.BUY,
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(-150), ValidatedCurrency.USD), // Negative price
-                null,
-                Instant.now().minusSeconds(3600),
-                "Invalid price"
-            );
-            
+                    userId,
+                    accountId,
+                    transactionId,
+                    TransactionType.BUY,
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(-150), ValidatedCurrency.USD), // Negative price
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Invalid price");
+
             List<Transaction> transactions = List.of(existingTransaction);
             if (transactions.isEmpty()) {
                 fail("Something went wrong");
@@ -1295,13 +1256,13 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Price must be positive");
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Price must be positive");
         }
 
         @Test
@@ -1309,31 +1270,30 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenTransactionNotFound() {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                TransactionId.randomId(), // Different ID
-                TransactionType.BUY,
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
-                BigDecimal.valueOf(15),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated purchase"
-            );
+                    userId,
+                    accountId,
+                    TransactionId.randomId(), // Different ID
+                    TransactionType.BUY,
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
+                    BigDecimal.valueOf(15),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated purchase");
 
             List<Transaction> transactions = List.of(existingTransaction);
             if (transactions.isEmpty()) {
                 fail("This is empty when it shouldn't be");
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(TransactionNotFoundException.class);
+                    .isInstanceOf(TransactionNotFoundException.class);
         }
 
         @Test
@@ -1344,93 +1304,87 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
-
 
         @Test
         @DisplayName("Should correctly calculate holdings from BUY transactions")
         void shouldCalculateHoldingsFromBuyTransactions() {
             // Given - Multiple BUY transactions
             Transaction buy1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(10800), // 3 hours ago
-                "First buy"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(10800), // 3 hours ago
+                    "First buy");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             Transaction buy2 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(40),
-                new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Second buy"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(40),
+                    new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Second buy");
             portfolio.recordTransaction(accountId, buy2);
-            
+
             Transaction buy3 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "Third buy"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "Third buy");
             portfolio.recordTransaction(accountId, buy3);
-            
+
             TransactionId sellTxId = TransactionId.randomId();
             Transaction sellTx = new Transaction(
-                sellTxId,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(1800), // 30 minutes ago
-                "Original sell"
-            );
+                    sellTxId,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(1800), // 30 minutes ago
+                    "Original sell");
             portfolio.recordTransaction(accountId, sellTx);
-            
+
             // Update sell to 100 (should work: 30 + 40 + 30 = 100 shares available)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sellTxId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100), // All available shares
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(1800),
-                "Updated sell - all shares"
-            );
-            
+                    userId,
+                    accountId,
+                    sellTxId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100), // All available shares
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(1800),
+                    "Updated sell - all shares");
+
             List<Transaction> transactions = List.of(buy1, buy2, buy3, sellTx);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1441,88 +1395,84 @@ class PortfolioApplicationServiceTest {
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
         }
-        
+
         @Test
         @DisplayName("Should correctly subtract SELL transactions in holdings calculation")
         void shouldSubtractSellTransactionsInHoldingsCalculation() {
             // Given - Buy lots, sell some, then update a later sell
             Transaction buy1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(200),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(10800), // 3 hours ago
-                "Buy 200"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(200),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(10800), // 3 hours ago
+                    "Buy 200");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             Transaction sell1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Sell 50"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Sell 50");
             portfolio.recordTransaction(accountId, sell1);
-            
+
             Transaction sell2 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(5400), // 1.5 hours ago
-                "Sell 30"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(5400), // 1.5 hours ago
+                    "Sell 30");
             portfolio.recordTransaction(accountId, sell2);
-            
+
             TransactionId sell3Id = TransactionId.randomId();
             Transaction sell3 = new Transaction(
-                sell3Id,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(20),
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "Sell 20"
-            );
+                    sell3Id,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(20),
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "Sell 20");
             portfolio.recordTransaction(accountId, sell3);
-            
-            // Holdings at sell3 time: 200 (buy1) - 50 (sell1) - 30 (sell2) - 20 (sell3 excluded) = 120
+
+            // Holdings at sell3 time: 200 (buy1) - 50 (sell1) - 30 (sell2) - 20 (sell3
+            // excluded) = 120
             // Update sell3 to 120 (maximum possible)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sell3Id,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(120), // Sell all remaining shares
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated sell to 120"
-            );
-            
+                    userId,
+                    accountId,
+                    sell3Id,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(120), // Sell all remaining shares
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated sell to 120");
+
             List<Transaction> transactions = List.of(buy1, sell1, sell2, sell3);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1539,79 +1489,75 @@ class PortfolioApplicationServiceTest {
         void shouldFailWhenSellTransactionsReduceHoldings() {
             // Given - Explicitly test that SELL subtracts from holdings
             Transaction buy1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(10800), // 3 hours ago
-                "Buy 100"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(10800), // 3 hours ago
+                    "Buy 100");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             // This SELL reduces available holdings
             Transaction sell1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(60), // Sell 60, leaving 40
-                new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Sell 60"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(60), // Sell 60, leaving 40
+                    new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Sell 60");
             portfolio.recordTransaction(accountId, sell1);
-            
+
             TransactionId sell2Id = TransactionId.randomId();
             Transaction sell2 = new Transaction(
-                sell2Id,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(10),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "Sell 10"
-            );
+                    sell2Id,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(10),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "Sell 10");
             portfolio.recordTransaction(accountId, sell2);
-            
+
             // Try to update sell2 to 50
             // Holdings: 100 (buy) - 60 (sell1) = 40, but trying to sell 50
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sell2Id,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50), // More than available 40
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated sell to 50"
-            );
-            
+                    userId,
+                    accountId,
+                    sell2Id,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50), // More than available 40
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated sell to 50");
+
             List<Transaction> transactions = List.of(buy1, sell1, sell2);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             // when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then - Should fail because sell1 reduced holdings to 40
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Insufficient holdings")
-                .hasMessageContaining("Available: 40")
-                .hasMessageContaining("Attempting to sell: 50");
-            
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Insufficient holdings")
+                    .hasMessageContaining("Available: 40")
+                    .hasMessageContaining("Attempting to sell: 50");
+
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
 
@@ -1620,82 +1566,78 @@ class PortfolioApplicationServiceTest {
         void shouldCalculateHoldingsWithMixedTransactions() {
             // Given - Mixed BUY and SELL transactions
             Transaction buy1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(10800), // 3 hours ago
-                "Buy 100"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(10800), // 3 hours ago
+                    "Buy 100");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             Transaction sell1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Sell 30"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(155), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Sell 30");
             portfolio.recordTransaction(accountId, sell1);
-            
+
             Transaction buy2 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(5400), // 1.5 hours ago
-                "Buy 50"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(5400), // 1.5 hours ago
+                    "Buy 50");
             portfolio.recordTransaction(accountId, buy2);
-            
+
             Transaction sell2 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(20),
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600), // 1 hour ago
-                "Sell 20"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(20),
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600), // 1 hour ago
+                    "Sell 20");
             portfolio.recordTransaction(accountId, sell2);
-            
+
             // Now update sell2 to sell more shares
-            // Holdings at that point: 100 (buy1) - 30 (sell1) + 50 (buy2) - 20 (sell2 excluded) = 120
+            // Holdings at that point: 100 (buy1) - 30 (sell1) + 50 (buy2) - 20 (sell2
+            // excluded) = 120
             TransactionId sell2Id = sell2.getTransactionId();
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sell2Id,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100), // Update to sell 100 (was 20)
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "Updated sell to 100"
-            );
-            
+                    userId,
+                    accountId,
+                    sell2Id,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100), // Update to sell 100 (was 20)
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "Updated sell to 100");
+
             List<Transaction> transactions = List.of(buy1, sell1, buy2, sell2);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1712,80 +1654,76 @@ class PortfolioApplicationServiceTest {
         void shouldIgnoreTransactionsAfterSellDate() {
             // Given - Transactions both before AND after the sell date
             Transaction buy1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Buy 50 BEFORE sell"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Buy 50 BEFORE sell");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             TransactionId sellTxId = TransactionId.randomId();
             Instant sellDate = Instant.now().minusSeconds(3600); // 1 hour ago
             Transaction sellTx = new Transaction(
-                sellTxId,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                sellDate,
-                "Original sell"
-            );
+                    sellTxId,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    sellDate,
+                    "Original sell");
             portfolio.recordTransaction(accountId, sellTx);
-            
+
             // This BUY happens AFTER the sell date, so should be ignored in validation
             Transaction buy2 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100), // This should NOT count towards available holdings
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(1800), // 30 minutes ago (AFTER sell)
-                "Buy 100 AFTER sell"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100), // This should NOT count towards available holdings
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(1800), // 30 minutes ago (AFTER sell)
+                    "Buy 100 AFTER sell");
             portfolio.recordTransaction(accountId, buy2);
-            
+
             // Try to update sell to 60 shares
             // Should fail because only 50 shares available at sell time (buy2 is after)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sellTxId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(60), // Trying to sell more than the 50 available
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                sellDate,
-                "Updated sell"
-            );
-            
+                    userId,
+                    accountId,
+                    sellTxId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(60), // Trying to sell more than the 50 available
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    sellDate,
+                    "Updated sell");
+
             List<Transaction> transactions = List.of(buy1, sellTx, buy2);
             if (transactions.isEmpty()) {
                 fail();
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             // when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Insufficient holdings")
-                .hasMessageContaining("Available: 50")
-                .hasMessageContaining("Attempting to sell: 60");
-            
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Insufficient holdings")
+                    .hasMessageContaining("Available: 50")
+                    .hasMessageContaining("Attempting to sell: 60");
+
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
 
@@ -1794,70 +1732,66 @@ class PortfolioApplicationServiceTest {
         void shouldUpdateSuccessfullyWithFutureTransactions() {
             // Given - Similar setup but valid update
             Transaction buy1 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(100),
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(7200), // 2 hours ago
-                "Buy 100 BEFORE sell"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(100),
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(7200), // 2 hours ago
+                    "Buy 100 BEFORE sell");
             portfolio.recordTransaction(accountId, buy1);
-            
+
             TransactionId sellTxId = TransactionId.randomId();
             Instant sellDate = Instant.now().minusSeconds(3600); // 1 hour ago
             Transaction sellTx = new Transaction(
-                sellTxId,
-                accountId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(30),
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                sellDate,
-                "Original sell"
-            );
+                    sellTxId,
+                    accountId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(30),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    sellDate,
+                    "Original sell");
             portfolio.recordTransaction(accountId, sellTx);
-            
+
             // This happens after, so ignored
             Transaction buy2 = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(50),
-                new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(1800), // 30 minutes ago (AFTER sell)
-                "Buy 50 AFTER sell"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(50),
+                    new Money(BigDecimal.valueOf(165), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(1800), // 30 minutes ago (AFTER sell)
+                    "Buy 50 AFTER sell");
             portfolio.recordTransaction(accountId, buy2);
-            
+
             // Update sell to 80 (valid because 100 shares available at sell time)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId,
-                accountId,
-                sellTxId,
-                TransactionType.SELL,
-                assetInfo.toIdentifier(),
-                BigDecimal.valueOf(80), // Valid: only considering buy1 (100 shares)
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
-                null,
-                sellDate,
-                "Updated sell to 80"
-            );
-            
+                    userId,
+                    accountId,
+                    sellTxId,
+                    TransactionType.SELL,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.valueOf(80), // Valid: only considering buy1 (100 shares)
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    sellDate,
+                    "Updated sell to 80");
+
             List<Transaction> transactions = List.of(buy1, sellTx, buy2);
             if (transactions.isEmpty()) {
                 fail("Something wen't wrong");
             }
             Page<Transaction> page = new PageImpl<>(transactions);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1880,19 +1814,18 @@ class PortfolioApplicationServiceTest {
         @BeforeEach
         void setUp() {
             transactionId = TransactionId.randomId();
-            
+
             transaction = new Transaction(
-                transactionId,
-                accountId,
-                TransactionType.BUY,
-                identifier,
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now().minusSeconds(3600),
-                "To be deleted"
-            );
-            
+                    transactionId,
+                    accountId,
+                    TransactionType.BUY,
+                    identifier,
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now().minusSeconds(3600),
+                    "To be deleted");
+
             portfolio.recordTransaction(accountId, transaction);
         }
 
@@ -1901,22 +1834,21 @@ class PortfolioApplicationServiceTest {
         void shouldDeleteTransaction() {
             // Given
             DeleteTransactionCommand command = new DeleteTransactionCommand(
-                userId,
-                accountId,
-                transactionId,
-                false,
-                null
-            );
-            
+                    userId,
+                    accountId,
+                    transactionId,
+                    false,
+                    null);
+
             List<Transaction> transactionList = List.of(transaction);
             if (transactionList.isEmpty()) {
                 fail("Something wrong here");
             }
             Page<Transaction> page = new PageImpl<>(transactionList);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.findByAccountId(accountId, Pageable.unpaged()))
-                .thenReturn(page);
+            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
+                    .thenReturn(page);
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When
@@ -1934,8 +1866,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.deleteTransaction(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -1950,12 +1882,11 @@ class PortfolioApplicationServiceTest {
         void shouldAddAccount() {
             // Given
             AddAccountCommand command = new AddAccountCommand(
-                userId,
-                "New Account",
-                AccountType.TFSA,
-                ValidatedCurrency.CAD
-            );
-            
+                    userId,
+                    "New Account",
+                    AccountType.TFSA,
+                    ValidatedCurrency.CAD);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -1977,9 +1908,9 @@ class PortfolioApplicationServiceTest {
             Account emptyAccount = Account.createNew(newAccountId, "Empty", AccountType.TFSA, ValidatedCurrency.CAD);
             emptyAccount.close();
             portfolio.addAccount(emptyAccount);
-            
+
             RemoveAccountCommand command = new RemoveAccountCommand(userId, newAccountId);
-            
+
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When
@@ -1994,20 +1925,19 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenRemovingNonEmptyAccount() {
             // Given - add an asset to the account to make it non-empty
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                assetInfo.toIdentifier(),
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now(),
-                "Asset to prevent deletion"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    assetInfo.toIdentifier(),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Asset to prevent deletion");
             portfolio.recordTransaction(accountId, buyTx);
-            
+
             RemoveAccountCommand command = new RemoveAccountCommand(userId, accountId);
-            
+
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // Verify account actually has assets before the test
@@ -2016,8 +1946,8 @@ class PortfolioApplicationServiceTest {
 
             // When/Then
             assertThatThrownBy(() -> service.removeAccount(command))
-                .isInstanceOf(AccountNotEmptyException.class);
-                
+                    .isInstanceOf(AccountNotEmptyException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -2030,12 +1960,12 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.addAccount(command))
-                .isInstanceOf(InvalidTransactionException.class);
-            
+                    .isInstanceOf(InvalidTransactionException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
-        
+
     }
 
     @Nested
@@ -2048,13 +1978,12 @@ class PortfolioApplicationServiceTest {
             // Given
             UserId newUserId = UserId.randomId();
             CreatePortfolioCommand command = new CreatePortfolioCommand(
-                newUserId,
-                ValidatedCurrency.USD,
-                true
-            );
-            
+                    newUserId,
+                    ValidatedCurrency.USD,
+                    true);
+
             Portfolio newPortfolio = new Portfolio(newUserId, ValidatedCurrency.USD);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
@@ -2074,13 +2003,12 @@ class PortfolioApplicationServiceTest {
             // Given
             UserId newUserId = UserId.randomId();
             CreatePortfolioCommand command = new CreatePortfolioCommand(
-                newUserId,
-                ValidatedCurrency.USD,
-                false
-            );
-            
+                    newUserId,
+                    ValidatedCurrency.USD,
+                    false);
+
             Portfolio newPortfolio = new Portfolio(newUserId, ValidatedCurrency.USD);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
@@ -2100,17 +2028,16 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenPortfolioExists() {
             // Given
             CreatePortfolioCommand command = new CreatePortfolioCommand(
-                userId,
-                ValidatedCurrency.USD,
-                true
-            );
-            
+                    userId,
+                    ValidatedCurrency.USD,
+                    true);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.createPortfolio(command))
-                .isInstanceOf(PortfolioAlreadyExistsException.class);
+                    .isInstanceOf(PortfolioAlreadyExistsException.class);
         }
 
         @Test
@@ -2121,8 +2048,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.createPortfolio(command))
-                .isInstanceOf(InvalidCommandException.class);
-            
+                    .isInstanceOf(InvalidCommandException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -2134,12 +2061,12 @@ class PortfolioApplicationServiceTest {
             // Given - create a portfolio with no accounts
             UserId newUserId = UserId.randomId();
             Portfolio emptyPortfolio = new Portfolio(newUserId, ValidatedCurrency.USD);
-            
+
             DeletePortfolioCommand command = new DeletePortfolioCommand(newUserId, true, false);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.of(emptyPortfolio));
-            
+
             // Verify portfolio is empty before deletion
             assertThat(emptyPortfolio.getAccounts()).isEmpty();
             assertThat(emptyPortfolio.containsAccounts()).isFalse();
@@ -2160,7 +2087,7 @@ class PortfolioApplicationServiceTest {
             // When/Then
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             assertThatThrownBy(() -> service.deletePortfolio(command))
-                .isInstanceOf(PortfolioDeletionRequiresConfirmationException.class);
+                    .isInstanceOf(PortfolioDeletionRequiresConfirmationException.class);
         }
 
         @Test
@@ -2168,19 +2095,19 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenDeletingNonEmptyPortfolio() {
             // Given - portfolio already has accounts from setUp()
             DeletePortfolioCommand command = new DeletePortfolioCommand(userId, true, false);
-            
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-            
+
             // Verify portfolio actually has accounts before the test
             assertThat(portfolio.getAccounts()).isNotEmpty();
             assertThat(portfolio.containsAccounts()).isTrue();
 
             // When/Then - portfolio has accounts, should fail
             assertThatThrownBy(() -> service.deletePortfolio(command))
-                .isInstanceOf(PortfolioNotEmptyException.class)
-                .hasMessageContaining("Cannot delete portfolio with existing accounts");
-                
+                    .isInstanceOf(PortfolioNotEmptyException.class)
+                    .hasMessageContaining("Cannot delete portfolio with existing accounts");
+
             // Verify delete was never called
             verify(portfolioRepository, never()).delete(any(PortfolioId.class));
         }
@@ -2195,8 +2122,8 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
             assertThatThrownBy(() -> service.deletePortfolio(command))
-                .isInstanceOf(InvalidCommandException.class);
-            
+                    .isInstanceOf(InvalidCommandException.class);
+
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
@@ -2211,25 +2138,23 @@ class PortfolioApplicationServiceTest {
         void shouldCorrectAssetTicker() {
             // Given
             Transaction buyTx = new Transaction(
-                TransactionId.randomId(),
-                accountId,
-                TransactionType.BUY,
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
-                null,
-                Instant.now(),
-                "Wrong ticker"
-            );
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Wrong ticker");
             portfolio.recordTransaction(accountId, buyTx);
-            
+
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
-                userId,
-                accountId,
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
-                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null)
-            );
-            
+                    userId,
+                    accountId,
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
+                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
+
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -2239,5 +2164,15 @@ class PortfolioApplicationServiceTest {
             // Then
             verify(portfolioRepository).save(any(Portfolio.class));
         }
+    }
+
+    private TransactionQuery createAccountIdQuery(AccountId accountId) {
+        return new TransactionQuery(
+                null,
+                accountId.accountId(),
+                null,
+                null,
+                null,
+                null);
     }
 }

@@ -61,6 +61,7 @@ public class PortfolioQueryService {
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioValuationService portfolioValuationService;
+    private final TransactionQueryService transactionQueryService;
     private final ExchangeRateService exchangeRateService;
     // LiabilityQueryService liabilityQueryService // ACL interface <- for the future when we have this context
     private final PortfolioMapper portfolioMapper;
@@ -91,7 +92,8 @@ public class PortfolioQueryService {
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
-        List<Transaction> transactions = transactionRepository.findByPortfolioIdAndDateRange(
+            
+        Page<Transaction> transactions = transactionQueryService.getPortfolioTransactionsByDateRange(
             portfolio.getPortfolioId(), 
             LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC), 
             LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC), 
@@ -101,7 +103,7 @@ public class PortfolioQueryService {
         // Calculate perofrmance metrics 
         Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
         
-        Money realizedGains = performanceCalculationService.calculateRealizedGains(portfolio, transactions);
+        Money realizedGains = performanceCalculationService.calculateRealizedGains(portfolio, transactions.getContent());
         
         Money unrealizedGains = performanceCalculationService.calculateUnrealizedGains(portfolio, marketDataService);
         
@@ -176,7 +178,7 @@ public class PortfolioQueryService {
         Page<Transaction> transactionPage;
         if (query.accountId() != null) {
             // Filter by account - much simpler now with direct relationship
-            transactionPage = transactionRepository.findByAccountIdAndFilters(
+            transactionPage = transactionQueryService.findByAccountIdAndFilters(
                 query.accountId(),
                 query.transactionType(),
                 startDate,
@@ -185,7 +187,7 @@ public class PortfolioQueryService {
             );
         } else {
             // All transactions for the portfolio
-            transactionPage = transactionRepository.findByPortfolioIdAndFilters(
+            transactionPage = transactionQueryService.findByPortfolioIdAndFilters(
                 portfolio.getPortfolioId(),
                 query.transactionType(),
                 startDate,

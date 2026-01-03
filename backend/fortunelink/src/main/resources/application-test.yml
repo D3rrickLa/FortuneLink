@@ -16,3 +16,6 @@ spring:
   h2:
     console:
       enabled: true
+
+db:
+  jsonColumnType: json
