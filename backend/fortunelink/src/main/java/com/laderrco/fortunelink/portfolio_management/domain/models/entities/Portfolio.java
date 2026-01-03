@@ -49,27 +49,14 @@ public class Portfolio implements ClassValidation {
     }
 
     // Static Factory for Reconstitution (used by Mappers/Repositories)
-    public static Portfolio reconstitute(
-        PortfolioId id, 
-        UserId userId, 
-        List<Account> accounts, 
-        ValidatedCurrency currency, 
-        Instant created, 
-        Instant updated
-    ) {
+    public static Portfolio reconstitute(PortfolioId id, UserId userId, List<Account> accounts, ValidatedCurrency currency, Instant created, Instant updated) {
         return new Portfolio(id, userId, accounts, currency, created, updated);
     }
 
     // Static Factory for NEW Portfolios (used by Application Services)
     public static Portfolio createNew(UserId userId, ValidatedCurrency currency) {
-        return new Portfolio(
-            new PortfolioId(UUID.randomUUID()), 
-            userId, 
-            new ArrayList<>(), 
-            currency, 
-            Instant.now(), 
-            Instant.now()
-        );
+        Instant time = Instant.now();
+        return new Portfolio(new PortfolioId(UUID.randomUUID()), userId, new ArrayList<>(), currency, time, time);
     }
 
     public void addAccount(Account account) {
@@ -128,7 +115,6 @@ public class Portfolio implements ClassValidation {
 
     public void recordTransaction(AccountId accountId, Transaction transaction) throws AccountNotFoundException {
         Account account = getAccount(accountId);
-
         account.recordTransaction(transaction);
         updateMetadata();
     }
@@ -138,9 +124,7 @@ public class Portfolio implements ClassValidation {
             .filter(a -> a.getAccountId().equals(accountId))
             .findFirst()
             .orElseThrow(() -> new AccountNotFoundException("Account not found when trying to update this transaction"));
-    
         existingAccount.updateTransaction(transactionId, updatedTransaction);
-
     }
 
     public void removeTransaction(AccountId accountId, TransactionId transactionId) {
