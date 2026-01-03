@@ -15,6 +15,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 // pageable -> Spring data interface handling pagination and sortinf for DB queries
 // setting it to null = load all at once
 // Read-only queries only - NO save() method    
+// UPDATE: most of these methods are 'caller concern - controllers / services'
+// we are simplifying
 public interface TransactionQueryRepository {
     // Primary queries - by Account (since Account owns Transactions)
     Page<Transaction> findByAccountId(AccountId accountId, Pageable pageable);

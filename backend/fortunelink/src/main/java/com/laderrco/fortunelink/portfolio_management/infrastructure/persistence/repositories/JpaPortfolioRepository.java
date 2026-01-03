@@ -26,14 +26,12 @@ private final SpringDataPortfolioRepository jpaRepo; // The standard JpaReposito
     public Optional<Portfolio> findById(PortfolioId id) {
         UUID portfolioUuid = id.portfolioId();
         Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
-        return jpaRepo.findById(portfolioUuid)
-                .map(portfolioMapper::toDomain);
+        return jpaRepo.findById(portfolioUuid).map(portfolioMapper::toDomain);
     }
 
     @Override
     public Optional<Portfolio> findByUserId(UserId userId) {
-        return jpaRepo.findByUserId(userId.userId())
-                .map(portfolioMapper::toDomain);
+        return jpaRepo.findByUserId(userId.userId()).map(portfolioMapper::toDomain);
     }
 
     @Override
@@ -43,15 +41,13 @@ private final SpringDataPortfolioRepository jpaRepo; // The standard JpaReposito
         // 1. Load existing or create fresh
         PortfolioEntity entity = jpaRepo.findById(portfolioUuid)
             .orElseGet(() -> {
-                PortfolioEntity newEntity = new PortfolioEntity();
-                newEntity.setId(portfolio.getPortfolioId().portfolioId());
-                // Set the mandatory userId immediately
-                newEntity.setUserId(portfolio.getUserId().userId());
+                PortfolioEntity newEntity = new PortfolioEntity(portfolio.getPortfolioId().portfolioId(), portfolio.getUserId().userId());
                 return newEntity;
             }
         );
-        Objects.requireNonNull(entity, "Entity canno be null");
+
         // 2. Map Domain state onto the Entity
+        Objects.requireNonNull(entity, "Entity cannot be null");
         portfolioMapper.updateEntityFromDomain(portfolio, entity);
 
         // 3. Save and return the mapped result
