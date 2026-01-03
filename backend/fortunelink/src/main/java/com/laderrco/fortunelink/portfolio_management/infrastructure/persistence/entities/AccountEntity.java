@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Data
 @Setter
@@ -26,6 +27,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "accounts")
+@ToString(exclude = "portfolio") // issue with testing shouldAddNewAccount(), circular DP
 public class AccountEntity {
     @Id
     private UUID id;
