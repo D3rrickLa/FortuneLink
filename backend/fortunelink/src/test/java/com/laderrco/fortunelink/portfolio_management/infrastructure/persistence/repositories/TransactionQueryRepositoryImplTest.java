@@ -21,14 +21,13 @@ import org.springframework.test.context.ActiveProfiles;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionQuery;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
 
 import jakarta.transaction.Transactional;
 

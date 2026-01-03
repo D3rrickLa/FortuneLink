@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries;
 
 import java.time.LocalDateTime;
 import java.util.Set;

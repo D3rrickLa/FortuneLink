@@ -52,48 +52,45 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
-import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionQuery;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-// TODO: right now we are using findByUserId -> assumes 1 portoflio per user for MVP, multi-portfolio for later
-// for transaction edits/deletes -> no recalculations, atleast not here, in domain yes there is a method, no cascade effect, and hard delete, also no ocmpatibility checks
-
-@Service // disabled for now, throws error with unit tests
+/**
+ * Application service for portfolio command operations (writes).
+ * 
+ * This service handles all state-changing operations on the Portfolio aggregate.
+ * All operations go through the Portfolio aggregate root to maintain consistency.
+ * 
+ * For read operations, see PortfolioQueryService.
+ * 
+ * TODO: Currently assumes 1 portfolio per user for MVP. Multi-portfolio support later.
+ * TODO: Transaction edits/deletes are hard deletes with no cascade effect checks.
+ */
+@Service 
 @Transactional
 @AllArgsConstructor
-@Data
-/*
- * Orchestrates use cases and coordinates between domain services, repositories,
- * and infrastructure
- */
+
 public class PortfolioApplicationService {
-    // use case handler
+    // Domain Repository (aggregate root)
     private final PortfolioRepository portfolioRepository;
-    private final TransactionQueryRepository transactionQueryRepository;
-    private final PortfolioValuationService portfolioValuationService;
+    
+    // Application Services
+    private final TransactionQueryService transactionQueryService;
+    
+    // Domain Services
     private final MarketDataService marketDataService;
+    
+    // Application Utilities
     private final CommandValidator commandValidator;
     private final PortfolioMapper portfolioMapper;
-
-    /*
-     * createPortfolio()
-     * addAccount()
-     * recordTransaction()
-     * updateTransaction()
-     * deleteTransaction()
-     * getPortfolioSummary() -> other service
-     * getTransactionHistory() -> other service
-     * getPerformanceReport() -> other service
-     * getAssetAllocation() -> other service
-     */
-
+    
     public TransactionResponse recordAssetPurchase(RecordPurchaseCommand command) {
         // 1. Validate command
         ValidationResult validationResult = commandValidator.validate(command);
