@@ -12,23 +12,20 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
-
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.TransactionQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionQuery;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapper;

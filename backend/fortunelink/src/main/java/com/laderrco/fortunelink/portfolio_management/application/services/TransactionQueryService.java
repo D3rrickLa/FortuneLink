@@ -9,10 +9,10 @@ import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.TransactionQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionQuery;
 
 import lombok.RequiredArgsConstructor;
 

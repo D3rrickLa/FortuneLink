@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities;
 
 import java.time.LocalDateTime;
 import java.util.Set;

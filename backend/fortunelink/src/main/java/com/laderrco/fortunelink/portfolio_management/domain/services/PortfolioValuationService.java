@@ -30,18 +30,15 @@ public class PortfolioValuationService {
     }
 
     public Money calculateAccountValue(Account account, ValidatedCurrency targetCurrency, Instant asOfDate) {
-        Money cashBalance = account.getCashBalance();
-
-        // Convert cash if it's not in the target currency
-        Money convertedCash = cashBalance.currency().equals(targetCurrency) 
-            ? cashBalance 
-            : exchangeRateService.convert(cashBalance, targetCurrency, asOfDate);
+        Money cashValue = account.getCashBalance().currency().equals(targetCurrency)
+            ? account.getCashBalance()
+            : exchangeRateService.convert(account.getCashBalance(), targetCurrency, asOfDate);
 
         Money assetsValue = account.getAssets().stream()
             .map(asset -> calculateAssetValue(asset, targetCurrency, asOfDate))
             .reduce(Money.ZERO(targetCurrency), Money::add);
         
-        return convertedCash.add(assetsValue);
+        return cashValue.add(assetsValue);
     }
 
     public Money calculateAssetValue(Asset asset, ValidatedCurrency targetCurrency, Instant asOfDate) {
@@ -57,11 +54,9 @@ public class PortfolioValuationService {
         Money localValue = price.multiply(asset.getQuantity());
 
         // If the asset is in a different currency than the target, convert it
-        if (!localValue.currency().equals(targetCurrency)) {
-            return exchangeRateService.convert(localValue, targetCurrency, asOfDate);
-        }
-
-        return localValue;
+        return localValue.currency().equals(targetCurrency)
+            ? localValue
+            : exchangeRateService.convert(localValue, targetCurrency, asOfDate);
     }
 
 }
