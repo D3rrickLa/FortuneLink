@@ -8,15 +8,13 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.laderrco.fortunelink.portfolio_management.application.mappers.AllocationMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
+import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
@@ -37,7 +35,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Tran
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
-import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
@@ -48,27 +45,50 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
 
-@AllArgsConstructor
-@Getter
+/**
+ * Application service for portfolio query operations.
+ * 
+ * This service orchestrates read-only portfolio operations by:
+ * - Loading portfolios from the repository
+ * - Coordinating with domain services for calculations
+ * - Using TransactionQueryService for transaction queries
+ * - Mapping domain objects to response DTOs
+ * 
+ * All methods are read-only (no state changes to aggregates).
+ */
 @Service
+@AllArgsConstructor
 @Transactional(readOnly = true)
 public class PortfolioQueryService {
+    // Repositories
     private final PortfolioRepository portfolioRepository;
-    private final TransactionQueryRepository transactionRepository;
+    
+    // Application Services
+    private final TransactionQueryService transactionQueryService;
+    
+    // Domain Services
     private final MarketDataService marketDataService;
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioValuationService portfolioValuationService;
     private final ExchangeRateService exchangeRateService;
-    // LiabilityQueryService liabilityQueryService // ACL interface <- for the future when we have this context
+    
+    // Mappers
     private final PortfolioMapper portfolioMapper;
-    private final TransactionMapper transactionMapper;
-    private final AllocationMapper allocationMapper;
+    
+    // Future: LiabilityQueryService liabilityQueryService // ACL interface for Loan Management context
 
+    /**
+     * Calculate net worth for a user's portfolio.
+     * 
+     * Net Worth = Total Assets - Total Liabilities
+     * 
+     * @param query Contains userId and optional asOfDate
+     * @return Net worth response with breakdown
+     */
     public NetWorthResponse getNetWorth(ViewNetWorthQuery query) {
-        Objects.nonNull(query);
+        Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -76,9 +96,12 @@ public class PortfolioQueryService {
 
         Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, calculationDate);
 
-        // TODO: When Loan Management context is implemented, fetch liabilities 
-        // Example: Money totalLiabilities = liabilitiesQueryService.getTotalLiabilities(quer.userId(), portfolio.getPortfolioCurrencyPreference());
-        Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrencyPreference()); // place holder
+        // TODO: When Loan Management context is implemented, fetch liabilities via ACL
+        // Example: Money totalLiabilities = liabilityQueryService.getTotalLiabilities(
+        //     query.userId(), 
+        //     portfolio.getPortfolioCurrencyPreference()
+        // );
+        Money totalLiabilities = Money.ZERO(portfolio.getPortfolioCurrencyPreference());
 
         Money netWorth = totalAssets.subtract(totalLiabilities);
 
@@ -86,18 +109,31 @@ public class PortfolioQueryService {
 
     }
 
+    /**
+     * Calculate portfolio performance metrics over a time period.
+     * 
+     * This method retrieves ALL transactions in the date range (unpaged)
+     * because performance calculations need the complete dataset.
+     * 
+     * @param query Contains userId, startDate, and endDate
+     * @return Performance metrics including returns and gains
+     */
     public PerformanceResponse getPortfolioPerformance(ViewPerformanceQuery query) {
-        Objects.requireNonNull(query);
+        Objects.requireNonNull(query, "ViewPerformanceQuery cannot be null");
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
-        List<Transaction> transactions = transactionRepository.findByPortfolioIdAndDateRange(
-            portfolio.getPortfolioId(), 
-            LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC), 
-            LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC), 
-            Pageable.unpaged()
-        );
-
+        // Build search criteria using the builder pattern
+        TransactionSearchCriteria criteria = TransactionSearchCriteria.builder()
+            .portfolioId(portfolio.getPortfolioId())
+            .startDate(LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC))
+            .endDate(LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC))
+            .build();
+        
+            
+            // Get ALL transactions in range (unpaged) - needed for performance calculations
+        List<Transaction> transactions = transactionQueryService.getAllTransactions(criteria);
+    
         // Calculate perofrmance metrics 
         Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
         
@@ -124,8 +160,14 @@ public class PortfolioQueryService {
         ); 
     }
 
+    /**
+     * Analyze asset allocation by type, account, or currency.
+     * 
+     * @param query Contains userId, allocationType, and optional asOfDate
+     * @return Allocation breakdown as percentages
+     */
     public AllocationResponse getAssetAllocation(AnalyzeAllocationQuery query) {
-        Objects.requireNonNull(query);
+        Objects.requireNonNull(query, "AnalyzeAllocationQuery cannot be null");
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
 
@@ -152,12 +194,21 @@ public class PortfolioQueryService {
         };
     }
 
+    /**
+     * Get paginated transaction history with optional filters.
+     * 
+     * This is for user-facing transaction lists, so it returns
+     * paginated results rather than all transactions.
+     * 
+     * @param query Contains userId, optional filters (accountId, type, dates), and pagination
+     * @return Paginated transaction history
+     */
     public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {
         Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
-        // Prepare filtering parameters
+        // Convert Instant to LocalDateTime for criteria
         LocalDateTime startDate = query.startDate() != null 
             ? LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC) 
             : null;
@@ -165,39 +216,34 @@ public class PortfolioQueryService {
             ? LocalDateTime.ofInstant(query.endDate(), ZoneOffset.UTC) 
             : null;
         
-        // Create pageable with sorting (Spring uses 0-based indexing)
-        Pageable pageable = PageRequest.of(
-            query.pageNumber() - 1,
-            query.pageSize(),
-            Sort.by(Sort.Direction.DESC, "transactionDate")
-        );
+        // Build search criteria with optional filters
+        TransactionSearchCriteria.TransactionSearchCriteriaBuilder criteriaBuilder = TransactionSearchCriteria.builder()
+            .portfolioId(portfolio.getPortfolioId())
+            .transactionType(query.transactionType())
+            .startDate(startDate)
+            .endDate(endDate);
         
-        // Use database-level filtering with proper pagination
-        Page<Transaction> transactionPage;
+        // Add account filter if specified
         if (query.accountId() != null) {
-            // Filter by account - much simpler now with direct relationship
-            transactionPage = transactionRepository.findByAccountIdAndFilters(
-                query.accountId(),
-                query.transactionType(),
-                startDate,
-                endDate,
-                pageable
-            );
-        } else {
-            // All transactions for the portfolio
-            transactionPage = transactionRepository.findByPortfolioIdAndFilters(
-                portfolio.getPortfolioId(),
-                query.transactionType(),
-                startDate,
-                endDate,
-                pageable
-            );
+            criteriaBuilder.accountId(query.accountId());
         }
         
+        TransactionSearchCriteria criteria = criteriaBuilder.build();
+        
+        // Query with pagination (convert from 1-based to 0-based page number)
+        // Note: TransactionQueryService already sorts by transactionDate DESC by default
+        Page<Transaction> transactionPage = transactionQueryService.queryTransactions(
+            criteria,
+            query.pageNumber() - 1,  // Convert to 0-based index
+            query.pageSize()
+        );
+        
+        // Map to response DTOs
         List<TransactionResponse> transactionResponses = TransactionMapper.toResponseList(
             transactionPage.getContent()
         );
-        
+
+        // Format date range for response
         String dateRange = query.startDate() != null && query.endDate() != null
             ? query.startDate() + " to " + query.endDate()
             : "All time";
@@ -211,8 +257,15 @@ public class PortfolioQueryService {
         );
     }
 
+    /**
+     * Get summary information for a specific account.
+     * 
+     * @param query Contains userId and accountId
+     * @return Account summary with current values
+     */
     public AccountResponse getAccountSummary(GetAccountSummaryQuery query) {
-        Objects.requireNonNull(query);
+        Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
+        
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
@@ -221,8 +274,15 @@ public class PortfolioQueryService {
         return portfolioMapper.toAccountResponse(account, marketDataService);
     }
 
+    /**
+     * Get complete portfolio summary with all accounts and holdings.
+     * 
+     * @param query Contains userId
+     * @return Complete portfolio summary
+     */
     public PortfolioResponse getPortfolioSummary(GetPortfolioSummaryQuery query) {
-        Objects.requireNonNull(query);
+        Objects.requireNonNull(query, "GetPortfolioSummaryQuery cannot be null");
+        
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         

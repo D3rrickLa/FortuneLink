@@ -420,20 +420,17 @@ class AssetMapperTest {
 
             @Override
             public String getPrimaryId() {
-                // TODO Auto-generated method stub
-                throw new UnsupportedOperationException("Unimplemented method 'getPrimaryId'");
+                return null;
             }
 
             @Override
             public String displayName() {
-                // TODO Auto-generated method stub
-                throw new UnsupportedOperationException("Unimplemented method 'displayName'");
+                return null;
             }
 
             @Override
             public AssetType getAssetType() {
-                // TODO Auto-generated method stub
-                throw new UnsupportedOperationException("Unimplemented method 'getAssetType'");
+                return null;
             }
 
         }

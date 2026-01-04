@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,6 +75,13 @@ class PortfolioTest {
     @Nested
     @DisplayName("Constructor Tests")
     class ConstructorTests {
+        @Test
+        @DisplayName("should create portfolio with createNew static method")
+        void shouldCreatePortfolioWithCreateNew() {
+            Portfolio portfolio = Portfolio.createNew(userId, portfolioCurrency);
+            assertEquals(userId, portfolio.getUserId());
+            assertEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());
+        }
 
         @Test
         @DisplayName("Should create portfolio with valid parameters")
@@ -261,6 +269,8 @@ class PortfolioTest {
             assertFalse(portfolio.containsAccounts());
         }
 
+
+
         @Test
         @DisplayName("Should throw exception when removing without closing the account first")
         void shouldThrowExceptionWhenRemovingIfAccountIsActive() {
@@ -380,6 +390,25 @@ class PortfolioTest {
         }
 
         @Test
+        @DisplayName("Should update transaction successfully")
+        void testUpdateTransactionShouldThrowErrorWhenAccountNotFound() {
+            portfolio.recordTransaction(account.getAccountId(), transaction);
+            Transaction updatedTransaction = Transaction.builder()
+                .transactionId(transaction.getTransactionId())
+                .accountId(account.getAccountId())
+                .transactionType(TransactionType.BUY)
+                .assetIdentifier(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null))
+                .quantity((new BigDecimal("100")))
+                .pricePerUnit((Money.of(new BigDecimal("350"), ValidatedCurrency.CAD)))
+                .transactionDate(Instant.now())
+                .notes("something here 2")
+                .build();
+
+            assertThrows(AccountNotFoundException.class, () ->portfolio.updateTransaction(AccountId.randomId(), transaction.getTransactionId(), updatedTransaction));
+            
+        }
+
+        @Test
         @DisplayName("Should remove transaction successfully")
         void testRemoveTransactionShouldBeSuccessful() {
             portfolio.recordTransaction(account.getAccountId(), transaction);
@@ -389,6 +418,17 @@ class PortfolioTest {
             portfolio.removeTransaction(account.getAccountId(), transaction.getTransactionId());
             assertTrue(portfolio.getTransactionCount() == 0);
             
+        }
+
+        @Test
+        @DisplayName("Should successfully remove empty account")
+        void shouldThrowExceptionWhenAccountNotFoundInRemoveTransaction() throws AccountNotFoundException {
+            // Given
+            portfolio.recordTransaction(account.getAccountId(), transaction);
+            assertTrue(portfolio.containsAccounts());
+            assertTrue(portfolio.getTransactionCount() == 1);
+
+            assertThrows(AccountNotFoundException.class, () -> portfolio.removeTransaction(AccountId.randomId(), transaction.getTransactionId()));
         }
     }
 

@@ -41,7 +41,7 @@ class JpaPortfolioRepositoryTest {
             
         PortfolioId portfolioId = portfolio.getPortfolioId();
         // when
-        Portfolio saved = repository.save(portfolio);
+        repository.save(portfolio);
 
         // then
         Optional<Portfolio> found = repository.findById(portfolioId);

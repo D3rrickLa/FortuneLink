@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
 
 @Repository
@@ -29,7 +31,7 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
            "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
            "AND (:startDate IS NULL OR t.transactionDate >= :startDate) " +
            "AND (:endDate IS NULL OR t.transactionDate <= :endDate)")
-    Page<TransactionEntity> findByPortfolioIdWithFilters(
+    public Page<TransactionEntity> findByPortfolioIdWithFilters(
         @Param("portfolioId") UUID portfolioId,
         @Param("transactionType") String transactionType,
         @Param("startDate") LocalDateTime startDate,
@@ -42,11 +44,31 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
         "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
         "AND (:startDate IS NULL OR t.transactionDate >= :startDate) " +
         "AND (:endDate IS NULL OR t.transactionDate <= :endDate)")
-    Page<TransactionEntity> findByAccountIdWithFilters(
+    public Page<TransactionEntity> findByAccountIdWithFilters(
         @Param("accountId") UUID accountId,
         @Param("transactionType") String transactionType,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,
         Pageable pageable
     );
+
+    @Query("""
+        SELECT t FROM TransactionEntity t
+        WHERE (:portfolioId IS NULL OR t.portfolioId = :portfolioId)
+          AND (:accountId IS NULL OR t.account.id = :accountId)
+          AND (:transactionType IS NULL OR t.transactionType = :transactionType)
+          AND (:startDate IS NULL OR t.transactionDate >= :startDate)
+          AND (:endDate IS NULL OR t.transactionDate <= :endDate)
+        ORDER BY t.transactionDate DESC
+        """)
+    public Page<TransactionEntity> findWithFilters(
+        @Param("portfolioId") UUID portfolioId,
+        @Param("accountId") UUID accountId,
+        @Param("transactionType") TransactionType transactionType,
+        @Param("startDate") Instant startDate,
+        @Param("endDate") Instant endDate,
+        Pageable pageable
+    );
+
+
 }

@@ -34,6 +34,13 @@ public class MarketIdentifierTest {
     }
 
     @Test
+    void testConstructor_ThrowsExceptionWhenIsMarketTradedIsFalse() {
+        assertThrows(IllegalArgumentException.class, () ->
+            new MarketIdentifier(Id, null, AssetType.COMMODITY, name, uOt, null)
+        );
+    }
+
+    @Test
     void testConstructor_FailsWhenNullPass() {
         assertThrows(NullPointerException.class, () -> {
             new MarketIdentifier(null, Map.of("null", "null"), assetType, name, Id, Map.of("null", "null"));

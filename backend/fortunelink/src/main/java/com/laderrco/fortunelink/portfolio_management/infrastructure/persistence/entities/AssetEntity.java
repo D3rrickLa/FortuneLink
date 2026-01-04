@@ -68,16 +68,20 @@ public class AssetEntity {
     // Identifier Data
     private String primaryId; // part of ALL, NOTE: cash Id gives only the Symbol as we can build the record from there
 
+    // @Type(JsonBinaryType.class)
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    // @Column(columnDefinition = "JSONB")
+    @Column(name = "secondary_ids")
     private Map<String, String> secondaryIds; // part of MI
 
     private String assetType; // part of AI
     private String name; // part of AI
     private String unitOfTrade; // part of MI, CI
 
+    // @Type(JsonBinaryType.class)
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    // @Column(columnDefinition = "JSONB")
+    @Column(name = "metadata")
     private Map<String, String> metadata; // part of MI, CI
 
     // Financials

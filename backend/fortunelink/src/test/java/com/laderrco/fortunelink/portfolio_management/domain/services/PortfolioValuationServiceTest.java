@@ -348,6 +348,52 @@ public class PortfolioValuationServiceTest {
     }
 
     @Test
+    @DisplayName("Should calculate account value correctly in target currency")
+    void calculateAccountValue_Success_TriggerExchangeService() {
+        // Arrange
+        ValidatedCurrency usd = ValidatedCurrency.USD;
+        ValidatedCurrency eur = ValidatedCurrency.EUR;
+
+        MarketIdentifier teslaSymbol = new MarketIdentifier("TSLA", null, AssetType.STOCK, "Tesla", "USD", null);
+
+        Asset teslaStock = createAsset("asset-1", teslaSymbol, "25", usd);
+
+        Account account = Account.builder()
+            .accountId(accountId1)
+            .name("Investment Account")
+            .accountType(AccountType.INVESTMENT)
+            .baseCurrency(usd)
+            .cashBalance(new Money(new BigDecimal("3000"), usd))
+            .assets(List.of(teslaStock))
+            .systemCreationDate(Instant.now())
+            .lastSystemInteraction(Instant.now())
+            .build();
+
+        // Mock the market price for the asset
+        when(marketDataService.getCurrentPrice(teslaSymbol))
+            .thenReturn(new Money(new BigDecimal("250"), usd));
+
+        // Mock the exchange conversion from USD to EUR
+        when(exchangeRateService.convert(any(Money.class), eq(eur), any()))
+            .thenAnswer(invocation -> {
+                Money money = invocation.getArgument(0);
+                // simple mock conversion: assume $1 = 0.85 EUR
+                BigDecimal rate = new BigDecimal("0.85");
+                return new Money(money.amount().multiply(rate), eur);
+            });
+
+        // Act
+        Money accountValue = valuationService.calculateAccountValue(account, eur, Instant.now());
+
+        // Assert
+        // Calculation: 25 shares * $250 = 6250 + $3000 cash = 9250 USD
+        // Converted to EUR: 9250 * 0.85 = 7862.5 EUR
+        Money expectedValue = new Money(new BigDecimal("7862.5"), eur);
+
+        assertEquals(expectedValue, accountValue);
+    }
+
+    @Test
     @DisplayName("Should calculate asset value correctly")
     void calculateAssetValue_Success() {
         // Arrange
