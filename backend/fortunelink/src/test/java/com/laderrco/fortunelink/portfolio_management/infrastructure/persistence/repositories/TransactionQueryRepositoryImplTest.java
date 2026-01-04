@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -10,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -17,10 +20,13 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
@@ -32,6 +38,12 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import jakarta.transaction.Transactional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @DataJpaTest
 @Transactional
@@ -182,9 +194,76 @@ public class TransactionQueryRepositoryImplTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getAssetIdentifier().getPrimaryId()).isEqualTo("AAPL");
     }
+    
+    @Test
+    void countByPortfolioId_ReturnsCorrectTotal() {
+        // Given
+        PortfolioEntity portfolio = creaPortfolioEntity();
+        AccountEntity account = createAccountEntity(portfolio);
+        
+        // Persist 3 transactions for this portfolio
+        persistTransaction(portfolio.getId(), account, "AAPL", TransactionType.BUY, LocalDateTime.now());
+        persistTransaction(portfolio.getId(), account, "MSFT", TransactionType.BUY, LocalDateTime.now());
+        persistTransaction(portfolio.getId(), account, "GOOG", TransactionType.SELL, LocalDateTime.now());
+
+        // When
+        long count = repository.countByPortfolioId(new PortfolioId(portfolio.getId()));
+
+        // Then
+        assertThat(count).isEqualTo(3);
+    }
+
+    @Test
+    void countByAccountId_ReturnsCorrectTotal() {
+        // Given
+        PortfolioEntity portfolio = creaPortfolioEntity();
+        AccountEntity accountA = createAccountEntity(portfolio);
+        AccountEntity accountB = createAccountEntity(portfolio);
+        
+        // 2 transactions for Account A
+        persistTransaction(portfolio.getId(), accountA, "AAPL", TransactionType.BUY, LocalDateTime.now());
+        persistTransaction(portfolio.getId(), accountA, "MSFT", TransactionType.BUY, LocalDateTime.now());
+        
+        // 1 transaction for Account B
+        persistTransaction(portfolio.getId(), accountB, "GOOG", TransactionType.SELL, LocalDateTime.now());
+
+        // When
+        long countA = repository.countByAccountId(new AccountId(accountA.getId()));
+        long countB = repository.countByAccountId(new AccountId(accountB.getId()));
+
+        // Then
+        assertThat(countA).isEqualTo(2);
+        assertThat(countB).isEqualTo(1);
+    }
+
+    @Test
+    void count_ReturnsZero_WhenNoTransactionsExist() {
+        // When
+        long count = repository.countByPortfolioId(new PortfolioId(UUID.randomUUID()));
+
+        // Then
+        assertThat(count).isZero();
+    }
+
+    @Test
+    void testMapPage_ThrowExceptionWhenPageableIsNull() throws Exception {
+        Page<TransactionEntity> mockPage = mock(Page.class);
+        TransactionQueryRepositoryImpl repository = new TransactionQueryRepositoryImpl(mock(JpaTransactionRepository.class), any(), any()); // The actual class under test
+        Method mapPage = repository.getClass().getDeclaredMethod("mapPage", Page.class, Pageable.class);
+        mapPage.setAccessible(true);
+
+        // Assert that the InvocationTargetException is thrown, 
+        // and its cause is the NullPointerException from Objects.requireNonNull
+        InvocationTargetException exception = assertThrows(InvocationTargetException.class, () -> {
+            mapPage.invoke(repository, mockPage, null);
+        });
+
+        assertTrue(exception.getCause() instanceof NullPointerException);
+    }
+
+
 
     // Helper: persist a transaction
-    // helper to persist a transaction
     private TransactionEntity persistTransaction(
             UUID portfolioId,
             AccountEntity account,

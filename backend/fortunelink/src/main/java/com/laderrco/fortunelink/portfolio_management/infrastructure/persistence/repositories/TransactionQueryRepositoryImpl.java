@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,7 +19,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import lombok.NonNull;
 
 /**
  * Implementation of query repository.
@@ -41,64 +38,17 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
     public Page<Transaction> find(TransactionQuery query, Pageable pageable) {
         Objects.requireNonNull(pageable);
         
-        // Safely handle null dates before calling .toInstant()
-        Instant start = (query.startDate() != null) ? query.startDate().toInstant(ZoneOffset.UTC) : null;
-        Instant end = (query.endDate() != null) ? query.endDate().toInstant(ZoneOffset.UTC) : null;
-        
-        Page<TransactionEntity> entityPage;
-
-        if (query.assetSymbols() == null || query.assetSymbols().isEmpty()) {
-            // No symbol filtering needed
-            entityPage = jpaRepository.findWithFilters(
-                query.portfolioId(),
-                query.accountId(),
-                query.transactionType() != null ? query.transactionType() : null,
-                start,
-                end,
-                pageable
-            );
-        } 
-        else {
-            // Include symbol filteirng in query
-            entityPage = jpaRepository.findWithFiltersAndSymbols(
-                query.portfolioId(),
-                query.accountId(),
-                query.transactionType(),
-                start,
-                end,
-                query.assetSymbols(),
-                pageable
-            );
-        }
+        Page<TransactionEntity> entityPage = jpaRepository.findWithFilters(
+            query.portfolioId(),
+            query.accountId(),
+            query.transactionType(),
+            query.startInstant(),
+            query.endInstant(),
+            query.assetSymbols().isEmpty() ? null : query.assetSymbols(),
+            pageable
+        );
 
         return mapPage(entityPage, pageable);
-
-        // Page<TransactionEntity> entityPage = jpaRepository.findWithFilters(
-        //         query.portfolioId(),
-        //         query.accountId(),
-        //         query.transactionType() != null ? query.transactionType() : null,
-        //         query.startDate().toInstant(ZoneOffset.UTC),
-        //         query.endDate().toInstant(ZoneOffset.UTC),
-        //         pageable);
-
-        // Page<Transaction> mappedPage = mapPage(entityPage, pageable);
-
-        // // In-memory filtering ONLY when unavoidable
-        // if (query.assetSymbols() == null || query.assetSymbols().isEmpty()) {
-        //     return mappedPage;
-        // }
-
-        // List<Transaction> filtered = mappedPage.getContent().stream()
-        //         .filter(t -> t.getAssetIdentifier().getPrimaryId() != null &&
-        //                 query.assetSymbols().contains(
-        //                         t.getAssetIdentifier().getPrimaryId()))
-        //         .toList();
-
-        // return new PageImpl<>(
-        //         filtered,
-        //         pageable,
-        //         filtered.size() // important: do NOT lie about totals
-        // );
     }
 
     @Override
@@ -113,16 +63,13 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
         return jpaRepository.countByAccountId(accountId.accountId());
     }
 
-    private Page<Transaction> mapPage(Page<TransactionEntity> entityPage, @NonNull Pageable pageable) {
+    private Page<Transaction> mapPage(Page<TransactionEntity> entityPage, Pageable pageable) {
+        Objects.requireNonNull(pageable);
         List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
             .map(mapper::toDomain)
             .toList());
 
-        
-        return new PageImpl<>(
-            transactions,
-            pageable,
-            entityPage.getTotalElements());
+        return new PageImpl<>(transactions, pageable, entityPage.getTotalElements());
     }
 
 }

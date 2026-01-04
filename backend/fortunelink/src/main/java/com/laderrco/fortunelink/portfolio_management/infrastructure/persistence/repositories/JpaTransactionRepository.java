@@ -53,31 +53,15 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable);
 
+    // findWithFilterAndSymbols is absorbed into
     @Query("""
             SELECT t FROM TransactionEntity t
             WHERE (:portfolioId IS NULL OR t.portfolioId = :portfolioId)
-            AND (:accountId IS NULL OR t.account.Id = :accountId)
-            AND (:type IS NULL OR t.transactionType = :type)
+            AND (:accountId IS NULL OR t.account.id = :accountId)
+            AND (:transactionType IS NULL OR t.transactionType = :transactionType)
             AND (:startDate IS NULL OR t.transactionDate >= :startDate)
             AND (:endDate IS NULL OR t.transactionDate <= :endDate)
             AND (:symbols IS NULL OR t.primaryId IN :symbols) 
-            """)
-    public Page<TransactionEntity> findWithFiltersAndSymbols(
-            @Param("portfolioId") UUID portfolioId,
-            @Param("accountId") UUID accountId,
-            @Param("type") TransactionType type,
-            @Param("startDate") Instant startDate,
-            @Param("endDate") Instant endDate,
-            @Param("symbols") Set<String> symbols,
-            Pageable pageable);
-
-    @Query("""
-            SELECT t FROM TransactionEntity t
-            WHERE (:portfolioId IS NULL OR t.portfolioId = :portfolioId)
-              AND (:accountId IS NULL OR t.account.id = :accountId)
-              AND (:transactionType IS NULL OR t.transactionType = :transactionType)
-              AND (:startDate IS NULL OR t.transactionDate >= :startDate)
-              AND (:endDate IS NULL OR t.transactionDate <= :endDate)
             ORDER BY t.transactionDate DESC
             """)
     public Page<TransactionEntity> findWithFilters(
@@ -86,6 +70,7 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
             @Param("transactionType") TransactionType transactionType,
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate,
+            @Param("symbols") Set<String> symbols,
             Pageable pageable);
 
 }
