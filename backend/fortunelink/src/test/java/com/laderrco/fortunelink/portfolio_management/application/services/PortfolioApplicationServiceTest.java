@@ -443,7 +443,6 @@ class PortfolioApplicationServiceTest {
                     userId,
                     accountId,
                     new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
-                    ValidatedCurrency.USD,
                     null,
                     Instant.now(),
                     "Withdrawal");
@@ -468,7 +467,6 @@ class PortfolioApplicationServiceTest {
                     userId,
                     accountId,
                     new Money(BigDecimal.valueOf(50000), ValidatedCurrency.USD), // More than available
-                    ValidatedCurrency.USD,
                     null,
                     Instant.now(),
                     "Large withdrawal");

@@ -665,7 +665,6 @@ class CommandValidatorTest {
                 null,
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(500), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 null,
                 Instant.now(),
                 "notes"
@@ -684,7 +683,6 @@ class CommandValidatorTest {
                 UserId.randomId(),
                 null,
                 new Money(BigDecimal.valueOf(500), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 null,
                 Instant.now(),
                 "notes"
@@ -697,32 +695,12 @@ class CommandValidatorTest {
         }
 
         @Test
-        @DisplayName("Should fail when currency is null")
-        void shouldFailWhenCurrencyIsNull() {
-            RecordWithdrawalCommand command = new RecordWithdrawalCommand(
-                UserId.randomId(),
-                AccountId.randomId(),
-                new Money(BigDecimal.valueOf(500), ValidatedCurrency.of("USD")),
-                null,
-                null,
-                Instant.now(),
-                "notes"
-            );
-            
-            ValidationResult result = validator.validate(command);
-            
-            assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Currency is required");
-        }
-
-        @Test
         @DisplayName("Should fail when Money is negative")
         void shouldFailWhenMoneyIsNegative() {
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
                 UserId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-500), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 null,
                 Instant.now(),
                 "notes"
@@ -746,7 +724,6 @@ class CommandValidatorTest {
                 UserId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(500), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 List.of(validFee),
                 Instant.now().minus(Duration.ofHours(36)),
                 "Test withdrawal"
