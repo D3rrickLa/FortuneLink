@@ -49,7 +49,7 @@ public class TransactionEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
-    private TransactionType transactionType; // TODO: find out if this should be TransactionType or String
+    private TransactionType transactionType;
 
     // Asset snapshot fields
     @Column(name = "primary_id", nullable = false)

@@ -5,7 +5,6 @@ import java.util.Collections;
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CryptoIdentifier;
@@ -17,7 +16,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 @Component
-public class AssetMapperImpl implements AssetEntityMapper, ClassValidation {
+public class AssetEntityMapperImpl implements AssetEntityMapper, ClassValidation {
 
     /**
      * Maps Domain -> Entity (for creating new records)
@@ -52,7 +51,7 @@ public class AssetMapperImpl implements AssetEntityMapper, ClassValidation {
         entity.setIdentifierType(determineIdentifierType(iden));
         entity.setPrimaryId(iden.getPrimaryId());
         entity.setName(iden.displayName());
-        entity.setAssetType(iden.getAssetType().name());
+        entity.setAssetType(iden.getAssetType());
 
         // Fill polymorphic "bucket" columns based on implementation
         switch (iden) {
@@ -116,7 +115,7 @@ public class AssetMapperImpl implements AssetEntityMapper, ClassValidation {
             case "MARKET" -> new MarketIdentifier(
                     entity.getPrimaryId(),
                     entity.getSecondaryIds(),
-                    AssetType.valueOf(entity.getAssetType()),
+                    entity.getAssetType(),
                     entity.getName(),
                     entity.getUnitOfTrade(),
                     entity.getMetadata());
@@ -126,7 +125,7 @@ public class AssetMapperImpl implements AssetEntityMapper, ClassValidation {
             case "CRYPTO" -> new CryptoIdentifier(
                     entity.getPrimaryId(),
                     entity.getName(),
-                    AssetType.valueOf(entity.getAssetType()),
+                    entity.getAssetType(),
                     entity.getUnitOfTrade(),
                     entity.getMetadata());
             default -> throw new IllegalStateException(String.format("Unknown identifier type '%s'",  entity.getIdentifierType().toString()));

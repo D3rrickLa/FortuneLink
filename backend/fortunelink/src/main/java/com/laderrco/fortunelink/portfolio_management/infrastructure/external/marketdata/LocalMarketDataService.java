@@ -15,6 +15,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @Service
+@Deprecated
 public class LocalMarketDataService implements MarketDataService{
 
     @Override

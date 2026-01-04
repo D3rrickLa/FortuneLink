@@ -55,7 +55,7 @@ class TransactionEntityMapperTest {
         testAccountEntity = new AccountEntity();
         testAccountEntity.setId(UUID.randomUUID());
         testAccountEntity.setName("Test Account");
-        testAccountEntity.setAccountType(AccountType.TFSA.toString());
+        testAccountEntity.setAccountType(AccountType.TFSA);
     }
 
     @Nested

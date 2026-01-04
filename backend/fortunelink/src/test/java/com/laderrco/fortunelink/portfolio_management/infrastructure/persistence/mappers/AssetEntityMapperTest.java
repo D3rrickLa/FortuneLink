@@ -37,19 +37,19 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 @DisplayName("AssetMapper Tests")
 class AssetEntityMapperTest {
 
-    private AssetMapperImpl mapper;
+    private AssetEntityMapperImpl mapper;
     private AccountEntity testAccountEntity;
     private Instant testDate;
 
     @BeforeEach
     void setUp() {
-        mapper = new AssetMapperImpl();
+        mapper = new AssetEntityMapperImpl();
         testDate = LocalDateTime.of(2025, 1, 2, 10, 0).toInstant(ZoneOffset.UTC);
 
         testAccountEntity = new AccountEntity();
         testAccountEntity.setId(UUID.randomUUID());
         testAccountEntity.setName("Test Account");
-        testAccountEntity.setAccountType(AccountType.TFSA.toString());
+        testAccountEntity.setAccountType(AccountType.TFSA);
     }
 
     @Nested
@@ -79,7 +79,7 @@ class AssetEntityMapperTest {
             assertThat(entity.getIdentifierType()).isEqualTo("MARKET");
             assertThat(entity.getPrimaryId()).isEqualTo("AAPL");
             assertThat(entity.getName()).isEqualTo("Apple Inc.");
-            assertThat(entity.getAssetType()).isEqualTo("STOCK");
+            assertThat(entity.getAssetType()).isEqualTo(AssetType.valueOf("STOCK"));
             assertThat(entity.getSecondaryIds())
                     .containsEntry("ISIN", "US0378331005")
                     .containsEntry("CUSIP", "037833100");
@@ -107,7 +107,7 @@ class AssetEntityMapperTest {
             // Then
             assertThat(entity.getIdentifierType()).isEqualTo("CASH");
             assertThat(entity.getPrimaryId()).isEqualTo("USD");
-            assertThat(entity.getAssetType()).isEqualTo("CASH");
+            assertThat(entity.getAssetType()).isEqualTo(AssetType.CASH);
             assertThat(entity.getSecondaryIds()).isEmpty();
             assertThat(entity.getUnitOfTrade()).isNull();
             assertThat(entity.getMetadata()).isEmpty();
@@ -133,12 +133,38 @@ class AssetEntityMapperTest {
             assertThat(entity.getIdentifierType()).isEqualTo("CRYPTO");
             assertThat(entity.getPrimaryId()).isEqualTo("BTC");
             assertThat(entity.getName()).isEqualTo("Bitcoin");
-            assertThat(entity.getAssetType()).isEqualTo("CRYPTO");
+            assertThat(entity.getAssetType()).isEqualTo(AssetType.valueOf("CRYPTO"));
             assertThat(entity.getSecondaryIds()).isEmpty();
             assertThat(entity.getUnitOfTrade()).isEqualTo("coins");
             assertThat(entity.getMetadata())
                     .containsEntry("blockchain", "Bitcoin")
                     .containsEntry("network", "mainnet");
+        }
+
+        @Test
+        @DisplayName("Should map Asset with CryptoIdentifier to entity")
+        void shouldMapCryptoAssetToEntityNullMetadata() {
+            // Given
+            CryptoIdentifier identifier = new CryptoIdentifier(
+                    "BTC",
+                    "Bitcoin",
+                    AssetType.CRYPTO,
+                    "coins",
+                   null);
+            Asset domain = createAsset(identifier, new BigDecimal("2.5"), new BigDecimal("112500.00"));
+
+            // When
+            AssetEntity entity = mapper.toEntity(domain, testAccountEntity);
+
+            // Then
+            assertThat(entity.getIdentifierType()).isEqualTo("CRYPTO");
+            assertThat(entity.getPrimaryId()).isEqualTo("BTC");
+            assertThat(entity.getName()).isEqualTo("Bitcoin");
+            assertThat(entity.getAssetType()).isEqualTo(AssetType.valueOf("CRYPTO"));
+            assertThat(entity.getSecondaryIds()).isEmpty();
+            assertThat(entity.getUnitOfTrade()).isEqualTo("coins");
+            assertThat(entity.getMetadata())
+                    .isNullOrEmpty();
         }
 
         @Test
@@ -306,20 +332,6 @@ class AssetEntityMapperTest {
             assertThat(identifier.assetType()).isEqualTo(AssetType.CRYPTO);
         }
 
-        // @Test
-        // @DisplayName("Should handle null version as version 0")
-        // void shouldHandleNullVersion() {
-        // // Given
-        // AssetEntity entity = createMarketEntity("TSLA", "Tesla", AssetType.STOCK);
-        // entity.setVersion(null);
-
-        // // When
-        // Asset domain = mapper.toDomain(entity);
-
-        // // Then
-        // assertThat(domain.getVersion()).isEqualTo(0);
-        // }
-
         @Test
         @DisplayName("Should handle null collections in entity")
         void shouldHandleNullCollectionsInEntity() {
@@ -370,46 +382,6 @@ class AssetEntityMapperTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("has null identifier type");
         }
-
-        @Test
-        @DisplayName("Should throw exception for invalid asset type")
-        void shouldThrowForInvalidAssetType() {
-            // Given
-            AssetEntity entity = createMarketEntity("AAPL", "Apple", AssetType.STOCK);
-            entity.setAssetType("INVALID_TYPE");
-
-            // When/Then
-            assertThatThrownBy(() -> mapper.toDomain(entity))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining(
-                            "No enum constant com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType.INVALID_TYPE");
-            // .hasMessageContaining("Valid types:");
-        }
-
-        // @ParameterizedTest
-        // @ValueSource(strings = {"id", "identifierType", "primaryId", "quantity",
-        // "costBasisAmount", "costBasisCurrency"})
-        // @DisplayName("Should detect data corruption for missing required fields")
-        // void shouldDetectDataCorruption(String fieldToNull) {
-        // // Given
-        // AssetEntity entity = createMarketEntity("AAPL", "Apple", AssetType.STOCK);
-
-        // // Corrupt the entity by nulling a required field
-        // switch (fieldToNull) {
-        // case "id" -> entity.setId(null);
-        // case "identifierType" -> entity.setIdentifierType(null);
-        // case "primaryId" -> entity.setPrimaryId(null);
-        // case "quantity" -> entity.setQuantity(null);
-        // case "costBasisAmount" -> entity.setCostBasisAmount(null);
-        // case "costBasisCurrency" -> entity.setCostBasisCurrency(null);
-        // }
-        // entity.setId(UUID.randomUUID());
-
-        // // When/Then
-        // assertThatThrownBy(() -> mapper.toDomain(entity))
-        // .isInstanceOf(IllegalStateException.class)
-        // .hasMessageContaining("null");
-        // }
     }
 
     @Nested
@@ -502,7 +474,7 @@ class AssetEntityMapperTest {
         @DisplayName("Should throw when unknown Identifier")
         void shouldThrowExceptionWhenUnknownIdentifierInUpdateEntityFromDomainSwitch() {
             // 1. Create a SPY of the real mapper, not a mock
-            AssetMapperImpl mapperSpy = spy(new AssetMapperImpl());
+            AssetEntityMapperImpl mapperSpy = spy(new AssetEntityMapperImpl());
 
             Asset asset = mock(Asset.class);
             AssetEntity assetEntity = mock(AssetEntity.class);
@@ -595,7 +567,7 @@ class AssetEntityMapperTest {
         entity.setIdentifierType("MARKET");
         entity.setPrimaryId(symbol);
         entity.setName(name);
-        entity.setAssetType(assetType.name());
+        entity.setAssetType(assetType);
         entity.setSecondaryIds(Map.of("ISIN", "US0378331005"));
         entity.setUnitOfTrade("shares");
         entity.setMetadata(Map.of("exchange", "NASDAQ"));
@@ -614,7 +586,7 @@ class AssetEntityMapperTest {
         entity.setIdentifierType("CASH");
         entity.setPrimaryId(currency);
         entity.setName(currency);
-        entity.setAssetType("CASH");
+        entity.setAssetType(AssetType.CASH);
         entity.setSecondaryIds(Collections.emptyMap());
         entity.setUnitOfTrade(null);
         entity.setMetadata(Collections.emptyMap());
@@ -633,7 +605,7 @@ class AssetEntityMapperTest {
         entity.setIdentifierType("CRYPTO");
         entity.setPrimaryId(symbol);
         entity.setName(name);
-        entity.setAssetType("CRYPTO");
+        entity.setAssetType(AssetType.valueOf("CRYPTO"));
         entity.setSecondaryIds(Collections.emptyMap());
         entity.setUnitOfTrade("coins");
         entity.setMetadata(Map.of("blockchain", symbol));
@@ -652,7 +624,7 @@ class AssetEntityMapperTest {
         entity.setIdentifierType("CRYPTO");
         entity.setPrimaryId(symbol);
         entity.setName(name);
-        entity.setAssetType("CRYPTO");
+        entity.setAssetType(AssetType.CRYPTO);
         entity.setSecondaryIds(Collections.emptyMap());
         entity.setUnitOfTrade("coins");
         entity.setMetadata(null);

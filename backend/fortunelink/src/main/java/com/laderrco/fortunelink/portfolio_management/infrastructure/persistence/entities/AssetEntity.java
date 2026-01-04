@@ -8,8 +8,12 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -74,7 +78,8 @@ public class AssetEntity {
     @Column(name = "secondary_ids")
     private Map<String, String> secondaryIds; // part of MI
 
-    private String assetType; // part of AI
+    @Enumerated(EnumType.STRING)
+    private AssetType assetType; // part of AI, this can be an Enum
     private String name; // part of AI
     private String unitOfTrade; // part of MI, CI
 

@@ -51,7 +51,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 class PortfolioEntityMapperTest {
 
     @Mock
-    private AssetMapperImpl assetMapper;
+    private AssetEntityMapperImpl assetMapper;
 
     @Mock
     private TransactionEntityMapperImpl txMapper;
@@ -177,7 +177,7 @@ class PortfolioEntityMapperTest {
             // Then
             AccountEntity accountEntity = entity.getAccounts().get(0);
             assertThat(accountEntity.getName()).isEqualTo("TFSA Account");
-            assertThat(accountEntity.getAccountType()).isEqualTo(AccountType.TFSA.toString());
+            assertThat(accountEntity.getAccountType()).isEqualTo(AccountType.TFSA);
             assertThat(accountEntity.getBaseCurrency()).isEqualTo("CAD");
             assertThat(accountEntity.getCashBalanceAmount()).isEqualByComparingTo(new BigDecimal("10000"));
             assertThat(accountEntity.getCashBalanceCurrency()).isEqualTo("CAD");
@@ -392,7 +392,7 @@ class PortfolioEntityMapperTest {
             AccountEntity secondAccount = new AccountEntity();
             secondAccount.setId(UUID.randomUUID());
             secondAccount.setName("To Be Deleted");
-            secondAccount.setAccountType(AccountType.RRSP.toString());
+            secondAccount.setAccountType(AccountType.RRSP);
             secondAccount.setAssets(Collections.emptyList());
             secondAccount.setTransactions(Collections.emptyList());
             existingEntity.getAccounts().add(secondAccount);
@@ -683,7 +683,7 @@ class PortfolioEntityMapperTest {
         AccountEntity account = new AccountEntity();
         account.setId(UUID.randomUUID());
         account.setName("Test Account");
-        account.setAccountType(AccountType.TFSA.toString());
+        account.setAccountType(AccountType.TFSA);
         account.setBaseCurrency("USD");
         account.setCashBalanceAmount(new BigDecimal("1000"));
         account.setCashBalanceCurrency("USD");
@@ -710,7 +710,7 @@ class PortfolioEntityMapperTest {
         asset.setIdentifierType("MARKET");
         asset.setPrimaryId("AAPL");
         asset.setName("Apple Inc.");
-        asset.setAssetType("STOCK");
+        asset.setAssetType(AssetType.STOCK);
         asset.setQuantity(BigDecimal.TEN);
         asset.setCostBasisAmount(new BigDecimal("1500"));
         asset.setCostBasisCurrency("USD");

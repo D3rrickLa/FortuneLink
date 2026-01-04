@@ -16,7 +16,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Acco
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
@@ -37,7 +36,7 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
-    private final AssetMapperImpl assetMapper;
+    private final AssetEntityMapperImpl assetMapper;
     private final TransactionEntityMapperImpl txMapper;
 
     /**
@@ -144,7 +143,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
      */
     private void updateAccountEntity(Account domain, AccountEntity entity) {
         entity.setName(domain.getName());
-        entity.setAccountType(domain.getAccountType().toString());
+        entity.setAccountType(domain.getAccountType());
         entity.setBaseCurrency(domain.getBaseCurrency().getCode());
         entity.setCashBalanceAmount(domain.getCashBalance().amount());
         entity.setCashBalanceCurrency(domain.getCashBalance().currency().getCode());
@@ -232,7 +231,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         AccountEntity entity = new AccountEntity();
         entity.setId(account.getAccountId().accountId());
         entity.setName(account.getName());
-        entity.setAccountType(account.getAccountType().toString());
+        entity.setAccountType(account.getAccountType());
         entity.setBaseCurrency(account.getBaseCurrency().getCode());
         entity.setCashBalanceAmount(account.getCashBalance().amount());
         entity.setCashBalanceCurrency(account.getCashBalance().currency().getCode());
@@ -277,7 +276,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         return Account.reconstitute(
                 new AccountId(entity.getId()),
                 entity.getName(),
-                AccountType.valueOf(entity.getAccountType()), // Direct enum access
+                entity.getAccountType(), // Direct enum access
                 ValidatedCurrency.of(entity.getBaseCurrency()),
                 new Money(
                         entity.getCashBalanceAmount(),

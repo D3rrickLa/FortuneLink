@@ -15,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetMapperImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapperImpl;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({ JpaPortfolioRepository.class, PortfolioEntityMapperImpl.class, AssetMapperImpl.class, TransactionEntityMapperImpl.class })
+@Import({ JpaPortfolioRepository.class, PortfolioEntityMapperImpl.class, AssetEntityMapperImpl.class, TransactionEntityMapperImpl.class })
 class JpaPortfolioRepositoryTest {
 
     @Autowired

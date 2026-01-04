@@ -22,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
+
+import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
@@ -30,8 +32,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetMapperImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapperImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
 
@@ -50,7 +53,7 @@ import static org.mockito.Mockito.mock;
     TransactionQueryRepositoryImpl.class, 
     TransactionEntityMapperImpl.class,
     PortfolioEntityMapperImpl.class, 
-    AssetMapperImpl.class, 
+    AssetEntityMapperImpl.class, 
 })
 public class TransactionQueryRepositoryImplTest {
     /*
@@ -245,14 +248,23 @@ public class TransactionQueryRepositoryImplTest {
 
     @Test
     void testMapPage_ThrowExceptionWhenPageableIsNull() throws Exception {
-        @SuppressWarnings("unchecked")
+        // 1. Setup real mocks, not matchers
+        JpaTransactionRepository mockJpaRepo = mock(JpaTransactionRepository.class);
+        TransactionEntityMapper mockMapper = mock(TransactionEntityMapper.class);
         Page<TransactionEntity> mockPage = mock(Page.class);
-        TransactionQueryRepository repository = new TransactionQueryRepositoryImpl(mock(JpaTransactionRepository.class), any(), any()); // The actual class under test
+
+        // 2. Pass the mocks into the constructor
+        TransactionQueryRepository repository = new TransactionQueryRepositoryImpl(
+            mockJpaRepo, 
+            mockMapper, 
+            null
+        );
+
+        // 3. Reflection logic
         Method mapPage = repository.getClass().getDeclaredMethod("mapPage", Page.class, Pageable.class);
         mapPage.setAccessible(true);
 
-        // Assert that the InvocationTargetException is thrown, 
-        // and its cause is the NullPointerException from Objects.requireNonNull
+        // 4. Execution & Assertion
         InvocationTargetException exception = assertThrows(InvocationTargetException.class, () -> {
             mapPage.invoke(repository, mockPage, null);
         });
@@ -295,7 +307,7 @@ public class TransactionQueryRepositoryImplTest {
         AccountEntity account = new AccountEntity();
         account.setId(UUID.randomUUID());
         account.setName("Test Account");
-        account.setAccountType(AccountType.TFSA.toString());
+        account.setAccountType(AccountType.TFSA);
         account.setBaseCurrency("USD");
         account.setCashBalanceAmount(new BigDecimal("1000"));
         account.setCashBalanceCurrency("USD");
