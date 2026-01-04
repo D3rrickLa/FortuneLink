@@ -11,7 +11,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapperImpl;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class JpaPortfolioRepository implements PortfolioRepository {
 
 private final SpringDataPortfolioRepository jpaRepo; // The standard JpaRepository<PortfolioEntity, UUID>
-    private final PortfolioEntityMapper portfolioMapper;
+    private final PortfolioEntityMapperImpl portfolioMapper;
 
     @Override
     public Optional<Portfolio> findById(PortfolioId id) {

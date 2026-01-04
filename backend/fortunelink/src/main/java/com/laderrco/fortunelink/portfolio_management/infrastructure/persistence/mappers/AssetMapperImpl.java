@@ -16,13 +16,13 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
-// TODO: NUll checks
 @Component
-public class AssetMapper implements ClassValidation {
+public class AssetMapperImpl implements AssetEntityMapper, ClassValidation {
 
     /**
      * Maps Domain -> Entity (for creating new records)
      */
+    @Override
     public AssetEntity toEntity(Asset domain, AccountEntity accountEntity) {
         ClassValidation.validateParameter(domain, "Domain asset cannot be null");
         ClassValidation.validateParameter(accountEntity, "Account entity cannot be null");
@@ -42,6 +42,7 @@ public class AssetMapper implements ClassValidation {
     /**
      * Updates an existing Entity with Domain state (for updates)
      */
+    @Override
     public void updateEntityFromDomain(Asset domain, AssetEntity entity) {
         ClassValidation.validateParameter(domain, "Domain asset cannot be null");
         ClassValidation.validateParameter(entity, "Entity cannot be null");
@@ -89,19 +90,21 @@ public class AssetMapper implements ClassValidation {
     /**
      * Maps Entity -> Domain (Reconstitution)
      */
+    @Override
     public Asset toDomain(AssetEntity entity) {
         ClassValidation.validateParameter(entity, "Entity cannot be null");
         return Asset.reconstitute(
-                new AssetId(entity.getId()),
-                toIdentifier(entity),
-                entity.getCostBasisCurrency(),
-                entity.getQuantity(),
-                entity.getCostBasisAmount(),
-                entity.getCostBasisCurrency(),
-                entity.getAcquiredDate(),
-                entity.getLastInteraction());
-        }
-
+            new AssetId(entity.getId()),
+            toIdentifier(entity),
+            entity.getCostBasisCurrency(),
+            entity.getQuantity(),
+            entity.getCostBasisAmount(),
+            entity.getCostBasisCurrency(),
+            entity.getAcquiredDate(),
+            entity.getLastInteraction());
+    }
+    
+    @Override
     public AssetIdentifier toIdentifier(AssetEntity entity) {
         ClassValidation.validateParameter(entity, "Entity cannot be null");
         String identifierType = entity.getIdentifierType();

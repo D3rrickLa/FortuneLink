@@ -30,9 +30,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.AccountEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetMapperImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapperImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
 
 import jakarta.transaction.Transactional;
@@ -42,17 +42,15 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @DataJpaTest
 @Transactional
 @ActiveProfiles("test")
 @Import({ 
     TransactionQueryRepositoryImpl.class, 
-    TransactionEntityMapper.class,
-    PortfolioEntityMapper.class, 
-    AssetMapper.class, 
+    TransactionEntityMapperImpl.class,
+    PortfolioEntityMapperImpl.class, 
+    AssetMapperImpl.class, 
 })
 public class TransactionQueryRepositoryImplTest {
     /*
@@ -247,8 +245,9 @@ public class TransactionQueryRepositoryImplTest {
 
     @Test
     void testMapPage_ThrowExceptionWhenPageableIsNull() throws Exception {
+        @SuppressWarnings("unchecked")
         Page<TransactionEntity> mockPage = mock(Page.class);
-        TransactionQueryRepositoryImpl repository = new TransactionQueryRepositoryImpl(mock(JpaTransactionRepository.class), any(), any()); // The actual class under test
+        TransactionQueryRepository repository = new TransactionQueryRepositoryImpl(mock(JpaTransactionRepository.class), any(), any()); // The actual class under test
         Method mapPage = repository.getClass().getDeclaredMethod("mapPage", Page.class, Pageable.class);
         mapPage.setAccessible(true);
 

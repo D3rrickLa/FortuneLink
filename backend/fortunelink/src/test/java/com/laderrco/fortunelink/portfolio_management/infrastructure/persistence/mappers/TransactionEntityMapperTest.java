@@ -43,13 +43,13 @@ import static org.mockito.Mockito.when;
 @DisplayName("TransactionEntityMapper Tests")
 class TransactionEntityMapperTest {
 
-    private TransactionEntityMapper mapper;
+    private TransactionEntityMapperImpl mapper;
     private AccountEntity testAccountEntity;
     private Instant testDate;
 
     @BeforeEach
     void setUp() {
-        mapper = new TransactionEntityMapper();
+        mapper = new TransactionEntityMapperImpl();
         testDate = LocalDateTime.of(2025, 1, 2, 10, 0).toInstant(ZoneOffset.UTC);
 
         testAccountEntity = new AccountEntity();

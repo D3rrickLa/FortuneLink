@@ -12,7 +12,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Tran
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
 
 import jakarta.persistence.EntityManager;
@@ -28,7 +28,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class TransactionQueryRepositoryImpl implements TransactionQueryRepository {
     private final JpaTransactionRepository jpaRepository;
-    private final TransactionEntityMapper mapper;
+    private final TransactionEntityMapperImpl mapper;
 
     @PersistenceContext
     private EntityManager em;

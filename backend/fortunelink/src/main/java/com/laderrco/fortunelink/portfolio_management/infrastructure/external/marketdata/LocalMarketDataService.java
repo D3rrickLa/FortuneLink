@@ -46,5 +46,11 @@ public class LocalMarketDataService implements MarketDataService{
     public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier) {
         return ValidatedCurrency.JPY;
     }
+
+    @Override
+    public boolean isSymbolSupported(AssetIdentifier symbol) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isSymbolSupported'");
+    }
     
 }

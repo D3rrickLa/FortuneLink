@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.application.mappers;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,9 +11,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 import org.junit.jupiter.api.Nested;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HashMap;
@@ -436,5 +440,91 @@ class AllocationMapperTest {
             // Assert
             assertTrue(response.getAllocations().isEmpty());
         }
+    }
+
+
+    @Nested
+    @DisplayName("Testing private method createAllocationDetail")
+    public class createAllocationDetailTests {
+        
+        private Class<AllocationMapper> allocationMapper;
+        private Method createAllocationDetail;
+        private String category;
+        private String categoryType;
+        private Money value;
+        private Money totalMoney;
+        
+        @BeforeEach
+        void init() throws NoSuchMethodException {
+            allocationMapper = AllocationMapper.class; 
+            createAllocationDetail = allocationMapper.getDeclaredMethod("createAllocationDetail", String.class, String.class, Money.class, Money.class);
+            createAllocationDetail.setAccessible(true);
+            category = "STOCK";
+            categoryType = "STOCK";
+            value = Money.of(1000, "USD");
+            totalMoney = Money.of(2000, "USD");
+        }
+
+        @Test
+        @DisplayName("Should throw excpetion when category is null")
+        void shouldThrowExceptionWhenCateogryIsNull() {
+            InvocationTargetException exception = assertThrows(InvocationTargetException.class, () -> 
+                createAllocationDetail.invoke(null, null, categoryType, value, totalMoney)
+            );
+            assertEquals(IllegalArgumentException.class, exception.getCause().getClass());
+        }
+
+        @Test
+        @DisplayName("Should throw excpetion when category type is null")
+        void shouldThrowExceptionWhenCateogryTypeIsNull() {
+            InvocationTargetException exception = assertThrows(InvocationTargetException.class, () -> 
+                createAllocationDetail.invoke(null, category, null, value, totalMoney)
+            );
+            assertEquals(IllegalArgumentException.class, exception.getCause().getClass());
+        }
+
+        @Test
+        @DisplayName("Should throw excpetion when value is null")
+        void shouldThrowExceptionWhenValueIsNull() {
+            InvocationTargetException exception = assertThrows(InvocationTargetException.class, () -> 
+                createAllocationDetail.invoke(null, category, categoryType, null, totalMoney)
+            );
+            assertEquals(IllegalArgumentException.class, exception.getCause().getClass());
+        }
+    }
+
+    @Nested
+    @DisplayName("Testing private method calculatePercentage")
+    public class CalculatePercentageTest {
+        
+        private Class<AllocationMapper> allocationMapper;
+        private Method calculatePercentage;
+        private Money value;
+        private Money totalMoney;
+        private Percentage expectedPercentage = new Percentage(BigDecimal.ZERO);
+        
+        @BeforeEach
+        void init() throws NoSuchMethodException {
+            allocationMapper = AllocationMapper.class; 
+            calculatePercentage = allocationMapper.getDeclaredMethod("calculatePercentage", Money.class, Money.class);
+            calculatePercentage.setAccessible(true);
+            value = Money.of(1000, "USD");
+            totalMoney = Money.of(2000, "USD");
+        }
+
+        @Test
+        @DisplayName("Should return zero when total is null")
+        void shouldReturnPercentageZeroWhenTotalIsNull() throws IllegalAccessException, InvocationTargetException {
+            Percentage acutal = (Percentage) calculatePercentage.invoke(null, value, null);
+            assertEquals(expectedPercentage, acutal);
+        }
+
+        @Test
+        @DisplayName("Should return value when total is null")
+        void shouldReturnPercentageZeroWhenValueIsNull() throws IllegalAccessException, InvocationTargetException {
+            Percentage acutal = (Percentage) calculatePercentage.invoke(null, null, totalMoney);
+            assertEquals(expectedPercentage, acutal);
+        }
+
     }
 }

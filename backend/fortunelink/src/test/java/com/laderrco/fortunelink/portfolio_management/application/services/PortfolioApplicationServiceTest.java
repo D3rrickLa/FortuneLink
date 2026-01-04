@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -62,6 +63,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Account
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
@@ -73,12 +75,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Portfolio Application Service Tests")
@@ -2148,5 +2150,61 @@ class PortfolioApplicationServiceTest {
             // Then
             verify(portfolioRepository).save(any(Portfolio.class));
         }
+    }
+
+    @Nested
+    @DisplayName("Rnadom Tests for coverage")
+    public class InnerPortfolioApplicationServiceTest {
+        @Test
+        @DisplayName("Should correctly calculate holdings and allow valid sell")
+        void testValidateSellTransaction_FullCoverage() throws Exception {
+            PortfolioApplicationService portfolioApplicationService = new PortfolioApplicationService(portfolioRepository, transactionQueryService, marketDataService, commandValidator, portfolioMapper);
+            // 1. Setup method access
+            Method method = PortfolioApplicationService.class.getDeclaredMethod(
+                "validateSellTransaction", 
+                AssetIdentifier.class, BigDecimal.class, Instant.class, List.class, TransactionId.class
+            );
+            method.setAccessible(true);
+
+            // 2. Mock/Setup Data
+            Instant sellDate = Instant.parse("2023-10-10T10:00:00Z");
+            TransactionId excludeId = TransactionId.randomId();
+            
+
+            
+            List<Transaction> transactions = List.of(
+                // 1. Branch: BUY (holdings + 10)
+                createMockTx(TransactionId.randomId(), TransactionType.BUY, new BigDecimal("10.0"), sellDate.minusSeconds(100)),
+                
+                // 2. Branch: SELL (holdings - 2)
+                createMockTx(TransactionId.randomId(), TransactionType.SELL, new BigDecimal("2.0"), sellDate.minusSeconds(50)),
+                
+                // 3. Branch: THE ELSE (Neither BUY nor SELL)
+                // This is what solves your coverage issue. Use a type like DIVIDEND or DEPOSIT.
+                createMockTx(TransactionId.randomId(), TransactionType.DIVIDEND, new BigDecimal("1.0"), sellDate.minusSeconds(40)),
+                
+                // 4. Branch: Exclude (Skip)
+                createMockTx(excludeId, TransactionType.BUY, new BigDecimal("100.0"), sellDate.minusSeconds(10))
+            );
+
+            // Ensure we pass the service instance as the first argument
+            assertDoesNotThrow(() -> 
+                method.invoke(portfolioApplicationService, identifier, new BigDecimal("5.0"), sellDate, transactions, excludeId)
+            );
+        }
+
+        private Transaction createMockTx(TransactionId transactionId, TransactionType sell, BigDecimal bigDecimal, Instant minusSeconds) {
+            return new Transaction(
+                transactionId, 
+                accountId, 
+                sell,
+                identifier, 
+                bigDecimal,
+                new Money(bigDecimal, ValidatedCurrency.USD),
+                null, 
+                minusSeconds,
+                null);
+        }
+                
     }
 }

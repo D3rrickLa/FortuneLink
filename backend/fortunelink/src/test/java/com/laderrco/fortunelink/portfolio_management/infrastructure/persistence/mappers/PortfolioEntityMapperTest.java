@@ -51,17 +51,17 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 class PortfolioEntityMapperTest {
 
     @Mock
-    private AssetMapper assetMapper;
+    private AssetMapperImpl assetMapper;
 
     @Mock
-    private TransactionEntityMapper txMapper;
+    private TransactionEntityMapperImpl txMapper;
 
-    private PortfolioEntityMapper mapper;
+    private PortfolioEntityMapperImpl mapper;
     private Instant testTime;
 
     @BeforeEach
     void setUp() {
-        mapper = new PortfolioEntityMapper(assetMapper, txMapper);
+        mapper = new PortfolioEntityMapperImpl(assetMapper, txMapper);
         testTime = Instant.now();
     }
 

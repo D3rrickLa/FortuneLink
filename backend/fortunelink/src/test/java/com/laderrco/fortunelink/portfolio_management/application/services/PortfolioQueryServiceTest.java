@@ -328,7 +328,7 @@ class PortfolioQueryServiceTest {
         AnalyzeAllocationQuery query = new AnalyzeAllocationQuery(
                 userId,
                 AllocationType.BY_TYPE,
-                time);
+                null);
 
         Map<AssetType, Money> allocationMap = Map.of(
                 AssetType.STOCK, new Money(new BigDecimal("60000.00"), testCurrency),
@@ -338,9 +338,9 @@ class PortfolioQueryServiceTest {
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(assetAllocationService.calculateAllocationByType(portfolio, time))
+        when(assetAllocationService.calculateAllocationByType(eq(portfolio), any(Instant.class)))
                 .thenReturn(allocationMap);
-        when(portfolioValuationService.calculateTotalValue(portfolio, time))
+        when(portfolioValuationService.calculateTotalValue(eq(portfolio), any(Instant.class)))
                 .thenReturn(totalValue);
 
         // Act
@@ -348,14 +348,14 @@ class PortfolioQueryServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(time, response.getAsOfDate());
-        // Verify the allocations are present and have correct percentages
+        assertNotNull(response.getAsOfDate()); // Verify it's not null anymore       
+        //  // Verify the allocations are present and have correct percentages
         assertNotNull(response.getAllocations());
         assertEquals(3, response.getAllocations().size());
 
         verify(portfolioRepository).findByUserId(userId);
-        verify(assetAllocationService).calculateAllocationByType(portfolio, time);
-        verify(portfolioValuationService, times(1)).calculateTotalValue(portfolio, time);
+        verify(assetAllocationService).calculateAllocationByType(eq(portfolio), any(Instant.class));
+        verify(portfolioValuationService, times(1)).calculateTotalValue(eq(portfolio), any(Instant.class));
     }
 
     @Test
@@ -483,8 +483,7 @@ class PortfolioQueryServiceTest {
         lenient().doReturn(transactionPage).when(transactionQueryService).queryTransactions(
                 any(TransactionSearchCriteria.class),
                 anyInt(),
-                anyInt()
-        );
+                anyInt());
 
         // 3. Act
         TransactionHistoryResponse response = queryService.getTransactionHistory(query);
@@ -494,12 +493,12 @@ class PortfolioQueryServiceTest {
         assertEquals(5, response.totalCount()); // This should now be 5 because transactionPage total is 5L
 
         // 5. Verify
-        ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor.forClass(TransactionSearchCriteria.class);
+        ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
+                .forClass(TransactionSearchCriteria.class);
         verify(transactionQueryService).queryTransactions(
                 criteriaCaptor.capture(),
                 anyInt(),
-                anyInt()
-        );
+                anyInt());
 
         assertEquals(accountId, criteriaCaptor.getValue().accountId());
     }
@@ -513,7 +512,7 @@ class PortfolioQueryServiceTest {
 
         List<Transaction> transactions = createMockTransactions(15);
         List<Transaction> pageTransactions = transactions.subList(0, 10);
-        
+
         // Use 0 here because the service code is calling the repository with 0
         if (pageTransactions.isEmpty()) {
             fail();
@@ -534,8 +533,9 @@ class PortfolioQueryServiceTest {
         assertEquals(15, response.totalCount());
         assertEquals("All time", response.dateRange());
 
-        ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor.forClass(TransactionSearchCriteria.class);
-        
+        ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
+                .forClass(TransactionSearchCriteria.class);
+
         // FIX: Change eq(1) to eq(0) to match the actual interaction in your log
         verify(transactionQueryService).queryTransactions(criteriaCaptor.capture(), eq(0), eq(10));
 
@@ -547,8 +547,9 @@ class PortfolioQueryServiceTest {
     @Test
     void getTransactionHistory_Success_WithAccountFilter() {
         // Arrange
+        Instant endDate = Instant.now();
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, accountId, null, null, null, 1, 10);
+                userId, accountId, null, endDate, null, 1, 10);
 
         List<Transaction> transactions = createMockTransactionsWithAccount(accountId, 5);
         if (transactions.isEmpty()) {
@@ -578,8 +579,9 @@ class PortfolioQueryServiceTest {
     @Test
     void getTransactionHistory_Success_WithTransactionTypeFilter() {
         // Arrange
+        Instant startDate = Instant.now().minusSeconds(86400 * 30);
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, null, null, null, TransactionType.BUY, 1, 10);
+                userId, null, startDate, null, TransactionType.BUY, 1, 10);
 
         List<Transaction> transactions = createMockTransactions(8);
         if (transactions.isEmpty()) {
@@ -606,7 +608,7 @@ class PortfolioQueryServiceTest {
         assertEquals(TransactionType.BUY, criteriaCaptor.getValue().transactionType());
     }
 
-@Test
+    @Test
     void getTransactionHistory_Success_Pagination() {
         // Arrange
         // Requesting page 2 with size 5
@@ -614,14 +616,14 @@ class PortfolioQueryServiceTest {
                 userId, null, null, null, null, 2, 5);
 
         List<Transaction> pageTransactions = createMockTransactions(5);
-        
+
         // Match the service's 0-indexed logic: Page 2 is index 1
         if (pageTransactions.isEmpty()) {
             fail();
         }
         Page<Transaction> transactionPage = new PageImpl<>(
                 pageTransactions,
-                PageRequest.of(1, 5), 
+                PageRequest.of(1, 5),
                 15);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
@@ -633,8 +635,9 @@ class PortfolioQueryServiceTest {
 
         // Assert
         assertEquals(15, response.totalCount());
-        // Note: Check if your response mapper adds +1 back to the page number for the user
-        assertEquals(2, response.pageNumber()); 
+        // Note: Check if your response mapper adds +1 back to the page number for the
+        // user
+        assertEquals(2, response.pageNumber());
         assertEquals(5, response.pageSize());
 
         // Verify the query parameters (Index 1 = Page 2)

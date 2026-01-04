@@ -35,15 +35,15 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 @DisplayName("AssetMapper Tests")
-class AssetMapperTest {
+class AssetEntityMapperTest {
 
-    private AssetMapper mapper;
+    private AssetMapperImpl mapper;
     private AccountEntity testAccountEntity;
     private Instant testDate;
 
     @BeforeEach
     void setUp() {
-        mapper = new AssetMapper();
+        mapper = new AssetMapperImpl();
         testDate = LocalDateTime.of(2025, 1, 2, 10, 0).toInstant(ZoneOffset.UTC);
 
         testAccountEntity = new AccountEntity();
@@ -502,7 +502,7 @@ class AssetMapperTest {
         @DisplayName("Should throw when unknown Identifier")
         void shouldThrowExceptionWhenUnknownIdentifierInUpdateEntityFromDomainSwitch() {
             // 1. Create a SPY of the real mapper, not a mock
-            AssetMapper mapperSpy = spy(new AssetMapper());
+            AssetMapperImpl mapperSpy = spy(new AssetMapperImpl());
 
             Asset asset = mock(Asset.class);
             AssetEntity assetEntity = mock(AssetEntity.class);

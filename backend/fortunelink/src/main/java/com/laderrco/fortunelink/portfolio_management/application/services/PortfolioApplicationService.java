@@ -597,6 +597,8 @@ public class PortfolioApplicationService {
             } 
             else if (t.getTransactionType() == TransactionType.SELL) {
                 holdings = holdings.subtract(t.getQuantity());
+            } else {
+                
             }
         }
 

@@ -30,6 +30,8 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -462,6 +464,20 @@ class PortfolioMapperTest {
             assertEquals(AssetType.CRYPTO, response.type());
             assertEquals("BTC", response.symbol());
             assertEquals(new BigDecimal("20.00"), response.unrealizedGainPercentage().value().setScale(2));
+        }
+    }
+
+    @Nested
+    @DisplayName("Testing private calcualteGainPercentage")
+    public class CalcualteGainPercentageTest {
+    
+        @Test
+        void testIfThrowPercentageZeroWhenCostBasisIsNull() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+            Method calculateGainPercentage = PortfolioMapper.class.getDeclaredMethod("calculateGainPercentage", Money.class, Money.class);
+            calculateGainPercentage.setAccessible(true);
+
+            Percentage actual = (Percentage) calculateGainPercentage.invoke(null, mock(Money.class), null);
+            assertEquals(new Percentage(BigDecimal.ZERO), actual);
         }
     }
 
