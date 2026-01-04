@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -24,8 +23,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CorrectAssetTickerCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
@@ -77,7 +74,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.repositories.Portfol
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -2152,15 +2148,5 @@ class PortfolioApplicationServiceTest {
             // Then
             verify(portfolioRepository).save(any(Portfolio.class));
         }
-    }
-
-    private TransactionQuery createAccountIdQuery(AccountId accountId) {
-        return new TransactionQuery(
-                null,
-                accountId.accountId(),
-                null,
-                null,
-                null,
-                null);
     }
 }

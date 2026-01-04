@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
@@ -39,33 +40,65 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
     @Transactional
     public Page<Transaction> find(TransactionQuery query, Pageable pageable) {
         Objects.requireNonNull(pageable);
+        
+        // Safely handle null dates before calling .toInstant()
+        Instant start = (query.startDate() != null) ? query.startDate().toInstant(ZoneOffset.UTC) : null;
+        Instant end = (query.endDate() != null) ? query.endDate().toInstant(ZoneOffset.UTC) : null;
+        
+        Page<TransactionEntity> entityPage;
 
-        Page<TransactionEntity> entityPage = jpaRepository.findWithFilters(
+        if (query.assetSymbols() == null || query.assetSymbols().isEmpty()) {
+            // No symbol filtering needed
+            entityPage = jpaRepository.findWithFilters(
                 query.portfolioId(),
                 query.accountId(),
                 query.transactionType() != null ? query.transactionType() : null,
-                query.startDate().toInstant(ZoneOffset.UTC),
-                query.endDate().toInstant(ZoneOffset.UTC),
-                pageable);
-
-        Page<Transaction> mappedPage = mapPage(entityPage, pageable);
-
-        // In-memory filtering ONLY when unavoidable
-        if (query.assetSymbols() == null || query.assetSymbols().isEmpty()) {
-            return mappedPage;
+                start,
+                end,
+                pageable
+            );
+        } 
+        else {
+            // Include symbol filteirng in query
+            entityPage = jpaRepository.findWithFiltersAndSymbols(
+                query.portfolioId(),
+                query.accountId(),
+                query.transactionType(),
+                start,
+                end,
+                query.assetSymbols(),
+                pageable
+            );
         }
 
-        List<Transaction> filtered = mappedPage.getContent().stream()
-                .filter(t -> t.getAssetIdentifier().getPrimaryId() != null &&
-                        query.assetSymbols().contains(
-                                t.getAssetIdentifier().getPrimaryId()))
-                .toList();
+        return mapPage(entityPage, pageable);
 
-        return new PageImpl<>(
-                filtered,
-                pageable,
-                filtered.size() // important: do NOT lie about totals
-        );
+        // Page<TransactionEntity> entityPage = jpaRepository.findWithFilters(
+        //         query.portfolioId(),
+        //         query.accountId(),
+        //         query.transactionType() != null ? query.transactionType() : null,
+        //         query.startDate().toInstant(ZoneOffset.UTC),
+        //         query.endDate().toInstant(ZoneOffset.UTC),
+        //         pageable);
+
+        // Page<Transaction> mappedPage = mapPage(entityPage, pageable);
+
+        // // In-memory filtering ONLY when unavoidable
+        // if (query.assetSymbols() == null || query.assetSymbols().isEmpty()) {
+        //     return mappedPage;
+        // }
+
+        // List<Transaction> filtered = mappedPage.getContent().stream()
+        //         .filter(t -> t.getAssetIdentifier().getPrimaryId() != null &&
+        //                 query.assetSymbols().contains(
+        //                         t.getAssetIdentifier().getPrimaryId()))
+        //         .toList();
+
+        // return new PageImpl<>(
+        //         filtered,
+        //         pageable,
+        //         filtered.size() // important: do NOT lie about totals
+        // );
     }
 
     @Override
@@ -82,14 +115,14 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
 
     private Page<Transaction> mapPage(Page<TransactionEntity> entityPage, @NonNull Pageable pageable) {
         List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
-                .map(mapper::toDomain)
-                .toList());
+            .map(mapper::toDomain)
+            .toList());
 
         
         return new PageImpl<>(
-                transactions,
-                pageable,
-                entityPage.getTotalElements());
+            transactions,
+            pageable,
+            entityPage.getTotalElements());
     }
 
 }

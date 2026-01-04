@@ -9,4 +9,13 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Transac
 public record TransactionQuery(UUID portfolioId, UUID accountId, TransactionType transactionType,
         LocalDateTime startDate, LocalDateTime endDate, Set<String> assetSymbols) {
 
+    public TransactionQuery {
+        if (startDate != null) {
+            if (startDate.isAfter(endDate)) {
+                throw new IllegalArgumentException("Start date must be before end date");
+            }
+        }
+
+    }
+
 }

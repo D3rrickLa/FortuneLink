@@ -38,19 +38,20 @@ import static org.assertj.core.api.Assertions.*;
 @ActiveProfiles("test")
 @Import({ 
     TransactionQueryRepositoryImpl.class, 
+    TransactionEntityMapper.class,
     PortfolioEntityMapper.class, 
     AssetMapper.class, 
-    TransactionEntityMapper.class 
 })
 public class TransactionQueryRepositoryImplTest {
     /*
-     * We are NOT go t hrough the domain aggreagate or calling Portfolio methods. NO
+     * We are NOT going through the domain aggreagate or calling Portfolio methods. NO
      * test invariants here
      * we are inserting entitie sdirectly
      */
 
     @Autowired
     private TransactionQueryRepository repository;
+    
 
     @Autowired
     private TestEntityManager entityManager;
@@ -62,16 +63,19 @@ public class TransactionQueryRepositoryImplTest {
         PortfolioEntity portfolioEntity = creaPortfolioEntity();
         AccountEntity accountEntity = createAccountEntity(null);
         UUID portfolioId = portfolioEntity.getId();
-        persistTransaction(portfolioId, accountEntity, "AAPL", TransactionType.BUY, LocalDateTime.now());
-        persistTransaction(portfolioId, accountEntity, "MSFT", TransactionType.SELL, LocalDateTime.now());
+
+        LocalDateTime testDate = LocalDateTime.of(2024, 6, 1, 12, 0);
+
+        persistTransaction(portfolioId, accountEntity, "AAPL", TransactionType.BUY, testDate);
+        persistTransaction(portfolioId, accountEntity, "MSFT", TransactionType.SELL, testDate);
 
         TransactionQuery query = new TransactionQuery(
                 portfolioId,
                 null,
                 null,
-                null,
-                null,
-                null);
+                LocalDateTime.of(2024, 01, 1, 0, 0),
+                LocalDateTime.of(2025, 01, 1, 0, 0),
+                Set.of("AAPL", "MSFT"));
 
         Page<Transaction> result = repository.find(query, PageRequest.of(0, 10));
 
@@ -169,8 +173,8 @@ public class TransactionQueryRepositoryImplTest {
                 portfolioId,
                 null,
                 null,
-                null,
-                null,
+                LocalDateTime.of(2024, 01, 1, 0, 0),
+                LocalDateTime.of(2027, 01, 1, 0, 0),
                 Set.of("AAPL"));
 
         Page<Transaction> result = repository.find(query, PageRequest.of(0, 10));
