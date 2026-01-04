@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -45,6 +46,7 @@ import com.laderrco.fortunelink.portfolio_management.application.exceptions.Port
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
+import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
@@ -90,7 +92,7 @@ class PortfolioApplicationServiceTest {
     private PortfolioRepository portfolioRepository;
 
     @Mock
-    private TransactionQueryRepository transactionQueryRepository;
+    TransactionQueryService transactionQueryService;
 
     @Mock
     private PortfolioValuationService portfolioValuationService;
@@ -886,8 +888,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -923,8 +924,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -955,8 +956,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -1013,8 +1014,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1075,8 +1075,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -1151,8 +1151,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1217,8 +1216,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1254,8 +1252,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -1286,8 +1284,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -1381,8 +1379,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1469,8 +1466,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1545,9 +1541,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
-            // when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then - Should fail because sell1 reduced holdings to 40
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -1634,8 +1629,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1711,9 +1705,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
-            // when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
             assertThatThrownBy(() -> service.updateTransation(command))
@@ -1788,8 +1781,7 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1845,10 +1837,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactionList);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryRepository.find(createAccountIdQuery(accountId), Pageable.unpaged()))
-                    .thenReturn(page);
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-
             // When
             service.deleteTransaction(command);
 

@@ -20,6 +20,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
 
 /**
  * Implementation of query repository.
@@ -79,14 +80,12 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
         return jpaRepository.countByAccountId(accountId.accountId());
     }
 
-    private Page<Transaction> mapPage(
-            Page<TransactionEntity> entityPage,
-            Pageable pageable) {
-
-        List<Transaction> transactions = entityPage.getContent().stream()
+    private Page<Transaction> mapPage(Page<TransactionEntity> entityPage, @NonNull Pageable pageable) {
+        List<Transaction> transactions = Objects.requireNonNull(entityPage.getContent().stream()
                 .map(mapper::toDomain)
-                .toList();
+                .toList());
 
+        
         return new PageImpl<>(
                 transactions,
                 pageable,

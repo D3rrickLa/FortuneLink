@@ -49,6 +49,7 @@ public class TransactionQueryService {
      */
     public Page<Transaction> queryTransactions(TransactionSearchCriteria criteria, int page,int size) {
         validateCriteria(criteria);
+        validatePagination(page, size);
         
         TransactionQuery query = buildQuery(criteria);
         Pageable pageable = PageRequest.of(page, size, Sort.by("transactionDate").descending());
@@ -70,7 +71,7 @@ public class TransactionQueryService {
     public Page<Transaction> queryTransactions(TransactionSearchCriteria criteria, int page, int size, Sort sort) {
         Objects.requireNonNull(criteria, "TransactionSearchCriteria cannot be null");
         Objects.requireNonNull(sort, "Sort cannot be null");
-        
+
         validateCriteria(criteria);
         validatePagination(page, size);
         

@@ -9,11 +9,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -25,7 +22,6 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-
 import com.laderrco.fortunelink.portfolio_management.application.mappers.AllocationMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
@@ -478,6 +472,9 @@ class PortfolioQueryServiceTest {
 
         List<Transaction> transactions = createMockTransactions(5);
         // PageRequest.of(0, 10) because your log showed the code calling with 0
+        if (transactions.isEmpty()) {
+            fail();
+        }
         Page<Transaction> transactionPage = new PageImpl<>(transactions, PageRequest.of(0, 10), 5L);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
@@ -518,6 +515,9 @@ class PortfolioQueryServiceTest {
         List<Transaction> pageTransactions = transactions.subList(0, 10);
         
         // Use 0 here because the service code is calling the repository with 0
+        if (pageTransactions.isEmpty()) {
+            fail();
+        }
         Page<Transaction> transactionPage = new PageImpl<>(pageTransactions, PageRequest.of(0, 10), 15);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
@@ -616,6 +616,9 @@ class PortfolioQueryServiceTest {
         List<Transaction> pageTransactions = createMockTransactions(5);
         
         // Match the service's 0-indexed logic: Page 2 is index 1
+        if (pageTransactions.isEmpty()) {
+            fail();
+        }
         Page<Transaction> transactionPage = new PageImpl<>(
                 pageTransactions,
                 PageRequest.of(1, 5), 
