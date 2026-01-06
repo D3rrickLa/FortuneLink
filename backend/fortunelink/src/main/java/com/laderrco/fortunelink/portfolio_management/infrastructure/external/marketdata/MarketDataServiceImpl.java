@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataS
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+
 public class MarketDataServiceImpl implements MarketDataService{
 
     @Override

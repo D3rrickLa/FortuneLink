@@ -27,7 +27,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -430,10 +430,10 @@ public class PortfolioValuationServiceTest {
         Asset asset = createAsset("asset-1", symbol, "10", ValidatedCurrencyCAD);
 
         when(marketDataService.getCurrentPrice(symbol))
-            .thenThrow(new MarketDataNotFoundException("Price not found for symbol: INVALID"));
+            .thenThrow(MarketDataException.symbolNotFound("INVALID"));
 
         // Act & Assert
-        assertThrows(MarketDataNotFoundException.class, () -> {
+        assertThrows(MarketDataException.class, () -> {
             valuationService.calculateAssetValue(asset, ValidatedCurrency.USD, Instant.now());
         });
     }

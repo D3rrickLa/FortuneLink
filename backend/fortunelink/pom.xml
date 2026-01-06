@@ -52,13 +52,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Jackson for JSON parsing (should already be included via spring-boot-starter-web) -->
+        <!-- Jackson for JSON parsing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- SLF4J Logging (should already be included) -->
+        <!-- SLF4J Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -200,7 +200,7 @@
             </plugin>
             <!-- 
 				need (this and the surefire because in the debug console while testing, says self-attaching 
-			 	will no longer work in future releases, do htis instead
+			 	will no longer work in future releases, do this instead
 			-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -234,5 +234,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
