@@ -145,7 +145,9 @@ class PortfolioApplicationServiceTest {
                 "NASDAQ",
                 ValidatedCurrency.USD,
                 "Technology",
-                Money.of(215, "USD"));
+                Money.of(215, "USD"), 
+                "SOME DESC"
+            );
 
         identifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
     }

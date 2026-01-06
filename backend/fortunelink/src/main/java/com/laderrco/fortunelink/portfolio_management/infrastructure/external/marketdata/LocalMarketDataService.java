@@ -35,7 +35,7 @@ public class LocalMarketDataService implements MarketDataService{
 
     @Override
     public Optional<MarketAssetInfo> getAssetInfo(String symbol) {
-        return Optional.ofNullable(new MarketAssetInfo(symbol, symbol, AssetType.OTHER, symbol, ValidatedCurrency.JPY, symbol, Money.of(1001, "JPY")));
+        return Optional.ofNullable(new MarketAssetInfo(symbol, symbol, AssetType.OTHER, symbol, ValidatedCurrency.JPY, symbol, Money.of(1001, "JPY"), "SOMETHING"));
     }
 
     @Override

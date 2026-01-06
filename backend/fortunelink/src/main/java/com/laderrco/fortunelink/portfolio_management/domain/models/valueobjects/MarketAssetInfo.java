@@ -15,8 +15,9 @@ public class MarketAssetInfo {
     private final ValidatedCurrency currency;
     private final String sector;
     private final Money currentPrice;
+    private final String description;
 
-    public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, ValidatedCurrency currency, String sector, Money currentPrice) {
+    public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, ValidatedCurrency currency, String sector, Money currentPrice, String description) {
         this.symbol = symbol;
         this.name = name;
         this.assetType = assetType;
@@ -24,6 +25,7 @@ public class MarketAssetInfo {
         this.currency = currency;
         this.sector = sector;
         this.currentPrice = currentPrice;
+        this.description = description;
     }
 
     public MarketIdentifier toIdentifier() {
@@ -58,6 +60,10 @@ public class MarketAssetInfo {
     public Money getCurrentPrice() {
         return currentPrice;
     }  
+
+    public String getDescription() {
+        return description;
+    }
     
     @Override
     public boolean equals(Object o) {
@@ -75,12 +81,15 @@ public class MarketAssetInfo {
                Objects.equals(exchange, that.exchange) && 
                Objects.equals(currency, that.currency) && 
                Objects.equals(sector, that.sector) && 
-               Objects.equals(currentPrice, that.currentPrice);
+               Objects.equals(currentPrice, that.currentPrice) &&
+               Objects.equals(description, that.description);
     }
 
     @Override
     public int hashCode() {
         // Generates a hash based on all fields to ensure distribution
-        return Objects.hash(symbol, name, assetType, exchange, currency, sector, currentPrice);
+        return Objects.hash(symbol, name, assetType, exchange, currency, sector, currentPrice, description);
     }
+
+
 }

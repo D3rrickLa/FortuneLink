@@ -26,6 +26,7 @@ public class MarketAssetInfoTest {
     private ValidatedCurrency currency;
     private String sector;
     private Money currentPrice;
+    private String desc;
 
     @BeforeEach
     void init() {
@@ -36,12 +37,13 @@ public class MarketAssetInfoTest {
         currency = ValidatedCurrency.USD;
         sector = "Technology";
         currentPrice = Money.of(215.55, "USD");
-        testMarketAssetInfo = new MarketAssetInfo(symbol, name, assetType, exchange, currency, sector, currentPrice);
+        desc = "SOMETHING HERE";
+        testMarketAssetInfo = new MarketAssetInfo(symbol, name, assetType, exchange, currency, sector, currentPrice, desc);
     }
 
     @Test
     void testConstructor() {
-        MarketAssetInfo tAssetInfo = new MarketAssetInfo(symbol, name, assetType, exchange, currency, sector, currentPrice);
+        MarketAssetInfo tAssetInfo = new MarketAssetInfo(symbol, name, assetType, exchange, currency, sector, currentPrice, desc);
         assertEquals(tAssetInfo, testMarketAssetInfo);
         assertAll(
             () -> tAssetInfo.getSymbol().equals("AAPL"),
@@ -50,7 +52,8 @@ public class MarketAssetInfoTest {
             () -> tAssetInfo.getExchange().equals("NASDAQ"),
             () -> tAssetInfo.getCurrency().equals(currency),
             () -> tAssetInfo.getSector().equals("Technology"),
-            () -> tAssetInfo.getCurrentPrice().equals(currentPrice)
+            () -> tAssetInfo.getCurrentPrice().equals(currentPrice),
+            () -> tAssetInfo.getDescription().equals("SOMETHING HERE")
         );
     }
 
@@ -64,11 +67,11 @@ public class MarketAssetInfoTest {
     @DisplayName("Verify equals and hashCode contracts for MarketAssetInfo")
     void testEqualsAndHashCode() {
         // 1. Create two identical objects
-        MarketAssetInfo asset1 = new MarketAssetInfo("AAPL", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.of("USD"), "Technology", new Money(new BigDecimal("150.00"), ValidatedCurrency.USD));
-        MarketAssetInfo asset2 = new MarketAssetInfo("AAPL", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.of("USD"), "Technology", new Money(new BigDecimal("150.00"), ValidatedCurrency.USD));
+        MarketAssetInfo asset1 = new MarketAssetInfo("AAPL", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.of("USD"), "Technology", new Money(new BigDecimal("150.00"), ValidatedCurrency.USD), desc);
+        MarketAssetInfo asset2 = new MarketAssetInfo("AAPL", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.of("USD"), "Technology", new Money(new BigDecimal("150.00"), ValidatedCurrency.USD), desc);
         
         // 2. Create a different object (changed symbol)
-        MarketAssetInfo assetDifferent = new MarketAssetInfo("MSFT", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Technology",  new Money(new BigDecimal("150.00"), ValidatedCurrency.USD));
+        MarketAssetInfo assetDifferent = new MarketAssetInfo("MSFT", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Technology",  new Money(new BigDecimal("150.00"), ValidatedCurrency.USD), null);
 
         // --- EQUALS CONTRACT TESTS ---
         
@@ -100,15 +103,15 @@ public class MarketAssetInfoTest {
     @Test
     @DisplayName("Test that changing any single field breaks equality")
     void testEqualitySensitivity() {
-        MarketAssetInfo base = new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD));
+        MarketAssetInfo base = new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD), desc);
 
         // Check every field individually
-        assertNotEquals(base, new MarketAssetInfo("OTHER", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD)));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Other", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD)));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.ETF, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD)));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NYSE", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD)));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.CAD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.CAD)));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Energy", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD)));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("1.00"), ValidatedCurrency.USD)));
+        assertNotEquals(base, new MarketAssetInfo("OTHER", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD), desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Other", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD), desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.ETF, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD), desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NYSE", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD), desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.CAD, "Tech", new Money(new BigDecimal("10.00"), ValidatedCurrency.CAD), desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Energy", new Money(new BigDecimal("10.00"), ValidatedCurrency.USD), desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", new Money(new BigDecimal("1.00"), ValidatedCurrency.USD), desc));
     }
 }

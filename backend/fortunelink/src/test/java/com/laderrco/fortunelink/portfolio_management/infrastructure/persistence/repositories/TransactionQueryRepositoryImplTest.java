@@ -23,7 +23,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
@@ -43,7 +42,6 @@ import jakarta.transaction.Transactional;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 
 @DataJpaTest
@@ -251,6 +249,7 @@ public class TransactionQueryRepositoryImplTest {
         // 1. Setup real mocks, not matchers
         JpaTransactionRepository mockJpaRepo = mock(JpaTransactionRepository.class);
         TransactionEntityMapper mockMapper = mock(TransactionEntityMapper.class);
+        @SuppressWarnings("unchecked")
         Page<TransactionEntity> mockPage = mock(Page.class);
 
         // 2. Pass the mocks into the constructor
