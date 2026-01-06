@@ -32,4 +32,8 @@ public class YahooChartResult extends YahooBaseData {
     public int getDataPointCount() {
         return timestamp != null ? timestamp.size() : 0;
     }
+
+    public boolean isMeta() {
+        return super.getCurrency() == null && super.getExchange() == null && super.getSymbol() == null;
+    }
 }

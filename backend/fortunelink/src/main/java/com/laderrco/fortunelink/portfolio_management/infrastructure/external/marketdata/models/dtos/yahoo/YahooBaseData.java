@@ -12,7 +12,7 @@ public abstract class YahooBaseData {
     /**
      * Get currency with fallback to USD.
      */
-    public String getCurrency() {
+    public String getCurrencyOrDefault() {
         return currency != null ? currency : "USD";
     }
 }
