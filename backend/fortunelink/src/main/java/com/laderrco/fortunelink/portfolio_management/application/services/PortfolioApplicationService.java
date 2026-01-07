@@ -454,6 +454,10 @@ public class PortfolioApplicationService {
     }
 
     public void removeAccount(RemoveAccountCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid remove account command", validationResult.errors());
+        }
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
 
@@ -469,6 +473,10 @@ public class PortfolioApplicationService {
     }
 
     public void correctAssetTicket(CorrectAssetTickerCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Correcting asset ticket command", validationResult.errors());
+        }
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
 

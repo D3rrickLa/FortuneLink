@@ -143,7 +143,7 @@ public class YahooFinanceProvider implements MarketDataProvider {
     }
 
     @Override
-    public Map<String, ProviderAssetInfo> festBatchAssetInfo(List<String> symbols) {
+    public Map<String, ProviderAssetInfo> fetchBatchAssetInfo(List<String> symbols) {
         if (symbols == null || symbols.isEmpty()) {
             return Collections.emptyMap();
         }

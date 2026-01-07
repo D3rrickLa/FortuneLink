@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -81,6 +82,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Portfolio Application Service Tests")
@@ -386,6 +388,68 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
+
+        @Test
+        @DisplayName("Should throw error test for lambda")
+        void recordAssetSale_WhenAssetNotFound_ThrowsException() {
+            // 1. Define the symbol
+            String symbol = "AAPL"; 
+            
+            // 2. Ensure the command actually contains that symbol
+            // (Assuming RecordSaleCommand is a record or has a constructor like this)
+            RecordSaleCommand command = new RecordSaleCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                symbol,
+                BigDecimal.TEN,
+                Money.of(20, "USD"),
+                null,
+                Instant.now(),
+                null
+            ); 
+
+            // 3. Mock the validator to pass
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            
+            // 4. Mock the service using the SAME symbol
+            when(marketDataService.getAssetInfo(symbol)).thenReturn(Optional.empty());
+
+            // 5. Assert the exception
+            assertThrows(AssetNotFoundException.class, () -> {
+                service.recordAssetSale(command);
+            });
+        }
+
+        @Test
+        @DisplayName("Should throw error test for lambda")
+        void recordAssetSale_WhenPortfolioNotFound_ThrowsException() {
+            // 1. Define the symbol
+            String symbol = "AAPL"; 
+            
+            // 2. Ensure the command actually contains that symbol
+            // (Assuming RecordSaleCommand is a record or has a constructor like this)
+            RecordSaleCommand command = new RecordSaleCommand(
+                UserId.randomId(),
+                AccountId.randomId(),
+                symbol,
+                BigDecimal.TEN,
+                Money.of(20, "USD"),
+                null,
+                Instant.now(),
+                null
+            ); 
+
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(marketDataService.getAssetInfo(symbol)).thenReturn(Optional.ofNullable(mock(MarketAssetInfo.class)));
+            when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
+            
+
+            // 5. Assert the exception
+            assertThrows(PortfolioNotFoundException.class, () -> {
+                service.recordAssetSale(command);
+            });
+        }
     }
 
     @Nested
@@ -429,6 +493,27 @@ class PortfolioApplicationServiceTest {
 
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
+        }
+
+        @Test
+        @DisplayName("Should throw error test for lambda")
+        void recordDeposit_WhenPortfolioNotFound_ThrowsException() {
+            RecordDepositCommand command = new RecordDepositCommand(
+                userId, 
+                accountId,
+                Money.of(20, "USD"),
+                ValidatedCurrency.CAD, 
+                null,
+                Instant.now(),
+                null
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
+            
+            assertThrows(PortfolioNotFoundException.class, () -> {
+                service.recordDeposit(command);
+            });
         }
     }
 
@@ -492,6 +577,26 @@ class PortfolioApplicationServiceTest {
 
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
+        }
+
+        @Test
+        @DisplayName("Should throw error test for lambda")
+        void recordWithdrawal_WhenPortfolioNotFound_ThrowsException() {
+            RecordWithdrawalCommand command = new RecordWithdrawalCommand(
+                userId, 
+                accountId,
+                Money.of(20, "USD"),
+                null,
+                Instant.now(),
+                null
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
+            
+            assertThrows(PortfolioNotFoundException.class, () -> {
+                service.recordWithdrawal(command);
+            });
         }
     }
 
@@ -608,6 +713,29 @@ class PortfolioApplicationServiceTest {
 
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
+        }
+
+        @Test
+        @DisplayName("Should throw error test for lambda")
+        void recordDividend_WhenPortfolioNotFound_ThrowsException() {
+            RecordIncomeCommand command = new RecordIncomeCommand(
+                userId, 
+                accountId,
+                "AAPL",
+                Money.of(20, "USD"),
+                TransactionType.DIVIDEND,
+                false,
+                BigDecimal.ONE,
+                Instant.now(),
+                null
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
+            
+            assertThrows(PortfolioNotFoundException.class, () -> {
+                service.recordDividendIncome(command);
+            });
         }
     }
 
@@ -1791,6 +1919,30 @@ class PortfolioApplicationServiceTest {
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
         }
+
+        @Test
+        @DisplayName("Should throw error test for lambda")
+        void recorUpdateTransaction_WhenPortfolioNotFound_ThrowsException() {
+            UpdateTransactionCommand command = new UpdateTransactionCommand(
+                userId, 
+                accountId,
+                TransactionId.randomId(),
+                TransactionType.BUY,
+                mock(AssetIdentifier.class),
+                BigDecimal.ONE,
+                Money.of(20, "USD"),
+                null,
+                Instant.now(),
+                null
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
+            
+            assertThrows(PortfolioNotFoundException.class, () -> {
+                service.updateTransation(command);
+            });
+        }
     }
 
     @Nested
@@ -1858,6 +2010,58 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
+        
+        @Test
+        void deleteTransaction_WhenTransactionIdNotFoundInList_ThrowsException() {
+            // Arrange
+            TransactionId targetId = TransactionId.randomId();
+            
+            DeleteTransactionCommand command = new DeleteTransactionCommand(
+                userId, 
+                accountId, 
+                targetId,
+                false,
+                "reason"
+            );
+            
+            // Mock validator
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            
+            // Mock list with a DIFFERENT ID so the .filter() fails to find a match
+            Transaction otherTransaction = mock(Transaction.class);
+            when(otherTransaction.getTransactionId()).thenReturn(TransactionId.randomId());
+            when(transactionQueryService.getAllTransactions(any())).thenReturn(List.of(otherTransaction));
+
+            // Act & Assert
+            assertThrows(TransactionNotFoundException.class, () -> service.deleteTransaction(command));
+        }
+
+        @Test
+        void deleteTransaction_WhenPortfolioNotFound_ThrowsException() {
+            // Arrange
+            TransactionId targetId = TransactionId.randomId();
+            
+            DeleteTransactionCommand command = new DeleteTransactionCommand(
+                userId, 
+                accountId, 
+                targetId,
+                false,
+                "reason"
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+
+            // 1. Transaction must be found first to reach the portfolio check
+            Transaction foundTxn = mock(Transaction.class);
+            when(foundTxn.getTransactionId()).thenReturn(targetId);
+            when(transactionQueryService.getAllTransactions(any())).thenReturn(List.of(foundTxn));
+
+            // 2. Mock Repository to return EMPTY
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(PortfolioNotFoundException.class, () -> service.deleteTransaction(command));
+        }
     }
 
     @Nested
@@ -1898,6 +2102,7 @@ class PortfolioApplicationServiceTest {
 
             RemoveAccountCommand command = new RemoveAccountCommand(userId, newAccountId);
 
+            when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When
@@ -1924,7 +2129,7 @@ class PortfolioApplicationServiceTest {
             portfolio.recordTransaction(accountId, buyTx);
 
             RemoveAccountCommand command = new RemoveAccountCommand(userId, accountId);
-
+            when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // Verify account actually has assets before the test
@@ -1952,7 +2157,45 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
+        @Test
+        void addAccount_WhenPortfolioNotFound_ThrowsException() {            
+            AddAccountCommand command = new AddAccountCommand(
+                userId, 
+                "some name",
+                AccountType.CHEQUING,
+                ValidatedCurrency.USD
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
+            assertThrows(PortfolioNotFoundException.class, () -> service.addAccount(command));
+        }
+
+        @Test
+        void removeAccount_WhenPortfolioNotFound_ThrowsException() {            
+            RemoveAccountCommand command = new RemoveAccountCommand(
+                userId, 
+                accountId
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+            assertThrows(PortfolioNotFoundException.class, () -> service.removeAccount(command));
+        }
+
+        @Test
+        void removeAccount_WhenInvalidTransaction_ThrowsException() {            
+            RemoveAccountCommand command = new RemoveAccountCommand(
+                userId, 
+                accountId
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));
+
+            assertThrows(InvalidTransactionException.class, () -> service.removeAccount(command));
+        }
     }
 
     @Nested
@@ -2114,7 +2357,21 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
-    }
+
+        @Test
+        void deletePortfolio_WhenPortfolioNotFound_ThrowsException() {            
+            DeletePortfolioCommand command = new DeletePortfolioCommand(
+                userId, 
+                true,
+                true
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+            assertThrows(PortfolioNotFoundException.class, () -> service.deletePortfolio(command));
+        }
+        }
 
     @Nested
     @DisplayName("Correct Asset Ticker Tests")
@@ -2141,7 +2398,8 @@ class PortfolioApplicationServiceTest {
                     accountId,
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
-
+                    
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -2150,6 +2408,34 @@ class PortfolioApplicationServiceTest {
 
             // Then
             verify(portfolioRepository).save(any(Portfolio.class));
+        }
+        @Test
+        void correctAssetTicket_WhenPortfolioNotFound_ThrowsException() {            
+            CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
+                userId, 
+                accountId,
+                mock(AssetIdentifier.class),
+                mock(AssetIdentifier.class)
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+            assertThrows(PortfolioNotFoundException.class, () -> service.correctAssetTicket(command));
+        }
+
+        @Test
+        void correctAssetTicket_WhenInvalidTransaction_ThrowsException() {            
+            CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
+                userId, 
+                accountId,
+                mock(AssetIdentifier.class),
+                mock(AssetIdentifier.class)
+            );
+            
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));
+
+            assertThrows(InvalidTransactionException.class, () -> service.correctAssetTicket(command));
         }
     }
 

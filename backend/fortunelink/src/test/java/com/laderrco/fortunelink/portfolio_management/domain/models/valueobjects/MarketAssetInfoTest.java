@@ -66,7 +66,7 @@ public class MarketAssetInfoTest {
         MarketAssetInfo asset2 = new MarketAssetInfo("AAPL", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.of("USD"), "Technology", desc);
         
         // 2. Create a different object (changed symbol)
-        MarketAssetInfo assetDifferent = new MarketAssetInfo("MSFT", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Technology", null);
+        MarketAssetInfo assetDifferent = new MarketAssetInfo("MSFT", "Apple Inc.", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Technology", "TEST");
 
         // --- EQUALS CONTRACT TESTS ---
         
@@ -107,6 +107,6 @@ public class MarketAssetInfoTest {
         assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NYSE", ValidatedCurrency.USD, "Tech",  desc));
         assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.CAD, "Tech", desc));
         assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Energy", desc));
-        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Tech", desc));
+        assertNotEquals(base, new MarketAssetInfo("AAPL", "Apple", AssetType.STOCK, "NASDAQ", ValidatedCurrency.USD, "Energy", "TET"));
     }
 }

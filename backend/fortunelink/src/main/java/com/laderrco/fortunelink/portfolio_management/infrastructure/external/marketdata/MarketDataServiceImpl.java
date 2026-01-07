@@ -142,30 +142,30 @@ public class MarketDataServiceImpl implements MarketDataService {
         if (symbols == null || symbols.isEmpty()) {
             return Collections.emptyMap();
         }
-        
+
         log.debug("Fetching batch asset info for {} symbols", symbols.size());
-        
+
         // Convert domain symbols to provider format
         List<String> providerSymbols = symbols.stream()
-            .map(s -> mapper.toProviderSymbol(s.getPrimaryId(), provider.getProviderName()))
-            .toList();
-        
+                .map(s -> mapper.toProviderSymbol(s.getPrimaryId(), provider.getProviderName()))
+                .toList();
+
         // ✅ USE THE BATCH ASSET INFO METHOD - single API call!
-        Map<AssetIdentifier, ProviderAssetInfo> providerInfoMap = provider.fetchBatchAssetInfo(providerSymbols);
-        
+        Map<String, ProviderAssetInfo> providerInfoMap = provider.fetchBatchAssetInfo(providerSymbols);
+
         // Map back to domain models
         Map<AssetIdentifier, MarketAssetInfo> result = new HashMap<>();
         for (AssetIdentifier symbol : symbols) {
             String providerSymbol = mapper.toProviderSymbol(symbol.getPrimaryId(), provider.getProviderName());
             ProviderAssetInfo providerInfo = providerInfoMap.get(providerSymbol);
-            
+
             if (providerInfo != null) {
                 result.put(symbol, mapper.toAssetInfo(providerInfo));
             } else {
                 log.warn("No asset info found for symbol: {}", symbol.getPrimaryId());
             }
         }
-        
+
         log.debug("Retrieved asset info for {}/{} symbols", result.size(), symbols.size());
         return result;
     }
@@ -178,8 +178,28 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     @Override
     public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getTradingCurrency'");
+        // Delegate to getAssetInfo (avoids duplicate API call logic)
+        MarketAssetInfo info = getAssetInfo(assetIdentifier.getPrimaryId())
+                .orElseThrow(() -> MarketDataException.symbolNotFound(assetIdentifier.getPrimaryId()));
+
+        return info.getCurrency();
     }
+
+
+    // --- Caching Methods (TODO: Implement with Redis) ---
+    
+    /*
+    private Money checkCache(AssetSymbol symbol) {
+        // Check Redis cache for recent price
+        // Key format: "market:price:{symbol}:{currency}"
+        // TTL: 5 minutes for current prices, 24h for historical
+        return null;
+    }
+    
+    private void cachePrice(AssetSymbol symbol, Money price) {
+        // Store in Redis with TTL
+        // cacheManager.getCache("market-data").put(symbol.value(), price);
+    }
+    */
 
 }
