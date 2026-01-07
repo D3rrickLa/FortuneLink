@@ -55,7 +55,7 @@ public interface MarketDataService {
      * @param symbols A list of ticker symbols.
      * @return A map mapping the symbol string to its corresponding asset metadata.
      */
-    public Map<String, MarketAssetInfo> getAssetInfoBatch(List<String> symbols);
+    public Map<AssetIdentifier, MarketAssetInfo> getAssetInfoBatch(List<AssetIdentifier> symbols);
 
     /**
      * Verifies if the underlying data provider supports and tracks the specified

@@ -56,7 +56,7 @@ public class YahooResponseMapper {
                 assetType,
                 quote.getExchange(),
                 quote.getCurrencyOrDefault(),
-                SOURCE);
+                SOURCE, assetType);
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
 
@@ -52,6 +53,14 @@ public interface MarketDataProvider {
      * @return Asset info if available
      */
     Optional<ProviderAssetInfo> fetchAssetInfo(String symbol);
+
+    /**
+     * Batch fetch asset info 
+     * 
+     * @param symbols list of raw symbols
+     * @return Map of successful fetches (excludes failures)
+     */
+    Map<AssetIdentifier, ProviderAssetInfo> fetchBatchAssetInfo(List<String> symbols);
     
     /**
      * Check if this provider supports the symbol.
@@ -59,7 +68,7 @@ public interface MarketDataProvider {
      * @param symbol Raw symbol
      * @return true if supported
      */
-    boolean supportsSymbol(String symbol);
+    boolean supportSymbol(String symbol);
     
     /**
      * Get provider name for logging/debugging.

@@ -5,26 +5,24 @@ import java.util.Objects;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+// AssetInfo = WHAT the asset IS (static metadata)
 public class MarketAssetInfo {
     private final String symbol;
     private final String name;
     private final AssetType assetType;
     private final String exchange;
-    private final ValidatedCurrency currency;
-    private final String sector;
-    private final Money currentPrice;
+    private final ValidatedCurrency currency;  // Trading currency
+    private final String sector;               // e.g., "Technology", "Finance"
     private final String description;
 
-    public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, ValidatedCurrency currency, String sector, Money currentPrice, String description) {
+    public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, ValidatedCurrency currency, String sector, String description) {
         this.symbol = symbol;
         this.name = name;
         this.assetType = assetType;
         this.exchange = exchange;
         this.currency = currency;
         this.sector = sector;
-        this.currentPrice = currentPrice;
         this.description = description;
     }
 
@@ -56,10 +54,7 @@ public class MarketAssetInfo {
     }
     public String getSector() {
         return sector;
-    }
-    public Money getCurrentPrice() {
-        return currentPrice;
-    }  
+    } 
 
     public String getDescription() {
         return description;
@@ -81,14 +76,13 @@ public class MarketAssetInfo {
                Objects.equals(exchange, that.exchange) && 
                Objects.equals(currency, that.currency) && 
                Objects.equals(sector, that.sector) && 
-               Objects.equals(currentPrice, that.currentPrice) &&
                Objects.equals(description, that.description);
     }
 
     @Override
     public int hashCode() {
         // Generates a hash based on all fields to ensure distribution
-        return Objects.hash(symbol, name, assetType, exchange, currency, sector, currentPrice, description);
+        return Objects.hash(symbol, name, assetType, exchange, currency, sector, description);
     }
 
 

@@ -10,6 +10,7 @@ public record ProviderAssetInfo(
     String assetType,    // "STOCK", "ETF", "CRYPTO"
     String exchange,     // "NYSE", "NASDAQ", "TSX"
     String currency,     // "USD", "CAD"
+    String sector,
     String source
 ) {
     public ProviderAssetInfo {

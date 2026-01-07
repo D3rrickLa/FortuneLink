@@ -145,7 +145,6 @@ class PortfolioApplicationServiceTest {
                 "NASDAQ",
                 ValidatedCurrency.USD,
                 "Technology",
-                Money.of(215, "USD"), 
                 "SOME DESC"
             );
 
