@@ -79,7 +79,7 @@ class MarketDataServiceImplTest {
         Money expectedPrice = new Money(new BigDecimal("150.00"), ValidatedCurrency.USD);
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(testIdentifier.getPrimaryId(), "YAHOO_FINANCE")).thenReturn("AAPL");
+        when(mapper.toProviderSymbol(testIdentifier, "YAHOO_FINANCE")).thenReturn("AAPL");
         when(provider.fetchCurrentQuote("AAPL")).thenReturn(Optional.of(quote));
         when(mapper.toMoney(quote)).thenReturn(expectedPrice);
 
@@ -97,7 +97,7 @@ class MarketDataServiceImplTest {
     void shouldThrowExceptionWhenSymbolNotFound() {
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(testIdentifier.getPrimaryId(), "YAHOO_FINANCE")).thenReturn("INVALID");
+        when(mapper.toProviderSymbol(testIdentifier, "YAHOO_FINANCE")).thenReturn("INVALID");
         when(provider.fetchCurrentQuote("INVALID")).thenReturn(Optional.empty());
 
         // When/Then
@@ -122,7 +122,7 @@ class MarketDataServiceImplTest {
         Money expectedPrice = new Money(new BigDecimal("145.00"), ValidatedCurrency.USD);
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(testIdentifier.getPrimaryId(), "YAHOO_FINANCE")).thenReturn("AAPL");
+        when(mapper.toProviderSymbol(testIdentifier, "YAHOO_FINANCE")).thenReturn("AAPL");
         when(provider.fetchHistoricalQuote("AAPL", dateTime)).thenReturn(Optional.of(quote));
         when(mapper.toMoney(quote)).thenReturn(expectedPrice);
 
@@ -156,38 +156,15 @@ class MarketDataServiceImplTest {
     void shouldFetchBatchPrices() {
         // Given
         List<AssetIdentifier> symbols = List.of(
-                new MarketIdentifier(
-                        "AAPL",
-                        null,
-                        AssetType.STOCK,
-                        "APPLE",
-                        "USD",
-                        null
-
-                ),
-                new MarketIdentifier(
-                        "GOGL",
-                        null,
-                        AssetType.STOCK,
-                        "Google",
-                        "USD",
-                        null
-
-                ),
-                new MarketIdentifier(
-                        "META",
-                        null,
-                        AssetType.STOCK,
-                        "Meta",
-                        "USD",
-                        null
-
-                ));
+                new MarketIdentifier("AAPL", null, AssetType.STOCK, "APPLE", "USD", null),
+                new MarketIdentifier("GOOGL", null, AssetType.STOCK, "Google", "USD", null), // Fixed typo
+                new MarketIdentifier("MSFT", null, AssetType.STOCK, "Microsoft", "USD", null) // Fixed
+        );
 
         Map<String, ProviderQuote> providerQuotes = Map.of(
-                "AAPL", new ProviderQuote("AAPL", new BigDecimal("150"), "USD", LocalDateTime.now(), "YAHOO"),
-                "GOOGL", new ProviderQuote("GOOGL", new BigDecimal("140"), "USD", LocalDateTime.now(), "YAHOO"),
-                "MSFT", new ProviderQuote("MSFT", new BigDecimal("380"), "USD", LocalDateTime.now(), "YAHOO"));
+                "AAPL", new ProviderQuote("AAPL", new BigDecimal("150.00"), "USD", LocalDateTime.now(), "YAHOO"),
+                "GOOGL", new ProviderQuote("GOOGL", new BigDecimal("140.00"), "USD", LocalDateTime.now(), "YAHOO"),
+                "MSFT", new ProviderQuote("MSFT", new BigDecimal("380.00"), "USD", LocalDateTime.now(), "YAHOO"));
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
         when(mapper.toProviderSymbol(any(AssetIdentifier.class), eq("YAHOO_FINANCE")))
@@ -203,17 +180,49 @@ class MarketDataServiceImplTest {
 
         // Then
         assertThat(result).hasSize(3);
-        assertThat(result.get(new MarketIdentifier(
-                "AAPL",
-                null,
-                AssetType.STOCK,
-                "APPLE",
-                "USD",
-                null
 
-        )).amount())
-                .isEqualByComparingTo(new BigDecimal("150"));
+        // More robust assertion using the actual identifiers from the list
+        assertThat(result.get(symbols.get(0)).amount())
+                .isEqualByComparingTo(new BigDecimal("150.00"));
+        assertThat(result.get(symbols.get(1)).amount())
+                .isEqualByComparingTo(new BigDecimal("140.00"));
+        assertThat(result.get(symbols.get(2)).amount())
+                .isEqualByComparingTo(new BigDecimal("380.00"));
+
         verify(provider).fetchBatchQuotes(anyList());
+    }
+
+    @Test
+    @DisplayName("Should handle partial batch results gracefully")
+    void shouldHandlePartialBatchResults() {
+        // Given
+        MarketIdentifier apple = createMarketIdentifier("AAPL", "Apple");
+        MarketIdentifier invalid = createMarketIdentifier("INVALID", "Invalid Corp");
+
+        List<AssetIdentifier> symbols = List.of(apple, invalid);
+
+        // Provider only returns data for AAPL
+        Map<String, ProviderQuote> providerQuotes = Map.of(
+                "AAPL", createQuote("AAPL", "150.00"));
+
+        // ... stubbing ...
+        when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
+        when(mapper.toProviderSymbol(any(AssetIdentifier.class), eq("YAHOO_FINANCE")))
+                .thenAnswer(inv -> inv.getArgument(0, AssetIdentifier.class).getPrimaryId());
+        when(provider.fetchBatchQuotes(anyList())).thenReturn(providerQuotes);
+        when(mapper.toMoney(any())).thenAnswer(inv -> {
+            ProviderQuote q = inv.getArgument(0);
+            return new Money(q.price(), ValidatedCurrency.USD);
+        });
+        
+        // When
+        Map<AssetIdentifier, Money> result = service.getBatchPrices(symbols);
+
+        // Then
+        assertThat(result)
+                .hasSize(1) // Only AAPL should be present
+                .containsKey(apple)
+                .doesNotContainKey(invalid);
     }
 
     @Test
@@ -259,7 +268,7 @@ class MarketDataServiceImplTest {
                 "Technology company");
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(symbol, "YAHOO_FINANCE")).thenReturn("AAPL");
+        when(mapper.toProviderSymbol(symbol.getPrimaryId(), "YAHOO_FINANCE")).thenReturn("AAPL");
         when(provider.fetchAssetInfo("AAPL")).thenReturn(Optional.of(providerInfo));
         when(mapper.toAssetInfo(providerInfo)).thenReturn(expectedInfo);
 
@@ -269,29 +278,25 @@ class MarketDataServiceImplTest {
         // Then
         assertThat(result).isPresent();
         assertThat(result.get().getName()).isEqualTo("Apple Inc.");
-        assertThat(result.get().getAssetType()).isEqualTo("STOCK");
+        assertThat(result.get().getAssetType().toString()).isEqualTo("STOCK");
     }
 
     @Test
     @DisplayName("Should return empty when asset info not found")
     void shouldReturnEmptyWhenAssetInfoNotFound() {
         // Given
-        AssetIdentifier symbol = new MarketIdentifier(
-                "INVALID",
-                null,
-                AssetType.STOCK,
-                "WRONG",
-                "USD",
-                null
-
-        );
+        String invalidSymbol = "INVALID";
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(symbol, "YAHOO_FINANCE")).thenReturn("INVALID");
+
+        // Fix: Stub with String, not MarketIdentifier
+        when(mapper.toProviderSymbol("INVALID", "YAHOO_FINANCE"))
+                .thenReturn("INVALID");
+
         when(provider.fetchAssetInfo("INVALID")).thenReturn(Optional.empty());
 
         // When
-        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol.getPrimaryId());
+        Optional<MarketAssetInfo> result = service.getAssetInfo(invalidSymbol);
 
         // Then
         assertThat(result).isEmpty();
@@ -329,5 +334,19 @@ class MarketDataServiceImplTest {
         // When/Then
         assertThat(service.isSymbolSupported(validSymbol)).isTrue();
         assertThat(service.isSymbolSupported(invalidSymbol)).isFalse();
+    }
+
+    // In your test class or separate TestFixtures class
+    private MarketIdentifier createMarketIdentifier(String symbol, String name) {
+        return new MarketIdentifier(symbol, null, AssetType.STOCK, name, "USD", null);
+    }
+
+    private ProviderQuote createQuote(String symbol, String price) {
+        return new ProviderQuote(
+                symbol,
+                new BigDecimal(price),
+                "USD",
+                LocalDateTime.now(),
+                "YAHOO");
     }
 }

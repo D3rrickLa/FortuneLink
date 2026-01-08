@@ -56,7 +56,7 @@ public class MarketDataServiceImpl implements MarketDataService {
         Optional<ProviderQuote> quote = provider.fetchCurrentQuote(providerSymbol);
 
         if (quote.isEmpty()) {
-            throw MarketDataException.symbolNotFound(assetIdentifier.getPrimaryId());
+            throw MarketDataException.symbolNotFound(providerSymbol);
         }
 
         Money price = mapper.toMoney(quote.get());
@@ -150,7 +150,6 @@ public class MarketDataServiceImpl implements MarketDataService {
                 .map(s -> mapper.toProviderSymbol(s.getPrimaryId(), provider.getProviderName()))
                 .toList();
 
-        // ✅ USE THE BATCH ASSET INFO METHOD - single API call!
         Map<String, ProviderAssetInfo> providerInfoMap = provider.fetchBatchAssetInfo(providerSymbols);
 
         // Map back to domain models

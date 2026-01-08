@@ -47,7 +47,7 @@ public interface MarketDataService {
      * @return An {@link Optional} containing the {@link MarketAssetInfo} if found,
      *         otherwise an empty Optional.
      */
-    public Optional<MarketAssetInfo> getAssetInfo(String symbol);
+    public Optional<MarketAssetInfo> getAssetInfo(String symbol);    
 
     /**
      * Batch fetch for multiple asset metadata objects.
