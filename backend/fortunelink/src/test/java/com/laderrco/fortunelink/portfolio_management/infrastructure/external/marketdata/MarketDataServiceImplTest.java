@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.external.ma
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,7 +29,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
-import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.MarketDataMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
@@ -71,7 +69,7 @@ class MarketDataServiceImplTest {
     @DisplayName("Should fetch current price successfully")
     void shouldFetchCurrentPrice() {
         // Given
-        
+
         ProviderQuote quote = new ProviderQuote(
                 "AAPL",
                 new BigDecimal("150.00"),
@@ -157,10 +155,34 @@ class MarketDataServiceImplTest {
     @DisplayName("Should fetch batch prices successfully")
     void shouldFetchBatchPrices() {
         // Given
-        List<AssetSymbol> symbols = List.of(
-                new AssetSymbol("AAPL"),
-                new AssetSymbol("GOOGL"),
-                new AssetSymbol("MSFT"));
+        List<AssetIdentifier> symbols = List.of(
+                new MarketIdentifier(
+                        "AAPL",
+                        null,
+                        AssetType.STOCK,
+                        "APPLE",
+                        "USD",
+                        null
+
+                ),
+                new MarketIdentifier(
+                        "GOGL",
+                        null,
+                        AssetType.STOCK,
+                        "Google",
+                        "USD",
+                        null
+
+                ),
+                new MarketIdentifier(
+                        "META",
+                        null,
+                        AssetType.STOCK,
+                        "Meta",
+                        "USD",
+                        null
+
+                ));
 
         Map<String, ProviderQuote> providerQuotes = Map.of(
                 "AAPL", new ProviderQuote("AAPL", new BigDecimal("150"), "USD", LocalDateTime.now(), "YAHOO"),
@@ -168,8 +190,8 @@ class MarketDataServiceImplTest {
                 "MSFT", new ProviderQuote("MSFT", new BigDecimal("380"), "USD", LocalDateTime.now(), "YAHOO"));
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(any(), eq("YAHOO_FINANCE")))
-                .thenAnswer(inv -> inv.getArgument(0, AssetSymbol.class).value());
+        when(mapper.toProviderSymbol(any(AssetIdentifier.class), eq("YAHOO_FINANCE")))
+                .thenAnswer(inv -> inv.getArgument(0, AssetIdentifier.class).getPrimaryId());
         when(provider.fetchBatchQuotes(anyList())).thenReturn(providerQuotes);
         when(mapper.toMoney(any())).thenAnswer(inv -> {
             ProviderQuote q = inv.getArgument(0);
@@ -181,7 +203,15 @@ class MarketDataServiceImplTest {
 
         // Then
         assertThat(result).hasSize(3);
-        assertThat(result.get(new AssetSymbol("AAPL")).amount())
+        assertThat(result.get(new MarketIdentifier(
+                "AAPL",
+                null,
+                AssetType.STOCK,
+                "APPLE",
+                "USD",
+                null
+
+        )).amount())
                 .isEqualByComparingTo(new BigDecimal("150"));
         verify(provider).fetchBatchQuotes(anyList());
     }
@@ -201,7 +231,15 @@ class MarketDataServiceImplTest {
     @DisplayName("Should fetch asset info successfully")
     void shouldFetchAssetInfo() {
         // Given
-        AssetSymbol symbol = new AssetSymbol("AAPL");
+        AssetIdentifier symbol = new MarketIdentifier(
+                "AAPL",
+                null,
+                AssetType.STOCK,
+                "APPLE",
+                "USD",
+                null
+
+        );
         ProviderAssetInfo providerInfo = new ProviderAssetInfo(
                 "AAPL",
                 "Apple Inc.",
@@ -209,14 +247,16 @@ class MarketDataServiceImplTest {
                 "STOCK",
                 "NASDAQ",
                 "USD",
+                "Technology",
                 "YAHOO");
-        MarketDataService.AssetInfo expectedInfo = new MarketDataService.AssetInfo(
-                symbol,
+        MarketAssetInfo expectedInfo = new MarketAssetInfo(
+                symbol.getPrimaryId(),
                 "Apple Inc.",
-                "Technology company",
-                "STOCK",
+                symbol.getAssetType(),
                 "NASDAQ",
-                "USD");
+                ValidatedCurrency.USD,
+                "Technology",
+                "Technology company");
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
         when(mapper.toProviderSymbol(symbol, "YAHOO_FINANCE")).thenReturn("AAPL");
@@ -224,7 +264,7 @@ class MarketDataServiceImplTest {
         when(mapper.toAssetInfo(providerInfo)).thenReturn(expectedInfo);
 
         // When
-        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol);
+        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol.getPrimaryId());
 
         // Then
         assertThat(result).isPresent();
@@ -236,14 +276,22 @@ class MarketDataServiceImplTest {
     @DisplayName("Should return empty when asset info not found")
     void shouldReturnEmptyWhenAssetInfoNotFound() {
         // Given
-        AssetSymbol symbol = new AssetSymbol("INVALID");
+        AssetIdentifier symbol = new MarketIdentifier(
+                "INVALID",
+                null,
+                AssetType.STOCK,
+                "WRONG",
+                "USD",
+                null
+
+        );
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
         when(mapper.toProviderSymbol(symbol, "YAHOO_FINANCE")).thenReturn("INVALID");
         when(provider.fetchAssetInfo("INVALID")).thenReturn(Optional.empty());
 
         // When
-        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol);
+        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol.getPrimaryId());
 
         // Then
         assertThat(result).isEmpty();
@@ -253,8 +301,24 @@ class MarketDataServiceImplTest {
     @DisplayName("Should check symbol support")
     void shouldCheckSymbolSupport() {
         // Given
-        AssetSymbol validSymbol = new AssetSymbol("AAPL");
-        AssetSymbol invalidSymbol = new AssetSymbol("@INVALID");
+        AssetIdentifier validSymbol = new MarketIdentifier(
+                "AAPL",
+                null,
+                AssetType.STOCK,
+                "APPLE",
+                "USD",
+                null
+
+        );
+        AssetIdentifier invalidSymbol = new MarketIdentifier(
+                "INVALID",
+                null,
+                AssetType.STOCK,
+                "WRONG",
+                "USD",
+                null
+
+        );
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
         when(mapper.toProviderSymbol(validSymbol, "YAHOO_FINANCE")).thenReturn("AAPL");
