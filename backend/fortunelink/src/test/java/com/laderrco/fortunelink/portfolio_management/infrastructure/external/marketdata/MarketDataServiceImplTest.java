@@ -268,12 +268,12 @@ class MarketDataServiceImplTest {
                 "Technology company");
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
-        when(mapper.toProviderSymbol(symbol.getPrimaryId(), "YAHOO_FINANCE")).thenReturn("AAPL");
+        when(mapper.toProviderSymbol(symbol, "YAHOO_FINANCE")).thenReturn("AAPL");
         when(provider.fetchAssetInfo("AAPL")).thenReturn(Optional.of(providerInfo));
         when(mapper.toAssetInfo(providerInfo)).thenReturn(expectedInfo);
 
         // When
-        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol.getPrimaryId());
+        Optional<MarketAssetInfo> result = service.getAssetInfo(symbol);
 
         // Then
         assertThat(result).isPresent();
@@ -285,12 +285,20 @@ class MarketDataServiceImplTest {
     @DisplayName("Should return empty when asset info not found")
     void shouldReturnEmptyWhenAssetInfoNotFound() {
         // Given
-        String invalidSymbol = "INVALID";
+        AssetIdentifier invalidSymbol = new MarketIdentifier(
+                "NULL",
+                null,
+                AssetType.STOCK,
+                "APPLE",
+                "USD",
+                null
+
+        );
 
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
 
         // Fix: Stub with String, not MarketIdentifier
-        when(mapper.toProviderSymbol("INVALID", "YAHOO_FINANCE"))
+        when(mapper.toProviderSymbol(invalidSymbol, "YAHOO_FINANCE"))
                 .thenReturn("INVALID");
 
         when(provider.fetchAssetInfo("INVALID")).thenReturn(Optional.empty());
@@ -328,8 +336,8 @@ class MarketDataServiceImplTest {
         when(provider.getProviderName()).thenReturn("YAHOO_FINANCE");
         when(mapper.toProviderSymbol(validSymbol, "YAHOO_FINANCE")).thenReturn("AAPL");
         when(mapper.toProviderSymbol(invalidSymbol, "YAHOO_FINANCE")).thenReturn("@INVALID");
-        when(provider.supportSymbol("AAPL")).thenReturn(true);
-        when(provider.supportSymbol("@INVALID")).thenReturn(false);
+        when(provider.supportsSymbol("AAPL")).thenReturn(true);
+        when(provider.supportsSymbol("@INVALID")).thenReturn(false);
 
         // When/Then
         assertThat(service.isSymbolSupported(validSymbol)).isTrue();

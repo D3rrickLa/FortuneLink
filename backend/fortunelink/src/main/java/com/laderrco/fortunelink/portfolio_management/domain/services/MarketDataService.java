@@ -43,19 +43,21 @@ public interface MarketDataService {
     /**
      * Fetches descriptive information for an asset based on its ticker symbol.
      *
-     * @param symbol The string representation of the asset (e.g., "AAPL").
+     * @param symbol The unique identifier for the asset (e.g., Ticker + Exchange).
      * @return An {@link Optional} containing the {@link MarketAssetInfo} if found,
      *         otherwise an empty Optional.
      */
-    public Optional<MarketAssetInfo> getAssetInfo(String symbol);    
+    public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier);    
+
+    public Optional<MarketAssetInfo> getAssetInfo(String symbol);
 
     /**
      * Batch fetch for multiple asset metadata objects.
      *
-     * @param symbols A list of ticker symbols.
+     * @param identifiers A list of tickers.
      * @return A map mapping the symbol string to its corresponding asset metadata.
      */
-    public Map<AssetIdentifier, MarketAssetInfo> getAssetInfoBatch(List<AssetIdentifier> symbols);
+    public Map<AssetIdentifier, MarketAssetInfo> getAssetInfoBatch(List<AssetIdentifier> identifiers);
 
     /**
      * Verifies if the underlying data provider supports and tracks the specified

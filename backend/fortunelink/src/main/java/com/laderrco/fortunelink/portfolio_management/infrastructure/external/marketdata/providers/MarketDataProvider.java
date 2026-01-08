@@ -67,7 +67,7 @@ public interface MarketDataProvider {
      * @param symbol Raw symbol
      * @return true if supported
      */
-    boolean supportSymbol(String symbol);
+    boolean supportsSymbol(String symbol);
     
     /**
      * Get provider name for logging/debugging.

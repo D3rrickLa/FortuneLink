@@ -179,7 +179,7 @@ public class YahooFinanceProvider implements MarketDataProvider {
     }
 
     @Override
-    public boolean supportSymbol(String symbol) {
+    public boolean supportsSymbol(String symbol) {
         // Yahoo supports most symbols - basic validation
         return symbol != null && !symbol.isBlank() && symbol.matches("[A-Z0-9\\.\\-^]+");
     }

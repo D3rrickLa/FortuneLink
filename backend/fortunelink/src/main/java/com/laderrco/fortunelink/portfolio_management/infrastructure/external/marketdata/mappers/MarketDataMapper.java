@@ -81,17 +81,6 @@ public class MarketDataMapper {
         return symbol.getPrimaryId();
     }
 
-    public String toProviderSymbol(String symbol, String providerName) {
-        // For Yahoo, use as-is
-        if ("YAHOO_FINANCE".equals(providerName)) {
-            return symbol;
-        }
-
-        // Future: handle other providers
-        // e.g., for Alpha Vantage, might strip ".TO" suffix
-        return symbol;
-    }
-
     /**
      * Parse currency string to domain Currency enum.
      * Handles common cases and defaults to USD for unknown.

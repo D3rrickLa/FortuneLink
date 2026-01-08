@@ -12,8 +12,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.MarketDataMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
@@ -120,21 +122,38 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
     @Override
-    public Optional<MarketAssetInfo> getAssetInfo(String symbol) {
-        log.debug("Fetching asset info for symbol: {}", symbol);
+    public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier) {
+        log.debug("Fetching asset info for symbol: {}", identifier.getPrimaryId());
 
-        String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
+        String providerSymbol = mapper.toProviderSymbol(identifier, provider.getProviderName());
 
         Optional<ProviderAssetInfo> providerInfo = provider.fetchAssetInfo(providerSymbol);
 
         if (providerInfo.isEmpty()) {
-            log.debug("No asset info found for {}", symbol);
+            log.debug("No asset info found for {}", identifier.getPrimaryId());
             return Optional.empty();
         }
 
         MarketAssetInfo info = mapper.toAssetInfo(providerInfo.get());
-        log.debug("Retrieved asset info for {}: {}", symbol, info.getName());
+        log.debug("Retrieved asset info for {}: {}", identifier.getPrimaryId(), info.getName());
         return Optional.of(info);
+    }
+
+    @Override
+    public Optional<MarketAssetInfo> getAssetInfo(String symbol) {
+        // Right now the this is being used only in the PortfolioApplicationService 
+        // specifically the record buy, sell, and divivdend methods. will build 
+        // a marktet identifier
+
+        AssetIdentifier marketIdentifier = new MarketIdentifier(
+            symbol,
+            null,
+            AssetType.STOCK, // because we don't know if this is a stock or etf, default to stock
+            "GetAssetInfoItem",
+            "UNKNOWN UOT",
+            null
+        );
+        return getAssetInfo(marketIdentifier);
     }
 
     @Override
@@ -147,7 +166,7 @@ public class MarketDataServiceImpl implements MarketDataService {
 
         // Convert domain symbols to provider format
         List<String> providerSymbols = symbols.stream()
-                .map(s -> mapper.toProviderSymbol(s.getPrimaryId(), provider.getProviderName()))
+                .map(s -> mapper.toProviderSymbol(s, provider.getProviderName()))
                 .toList();
 
         Map<String, ProviderAssetInfo> providerInfoMap = provider.fetchBatchAssetInfo(providerSymbols);
@@ -155,7 +174,7 @@ public class MarketDataServiceImpl implements MarketDataService {
         // Map back to domain models
         Map<AssetIdentifier, MarketAssetInfo> result = new HashMap<>();
         for (AssetIdentifier symbol : symbols) {
-            String providerSymbol = mapper.toProviderSymbol(symbol.getPrimaryId(), provider.getProviderName());
+            String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
             ProviderAssetInfo providerInfo = providerInfoMap.get(providerSymbol);
 
             if (providerInfo != null) {
@@ -172,13 +191,13 @@ public class MarketDataServiceImpl implements MarketDataService {
     @Override
     public boolean isSymbolSupported(AssetIdentifier symbol) {
         String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
-        return provider.supportSymbol(providerSymbol);
+        return provider.supportsSymbol(providerSymbol);
     }
 
     @Override
     public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier) {
         // Delegate to getAssetInfo (avoids duplicate API call logic)
-        MarketAssetInfo info = getAssetInfo(assetIdentifier.getPrimaryId())
+        MarketAssetInfo info = getAssetInfo(assetIdentifier)
                 .orElseThrow(() -> MarketDataException.symbolNotFound(assetIdentifier.getPrimaryId()));
 
         return info.getCurrency();
