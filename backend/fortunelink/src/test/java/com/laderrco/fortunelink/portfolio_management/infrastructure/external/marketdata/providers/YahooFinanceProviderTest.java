@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
@@ -28,11 +30,12 @@ import static org.assertj.core.api.Assertions.*;
  * Run with: mvn test -Dgroups="integration"
  * Skip with: mvn test -DexcludedGroups="integration"
  */
-@Tag("integration")
+@ExtendWith(MockitoExtension.class)
 @DisplayName("Yahoo Finance Provider Integration Tests")
 class YahooFinanceProviderIntegrationTest {
     
     private YahooFinanceProvider provider;
+    private YahooResponseMapper mapper; 
     
     @BeforeEach
     void setUp() {
@@ -41,15 +44,20 @@ class YahooFinanceProviderIntegrationTest {
             .readTimeout(Duration.ofSeconds(10))
             .build();
 
-        YahooResponseMapper mapper = new YahooResponseMapper();
-        
+        mapper = new YahooResponseMapper();
         provider = new YahooFinanceProvider(restTemplate, mapper);
     }
     
     @Test
+    void test() {
+        fail();
+    }
+
+    @Test
     @DisplayName("Should fetch real current quote for AAPL")
     void shouldFetchRealCurrentQuoteForAAPL() {
         // When
+        // when(mapper)
         Optional<ProviderQuote> quote = provider.fetchCurrentQuote("AAPL");
         
         // Then
@@ -66,6 +74,7 @@ class YahooFinanceProviderIntegrationTest {
     @DisplayName("Should fetch real current quote for Canadian stock")
     void shouldFetchRealCurrentQuoteForCanadianStock() {
         // When - VGRO is a popular Canadian ETF
+        // when(mapper);
         Optional<ProviderQuote> quote = provider.fetchCurrentQuote("VGRO.TO");
         
         // Then
