@@ -13,6 +13,7 @@ public class YahooQuote extends YahooBaseData {
     private String quoteType;
     private BigDecimal regularMarketPrice;
     private BigDecimal bid;
+    private BigDecimal ask;
     private Long regularMarketTime;
 
     /**

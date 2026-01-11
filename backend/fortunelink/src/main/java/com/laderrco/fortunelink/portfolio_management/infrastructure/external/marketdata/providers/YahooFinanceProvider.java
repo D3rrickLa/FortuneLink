@@ -43,7 +43,7 @@ import lombok.AllArgsConstructor;
 public class YahooFinanceProvider implements MarketDataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(YahooFinanceProvider.class);
-    private static final String QUOTE_API = "https://query1.finance.yahoo.com/v7/finance/quote";
+    private static final String QUOTE_API = "https://query1.finance.yahoo.com/v6/finance/quote";
     private static final String CHART_API = "https://query1.finance.yahoo.com/v8/finance/chart";
     
     private final RestTemplate restTemplate;
