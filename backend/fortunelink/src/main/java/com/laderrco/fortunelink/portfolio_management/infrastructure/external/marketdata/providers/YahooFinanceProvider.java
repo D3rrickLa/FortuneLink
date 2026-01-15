@@ -38,7 +38,7 @@ import lombok.AllArgsConstructor;
  * 2. Implementing circuit breaker (Resilience4j)
  * 3. Having fallback providers
  */
-@Component
+@Component("yahooProvider")
 @AllArgsConstructor
 public class YahooFinanceProvider implements MarketDataProvider {
 
