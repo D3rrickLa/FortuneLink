@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -38,7 +39,7 @@ public interface MarketDataService {
      * @return A map where keys are the requested identifiers and values are their
      *         current prices.
      */
-    public Map<AssetIdentifier, Money> getBatchPrices(List<AssetIdentifier> assetIdentifiers);
+    public Map<AssetIdentifier, Money> getBatchPrices(List<? extends AssetIdentifier> assetIdentifiers);
 
     /**
      * Fetches descriptive information for an asset based on its ticker symbol.
@@ -57,7 +58,7 @@ public interface MarketDataService {
      * @param identifiers A list of tickers.
      * @return A map mapping the symbol string to its corresponding asset metadata.
      */
-    public Map<AssetIdentifier, MarketAssetInfo> getAssetInfoBatch(List<AssetIdentifier> identifiers);
+    public Map<AssetIdentifier, MarketAssetInfo> getBatchAssetInfo(List<? extends AssetIdentifier> identifiers);
 
     /**
      * Verifies if the underlying data provider supports and tracks the specified

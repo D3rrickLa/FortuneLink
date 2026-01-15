@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -45,6 +46,16 @@ public class MarketDataMapper {
                 ValidatedCurrency.of(info.currency()),
                 info.sector(),
                 info.description());
+    }
+
+    /**
+     * 
+     * @param symbol
+     * @param price
+     * @return a new PriceResponse object
+     */
+    public PriceResponse toPriceResponse(String symbol, Money price) {
+        return PriceResponse.of(symbol, price.amount(), price.currency().getSymbol());
     }
 
     /**

@@ -16,6 +16,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.MarketDataMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
@@ -90,7 +91,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
     @Override
-    public Map<AssetIdentifier, Money> getBatchPrices(List<AssetIdentifier> assetIdentifiers) {
+    public Map<AssetIdentifier, Money> getBatchPrices(List<? extends AssetIdentifier> assetIdentifiers) {
         if (assetIdentifiers == null || assetIdentifiers.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -157,7 +158,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
     @Override
-    public Map<AssetIdentifier, MarketAssetInfo> getAssetInfoBatch(List<AssetIdentifier> symbols) {
+    public Map<AssetIdentifier, MarketAssetInfo> getBatchAssetInfo(List<? extends AssetIdentifier> symbols) {
         if (symbols == null || symbols.isEmpty()) {
             return Collections.emptyMap();
         }
