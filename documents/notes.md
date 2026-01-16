@@ -926,3 +926,9 @@ Entities	    JUnit 5	        Validation rules, ID equality, Basic constraints
 
 ----
 TODO: Look into how we can add AI agents into the applications
+
+
+----- jan 16 2026 ---
+know issue, i think i was confusing how hte web controller interacts with the data 
+coming from the api. from what i see we are doing some duplicates sets, mainly the
+market data dto mapper and assetinfo response...
