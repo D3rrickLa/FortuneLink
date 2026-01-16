@@ -19,7 +19,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
  * 
  * Responsibilities:
  * 1. Map ProviderQuote → Money (domain value object)
- * 2. Map ProviderAssetInfo → MarketDataService.AssetInfo (domain DTO)
+ * 2. Map ProviderAssetInfo → MarketAssetInfo (domain DTO)
  * 3. Normalize symbol formats between providers
  * 4. Handle currency conversions/validations
  */
