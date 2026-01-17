@@ -929,6 +929,112 @@ TODO: Look into how we can add AI agents into the applications
 
 
 ----- jan 16 2026 ---
-know issue, i think i was confusing how hte web controller interacts with the data 
+known issue, i think i was confusing how hte web controller interacts with the data 
 coming from the api. from what i see we are doing some duplicates sets, mainly the
 market data dto mapper and assetinfo response...
+
+
+also, if we want 'chart info' we need to include the yahoo chart stuff, might put that off for a minute though
+
+we should also 'redis' the information as well as long term store that history data
+
+
+{
+    "symbol": "VFV.TO",
+    "name": "Vanguard S&P 500 Index ETF",
+    "assetType": "ETF",
+    "currency": "$",
+    "exchange": "TSX",
+    "currentPrice": null,
+    "sector": "Financial Services",
+    "marketCap": null,
+    "peRatio": null,
+    "fiftyTwoWeekHigh": null,
+    "fiftyTwoWeekLow": null,
+    "averageVolume": null,
+    "source": "API CALL"
+}
+this is wrong, also the source is hard coded, we need to change that in the MarketAssetInfo in domain layer
+
+
+[
+  {
+    "symbol": "AAPL",
+    "price": 255.53,
+    "marketCap": 3775801225282,
+    "beta": 1.093,
+    "lastDividend": 1.03,
+    "range": "169.21-288.62",
+    "change": -2.68,
+    "changePercentage": -1.03792,
+    "volume": 70054453,
+    "averageVolume": 45960616,
+    "companyName": "Apple Inc.",
+    "currency": "USD",
+    "cik": "0000320193",
+    "isin": "US0378331005",
+    "cusip": "037833100",
+    "exchangeFullName": "NASDAQ Global Select",
+    "exchange": "NASDAQ",
+    "industry": "Consumer Electronics",
+    "website": "https://www.apple.com",
+    "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, a line of smartphones; Mac, a line of personal computers; iPad, a line of multi-purpose tablets; and wearables, home, and accessories comprising AirPods, Apple TV, Apple Watch, Beats products, and HomePod. It also provides AppleCare support and cloud services; and operates various platforms, including the App Store that allow customers to discover and download applications and digital content, such as books, music, video, games, and podcasts, as well as advertising services include third-party licensing arrangements and its own advertising platforms. In addition, the company offers various subscription-based services, such as Apple Arcade, a game subscription service; Apple Fitness+, a personalized fitness service; Apple Music, which offers users a curated listening experience with on-demand radio stations; Apple News+, a subscription news and magazine service; Apple TV+, which offers exclusive original content; Apple Card, a co-branded credit card; and Apple Pay, a cashless payment service, as well as licenses its intellectual property. The company serves consumers, and small and mid-sized businesses; and the education, enterprise, and government markets. It distributes third-party applications for its products through the App Store. The company also sells its products through its retail and online stores, and direct sales force; and third-party cellular network carriers, wholesalers, retailers, and resellers. Apple Inc. was founded in 1976 and is headquartered in Cupertino, California.",
+    "ceo": "Timothy D. Cook",
+    "sector": "Technology",
+    "country": "US",
+    "fullTimeEmployees": "164000",
+    "phone": "(408) 996-1010",
+    "address": "One Apple Park Way",
+    "city": "Cupertino",
+    "state": "CA",
+    "zip": "95014",
+    "image": "https://images.financialmodelingprep.com/symbol/AAPL.png",
+    "ipoDate": "1980-12-12",
+    "defaultImage": false,
+    "isEtf": false,
+    "isActivelyTrading": true,
+    "isAdr": false,
+    "isFund": false
+  }
+]
+
+[
+  {
+    "symbol": "VFV.TO",
+    "price": 171.34,
+    "marketCap": 27584495386,
+    "beta": 0.96,
+    "lastDividend": 1.52767,
+    "range": "121.61-172.18",
+    "change": 0.14,
+    "changePercentage": 0.0817757,
+    "volume": 284321,
+    "averageVolume": 280626,
+    "companyName": "Vanguard S&P 500 Index ETF",
+    "currency": "CAD",
+    "cik": null,
+    "isin": "CA92205Y1051",
+    "cusip": "92205Y105",
+    "exchangeFullName": "Toronto Stock Exchange",
+    "exchange": "TSX",
+    "industry": "Asset Management",
+    "website": null,
+    "description": "Vanguard S&P 500 Index ETF seeks to track, to the extent reasonably possible and before fees and expenses, the performance of a broad U.S. equity index that measures the investment return of large-capitalization U.S. stocks. Currently, this Vanguard ETF seeks to track the S&P 500 Index (or any successor thereto). It invests directly or indirectly primarily in stocks of U.S. companies.",
+    "ceo": "",
+    "sector": "Financial Services",
+    "country": "CA",
+    "fullTimeEmployees": null,
+    "phone": null,
+    "address": null,
+    "city": null,
+    "state": null,
+    "zip": null,
+    "image": "https://images.financialmodelingprep.com/symbol/VFV.TO.png",
+    "ipoDate": "2012-11-08",
+    "defaultImage": false,
+    "isEtf": true,
+    "isActivelyTrading": true,
+    "isAdr": false,
+    "isFund": false
+  }
+]

@@ -64,7 +64,7 @@ public class MarketDataDtoMapper {
                 // .fiftyTwoWeekHigh(assetInfo.getFiftyTwoWeekHigh())
                 // .fiftyTwoWeekLow(assetInfo.getFiftyTwoWeekLow())
                 // .averageVolume(assetInfo.getAverageVolume())
-                .source("Yahoo Finance")
+                .source("API CALL")
                 .build();
     }
 

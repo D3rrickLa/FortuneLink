@@ -28,7 +28,7 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.external.mar
 public class FmpResponseMapper {
     private static final String SOURCE = "Financial Modeling Prep";
 
-    public ProviderQuote tProviderQuote(FmpQuoteResponse quoteResponse) {
+    public ProviderQuote toProviderQuote(FmpQuoteResponse quoteResponse) {
         return new ProviderQuote(
             quoteResponse.getSymbol(), 
             quoteResponse.getPrice(), 

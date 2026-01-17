@@ -19,7 +19,6 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.F
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpQuoteResponse;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class FmpApiClient {
 
     private final FmpConfigurationProperties config;
@@ -49,6 +47,7 @@ public class FmpApiClient {
         this.config = config;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
                 .build();
         
@@ -106,7 +105,7 @@ public class FmpApiClient {
         }
         
         String symbolsParam = String.join(",", symbols);
-        String url = buildUrl("/quote/" + encodeSymbol(symbolsParam));
+        String url = buildUrl("/quote?symbol=" + encodeSymbol(symbolsParam));
         
         if (config.isDebugLogging()) {
             log.debug("FMP Batch Request: GET {} (symbols: {})", url, symbols.size());
@@ -135,7 +134,7 @@ public class FmpApiClient {
      * Endpoint: GET /profile/{symbol}?apikey={key}
      */
     public FmpProfileResponse getProfile(String symbol) {
-        String url = buildUrl("/profile/" + encodeSymbol(symbol));
+        String url = buildUrl("/profile?symbol=" + encodeSymbol(symbol));
         
         if (config.isDebugLogging()) {
             log.debug("FMP Profile Request: GET {}", url);
@@ -215,7 +214,8 @@ public class FmpApiClient {
      * Build full API URL with base URL and API key.
      */
     private String buildUrl(String endpoint) {
-        return String.format("%s%s?apikey=%s", config.getBaseUrl(), endpoint, config.getApiKey());
+        log.debug("FMP CLIENT DEBUG URL: "+config.getBaseUrl());
+        return String.format("%s%s&apikey=%s", config.getBaseUrl(), endpoint, config.getApiKey());
     }
 
     /**

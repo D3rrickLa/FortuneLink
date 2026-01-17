@@ -65,7 +65,7 @@ public class FmpProfileResponse {
     private BigDecimal price;
 
     @JsonProperty("marketCap")
-    private Long mktCap;
+    private Long marketCap;
 
     @JsonProperty("beta")
     private BigDecimal beta;

@@ -9,8 +9,11 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.api_clients.FmpApiClient;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.FmpResponseMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpProfileResponse;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpQuoteResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +44,13 @@ import lombok.extern.slf4j.Slf4j;
 public class FmpProvider implements MarketDataProvider {
 
     private final FmpApiClient fmpApiClient;
+    private final FmpResponseMapper mapper;
 
     @Override
     public Optional<ProviderQuote> fetchCurrentQuote(String symbol) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'fetchCurrentQuote'");
+        FmpQuoteResponse response = fmpApiClient.getQuote(symbol);
+
+        return Optional.of(mapper.toProviderQuote(response));
     }
 
     @Override
@@ -62,8 +67,9 @@ public class FmpProvider implements MarketDataProvider {
 
     @Override
     public Optional<ProviderAssetInfo> fetchAssetInfo(String symbol) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'fetchAssetInfo'");
+        FmpProfileResponse response = fmpApiClient.getProfile(symbol);
+
+        return Optional.of(mapper.toProviderAssetInfo(response));
     }
 
     @Override
@@ -74,14 +80,12 @@ public class FmpProvider implements MarketDataProvider {
 
     @Override
     public boolean supportsSymbol(String symbol) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'supportsSymbol'");
+        return symbol != null && !symbol.isBlank() && symbol.matches("[A-Z0-9\\.\\-^]+");
     }
 
     @Override
     public String getProviderName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getProviderName'");
+        return "FMP";
     }
     
 }

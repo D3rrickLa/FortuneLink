@@ -30,10 +30,10 @@ public class FmpConfigurationProperties {
     private String apiKey;
 
     /**
-     * Base URL for FMP API v3.
-     * Default: https://financialmodelingprep.com/api/v3
+     * Base URL for FMP API
+     * Default: https://financialmodelingprep.com/
      */
-    private String baseUrl = "https://financialmodelingprep.com/api/v3";
+    private String baseUrl = "https://financialmodelingprep.com/stable/";
 
     /**
      * HTTP timeout in seconds.
@@ -45,7 +45,7 @@ public class FmpConfigurationProperties {
      * Enable request/response logging for debugging.
      * Default: false (set true in dev, false in prod)
      */
-    private boolean debugLogging = false;
+    private boolean debugLogging = true;
 
     /**
      * Validate configuration on startup.
