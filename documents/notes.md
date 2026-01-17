@@ -938,25 +938,6 @@ also, if we want 'chart info' we need to include the yahoo chart stuff, might pu
 
 we should also 'redis' the information as well as long term store that history data
 
-
-{
-    "symbol": "VFV.TO",
-    "name": "Vanguard S&P 500 Index ETF",
-    "assetType": "ETF",
-    "currency": "$",
-    "exchange": "TSX",
-    "currentPrice": null,
-    "sector": "Financial Services",
-    "marketCap": null,
-    "peRatio": null,
-    "fiftyTwoWeekHigh": null,
-    "fiftyTwoWeekLow": null,
-    "averageVolume": null,
-    "source": "API CALL"
-}
-this is wrong, also the source is hard coded, we need to change that in the MarketAssetInfo in domain layer
-
-
 [
   {
     "symbol": "AAPL",
@@ -998,6 +979,23 @@ this is wrong, also the source is hard coded, we need to change that in the Mark
   }
 ]
 
+{
+    "symbol": "VFV.TO",
+    "name": "Vanguard S&P 500 Index ETF",
+    "assetType": "ETF",
+    "currency": "$",
+    "exchange": "TSX",
+    "currentPrice": null,
+    "sector": "Financial Services",
+    "marketCap": null,
+    "peRatio": null,
+    "fiftyTwoWeekHigh": null,
+    "fiftyTwoWeekLow": null,
+    "averageVolume": null,
+    "source": "API CALL"
+}
+this is wrong, also the source is hard coded, we need to change that in the MarketAssetInfo in domain layer
+
 [
   {
     "symbol": "VFV.TO",
@@ -1038,3 +1036,25 @@ this is wrong, also the source is hard coded, we need to change that in the Mark
     "isFund": false
   }
 ]
+
+---- jan 17th 26--- 
+this is how the data flows from endpoint and back, or atleast how it should operate
+
+endpoint/asset-info/example -> MarketDataController -> marketDataService (get AssetInfo) -> mapper.toProviderSymbol() (this is kind of a useless step), UPDATE ON THAT: we removed it, it was stupid -> providerFetchAssetInfo(...) -> our implementation of the MarketDataProvider int (i.e. FmpProvider) -> apiClient (fmpApiClient).fetchAssetInfo(...) -> a response:
+    @Override
+    public Optional<ProviderAssetInfo> fetchAssetInfo(String symbol) {
+        FmpProfileResponse response = fmpApiClient.getProfile(symbol);
+
+        return Optional.of(mapper.toProviderAssetInfo(response));
+    }
+    OR
+    @Override
+    public Optional<ProviderAssetInfo> fetchAssetInfo(String symbol) {
+        FmpProfileResponse response = fmpApiClient.getProfile(symbol);
+
+        return Optional.of(mapper.toProviderAssetInfo(response));
+    }
+
+-> conversion back to the intenral provider structure or either ProviderQuote or ProviderAssetInfo
+-> back to the market data serivce impl -> converts to MarketAssetInfo (domain value object) via mapper.toAssetInfo(providerInfo)
+-> MarketDataController -> AssetInfoResponse -> response entity

@@ -23,7 +23,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 public class MarketDataDtoMapper {
 
     /**
-     * Convert domain Price to API response.
+     * Convert domain Price to MarkteDataController API response.
      */
     public PriceResponse toPriceResponse(String symbol, Money price) {
         return PriceResponse.builder()

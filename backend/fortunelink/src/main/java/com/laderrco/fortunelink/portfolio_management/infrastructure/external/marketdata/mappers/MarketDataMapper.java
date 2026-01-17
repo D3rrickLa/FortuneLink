@@ -80,6 +80,7 @@ public class MarketDataMapper {
      * 
      * For MVP with Yahoo, this is identity function.
      * When adding other providers, implement provider-specific transformations.
+     * This is not going to be useful in the near or long future so we are going to just ignore it and unimpl it
      */
     public String toProviderSymbol(AssetIdentifier symbol, String providerName) {
         // For Yahoo, use as-is
