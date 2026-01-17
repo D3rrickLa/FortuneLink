@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.api_clients;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.api_clients;
 
 import java.io.IOException;
 import java.net.URI;

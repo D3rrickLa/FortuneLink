@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.api_clients.FmpApiClient;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.api_clients.FmpApiClient;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.FmpResponseMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;

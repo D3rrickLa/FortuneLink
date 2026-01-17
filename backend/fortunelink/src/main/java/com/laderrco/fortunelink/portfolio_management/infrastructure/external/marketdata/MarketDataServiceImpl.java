@@ -155,9 +155,7 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     @Override
     public Map<AssetIdentifier, MarketAssetInfo> getBatchAssetInfo(List<? extends AssetIdentifier> symbols) {
-        if (symbols == null || symbols.isEmpty()) {
-            return Collections.emptyMap();
-        }
+        if (symbols == null || symbols.isEmpty()) { return Collections.emptyMap(); }
 
         log.debug("Fetching batch asset info for {} symbols", symbols.size());
 
