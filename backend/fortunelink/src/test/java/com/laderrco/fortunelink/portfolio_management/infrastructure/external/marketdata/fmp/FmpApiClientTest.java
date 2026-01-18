@@ -20,6 +20,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,14 +31,13 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.FmpConfigurationProperties;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.FmpApiException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpQuoteResponse;
-
-import com.fasterxml.jackson.core.type.TypeReference;
 
 @ExtendWith(MockitoExtension.class)
 class FmpApiClientTest {
@@ -321,5 +321,16 @@ class FmpApiClientTest {
     @Test
     void testIfValidateConfig() {
         assertDoesNotThrow(()->config.validate());
+    }
+
+
+    @Test
+    void getProfile_throwsInterruptedException() throws IOException, InterruptedException {
+        when(httpClient.send(
+            any(HttpRequest.class),
+            ArgumentMatchers.<HttpResponse.BodyHandler<String>>any())).thenThrow(InterruptedException.class);
+
+        assertThrows(FmpApiException.class, ()->client.getProfile("AAPL"));
+
     }
 }

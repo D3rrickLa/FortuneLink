@@ -29,7 +29,7 @@ public class MarketDataDtoMapper {
         return PriceResponse.builder()
                 .symbol(symbol)
                 .price(price.amount())
-                .currency(price.currency().getSymbol())
+                .currency(price.currency().getCode())
                 .timestamp(Instant.now())
                 .source("Yahoo Finance")
                 .build();
@@ -55,7 +55,7 @@ public class MarketDataDtoMapper {
                 .symbol(assetInfo.getSymbol())
                 .name(assetInfo.getName())
                 .assetType(assetInfo.getAssetType().toString())
-                .currency(assetInfo.getCurrency().getSymbol())
+                .currency(assetInfo.getCurrency().getCode())
                 .exchange(assetInfo.getExchange())
                 // .currentPrice(assetInfo.getCurrentPrice()) /TODO might need to pass another var for this additional info...
                 .sector(assetInfo.getSector())
