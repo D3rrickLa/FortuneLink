@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos;
 
 import java.math.BigDecimal;
 

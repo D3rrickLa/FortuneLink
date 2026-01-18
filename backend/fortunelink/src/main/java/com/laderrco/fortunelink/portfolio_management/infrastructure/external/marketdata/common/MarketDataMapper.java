@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common;
 
 import java.util.Locale;
 
@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;

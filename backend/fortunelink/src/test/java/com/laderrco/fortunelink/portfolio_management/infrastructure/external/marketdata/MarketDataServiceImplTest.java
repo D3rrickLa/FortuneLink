@@ -35,10 +35,10 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.MarketDataMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.providers.MarketDataProvider;
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.MarketDataMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 

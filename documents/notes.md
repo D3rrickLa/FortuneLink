@@ -1058,3 +1058,32 @@ endpoint/asset-info/example -> MarketDataController -> marketDataService (get As
 -> conversion back to the intenral provider structure or either ProviderQuote or ProviderAssetInfo
 -> back to the market data serivce impl -> converts to MarketAssetInfo (domain value object) via mapper.toAssetInfo(providerInfo)
 -> MarketDataController -> AssetInfoResponse -> response entity
+
+
+infrastructure/
+├── config/
+├── persistence/ (Repositories)
+├── external/
+│   ├── fmp/ (Financial Modeling Prep - specific provider)
+│   │   ├── FmpApiClient.java
+│   │   ├── FmpResponseMapper.java
+│   │   ├── FmpProvider.java (Implements MarketDataProvider)
+│   │   └── dtos/ (Provider-specific JSON/XML objects)
+│   │       ├── FmpProfileResponse.java
+│   │       └── FmpQuoteResponse.java
+│   └── common/ (If you have multiple providers)
+│       ├── ProviderQuote.java
+│       └── ProviderAssetInfo.java
+├── marketdata/
+│   └── MarketDataServiceImpl.java (The orchestration logic)
+└── exceptions/
+
+
+infrastructure/
+└── external/
+    ├── marketdata/       <-- Capability 1
+    │   ├── fmp/          (Implementation)
+    │   └── MarketDataServiceImpl.java
+    └── exchangerate/     <-- Capability 2
+        ├── fixio/        (Implementation)
+        └── ExchangeRateServiceImpl.java

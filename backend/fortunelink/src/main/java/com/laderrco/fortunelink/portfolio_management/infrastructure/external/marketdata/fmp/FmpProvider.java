@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.providers;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -8,12 +8,11 @@ import java.util.Optional;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.api_clients.FmpApiClient;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.FmpResponseMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpProfileResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpQuoteResponse;
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpProfileResponse;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpQuoteResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

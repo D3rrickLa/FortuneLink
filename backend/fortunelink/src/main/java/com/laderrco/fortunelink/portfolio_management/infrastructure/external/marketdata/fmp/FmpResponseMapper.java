@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -6,10 +6,10 @@ import java.time.ZoneId;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpProfileResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpQuoteResponse;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpProfileResponse;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpQuoteResponse;
 
 /**
  * Maps FMP API responses to internal provider models.

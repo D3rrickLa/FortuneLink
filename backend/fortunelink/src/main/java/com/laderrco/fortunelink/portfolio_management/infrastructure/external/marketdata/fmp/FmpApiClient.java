@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.api_clients;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp;
 
 import java.io.IOException;
 import java.net.URI;
@@ -16,8 +16,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.FmpConfigurationProperties;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.FmpApiException;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpProfileResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.dtos.financial_modeling_prep.FmpQuoteResponse;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpProfileResponse;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp.dtos.FmpQuoteResponse;
 
 import lombok.extern.slf4j.Slf4j;
 
