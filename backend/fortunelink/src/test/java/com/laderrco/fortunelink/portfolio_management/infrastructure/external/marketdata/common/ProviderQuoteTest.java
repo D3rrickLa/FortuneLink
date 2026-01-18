@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -9,8 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
 
 @DisplayName("ProviderQuote Unit Tests")
 class ProviderQuoteTest {

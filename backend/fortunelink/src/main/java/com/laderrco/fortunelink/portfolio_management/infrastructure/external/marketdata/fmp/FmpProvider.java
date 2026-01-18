@@ -1,9 +1,11 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.fmp;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -47,34 +49,72 @@ public class FmpProvider implements MarketDataProvider {
 
     @Override
     public Optional<ProviderQuote> fetchCurrentQuote(String symbol) {
-        FmpQuoteResponse response = fmpApiClient.getQuote(symbol);
-
-        return Optional.of(mapper.toProviderQuote(response));
+        try {
+            FmpQuoteResponse response = fmpApiClient.getQuote(symbol);
+            return Optional.ofNullable(response).map(mapper::toProviderQuote);
+        } catch (Exception e) {
+            log.error("Failed to fetch current quote for symbol: {} from FMP", symbol, e);
+            return Optional.empty();
+        }
     }
 
     @Override
     public Optional<ProviderQuote> fetchHistoricalQuote(String symbol, LocalDateTime dateTime) {
-        // TODO Auto-generated method stub
+        // NOTE: This is gatekept in their sub models so no IMP
         throw new UnsupportedOperationException("Unimplemented method 'fetchHistoricalQuote'");
     }
 
     @Override
     public Map<String, ProviderQuote> fetchBatchQuotes(List<String> symbols) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'fetchBatchQuotes'");
+        if (symbols == null || symbols.isEmpty()) { return Collections.emptyMap(); }
+
+        try {
+            List<FmpQuoteResponse> responses = fmpApiClient.getBatchQuotes(symbols);
+            return responses.stream()
+                .collect(Collectors.toMap(
+                    FmpQuoteResponse::getSymbol,
+                    mapper::toProviderQuote,
+                    (existing, replacement) -> existing
+                ));
+        } catch (Exception e) {
+            log.error("Critical failure during FMP batch quote fetch for {} symbols", symbols.size(), e);
+            return Collections.emptyMap();
+        }
     }
 
     @Override
     public Optional<ProviderAssetInfo> fetchAssetInfo(String symbol) {
-        FmpProfileResponse response = fmpApiClient.getProfile(symbol);
-
-        return Optional.of(mapper.toProviderAssetInfo(response));
+        try {
+            FmpProfileResponse response = fmpApiClient.getProfile(symbol);
+            return Optional.ofNullable(response).map(mapper::toProviderAssetInfo);
+        } catch (Exception e) {
+            log.error("Failed to fetch asset info for symbol: {} from FMP", symbol, e);
+            return Optional.empty();
+        }
     }
 
     @Override
     public Map<String, ProviderAssetInfo> fetchBatchAssetInfo(List<String> symbols) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'fetchBatchAssetInfo'");
+        if (symbols == null || symbols.isEmpty()) { return Collections.emptyMap(); }
+
+        // Note: BatchProfiles usually performs individual calls. 
+        // We use a stream here to handle individual failures so one 404 doesn't kill the batch.
+        // NOTE: FMP does have a 'batch' quote option BUT it's gatekept by their sub so not using it
+        // else i would as that saves API request
+        return symbols.stream()
+            .map(s -> {
+                try { return Optional.of(fmpApiClient.getProfile(s)); }
+                catch (Exception e) {
+                    log.warn("Skipping asset info for {} due to provider error", s);
+                    return Optional.<FmpProfileResponse>empty();
+                }
+            })
+            .flatMap(Optional::stream)
+            .collect(Collectors.toMap(
+                FmpProfileResponse::getSymbol,
+                mapper::toProviderAssetInfo,
+                (existing, replacement) -> existing
+            ));
     }
 
     @Override
@@ -86,5 +126,4 @@ public class FmpProvider implements MarketDataProvider {
     public String getProviderName() {
         return "FMP";
     }
-    
 }

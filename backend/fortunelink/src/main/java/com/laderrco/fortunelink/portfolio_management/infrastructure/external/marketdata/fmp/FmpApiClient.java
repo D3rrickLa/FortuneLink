@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 
@@ -36,6 +37,11 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FmpApiClient {
 
+    private static final TypeReference<List<FmpQuoteResponse>> QUOTE_LIST_TYPE = new TypeReference<>() {
+    };
+    private static final TypeReference<List<FmpProfileResponse>> PROFILE_LIST_TYPE = new TypeReference<>() {
+    };
+
     private final FmpConfigurationProperties config;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -43,14 +49,15 @@ public class FmpApiClient {
     /**
      * Initialize HTTP client bean.
      */
-    public FmpApiClient(FmpConfigurationProperties config, ObjectMapper objectMapper) {
+    public FmpApiClient(FmpConfigurationProperties config, ObjectMapper objectMapper, HttpClient httpClient) {
         this.config = config;
         this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
-                .build();
-        
+        this.httpClient = httpClient;
+        // this.httpClient = HttpClient.newBuilder()
+        // .followRedirects(HttpClient.Redirect.NORMAL)
+        // .connectTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
+        // .build();
+
         // Validate config on startup
         config.validate();
         log.info("FMP API Client initialized with base URL: {}", config.getBaseUrl());
@@ -64,30 +71,29 @@ public class FmpApiClient {
      */
     public FmpQuoteResponse getQuote(String symbol) {
         String url = buildUrl("/quote/" + encodeSymbol(symbol));
-        
+
         if (config.isDebugLogging()) {
             log.debug("FMP Request: GET {}", url);
         }
-        
+
         try {
             String jsonResponse = executeGetRequest(url);
-            
+
             if (config.isDebugLogging()) {
                 log.debug("FMP Response: {}", jsonResponse);
             }
-            
+
             // FMP returns array even for single symbol
             List<FmpQuoteResponse> quotes = objectMapper.readValue(
-                jsonResponse, 
-                new TypeReference<List<FmpQuoteResponse>>() {}
-            );
-            
+                    jsonResponse,
+                    QUOTE_LIST_TYPE);
+
             if (quotes.isEmpty()) {
                 throw new FmpApiException("Symbol not found: " + symbol);
             }
-            
+
             return quotes.get(0);
-            
+
         } catch (IOException e) {
             throw new FmpApiException("Failed to parse FMP quote response for " + symbol, e);
         }
@@ -96,36 +102,48 @@ public class FmpApiClient {
     /**
      * Get real-time quotes for multiple symbols (batch).
      * 
-     * Endpoint: GET /quote/{symbol1,symbol2,symbol3}?apikey={key}
-     * More efficient than individual calls (saves API quota).
+     * this is HELLA jank as we need to call the single quote api multiple times as
+     * multi is a preimum thing
      */
     public List<FmpQuoteResponse> getBatchQuotes(List<String> symbols) {
-        if (symbols.isEmpty()) {
+        // THIS IS THE PROPER IMPL of this method, just can't use it
+        // if (symbols.isEmpty()) { return List.of(); }
+
+        // String symbolsParam = String.join(",", symbols);
+        // String url = buildUrl("/quote?symbol=" + encodeSymbol(symbolsParam));
+
+        // if (config.isDebugLogging()) {
+        // log.debug("FMP Batch Request: GET {} (symbols: {})", url, symbols.size());
+        // }
+
+        // try {
+        // String jsonResponse = executeGetRequest(url);
+
+        // List<FmpQuoteResponse> quotes = objectMapper.readValue(
+        // jsonResponse,
+        // QUOTE_LIST_TYPE
+        // );
+
+        // log.info("Retrieved {} quotes from FMP (requested {})", quotes.size(),
+        // symbols.size());
+
+        // return quotes;
+
+        // } catch (IOException e) {
+        // throw new FmpApiException("Failed to parse FMP batch quotes response", e);
+        // }
+
+        if (symbols == null || symbols.isEmpty()) {
             return List.of();
         }
-        
-        String symbolsParam = String.join(",", symbols);
-        String url = buildUrl("/quote?symbol=" + encodeSymbol(symbolsParam));
-        
-        if (config.isDebugLogging()) {
-            log.debug("FMP Batch Request: GET {} (symbols: {})", url, symbols.size());
-        }
-        
-        try {
-            String jsonResponse = executeGetRequest(url);
-            
-            List<FmpQuoteResponse> quotes = objectMapper.readValue(
-                jsonResponse,
-                new TypeReference<List<FmpQuoteResponse>>() {}
-            );
-            
-            log.info("Retrieved {} quotes from FMP (requested {})", quotes.size(), symbols.size());
-            
-            return quotes;
-            
-        } catch (IOException e) {
-            throw new FmpApiException("Failed to parse FMP batch quotes response", e);
-        }
+        ;
+
+        log.info("Performing sequential quote lookups for {} symbols (FMP Free Tier limitation)", symbols.size());
+
+        return symbols.parallelStream() // <--- The Change
+            .map(this::fetchSingleQuoteSafe)
+            .filter(Objects::nonNull)
+            .toList();
     }
 
     /**
@@ -135,26 +153,23 @@ public class FmpApiClient {
      */
     public FmpProfileResponse getProfile(String symbol) {
         String url = buildUrl("/profile?symbol=" + encodeSymbol(symbol));
-        
-        if (config.isDebugLogging()) {
-            log.debug("FMP Profile Request: GET {}", url);
-        }
-        
+
+        log.debug("FMP Request: GET {}", url);
+
         try {
             String jsonResponse = executeGetRequest(url);
-            
+
             // FMP returns array even for single symbol
             List<FmpProfileResponse> profiles = objectMapper.readValue(
-                jsonResponse,
-                new TypeReference<List<FmpProfileResponse>>() {}
-            );
-            
+                    jsonResponse,
+                    PROFILE_LIST_TYPE);
+
             if (profiles.isEmpty()) {
                 throw new FmpApiException("Profile not found for symbol: " + symbol);
             }
-            
+
             return profiles.get(0);
-            
+
         } catch (IOException e) {
             throw new FmpApiException("Failed to parse FMP profile response for " + symbol, e);
         }
@@ -168,10 +183,8 @@ public class FmpApiClient {
      */
     public List<FmpProfileResponse> getBatchProfiles(List<String> symbols) {
         log.warn("Batch profile requests make {} individual API calls. Consider caching.", symbols.size());
-        
-        return symbols.stream()
-                .map(this::getProfile)
-                .toList();
+
+        return symbols.stream().map(this::getProfile).toList();
     }
 
     /**
@@ -198,8 +211,7 @@ public class FmpApiClient {
                 throw new FmpApiException("FMP API endpoint not found: " + url);
             } else {
                 throw new FmpApiException(
-                    String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body())
-                );
+                        String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body()));
             }
 
         } catch (IOException e) {
@@ -210,12 +222,21 @@ public class FmpApiClient {
         }
     }
 
+    private FmpQuoteResponse fetchSingleQuoteSafe(String symbol) {
+        try {
+            return getQuote(symbol);
+        } catch (Exception e) {
+            log.error("Parallel fetch failed for {}: {}", symbol, e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * Build full API URL with base URL and API key.
      */
     private String buildUrl(String endpoint) {
-        log.debug("FMP CLIENT DEBUG URL: "+config.getBaseUrl());
-        return String.format("%s%s&apikey=%s", config.getBaseUrl(), endpoint, config.getApiKey());
+        String separator = endpoint.contains("?") ? "&" : "?";
+        return config.getBaseUrl() + endpoint + separator + "apikey=" + config.getApiKey();
     }
 
     /**

@@ -53,7 +53,7 @@ public class MarketDataMapper {
      * @return a new PriceResponse object
      */
     public PriceResponse toPriceResponse(String symbol, Money price) {
-        return PriceResponse.of(symbol, price.amount(), price.currency().getSymbol());
+        return PriceResponse.of(symbol, price.amount(), price.currency().getCode());
     }
 
     /**

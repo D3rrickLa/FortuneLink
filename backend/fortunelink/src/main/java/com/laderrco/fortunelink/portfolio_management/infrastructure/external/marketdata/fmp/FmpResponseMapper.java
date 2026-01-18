@@ -55,8 +55,8 @@ public class FmpResponseMapper {
      */
     private LocalDateTime timestampToLocalDateTime(long epochSeconds) {
         return LocalDateTime.ofInstant(
-                Instant.ofEpochSecond(epochSeconds),
-                ZoneId.systemDefault());
+            Instant.ofEpochSecond(epochSeconds),
+            ZoneId.systemDefault());
     }
 
     private String mapQuoteTypeToAssetType(FmpProfileResponse profileResponse) {

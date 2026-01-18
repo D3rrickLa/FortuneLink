@@ -939,6 +939,29 @@ also, if we want 'chart info' we need to include the yahoo chart stuff, might pu
 we should also 'redis' the information as well as long term store that history data
 
 [
+	{
+		"symbol": "AAPL",
+		"name": "Apple Inc.",
+		"price": 232.8,
+		"changePercentage": 2.1008,
+		"change": 4.79,
+		"volume": 44489128,
+		"dayLow": 226.65,
+		"dayHigh": 233.13,
+		"yearHigh": 260.1,
+		"yearLow": 164.08,
+		"marketCap": 3500823120000,
+		"priceAvg50": 240.2278,
+		"priceAvg200": 219.98755,
+		"exchange": "NASDAQ",
+		"open": 227.2,
+		"previousClose": 228.01,
+		"timestamp": 1738702801
+	}
+]
+
+
+[
   {
     "symbol": "AAPL",
     "price": 255.53,
@@ -979,22 +1002,6 @@ we should also 'redis' the information as well as long term store that history d
   }
 ]
 
-{
-    "symbol": "VFV.TO",
-    "name": "Vanguard S&P 500 Index ETF",
-    "assetType": "ETF",
-    "currency": "$",
-    "exchange": "TSX",
-    "currentPrice": null,
-    "sector": "Financial Services",
-    "marketCap": null,
-    "peRatio": null,
-    "fiftyTwoWeekHigh": null,
-    "fiftyTwoWeekLow": null,
-    "averageVolume": null,
-    "source": "API CALL"
-}
-this is wrong, also the source is hard coded, we need to change that in the MarketAssetInfo in domain layer
 
 [
   {
@@ -1036,6 +1043,24 @@ this is wrong, also the source is hard coded, we need to change that in the Mark
     "isFund": false
   }
 ]
+
+
+{
+    "symbol": "VFV.TO",
+    "name": "Vanguard S&P 500 Index ETF",
+    "assetType": "ETF",
+    "currency": "$",
+    "exchange": "TSX",
+    "currentPrice": null,
+    "sector": "Financial Services",
+    "marketCap": null,
+    "peRatio": null,
+    "fiftyTwoWeekHigh": null,
+    "fiftyTwoWeekLow": null,
+    "averageVolume": null,
+    "source": "API CALL"
+}
+this is wrong, also the source is hard coded, we need to change that in the MarketAssetInfo in domain layer
 
 ---- jan 17th 26--- 
 this is how the data flows from endpoint and back, or atleast how it should operate
