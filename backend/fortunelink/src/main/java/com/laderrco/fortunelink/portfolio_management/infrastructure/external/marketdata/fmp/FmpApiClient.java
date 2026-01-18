@@ -37,10 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FmpApiClient {
 
-    private static final TypeReference<List<FmpQuoteResponse>> QUOTE_LIST_TYPE = new TypeReference<>() {
-    };
-    private static final TypeReference<List<FmpProfileResponse>> PROFILE_LIST_TYPE = new TypeReference<>() {
-    };
+    private static final TypeReference<List<FmpQuoteResponse>> QUOTE_LIST_TYPE = new TypeReference<>() {};
+    private static final TypeReference<List<FmpProfileResponse>> PROFILE_LIST_TYPE = new TypeReference<>() {};
 
     private final FmpConfigurationProperties config;
     private final ObjectMapper objectMapper;
@@ -106,6 +104,7 @@ public class FmpApiClient {
      * multi is a preimum thing
      */
     public List<FmpQuoteResponse> getBatchQuotes(List<String> symbols) {
+        /*
         // THIS IS THE PROPER IMPL of this method, just can't use it
         // if (symbols.isEmpty()) { return List.of(); }
 
@@ -132,15 +131,15 @@ public class FmpApiClient {
         // } catch (IOException e) {
         // throw new FmpApiException("Failed to parse FMP batch quotes response", e);
         // }
+        
+        
+        */
 
-        if (symbols == null || symbols.isEmpty()) {
-            return List.of();
-        }
-        ;
-
+        if (symbols == null || symbols.isEmpty()) { return List.of(); }
+        
         log.info("Performing sequential quote lookups for {} symbols (FMP Free Tier limitation)", symbols.size());
 
-        return symbols.parallelStream() // <--- The Change
+        return symbols.parallelStream()
             .map(this::fetchSingleQuoteSafe)
             .filter(Objects::nonNull)
             .toList();
@@ -182,9 +181,12 @@ public class FmpApiClient {
      * For large batches, consider caching or rate limiting.
      */
     public List<FmpProfileResponse> getBatchProfiles(List<String> symbols) {
+        if (symbols == null || symbols.isEmpty()) { return List.of(); }
         log.warn("Batch profile requests make {} individual API calls. Consider caching.", symbols.size());
-
-        return symbols.stream().map(this::getProfile).toList();
+            return symbols.parallelStream()
+            .map(this::fetchSingleProfileSafe)
+            .filter(Objects::nonNull)
+            .toList();
     }
 
     /**
@@ -225,6 +227,15 @@ public class FmpApiClient {
     private FmpQuoteResponse fetchSingleQuoteSafe(String symbol) {
         try {
             return getQuote(symbol);
+        } catch (Exception e) {
+            log.error("Parallel fetch failed for {}: {}", symbol, e.getMessage());
+            return null;
+        }
+    }
+
+    private FmpProfileResponse fetchSingleProfileSafe(String symbol) {
+        try {
+            return getProfile(symbol);
         } catch (Exception e) {
             log.error("Parallel fetch failed for {}: {}", symbol, e.getMessage());
             return null;
