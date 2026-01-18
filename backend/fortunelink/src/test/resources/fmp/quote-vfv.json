@@ -1,0 +1,21 @@
+[
+  {
+    "symbol": "VFV.TO",
+    "name": "Vanguard S&P 500 Index ETF",
+    "price": 171.34,
+    "changePercentage": 0.0817757,
+    "change": 0.14,
+    "volume": 284321,
+    "dayLow": 170.92,
+    "dayHigh": 172.18,
+    "yearHigh": 172.18,
+    "yearLow": 121.61,
+    "marketCap": 27584495386,
+    "priceAvg50": 168.42,
+    "priceAvg200": 154.88,
+    "exchange": "TSX",
+    "open": 171.20,
+    "previousClose": 171.20,
+    "timestamp": 1738702801
+  }
+]

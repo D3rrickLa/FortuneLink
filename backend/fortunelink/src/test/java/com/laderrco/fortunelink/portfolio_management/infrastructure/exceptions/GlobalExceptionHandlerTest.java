@@ -1,0 +1,61 @@
+package com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers.MarketDataController;
+
+@WebMvcTest(MarketDataController.class)
+@Import(DevSecurityConfig.class)
+class GlobalExceptionHandlerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private MarketDataService marketDataService;
+
+    @MockitoBean
+    private MarketDataDtoMapper mapper;
+
+    // ---------------------------------------------------
+    // Generic Exception Handler Test
+    // ---------------------------------------------------
+
+    @Test
+    @SuppressWarnings("null")
+    void handleGenericException_returnsInternalServerError() throws Exception {
+
+        // Force a generic runtime exception
+        when(marketDataService.getCurrentPrice(any()))
+                .thenThrow(new RuntimeException("Boom"));
+
+        mockMvc.perform(get("/api/market-data/price/AAPL"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+
+                // ErrorResponse fields
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message")
+                        .value("An unexpected error occurred. Please try again later."))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/market-data/price/AAPL"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+}

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -48,7 +49,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PortfolioEntityMapper Tests")
-class PortfolioEntityMapperTest {
+class PortfolioEntityMapperImplTest {
 
     @Mock
     private AssetEntityMapperImpl assetMapper;
@@ -297,6 +298,25 @@ class PortfolioEntityMapperTest {
             // Then
             assertThat(existingEntity.getUserId()).isEqualTo(updatedDomain.getUserId().userId());
             assertThat(existingEntity.getCurrencyPreference()).isEqualTo("USD");
+        }
+
+        @Test
+        @DisplayName("Should update existing portfolio entity")
+        void shouldReturnNewEmptyArrayListWhenEntityIsNull() {
+            // Given
+            PortfolioEntity existingEntity = mock();
+            Portfolio updatedDomain = createTestPortfolio();
+
+            // Setup mocks
+            setupMockMappers();
+
+            // When
+            // when(existingEntity.getAccounts()).thenReturn(null);
+            mapper.updateEntityFromDomain(updatedDomain, existingEntity);
+
+            // Then
+            assertThat(existingEntity.getAccounts().isEmpty()).isEqualTo(true);
+            // assertThat(existingEntity.getCurrencyPreference()).isEqualTo("USD");
         }
 
         @Test

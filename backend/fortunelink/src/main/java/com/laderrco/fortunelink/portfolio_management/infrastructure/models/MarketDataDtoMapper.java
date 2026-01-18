@@ -23,13 +23,13 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 public class MarketDataDtoMapper {
 
     /**
-     * Convert domain Price to API response.
+     * Convert domain Price to MarkteDataController API response.
      */
     public PriceResponse toPriceResponse(String symbol, Money price) {
         return PriceResponse.builder()
                 .symbol(symbol)
                 .price(price.amount())
-                .currency(price.currency().getSymbol())
+                .currency(price.currency().getCode())
                 .timestamp(Instant.now())
                 .source("Yahoo Finance")
                 .build();
@@ -55,7 +55,7 @@ public class MarketDataDtoMapper {
                 .symbol(assetInfo.getSymbol())
                 .name(assetInfo.getName())
                 .assetType(assetInfo.getAssetType().toString())
-                .currency(assetInfo.getCurrency().getSymbol())
+                .currency(assetInfo.getCurrency().getCode())
                 .exchange(assetInfo.getExchange())
                 // .currentPrice(assetInfo.getCurrentPrice()) /TODO might need to pass another var for this additional info...
                 .sector(assetInfo.getSector())
@@ -64,7 +64,7 @@ public class MarketDataDtoMapper {
                 // .fiftyTwoWeekHigh(assetInfo.getFiftyTwoWeekHigh())
                 // .fiftyTwoWeekLow(assetInfo.getFiftyTwoWeekLow())
                 // .averageVolume(assetInfo.getAverageVolume())
-                .source("Yahoo Finance")
+                .source("API CALL")
                 .build();
     }
 

@@ -16,11 +16,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers.MarketDataMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.providers.MarketDataProvider;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.MarketDataMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -53,12 +53,12 @@ public class MarketDataServiceImpl implements MarketDataService {
         // Money cached = checkCache(symbol);
         // if (cached != null) return cached;
 
-        String providerSymbol = mapper.toProviderSymbol(assetIdentifier, provider.getProviderName());
+        // String providerSymbol = mapper.toProviderSymbol(assetIdentifier.getPrimaryId(), provider.getProviderName());
 
-        Optional<ProviderQuote> quote = provider.fetchCurrentQuote(providerSymbol);
+        Optional<ProviderQuote> quote = provider.fetchCurrentQuote(assetIdentifier.getPrimaryId());
 
         if (quote.isEmpty()) {
-            throw MarketDataException.symbolNotFound(providerSymbol);
+            throw MarketDataException.symbolNotFound(assetIdentifier.getPrimaryId());
         }
 
         Money price = mapper.toMoney(quote.get());
@@ -71,29 +71,26 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
     @Override
-    public Money getHistoricalPrice(AssetIdentifier assetIdentifierId, LocalDateTime dateTime) {
-        log.debug("Fetching historical price for {} at {}", assetIdentifierId.getPrimaryId(), dateTime);
+    public Money getHistoricalPrice(AssetIdentifier assetIdentifier, LocalDateTime dateTime) {
+        log.debug("Fetching historical price for {} at {}", assetIdentifier.getPrimaryId(), dateTime);
 
-        String providerSymbol = mapper.toProviderSymbol(assetIdentifierId, provider.getProviderName());
+        // NOT NEEDED FOR MVP
+        // String providerSymbol = mapper.toProviderSymbol(assetIdentifier, provider.getProviderName());
 
-        Optional<ProviderQuote> quote = provider.fetchHistoricalQuote(providerSymbol, dateTime);
+        Optional<ProviderQuote> quote = provider.fetchHistoricalQuote(assetIdentifier.getPrimaryId(), dateTime);
 
         if (quote.isEmpty()) {
-            throw MarketDataException.dataUnavailable(
-                    assetIdentifierId.getPrimaryId(),
-                    "No historical data available for " + dateTime);
+            throw MarketDataException.dataUnavailable(assetIdentifier.getPrimaryId(), "No historical data available for " + dateTime);
         }
 
         Money price = mapper.toMoney(quote.get());
-        log.debug("Retrieved historical price for {} at {}: {}", assetIdentifierId.getPrimaryId(), dateTime, price);
+        log.debug("Retrieved historical price for {} at {}: {}", assetIdentifier.getPrimaryId(), dateTime, price);
         return price;
     }
 
     @Override
     public Map<AssetIdentifier, Money> getBatchPrices(List<? extends AssetIdentifier> assetIdentifiers) {
-        if (assetIdentifiers == null || assetIdentifiers.isEmpty()) {
-            return Collections.emptyMap();
-        }
+        if (assetIdentifiers == null || assetIdentifiers.isEmpty()) { return Collections.emptyMap(); }
 
         log.debug("Fetching batch prices for {} symbols", assetIdentifiers.size());
 
@@ -107,8 +104,8 @@ public class MarketDataServiceImpl implements MarketDataService {
         // Map back to domain
         Map<AssetIdentifier, Money> result = new HashMap<>();
         for (AssetIdentifier symbol : assetIdentifiers) {
-            String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
-            ProviderQuote quote = quotes.get(providerSymbol);
+            // String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
+            ProviderQuote quote = quotes.get(symbol.getPrimaryId());
 
             if (quote != null) {
                 result.put(symbol, mapper.toMoney(quote));
@@ -125,9 +122,9 @@ public class MarketDataServiceImpl implements MarketDataService {
     public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier) {
         log.debug("Fetching asset info for symbol: {}", identifier.getPrimaryId());
 
-        String providerSymbol = mapper.toProviderSymbol(identifier, provider.getProviderName());
+        // String providerSymbol = mapper.toProviderSymbol(identifier, provider.getProviderName());
 
-        Optional<ProviderAssetInfo> providerInfo = provider.fetchAssetInfo(providerSymbol);
+        Optional<ProviderAssetInfo> providerInfo = provider.fetchAssetInfo(identifier.getPrimaryId());
 
         if (providerInfo.isEmpty()) {
             log.debug("No asset info found for {}", identifier.getPrimaryId());
@@ -158,9 +155,7 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     @Override
     public Map<AssetIdentifier, MarketAssetInfo> getBatchAssetInfo(List<? extends AssetIdentifier> symbols) {
-        if (symbols == null || symbols.isEmpty()) {
-            return Collections.emptyMap();
-        }
+        if (symbols == null || symbols.isEmpty()) { return Collections.emptyMap(); }
 
         log.debug("Fetching batch asset info for {} symbols", symbols.size());
 
@@ -174,8 +169,8 @@ public class MarketDataServiceImpl implements MarketDataService {
         // Map back to domain models
         Map<AssetIdentifier, MarketAssetInfo> result = new HashMap<>();
         for (AssetIdentifier symbol : symbols) {
-            String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
-            ProviderAssetInfo providerInfo = providerInfoMap.get(providerSymbol);
+            // String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
+            ProviderAssetInfo providerInfo = providerInfoMap.get(symbol.getPrimaryId());
 
             if (providerInfo != null) {
                 result.put(symbol, mapper.toAssetInfo(providerInfo));
@@ -190,8 +185,8 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     @Override
     public boolean isSymbolSupported(AssetIdentifier symbol) {
-        String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
-        return provider.supportsSymbol(providerSymbol);
+        // String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
+        return provider.supportsSymbol(symbol.getPrimaryId());
     }
 
     @Override

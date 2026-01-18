@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.mappers;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common;
 
 import java.util.Locale;
 
@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -19,7 +17,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
  * 
  * Responsibilities:
  * 1. Map ProviderQuote → Money (domain value object)
- * 2. Map ProviderAssetInfo → MarketDataService.AssetInfo (domain DTO)
+ * 2. Map ProviderAssetInfo → MarketAssetInfo (domain DTO)
  * 3. Normalize symbol formats between providers
  * 4. Handle currency conversions/validations
  */
@@ -55,7 +53,7 @@ public class MarketDataMapper {
      * @return a new PriceResponse object
      */
     public PriceResponse toPriceResponse(String symbol, Money price) {
-        return PriceResponse.of(symbol, price.amount(), price.currency().getSymbol());
+        return PriceResponse.of(symbol, price.amount(), price.currency().getCode());
     }
 
     /**
@@ -80,6 +78,7 @@ public class MarketDataMapper {
      * 
      * For MVP with Yahoo, this is identity function.
      * When adding other providers, implement provider-specific transformations.
+     * This is not going to be useful in the near or long future so we are going to just ignore it and unimpl it
      */
     public String toProviderSymbol(AssetIdentifier symbol, String providerName) {
         // For Yahoo, use as-is

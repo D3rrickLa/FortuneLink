@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common;
 
 /**
  * Internal representation of asset metadata from any provider.

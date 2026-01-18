@@ -1,12 +1,12 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.providers;
+package com.laderrco.fortunelink.portfolio_management.domain.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.models.ProviderQuote;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
 
 /**
  * Strategy interface for market data providers.

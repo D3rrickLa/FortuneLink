@@ -14,6 +14,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
@@ -125,7 +126,8 @@ public class MarketDataController {
         log.info("Fetching asset info for symbol: {}", symbol);
         
         SymbolIdentifier symbolId = new SymbolIdentifier(symbol);
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbolId).orElseThrow(); // TODO change this
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbolId)
+            .orElseThrow(() -> new SymbolNotFoundException("Asset not found: " + symbol));
         
         AssetInfoResponse response = mapper.toAssetInfoResponse(assetInfo);
         
@@ -180,7 +182,7 @@ public class MarketDataController {
         log.info("Fetching trading currency for symbol: {}", symbol);
         
         SymbolIdentifier symbolId = new SymbolIdentifier(symbol);
-        String currency = marketDataService.getTradingCurrency(symbolId).getSymbol();
+        String currency = marketDataService.getTradingCurrency(symbolId).getCode();
         
         log.info("Trading currency for {}: {}", symbol, currency);
         

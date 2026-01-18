@@ -68,12 +68,11 @@
         <!-- FUTURE: Add these when implementing advanced features -->
         <!-- ============================================ -->
 
-        <!-- Redis Cache (commented out for MVP) -->
-        <!--
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
@@ -82,7 +81,12 @@
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
         </dependency>
-        -->
+
+        <!-- Lettuce connection pool -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
 
         <!-- Resilience4j Circuit Breaker & Retry (commented out for MVP) -->
         <!--
@@ -108,14 +112,6 @@
         </dependency>
         -->
 
-        <!-- Alternative: Official Finnhub Java Client (if switching from Yahoo) -->
-        <!--
-        <dependency>
-            <groupId>io.finnhub</groupId>
-            <artifactId>finnhub-java-client</artifactId>
-            <version>2.0.18</version>
-        </dependency>
-        -->
         <!-- SpringDoc OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -185,6 +181,22 @@
             <groupId>io.hypersistence</groupId>
             <artifactId>hypersistence-utils-hibernate-60</artifactId>
             <version>3.9.0</version>
+        </dependency>
+
+        <!-- ============================================ -->
+        <!-- MONITORING (Optional but Recommended) -->
+        <!-- ============================================ -->
+
+        <!-- Spring Boot Actuator for metrics -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Micrometer for cache metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
         </dependency>
 
         <!-- WireMock for mocking HTTP calls in tests -->
