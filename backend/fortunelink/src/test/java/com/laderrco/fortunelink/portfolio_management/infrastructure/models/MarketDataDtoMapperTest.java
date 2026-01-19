@@ -40,7 +40,7 @@ public class MarketDataDtoMapperTest {
         assertThat(response.getSymbol()).isEqualTo("AAPL");
         assertThat(response.getPrice()).isEqualByComparingTo("123.45");
         assertThat(response.getCurrency()).isEqualTo("USD");
-        assertThat(response.getSource()).isEqualTo("Yahoo Finance");
+        assertThat(response.getSource()).isEqualTo("EXTERNAL API");
 
         // dynamic fields
         assertThat(response.getTimestamp()).isNotNull();

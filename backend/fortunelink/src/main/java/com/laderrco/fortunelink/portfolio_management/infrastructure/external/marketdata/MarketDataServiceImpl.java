@@ -5,10 +5,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
@@ -36,6 +39,17 @@ import lombok.AllArgsConstructor;
  * 4. Provides caching (commented out for MVP - add Redis later)
  * 
  * Thread-safe: All operations are stateless or use thread-safe components.
+ * 
+ * Cache Strategy:
+ * - current-prices: 5 min TTL (prices change frequently)
+ * - historical-prices: 24 hours TTL (historical data is immutable)
+ * - asset-info: 7 days TTL (metadata rarely changes)
+ * - trading-currency: 7 days TTL (currency rarely changes)
+ * 
+ * Cache Keys:
+ * - Uses SpEL (Spring Expression Language) for dynamic keys
+ * - Format: "cacheName::keyExpression"
+ * - Example: "current-prices::AAPL"
  */
 @Service
 @AllArgsConstructor
@@ -45,16 +59,17 @@ public class MarketDataServiceImpl implements MarketDataService {
     private final MarketDataProvider provider;
     private final MarketDataMapper mapper;
 
+    /**
+     * Get current price with caching, TTL of 5 min
+     */
     @Override
+    @Cacheable(value = "current-prices", key = "#symbol.value()", unless = "#result == null")
     public Money getCurrentPrice(AssetIdentifier assetIdentifier) {
         log.debug("Fetching current price for symbol: {}", assetIdentifier.getPrimaryId());
 
-        // CHECKS cache first (TODO: impelemnt Redis caching)
-        // Money cached = checkCache(symbol);
-        // if (cached != null) return cached;
-
-        // String providerSymbol = mapper.toProviderSymbol(assetIdentifier.getPrimaryId(), provider.getProviderName());
-
+        // String providerSymbol =
+        // mapper.toProviderSymbol(assetIdentifier.getPrimaryId(),
+        // provider.getProviderName());
         Optional<ProviderQuote> quote = provider.fetchCurrentQuote(assetIdentifier.getPrimaryId());
 
         if (quote.isEmpty()) {
@@ -63,24 +78,29 @@ public class MarketDataServiceImpl implements MarketDataService {
 
         Money price = mapper.toMoney(quote.get());
 
-        // Cach result -> TODO: Implement
-        // cachePrice(symbol, price);
-
         log.debug("Retrieved price for {}: {}", assetIdentifier.getPrimaryId(), price);
         return price;
     }
 
+    /**
+     * NOTE: this doesn't actually exists as in i didn't code the provider method
+     * Get historical price with caching.
+     * Cache key: "historical-prices::AAPL::2026-01-01T00:00:00"
+     * TTL: 24 hours (historical data doesn't change)
+     */
     @Override
+    @Cacheable(value = "historical-prices", key = "#symbol.value() + '::' + #dateTime.toString()", unless = "#result == null")
     public Money getHistoricalPrice(AssetIdentifier assetIdentifier, LocalDateTime dateTime) {
         log.debug("Fetching historical price for {} at {}", assetIdentifier.getPrimaryId(), dateTime);
 
         // NOT NEEDED FOR MVP
-        // String providerSymbol = mapper.toProviderSymbol(assetIdentifier, provider.getProviderName());
-
+        // String providerSymbol = mapper.toProviderSymbol(assetIdentifier,
+        // provider.getProviderName());
         Optional<ProviderQuote> quote = provider.fetchHistoricalQuote(assetIdentifier.getPrimaryId(), dateTime);
 
         if (quote.isEmpty()) {
-            throw MarketDataException.dataUnavailable(assetIdentifier.getPrimaryId(), "No historical data available for " + dateTime);
+            throw MarketDataException.dataUnavailable(assetIdentifier.getPrimaryId(),
+                    "No historical data available for " + dateTime);
         }
 
         Money price = mapper.toMoney(quote.get());
@@ -88,42 +108,55 @@ public class MarketDataServiceImpl implements MarketDataService {
         return price;
     }
 
+    /**
+     * Get batch prices.
+     * Note: Batch operations are harder to cache effectively.
+     * Each individual price is cached by getCurrentPrice() if called separately.
+     * 
+     * For true batch caching, we'd need a custom cache key generator.
+     */
     @Override
     public Map<AssetIdentifier, Money> getBatchPrices(List<? extends AssetIdentifier> assetIdentifiers) {
-        if (assetIdentifiers == null || assetIdentifiers.isEmpty()) { return Collections.emptyMap(); }
+        if (assetIdentifiers == null || assetIdentifiers.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
         log.debug("Fetching batch prices for {} symbols", assetIdentifiers.size());
 
-        // convert domain symbols to provider format
         List<String> providerSymbols = assetIdentifiers.stream()
                 .map(s -> mapper.toProviderSymbol(s, provider.getProviderName()))
                 .toList();
-        // Fetch from provider
-        Map<String, ProviderQuote> quotes = provider.fetchBatchQuotes(providerSymbols);
 
-        // Map back to domain
+        Map<String, ProviderQuote> batchQuotes = provider.fetchBatchQuotes(providerSymbols);
+
         Map<AssetIdentifier, Money> result = new HashMap<>();
-        for (AssetIdentifier symbol : assetIdentifiers) {
-            // String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
-            ProviderQuote quote = quotes.get(symbol.getPrimaryId());
 
-            if (quote != null) {
-                result.put(symbol, mapper.toMoney(quote));
-            } else {
-                log.warn("No price data for symbol: {}", symbol.getPrimaryId());
+        for (AssetIdentifier symbol : assetIdentifiers) {
+            try {
+                // Reuse cached / rate-limited method
+                Money price = resolvePrice(symbol, batchQuotes);
+                result.put(symbol, price);
+            } catch (MarketDataException e) {
+                log.warn("Failed to fetch price for {}: {}", symbol.getPrimaryId(), e.getMessage());
             }
         }
 
-        log.debug("Retrieved prices for {}/{} symbols", result.size(), assetIdentifiers.size());
+        log.debug("Batch fetch complete: {}/{} symbols retrieved", result.size(), assetIdentifiers.size());
         return result;
     }
 
+    /**
+     * Get asset info with caching.
+     * Cache key: "asset-info::AAPL"
+     * TTL: 7 days (metadata rarely changes)
+     */
     @Override
+    @Cacheable(value = "asset-info", key = "#symbol.value()", unless = "#result == null")
     public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier) {
         log.debug("Fetching asset info for symbol: {}", identifier.getPrimaryId());
 
-        // String providerSymbol = mapper.toProviderSymbol(identifier, provider.getProviderName());
-
+        // String providerSymbol = mapper.toProviderSymbol(identifier,
+        // provider.getProviderName());
         Optional<ProviderAssetInfo> providerInfo = provider.fetchAssetInfo(identifier.getPrimaryId());
 
         if (providerInfo.isEmpty()) {
@@ -138,46 +171,49 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     @Override
     public Optional<MarketAssetInfo> getAssetInfo(String symbol) {
-        // Right now the this is being used only in the PortfolioApplicationService 
-        // specifically the record buy, sell, and divivdend methods. will build 
+        // Right now the this is being used only in the PortfolioApplicationService
+        // specifically the record buy, sell, and divivdend methods. will build
         // a marktet identifier
 
         AssetIdentifier marketIdentifier = new MarketIdentifier(
-            symbol,
-            null,
-            AssetType.STOCK, // because we don't know if this is a stock or etf, default to stock
-            "GetAssetInfoItem",
-            "UNKNOWN UOT",
-            null
-        );
+                symbol,
+                null,
+                AssetType.STOCK, // because we don't know if this is a stock or etf, default to stock
+                "GetAssetInfoItem",
+                "UNKNOWN UOT",
+                null);
         return getAssetInfo(marketIdentifier);
     }
 
+    /**
+     * Get batch asset info.
+     * Similar strategy to getBatchPrices - leverages individual caching.
+     */
     @Override
     public Map<AssetIdentifier, MarketAssetInfo> getBatchAssetInfo(List<? extends AssetIdentifier> symbols) {
-        if (symbols == null || symbols.isEmpty()) { return Collections.emptyMap(); }
+        if (symbols == null || symbols.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
         log.debug("Fetching batch asset info for {} symbols", symbols.size());
 
-        // Convert domain symbols to provider format
         List<String> providerSymbols = symbols.stream()
                 .map(s -> mapper.toProviderSymbol(s, provider.getProviderName()))
                 .toList();
 
         Map<String, ProviderAssetInfo> providerInfoMap = provider.fetchBatchAssetInfo(providerSymbols);
 
-        // Map back to domain models
-        Map<AssetIdentifier, MarketAssetInfo> result = new HashMap<>();
-        for (AssetIdentifier symbol : symbols) {
-            // String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
-            ProviderAssetInfo providerInfo = providerInfoMap.get(symbol.getPrimaryId());
-
-            if (providerInfo != null) {
-                result.put(symbol, mapper.toAssetInfo(providerInfo));
-            } else {
-                log.warn("No asset info found for symbol: {}", symbol.getPrimaryId());
-            }
-        }
+        Map<AssetIdentifier, MarketAssetInfo> result = symbols.stream()
+                .map(symbol -> {
+                    ProviderAssetInfo providerInfo = providerInfoMap.get(symbol.getPrimaryId());
+                    if (providerInfo == null) {
+                        log.warn("No asset info found for symbol: {}", symbol.getPrimaryId());
+                        return null;
+                    }
+                    return Map.entry(symbol, mapper.toAssetInfo(providerInfo));
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         log.debug("Retrieved asset info for {}/{} symbols", result.size(), symbols.size());
         return result;
@@ -185,34 +221,42 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     @Override
     public boolean isSymbolSupported(AssetIdentifier symbol) {
-        // String providerSymbol = mapper.toProviderSymbol(symbol, provider.getProviderName());
+        // String providerSymbol = mapper.toProviderSymbol(symbol,
+        // provider.getProviderName());
         return provider.supportsSymbol(symbol.getPrimaryId());
     }
 
+    /**
+     * Get trading currency with caching.
+     * Cache key: "trading-currency::AAPL"
+     * TTL: 7 days (trading currency rarely changes)
+     */
     @Override
+    @Cacheable(value = "trading-currency", key = "#symbol.value()", unless = "#result == null")
     public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier) {
+        log.debug("Cache miss for trading currency: {} (fetching from provider)", assetIdentifier.getPrimaryId());
+
         // Delegate to getAssetInfo (avoids duplicate API call logic)
         MarketAssetInfo info = getAssetInfo(assetIdentifier)
                 .orElseThrow(() -> MarketDataException.symbolNotFound(assetIdentifier.getPrimaryId()));
+        ValidatedCurrency currency = info.getCurrency();
 
-        return info.getCurrency();
+        log.debug("Fetched and cached trading currency for {}: {}", assetIdentifier.getPrimaryId(), currency);
+        return currency;
     }
 
-
-    // --- Caching Methods (TODO: Implement with Redis) ---
-    
-    /*
-    private Money checkCache(AssetSymbol symbol) {
-        // Check Redis cache for recent price
-        // Key format: "market:price:{symbol}:{currency}"
-        // TTL: 5 minutes for current prices, 24h for historical
-        return null;
+    /**
+     * Resolves a single AssetIdentifier to Money.
+     * Checks batchQuotes first, falls back to getCurrentPrice().
+     */
+    private Money resolvePrice(AssetIdentifier asset, Map<String, ProviderQuote> batchQuotes) {
+        String symbol = asset.getPrimaryId();
+        if (batchQuotes.containsKey(symbol)) {
+            return mapper.toMoney(batchQuotes.get(symbol));
+        } else {
+            // Fallback to single fetch (current implementation)
+            return getCurrentPrice(asset);
+        }
     }
-    
-    private void cachePrice(AssetSymbol symbol, Money price) {
-        // Store in Redis with TTL
-        // cacheManager.getCache("market-data").put(symbol.value(), price);
-    }
-    */
 
 }

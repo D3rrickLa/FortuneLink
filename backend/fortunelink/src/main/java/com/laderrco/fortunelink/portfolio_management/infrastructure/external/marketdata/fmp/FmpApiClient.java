@@ -151,7 +151,7 @@ public class FmpApiClient {
      * Endpoint: GET /profile/{symbol}?apikey={key}
      */
     public FmpProfileResponse getProfile(String symbol) {
-        String url = buildUrl("/profile?symbol=" + encodeSymbol(symbol));
+        String url = buildUrl("profile?symbol=" + encodeSymbol(symbol));
 
         log.debug("FMP Request: GET {}", url);
 
@@ -246,8 +246,7 @@ public class FmpApiClient {
      * Build full API URL with base URL and API key.
      */
     private String buildUrl(String endpoint) {
-        String separator = endpoint.contains("?") ? "&" : "?";
-        return config.getBaseUrl() + endpoint + separator + "apikey=" + config.getApiKey();
+        return config.getBaseUrl() + endpoint + "&apikey=" + config.getApiKey();
     }
 
     /**

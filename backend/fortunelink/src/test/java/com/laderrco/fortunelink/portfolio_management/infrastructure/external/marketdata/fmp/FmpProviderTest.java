@@ -2,11 +2,15 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.external.ma
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +64,7 @@ class FmpProviderTest {
         assertThat(result).containsKey("AAPL");
         verify(fmpApiClient).getBatchQuotes(anyList());
     }
-    
+
     @ParameterizedTest
     @NullAndEmptySource
     @DisplayName("fetchBAstAssetInfo should reutrn empty when symbol is null")
@@ -68,7 +72,6 @@ class FmpProviderTest {
         Map<String, ProviderQuote> map = fmpProvider.fetchBatchQuotes(symbols);
         assertThat(map.isEmpty()).isTrue();
     }
-
 
     @Test
     @DisplayName("fetchBatchAssetInfo: Should continue if one profile fails")
@@ -116,7 +119,7 @@ class FmpProviderTest {
     void fetchCurrentQuote_Success() {
         FmpQuoteResponse mockRes = mock(FmpQuoteResponse.class);
         ProviderQuote mockQuote = mock(ProviderQuote.class);
-        
+
         when(fmpApiClient.getQuote("AAPL")).thenReturn(mockRes);
         when(mapper.toProviderQuote(mockRes)).thenReturn(mockQuote);
 
@@ -129,9 +132,9 @@ class FmpProviderTest {
     @DisplayName("fetchCurrentQuote: Catch block coverage")
     void fetchCurrentQuote_CatchBlock() {
         when(fmpApiClient.getQuote(anyString())).thenThrow(new RuntimeException("Network Error"));
-        
+
         Optional<ProviderQuote> result = fmpProvider.fetchCurrentQuote("AAPL");
-        
+
         assertThat(result).isEmpty();
         // Log is implicitly tested via the behavior
     }
@@ -140,8 +143,8 @@ class FmpProviderTest {
     @DisplayName("fetchHistoricalQuote: Should throw UnsupportedOperationException")
     void fetchHistoricalQuote_ThrowsException() {
         assertThatThrownBy(() -> fmpProvider.fetchHistoricalQuote("AAPL", LocalDateTime.now()))
-            .isInstanceOf(UnsupportedOperationException.class)
-            .hasMessageContaining("Unimplemented method 'fetchHistoricalQuote'");
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("Unimplemented method 'fetchHistoricalQuote'");
     }
 
     @Test
@@ -177,5 +180,129 @@ class FmpProviderTest {
         Optional<ProviderAssetInfo> result = fmpProvider.fetchAssetInfo("AAPL");
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Testing the fetchBatchQuotes lambda 3")
+    void testFetchBatchQuotes_mapsResponsesCorrectly() {
+        // Arrange
+        List<String> symbols = List.of("AAPL", "MSFT");
+        FmpQuoteResponse aaplResponse = new FmpQuoteResponse();
+        aaplResponse.setSymbol("AAPL");
+        FmpQuoteResponse msftResponse = new FmpQuoteResponse();
+        msftResponse.setSymbol("MSFT");
+
+        when(fmpApiClient.getBatchQuotes(symbols))
+                .thenReturn(List.of(aaplResponse, msftResponse));
+
+        // Mock mapper
+        ProviderQuote aaplQuote = new ProviderQuote("AAPL", BigDecimal.TEN, "USD", LocalDateTime.now(), "FMP");
+        ProviderQuote msftQuote = new ProviderQuote("MSFT", BigDecimal.ONE, "USD", LocalDateTime.now(), "FMP");
+        when(mapper.toProviderQuote(aaplResponse)).thenReturn(aaplQuote);
+        when(mapper.toProviderQuote(msftResponse)).thenReturn(msftQuote);
+
+        List<FmpQuoteResponse> mockResponses = List.of(new FmpQuoteResponse());
+        when(fmpApiClient.getBatchQuotes(anyList())).thenReturn(mockResponses);
+
+        // Act
+        Map<String, ProviderQuote> result = fmpProvider.fetchBatchQuotes(symbols);
+
+        // Assert
+        assertEquals(2, result.size());
+        assertSame(aaplQuote, result.get("AAPL"));
+        assertSame(msftQuote, result.get("MSFT"));
+
+        // Verify mapper was called
+        verify(mapper).toProviderQuote(aaplResponse);
+        verify(mapper).toProviderQuote(msftResponse);
+    }
+
+    @Test
+    void fetchBatchQuotes_mapsResponsesCorrectly() {
+        // Arrange: create a sample FmpQuoteResponse
+        FmpQuoteResponse response = new FmpQuoteResponse();
+        response.setSymbol("AAPL"); // Must set symbol for map key
+
+        // Mock the API client to return a list with the response
+        when(fmpApiClient.getBatchQuotes(List.of("AAPL"))).thenReturn(List.of(response));
+
+        // Mock the mapper to return a ProviderQuote for the response
+        ProviderQuote providerQuote = new ProviderQuote("AAPL", BigDecimal.TEN, "USD", LocalDateTime.now(), "FMP");
+        when(mapper.toProviderQuote(response)).thenReturn(providerQuote);
+
+        // Act: call the method under test
+        Map<String, ProviderQuote> result = fmpProvider.fetchBatchQuotes(List.of("AAPL"));
+
+        // Assert: check that the map contains the expected entry
+        assertEquals(1, result.size());
+        assertSame(providerQuote, result.get("AAPL"));
+
+        // Verify: ensure the mapper lambda was actually called
+        verify(mapper).toProviderQuote(response);
+    }
+
+    @Test
+    void fetchBatchQuotes_shouldHandleDuplicateSymbols() {
+        // Arrange: 3 symbols, but only 2 are unique
+        List<String> symbols = List.of("AAPL", "AAPL", "MSFT");
+
+        FmpQuoteResponse quote1 = new FmpQuoteResponse();
+        quote1.setSymbol("AAPL");
+        quote1.setPrice(BigDecimal.valueOf(150.0));
+
+        // CHANGE: This should be MSFT so the Map has two distinct keys
+        FmpQuoteResponse quote2 = new FmpQuoteResponse();
+        quote2.setSymbol("MSFT");
+        quote2.setPrice(BigDecimal.valueOf(200.0));
+
+        ProviderQuote mockProviderQuote = mock(ProviderQuote.class);
+
+        // Mock the API to return the two unique responses found by the API
+        when(fmpApiClient.getBatchQuotes(any())).thenReturn(List.of(quote1, quote2));
+
+        // Mock the mapper
+        when(mapper.toProviderQuote(any(FmpQuoteResponse.class))).thenReturn(mockProviderQuote);
+
+        // Act
+        Map<String, ProviderQuote> result = fmpProvider.fetchBatchQuotes(symbols);
+
+        // Assert
+        // Result size is 2 because AAPL is deduplicated by the Map keys
+        assertEquals(2, result.size(), "Map should have 2 entries (AAPL and MSFT)");
+        verify(fmpApiClient, times(1)).getBatchQuotes(any());
+    }
+
+    @Test
+    void fetchBatchAssetInfo_shouldHandleDuplicateSymbolsInMergeFunction() {
+        // 1. Arrange: Input has duplicates
+        List<String> symbols = List.of("AAPL", "AAPL");
+
+        FmpProfileResponse profile1 = new FmpProfileResponse();
+        profile1.setSymbol("AAPL");
+        profile1.setCompanyName("Apple Inc (First)");
+
+        FmpProfileResponse profile2 = new FmpProfileResponse();
+        profile2.setSymbol("AAPL");
+        profile2.setCompanyName("Apple Inc (Second)");
+
+        ProviderAssetInfo mappedInfo = mock(ProviderAssetInfo.class); // Your domain model
+
+        // 2. Mock: First call returns profile1, second call returns profile2
+        when(fmpApiClient.getProfile("AAPL"))
+                .thenReturn(profile1)
+                .thenReturn(profile2);
+
+        // Mock Mapper
+        when(mapper.toProviderAssetInfo(any(FmpProfileResponse.class))).thenReturn(mappedInfo);
+
+        // 3. Act
+        Map<String, ProviderAssetInfo> result = fmpProvider.fetchBatchAssetInfo(symbols);
+
+        // 4. Assert
+        assertEquals(1, result.size(), "Map should collapse duplicates to a single entry");
+        assertTrue(result.containsKey("AAPL"));
+
+        // Verify interactions
+        verify(fmpApiClient, times(2)).getProfile("AAPL");
     }
 }
