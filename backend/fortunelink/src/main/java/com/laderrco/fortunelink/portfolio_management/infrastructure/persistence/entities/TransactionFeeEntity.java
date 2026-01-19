@@ -10,6 +10,7 @@ import org.hibernate.type.SqlTypes;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -42,6 +43,7 @@ public class TransactionFeeEntity {
     private String rateSource; // renamed from 'source' to avoid SQL keywords
     
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, String> metadata;
 
     private Instant feeDate;

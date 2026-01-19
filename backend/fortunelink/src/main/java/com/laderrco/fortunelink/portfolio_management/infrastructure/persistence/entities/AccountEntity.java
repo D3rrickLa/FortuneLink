@@ -9,6 +9,7 @@ import java.util.UUID;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -59,6 +60,8 @@ public class AccountEntity {
     private List<TransactionEntity> transactions = new ArrayList<>();
 
     private Instant createdAt;
+    
+    @Column(name = "last_system_interaction")
     private Instant lastUpdated;
 
     @Version

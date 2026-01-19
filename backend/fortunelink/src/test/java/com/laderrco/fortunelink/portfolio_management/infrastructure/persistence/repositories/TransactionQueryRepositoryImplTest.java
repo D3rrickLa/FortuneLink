@@ -12,16 +12,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
@@ -40,39 +45,57 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import jakarta.transaction.Transactional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @DataJpaTest
+@Testcontainers
 @Transactional
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({ 
-    TransactionQueryRepositoryImpl.class, 
-    TransactionEntityMapperImpl.class,
-    PortfolioEntityMapperImpl.class, 
-    AssetEntityMapperImpl.class, 
+@Import({
+        TransactionQueryRepositoryImpl.class,
+        TransactionEntityMapperImpl.class,
+        PortfolioEntityMapperImpl.class,
+        AssetEntityMapperImpl.class,
+        PortfolioEntity.class,
+        AccountEntity.class
 })
-public class TransactionQueryRepositoryImplTest {
-    /*
-     * We are NOT going through the domain aggreagate or calling Portfolio methods. NO
-     * test invariants here
-     * we are inserting entitie sdirectly
-     */
+class TransactionQueryRepositoryImplTest {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest")
+            .withInitScript("db/migration/test-setup-schema.sql");;
 
     @Autowired
-    private TransactionQueryRepository repository;
-    
+    TransactionQueryRepository repository;
 
     @Autowired
-    private TestEntityManager entityManager;
+    TestEntityManager entityManager;
 
     Instant testTime = Instant.now();
+    UUID testUserId = UUID.fromString("482592a2-cb1d-4571-ad44-97047fa0b63f");
+
+    @BeforeEach
+    void init() {
+        entityManager.getEntityManager()
+                .createNativeQuery("INSERT INTO auth.users (id, email) VALUES (:id, :email)")
+                .setParameter("id", testUserId)
+                .setParameter("email", "test@example.com")
+                .executeUpdate();
+    }
+
+    @Test
+    void contextLoads() {
+        // Just to see if it starts
+    }
 
     @Test
     public void findByPortfolio_returnsTransactions() {
         PortfolioEntity portfolioEntity = creaPortfolioEntity();
-        AccountEntity accountEntity = createAccountEntity(null);
+        AccountEntity accountEntity = createAccountEntity(portfolioEntity);
         UUID portfolioId = portfolioEntity.getId();
 
         LocalDateTime testDate = LocalDateTime.of(2024, 6, 1, 12, 0);
@@ -134,7 +157,7 @@ public class TransactionQueryRepositoryImplTest {
         TransactionQuery query = new TransactionQuery(
                 portfolioId,
                 null,
-                null,
+                TransactionType.BUY,
                 now.minusDays(1),
                 now.plusDays(1),
                 null);
@@ -193,13 +216,13 @@ public class TransactionQueryRepositoryImplTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getAssetIdentifier().getPrimaryId()).isEqualTo("AAPL");
     }
-    
+
     @Test
     void countByPortfolioId_ReturnsCorrectTotal() {
         // Given
         PortfolioEntity portfolio = creaPortfolioEntity();
         AccountEntity account = createAccountEntity(portfolio);
-        
+
         // Persist 3 transactions for this portfolio
         persistTransaction(portfolio.getId(), account, "AAPL", TransactionType.BUY, LocalDateTime.now());
         persistTransaction(portfolio.getId(), account, "MSFT", TransactionType.BUY, LocalDateTime.now());
@@ -218,11 +241,11 @@ public class TransactionQueryRepositoryImplTest {
         PortfolioEntity portfolio = creaPortfolioEntity();
         AccountEntity accountA = createAccountEntity(portfolio);
         AccountEntity accountB = createAccountEntity(portfolio);
-        
+
         // 2 transactions for Account A
         persistTransaction(portfolio.getId(), accountA, "AAPL", TransactionType.BUY, LocalDateTime.now());
         persistTransaction(portfolio.getId(), accountA, "MSFT", TransactionType.BUY, LocalDateTime.now());
-        
+
         // 1 transaction for Account B
         persistTransaction(portfolio.getId(), accountB, "GOOG", TransactionType.SELL, LocalDateTime.now());
 
@@ -254,10 +277,9 @@ public class TransactionQueryRepositoryImplTest {
 
         // 2. Pass the mocks into the constructor
         TransactionQueryRepository repository = new TransactionQueryRepositoryImpl(
-            mockJpaRepo, 
-            mockMapper, 
-            null
-        );
+                mockJpaRepo,
+                mockMapper,
+                null);
 
         // 3. Reflection logic
         Method mapPage = repository.getClass().getDeclaredMethod("mapPage", Page.class, Pageable.class);
@@ -270,8 +292,6 @@ public class TransactionQueryRepositoryImplTest {
 
         assertTrue(exception.getCause() instanceof NullPointerException);
     }
-
-
 
     // Helper: persist a transaction
     private TransactionEntity persistTransaction(
@@ -289,7 +309,7 @@ public class TransactionQueryRepositoryImplTest {
         entity.setQuantity(new BigDecimal("10"));
         entity.setPriceAmount(new BigDecimal("150.00"));
         entity.setPriceCurrency("USD");
-        entity.setTransactionDate(transactionDate.toInstant(ZoneOffset.UTC)); // LocalDateTime, not Instant
+        entity.setTransactionDate(transactionDate.toInstant(ZoneOffset.UTC));
         entity.setFees(new ArrayList<>());
         entity.setAssetType("STOCK");
         entity.setPrimaryId(symbol);
@@ -323,7 +343,7 @@ public class TransactionQueryRepositoryImplTest {
     private PortfolioEntity creaPortfolioEntity() {
         PortfolioEntity entity = new PortfolioEntity();
         entity.setId(UUID.randomUUID());
-        entity.setUserId(UUID.randomUUID());
+        entity.setUserId(testUserId);
         entity.setCurrencyPreference("USD");
         entity.setCreatedAt(testTime);
         entity.setUpdatedAt(testTime);

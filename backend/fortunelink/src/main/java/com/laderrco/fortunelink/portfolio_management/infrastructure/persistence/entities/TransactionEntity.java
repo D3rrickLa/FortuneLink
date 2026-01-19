@@ -59,17 +59,17 @@ public class TransactionEntity {
     private String assetType;
     
     @Column(name = "display_name")
-    private String displayName;
+    private String displayName; // name of asset
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "secondary_ids")
+    @Column(name = "secondary_ids", columnDefinition = "jsonb")
     private Map<String, String> secondaryIds;
     
     @Column(name = "unit_of_trade")
     private String unitOfTrade;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata") // columnDefinition = "JSONB"
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, String> metadata;
 
     // Transaction details
@@ -101,7 +101,7 @@ public class TransactionEntity {
 
     private String notes;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_date", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Version

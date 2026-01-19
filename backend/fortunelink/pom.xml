@@ -29,6 +29,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
     <dependencies>
 
@@ -123,7 +124,7 @@
 
         <dependency>
             <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
         <!-- JSONB / Hibernate Utilities -->
@@ -186,14 +187,33 @@
         </dependency>
 
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!-- This is here to fix a test container issue -->
+        <!-- Testcontainers core -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JUnit 5 integration (REQUIRED for @Container) -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- PostgreSQL container -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -222,7 +242,18 @@
             </plugin>
             <!-- 
 				need (this and the surefire because in the debug console while testing, says self-attaching 
-			 	will no longer work in future releases, do this instead
+			 	will no longer work in future releases, do this instead. the log below
+                    Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in
+                    future releases of the JDK. Please add Mockito as an agent to your build as described in
+                    Mockito's documentation:
+                 
+                    WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide
+                                this warning
+                    WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for
+                                more information
+                    WARNING: Dynamic loading of agents will be disallowed by default in a future release
+                    OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because
+                                bootstrap classpath has been appended
 			-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -240,9 +271,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>
-                        @{argLine}
-                        -javaagent:${org.mockito:mockito-core:jar}
-                        -XX:+AllowRedefinitionToAddDeleteMethods
+                        @{argLine} -javaagent:${org.mockito:mockito-core:jar} -XX:+AllowRedefinitionToAddDeleteMethods
                     </argLine>
                 </configuration>
             </plugin>

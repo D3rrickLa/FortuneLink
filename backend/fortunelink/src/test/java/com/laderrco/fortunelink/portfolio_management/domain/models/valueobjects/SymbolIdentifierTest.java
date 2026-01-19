@@ -1,7 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 

@@ -83,10 +83,8 @@ public class AssetEntity {
     private String name; // part of AI
     private String unitOfTrade; // part of MI, CI
 
-    // @Type(JsonBinaryType.class)
     @JdbcTypeCode(SqlTypes.JSON)
-    // @Column(columnDefinition = "JSONB")
-    @Column(name = "metadata")
+    @Column(name = "metadata", columnDefinition = "JSONB")
     private Map<String, String> metadata; // part of MI, CI
 
     // Financials

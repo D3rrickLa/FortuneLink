@@ -1,10 +1,10 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 

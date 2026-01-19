@@ -54,23 +54,23 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
             Pageable pageable);
 
     // findWithFilterAndSymbols is absorbed into
-    @Query("""
-            SELECT t FROM TransactionEntity t
-            WHERE (:portfolioId IS NULL OR t.portfolioId = :portfolioId)
-            AND (:accountId IS NULL OR t.account.id = :accountId)
-            AND (:transactionType IS NULL OR t.transactionType = :transactionType)
-            AND (:startDate IS NULL OR t.transactionDate >= :startDate)
-            AND (:endDate IS NULL OR t.transactionDate <= :endDate)
-            AND (:symbols IS NULL OR t.primaryId IN :symbols) 
-            ORDER BY t.transactionDate DESC
-            """)
-    public Page<TransactionEntity> findWithFilters(
+    @Query(value = """
+            SELECT * FROM transactions t
+            WHERE (:portfolioId IS NULL OR t.portfolio_id = :portfolioId)
+              AND (:accountId IS NULL OR t.account_id = :accountId)
+              AND (:transactionType IS NULL OR t.transaction_type = :transactionType)
+              AND (:startDate IS NULL OR t.transaction_date >= :startDate)
+              AND (:endDate IS NULL OR t.transaction_date <= :endDate)
+              AND (:#{#symbols == null || #symbols.isEmpty()} = true OR t.primary_id IN (:symbols))
+            ORDER BY t.transaction_date DESC
+            """, nativeQuery = true)
+    Page<TransactionEntity> findWithFilters(
             @Param("portfolioId") UUID portfolioId,
             @Param("accountId") UUID accountId,
-            @Param("transactionType") TransactionType transactionType,
+            @Param("transactionType") String transactionType,
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate,
-            @Param("symbols") Set<String> symbols,
+            @Param("symbols") List<String> symbols,
             Pageable pageable);
 
 }
