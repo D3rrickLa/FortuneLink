@@ -73,7 +73,6 @@ public class FmpApiClient {
 
         try {
             String jsonResponse = executeGetRequest(url);
-            IO.print("TAG/OUTPUT" + jsonResponse);
 
             if (config.isDebugLogging()) {
                 log.debug("FMP Response: {}", jsonResponse);
@@ -87,7 +86,6 @@ public class FmpApiClient {
             if (quotes.isEmpty()) {
                 throw new FmpApiException("Symbol not found: " + symbol);
             }
-            IO.print("TAG/OUTPUT" + quotes);
 
             return quotes.get(0);
 

@@ -32,24 +32,18 @@ public class Phase2CompletionTest {
         // Test 1: Can fetch price?
         Money price = marketDataService.getCurrentPrice(apple);
         assertThat(price).isNotNull();
-        System.out.println("✅ Price fetching works: " + price);
 
         // Test 2: Can fetch asset info?
         MarketAssetInfo info = marketDataService.getAssetInfo(apple).orElseThrow();
         assertThat(info).isNotNull();
-        System.out.println("✅ Asset info works: " + info.getName());
 
         // Test 3: Can fetch trading currency?
         ValidatedCurrency currency = marketDataService.getTradingCurrency(apple);
         assertThat(currency).isNotNull();
-        System.out.println("✅ Currency works: " + currency);
 
         // Test 4: Batch operations?
         List<AssetIdentifier> symbols = List.of(apple, new MarketIdentifier("GOOGL", null, AssetType.STOCK, "GOOGLE", "USD", null));
         Map<AssetIdentifier, Money> prices = marketDataService.getBatchPrices(symbols);
         assertThat(prices).hasSize(2);
-        System.out.println("✅ Batch fetching works");
-
-        System.out.println("\n🎉 PHASE 2 COMPLETE! Ready for Phase 3!");
     }
 }

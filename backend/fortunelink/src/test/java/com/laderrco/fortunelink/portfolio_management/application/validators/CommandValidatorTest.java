@@ -154,7 +154,6 @@ class CommandValidatorTest {
             
             assertThat(result.isValid()).isFalse();
             assertThat(result.errors()).anyMatch(e -> e.contains("symbol"));
-            IO.println(result.errors());
         }
         
         @Test

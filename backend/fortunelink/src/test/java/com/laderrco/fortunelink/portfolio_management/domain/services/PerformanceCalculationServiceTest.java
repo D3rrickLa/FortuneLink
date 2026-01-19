@@ -424,7 +424,6 @@ class PerformanceCalculationServiceTest {
             Money result = performanceService.calculateRealizedGains(portfolio, txs);
 
             // Total Gain: 60 + 40 = 100.00
-            IO.println(result);
             assertEquals(0, new BigDecimal("100.0").compareTo(result.amount().setScale(1, RoundingMode.HALF_EVEN)));
         }
 

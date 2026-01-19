@@ -100,7 +100,6 @@ public class CacheAdminController {
     @DeleteMapping
     public ResponseEntity<Map<String, Object>> clearAllCaches() {
         Collection<String> cacheNames = cacheManager.getCacheNames();
-        IO.print(cacheNames.toString());
         
         cacheNames.stream()
                 .map(cacheManager::getCache)

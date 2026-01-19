@@ -89,7 +89,7 @@ public class MarketDataServiceImpl implements MarketDataService {
      * TTL: 24 hours (historical data doesn't change)
      */
     @Override
-    @Cacheable(value = "historical-prices", key = "#symbol.value() + '::' + #dateTime.toString()", unless = "#result == null")
+    @Cacheable(value = "historical-prices", key = "#assetIdentifier.getPrimaryId() + '::' + #dateTime.toString()", unless = "#result == null")
     public Money getHistoricalPrice(AssetIdentifier assetIdentifier, LocalDateTime dateTime) {
         log.debug("Fetching historical price for {} at {}", assetIdentifier.getPrimaryId(), dateTime);
 
@@ -151,7 +151,7 @@ public class MarketDataServiceImpl implements MarketDataService {
      * TTL: 7 days (metadata rarely changes)
      */
     @Override
-    @Cacheable(value = "asset-info", key = "#symbol.value()", unless = "#result == null")
+    @Cacheable(value = "asset-info", key = "#identifier.getPrimaryId()", unless = "#result == null")
     public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier) {
         log.debug("Fetching asset info for symbol: {}", identifier.getPrimaryId());
 

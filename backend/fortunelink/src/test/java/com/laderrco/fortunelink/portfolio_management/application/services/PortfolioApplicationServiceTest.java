@@ -327,7 +327,6 @@ class PortfolioApplicationServiceTest {
             assertThat(assetBeforeSale).isNotNull();
             assertThat(assetBeforeSale.getQuantity()).isGreaterThanOrEqualTo(command.quantity());
 
-            IO.println(assetBeforeSale);
 
             // When
             TransactionResponse response = service.recordAssetSale(command);
@@ -343,7 +342,6 @@ class PortfolioApplicationServiceTest {
             Account savedAccount = savedPortfolio.getAccount(accountId);
             Asset soldAsset = savedAccount.getAsset(assetInfo.toIdentifier());
 
-            IO.println(soldAsset);
 
             assertThat(soldAsset.getQuantity()).isEqualTo(BigDecimal.valueOf(5)); // 10 - 5 = 5 remaining
         }
