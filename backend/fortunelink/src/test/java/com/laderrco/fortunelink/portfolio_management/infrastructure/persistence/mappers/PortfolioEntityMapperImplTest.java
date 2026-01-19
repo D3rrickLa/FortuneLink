@@ -711,7 +711,7 @@ class PortfolioEntityMapperImplTest {
         account.setPortfolio(entity);
         account.setAssets(new ArrayList<>());
         account.setTransactions(new ArrayList<>());
-        account.setCreatedAt(testTime);
+        account.setCreateDate(testTime);
         account.setLastUpdated(testTime);
 
         entity.setAccounts(new ArrayList<>(List.of(account)));

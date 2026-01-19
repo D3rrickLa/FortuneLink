@@ -12,7 +12,7 @@ import io.github.bucket4j.Bucket;
         "fortunelink.rate-limit.global.requests-per-minute=60",
         "fortunelink.rate-limit.global.requests-per-hour=1000",
         "fortunelink.rate-limit.global.requests-per-day=10000"
-})
+    }, classes = RateLimitConfig.class)
 class RateLimitConfigTest {
 
     @Autowired

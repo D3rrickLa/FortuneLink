@@ -26,7 +26,7 @@ CREATE TABLE accounts (
     cash_balance_currency VARCHAR(3) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT true,
     closed_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_system_interaction TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT fk_portfolio FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE,

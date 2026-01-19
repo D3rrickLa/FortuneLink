@@ -55,15 +55,16 @@ public class AccountEntity {
 
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AssetEntity> assets = new ArrayList<>();
-    
+
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransactionEntity> transactions = new ArrayList<>();
 
-    private Instant createdAt;
-    
+    @Column(name = "created_date")
+    private Instant createDate;
+
     @Column(name = "last_system_interaction")
     private Instant lastUpdated;
 
     @Version
-    private Integer version;    
+    private Integer version;
 }

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +25,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
@@ -66,8 +67,7 @@ class TransactionQueryRepositoryImplTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest")
-            .withInitScript("db/migration/test-setup-schema.sql");;
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.7");
 
     @Autowired
     TransactionQueryRepository repository;
@@ -77,6 +77,18 @@ class TransactionQueryRepositoryImplTest {
 
     Instant testTime = Instant.now();
     UUID testUserId = UUID.fromString("482592a2-cb1d-4571-ad44-97047fa0b63f");
+
+    @BeforeAll
+    static void setupDb() throws Exception {
+        // Force start the container if it hasn't started yet
+        postgres.start();
+        // We create the missing "auth" piece before Flyway triggers
+        try (var conn = postgres.createConnection("")) {
+            var st = conn.createStatement();
+            st.execute("CREATE SCHEMA IF NOT EXISTS auth;");
+            st.execute("CREATE TABLE IF NOT EXISTS auth.users (id UUID PRIMARY KEY, email VARCHAR(255));");
+        }
+    }
 
     @BeforeEach
     void init() {
@@ -157,7 +169,7 @@ class TransactionQueryRepositoryImplTest {
         TransactionQuery query = new TransactionQuery(
                 portfolioId,
                 null,
-                TransactionType.BUY,
+                null,
                 now.minusDays(1),
                 now.plusDays(1),
                 null);
@@ -334,7 +346,7 @@ class TransactionQueryRepositoryImplTest {
         account.setPortfolio(portfolio);
         account.setAssets(new ArrayList<>());
         account.setTransactions(new ArrayList<>());
-        account.setCreatedAt(testTime);
+        account.setCreateDate(testTime);
         account.setLastUpdated(testTime);
         // Use merge instead of persist
         return entityManager.getEntityManager().merge(account);

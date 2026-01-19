@@ -93,6 +93,8 @@ public class AssetEntity {
     private String costBasisCurrency; // we are reusing this currency
 
     private Instant acquiredDate;
+
+    @Column(name = "last_system_interaction")
     private Instant lastInteraction;
     
     @Version

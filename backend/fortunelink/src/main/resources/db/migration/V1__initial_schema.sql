@@ -11,8 +11,8 @@ CREATE TABLE portfolios (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE,
     portfolio_currency_preference VARCHAR(3) NOT NULL,
-    created_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
@@ -85,7 +85,7 @@ CREATE TABLE transactions (
     primary_id VARCHAR(100),
     secondary_ids JSONB DEFAULT '{}'::jsonb,
     asset_type VARCHAR(50),
-    name VARCHAR(255),
+    display_name VARCHAR(255),
     unit_of_trade VARCHAR(50),
     metadata JSONB DEFAULT '{}'::jsonb,
 
@@ -112,10 +112,22 @@ CREATE TABLE transactions (
 CREATE TABLE transaction_fees (
     id UUID PRIMARY KEY,
     transaction_id UUID NOT NULL,
+    fee_type VARCHAR(50),
     fee_amount NUMERIC(20, 2) NOT NULL,
     fee_currency VARCHAR(3) NOT NULL,
-    fee_type VARCHAR(50),
-    description TEXT,
+    
+    -- Exchange Rate Components (Missing in your previous SQL)
+    rate NUMERIC(20, 10),
+    from_currency VARCHAR(3),
+    to_currency VARCHAR(3),
+    exchange_rate_date TIMESTAMPTZ,
+    rate_source VARCHAR(100),
+    
+    -- Metadata and Date
+    metadata JSONB,
+    fee_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    description TEXT, -- Kept from your previous SQL
     version INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT fk_transaction_fee FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
 );

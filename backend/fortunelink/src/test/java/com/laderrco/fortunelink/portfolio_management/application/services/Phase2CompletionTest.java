@@ -18,7 +18,10 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "spring.jpa.hibernate.ddl-auto=none", // Stops Hibernate from validating/changing schema
+    "spring.flyway.enabled=false"         // Disables Flyway for this test
+})
 public class Phase2CompletionTest {
     @Autowired
     private MarketDataService marketDataService;

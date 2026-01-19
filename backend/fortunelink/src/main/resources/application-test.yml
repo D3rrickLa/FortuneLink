@@ -20,7 +20,9 @@ spring:
     enabled: true
     schemas:
       - public
-      - auth
+    locations: classpath:db/migration
+    # This prevents Flyway from failing if @BeforeAll already did something
+    baseline-on-migrate: true
 db:
   # If 'json' fails, try 'jsonb' or 'varchar' here for the H2 profile
   jsonColumnType: jsonb
@@ -28,3 +30,6 @@ db:
 logging:
   level:
     org.hibernate.SQL: debug
+
+postgres:
+  version: ${POSTGRES_VERSION}

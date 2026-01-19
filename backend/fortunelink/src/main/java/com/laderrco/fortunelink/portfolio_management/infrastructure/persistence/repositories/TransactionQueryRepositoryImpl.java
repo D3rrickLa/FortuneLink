@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -39,13 +38,9 @@ public class TransactionQueryRepositoryImpl implements TransactionQueryRepositor
     public Page<Transaction> find(TransactionQuery query, Pageable pageable) {
         Objects.requireNonNull(pageable);
 
-        Page<TransactionEntity> entityPage = jpaRepository.findWithFilters(
-                query.portfolioId(),
-                query.accountId(),
-                query.transactionType() != null ? query.transactionType().name() : null,
-                query.startInstant(),
-                query.endInstant(),
-                query.assetSymbols() != null ? new ArrayList<>(query.assetSymbols()) : null,
+        // Use the Specification instead of the @Query method
+        Page<TransactionEntity> entityPage = jpaRepository.findAll(
+                JpaTransactionRepository.TransactionSpecifications.withFilters(query),
                 pageable);
 
         return mapPage(entityPage, pageable);
