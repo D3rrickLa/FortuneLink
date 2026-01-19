@@ -63,7 +63,7 @@ public class MarketDataServiceImpl implements MarketDataService {
      * Get current price with caching, TTL of 5 min
      */
     @Override
-    @Cacheable(value = "current-prices", key = "#symbol.value()", unless = "#result == null")
+    @Cacheable(value = "current-prices", key = "#assetIdentifier.getPrimaryId()", unless = "#result == null")
     public Money getCurrentPrice(AssetIdentifier assetIdentifier) {
         log.debug("Fetching current price for symbol: {}", assetIdentifier.getPrimaryId());
 

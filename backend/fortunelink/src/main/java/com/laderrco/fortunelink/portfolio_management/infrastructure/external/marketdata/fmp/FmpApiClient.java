@@ -51,10 +51,6 @@ public class FmpApiClient {
         this.config = config;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
-        // this.httpClient = HttpClient.newBuilder()
-        // .followRedirects(HttpClient.Redirect.NORMAL)
-        // .connectTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
-        // .build();
 
         // Validate config on startup
         config.validate();
@@ -76,6 +72,7 @@ public class FmpApiClient {
 
         try {
             String jsonResponse = executeGetRequest(url);
+            IO.print("TAG/OUTPUT" + jsonResponse);
 
             if (config.isDebugLogging()) {
                 log.debug("FMP Response: {}", jsonResponse);
@@ -89,6 +86,7 @@ public class FmpApiClient {
             if (quotes.isEmpty()) {
                 throw new FmpApiException("Symbol not found: " + symbol);
             }
+            IO.print("TAG/OUTPUT" + quotes);
 
             return quotes.get(0);
 
@@ -105,44 +103,46 @@ public class FmpApiClient {
      */
     public List<FmpQuoteResponse> getBatchQuotes(List<String> symbols) {
         /*
-        // THIS IS THE PROPER IMPL of this method, just can't use it
-        // if (symbols.isEmpty()) { return List.of(); }
+         * // THIS IS THE PROPER IMPL of this method, just can't use it
+         * // if (symbols.isEmpty()) { return List.of(); }
+         * 
+         * // String symbolsParam = String.join(",", symbols);
+         * // String url = buildUrl("/quote?symbol=" + encodeSymbol(symbolsParam));
+         * 
+         * // if (config.isDebugLogging()) {
+         * // log.debug("FMP Batch Request: GET {} (symbols: {})", url, symbols.size());
+         * // }
+         * 
+         * // try {
+         * // String jsonResponse = executeGetRequest(url);
+         * 
+         * // List<FmpQuoteResponse> quotes = objectMapper.readValue(
+         * // jsonResponse,
+         * // QUOTE_LIST_TYPE
+         * // );
+         * 
+         * // log.info("Retrieved {} quotes from FMP (requested {})", quotes.size(),
+         * // symbols.size());
+         * 
+         * // return quotes;
+         * 
+         * // } catch (IOException e) {
+         * // throw new FmpApiException("Failed to parse FMP batch quotes response", e);
+         * // }
+         * 
+         * 
+         */
 
-        // String symbolsParam = String.join(",", symbols);
-        // String url = buildUrl("/quote?symbol=" + encodeSymbol(symbolsParam));
+        if (symbols == null || symbols.isEmpty()) {
+            return List.of();
+        }
 
-        // if (config.isDebugLogging()) {
-        // log.debug("FMP Batch Request: GET {} (symbols: {})", url, symbols.size());
-        // }
-
-        // try {
-        // String jsonResponse = executeGetRequest(url);
-
-        // List<FmpQuoteResponse> quotes = objectMapper.readValue(
-        // jsonResponse,
-        // QUOTE_LIST_TYPE
-        // );
-
-        // log.info("Retrieved {} quotes from FMP (requested {})", quotes.size(),
-        // symbols.size());
-
-        // return quotes;
-
-        // } catch (IOException e) {
-        // throw new FmpApiException("Failed to parse FMP batch quotes response", e);
-        // }
-        
-        
-        */
-
-        if (symbols == null || symbols.isEmpty()) { return List.of(); }
-        
         log.info("Performing sequential quote lookups for {} symbols (FMP Free Tier limitation)", symbols.size());
 
         return symbols.parallelStream()
-            .map(this::fetchSingleQuoteSafe)
-            .filter(Objects::nonNull)
-            .toList();
+                .map(this::fetchSingleQuoteSafe)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     /**
@@ -181,12 +181,14 @@ public class FmpApiClient {
      * For large batches, consider caching or rate limiting.
      */
     public List<FmpProfileResponse> getBatchProfiles(List<String> symbols) {
-        if (symbols == null || symbols.isEmpty()) { return List.of(); }
+        if (symbols == null || symbols.isEmpty()) {
+            return List.of();
+        }
         log.warn("Batch profile requests make {} individual API calls. Consider caching.", symbols.size());
-            return symbols.parallelStream()
-            .map(this::fetchSingleProfileSafe)
-            .filter(Objects::nonNull)
-            .toList();
+        return symbols.parallelStream()
+                .map(this::fetchSingleProfileSafe)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     /**

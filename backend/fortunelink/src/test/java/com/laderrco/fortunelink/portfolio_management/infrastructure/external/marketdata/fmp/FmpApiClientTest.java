@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.external.ma
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -112,6 +113,48 @@ class FmpApiClientTest {
         assertTrue(vfv.getPrice().compareTo(BigDecimal.ZERO) > 0);
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    void getQuote_SuccessfulMapping() throws Exception {
+        // GIVEN: The exact JSON from your log
+        String json = """
+                [
+                  {
+                    "symbol": "AAPL",
+                    "name": "Apple Inc.",
+                    "price": 255.517,
+                    "changePercentage": -1.04295,
+                    "change": -2.693,
+                    "volume": 72142773,
+                    "dayLow": 254.93,
+                    "dayHigh": 258.9,
+                    "yearHigh": 288.62,
+                    "yearLow": 169.21,
+                    "marketCap": 3775609234912.9995,
+                    "priceAvg50": 271.5098,
+                    "priceAvg200": 234.05525,
+                    "exchange": "NASDAQ",
+                    "open": 257.88,
+                    "previousClose": 258.21,
+                    "timestamp": 1768597201
+                  }
+                ]
+                """;
+
+        when(httpResponse.statusCode()).thenReturn(200); 
+        when(httpResponse.body()).thenReturn(json);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        // WHEN
+        FmpQuoteResponse result = client.getQuote("AAPL");
+
+        // THEN
+        assertNotNull(result);
+        assertEquals("AAPL", result.getSymbol());
+        assertEquals(BigDecimal.valueOf(255.517), result.getPrice());
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void getQuote_throwsFmpApiException_whenJacksonFails() throws Exception {
@@ -137,7 +180,6 @@ class FmpApiClientTest {
                 .thenThrow(new JsonMappingException(null, "Jackson parse error"));
         // JsonMappingException is a subclass of IOException
 
-        
         FmpApiException exception = assertThrows(FmpApiException.class, () -> {
             client.getQuote("AAPL");
         });
@@ -177,7 +219,7 @@ class FmpApiClientTest {
         assertEquals("Financial Services", vfv.getSector());
     }
 
-        @Test
+    @Test
     @SuppressWarnings("unchecked")
     void getProfile_throwsFmpApiException_whenJacksonFails() throws Exception {
 
@@ -202,7 +244,6 @@ class FmpApiClientTest {
                 .thenThrow(new JsonMappingException(null, "Jackson parse error"));
         // JsonMappingException is a subclass of IOException
 
-        
         FmpApiException exception = assertThrows(FmpApiException.class, () -> {
             client.getProfile("AAPL");
         });
@@ -242,7 +283,7 @@ class FmpApiClientTest {
 
         assertEquals(0, results.size());
     }
-    
+
     // -------------------------------------------------------
     // BATCH PROFILES (FREE TIER SEQUENTIAL)
     // -------------------------------------------------------
@@ -306,7 +347,7 @@ class FmpApiClientTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {401, 429, 404, 503})
+    @ValueSource(ints = { 401, 429, 404, 503 })
     void getQuote_unauthorized_throwsException(int error) throws Exception {
         when(httpClient.send(
                 any(HttpRequest.class),
@@ -320,17 +361,16 @@ class FmpApiClientTest {
 
     @Test
     void testIfValidateConfig() {
-        assertDoesNotThrow(()->config.validate());
+        assertDoesNotThrow(() -> config.validate());
     }
-
 
     @Test
     void getProfile_throwsInterruptedException() throws IOException, InterruptedException {
         when(httpClient.send(
-            any(HttpRequest.class),
-            ArgumentMatchers.<HttpResponse.BodyHandler<String>>any())).thenThrow(InterruptedException.class);
+                any(HttpRequest.class),
+                ArgumentMatchers.<HttpResponse.BodyHandler<String>>any())).thenThrow(InterruptedException.class);
 
-        assertThrows(FmpApiException.class, ()->client.getProfile("AAPL"));
+        assertThrows(FmpApiException.class, () -> client.getProfile("AAPL"));
 
     }
 }

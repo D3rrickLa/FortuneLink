@@ -51,8 +51,8 @@ public class FmpQuoteResponse {
     @JsonProperty("price")
     private BigDecimal price;
 
-    @JsonProperty("changesPercentage")
-    private BigDecimal changesPercentage;
+    @JsonProperty("changePercentage")
+    private BigDecimal changePercentage;
 
     @JsonProperty("change")
     private BigDecimal change;
