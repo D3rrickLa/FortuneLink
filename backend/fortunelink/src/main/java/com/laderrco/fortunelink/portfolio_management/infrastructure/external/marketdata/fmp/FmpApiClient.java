@@ -68,7 +68,7 @@ public class FmpApiClient {
      * Returns: List with 1 element (FMP returns array even for single symbol)
      */
     public FmpQuoteResponse getQuote(String symbol) {
-        String url = buildUrl("/quote/" + encodeSymbol(symbol));
+        String url = buildUrl("quote?symbol=" + encodeSymbol(symbol));
 
         if (config.isDebugLogging()) {
             log.debug("FMP Request: GET {}", url);

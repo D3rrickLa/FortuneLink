@@ -31,7 +31,7 @@ public class MarketDataDtoMapper {
                 .price(price.amount())
                 .currency(price.currency().getCode())
                 .timestamp(Instant.now())
-                .source("Yahoo Finance")
+                .source("EXTERNAL API") // we need a way to pass info to this
                 .build();
     }
 
