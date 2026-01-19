@@ -24,7 +24,7 @@ spring:
       ddl-auto: update
 
   flyway:
-    enabled: false # doesn't suuport latest 17 postgres
+    enabled: false # doesn't suuport latest 17 postgres, need a workaround
     baseline-on-migrate: true
     locations: classpath:db/migration
 
@@ -143,6 +143,4 @@ logging:
     com.fortunelink: INFO
     org.springframework.cache: INFO
     io.lettuce.core: INFO
-
-
 

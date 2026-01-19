@@ -46,8 +46,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
     
     @Override
-    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) 
-            throws Exception {
+    @SuppressWarnings("nulls")
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         
         // Skip rate limiting if disabled (dev environment)
         if (!rateLimitEnabled) {

@@ -8,9 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
+import lombok.Data;
 
 /**
  * Rate limiting configuration using Bucket4j (Token Bucket algorithm).
@@ -26,6 +25,7 @@ import io.github.bucket4j.Refill;
  * 3. Tokens refill at a fixed rate
  * 4. If bucket is empty, request is rejected (429)
  */
+@Data
 @Configuration
 public class RateLimitConfig {
     @Value("${fortunelink.rate-limit.global.requests-per-minute:60}")

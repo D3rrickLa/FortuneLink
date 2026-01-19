@@ -181,43 +181,9 @@ class FmpProviderTest {
 
         assertThat(result).isEmpty();
     }
-
+    
     @Test
     @DisplayName("Testing the fetchBatchQuotes lambda 3")
-    void testFetchBatchQuotes_mapsResponsesCorrectly() {
-        // Arrange
-        List<String> symbols = List.of("AAPL", "MSFT");
-        FmpQuoteResponse aaplResponse = new FmpQuoteResponse();
-        aaplResponse.setSymbol("AAPL");
-        FmpQuoteResponse msftResponse = new FmpQuoteResponse();
-        msftResponse.setSymbol("MSFT");
-
-        when(fmpApiClient.getBatchQuotes(symbols))
-                .thenReturn(List.of(aaplResponse, msftResponse));
-
-        // Mock mapper
-        ProviderQuote aaplQuote = new ProviderQuote("AAPL", BigDecimal.TEN, "USD", LocalDateTime.now(), "FMP");
-        ProviderQuote msftQuote = new ProviderQuote("MSFT", BigDecimal.ONE, "USD", LocalDateTime.now(), "FMP");
-        when(mapper.toProviderQuote(aaplResponse)).thenReturn(aaplQuote);
-        when(mapper.toProviderQuote(msftResponse)).thenReturn(msftQuote);
-
-        List<FmpQuoteResponse> mockResponses = List.of(new FmpQuoteResponse());
-        when(fmpApiClient.getBatchQuotes(anyList())).thenReturn(mockResponses);
-
-        // Act
-        Map<String, ProviderQuote> result = fmpProvider.fetchBatchQuotes(symbols);
-
-        // Assert
-        assertEquals(2, result.size());
-        assertSame(aaplQuote, result.get("AAPL"));
-        assertSame(msftQuote, result.get("MSFT"));
-
-        // Verify mapper was called
-        verify(mapper).toProviderQuote(aaplResponse);
-        verify(mapper).toProviderQuote(msftResponse);
-    }
-
-    @Test
     void fetchBatchQuotes_mapsResponsesCorrectly() {
         // Arrange: create a sample FmpQuoteResponse
         FmpQuoteResponse response = new FmpQuoteResponse();

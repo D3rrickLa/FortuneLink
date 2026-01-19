@@ -29,6 +29,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
@@ -37,7 +38,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @AutoConfigureMockMvc
-@Import(DevSecurityConfig.class) // Explicitly pulls in your permitAll() logic
+@Import({DevSecurityConfig.class, RateLimitConfig.class}) // Explicitly pulls in your permitAll() logic
 @WebMvcTest(MarketDataController.class)
 class MarketDataControllerTest {
 

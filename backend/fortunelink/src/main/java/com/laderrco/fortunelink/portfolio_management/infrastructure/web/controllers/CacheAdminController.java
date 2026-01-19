@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,44 +29,45 @@ import lombok.RequiredArgsConstructor;
  * Consider adding @PreAuthorize("hasRole('ADMIN')") or similar.
  * 
  * Endpoints:
- * - GET  /api/admin/cache/stats       - View cache statistics
- * - DELETE /api/admin/cache/{name}    - Clear specific cache
- * - DELETE /api/admin/cache           - Clear all caches
+ * - GET /api/admin/cache/stats - View cache statistics
+ * - DELETE /api/admin/cache/{name} - Clear specific cache
+ * - DELETE /api/admin/cache - Clear all caches
  * - DELETE /api/admin/cache/{name}/{key} - Clear specific cache entry
  */
 @RestController
 @RequestMapping("/api/admin/cache")
 @RequiredArgsConstructor
-// @PreAuthorize("hasRole('ADMIN')") // TODO: Add security in Phase 4 (Authentication)
+// @PreAuthorize("hasRole('ADMIN')") // TODO: Add security in Phase 4
+// (Authentication)
 public class CacheAdminController {
-    
+
     private final CacheManager cacheManager;
     private final MarketDataServiceImpl marketDataService;
     private final CacheEvictionService evictionService;
 
-    
     /**
      * Get cache statistics.
      * 
      * GET /api/admin/cache/stats
      * 
-     * Returns cache names and approximate sizes (if supported by cache implementation).
+     * Returns cache names and approximate sizes (if supported by cache
+     * implementation).
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getCacheStats() {
         Map<String, Object> stats = new HashMap<>();
         Collection<String> cacheNames = cacheManager.getCacheNames();
-        
+
         stats.put("cacheNames", cacheNames);
         stats.put("cacheCount", cacheNames.size());
-        
+
         // Note: Redis cache doesn't expose size easily
         // This would require custom implementation to track sizes
         stats.put("note", "Cache sizes not available in current implementation");
-        
+
         return ResponseEntity.ok(stats);
     }
-    
+
     /**
      * Clear a specific cache by name.
      * 
@@ -76,20 +78,20 @@ public class CacheAdminController {
     @DeleteMapping("/{cacheName}")
     public ResponseEntity<Map<String, String>> clearCache(@PathVariable String cacheName) {
         var cache = cacheManager.getCache(Objects.requireNonNull(cacheName));
-        
+
         if (cache == null) {
             return ResponseEntity.notFound().build();
         }
-        
+
         cache.clear();
-        
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "Cache cleared successfully");
         response.put("cacheName", cacheName);
-        
+
         return ResponseEntity.ok(response);
     }
-    
+
     /**
      * Clear all caches.
      * 
@@ -98,21 +100,20 @@ public class CacheAdminController {
     @DeleteMapping
     public ResponseEntity<Map<String, Object>> clearAllCaches() {
         Collection<String> cacheNames = cacheManager.getCacheNames();
+        IO.print(cacheNames.toString());
         
-        cacheNames.forEach(cacheName -> {
-            var cache = cacheManager.getCache(Objects.requireNonNull(cacheName));
-            if (cache != null) {
-                cache.clear();
-            }
-        });
-        
+        cacheNames.stream()
+                .map(cacheManager::getCache)
+                .filter(Objects::nonNull) 
+                .forEach(Cache::clear);
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "All caches cleared successfully");
         response.put("clearedCaches", cacheNames);
-        
+
         return ResponseEntity.ok(response);
     }
-    
+
     /**
      * Clear a specific cache entry.
      * 
@@ -124,23 +125,23 @@ public class CacheAdminController {
     public ResponseEntity<Map<String, String>> clearCacheEntry(
             @PathVariable String cacheName,
             @PathVariable String key) {
-        
+
         var cache = cacheManager.getCache(Objects.requireNonNull(cacheName));
-        
+
         if (cache == null) {
             return ResponseEntity.notFound().build();
         }
-        
-        cache.evict(key);
-        
+
+        cache.evict(Objects.requireNonNull(key));
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "Cache entry evicted successfully");
         response.put("cacheName", cacheName);
         response.put("key", key);
-        
+
         return ResponseEntity.ok(response);
     }
-    
+
     /**
      * Evict price cache for specific symbol.
      * Convenience method that uses domain service.
@@ -151,14 +152,14 @@ public class CacheAdminController {
     public ResponseEntity<Map<String, String>> evictPriceCache(@PathVariable String symbol) {
         AssetIdentifier assetId = new SymbolIdentifier(symbol);
         evictionService.evictPriceCache(assetId);
-        
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "Price cache evicted successfully");
         response.put("symbol", symbol);
-        
+
         return ResponseEntity.ok(response);
     }
-    
+
     /**
      * Warm cache with popular symbols.
      * Pre-loads cache with commonly requested symbols.
@@ -169,10 +170,10 @@ public class CacheAdminController {
     public ResponseEntity<Map<String, Object>> warmCache() {
         // List of popular symbols to pre-cache
         String[] popularSymbols = {
-            "AAPL", "GOOGL", "MSFT", "AMZN", "TSLA",
-            "SPY", "QQQ", "VOO", "VTI", "BTC-USD"
+                "AAPL", "GOOGL", "MSFT", "AMZN", "TSLA",
+                "SPY", "QQQ", "VOO", "VTI", "BTC-USD"
         };
-        
+
         int warmed = 0;
         for (String symbol : popularSymbols) {
             try {
@@ -184,12 +185,12 @@ public class CacheAdminController {
                 // Continue on error
             }
         }
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Cache warming completed");
         response.put("symbolsWarmed", warmed);
         response.put("total", popularSymbols.length);
-        
+
         return ResponseEntity.ok(response);
     }
 }

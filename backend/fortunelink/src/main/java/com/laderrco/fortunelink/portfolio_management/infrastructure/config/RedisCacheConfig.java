@@ -66,8 +66,7 @@ public class RedisCacheConfig {
      */
     @Bean
     @SuppressWarnings("null")
-    public CacheManager cacheManager(@NonNull RedisConnectionFactory connectionFactory,
-            @NonNull ObjectMapper redisCacheObjectMapper) {
+    public CacheManager cacheManager(@NonNull RedisConnectionFactory connectionFactory, ObjectMapper redisCacheObjectMapper) {
         // Default cache configuration
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofSeconds(300)) // 5 minutes default

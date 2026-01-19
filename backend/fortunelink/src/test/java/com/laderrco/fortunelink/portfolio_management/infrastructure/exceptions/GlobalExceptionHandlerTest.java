@@ -17,11 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers.MarketDataController;
 
 @WebMvcTest(MarketDataController.class)
-@Import(DevSecurityConfig.class)
+@Import({DevSecurityConfig.class, RateLimitConfig.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired
