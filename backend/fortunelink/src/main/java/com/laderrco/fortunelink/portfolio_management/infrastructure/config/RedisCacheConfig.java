@@ -4,11 +4,13 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -16,6 +18,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -50,7 +53,7 @@ public class RedisCacheConfig {
      * Custom ObjectMapper for Redis serialization.
      * Handles LocalDateTime, BigDecimal, and other domain types.
      */
-    @Bean
+    @Bean("redisCacheObjectMapper")
     public ObjectMapper redisCacheObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
@@ -62,11 +65,26 @@ public class RedisCacheConfig {
     }
 
     /**
+     * Standard ObjectMapper for REST API calls (FMP, etc.)
+     */
+    @Bean("defaultObjectMapper")
+    @Primary  // This makes it the default for @Autowired ObjectMapper
+    public ObjectMapper defaultObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // NO activateDefaultTyping here!
+        return mapper;
+
+    }
+    /**
      * Main cache manager with multiple cache configurations.
      */
     @Bean
     @SuppressWarnings("null")
-    public CacheManager cacheManager(@NonNull RedisConnectionFactory connectionFactory, ObjectMapper redisCacheObjectMapper) {
+    public CacheManager cacheManager(@NonNull RedisConnectionFactory connectionFactory,
+            @Qualifier("redisCacheObjectMapper") ObjectMapper redisCacheObjectMapper) {
         // Default cache configuration
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofSeconds(300)) // 5 minutes default

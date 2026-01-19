@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -47,7 +48,7 @@ public class FmpApiClient {
     /**
      * Initialize HTTP client bean.
      */
-    public FmpApiClient(FmpConfigurationProperties config, ObjectMapper objectMapper, HttpClient httpClient) {
+    public FmpApiClient(FmpConfigurationProperties config, @Qualifier("defaultObjectMapper") ObjectMapper objectMapper, HttpClient httpClient) {
         this.config = config;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
