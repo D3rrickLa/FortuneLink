@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.models;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -76,9 +77,21 @@ public class MarketDataDtoMapper {
     public Map<String, AssetInfoResponse> toAssetInfoResponseMap(
             Map<AssetIdentifier, MarketAssetInfo> infoMap,
             Map<AssetIdentifier, MarketAssetQuote> quoteMap) {
+
+        Map<String, MarketAssetQuote> quotesByKey = quoteMap == null
+                ? Map.of()
+                : quoteMap.values().stream()
+                        .collect(Collectors.toMap(
+                                q -> q.id().cacheKey(),
+                                Function.identity(),
+                                (a, b) -> a));
+
         return infoMap.entrySet().stream()
                 .collect(Collectors.toMap(
-                        e -> e.getKey().getPrimaryId(),
-                        e -> toAssetInfoResponse(e.getValue(), quoteMap.get(e.getKey()))));
+                        entry -> entry.getKey().getPrimaryId(),
+                        entry -> toAssetInfoResponse(
+                                entry.getValue(),
+                                quotesByKey.get(entry.getKey().cacheKey())),
+                        (existing, replacement) -> existing));
     }
 }

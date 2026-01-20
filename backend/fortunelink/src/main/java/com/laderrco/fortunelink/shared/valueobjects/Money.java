@@ -28,6 +28,10 @@ public record Money(BigDecimal amount, ValidatedCurrency currency) implements Cl
         return of(new BigDecimal(String.valueOf(value)), ValidatedCurrency.of(currency));
     }
 
+    public static Money of(BigDecimal value, String currency) {
+        return of(new BigDecimal(String.valueOf(value)), ValidatedCurrency.of(currency));
+    }
+
     public static Money ZERO(ValidatedCurrency currency) {
         return new Money(BigDecimal.ZERO, currency);
     }

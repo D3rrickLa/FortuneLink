@@ -11,18 +11,21 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CryptoIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
@@ -44,11 +47,14 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class PerformanceCalculationServiceTest {
@@ -62,8 +68,8 @@ class PerformanceCalculationServiceTest {
 
     @Mock
     private MarketDataService marketDataService;
-    
-    @Mock 
+
+    @Mock
     private ExchangeRateService exchangeRateService;
 
     @BeforeEach
@@ -84,46 +90,97 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("Should calculate positive total return correctly")
         void calculateTotalReturn_PositiveReturn() {
-            // Arrange
+            // --- Arrange ---
             ValidatedCurrency usd = ValidatedCurrency.USD;
+
+            // This helper must create a portfolio with:
+            // 1. 10 shares of AAPL bought at $150 (Cost Basis: $1500)
+            // 2. $500 Cash Deposit (Total Invested: $2000)
             Portfolio portfolio = createPortfolioWithTransactions(usd);
 
-            // Mock current prices to give us a gain
-            // Asset has 10 shares of AAPL, let's say current price is $180
-            when(marketDataService
-                    .getCurrentPrice(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null)))
-                    .thenReturn(new Money(new BigDecimal("180"), usd));
+            MarketIdentifier identifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
 
-            // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
+            // Current Price is $180.
+            // Portfolio Value = (10 * 180) + 500 cash = $2300
+            // Profit = $2300 - $2000 = $300
+            // Return = 300 / 2000 = 0.15 (15%)
+            MarketAssetQuote currentAaplQuote = new MarketAssetQuote(
+                    identifier,
+                    Money.of(180.0, "USD"),
+                    null, null, null, null, null, null, null, null,
+                    Instant.now(),
+                    "FMP");
 
-            // Assert
-            // Invested: $1500 (10 shares * $150) + $500 deposit = $2000
-            // Current: (10 * $180) + $500 cash = $2300
-            // Return: ($2300 - $2000) / $2000 = 15%
-            assertEquals(new BigDecimal("15.00"), totalReturn.value().multiply(BigDecimal.valueOf(100)).setScale(2));
+            // Ensure we mock the specific method the service uses (getCurrentQuote)
+            // We use any() or the specific identifier to ensure it hits.
+            when(marketDataService.getCurrentQuote(argThat(id -> id.getPrimaryId().equals("AAPL"))))
+                    .thenReturn(Optional.of(currentAaplQuote));
+
+            // If your service performs currency conversion, mock the exchange service to
+            // return the same value
+            // (Assuming USD to USD conversion just returns the input)
+            lenient().when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class), any()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            // --- Act ---
+            Percentage totalReturn = performanceService.calculateTotalReturn(
+                    portfolio,
+                    marketDataService,
+                    exchangeRateService);
+
+            // --- Assert ---
+            // Expected 15.00 (0.15 * 100)
+            BigDecimal resultAsPercentage = totalReturn.value()
+                    .multiply(new BigDecimal("100"))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            assertEquals(new BigDecimal("15.00"), resultAsPercentage);
         }
 
         @Test
         @DisplayName("Should calculate negative total return correctly")
         void calculateTotalReturn_NegativeReturn() {
-            // Arrange
+            // --- Arrange ---
             ValidatedCurrency usd = ValidatedCurrency.USD;
             Portfolio portfolio = createPortfolioWithTransactions(usd);
 
-            // Mock current prices to give us a loss
-            when(marketDataService
-                    .getCurrentPrice(new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null)))
-                    .thenReturn(new Money(new BigDecimal("120"), usd));
+            // Define the identifier exactly as it appears in your logs
+            MarketIdentifier identifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
 
-            // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
+            // Mock current price to $120 to create a loss
+            // Invested: $2000 (Cost basis $1500 + $500 cash)
+            // Current: $1700 (10 shares * $120 + $500 cash)
+            // Loss: -$300 -> -15%
+            MarketAssetQuote negativeQuote = new MarketAssetQuote(
+                    identifier,
+                    Money.of(120.00, "USD"),
+                    null, null, null, null, null, null, null, null,
+                    Instant.now(),
+                    "FMP");
 
-            // Assert
-            // Invested: $2000
-            // Current: (10 * $120) + $500 cash = $1700
-            // Return: ($1700 - $2000) / $2000 = -15%
-            assertEquals(new BigDecimal("-15.00"), totalReturn.value().multiply(BigDecimal.valueOf(100)).setScale(2));
+            // CRITICAL FIX: Mock getCurrentQuote, as this is what
+            // PortfolioValuationService.java:54 calls
+            when(marketDataService.getCurrentQuote(argThat(id -> id.getPrimaryId().equals("AAPL"))))
+                    .thenReturn(Optional.of(negativeQuote));
+
+            // Handle potential currency conversion calls (identity conversion for USD to
+            // USD)
+            lenient().when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class), any()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            // --- Act ---
+            Percentage totalReturn = performanceService.calculateTotalReturn(
+                    portfolio,
+                    marketDataService,
+                    exchangeRateService);
+
+            // --- Assert ---
+            // Expected -15.00
+            BigDecimal resultAsPercentage = totalReturn.value()
+                    .multiply(new BigDecimal("100"))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            assertEquals(new BigDecimal("-15.00"), resultAsPercentage);
         }
 
         @Test
@@ -141,7 +198,8 @@ class PerformanceCalculationServiceTest {
                     .build();
 
             // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService,
+                    exchangeRateService);
 
             // Assert
             assertEquals(Percentage.of(0), totalReturn);
@@ -150,7 +208,7 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("Should calculate return after withdrawal")
         void calculateTotalReturn_WithWithdrawal() {
-            // Arrange
+            // --- Arrange ---
             ValidatedCurrency cad = ValidatedCurrency.CAD;
             MarketIdentifier shopifySymbol = new MarketIdentifier("SHOP", null, AssetType.STOCK, "Shopify", "CAD",
                     null);
@@ -174,17 +232,38 @@ class PerformanceCalculationServiceTest {
                     .lastUpdatedAt(Instant.now())
                     .build();
 
-            when(marketDataService.getCurrentPrice(shopifySymbol))
-                    .thenReturn(new Money(new BigDecimal("120"), cad));
+            // 1. Create the Quote object (using $120 to hit your 16% target)
+            MarketAssetQuote shopQuote = new MarketAssetQuote(
+                    shopifySymbol,
+                    Money.of(120.00, "CAD"),
+                    null, null, null, null, null, null, null, null,
+                    Instant.now(),
+                    "FMP");
 
-            // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
+            // 2. Mock getCurrentQuote (the method called at
+            // PortfolioValuationService.java:54)
+            when(marketDataService.getCurrentQuote(argThat(id -> id.getPrimaryId().equals("SHOP"))))
+                    .thenReturn(Optional.of(shopQuote));
 
-            // Assert
+            // 3. Mock exchange rate to return input (CAD to CAD)
+            lenient().when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class), any()))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            // --- Act ---
+            Percentage totalReturn = performanceService.calculateTotalReturn(
+                    portfolio,
+                    marketDataService,
+                    exchangeRateService);
+
+            // --- Assert ---
             // Invested: $2000 (buy) + $1000 (deposit) - $500 (withdrawal) = $2500
-            // Current: (20 * $120) + $500 cash = $2900
-            // Return: ($2900 - $2500) / $2500 = 16%
-            assertEquals(new BigDecimal("16.00"), totalReturn.value().multiply(BigDecimal.valueOf(100)).setScale(2));
+            // Current: (20 shares * $120) + $500 cash = $2900
+            // Return: ($2900 - $2500) / $2500 = 0.16 (16%)
+            BigDecimal resultAsPercentage = totalReturn.value()
+                    .multiply(new BigDecimal("100"))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            assertEquals(new BigDecimal("16.00"), resultAsPercentage);
         }
     }
 

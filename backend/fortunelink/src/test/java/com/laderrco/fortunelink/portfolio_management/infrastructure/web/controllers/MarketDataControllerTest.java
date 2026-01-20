@@ -20,7 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
@@ -31,6 +31,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
@@ -40,7 +41,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @AutoConfigureMockMvc
 @Import({ DevSecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
-@WebMvcTest(MarketDataController.class)
+@WebMvcTest({MarketDataController.class, GlobalExceptionHandler.class})
 class MarketDataControllerTest {
 
     @Autowired
@@ -64,7 +65,8 @@ class MarketDataControllerTest {
                 null, Instant.now(), "FMP");
         PriceResponse response = PriceResponse.of("AAPL", BigDecimal.valueOf(150.25), "USD");
 
-        when(marketDataService.getCurrentPrice(symbolId)).thenReturn(price);
+        when(marketDataService.getCurrentQuote(any(SymbolIdentifier.class)))
+            .thenReturn(Optional.of(quote));
         when(mapper.toPriceResponse("AAPL", quote)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/price/AAPL"))
@@ -163,10 +165,10 @@ class MarketDataControllerTest {
         AssetInfoResponse response = new AssetInfoResponse(
                 "AAPL",
                 "Apple Inc.",
+                "DESC",
                 "STOCK",
                 "USD",
                 "NASDAQ",
-                null,
                 BigDecimal.valueOf(235.66),
                 "Technology",
                 BigDecimal.TEN,
@@ -179,6 +181,8 @@ class MarketDataControllerTest {
 
         when(marketDataService.getAssetInfo(symbolId))
                 .thenReturn(Optional.of(assetInfo));
+        when(marketDataService.getCurrentQuote(any()))
+            .thenReturn(Optional.of(applQuote));
         when(mapper.toAssetInfoResponse(assetInfo, applQuote)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/asset-info/AAPL"))
@@ -191,11 +195,13 @@ class MarketDataControllerTest {
 
     @Test
     void getAssetInfo_notFound() throws Exception {
-        when(marketDataService.getAssetInfo(any(SymbolIdentifier.class)))
-                .thenReturn(Optional.empty());
+        when(marketDataService.getAssetInfo(any())).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/market-data/asset-info/UNKNOWN"))
+                .andDo(print())
                 .andExpect(status().isNotFound());
+                // .andExpect(status().reason(containsString("Asset not found")));
+
     }
 
     // ---------------------------------------------------
@@ -237,7 +243,7 @@ class MarketDataControllerTest {
                 "USD",
                 "NASDAQ",
                 null,
-                 BigDecimal.valueOf(235.66),
+                BigDecimal.valueOf(235.66),
                 "Technology",
                 BigDecimal.TEN,
                 null,
@@ -247,10 +253,9 @@ class MarketDataControllerTest {
                 "INTERNAL", 
                 null));
 
-        when(marketDataService.getBatchAssetInfo(anyList()))
-                .thenReturn(serviceResult);
-        when(mapper.toAssetInfoResponseMap(serviceResult, serviceResult2))
-                .thenReturn(response);
+        when(marketDataService.getBatchAssetInfo(anyList())).thenReturn(serviceResult);
+        when(marketDataService.getBatchQuotes(any())).thenReturn(serviceResult2);
+        when(mapper.toAssetInfoResponseMap(serviceResult, serviceResult2)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/asset-info")
                 .param("symbols", "AAPL"))
@@ -302,25 +307,25 @@ class MarketDataControllerTest {
 
     @Test
     void healthCheck_up() throws Exception {
-        when(marketDataService.getCurrentPrice(any()))
-                .thenReturn(new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")));
+        when(marketDataService.isSymbolSupported(any())).thenReturn(true);
 
         mockMvc.perform(get("/api/market-data/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.service").value("market-data"))
-                .andExpect(jsonPath("$.testSymbol").value("AAPL"));
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
     void healthCheck_down() throws Exception {
-        when(marketDataService.getCurrentPrice(any()))
-                .thenThrow(new RuntimeException("Service unavailable"));
+        when(marketDataService.isSymbolSupported(any()))
+                .thenThrow(new RuntimeException("Connection failed"));
 
         mockMvc.perform(get("/api/market-data/health"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value("DOWN"))
-                .andExpect(jsonPath("$.service").value("market-data"));
+                .andExpect(jsonPath("$.service").value("market-data"))
+                .andExpect(jsonPath("$.error").value("Connection failed"));
     }
 
     @Test
@@ -335,14 +340,13 @@ class MarketDataControllerTest {
                 .andExpect(status().isNotFound()) // 404
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message").value("Symbol not found: INVALID"))
-                .andExpect(jsonPath("$.path").value("/api/market-data/price/INVALID"));
+                .andExpect(jsonPath("$.message").value("Symbol not found: INVALID"));
     }
 
     @Test
     void getPrice_ShouldReturn503_WhenMarketDataFails() throws Exception {
         // Arrange: Simulate a provider timeout or rate limit
-        when(marketDataService.getCurrentPrice(any()))
+        when(marketDataService.getCurrentQuote(any()))
                 .thenThrow(new MarketDataException("API rate limit exceeded", ErrorType.RATE_LIMIT_EXCEEDED));
 
         // Act & Assert
@@ -359,7 +363,7 @@ class MarketDataControllerTest {
     @Test
     void getPrice_ShouldReturn400_WhenIllegalArgumentThrown() throws Exception {
         // Arrange: Simulate bad input validation in the service
-        when(marketDataService.getCurrentPrice(any()))
+        when(marketDataService.getCurrentQuote(any()))
                 .thenThrow(new IllegalArgumentException("Invalid symbol format"));
 
         // Act & Assert

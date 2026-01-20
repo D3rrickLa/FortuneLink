@@ -19,20 +19,20 @@ public interface MarketDataService {
     /**
      * Retrieves the most recent market price for a specific asset.
      * 
-     * @param assetIdentifier
+     * @param identifier
      * @return An {@link Optional} containing the {@link MarketAssetQuote} if found, otherwise, empty
      */
-    Optional<MarketAssetQuote> getCurrentQuote(AssetIdentifier assetIdentifier);
+    Optional<MarketAssetQuote> getCurrentQuote(AssetIdentifier identifier);
     
     /**
      * Convience default method
      * 
-     * @param assetIdentifier
+     * @param identifier
      * @return
      */
-    default Money getCurrentPrice(AssetIdentifier assetIdentifier) {
-        return getCurrentQuote(assetIdentifier).map(MarketAssetQuote::currentPrice)
-            .orElseThrow(() -> new MarketDataException("Price unavailable: " + assetIdentifier.toString(), ErrorType.DATA_UNAVAILABLE));
+    default Money getCurrentPrice(AssetIdentifier identifier) {
+        return getCurrentQuote(identifier).map(MarketAssetQuote::currentPrice)
+            .orElseThrow(() -> new MarketDataException("Price unavailable: " + identifier.toString(), ErrorType.DATA_UNAVAILABLE));
     }
 
     /**
@@ -42,7 +42,7 @@ public interface MarketDataService {
      * @param date              The specific date and time for the historical lookup.
      * @return The price of the asset at the requested time.
      */
-    Optional<MarketAssetQuote> getHistoricalQuote(AssetIdentifier assetIdentifier, LocalDateTime date);
+    Optional<MarketAssetQuote> getHistoricalQuote(AssetIdentifier identifier, LocalDateTime date);
     
     /**
      * Efficiently fetches the current prices for a list of assets in a single batch.
@@ -81,7 +81,7 @@ public interface MarketDataService {
      * @return The {@link ValidatedCurrency} used for transactions involving this
      *         asset.
      */
-    public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier);
+    public ValidatedCurrency getTradingCurrency(AssetIdentifier odentifier);
 
     /**
      * Verifies if the underlying data provider supports and tracks the specified
