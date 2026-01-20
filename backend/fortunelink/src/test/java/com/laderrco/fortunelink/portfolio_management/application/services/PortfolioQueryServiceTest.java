@@ -259,11 +259,11 @@ class PortfolioQueryServiceTest {
         when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
                 .thenReturn(transactionList);
 
-        when(performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService))
+        when(performanceCalculationService.calculateTotalReturn(portfolio))
                 .thenReturn(totalReturn);
         when(performanceCalculationService.calculateRealizedGains(portfolio, transactionList))
                 .thenReturn(realizedGains);
-        when(performanceCalculationService.calculateUnrealizedGains(portfolio, marketDataService))
+        when(performanceCalculationService.calculateUnrealizedGains(portfolio))
                 .thenReturn(unrealizedGains);
         when(performanceCalculationService.calculateTimeWeightedReturn(portfolio))
                 .thenReturn(timeWeightedReturn);

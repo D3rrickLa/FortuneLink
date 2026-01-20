@@ -7,4 +7,7 @@ public interface AssetIdentifier {
     String displayName();     
     AssetType getAssetType();
     
+    default String cacheKey() {
+        return String.format("%s:%s", getClass().getSimpleName(), getPrimaryId());
+    }
 }

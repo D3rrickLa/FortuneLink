@@ -2,13 +2,14 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.models;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 
 /**
  * Maps between domain objects and API DTOs for market data.
@@ -21,17 +22,40 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
  */
 @Component
 public class MarketDataDtoMapper {
+    /**
+     * Convert domain AssetInfo to API response via MarketAssetInfo + optional
+     * MarketAssetQuote to API DTO.
+     */
+    public AssetInfoResponse toAssetInfoResponse(MarketAssetInfo info, MarketAssetQuote quote) {
+        return AssetInfoResponse.builder()
+                .symbol(info.getSymbol())
+                .name(info.getName())
+                .assetType(info.getAssetType().toString())
+                .currency(info.getCurrency().getCode())
+                .exchange(info.getExchange())
+                .sector(info.getSector())
+                .description(info.getDescription())
+                .currentPrice(quote != null ? quote.currentPrice().amount() : null)
+                .marketCap(quote != null ? quote.marketCap() : null)
+                // .peRatio(assetInfo.getPeRatio())
+                // .fiftyTwoWeekHigh(assetInfo.getFiftyTwoWeekHigh())
+                // .fiftyTwoWeekLow(assetInfo.getFiftyTwoWeekLow())
+                // .averageVolume(assetInfo.getAverageVolume())
+                .timestamp(quote != null ? quote.lastUpdated() : null)
+                .source(quote != null ? quote.source() : null)
+                .build();
+    }
 
     /**
      * Convert domain Price to MarkteDataController API response.
      */
-    public PriceResponse toPriceResponse(String symbol, Money price) {
+    public PriceResponse toPriceResponse(String symbol, MarketAssetQuote quote) {
         return PriceResponse.builder()
                 .symbol(symbol)
-                .price(price.amount())
-                .currency(price.currency().getCode())
+                .price(quote.currentPrice().amount())
+                .currency(quote.currentPrice().currency().getCode())
                 .timestamp(Instant.now())
-                .source("EXTERNAL API") // we need a way to pass info to this
+                .source(quote.source()) // we need a way to pass info to this
                 .build();
     }
 
@@ -39,44 +63,35 @@ public class MarketDataDtoMapper {
      * Convert map of domain Prices to API responses.
      * Used for batch endpoints.
      */
-    public Map<String, PriceResponse> toPriceResponseMap(Map<AssetIdentifier, Money> prices) {
+    public Map<String, PriceResponse> toPriceResponseMap(Map<AssetIdentifier, MarketAssetQuote> prices) {
         return prices.entrySet().stream()
                 .collect(Collectors.toMap(
                         entry -> entry.getKey().getPrimaryId(),
-                        entry -> toPriceResponse(entry.getKey().getPrimaryId(), entry.getValue())
-                ));
-    }
-
-    /**
-     * Convert domain AssetInfo to API response.
-     */
-    public AssetInfoResponse toAssetInfoResponse(MarketAssetInfo assetInfo) {
-        return AssetInfoResponse.builder()
-                .symbol(assetInfo.getSymbol())
-                .name(assetInfo.getName())
-                .assetType(assetInfo.getAssetType().toString())
-                .currency(assetInfo.getCurrency().getCode())
-                .exchange(assetInfo.getExchange())
-                // .currentPrice(assetInfo.getCurrentPrice()) /TODO might need to pass another var for this additional info...
-                .sector(assetInfo.getSector())
-                // .marketCap(assetInfo.getMarketCap())
-                // .peRatio(assetInfo.getPeRatio())
-                // .fiftyTwoWeekHigh(assetInfo.getFiftyTwoWeekHigh())
-                // .fiftyTwoWeekLow(assetInfo.getFiftyTwoWeekLow())
-                // .averageVolume(assetInfo.getAverageVolume())
-                .source("API CALL")
-                .build();
+                        entry -> toPriceResponse(entry.getKey().getPrimaryId(), entry.getValue())));
     }
 
     /**
      * Convert map of domain AssetInfo to API responses.
      * Used for batch endpoints.
      */
-    public Map<String, AssetInfoResponse> toAssetInfoResponseMap(Map<AssetIdentifier, MarketAssetInfo> assetInfoMap) {
-        return assetInfoMap.entrySet().stream()
+    public Map<String, AssetInfoResponse> toAssetInfoResponseMap(
+            Map<AssetIdentifier, MarketAssetInfo> infoMap,
+            Map<AssetIdentifier, MarketAssetQuote> quoteMap) {
+
+        Map<String, MarketAssetQuote> quotesByKey = quoteMap == null
+                ? Map.of()
+                : quoteMap.values().stream()
+                        .collect(Collectors.toMap(
+                                q -> q.id().cacheKey(),
+                                Function.identity(),
+                                (a, b) -> a));
+
+        return infoMap.entrySet().stream()
                 .collect(Collectors.toMap(
                         entry -> entry.getKey().getPrimaryId(),
-                        entry -> toAssetInfoResponse(entry.getValue())
-                ));
+                        entry -> toAssetInfoResponse(
+                                entry.getValue(),
+                                quotesByKey.get(entry.getKey().cacheKey())),
+                        (existing, replacement) -> existing));
     }
 }

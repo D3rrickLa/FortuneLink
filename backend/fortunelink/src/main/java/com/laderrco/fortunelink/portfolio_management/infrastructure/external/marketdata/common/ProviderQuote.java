@@ -7,7 +7,15 @@ import java.time.LocalDateTime;
  * Internal representation of a price quote from any provider.
  * Part of the Anti-Corruption Layer - isolates domain from provider specifics.
  */
-public record ProviderQuote(String symbol, BigDecimal price, String currency, LocalDateTime timestamp, String source  /*"YAHOO", "ALPHAVANTAGE", etc. */) {
+public record ProviderQuote(
+    String symbol, 
+    BigDecimal price, 
+    String currency, 
+    LocalDateTime timestamp, 
+    BigDecimal marketCap,
+    BigDecimal changePercent,
+    String source  /*"YAHOO", "ALPHAVANTAGE", etc. */
+) {
     public ProviderQuote {
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException("Symbol cannot be null or blank");

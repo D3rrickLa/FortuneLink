@@ -10,8 +10,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 public class MarketAssetInfoSerializer extends JsonSerializer<MarketAssetInfo> {
     
     @Override
-    public void serialize(MarketAssetInfo value, JsonGenerator gen, SerializerProvider serializers) 
-            throws IOException {
+    public void serialize(MarketAssetInfo value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         gen.writeStartObject();
         gen.writeStringField("symbol", value.getSymbol());
         gen.writeStringField("name", value.getName());

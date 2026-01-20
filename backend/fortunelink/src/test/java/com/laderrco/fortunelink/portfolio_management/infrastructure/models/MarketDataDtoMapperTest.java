@@ -12,12 +12,13 @@ import org.junit.jupiter.api.Test;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class MarketDataDtoMapperTest {
-        private MarketDataDtoMapper mapper;
+    private MarketDataDtoMapper mapper;
 
     @BeforeEach
     void setUp() {
@@ -32,15 +33,17 @@ public class MarketDataDtoMapperTest {
     void toPriceResponse_mapsAllFieldsCorrectly() {
         Money money = new Money(
                 BigDecimal.valueOf(123.45),
-                ValidatedCurrency.of("USD")
-        );
+                ValidatedCurrency.of("USD"));
 
-        PriceResponse response = mapper.toPriceResponse("AAPL", money);
+        MarketAssetQuote quote = new MarketAssetQuote(new SymbolIdentifier("AAPL"), money, money, money, money, money,
+                null, null, null, null, Instant.now(), "FMP");
+
+        PriceResponse response = mapper.toPriceResponse("AAPL", quote);
 
         assertThat(response.getSymbol()).isEqualTo("AAPL");
         assertThat(response.getPrice()).isEqualByComparingTo("123.45");
         assertThat(response.getCurrency()).isEqualTo("USD");
-        assertThat(response.getSource()).isEqualTo("EXTERNAL API");
+        assertThat(response.getSource()).isEqualTo("FMP");
 
         // dynamic fields
         assertThat(response.getTimestamp()).isNotNull();
@@ -55,11 +58,37 @@ public class MarketDataDtoMapperTest {
     void toPriceResponseMap_convertsMapCorrectly() {
         AssetIdentifier aapl = new SymbolIdentifier("AAPL");
         AssetIdentifier msft = new SymbolIdentifier("MSFT");
+        MarketAssetQuote applQuote = new MarketAssetQuote(
+                aapl,
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
 
-        Map<AssetIdentifier, Money> prices = Map.of(
-                aapl, new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
-                msft, new Money(BigDecimal.valueOf(320), ValidatedCurrency.of("USD"))
-        );
+        MarketAssetQuote msftQuote = new MarketAssetQuote(
+                msft,
+                new Money(BigDecimal.valueOf(320), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
+
+        Map<AssetIdentifier, MarketAssetQuote> prices = Map.of(
+                aapl, applQuote,
+                msft, msftQuote);
 
         Map<String, PriceResponse> result = mapper.toPriceResponseMap(prices);
 
@@ -84,11 +113,24 @@ public class MarketDataDtoMapperTest {
                 "NASDAQ",
                 ValidatedCurrency.of("USD"),
                 "Technology",
-                "null"
-        );
+                "null");
         // assetInfo.setSector("Technology");
 
-        AssetInfoResponse response = mapper.toAssetInfoResponse(assetInfo);
+        MarketAssetQuote applQuote = new MarketAssetQuote(
+                new SymbolIdentifier("AAPL"),
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
+
+        AssetInfoResponse response = mapper.toAssetInfoResponse(assetInfo, applQuote);
 
         assertThat(response.getSymbol()).isEqualTo("AAPL");
         assertThat(response.getName()).isEqualTo("Apple Inc.");
@@ -96,7 +138,7 @@ public class MarketDataDtoMapperTest {
         assertThat(response.getCurrency()).isEqualTo("USD");
         assertThat(response.getExchange()).isEqualTo("NASDAQ");
         assertThat(response.getSector()).isEqualTo("Technology");
-        assertThat(response.getSource()).isEqualTo("API CALL");
+        assertThat(response.getSource()).isEqualTo("FMP");
     }
 
     // ---------------------------------------------------
@@ -114,14 +156,27 @@ public class MarketDataDtoMapperTest {
                 "COINBASE",
                 ValidatedCurrency.USD,
                 "Crypto",
-                null
-        );
+                null);
 
-        Map<AssetIdentifier, MarketAssetInfo> input =
-                Map.of(btc, assetInfo);
+        MarketAssetQuote assetQuote = new MarketAssetQuote(
+                btc,
+                new Money(BigDecimal.valueOf(320), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
 
-        Map<String, AssetInfoResponse> result =
-                mapper.toAssetInfoResponseMap(input);
+        Map<AssetIdentifier, MarketAssetInfo> input = Map.of(btc, assetInfo);
+
+        Map<AssetIdentifier, MarketAssetQuote> quoteMap = Map.of(btc, assetQuote);
+
+        Map<String, AssetInfoResponse> result = mapper.toAssetInfoResponseMap(input, quoteMap);
 
         assertThat(result).hasSize(1);
         assertThat(result).containsKey("BTC-USD");

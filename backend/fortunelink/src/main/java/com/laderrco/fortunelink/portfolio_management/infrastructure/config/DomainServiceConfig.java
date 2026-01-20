@@ -18,8 +18,8 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public PerformanceCalculationService performanceCalculationService() {
-        return new PerformanceCalculationService();
+    public PerformanceCalculationService performanceCalculationService(MarketDataService marketDataService, ExchangeRateService exchangeRateService, PortfolioValuationService portfolioValuationService) {
+        return new PerformanceCalculationService(marketDataService, exchangeRateService, portfolioValuationService);
     }
 
     @Bean

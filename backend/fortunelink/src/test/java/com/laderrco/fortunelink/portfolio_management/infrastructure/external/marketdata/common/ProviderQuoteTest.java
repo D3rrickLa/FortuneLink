@@ -18,7 +18,7 @@ class ProviderQuoteTest {
     @Test
     @DisplayName("Should create valid ProviderQuote when all fields are correct")
     void shouldCreateValidQuote() {
-        ProviderQuote quote = new ProviderQuote("AAPL", new BigDecimal("150.00"), "USD", now, "YAHOO");
+        ProviderQuote quote = new ProviderQuote("AAPL", new BigDecimal("150.00"), "USD", now, null, null, "YAHOO");
 
         assertThat(quote.symbol()).isEqualTo("AAPL");
         assertThat(quote.price()).isEqualByComparingTo("150.00");
@@ -30,11 +30,11 @@ class ProviderQuoteTest {
     @ValueSource(strings = {"", " ", "  "})
     @DisplayName("Should throw exception if symbol is blank or null")
     void shouldThrowExceptionForInvalidSymbol(String invalidSymbol) {
-        assertThatThrownBy(() -> new ProviderQuote(invalidSymbol, BigDecimal.TEN, "USD", now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote(invalidSymbol, BigDecimal.TEN, "USD", now,  null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Symbol cannot be null or blank");
 
-        assertThatThrownBy(() -> new ProviderQuote(null, BigDecimal.TEN, "USD", now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote(null, BigDecimal.TEN, "USD", now, null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -42,24 +42,24 @@ class ProviderQuoteTest {
     @DisplayName("Should throw exception if price is zero or negative")
     void shouldThrowExceptionForInvalidPrice() {
         // Zero price
-        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.ZERO, "USD", now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.ZERO, "USD", now, null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Price must be positive");
 
         // Negative price
-        assertThatThrownBy(() -> new ProviderQuote("AAPL", new BigDecimal("-1.00"), "USD", now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote("AAPL", new BigDecimal("-1.00"), "USD", now, null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Price must be positive");
         
         // Null price
-        assertThatThrownBy(() -> new ProviderQuote("AAPL", null, "USD", now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote("AAPL", null, "USD", now, null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("Should throw exception if currency is blank")
     void shouldThrowExceptionForInvalidCurrency() {
-        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.TEN, "", now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.TEN, "", now, null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Currency cannot be null or blank");
     }
@@ -67,7 +67,7 @@ class ProviderQuoteTest {
     @Test
     @DisplayName("Should throw exception if currency is null")
     void shouldThrowExceptionForInvalidCurrencyNullCheck() {
-        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.TEN, null, now, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.TEN, null, now,  null, null,"YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Currency cannot be null or blank");
     }
@@ -75,7 +75,7 @@ class ProviderQuoteTest {
     @Test
     @DisplayName("Should throw exception if timestamp is null")
     void shouldThrowExceptionForNullTimestamp() {
-        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.TEN, "USD", null, "YAHOO"))
+        assertThatThrownBy(() -> new ProviderQuote("AAPL", BigDecimal.TEN, "USD", null, null, null, "YAHOO"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Timestamp cannot be null");
     }

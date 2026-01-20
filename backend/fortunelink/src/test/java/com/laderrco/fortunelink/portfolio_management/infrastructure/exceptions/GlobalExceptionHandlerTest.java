@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,7 +21,7 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.models.Marke
 import com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers.MarketDataController;
 
 @WebMvcTest(MarketDataController.class)
-@Import({DevSecurityConfig.class, RateLimitConfig.class})
+@Import({ DevSecurityConfig.class, RateLimitConfig.class })
 class GlobalExceptionHandlerTest {
 
     @Autowired
@@ -41,22 +40,19 @@ class GlobalExceptionHandlerTest {
     @Test
     @SuppressWarnings("null")
     void handleGenericException_returnsInternalServerError() throws Exception {
-
-        // Force a generic runtime exception
-        when(marketDataService.getCurrentPrice(any()))
+        // Arrange: Mock the service to throw a raw Exception or RuntimeException
+        when(marketDataService.getCurrentQuote(any()))
                 .thenThrow(new RuntimeException("Boom"));
 
-        mockMvc.perform(get("/api/market-data/price/AAPL"))
+        // Act & Assert
+        mockMvc.perform(get("/api/market-data/price/AAPL")
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-
-                // ErrorResponse fields
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.error").value("Internal Server Error"))
-                .andExpect(jsonPath("$.message")
-                        .value("An unexpected error occurred. Please try again later."))
-                .andExpect(jsonPath("$.path")
-                        .value("/api/market-data/price/AAPL"))
+                // Note: We check for your "friendly" message, not the "Boom" message
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred. Please try again later."))
+                .andExpect(jsonPath("$.path").value("/api/market-data/price/AAPL"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 }

@@ -1,12 +1,16 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 
@@ -93,14 +97,27 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles status responses
+     * @param ex
+     * @return
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", ex.getStatusCode().value());
+        body.put("error", "Not Found");
+        body.put("message", ex.getReason());
+
+        return new ResponseEntity<>(body, ex.getStatusCode());
+    }
+
+    /**
      * Catch-all for unexpected errors (500 Internal Server Error).
      * IMPORTANT: Don't leak internal details to clients!
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex, 
-            WebRequest request) {
-        
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
         log.error("Unexpected error occurred", ex);
         
         ErrorResponse error = ErrorResponse.builder()

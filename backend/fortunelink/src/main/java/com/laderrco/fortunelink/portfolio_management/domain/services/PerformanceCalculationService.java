@@ -20,8 +20,17 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 // ANSWERS THE QUESTION: HOW IS IT PERFORMING (COMPLEX, USES VALUATION + HISTORY)
-// TODO: make the services DI
-public class PerformanceCalculationService {
+public class PerformanceCalculationService {    
+    private final MarketDataService marketDataService;
+    private final ExchangeRateService exchangeRateService;
+    private final PortfolioValuationService portfolioValuationService;
+
+    public PerformanceCalculationService(MarketDataService marketDataService, ExchangeRateService exchangeRateService, PortfolioValuationService portfolioValuationService) {
+        this.marketDataService = marketDataService;
+        this.exchangeRateService = exchangeRateService;
+        this.portfolioValuationService = portfolioValuationService;
+    }
+
     /**
      * Calculates the total return percentage of the portfolio.
      * Formula: (Current Value - Total Invested) / Total Invested × 100
@@ -31,8 +40,8 @@ public class PerformanceCalculationService {
      * @return Percentage representing total portfolio return (e.g., 20% gain or -5%
      *         loss)
      */
-    public Percentage calculateTotalReturn(Portfolio portfolio, MarketDataService marketDataService, ExchangeRateService exchangeRateService) {
-        Money currentValue = calculateCurrentValue(portfolio, marketDataService, exchangeRateService);
+    public Percentage calculateTotalReturn(Portfolio portfolio) {
+        Money currentValue = calculateCurrentValue(portfolio);
         Money totalInvested = calculateTotalInvested(portfolio);
 
         if (totalInvested.isZero()) {
@@ -78,12 +87,12 @@ public class PerformanceCalculationService {
 
     }
 
-    public Money calculateRealizedGainsCAD_ACB(Portfolio portfolio, ExchangeRateService exchangeRateService, List<Transaction> transactions) {
+    public Money calculateRealizedGainsCAD_ACB(Portfolio portfolio, List<Transaction> transactions) {
         if (portfolio == null) {
             return Money.ZERO("CAD"); 
         }
         
-        return calculateSellGainWithACB(portfolio, exchangeRateService, transactions);
+        return calculateSellGainWithACB(portfolio, transactions);
     }
 
     /**
@@ -98,7 +107,7 @@ public class PerformanceCalculationService {
      * 
      * @return Total paper gains/losses across all assets in portfolio base currency
      */
-    public Money calculateUnrealizedGains(Portfolio portfolio, MarketDataService marketDataService) {
+    public Money calculateUnrealizedGains(Portfolio portfolio) {
         ValidatedCurrency baseCurrency = portfolio.getPortfolioCurrencyPreference();
 
         return portfolio.getAccounts().stream()
@@ -129,10 +138,8 @@ public class PerformanceCalculationService {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    private Money calculateCurrentValue(Portfolio portfolio, MarketDataService marketDataService, ExchangeRateService exchangeRateService) {
-        // we are going to use the PortfolioEvaluationService.java for calculation
-        // rather than a direct implementation
-        PortfolioValuationService portfolioValuationService = new PortfolioValuationService(marketDataService, exchangeRateService);
+    private Money calculateCurrentValue(Portfolio portfolio) {
+        // we are going to use the PortfolioEvaluationService.java for calculation rather than a direct implementation
         return portfolioValuationService.calculateTotalValue(portfolio, Instant.now());
     }
 
@@ -173,7 +180,7 @@ public class PerformanceCalculationService {
 
     
 
-    private Money calculateSellGainWithACB(Portfolio portfolio, ExchangeRateService exchangeRateService, List<Transaction> transactions) {
+    private Money calculateSellGainWithACB(Portfolio portfolio, List<Transaction> transactions) {
         BigDecimal runningTotalShares = BigDecimal.ZERO;
         BigDecimal runningTotalCostCAD = BigDecimal.ZERO;
         BigDecimal totalRealizedGainCAD = BigDecimal.ZERO;
