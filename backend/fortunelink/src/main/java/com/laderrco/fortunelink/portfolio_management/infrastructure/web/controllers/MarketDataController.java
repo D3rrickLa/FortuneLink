@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
@@ -68,8 +69,10 @@ public class MarketDataController {
         // Create SymbolIdentifier - holds just the symbol string
         SymbolIdentifier symbolId = new SymbolIdentifier(symbol);
         Money price = marketDataService.getCurrentPrice(symbolId);
+
+        MarketAssetQuote quote = new MarketAssetQuote(symbolId, price, price, price, price, price, null, null, null, null, null, "FMP");
         
-        PriceResponse response = mapper.toPriceResponse(symbol, price);
+        PriceResponse response = mapper.toPriceResponse(symbol, quote);
         
         log.info("Successfully retrieved price for {}: {} {}", 
                  symbol, price.amount(), price.currency());
@@ -99,7 +102,7 @@ public class MarketDataController {
             .map(SymbolIdentifier::new)
             .toList();
         
-        Map<AssetIdentifier, Money> prices = marketDataService.getBatchPrices(symbolIds);
+        Map<AssetIdentifier, MarketAssetQuote> prices = marketDataService.getBatchQuotes(symbolIds);
         Map<String, PriceResponse> response = mapper.toPriceResponseMap(prices);
         
         log.info("Successfully retrieved {} prices", response.size());

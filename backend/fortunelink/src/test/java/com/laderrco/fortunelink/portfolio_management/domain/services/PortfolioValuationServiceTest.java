@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Account
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CryptoIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
@@ -458,8 +460,11 @@ public class PortfolioValuationServiceTest {
         
         // Mock the historical price response
         Money historicalPrice = new Money(new BigDecimal("150.00"), ValidatedCurrency.CAD);
-        when(mockMarketData.getHistoricalPrice(eq(assetId), eq(expectedLdt)))
-            .thenReturn(historicalPrice);
+        MarketAssetQuote historicalQuote = new MarketAssetQuote(
+            assetId, historicalPrice, historicalPrice, historicalPrice, historicalPrice, historicalPrice, null, null, null, null, historicalInstant, "FMP");
+
+        when(mockMarketData.getHistoricalQuote(eq(assetId), eq(expectedLdt)))
+            .thenReturn(Optional.of(historicalQuote));
 
         // Mock the exchange rate service (since CAD != USD)
         // If you don't mock this, 'result' will be null!
@@ -474,7 +479,7 @@ public class PortfolioValuationServiceTest {
         assertNotNull(result);
         assertEquals(new BigDecimal("1100.00"), result.amount().setScale(2));
         
-        verify(mockMarketData, times(1)).getHistoricalPrice(eq(assetId), any());
+        verify(mockMarketData, times(1)).getHistoricalQuote(eq(assetId), any());
         verify(mockMarketData, never()).getCurrentPrice(any());
     }
     

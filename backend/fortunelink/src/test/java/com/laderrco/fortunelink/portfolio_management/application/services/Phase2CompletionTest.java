@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -46,7 +47,7 @@ public class Phase2CompletionTest {
 
         // Test 4: Batch operations?
         List<AssetIdentifier> symbols = List.of(apple, new MarketIdentifier("GOOGL", null, AssetType.STOCK, "GOOGLE", "USD", null));
-        Map<AssetIdentifier, Money> prices = marketDataService.getBatchPrices(symbols);
+        Map<AssetIdentifier, MarketAssetQuote> prices = marketDataService.getBatchQuotes(symbols);
         assertThat(prices).hasSize(2);
     }
 }

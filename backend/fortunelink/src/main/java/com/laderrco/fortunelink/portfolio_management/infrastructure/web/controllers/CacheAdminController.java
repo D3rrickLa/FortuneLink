@@ -37,7 +37,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/admin/cache")
 @RequiredArgsConstructor
-// @PreAuthorize("hasRole('ADMIN')") // TODO: Add security in Phase 4
+// @PreAuthorize("hasRole('ADMIN')") // TODO: Add security in Phase 5
 // (Authentication)
 public class CacheAdminController {
 

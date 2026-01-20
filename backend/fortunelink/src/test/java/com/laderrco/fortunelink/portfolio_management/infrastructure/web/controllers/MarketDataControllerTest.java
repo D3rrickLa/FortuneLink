@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,6 +26,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
@@ -37,7 +39,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @AutoConfigureMockMvc
-@Import({DevSecurityConfig.class, RateLimitConfig.class}) // Explicitly pulls in your permitAll() logic
+@Import({ DevSecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
 @WebMvcTest(MarketDataController.class)
 class MarketDataControllerTest {
 
@@ -58,10 +60,11 @@ class MarketDataControllerTest {
     void getCurrentPrice_success() throws Exception {
         SymbolIdentifier symbolId = new SymbolIdentifier("AAPL");
         Money price = new Money(BigDecimal.valueOf(150.25), ValidatedCurrency.of("USD"));
+        MarketAssetQuote quote = new MarketAssetQuote(symbolId, price, price, price, price, price, null, null, null, null, Instant.now(), "FMP");
         PriceResponse response = PriceResponse.of("AAPL", BigDecimal.valueOf(150.25), "USD");
 
         when(marketDataService.getCurrentPrice(symbolId)).thenReturn(price);
-        when(mapper.toPriceResponse("AAPL", price)).thenReturn(response);
+        when(mapper.toPriceResponse("AAPL", quote)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/price/AAPL"))
                 .andExpect(status().isOk())
@@ -79,15 +82,43 @@ class MarketDataControllerTest {
         AssetIdentifier aapl = new SymbolIdentifier("AAPL");
         AssetIdentifier googl = new SymbolIdentifier("GOOGL");
 
-        Map<AssetIdentifier, Money> prices = Map.of(
-                aapl, new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
-                googl, new Money(BigDecimal.valueOf(2800), ValidatedCurrency.of("USD")));
+        MarketAssetQuote applQuote = new MarketAssetQuote(
+                aapl, 
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")), 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                Instant.now(), 
+                "FMP");
+
+        MarketAssetQuote googlQuote = new MarketAssetQuote(
+            googl,
+            new Money(BigDecimal.valueOf(2800), ValidatedCurrency.of("USD")),
+            null,
+            null,
+            null,
+            null,
+            null, 
+            null, 
+            null, 
+            null, 
+            Instant.now(), 
+            "FMP");
+
+        Map<AssetIdentifier, MarketAssetQuote> prices = Map.of(
+                aapl, applQuote,
+                googl, googlQuote);
 
         Map<String, PriceResponse> response = Map.of(
                 "AAPL", PriceResponse.of("AAPL", BigDecimal.valueOf(150), "USD"),
                 "GOOGL",PriceResponse.of("GOOGL", BigDecimal.valueOf(2800), "USD"));
 
-        when(marketDataService.getBatchPrices(anyList())).thenReturn(prices);
+        when(marketDataService.getBatchQuotes(anyList())).thenReturn(prices);
         when(mapper.toPriceResponseMap(prices)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/prices")
@@ -106,30 +137,28 @@ class MarketDataControllerTest {
         SymbolIdentifier symbolId = new SymbolIdentifier("AAPL");
 
         MarketAssetInfo assetInfo = new MarketAssetInfo(
-            "AAPL",
-            "Apple Inc.",
-            AssetType.STOCK,
-            "NASDAQ",
-            ValidatedCurrency.USD,
-            "Technology",
-            "DESC"
-        );
+                "AAPL",
+                "Apple Inc.",
+                AssetType.STOCK,
+                "NASDAQ",
+                ValidatedCurrency.USD,
+                "Technology",
+                "DESC");
 
         AssetInfoResponse response = new AssetInfoResponse(
-            "AAPL",
-            "Apple Inc.",
-            "STOCK",
-            "USD",
-            "NASDAQ",
-            BigDecimal.valueOf(235.66),
-            "Technology",
-            BigDecimal.TEN,
-            null,
-            null,
-            null,
-            null,
-            "INTERNAL"
-        );
+                "AAPL",
+                "Apple Inc.",
+                "STOCK",
+                "USD",
+                "NASDAQ",
+                BigDecimal.valueOf(235.66),
+                "Technology",
+                BigDecimal.TEN,
+                null,
+                null,
+                null,
+                null,
+                "INTERNAL");
 
         when(marketDataService.getAssetInfo(symbolId))
                 .thenReturn(Optional.of(assetInfo));
@@ -160,33 +189,31 @@ class MarketDataControllerTest {
     void getBatchAssetInfo_success() throws Exception {
         AssetIdentifier aapl = new SymbolIdentifier("AAPL");
 
-        MarketAssetInfo assetInfo =new MarketAssetInfo(
-            "AAPL",
-            "Apple Inc.",
-            AssetType.STOCK,
-            "NASDAQ",
-            ValidatedCurrency.USD,
-            "Technology",
-            "DESC"
-        );
+        MarketAssetInfo assetInfo = new MarketAssetInfo(
+                "AAPL",
+                "Apple Inc.",
+                AssetType.STOCK,
+                "NASDAQ",
+                ValidatedCurrency.USD,
+                "Technology",
+                "DESC");
 
         Map<AssetIdentifier, MarketAssetInfo> serviceResult = Map.of(aapl, assetInfo);
 
         Map<String, AssetInfoResponse> response = Map.of("AAPL", new AssetInfoResponse(
-            "AAPL",
-            "Apple Inc.",
-            "STOCK",
-            "USD",
-            "NASDAQ",
-            BigDecimal.valueOf(235.66),
-            "Technology",
-            BigDecimal.TEN,
-            null,
-            null,
-            null,
-            null,
-            "INTERNAL"
-        ));
+                "AAPL",
+                "Apple Inc.",
+                "STOCK",
+                "USD",
+                "NASDAQ",
+                BigDecimal.valueOf(235.66),
+                "Technology",
+                BigDecimal.TEN,
+                null,
+                null,
+                null,
+                null,
+                "INTERNAL"));
 
         when(marketDataService.getBatchAssetInfo(anyList()))
                 .thenReturn(serviceResult);

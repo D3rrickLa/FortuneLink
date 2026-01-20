@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 
 /**
  * Maps between domain objects and API DTOs for market data.
@@ -25,13 +25,13 @@ public class MarketDataDtoMapper {
     /**
      * Convert domain Price to MarkteDataController API response.
      */
-    public PriceResponse toPriceResponse(String symbol, Money price) {
+    public PriceResponse toPriceResponse(String symbol, MarketAssetQuote quote) {
         return PriceResponse.builder()
                 .symbol(symbol)
-                .price(price.amount())
-                .currency(price.currency().getCode())
+                .price(quote.currentPrice().amount())
+                .currency(quote.currentPrice().currency().getCode())
                 .timestamp(Instant.now())
-                .source("EXTERNAL API") // we need a way to pass info to this
+                .source(quote.source()) // we need a way to pass info to this
                 .build();
     }
 
@@ -39,7 +39,7 @@ public class MarketDataDtoMapper {
      * Convert map of domain Prices to API responses.
      * Used for batch endpoints.
      */
-    public Map<String, PriceResponse> toPriceResponseMap(Map<AssetIdentifier, Money> prices) {
+    public Map<String, PriceResponse> toPriceResponseMap(Map<AssetIdentifier, MarketAssetQuote> prices) {
         return prices.entrySet().stream()
                 .collect(Collectors.toMap(
                         entry -> entry.getKey().getPrimaryId(),
@@ -57,7 +57,7 @@ public class MarketDataDtoMapper {
                 .assetType(assetInfo.getAssetType().toString())
                 .currency(assetInfo.getCurrency().getCode())
                 .exchange(assetInfo.getExchange())
-                // .currentPrice(assetInfo.getCurrentPrice()) /TODO might need to pass another var for this additional info...
+                // .currentPrice(assetInfo.getCurrentPrice()) // TODO might need to pass another var for this additional info...
                 .sector(assetInfo.getSector())
                 // .marketCap(assetInfo.getMarketCap())
                 // .peRatio(assetInfo.getPeRatio())
