@@ -114,10 +114,13 @@ public class PortfolioValuationServiceTest {
                 .lastUpdatedAt(Instant.now())
                 .build();
 
-        // Mock market data service to return current price
-        Money currentPrice = new Money(new BigDecimal("180"), usd);
-        when(marketDataService.getCurrentPrice(appleSymbol)).thenReturn(currentPrice);
-        // when(exchangeRateService.convert(currentPrice, usd));
+        // FIX: Mock getCurrentQuote with an Optional containing the Quote object
+        Money price = new Money(new BigDecimal("180"), usd);
+        MarketAssetQuote quote = new MarketAssetQuote(
+                appleSymbol, price, price, price, price, price,
+                null, null, null, null, Instant.now(), "TEST");
+
+        when(marketDataService.getCurrentQuote(appleSymbol)).thenReturn(Optional.of(quote));
 
         // Act
         Money totalValue = valuationService.calculateTotalValue(portfolio, Instant.now());
@@ -127,11 +130,11 @@ public class PortfolioValuationServiceTest {
         Money expectedValue = new Money(new BigDecimal("2300"), usd);
         assertEquals(expectedValue, totalValue);
 
-        verify(marketDataService, times(1)).getCurrentPrice(appleSymbol);
+        verify(marketDataService, times(1)).getCurrentQuote(appleSymbol);
     }
 
     @Test
-    @DisplayName("Should calculate total portfolio value with single account and single asset")
+    @DisplayName("Should calculate total assets correctly (Single Account/Asset)")
     void calculateTotalAssets_SingleAccountSingleAsset() {
         // Arrange
         MarketIdentifier appleSymbol = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
@@ -168,25 +171,26 @@ public class PortfolioValuationServiceTest {
                 .lastUpdatedAt(Instant.now())
                 .build();
 
-        // Mock market data service to return current price
-        Money currentPrice = new Money(new BigDecimal("180"), usd);
+        // FIX: Mock getCurrentQuote
+        Money price = new Money(new BigDecimal("180"), usd);
+        MarketAssetQuote quote = new MarketAssetQuote(
+                appleSymbol, price, price, price, price, price,
+                null, null, null, null, Instant.now(), "TEST");
 
-        when(marketDataService.getCurrentPrice(appleSymbol)).thenReturn(currentPrice);
-        // IMPORTANT: Return the actual value if converting to the same currency,
-        // or just stub it to return the input amount for this test.
+        when(marketDataService.getCurrentQuote(appleSymbol)).thenReturn(Optional.of(quote));
+
+        // Mock identity conversion (USD to USD)
         when(exchangeRateService.convert(any(Money.class), eq(usd), any(Instant.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0)); // Returns the input Money as is
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        Money totalValue = valuationService.calculateTotalValue(portfolio, evaluationTime); // this was total assets
-                                                                                            // before
+        Money totalValue = valuationService.calculateTotalValue(portfolio, evaluationTime);
 
         // Assert
-        // 10 shares * $180 = $1800 + $500 cash = $2300
         Money expectedValue = new Money(new BigDecimal("2300"), usd);
         assertEquals(expectedValue, totalValue);
 
-        verify(marketDataService, times(1)).getCurrentPrice(appleSymbol);
+        verify(marketDataService, times(1)).getCurrentQuote(appleSymbol);
     }
 
     @Test
