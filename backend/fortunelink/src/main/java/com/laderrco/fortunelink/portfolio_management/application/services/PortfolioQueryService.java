@@ -36,7 +36,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Account
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
-import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
@@ -72,7 +71,6 @@ public class PortfolioQueryService {
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioValuationService portfolioValuationService;
-    private final ExchangeRateService exchangeRateService;
     
     // Mappers
     private final PortfolioMapper portfolioMapper;
@@ -135,11 +133,11 @@ public class PortfolioQueryService {
         List<Transaction> transactions = transactionQueryService.getAllTransactions(criteria);
     
         // Calculate perofrmance metrics 
-        Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio, marketDataService, exchangeRateService);
+        Percentage totalReturn = performanceCalculationService.calculateTotalReturn(portfolio);
         
         Money realizedGains = performanceCalculationService.calculateRealizedGains(portfolio, transactions);
         
-        Money unrealizedGains = performanceCalculationService.calculateUnrealizedGains(portfolio, marketDataService);
+        Money unrealizedGains = performanceCalculationService.calculateUnrealizedGains(portfolio);
         
         Percentage timeWeightedReturn = performanceCalculationService.calculateTimeWeightedReturn(portfolio);
 

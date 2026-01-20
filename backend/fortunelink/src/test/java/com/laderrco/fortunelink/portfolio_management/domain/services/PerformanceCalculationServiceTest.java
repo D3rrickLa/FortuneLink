@@ -69,10 +69,13 @@ class PerformanceCalculationServiceTest {
     @Mock
     private ExchangeRateService exchangeRateService;
 
+    @Mock
+    private PortfolioValuationService portfolioValuationService;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        performanceService = new PerformanceCalculationService();
+        performanceService = new PerformanceCalculationService(marketDataService, exchangeRateService, portfolioValuationService);
         portfolioId1 = PortfolioId.randomId();
         userId1 = UserId.randomId();
         assetId1 = AssetId.randomId();
@@ -113,6 +116,8 @@ class PerformanceCalculationServiceTest {
             when(marketDataService.getCurrentQuote(argThat(id -> id.getPrimaryId().equals("AAPL"))))
                     .thenReturn(Optional.of(currentAaplQuote));
 
+            when(portfolioValuationService.calculateTotalValue(any(), any())).thenReturn(Money.of(2300, "USD"));
+
             // If your service performs currency conversion, mock the exchange service to
             // return the same value
             // (Assuming USD to USD conversion just returns the input)
@@ -120,10 +125,7 @@ class PerformanceCalculationServiceTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             // --- Act ---
-            Percentage totalReturn = performanceService.calculateTotalReturn(
-                    portfolio,
-                    marketDataService,
-                    exchangeRateService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio);
 
             // --- Assert ---
             // Expected 15.00 (0.15 * 100)
@@ -159,6 +161,8 @@ class PerformanceCalculationServiceTest {
             // PortfolioValuationService.java:54 calls
             when(marketDataService.getCurrentQuote(argThat(id -> id.getPrimaryId().equals("AAPL"))))
                     .thenReturn(Optional.of(negativeQuote));
+            when(portfolioValuationService.calculateTotalValue(any(), any())).thenReturn(Money.of(1700, "USD"));
+
 
             // Handle potential currency conversion calls (identity conversion for USD to
             // USD)
@@ -166,10 +170,7 @@ class PerformanceCalculationServiceTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             // --- Act ---
-            Percentage totalReturn = performanceService.calculateTotalReturn(
-                    portfolio,
-                    marketDataService,
-                    exchangeRateService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio);
 
             // --- Assert ---
             // Expected -15.00
@@ -195,8 +196,7 @@ class PerformanceCalculationServiceTest {
                     .build();
 
             // Act
-            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio, marketDataService,
-                    exchangeRateService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio);
 
             // Assert
             assertEquals(Percentage.of(0), totalReturn);
@@ -245,12 +245,11 @@ class PerformanceCalculationServiceTest {
             // 3. Mock exchange rate to return input (CAD to CAD)
             lenient().when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
+            when(portfolioValuationService.calculateTotalValue(any(), any())).thenReturn(Money.of(2900, "CAD"));
+
 
             // --- Act ---
-            Percentage totalReturn = performanceService.calculateTotalReturn(
-                    portfolio,
-                    marketDataService,
-                    exchangeRateService);
+            Percentage totalReturn = performanceService.calculateTotalReturn(portfolio);
 
             // --- Assert ---
             // Invested: $2000 (buy) + $1000 (deposit) - $500 (withdrawal) = $2500
@@ -591,8 +590,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("500"), usd));
 
             // Act
-            Money unrealizedGains = performanceService.calculateUnrealizedGains(
-                    portfolio, marketDataService);
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(portfolio);
 
             // Assert
             // Current value: 50 * $500 = $25,000
@@ -635,8 +633,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("250"), cad));
 
             // Act
-            Money unrealizedGains = performanceService.calculateUnrealizedGains(
-                    portfolio, marketDataService);
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(portfolio);
 
             // Assert
             // Current value: 100 * $250 = $25,000
@@ -694,8 +691,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("140"), usd));
 
             // Act
-            Money unrealizedGains = performanceService.calculateUnrealizedGains(
-                    portfolio, marketDataService);
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(portfolio);
 
             // Assert
             // Google: (100 * $120) - $10,000 = $2,000
@@ -758,8 +754,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("32"), cad));
 
             // Act
-            Money unrealizedGains = performanceService.calculateUnrealizedGains(
-                    portfolio, marketDataService);
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(portfolio);
 
             // Assert
             // TFSA: (100 * $110) - $10,000 = $1,000
@@ -787,8 +782,7 @@ class PerformanceCalculationServiceTest {
                     .build();
 
             // Act
-            Money unrealizedGains = performanceService.calculateUnrealizedGains(
-                    portfolio, marketDataService);
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(portfolio);
 
             // Assert
             assertEquals(Money.ZERO(usd), unrealizedGains);
@@ -829,8 +823,7 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(new Money(new BigDecimal("45000"), usd));
 
             // Act
-            Money unrealizedGains = performanceService.calculateUnrealizedGains(
-                    portfolio, marketDataService);
+            Money unrealizedGains = performanceService.calculateUnrealizedGains(portfolio);
 
             // Assert
             // Current value: 2 * $45,000 = $90,000
@@ -1154,20 +1147,20 @@ class PerformanceCalculationServiceTest {
     public class TestsCADACBMethod {
         @Test
         void calculateSellGainWithACB_shouldReturnZeroWhenPortoflioIsNull() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
 
             // Path 1: Valid portfolio should trigger the (currently unimplemented) ACB
             // logic
-            Money test = service.calculateRealizedGainsCAD_ACB(null, exchangeRateService, List.of());
+            Money test = service.calculateRealizedGainsCAD_ACB(null, List.of());
             assertEquals(Money.ZERO("CAD"), test);
         }
 
         @Test
         @DisplayName("Should calculate simple ACB gain for two buys and one sell")
         void testCalculateRealizedGainsCAD_ACB_Success() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1189,7 +1182,7 @@ class PerformanceCalculationServiceTest {
 
             when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class))).thenAnswer(
                     invocation -> invocation.getArgument(0));
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             assertEquals(new BigDecimal("100.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
             assertEquals(ValidatedCurrency.CAD, result.currency());
@@ -1198,8 +1191,8 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("Should ignore cash-only transactions like Fees or Interest")
         void testCalculateACB_IgnoresCashEvents() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1220,7 +1213,7 @@ class PerformanceCalculationServiceTest {
                     invocation -> invocation.getArgument(0));
 
             // Act
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             // Assert: The fee should not have affected the gain or cost base calculation
             assertEquals(BigDecimal.ZERO.setScale(Precision.getMoneyPrecision()), result.amount());
@@ -1234,8 +1227,8 @@ class PerformanceCalculationServiceTest {
             // 3. Sell 10 shares at $110 ($1100 proceeds)
             // Expected Gain: $1100 - $1050 = $50 (instead of $100)
 
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1255,15 +1248,15 @@ class PerformanceCalculationServiceTest {
                     invocation -> invocation.getArgument(0));
 
             // Act
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
             assertEquals(new BigDecimal("50.00").setScale(Precision.getMoneyPrecision()), result.amount());
         }
 
         @Test
         @DisplayName("Should handle ROC: reduce cost base and trigger gain if ACB goes negative")
         void testCalculateRealizedGainsCAD_ACB_ReturnOfCapital() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1281,7 +1274,7 @@ class PerformanceCalculationServiceTest {
 
             when(exchangeRateService.convert(any(), any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             // Assert: The gain should be exactly the $100 that pushed the ACB below zero
             assertEquals(new BigDecimal("100.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
@@ -1290,8 +1283,8 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("Should increase ACB only when Dividend includes reinvested shares (DRIP)")
         void testCalculateRealizedGainsCAD_ACB_DividendDrip() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1318,7 +1311,7 @@ class PerformanceCalculationServiceTest {
 
             when(exchangeRateService.convert(any(), any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             // Total Cost: 1000 + 110 = 1110. Sell Proceeds: 11 * 120 = 1320. Gain = 1320 -
             // 1110 = 210.
@@ -1328,8 +1321,8 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("Should handle TRANSFER_OUT (decreases cost/shares without affecting gain)")
         void testTransferOut_BranchCoverage() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1346,7 +1339,7 @@ class PerformanceCalculationServiceTest {
                             new BigDecimal("5"), Money.of(100, "CAD"), null, VALID_DATE, "Buy"));
 
             when(exchangeRateService.convert(any(), any())).thenAnswer(inv -> inv.getArgument(0));
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             // Assert: Realized gain stays $0 because TRANSFER_OUT is not a taxable 'SELL'
             assertEquals(0, BigDecimal.ZERO.compareTo(result.amount()));
@@ -1355,8 +1348,8 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("Should handle 0 shares edge case (avoids Division by Zero)")
         void testZeroShares_BranchCoverage() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1371,7 +1364,7 @@ class PerformanceCalculationServiceTest {
                     new Transaction(VALID_ID, VAL_ACCOUNT_ID, TransactionType.SELL, VALID_ASSET, new BigDecimal("5"),
                             Money.of(100, "CAD"), null, VALID_DATE, "Buy"));
 
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             // Assert: Code doesn't crash, returns $0 gain
             assertEquals(0, BigDecimal.ZERO.compareTo(result.amount()));
@@ -1380,8 +1373,8 @@ class PerformanceCalculationServiceTest {
         @Test
         @DisplayName("ROC Scenario A: Reduce ACB but stay positive")
         void testROC_ReducesCost() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1400,15 +1393,15 @@ class PerformanceCalculationServiceTest {
                     new Transaction(VALID_ID, VAL_ACCOUNT_ID, TransactionType.RETURN_OF_CAPITAL, VALID_ASSET,
                             new BigDecimal("0"), Money.of(400, "CAD"), null, VALID_DATE, "Buy"));
 
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
             assertEquals(0, BigDecimal.ZERO.compareTo(result.amount()));
         }
 
         @Test
         @DisplayName("ROC Scenario B: Negative ACB triggers Capital Gain")
         void testROC_TriggersGain() {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1428,15 +1421,15 @@ class PerformanceCalculationServiceTest {
 
             );
 
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
             assertEquals(new BigDecimal("200.00"), result.amount().setScale(2, RoundingMode.HALF_UP));
         }
 
         @Test
         @DisplayName("Dividend Branch Coverage: Success and Failure paths")
         void testDividend_Branches() throws Exception, IllegalAccessException {
-            PerformanceCalculationService service = new PerformanceCalculationService();
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
+            PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
@@ -1470,7 +1463,7 @@ class PerformanceCalculationServiceTest {
                             new BigDecimal("1"), Money.of(120, "CAD"), // Use 120 to see a clear $10 gain
                             null, SELL_DATE, "Sell") // Use SELL_DATE
             );
-            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, exchangeRateService, txs);
+            Money result = service.calculateRealizedGainsCAD_ACB(portfolio, txs);
 
             // Total Cost = $100 (from dripTx). Sell = $110. Gain = $10.
             // If Case 2 or 3 had run, the cost would be higher and gain lower.
