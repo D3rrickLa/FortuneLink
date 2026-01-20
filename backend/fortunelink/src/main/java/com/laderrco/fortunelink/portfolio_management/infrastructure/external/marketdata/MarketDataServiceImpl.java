@@ -15,10 +15,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.MarketDataMapper;
@@ -167,22 +165,6 @@ public class MarketDataServiceImpl implements MarketDataService {
         MarketAssetInfo info = mapper.toAssetInfo(providerInfo.get());
         log.debug("Retrieved asset info for {}: {}", identifier.getPrimaryId(), info.getName());
         return Optional.of(info);
-    }
-
-    @Override
-    public Optional<MarketAssetInfo> getAssetInfo(String symbol) {
-        // Right now the this is being used only in the PortfolioApplicationService
-        // specifically the record buy, sell, and divivdend methods. will build
-        // a marktet identifier
-
-        AssetIdentifier marketIdentifier = new MarketIdentifier(
-                symbol,
-                null,
-                AssetType.STOCK, // because we don't know if this is a stock or etf, default to stock
-                "GetAssetInfoItem",
-                "UNKNOWN UOT",
-                null);
-        return getAssetInfo(marketIdentifier);
     }
 
     /**

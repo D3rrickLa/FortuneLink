@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.web.control
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -146,7 +145,7 @@ class MarketDataControllerTest {
 
     @Test
     void getAssetInfo_notFound() throws Exception {
-        when(marketDataService.getAssetInfo(anyString()))
+        when(marketDataService.getAssetInfo(any(SymbolIdentifier.class)))
                 .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/market-data/asset-info/UNKNOWN"))

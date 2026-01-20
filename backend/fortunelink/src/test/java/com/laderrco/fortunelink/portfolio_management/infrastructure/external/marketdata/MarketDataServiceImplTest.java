@@ -35,6 +35,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.MarketDataMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderAssetInfo;
@@ -187,7 +188,7 @@ class MarketDataServiceImplTest {
         when(mapper.toAssetInfo(providerInfo)).thenReturn(expectedInfo);
 
         // When
-        Optional<MarketAssetInfo> result = service.getAssetInfo(rawSymbol);
+        Optional<MarketAssetInfo> result = service.getAssetInfo(SymbolIdentifier.of("MSFT"));
 
         // Then
         assertThat(result).isPresent().contains(expectedInfo);

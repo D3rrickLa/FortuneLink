@@ -9,24 +9,20 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-import lombok.Builder;
-import lombok.ToString;
-
-@ToString
-@Builder // TODO: remove this and implement your own
 public class Asset {
     private final AssetId assetId;
     private final AssetIdentifier assetIdentifier;
     private final ValidatedCurrency currency; // the currency the asset is listed in
     private BigDecimal quantity;
-    private Money costBasis; // total cost of all purchaes (feed included) E.i (pricePerUnit * quantity) + fees
+    private Money costBasis; // total cost of all purchaes (feed included) E.i (pricePerUnit * quantity) +
+                             // fees
 
     private final Instant acquiredOn;
     private Instant lastSystemInteraction;
 
     private Asset(AssetId assetId, AssetIdentifier assetIdentifier, ValidatedCurrency currency,
             BigDecimal quantity, Money costBasis, Instant acquiredOn, Instant lastSystemInteraction) {
-        
+
         Objects.requireNonNull(assetId);
         Objects.requireNonNull(assetIdentifier);
         Objects.requireNonNull(currency);
@@ -44,63 +40,60 @@ public class Asset {
         this.lastSystemInteraction = lastSystemInteraction;
     }
 
-    // RECONSTITUTION: Used by the REpo to restore state
-    public static Asset reconstitute(AssetId id, AssetIdentifier identifier, String currencyCode, BigDecimal quantity, 
-        BigDecimal cbAmount, String cbCurrency, Instant acquiredOn, Instant lastInteraction
-    ) {
+    // RECONSTITUTION: Used by the repo to restore state
+    public static Asset reconstitute(AssetId id, AssetIdentifier identifier, String currencyCode, BigDecimal quantity,
+            BigDecimal cbAmount, String cbCurrency, Instant acquiredOn, Instant lastInteraction) {
         Money recoCbMoney = new Money(cbAmount, ValidatedCurrency.of(cbCurrency));
-        return new Asset(id, identifier, ValidatedCurrency.of(currencyCode), quantity, recoCbMoney, acquiredOn, lastInteraction);
+        return new Asset(id, identifier, ValidatedCurrency.of(currencyCode), quantity, recoCbMoney, acquiredOn,
+                lastInteraction);
     }
 
     // package-private, only Account can create
     Asset(AssetId assetId, AssetIdentifier assetIdentifier, BigDecimal quantity, Money costBasis, Instant acquiredOn) {
         this(
-            assetId,
-            assetIdentifier,
-            costBasis.currency(),
-            quantity,
-            costBasis,
-            acquiredOn,
-            acquiredOn
-        );
+                assetId,
+                assetIdentifier,
+                costBasis.currency(),
+                quantity,
+                costBasis,
+                acquiredOn,
+                acquiredOn);
     }
 
     // MUTATION METHODS (package-private - only Portfolio can call) //
     void addQuantity(BigDecimal additionalQuantity) {
         Objects.requireNonNull(additionalQuantity, "Quantity cannot be null");
-        
+
         this.quantity = this.quantity.add(additionalQuantity);
         updateMetadata();
     }
 
     void reduceQuantity(BigDecimal quantityToRemove) {
         Objects.requireNonNull(quantityToRemove, "Quantity cannot be null");
-        
+
         BigDecimal newQuantity = this.quantity.subtract(quantityToRemove);
 
         if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException(
-                "Cannot remove " + quantityToRemove + " from position of " + this.quantity
-            );
+                    "Cannot remove " + quantityToRemove + " from position of " + this.quantity);
         }
-        
+
         this.quantity = newQuantity;
         updateMetadata();
     }
 
     void updateCostBasis(Money newCostBasis) {
         Objects.requireNonNull(newCostBasis, "Cost basis cannot be null");
-        
+
         if (!newCostBasis.currency().equals(this.currency)) {
             throw new IllegalArgumentException(
-                "Cost basis currency must match asset base currency"
-            );
+                    "Cost basis currency must match asset base currency");
         }
 
         if (newCostBasis.amount().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Cost basis cannot be negative");
         }
-        
+
         this.costBasis = newCostBasis;
         updateMetadata();
     }
@@ -145,18 +138,19 @@ public class Asset {
     }
 
     public Money calculateCurrentValue(Money currentPrice) {
-        Objects.requireNonNull(currentPrice, "Price cannot be null"); 
-        
+        Objects.requireNonNull(currentPrice, "Price cannot be null");
+
         if (!currentPrice.currency().equals(this.currency)) {
-            throw new IllegalArgumentException("Price currency " + currentPrice.currency() + " does not match asset currency " + this.currency);
+            throw new IllegalArgumentException(
+                    "Price currency " + currentPrice.currency() + " does not match asset currency " + this.currency);
         }
-  
+
         return currentPrice.multiply(quantity);
     }
 
     public Money calculateUnrealizedGainLoss(Money currentPrice) {
         Objects.requireNonNull(currentPrice, "Price cannot be null");
-        
+
         Money currentValue = calculateCurrentValue(currentPrice);
         return currentValue.subtract(costBasis);
     }
@@ -169,5 +163,96 @@ public class Asset {
         lastSystemInteraction = Instant.now();
     }
 
+    @Override
+    public String toString() {
+        return "Asset{" +
+                "assetId=" + assetId +
+                ", assetIdentifier=" + assetIdentifier +
+                ", currency=" + currency +
+                ", quantity=" + quantity +
+                ", costBasis=" + costBasis +
+                ", acquiredOn=" + acquiredOn +
+                ", lastSystemInteraction=" + lastSystemInteraction +
+                '}';
+    }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (!(o instanceof Asset asset))
+            return false;
+        return assetId.equals(asset.assetId);
+    }
+
+    @Override
+    public int hashCode() {
+        return assetId.hashCode();
+    }
+
+    /* -------------------- Builder -------------------- */
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+
+        private AssetId assetId;
+        private AssetIdentifier assetIdentifier;
+        private ValidatedCurrency currency;
+        private BigDecimal quantity;
+        private Money costBasis;
+        private Instant acquiredOn;
+        private Instant lastSystemInteraction;
+
+        private Builder() {
+        }
+
+        public Builder assetId(AssetId assetId) {
+            this.assetId = assetId;
+            return this;
+        }
+
+        public Builder assetIdentifier(AssetIdentifier assetIdentifier) {
+            this.assetIdentifier = assetIdentifier;
+            return this;
+        }
+
+        public Builder currency(ValidatedCurrency currency) {
+            this.currency = currency;
+            return this;
+        }
+
+        public Builder quantity(BigDecimal quantity) {
+            this.quantity = quantity;
+            return this;
+        }
+
+        public Builder costBasis(Money costBasis) {
+            this.costBasis = costBasis;
+            return this;
+        }
+
+        public Builder acquiredOn(Instant acquiredOn) {
+            this.acquiredOn = acquiredOn;
+            return this;
+        }
+
+        public Builder lastSystemInteraction(Instant lastSystemInteraction) {
+            this.lastSystemInteraction = lastSystemInteraction;
+            return this;
+        }
+
+        public Asset build() {
+            return new Asset(
+                    assetId,
+                    assetIdentifier,
+                    currency,
+                    quantity,
+                    costBasis,
+                    acquiredOn,
+                    lastSystemInteraction);
+        }
+    }
 }

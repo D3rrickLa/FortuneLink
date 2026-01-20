@@ -6,7 +6,9 @@ import java.util.Objects;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
-// AssetInfo = WHAT the asset IS (static metadata)
+/**
+ * This represents what the Asset Is, immutable values
+ */
 public class MarketAssetInfo {
     private final String symbol;
     private final String name;

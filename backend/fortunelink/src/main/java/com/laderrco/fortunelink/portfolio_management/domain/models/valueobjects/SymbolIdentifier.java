@@ -2,7 +2,17 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 
-// TODO: replace the current imp in the application service with this so we can get ride of the infra mapper
+/**
+ * This is NOT an input like MarketIdnetifier or CyrptoIdentifier, all this does is transfer data to
+ * the proper form
+ * 
+ * If we treat this as an 'Identity', we will be too abstracted causing lots of problems
+ * 
+ * this is juse a 'please user give me a symbol' app input
+ * 
+ * We will wnatto map the symbo lto a market or crypto identifier some time later for caching
+ * and persistance
+ */
 public record SymbolIdentifier(String symbol) implements AssetIdentifier {
 
     public static SymbolIdentifier of(String symbol) {

@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.mock;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,13 +19,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.InvalidQuantityException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 public class AssetTest {
-    
+
     private AssetId assetId;
     private AssetIdentifier assetIdentifier;
     private ValidatedCurrency currency;
@@ -49,12 +53,11 @@ public class AssetTest {
         @DisplayName("Should create valid asset with all required fields")
         void shouldCreateValidAsset() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             assertNotNull(asset);
             assertEquals(assetId, asset.getAssetId());
@@ -69,14 +72,13 @@ public class AssetTest {
         @DisplayName("Should derive currency from cost basis")
         void shouldDeriveCurrencyFromCostBasis() {
             Money cadCostBasis = Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.CAD);
-            
+
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                quantity,
-                cadCostBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    quantity,
+                    cadCostBasis,
+                    acquiredOn);
 
             assertEquals(ValidatedCurrency.CAD, asset.getCurrency());
         }
@@ -85,12 +87,11 @@ public class AssetTest {
         @DisplayName("Should set acquiredOn as lastSystemInteraction initially")
         void shouldSetAcquiredOnAsLastSystemInteraction() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             assertEquals(acquiredOn, asset.getLastSystemInteraction());
         }
@@ -98,71 +99,56 @@ public class AssetTest {
         @Test
         @DisplayName("Should throw NullPointerException when assetId is null")
         void shouldThrowExceptionWhenAssetIdIsNull() {
-            assertThrows(NullPointerException.class, () -> 
-                new Asset(
+            assertThrows(NullPointerException.class, () -> new Asset(
                     null,
                     assetIdentifier,
                     quantity,
                     costBasis,
-                    acquiredOn
-                )
-            );
+                    acquiredOn));
         }
 
         @Test
         @DisplayName("Should throw NullPointerException when assetIdentifier is null")
         void shouldThrowExceptionWhenAssetIdentifierIsNull() {
-            assertThrows(NullPointerException.class, () -> 
-                new Asset(
+            assertThrows(NullPointerException.class, () -> new Asset(
                     assetId,
                     null,
                     quantity,
                     costBasis,
-                    acquiredOn
-                )
-            );
+                    acquiredOn));
         }
 
         @Test
         @DisplayName("Should throw NullPointerException when quantity is null")
         void shouldThrowExceptionWhenQuantityIsNull() {
-            assertThrows(NullPointerException.class, () -> 
-                new Asset(
+            assertThrows(NullPointerException.class, () -> new Asset(
                     assetId,
                     assetIdentifier,
                     null,
                     costBasis,
-                    acquiredOn
-                )
-            );
+                    acquiredOn));
         }
 
         @Test
         @DisplayName("Should throw NullPointerException when costBasis is null")
         void shouldThrowExceptionWhenCostBasisIsNull() {
-            assertThrows(NullPointerException.class, () -> 
-                new Asset(
+            assertThrows(NullPointerException.class, () -> new Asset(
                     assetId,
                     assetIdentifier,
                     quantity,
                     null,
-                    acquiredOn
-                )
-            );
+                    acquiredOn));
         }
 
         @Test
         @DisplayName("Should throw NullPointerException when acquiredOn is null")
         void shouldThrowExceptionWhenAcquiredOnIsNull() {
-            assertThrows(NullPointerException.class, () -> 
-                new Asset(
+            assertThrows(NullPointerException.class, () -> new Asset(
                     assetId,
                     assetIdentifier,
                     quantity,
                     costBasis,
-                    null
-                )
-            );
+                    null));
         }
     }
 
@@ -174,12 +160,11 @@ public class AssetTest {
         @DisplayName("Should increase quantity when adding positive amount")
         void shouldIncreaseQuantity() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             asset.addQuantity(BigDecimal.valueOf(50));
 
@@ -191,12 +176,11 @@ public class AssetTest {
         @DisplayName("Should decrease quantity when adding negative amount")
         void shouldDecreaseQuantity() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             asset.addQuantity(BigDecimal.valueOf(-30));
 
@@ -207,12 +191,11 @@ public class AssetTest {
         @DisplayName("Should handle zero adjustment")
         void shouldHandleZeroAdjustment() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             asset.addQuantity(BigDecimal.ZERO);
 
@@ -223,35 +206,31 @@ public class AssetTest {
         @DisplayName("Should throw NullPointerException when adjustment is null")
         void shouldThrowExceptionWhenAdjustmentIsNull() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
-            assertThrows(NullPointerException.class, () -> 
-                asset.addQuantity(null)
-            );
+            assertThrows(NullPointerException.class, () -> asset.addQuantity(null));
         }
 
         @Test
         @DisplayName("Should update metadata after adjustment")
         void shouldUpdateMetadataAfterAdjustment() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Instant initialInteraction = asset.getLastSystemInteraction();
 
             asset.addQuantity(BigDecimal.TEN);
 
-            assertTrue(asset.getLastSystemInteraction().isAfter(initialInteraction) || 
-                       asset.getLastSystemInteraction().equals(initialInteraction));
+            assertTrue(asset.getLastSystemInteraction().isAfter(initialInteraction) ||
+                    asset.getLastSystemInteraction().equals(initialInteraction));
         }
     }
 
@@ -263,13 +242,12 @@ public class AssetTest {
         @DisplayName("Should reduce quantity when amount is valid")
         void shouldReduceQuantity() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             asset.reduceQuantity(BigDecimal.valueOf(30));
 
@@ -280,13 +258,12 @@ public class AssetTest {
         @DisplayName("Should allow reducing to zero")
         void shouldAllowReducingToZero() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             asset.reduceQuantity(BigDecimal.valueOf(100));
 
@@ -298,18 +275,16 @@ public class AssetTest {
         @DisplayName("Should throw exception when reducing below zero")
         void shouldThrowExceptionWhenReducingBelowZero() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> asset.reduceQuantity(BigDecimal.valueOf(150))
-            );
+                    IllegalStateException.class,
+                    () -> asset.reduceQuantity(BigDecimal.valueOf(150)));
 
             assertTrue(exception.getMessage().contains("Cannot remove"));
         }
@@ -318,29 +293,25 @@ public class AssetTest {
         @DisplayName("Should throw NullPointerException when reduction amount is null")
         void shouldThrowExceptionWhenReductionIsNull() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
-            assertThrows(NullPointerException.class, () -> 
-                asset.reduceQuantity(null)
-            );
+            assertThrows(NullPointerException.class, () -> asset.reduceQuantity(null));
         }
 
         @Test
         @DisplayName("Should update metadata after reduction")
         void shouldUpdateMetadataAfterReduction() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             asset.reduceQuantity(BigDecimal.valueOf(20));
 
@@ -356,13 +327,12 @@ public class AssetTest {
         @DisplayName("Should update cost basis when valid")
         void shouldUpdateCostBasis() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Money newCostBasis = Money.of(BigDecimal.valueOf(6000), ValidatedCurrency.USD);
             asset.updateCostBasis(newCostBasis);
@@ -374,20 +344,18 @@ public class AssetTest {
         @DisplayName("Should throw exception when cost basis currency mismatches")
         void shouldThrowExceptionWhenCurrencyMismatches() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Money cadCostBasis = Money.of(BigDecimal.valueOf(6000), ValidatedCurrency.CAD);
 
             IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> asset.updateCostBasis(cadCostBasis)
-            );
+                    IllegalArgumentException.class,
+                    () -> asset.updateCostBasis(cadCostBasis));
 
             assertTrue(exception.getMessage().contains("currency must match"));
         }
@@ -396,20 +364,18 @@ public class AssetTest {
         @DisplayName("Should throw exception when cost basis is negative")
         void shouldThrowExceptionWhenCostBasisIsNegative() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Money negativeCostBasis = Money.of(BigDecimal.valueOf(-1000), ValidatedCurrency.USD);
 
             IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> asset.updateCostBasis(negativeCostBasis)
-            );
+                    IllegalArgumentException.class,
+                    () -> asset.updateCostBasis(negativeCostBasis));
 
             assertTrue(exception.getMessage().contains("cannot be negative"));
         }
@@ -418,33 +384,29 @@ public class AssetTest {
         @DisplayName("Should throw NullPointerException when cost basis is null")
         void shouldThrowExceptionWhenCostBasisIsNull() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
 
-            assertThrows(NullPointerException.class, () -> 
-                asset.updateCostBasis(null)
-            );
+                    quantity,
+                    costBasis,
+                    acquiredOn);
+
+            assertThrows(NullPointerException.class, () -> asset.updateCostBasis(null));
         }
 
         @Test
         @DisplayName("Should allow zero cost basis")
         void shouldAllowZeroCostBasis() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Money zeroCostBasis = Money.of(BigDecimal.ZERO, ValidatedCurrency.USD);
-            
+
             assertDoesNotThrow(() -> asset.updateCostBasis(zeroCostBasis));
             assertEquals(zeroCostBasis, asset.getCostBasis());
         }
@@ -453,16 +415,15 @@ public class AssetTest {
         @DisplayName("Should update metadata after cost basis change")
         void shouldUpdateMetadataAfterCostBasisChange() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Money newCostBasis = Money.of(BigDecimal.valueOf(7000), ValidatedCurrency.USD);
-            
+
             asset.updateCostBasis(newCostBasis);
 
             assertTrue(asset.getLastSystemInteraction().isAfter(acquiredOn));
@@ -477,13 +438,12 @@ public class AssetTest {
         @DisplayName("Should calculate cost per unit correctly")
         void shouldCalculateCostPerUnit() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
+                    acquiredOn);
 
             Money costPerUnit = asset.getCostPerUnit();
 
@@ -495,13 +455,12 @@ public class AssetTest {
         @DisplayName("Should handle fractional quantities")
         void shouldHandleFractionalQuantities() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(33.333),
-                Money.of(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(33.333),
+                    Money.of(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
+                    acquiredOn);
 
             Money costPerUnit = asset.getCostPerUnit();
 
@@ -513,13 +472,12 @@ public class AssetTest {
         @DisplayName("Should return zero when quantity is zero")
         void shouldReturnZeroWhenQuantityIsZero() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.ZERO,
-                Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.ZERO,
+                    Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
+                    acquiredOn);
 
             Money costPerUnit = asset.getCostPerUnit();
 
@@ -535,13 +493,12 @@ public class AssetTest {
         @DisplayName("Should calculate current value correctly")
         void shouldCalculateCurrentValue() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             Money currentPrice = Money.of(BigDecimal.valueOf(60), ValidatedCurrency.USD);
             Money currentValue = asset.calculateCurrentValue(currentPrice);
@@ -553,13 +510,12 @@ public class AssetTest {
         @DisplayName("Should handle zero quantity")
         void shouldHandleZeroQuantity() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.ZERO,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.ZERO,
+                    costBasis,
+                    acquiredOn);
 
             Money currentPrice = Money.of(BigDecimal.valueOf(60), ValidatedCurrency.USD);
             Money currentValue = asset.calculateCurrentValue(currentPrice);
@@ -571,20 +527,18 @@ public class AssetTest {
         @DisplayName("Should throw exception when price currency mismatches")
         void shouldThrowExceptionWhenPriceCurrencyMismatches() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Money cadPrice = Money.of(BigDecimal.valueOf(60), ValidatedCurrency.CAD);
 
             IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> asset.calculateCurrentValue(cadPrice)
-            );
+                    IllegalArgumentException.class,
+                    () -> asset.calculateCurrentValue(cadPrice));
 
             assertTrue(exception.getMessage().contains("currency"));
             assertTrue(exception.getMessage().contains("does not match"));
@@ -594,30 +548,26 @@ public class AssetTest {
         @DisplayName("Should throw NullPointerException when price is null")
         void shouldThrowExceptionWhenPriceIsNull() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
 
-            assertThrows(NullPointerException.class, () -> 
-                asset.calculateCurrentValue(null)
-            );
+                    quantity,
+                    costBasis,
+                    acquiredOn);
+
+            assertThrows(NullPointerException.class, () -> asset.calculateCurrentValue(null));
         }
 
         @Test
         @DisplayName("Should handle fractional prices")
         void shouldHandleFractionalPrices() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             Money fractionalPrice = Money.of(BigDecimal.valueOf(55.75), ValidatedCurrency.USD);
             Money currentValue = asset.calculateCurrentValue(fractionalPrice);
@@ -634,13 +584,12 @@ public class AssetTest {
         @DisplayName("Should calculate unrealized gain")
         void shouldCalculateUnrealizedGain() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
+                    acquiredOn);
 
             Money currentPrice = Money.of(BigDecimal.valueOf(60), ValidatedCurrency.USD);
             Money unrealizedGain = asset.calculateUnrealizedGainLoss(currentPrice);
@@ -655,13 +604,12 @@ public class AssetTest {
         @DisplayName("Should calculate unrealized loss")
         void shouldCalculateUnrealizedLoss() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
+                    acquiredOn);
 
             Money currentPrice = Money.of(BigDecimal.valueOf(40), ValidatedCurrency.USD);
             Money unrealizedLoss = asset.calculateUnrealizedGainLoss(currentPrice);
@@ -676,13 +624,12 @@ public class AssetTest {
         @DisplayName("Should return zero when no gain or loss")
         void shouldReturnZeroWhenNoGainOrLoss() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    Money.of(BigDecimal.valueOf(5000), ValidatedCurrency.USD),
+                    acquiredOn);
 
             Money currentPrice = Money.of(BigDecimal.valueOf(50), ValidatedCurrency.USD);
             Money unrealizedGain = asset.calculateUnrealizedGainLoss(currentPrice);
@@ -694,17 +641,14 @@ public class AssetTest {
         @DisplayName("Should throw NullPointerException when price is null")
         void shouldThrowExceptionWhenPriceIsNull() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
 
-            assertThrows(NullPointerException.class, () -> 
-                asset.calculateUnrealizedGainLoss(null)
-            );
+                    quantity,
+                    costBasis,
+                    acquiredOn);
+
+            assertThrows(NullPointerException.class, () -> asset.calculateUnrealizedGainLoss(null));
         }
     }
 
@@ -716,13 +660,12 @@ public class AssetTest {
         @DisplayName("Should return true when quantity is zero")
         void shouldReturnTrueWhenQuantityIsZero() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.ZERO,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.ZERO,
+                    costBasis,
+                    acquiredOn);
 
             assertTrue(asset.hasZeroQuantity());
         }
@@ -731,13 +674,12 @@ public class AssetTest {
         @DisplayName("Should return false when quantity is positive")
         void shouldReturnFalseWhenQuantityIsPositive() {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             assertFalse(asset.hasZeroQuantity());
         }
@@ -745,21 +687,98 @@ public class AssetTest {
         @Test
         @DisplayName("Should return false when quantity is negative")
         void shouldReturnFalseWhenQuantityIsNegative() {
-            // Note: This tests the method behavior, though negative quantities 
+            // Note: This tests the method behavior, though negative quantities
             // shouldn't normally occur due to reduceQuantity validation
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                BigDecimal.valueOf(100),
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    BigDecimal.valueOf(100),
+                    costBasis,
+                    acquiredOn);
 
             // Artificially create negative through addQuantity
             asset.addQuantity(BigDecimal.valueOf(-150));
 
             assertFalse(asset.hasZeroQuantity());
+        }
+
+        private Asset createAsset(AssetId assetId) {
+            return Asset.builder()
+                    .assetId(assetId)
+                    .assetIdentifier(SymbolIdentifier.of("BTC"))
+                    .currency(ValidatedCurrency.CAD)
+                    .quantity(BigDecimal.ONE)
+                    .costBasis(Money.of(BigDecimal.valueOf(50000), ValidatedCurrency.CAD))
+                    .acquiredOn(Instant.parse("2023-01-01T00:00:00Z"))
+                    .lastSystemInteraction(Instant.parse("2023-01-02T00:00:00Z"))
+                    .build();
+        }
+
+        @Test
+        @DisplayName("toString contains all significant fields")
+        void toStringContainsFields() {
+            AssetId assetId = new AssetId(UUID.randomUUID());
+            Asset asset = createAsset(assetId);
+
+            String toString = asset.toString();
+
+            assertTrue(toString.contains("Asset{"));
+            assertTrue(toString.contains(assetId.toString()));
+            assertTrue(toString.contains("BTC"));
+            assertTrue(toString.contains("quantity=1"));
+            assertTrue(toString.contains("costBasis"));
+            assertTrue(toString.contains("acquiredOn"));
+            assertTrue(toString.contains("lastSystemInteraction"));
+        }
+
+        @Test
+        @DisplayName("Assets with same assetId are equal")
+        void assetsWithSameIdAreEqual() {
+            AssetId assetId = new AssetId(UUID.randomUUID());
+
+            Asset asset1 = createAsset(assetId);
+            Asset asset2 = createAsset(assetId);
+
+            assertEquals(asset1, asset2);
+        }
+
+        @Test
+        @DisplayName("Assets with different assetIds are not equal")
+        void assetsWithDifferentIdsAreNotEqual() {
+            Asset asset1 = createAsset(new AssetId(UUID.randomUUID()));
+            Asset asset2 = createAsset(new AssetId(UUID.randomUUID()));
+
+            assertNotEquals(asset1, asset2);
+        }
+
+        @Test
+        @DisplayName("hashCode is based only on assetId")
+        void hashCodeIsBasedOnAssetId() {
+            AssetId assetId = new AssetId(UUID.randomUUID());
+
+            Asset asset1 = createAsset(assetId);
+            Asset asset2 = createAsset(assetId);
+
+            assertEquals(asset1.hashCode(), asset2.hashCode());
+        }
+
+        @Test
+        @DisplayName("equals is reflexive, symmetric, and transitive")
+        void equalsContract() {
+            AssetId assetId = new AssetId(UUID.randomUUID());
+
+            Asset a = createAsset(assetId);
+            Asset b = createAsset(assetId);
+            Asset c = createAsset(assetId);
+
+            assertEquals(a, b);
+            assertEquals(b, c);
+            assertEquals(a, c);
+
+            assertEquals(a, a);
+            assertNotEquals(a, null);
+            assertNotEquals(a, new Object());
         }
     }
 
@@ -770,50 +789,113 @@ public class AssetTest {
         // @Test
         // @DisplayName("Should increment version on each mutation")
         // void shouldIncrementVersionOnMutations() {
-        //     Asset asset = new Asset(
-        //         assetId,
-        //         assetIdentifier,
-                
-        //         quantity,
-        //         costBasis,
-        //         acquiredOn
-        //     );
+        // Asset asset = new Asset(
+        // assetId,
+        // assetIdentifier,
 
-        //     assertEquals(1, asset.getVersion());
+        // quantity,
+        // costBasis,
+        // acquiredOn
+        // );
 
-        //     asset.addQuantity(BigDecimal.TEN);
-        //     assertEquals(2, asset.getVersion());
+        // assertEquals(1, asset.getVersion());
 
-        //     asset.reduceQuantity(BigDecimal.ONE);
-        //     assertEquals(3, asset.getVersion());
+        // asset.addQuantity(BigDecimal.TEN);
+        // assertEquals(2, asset.getVersion());
 
-        //     Money newCostBasis = Money.of(BigDecimal.valueOf(6000), ValidatedCurrency.USD);
-        //     asset.updateCostBasis(newCostBasis);
-        //     assertEquals(4, asset.getVersion());
+        // asset.reduceQuantity(BigDecimal.ONE);
+        // assertEquals(3, asset.getVersion());
+
+        // Money newCostBasis = Money.of(BigDecimal.valueOf(6000),
+        // ValidatedCurrency.USD);
+        // asset.updateCostBasis(newCostBasis);
+        // assertEquals(4, asset.getVersion());
         // }
 
         @Test
         @DisplayName("Should update lastSystemInteraction on each mutation")
         void shouldUpdateLastSystemInteractionOnMutations() throws InterruptedException {
             Asset asset = new Asset(
-                assetId,
-                assetIdentifier,
-                
-                quantity,
-                costBasis,
-                acquiredOn
-            );
+                    assetId,
+                    assetIdentifier,
+
+                    quantity,
+                    costBasis,
+                    acquiredOn);
 
             Instant firstInteraction = asset.getLastSystemInteraction();
-            
+
             // Small delay to ensure timestamp difference
             Thread.sleep(10);
-            
+
             asset.addQuantity(BigDecimal.TEN);
             Instant secondInteraction = asset.getLastSystemInteraction();
-            
-            assertTrue(secondInteraction.isAfter(firstInteraction) || 
-                       secondInteraction.equals(firstInteraction));
+
+            assertTrue(secondInteraction.isAfter(firstInteraction) ||
+                    secondInteraction.equals(firstInteraction));
         }
+    }
+
+    @DisplayName("Test the Builder Pattern")
+    public class BuilderTests {
+        @Test
+        @DisplayName("Builder creates Asset with all fields set")
+        void builderCreatesAssetSuccessfully() {
+            AssetId assetId = new AssetId(UUID.randomUUID());
+            AssetIdentifier identifier = SymbolIdentifier.of("BTC");
+            ValidatedCurrency currency = ValidatedCurrency.CAD;
+            BigDecimal quantity = BigDecimal.ONE;
+            Money costBasis = Money.of(50000d, currency.getCode());
+            Instant acquiredOn = Instant.now();
+            Instant lastInteraction = Instant.now();
+
+            Asset asset = Asset.builder()
+                    .assetId(assetId)
+                    .assetIdentifier(identifier)
+                    .currency(currency)
+                    .quantity(quantity)
+                    .costBasis(costBasis)
+                    .acquiredOn(acquiredOn)
+                    .lastSystemInteraction(lastInteraction)
+                    .build();
+
+            assertEquals(assetId, asset.getAssetId());
+            assertEquals(identifier, asset.getAssetIdentifier());
+            assertEquals(currency, asset.getCurrency());
+            assertEquals(quantity, asset.getQuantity());
+            assertEquals(costBasis, asset.getCostBasis());
+            assertEquals(acquiredOn, asset.getAcquiredOn());
+            assertEquals(lastInteraction, asset.getLastSystemInteraction());
+        }
+
+        @Test
+        @DisplayName("Builder throws when required fields are missing")
+        void builderFailsWhenRequiredFieldsMissing() {
+            Asset.Builder builder = Asset.builder();
+
+            assertThrows(
+                    RuntimeException.class,
+                    builder::build,
+                    "Expected validation to fail when required fields are missing");
+        }
+
+        @Test
+        @DisplayName("Builder rejects negative quantity")
+        void builderRejectsNegativeQuantity() {
+            AssetId assetId = new AssetId(UUID.randomUUID());
+            AssetIdentifier identifier = SymbolIdentifier.of("ETH");
+
+            assertThrows(
+                    InvalidQuantityException.class,
+                    () -> Asset.builder()
+                            .assetId(assetId)
+                            .assetIdentifier(identifier)
+                            .currency(ValidatedCurrency.USD)
+                            .quantity(BigDecimal.valueOf(-1))
+                            .costBasis(Money.of(1000, ValidatedCurrency.USD.getCode()))
+                            .acquiredOn(Instant.now())
+                            .build());
+        }
+
     }
 }

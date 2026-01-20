@@ -50,8 +50,6 @@ public interface MarketDataService {
      */
     public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier);    
 
-    public Optional<MarketAssetInfo> getAssetInfo(String symbol);
-
     /**
      * Batch fetch for multiple asset metadata objects.
      *

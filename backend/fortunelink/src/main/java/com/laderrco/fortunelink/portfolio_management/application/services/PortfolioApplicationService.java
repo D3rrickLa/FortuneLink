@@ -48,6 +48,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Transac
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
@@ -97,7 +98,8 @@ public class PortfolioApplicationService {
         }
 
         // 2. Fetch asset information from market data service
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
+        AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
             .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
         // 3. Load portfolio aggregate
@@ -144,7 +146,8 @@ public class PortfolioApplicationService {
             throw new InvalidTransactionException("Invalid sale command", validationResult.errors());
         }
 
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
+        AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
             .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
         Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
@@ -252,7 +255,8 @@ public class PortfolioApplicationService {
 
         Account account = portfolio.getAccount(command.accountId());
 
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(command.symbol())
+        AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
             .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
         // For DRIP: quantity represents shares purchased with the dividend

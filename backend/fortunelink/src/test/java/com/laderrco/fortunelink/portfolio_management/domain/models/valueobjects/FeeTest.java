@@ -192,7 +192,7 @@ public class FeeTest {
                 .isThrownBy(() -> Fee.builder()
                         .feeType(FeeType.COMMISSION)
                         .amountInNativeCurrency(money(-1))
-                        .metadata(Map.of("Description","Negative fee"))
+                        .addMetadata("Description","Negative fee")
                         .exchangeRate(exchangeRate())
                         .feeDate(Instant.now())
                         .build());

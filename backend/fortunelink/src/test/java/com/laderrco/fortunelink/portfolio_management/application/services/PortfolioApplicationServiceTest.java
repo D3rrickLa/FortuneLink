@@ -68,6 +68,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
@@ -176,7 +177,7 @@ class PortfolioApplicationServiceTest {
         void shouldRecordAssetPurchase() {
             // Given
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -186,7 +187,7 @@ class PortfolioApplicationServiceTest {
             // Then
             assertThat(response).isNotNull();
             verify(portfolioRepository).save(any(Portfolio.class));
-            verify(marketDataService).getAssetInfo("AAPL");
+            verify(marketDataService).getAssetInfo(SymbolIdentifier.of("AAPL"));
 
             // Verify portfolio state
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
@@ -217,7 +218,7 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenAssetNotFound() {
             // Given
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.empty());
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.empty());
 
             // When/Then
             assertThatThrownBy(() -> service.recordAssetPurchase(command))
@@ -230,7 +231,7 @@ class PortfolioApplicationServiceTest {
         void shouldThrowExceptionWhenPortfolioNotFound() {
             // Given
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
             // When/Then
@@ -253,7 +254,7 @@ class PortfolioApplicationServiceTest {
                     "Large purchase");
 
             when(commandValidator.validate(largeCommand)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -317,7 +318,7 @@ class PortfolioApplicationServiceTest {
         void shouldRecordAssetSale() {
             // Given
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -361,7 +362,7 @@ class PortfolioApplicationServiceTest {
                     "Large sale");
 
             when(commandValidator.validate(largeCommand)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -409,7 +410,7 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             
             // 4. Mock the service using the SAME symbol
-            when(marketDataService.getAssetInfo(symbol)).thenReturn(Optional.empty());
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.empty());
 
             // 5. Assert the exception
             assertThrows(AssetNotFoundException.class, () -> {
@@ -438,7 +439,7 @@ class PortfolioApplicationServiceTest {
 
             
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(symbol)).thenReturn(Optional.ofNullable(mock(MarketAssetInfo.class)));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.ofNullable(mock(MarketAssetInfo.class)));
             when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
             
 
@@ -633,7 +634,7 @@ class PortfolioApplicationServiceTest {
                     "Dividend");
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -661,7 +662,7 @@ class PortfolioApplicationServiceTest {
                     "DRIP Dividend");
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo("AAPL")).thenReturn(Optional.of(assetInfo));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
