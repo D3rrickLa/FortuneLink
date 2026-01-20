@@ -403,6 +403,6 @@ class MarketDataServiceImplTest {
                 new BigDecimal(price),
                 "USD",
                 LocalDateTime.now(),
-                "YAHOO");
+                null, null, "YAHOO");
     }
 }

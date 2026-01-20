@@ -70,7 +70,7 @@ public class FmpQuoteResponse {
     private BigDecimal yearLow;
 
     @JsonProperty("marketCap")
-    private Long marketCap;
+    private BigDecimal marketCap;
 
     @JsonProperty("priceAvg50")
     private BigDecimal priceAvg50;

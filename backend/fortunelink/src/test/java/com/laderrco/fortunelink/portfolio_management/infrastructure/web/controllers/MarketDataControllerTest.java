@@ -60,7 +60,8 @@ class MarketDataControllerTest {
     void getCurrentPrice_success() throws Exception {
         SymbolIdentifier symbolId = new SymbolIdentifier("AAPL");
         Money price = new Money(BigDecimal.valueOf(150.25), ValidatedCurrency.of("USD"));
-        MarketAssetQuote quote = new MarketAssetQuote(symbolId, price, price, price, price, price, null, null, null, null, Instant.now(), "FMP");
+        MarketAssetQuote quote = new MarketAssetQuote(symbolId, price, price, price, price, price, null, null, null,
+                null, Instant.now(), "FMP");
         PriceResponse response = PriceResponse.of("AAPL", BigDecimal.valueOf(150.25), "USD");
 
         when(marketDataService.getCurrentPrice(symbolId)).thenReturn(price);
@@ -83,32 +84,32 @@ class MarketDataControllerTest {
         AssetIdentifier googl = new SymbolIdentifier("GOOGL");
 
         MarketAssetQuote applQuote = new MarketAssetQuote(
-                aapl, 
-                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")), 
-                null, 
-                null, 
-                null, 
-                null, 
-                null, 
-                null, 
-                null, 
-                null, 
-                Instant.now(), 
+                aapl,
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
                 "FMP");
 
         MarketAssetQuote googlQuote = new MarketAssetQuote(
-            googl,
-            new Money(BigDecimal.valueOf(2800), ValidatedCurrency.of("USD")),
-            null,
-            null,
-            null,
-            null,
-            null, 
-            null, 
-            null, 
-            null, 
-            Instant.now(), 
-            "FMP");
+                googl,
+                new Money(BigDecimal.valueOf(2800), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
 
         Map<AssetIdentifier, MarketAssetQuote> prices = Map.of(
                 aapl, applQuote,
@@ -116,7 +117,7 @@ class MarketDataControllerTest {
 
         Map<String, PriceResponse> response = Map.of(
                 "AAPL", PriceResponse.of("AAPL", BigDecimal.valueOf(150), "USD"),
-                "GOOGL",PriceResponse.of("GOOGL", BigDecimal.valueOf(2800), "USD"));
+                "GOOGL", PriceResponse.of("GOOGL", BigDecimal.valueOf(2800), "USD"));
 
         when(marketDataService.getBatchQuotes(anyList())).thenReturn(prices);
         when(mapper.toPriceResponseMap(prices)).thenReturn(response);
@@ -145,12 +146,27 @@ class MarketDataControllerTest {
                 "Technology",
                 "DESC");
 
+        MarketAssetQuote applQuote = new MarketAssetQuote(
+                symbolId,
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
+
         AssetInfoResponse response = new AssetInfoResponse(
                 "AAPL",
                 "Apple Inc.",
                 "STOCK",
                 "USD",
                 "NASDAQ",
+                null,
                 BigDecimal.valueOf(235.66),
                 "Technology",
                 BigDecimal.TEN,
@@ -158,11 +174,12 @@ class MarketDataControllerTest {
                 null,
                 null,
                 null,
-                "INTERNAL");
+                "INTERNAL",
+                null);
 
         when(marketDataService.getAssetInfo(symbolId))
                 .thenReturn(Optional.of(assetInfo));
-        when(mapper.toAssetInfoResponse(assetInfo)).thenReturn(response);
+        when(mapper.toAssetInfoResponse(assetInfo, applQuote)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/asset-info/AAPL"))
                 .andExpect(status().isOk())
@@ -197,8 +214,21 @@ class MarketDataControllerTest {
                 ValidatedCurrency.USD,
                 "Technology",
                 "DESC");
-
+        MarketAssetQuote applQuote = new MarketAssetQuote(
+                aapl,
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.of("USD")),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "FMP");
         Map<AssetIdentifier, MarketAssetInfo> serviceResult = Map.of(aapl, assetInfo);
+        Map<AssetIdentifier, MarketAssetQuote> serviceResult2 = Map.of(aapl, applQuote);
 
         Map<String, AssetInfoResponse> response = Map.of("AAPL", new AssetInfoResponse(
                 "AAPL",
@@ -206,18 +236,20 @@ class MarketDataControllerTest {
                 "STOCK",
                 "USD",
                 "NASDAQ",
-                BigDecimal.valueOf(235.66),
+                null,
+                 BigDecimal.valueOf(235.66),
                 "Technology",
                 BigDecimal.TEN,
                 null,
                 null,
                 null,
                 null,
-                "INTERNAL"));
+                "INTERNAL", 
+                null));
 
         when(marketDataService.getBatchAssetInfo(anyList()))
                 .thenReturn(serviceResult);
-        when(mapper.toAssetInfoResponseMap(serviceResult))
+        when(mapper.toAssetInfoResponseMap(serviceResult, serviceResult2))
                 .thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/asset-info")

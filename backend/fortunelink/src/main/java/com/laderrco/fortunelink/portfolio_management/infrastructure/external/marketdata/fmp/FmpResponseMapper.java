@@ -33,6 +33,8 @@ public class FmpResponseMapper {
             quoteResponse.getPrice(), 
             inferFromExchange(quoteResponse.getExchange()),
             timestampToLocalDateTime(quoteResponse.getTimestamp()),
+            quoteResponse.getMarketCap(), 
+            quoteResponse.getChangePercentage(), 
             SOURCE
         );
     }

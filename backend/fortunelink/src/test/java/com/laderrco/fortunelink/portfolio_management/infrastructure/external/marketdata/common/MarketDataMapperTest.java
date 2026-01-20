@@ -35,7 +35,7 @@ class MarketDataMapperTest {
     @DisplayName("toMoney: should map valid quote to domain Money object")
     void toMoney_ValidQuote_MapsCorrectly() {
         // Given
-        ProviderQuote quote = new ProviderQuote("AAPL", new BigDecimal("150.00"), "USD", LocalDateTime.now(), "YAHOO");
+        ProviderQuote quote = new ProviderQuote("AAPL", new BigDecimal("150.00"), "USD", LocalDateTime.now(), null, null, "YAHOO");
 
         // When
         Money result = mapper.toMoney(quote);
@@ -54,7 +54,7 @@ class MarketDataMapperTest {
     @DisplayName("toMoney: should handle currency resolution from valid records")
     void toMoney_CurrencyResolution_ReturnsExpected(String inputCurrency, ValidatedCurrency expected) {
         // These inputs are valid strings, so ProviderQuote won't complain
-        ProviderQuote quote = new ProviderQuote("AAPL", BigDecimal.TEN, inputCurrency, LocalDateTime.now(), "TEST");
+        ProviderQuote quote = new ProviderQuote("AAPL", BigDecimal.TEN, inputCurrency, LocalDateTime.now(), null, null,"TEST");
 
         Money result = mapper.toMoney(quote);
 
@@ -84,7 +84,7 @@ class MarketDataMapperTest {
     void toMoney_CurrencyEdgeCases_ReturnsExpected(String inputCurrency, ValidatedCurrency expected) {
         // Use "NULL" string to represent actual null for CsvSource
         String currencyStr = "NULL".equals(inputCurrency) ? null : inputCurrency;
-        ProviderQuote quote = new ProviderQuote("AAPL", BigDecimal.TEN, currencyStr, LocalDateTime.now(), "TEST");
+        ProviderQuote quote = new ProviderQuote("AAPL", BigDecimal.TEN, currencyStr, LocalDateTime.now(), null, null, "TEST");
 
         Money result = mapper.toMoney(quote);
 

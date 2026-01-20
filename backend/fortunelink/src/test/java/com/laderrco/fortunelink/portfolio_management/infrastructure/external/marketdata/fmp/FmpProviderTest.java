@@ -193,7 +193,7 @@ class FmpProviderTest {
         when(fmpApiClient.getBatchQuotes(List.of("AAPL"))).thenReturn(List.of(response));
 
         // Mock the mapper to return a ProviderQuote for the response
-        ProviderQuote providerQuote = new ProviderQuote("AAPL", BigDecimal.TEN, "USD", LocalDateTime.now(), "FMP");
+        ProviderQuote providerQuote = new ProviderQuote("AAPL", BigDecimal.TEN, "USD", LocalDateTime.now(), null, null, "FMP");
         when(mapper.toProviderQuote(response)).thenReturn(providerQuote);
 
         // Act: call the method under test

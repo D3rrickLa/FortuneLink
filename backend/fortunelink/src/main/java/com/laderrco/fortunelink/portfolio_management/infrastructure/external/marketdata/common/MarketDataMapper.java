@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -46,6 +47,10 @@ public class MarketDataMapper {
                 info.description());
     }
 
+    public MarketAssetQuote toAssetQuote(AssetIdentifier assetIdentifier, ProviderQuote quote) {
+        return MarketAssetQuote.fromProvider(assetIdentifier, quote);
+    }
+
     /**
      * 
      * @param symbol
@@ -78,7 +83,8 @@ public class MarketDataMapper {
      * 
      * For MVP with Yahoo, this is identity function.
      * When adding other providers, implement provider-specific transformations.
-     * This is not going to be useful in the near or long future so we are going to just ignore it and unimpl it
+     * This is not going to be useful in the near or long future so we are going to
+     * just ignore it and unimpl it
      */
     public String toProviderSymbol(AssetIdentifier symbol, String providerName) {
         // For Yahoo, use as-is

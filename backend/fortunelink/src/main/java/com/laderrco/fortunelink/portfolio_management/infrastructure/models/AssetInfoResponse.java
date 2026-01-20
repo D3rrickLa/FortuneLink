@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.models;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,9 @@ public class AssetInfoResponse {
 
     @Schema(description = "Full company/asset name", example = "Apple Inc.")
     private String name;
+
+    @Schema(description = "Full descirption of company", example = "Apple Inc. Founded in XYZ...")
+    private String description;
 
     @Schema(description = "Asset type", example = "STOCK", allowableValues = {"STOCK", "ETF", "CRYPTO", "BOND"})
     private String assetType;
@@ -57,4 +61,7 @@ public class AssetInfoResponse {
 
     @Schema(description = "Data source", example = "Yahoo Finance")
     private String source;
+
+    @Schema(description = "Timestamp of data", example = "1234567890")
+    private Instant timestamp;
 }

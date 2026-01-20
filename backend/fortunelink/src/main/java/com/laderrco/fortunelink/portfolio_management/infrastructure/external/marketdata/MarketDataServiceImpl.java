@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
@@ -14,6 +15,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.MarketDataMapper;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.common.ProviderQuote;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import lombok.AllArgsConstructor;
 
@@ -46,55 +48,68 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     private final MarketDataProvider provider;
     private final MarketDataMapper mapper;
-    
+
     @Override
+    @Cacheable(value = "current-prices", key = "#assetIdentifier.cacheKey()", unless = "#result == null")
     public Optional<MarketAssetQuote> getCurrentQuote(AssetIdentifier assetIdentifier) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getCurrentQuote'");
+        log.debug("Fetching current price for symbol: {}", assetIdentifier.getPrimaryId());
+        String providerSymbol = mapper.toProviderSymbol(assetIdentifier, provider.getProviderName());
+
+        Optional<ProviderQuote> providerQuote = provider.fetchCurrentQuote(providerSymbol);
+
+        if (providerQuote.isEmpty()) {
+            log.debug("No quote found for provider symbol {}", providerSymbol);
+            return Optional.empty();
+        }
+
+        return Optional.of(mapper.toAssetQuote(assetIdentifier, providerQuote.get()));
+
     }
+
     @Override
     public Optional<MarketAssetQuote> getHistoricalQuote(AssetIdentifier assetIdentifier, LocalDateTime date) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getHistoricalQuote'");
     }
+
     @Override
     public Map<AssetIdentifier, MarketAssetQuote> getBatchQuotes(List<? extends AssetIdentifier> identifiers) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getBatchQuotes'");
     }
+
     @Override
     public Optional<MarketAssetInfo> getAssetInfo(AssetIdentifier identifier) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAssetInfo'");
     }
+
     @Override
     public Map<AssetIdentifier, MarketAssetInfo> getBatchAssetInfo(List<? extends AssetIdentifier> identifiers) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getBatchAssetInfo'");
     }
+
     @Override
     public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getTradingCurrency'");
     }
+
     @Override
     public boolean isSymbolSupported(AssetIdentifier symbol) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'isSymbolSupported'");
     }
 
-
-    
-
-
-    
     // /**
     //  * Get current price with caching, TTL of 5 min
     //  */
     // @Override
     // @Cacheable(value = "current-prices", key = "#assetIdentifier.getPrimaryId()", unless = "#result == null")
     // public Money getCurrentPrice(AssetIdentifier assetIdentifier) {
-    //     log.debug("Fetching current price for symbol: {}", assetIdentifier.getPrimaryId());
+    //     log.debug("Fetching current price for symbol: {}",
+    //             assetIdentifier.getPrimaryId());
 
     //     // String providerSymbol =
     //     // mapper.toProviderSymbol(assetIdentifier.getPrimaryId(),
@@ -107,7 +122,8 @@ public class MarketDataServiceImpl implements MarketDataService {
 
     //     Money price = mapper.toMoney(quote.get());
 
-    //     log.debug("Retrieved price for {}: {}", assetIdentifier.getPrimaryId(), price);
+    //     log.debug("Retrieved price for {}: {}", assetIdentifier.getPrimaryId(),
+    //             price);
     //     return price;
     // }
 
@@ -119,8 +135,10 @@ public class MarketDataServiceImpl implements MarketDataService {
     //  */
     // @Override
     // @Cacheable(value = "historical-prices", key = "#assetIdentifier.getPrimaryId() + '::' + #dateTime.toString()", unless = "#result == null")
-    // public Money getHistoricalPrice(AssetIdentifier assetIdentifier, LocalDateTime dateTime) {
-    //     log.debug("Fetching historical price for {} at {}", assetIdentifier.getPrimaryId(), dateTime);
+    // public Money getHistoricalPrice(AssetIdentifier assetIdentifier,
+    //         LocalDateTime dateTime) {
+    //     log.debug("Fetching historical price for {} at {}",
+    //             assetIdentifier.getPrimaryId(), dateTime);
 
     //     // NOT NEEDED FOR MVP
     //     // String providerSymbol = mapper.toProviderSymbol(assetIdentifier,
@@ -133,7 +151,8 @@ public class MarketDataServiceImpl implements MarketDataService {
     //     }
 
     //     Money price = mapper.toMoney(quote.get());
-    //     log.debug("Retrieved historical price for {} at {}: {}", assetIdentifier.getPrimaryId(), dateTime, price);
+    //     log.debug("Retrieved historical price for {} at {}: {}",
+    //             assetIdentifier.getPrimaryId(), dateTime, price);
     //     return price;
     // }
 
@@ -141,7 +160,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     //  * Get batch prices.
     //  * Note: Batch operations are harder to cache effectively.
     //  * Each individual price is cached by getCurrentPrice() if called separately.
-    //  * 
+    //  *
     //  * For true batch caching, we'd need a custom cache key generator.
     //  */
     // @Override
@@ -166,11 +185,13 @@ public class MarketDataServiceImpl implements MarketDataService {
     //             Money price = resolvePrice(symbol, batchQuotes);
     //             result.put(symbol, price);
     //         } catch (MarketDataException e) {
-    //             log.warn("Failed to fetch price for {}: {}", symbol.getPrimaryId(), e.getMessage());
+    //             log.warn("Failed to fetch price for {}: {}", symbol.getPrimaryId(),
+    //                     e.getMessage());
     //         }
     //     }
 
-    //     log.debug("Batch fetch complete: {}/{} symbols retrieved", result.size(), assetIdentifiers.size());
+    //     log.debug("Batch fetch complete: {}/{} symbols retrieved", result.size(),
+    //             assetIdentifiers.size());
     //     return result;
     // }
 
@@ -194,7 +215,8 @@ public class MarketDataServiceImpl implements MarketDataService {
     //     }
 
     //     MarketAssetInfo info = mapper.toAssetInfo(providerInfo.get());
-    //     log.debug("Retrieved asset info for {}: {}", identifier.getPrimaryId(), info.getName());
+    //     log.debug("Retrieved asset info for {}: {}", identifier.getPrimaryId(),
+    //             info.getName());
     //     return Optional.of(info);
     // }
 
@@ -228,7 +250,8 @@ public class MarketDataServiceImpl implements MarketDataService {
     //             .filter(Objects::nonNull)
     //             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-    //     log.debug("Retrieved asset info for {}/{} symbols", result.size(), symbols.size());
+    //     log.debug("Retrieved asset info for {}/{} symbols", result.size(),
+    //             symbols.size());
     //     return result;
     // }
 
@@ -247,14 +270,16 @@ public class MarketDataServiceImpl implements MarketDataService {
     // @Override
     // @Cacheable(value = "trading-currency", key = "#symbol.value()", unless = "#result == null")
     // public ValidatedCurrency getTradingCurrency(AssetIdentifier assetIdentifier) {
-    //     log.debug("Cache miss for trading currency: {} (fetching from provider)", assetIdentifier.getPrimaryId());
+    //     log.debug("Cache miss for trading currency: {} (fetching from provider)",
+    //             assetIdentifier.getPrimaryId());
 
     //     // Delegate to getAssetInfo (avoids duplicate API call logic)
     //     MarketAssetInfo info = getAssetInfo(assetIdentifier)
     //             .orElseThrow(() -> MarketDataException.symbolNotFound(assetIdentifier.getPrimaryId()));
     //     ValidatedCurrency currency = info.getCurrency();
 
-    //     log.debug("Fetched and cached trading currency for {}: {}", assetIdentifier.getPrimaryId(), currency);
+    //     log.debug("Fetched and cached trading currency for {}: {}",
+    //             assetIdentifier.getPrimaryId(), currency);
     //     return currency;
     // }
 

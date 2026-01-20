@@ -10,13 +10,13 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
  * This represents what the Asset Is, immutable values
  */
 public class MarketAssetInfo {
-    private final String symbol;
     private final String name;
+    private final String symbol;
+    private final String description;
     private final AssetType assetType;
     private final String exchange;
     private final ValidatedCurrency currency; // Trading currency
     private final String sector; // e.g., "Technology", "Finance"
-    private final String description;
 
     public MarketAssetInfo(String symbol, String name, AssetType assetType, String exchange, ValidatedCurrency currency,
             String sector, String description) {
