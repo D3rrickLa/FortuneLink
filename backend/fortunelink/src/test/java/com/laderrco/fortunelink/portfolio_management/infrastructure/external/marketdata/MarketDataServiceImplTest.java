@@ -34,6 +34,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
@@ -106,10 +107,10 @@ class MarketDataServiceImplTest {
         when(mapper.toMoney(quote)).thenReturn(expectedPrice);
 
         // When
-        Money result = service.getHistoricalPrice(testIdentifier, dateTime);
+        Optional<MarketAssetQuote> result = service.getHistoricalQuote(testIdentifier, dateTime);
 
         // Then
-        assertThat(result).isEqualTo(expectedPrice);
+        assertThat(result.get().currentPrice()).isEqualTo(expectedPrice);
     }
 
     @Test
@@ -138,7 +139,7 @@ class MarketDataServiceImplTest {
         });
 
         // When
-        Map<AssetIdentifier, Money> result = service.getBatchPrices(symbols);
+        Map<AssetIdentifier, MarketAssetQuote> result = service.getBatchQuotes(symbols);
 
         // Then
         assertThat(result).hasSize(2);
@@ -267,10 +268,10 @@ class MarketDataServiceImplTest {
     @DisplayName("getBatchPrices: Should return empty map for null or empty list")
     void getBatchPrices_EmptyInput_ReturnsEmptyMap() {
         // Test Null
-        assertThat(service.getBatchPrices(null)).isEmpty();
+        assertThat(service.getBatchQuotes(null)).isEmpty();
 
         // Test Empty
-        assertThat(service.getBatchPrices(Collections.emptyList())).isEmpty();
+        assertThat(service.getBatchQuotes(Collections.emptyList())).isEmpty();
 
         // Verify provider was never touched
         verifyNoInteractions(provider);
@@ -304,7 +305,7 @@ class MarketDataServiceImplTest {
         when(mapper.toMoney(any())).thenReturn(new Money(new BigDecimal("150.00"), ValidatedCurrency.USD));
 
         // When
-        Map<AssetIdentifier, Money> result = service.getBatchPrices(symbols);
+        Map<AssetIdentifier, MarketAssetQuote> result = service.getBatchQuotes(symbols);
 
         // Then
         assertThat(result).hasSize(1);
@@ -335,7 +336,7 @@ class MarketDataServiceImplTest {
         when(provider.fetchHistoricalQuote("AAPL", now)).thenReturn(Optional.empty());
 
         // When / Then
-        assertThatThrownBy(() -> service.getHistoricalPrice(testIdentifier, now))
+        assertThatThrownBy(() -> service.getHistoricalQuote(testIdentifier, now))
                 .isInstanceOf(MarketDataException.class)
                 // Verify it uses the DATA_UNAVAILABLE type specifically
                 .extracting("errorType")
