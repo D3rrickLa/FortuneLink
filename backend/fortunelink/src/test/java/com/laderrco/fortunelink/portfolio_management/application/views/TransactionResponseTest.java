@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.responses;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -27,21 +27,21 @@ public class TransactionResponseTest {
             new Fee(FeeType.ANNUAL_FEE, Money.of(10, "CAD"), cad, null, Instant.now())
         );
 
-        TransactionResponse response = new TransactionResponse(TransactionId.randomId(), TransactionType.DEPOSIT, "CAD", BigDecimal.ONE, Money.of(25, "CAD"), fees, Money.of(25, "CAD"), Instant.now(), null);
+        TransactionView response = new TransactionView(TransactionId.randomId(), TransactionType.DEPOSIT, "CAD", BigDecimal.ONE, Money.of(25, "CAD"), fees, Money.of(25, "CAD"), Instant.now(), null);
         Money actual = response.calculateNetAmount();
         assertEquals(Money.of(-12, "CAD"), actual);
     }
    
     @Test
     void testSetNetAmountNoFees() {
-        TransactionResponse response = new TransactionResponse(TransactionId.randomId(), TransactionType.DEPOSIT, "CAD", BigDecimal.ONE, Money.of(25, "CAD"), null, Money.of(25, "CAD"), Instant.now(), null);
+        TransactionView response = new TransactionView(TransactionId.randomId(), TransactionType.DEPOSIT, "CAD", BigDecimal.ONE, Money.of(25, "CAD"), null, Money.of(25, "CAD"), Instant.now(), null);
         Money actual = response.calculateNetAmount();
         assertEquals(Money.of(25, "CAD"), actual);
     }
     
     @Test
     void testEdgeCaseForNetAmount() {
-        TransactionResponse response = new TransactionResponse(TransactionId.randomId(), TransactionType.DEPOSIT, "CAD", BigDecimal.ONE, Money.of(25, "CAD"), List.of(), Money.of(25, "CAD"), Instant.now(), null);
+        TransactionView response = new TransactionView(TransactionId.randomId(), TransactionType.DEPOSIT, "CAD", BigDecimal.ONE, Money.of(25, "CAD"), List.of(), Money.of(25, "CAD"), Instant.now(), null);
         Money actual = response.calculateNetAmount();
         assertEquals(Money.of(25, "CAD"), actual);
 

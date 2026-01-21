@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JpaPortfolioRepository implements PortfolioRepository {
 
-private final SpringDataPortfolioRepository jpaRepo; // The standard JpaRepository<PortfolioEntity, UUID>
+    private final SpringDataPortfolioRepository jpaRepo; // The standard JpaRepository<PortfolioEntity, UUID>
     private final PortfolioEntityMapperImpl portfolioMapper;
 
     @Override
@@ -35,16 +36,25 @@ private final SpringDataPortfolioRepository jpaRepo; // The standard JpaReposito
     }
 
     @Override
+    public List<Portfolio> findAllByUserId(UserId userId) {
+        List<PortfolioEntity> portfolios = jpaRepo.findAllByUserId(userId.userId());
+        return portfolios.stream()
+            .map(portfolioMapper::toDomain)
+            .toList();
+    }
+
+    @Override
     public Portfolio save(Portfolio portfolio) {
         UUID portfolioUuid = portfolio.getPortfolioId().portfolioId();
         Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
         // 1. Load existing or create fresh
         PortfolioEntity entity = jpaRepo.findById(portfolioUuid)
-            .orElseGet(() -> {
-                PortfolioEntity newEntity = new PortfolioEntity(portfolio.getPortfolioId().portfolioId(), portfolio.getUserId().userId(), portfolio.getName(), portfolio.getPortfolioCurrencyPreference().getCode(), portfolio.getDescription());
-                return newEntity;
-            }
-        );
+                .orElseGet(() -> {
+                    PortfolioEntity newEntity = new PortfolioEntity(portfolio.getPortfolioId().portfolioId(),
+                            portfolio.getUserId().userId(), portfolio.getName(),
+                            portfolio.getPortfolioCurrencyPreference().getCode(), portfolio.getDescription());
+                    return newEntity;
+                });
 
         // 2. Map Domain state onto the Entity
         Objects.requireNonNull(entity, "Entity cannot be null");
@@ -61,5 +71,4 @@ private final SpringDataPortfolioRepository jpaRepo; // The standard JpaReposito
         Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
         jpaRepo.deleteById(portfolioUuid);
     }
-    
 }

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.mappers;
+package com.laderrco.fortunelink.portfolio_management.application.views.assemblers;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -6,9 +6,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AssetResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.views.AssetView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -26,10 +26,11 @@ import lombok.RequiredArgsConstructor;
 /**
  * Mapper for converting Portfolio domain objects to response DTOs
  * Uses ExchangeRateService for currency conversions
+ * TODO: DI the marketdataservice
  */
 @Component
 @RequiredArgsConstructor
-public class PortfolioMapper {
+public class PortfolioViewAssembler {
     
     private final ExchangeRateService exchangeRateService;
 
@@ -40,20 +41,22 @@ public class PortfolioMapper {
      * @param marketDataService Service to fetch current market prices
      * @return PortfolioResponse DTO or null if portfolio is null
      */
-    public PortfolioResponse toResponse(Portfolio portfolio, MarketDataService marketDataService) {
+    public PortfolioView toResponse(Portfolio portfolio, MarketDataService marketDataService) {
         if (portfolio == null) {
             return null;
         }
 
-        List<AccountResponse> accountResponses = portfolio.getAccounts().stream()
+        List<AccountView> accountResponses = portfolio.getAccounts().stream()
             .map(account -> toAccountResponse(account, marketDataService))
             .collect(Collectors.toList());
 
         Money totalAssetsValue = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
 
-        return new PortfolioResponse(
+        return new PortfolioView(
             portfolio.getPortfolioId(),
             portfolio.getUserId(),
+            portfolio.getName(),
+            portfolio.getDescription(),
             accountResponses,
             totalAssetsValue,
             portfolio.getTransactionCount(),
@@ -69,7 +72,7 @@ public class PortfolioMapper {
      * @param marketDataService Service to fetch current market prices
      * @return AccountResponse DTO or null if account is null
      */
-    public AccountResponse toAccountResponse(Account account, MarketDataService marketDataService) {
+    public AccountView toAccountResponse(Account account, MarketDataService marketDataService) {
         if (account == null) {
             return null;
         }
@@ -77,10 +80,13 @@ public class PortfolioMapper {
         Money totalValue = account.calculateTotalValue(marketDataService);
         Money cashBalance = calculateCashBalance(account);
         
-        return new AccountResponse(
+        return new AccountView(
             account.getAccountId(),
             account.getName(),
             account.getAccountType(),
+            account.getAssets().stream()
+                .map(a -> toAssetResponse(a, marketDataService.getCurrentPrice(a.getAssetIdentifier())))
+                .collect(Collectors.toList()),
             account.getBaseCurrency(),
             cashBalance,
             totalValue,
@@ -110,7 +116,7 @@ public class PortfolioMapper {
      * @param currentPrice Current market price for the asset
      * @return AssetResponse DTO or null if asset is null
      */
-    public static AssetResponse toAssetResponse(Asset asset, Money currentPrice) {
+    public static AssetView toAssetResponse(Asset asset, Money currentPrice) {
         if (asset == null) {
             return null;
         }
@@ -132,7 +138,7 @@ public class PortfolioMapper {
             unrealizedGainPercentage = Percentage.of(0);
         }
         
-        return new AssetResponse(
+        return new AssetView(
             asset.getAssetId(),
             asset.getAssetIdentifier().getPrimaryId(),
             asset.getAssetIdentifier().getAssetType(),

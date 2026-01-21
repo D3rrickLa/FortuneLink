@@ -18,7 +18,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
-import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 

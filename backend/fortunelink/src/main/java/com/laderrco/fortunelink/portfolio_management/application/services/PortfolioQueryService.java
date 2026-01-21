@@ -11,23 +11,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.laderrco.fortunelink.portfolio_management.application.mappers.AllocationMapper;
-import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.NetWorthResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PerformanceResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationView;
+import com.laderrco.fortunelink.portfolio_management.application.views.NetWorthView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PerformanceView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.views.TransactionHistoryView;
+import com.laderrco.fortunelink.portfolio_management.application.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.application.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -73,7 +74,7 @@ public class PortfolioQueryService {
     private final PortfolioValuationService portfolioValuationService;
     
     // Mappers
-    private final PortfolioMapper portfolioMapper;
+    private final PortfolioViewAssembler portfolioAssembler;
     
     // Future: LiabilityQueryService liabilityQueryService // ACL interface for Loan Management context
 
@@ -91,10 +92,10 @@ public class PortfolioQueryService {
     /**
      * Get all portfolios for a user.
      */
-    // @Transactional(readOnly = true)
-    // public List<Portfolio> getUserPortfolios(GetPortfoliosByUserIdQuery query) {        
-    //     return portfolioRepository.findByUserId(query.id()).get();
-    //     }
+    @Transactional(readOnly = true)
+    public List<Portfolio> getUserPortfolios(GetPortfoliosByUserIdQuery query) {        
+        return portfolioRepository.findAllByUserId(query.id());
+    }
 
 
     /**
@@ -105,7 +106,7 @@ public class PortfolioQueryService {
      * @param query Contains userId and optional asOfDate
      * @return Net worth response with breakdown
      */
-    public NetWorthResponse getNetWorth(ViewNetWorthQuery query) {
+    public NetWorthView getNetWorth(ViewNetWorthQuery query) {
         Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
@@ -123,7 +124,7 @@ public class PortfolioQueryService {
 
         Money netWorth = totalAssets.subtract(totalLiabilities);
 
-        return new NetWorthResponse(totalAssets, totalLiabilities, netWorth, calculationDate, totalAssets.currency());
+        return new NetWorthView(totalAssets, totalLiabilities, netWorth, calculationDate, totalAssets.currency());
 
     }
 
@@ -136,7 +137,7 @@ public class PortfolioQueryService {
      * @param query Contains userId, startDate, and endDate
      * @return Performance metrics including returns and gains
      */
-    public PerformanceResponse getPortfolioPerformance(ViewPerformanceQuery query) {
+    public PerformanceView getPortfolioPerformance(ViewPerformanceQuery query) {
         Objects.requireNonNull(query, "ViewPerformanceQuery cannot be null");
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
@@ -167,7 +168,7 @@ public class PortfolioQueryService {
         Percentage annualizedReturn = totalReturn.annualize(years);
         String period = query.startDate() + " to " + query.endDate();
 
-        return new PerformanceResponse(
+        return new PerformanceView(
             totalReturn,
             annualizedReturn,
             realizedGains,
@@ -184,7 +185,7 @@ public class PortfolioQueryService {
      * @param query Contains userId, allocationType, and optional asOfDate
      * @return Allocation breakdown as percentages
      */
-    public AllocationResponse getAssetAllocation(AnalyzeAllocationQuery query) {
+    public AllocationView getAssetAllocation(AnalyzeAllocationQuery query) {
         Objects.requireNonNull(query, "AnalyzeAllocationQuery cannot be null");
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
@@ -221,7 +222,7 @@ public class PortfolioQueryService {
      * @param query Contains userId, optional filters (accountId, type, dates), and pagination
      * @return Paginated transaction history
      */
-    public TransactionHistoryResponse getTransactionHistory(GetTransactionHistoryQuery query) {
+    public TransactionHistoryView getTransactionHistory(GetTransactionHistoryQuery query) {
         Objects.requireNonNull(query);
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
@@ -257,7 +258,7 @@ public class PortfolioQueryService {
         );
         
         // Map to response DTOs
-        List<TransactionResponse> transactionResponses = TransactionMapper.toResponseList(
+        List<TransactionView> transactionResponses = TransactionMapper.toResponseList(
             transactionPage.getContent()
         );
 
@@ -266,7 +267,7 @@ public class PortfolioQueryService {
             ? query.startDate() + " to " + query.endDate()
             : "All time";
         
-        return new TransactionHistoryResponse(
+        return new TransactionHistoryView(
             transactionResponses,
             (int) transactionPage.getTotalElements(),
             query.pageNumber(),
@@ -281,7 +282,7 @@ public class PortfolioQueryService {
      * @param query Contains userId and accountId
      * @return Account summary with current values
      */
-    public AccountResponse getAccountSummary(GetAccountSummaryQuery query) {
+    public AccountView getAccountSummary(GetAccountSummaryQuery query) {
         Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
         
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
@@ -289,7 +290,7 @@ public class PortfolioQueryService {
         
         Account account = portfolio.getAccount(query.accountId());
         
-        return portfolioMapper.toAccountResponse(account, marketDataService);
+        return portfolioAssembler.toAccountResponse(account, marketDataService);
     }
 
     /**
@@ -298,12 +299,12 @@ public class PortfolioQueryService {
      * @param query Contains userId
      * @return Complete portfolio summary
      */
-    public PortfolioResponse getPortfolioSummary(GetPortfolioSummaryQuery query) {
+    public PortfolioView getPortfolioSummary(GetPortfolioSummaryQuery query) {
         Objects.requireNonNull(query, "GetPortfolioSummaryQuery cannot be null");
         
         Portfolio portfolio = portfolioRepository.findByUserId(query.userId())
             .orElseThrow(() -> new PortfolioNotFoundException(query.userId()));
         
-        return portfolioMapper.toResponse(portfolio, marketDataService);
+        return portfolioAssembler.toResponse(portfolio, marketDataService);
     }
 }

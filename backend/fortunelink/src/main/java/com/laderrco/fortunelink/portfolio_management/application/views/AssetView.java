@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.responses;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -9,7 +9,7 @@ import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
-public record AssetResponse(
+public record AssetView(
         AssetId assetId,
         String symbol,
         AssetType type,
@@ -22,7 +22,7 @@ public record AssetResponse(
         Percentage unrealizedGainPercentage,
         Instant acquiredDate,
         Instant lastUpdated) {
-    public AssetResponse {
+    public AssetView {
         
         ClassValidation.validateParameter(assetId);
         ClassValidation.validateParameter(symbol);

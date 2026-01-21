@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.mappers;
+package com.laderrco.fortunelink.portfolio_management.application.views.assemblers;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -8,9 +8,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AssetResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.views.AssetView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -44,7 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class PortfolioMapperTest {
+class PortfolioViewAssemblerTest {
 
     @Mock
     private ExchangeRateService exchangeRateService;
@@ -52,7 +52,7 @@ class PortfolioMapperTest {
     @Mock
     private MarketDataService marketDataService;
 
-    private PortfolioMapper mapper;
+    private PortfolioViewAssembler mapper;
     
     private static final ValidatedCurrency USD = ValidatedCurrency.USD;
     private static final ValidatedCurrency CAD = ValidatedCurrency.CAD;
@@ -62,7 +62,7 @@ class PortfolioMapperTest {
 
     @BeforeEach
     void setUp() {
-        mapper = new PortfolioMapper(exchangeRateService);
+        mapper = new PortfolioViewAssembler(exchangeRateService);
         portfolioId = PortfolioId.randomId();
         accountId = AccountId.randomId();
     }
@@ -75,7 +75,7 @@ class PortfolioMapperTest {
         @DisplayName("Should return null when portfolio is null")
         void shouldReturnNullForNullPortfolio() {
             // Act
-            PortfolioResponse response = mapper.toResponse(null, marketDataService);
+            PortfolioView response = mapper.toResponse(null, marketDataService);
 
             // Assert
             assertNull(response);
@@ -94,7 +94,7 @@ class PortfolioMapperTest {
             
 
             // Act
-            PortfolioResponse response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
 
             // Assert
             assertNotNull(response);
@@ -125,17 +125,17 @@ class PortfolioMapperTest {
             when(account2.calculateTotalValue(marketDataService)).thenReturn(Money.of(10000, "CAD"));
 
             // Act
-            PortfolioResponse response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
 
             // Assert
             assertNotNull(response);
             assertEquals(2, response.accounts().size());
             
-            AccountResponse acc1Response = response.accounts().get(0);
+            AccountView acc1Response = response.accounts().get(0);
             assertEquals("TFSA", acc1Response.name());
             assertEquals(AccountType.TFSA, acc1Response.type());
             
-            AccountResponse acc2Response = response.accounts().get(1);
+            AccountView acc2Response = response.accounts().get(1);
             assertEquals("RRSP", acc2Response.name());
             assertEquals(AccountType.RRSP, acc2Response.type());
         }
@@ -153,7 +153,7 @@ class PortfolioMapperTest {
             when(portfolio.getLastUpdatedAt()).thenReturn(NOW);
 
             // Act
-            PortfolioResponse response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
 
             // Assert
             assertNotNull(response);
@@ -175,7 +175,7 @@ class PortfolioMapperTest {
             when(portfolio.getAssetsTotalValue(any(), any())).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            PortfolioResponse response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
 
             // Assert
             assertEquals(createdDate, response.createDate());
@@ -192,7 +192,7 @@ class PortfolioMapperTest {
         @DisplayName("Should return null when account is null")
         void shouldReturnNullForNullAccount() {
             // Act
-            AccountResponse response = mapper.toAccountResponse(null, marketDataService);
+            AccountView response = mapper.toAccountResponse(null, marketDataService);
 
             // Assert
             assertNull(response);
@@ -209,7 +209,7 @@ class PortfolioMapperTest {
             when(account.calculateTotalValue(marketDataService)).thenReturn(totalValue);
 
             // Act
-            AccountResponse response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.toAccountResponse(account, marketDataService);
 
             // Assert
             assertNotNull(response);
@@ -239,7 +239,7 @@ class PortfolioMapperTest {
             when(account.getSystemCreationDate()).thenReturn(NOW);
 
             // Act
-            AccountResponse response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.toAccountResponse(account, marketDataService);
 
             // Assert
             assertNotNull(response);
@@ -265,7 +265,7 @@ class PortfolioMapperTest {
             when(account.getSystemCreationDate()).thenReturn(NOW);
 
             // Act
-            AccountResponse response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.toAccountResponse(account, marketDataService);
 
             // Assert
             assertNotNull(response);
@@ -287,7 +287,7 @@ class PortfolioMapperTest {
             when(account.getSystemCreationDate()).thenReturn(NOW);
 
             // Act
-            AccountResponse response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.toAccountResponse(account, marketDataService);
 
             // Assert
             assertNotNull(response);
@@ -304,7 +304,7 @@ class PortfolioMapperTest {
         @DisplayName("Should return null when asset is null")
         void shouldReturnNullForNullAsset() {
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(null, Money.of(150, "USD"));
+            AssetView response = PortfolioViewAssembler.toAssetResponse(null, Money.of(150, "USD"));
 
             // Assert
             assertNull(response);
@@ -324,7 +324,7 @@ class PortfolioMapperTest {
             when(asset.getCostBasis()).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -348,7 +348,7 @@ class PortfolioMapperTest {
             when(asset.getCostPerUnit()).thenReturn(Money.of(0, "USD"));
             when(asset.getCostBasis()).thenReturn(Money.of(0, "USD"));
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(asset, null);
+            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, null);
 
             // Assert
             assertNotNull(response);
@@ -372,7 +372,7 @@ class PortfolioMapperTest {
             lenient().when(asset.getCostBasis()).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -395,7 +395,7 @@ class PortfolioMapperTest {
             when(asset.getCostBasis()).thenReturn(Money.ZERO("USD"));
 
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -430,7 +430,7 @@ class PortfolioMapperTest {
             when(asset.calculateUnrealizedGainLoss(currentPrice)).thenReturn(Money.of(1000, "USD"));
 
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
 
             // Assert
             assertEquals(assetId, response.assetId());
@@ -457,7 +457,7 @@ class PortfolioMapperTest {
             lenient().when(asset.getCostBasis()).thenReturn(Money.of(50000, "USD"));
 
             // Act
-            AssetResponse response = PortfolioMapper.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -473,7 +473,7 @@ class PortfolioMapperTest {
     
         @Test
         void testIfThrowPercentageZeroWhenCostBasisIsNull() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-            Method calculateGainPercentage = PortfolioMapper.class.getDeclaredMethod("calculateGainPercentage", Money.class, Money.class);
+            Method calculateGainPercentage = PortfolioViewAssembler.class.getDeclaredMethod("calculateGainPercentage", Money.class, Money.class);
             calculateGainPercentage.setAccessible(true);
 
             Percentage actual = (Percentage) calculateGainPercentage.invoke(null, mock(Money.class), null);

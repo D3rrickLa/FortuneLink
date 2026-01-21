@@ -43,13 +43,13 @@ import com.laderrco.fortunelink.portfolio_management.application.exceptions.Inva
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
-import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.application.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
@@ -104,7 +104,7 @@ class PortfolioApplicationServiceTest {
     private CommandValidator commandValidator;
 
     @Mock
-    private PortfolioMapper portfolioMapper;
+    private PortfolioViewAssembler portfolioViewAssembler;
 
     @InjectMocks
     private PortfolioApplicationService service;
@@ -184,7 +184,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordAssetPurchase(command);
+            TransactionView response = service.recordAssetPurchase(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -332,7 +332,7 @@ class PortfolioApplicationServiceTest {
 
 
             // When
-            TransactionResponse response = service.recordAssetSale(command);
+            TransactionView response = service.recordAssetSale(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -474,7 +474,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordDeposit(command);
+            TransactionView response = service.recordDeposit(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -538,7 +538,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordWithdrawal(command);
+            TransactionView response = service.recordWithdrawal(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -641,7 +641,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordDividendIncome(command);
+            TransactionView response = service.recordDividendIncome(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -669,7 +669,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordDividendIncome(command);
+            TransactionView response = service.recordDividendIncome(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -764,7 +764,7 @@ class PortfolioApplicationServiceTest {
             Money cashBeforeFee = portfolio.getAccount(accountId).getCashBalance();
 
             // When
-            TransactionResponse response = service.recordFee(command);
+            TransactionView response = service.recordFee(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -890,7 +890,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordFee(command);
+            TransactionView response = service.recordFee(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -918,7 +918,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.recordFee(command);
+            TransactionView response = service.recordFee(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -956,8 +956,8 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response1 = service.recordFee(fee1);
-            TransactionResponse response2 = service.recordFee(fee2);
+            TransactionView response1 = service.recordFee(fee1);
+            TransactionView response2 = service.recordFee(fee2);
 
             // Then
             assertThat(response1).isNotNull();
@@ -1020,7 +1020,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1146,7 +1146,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1283,7 +1283,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1348,7 +1348,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1511,7 +1511,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1598,7 +1598,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1761,7 +1761,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1913,7 +1913,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionResponse response = service.updateTransation(command);
+            TransactionView response = service.updateTransation(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -2081,10 +2081,10 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
-            when(portfolioMapper.toAccountResponse(any(), any())).thenReturn(mock(AccountResponse.class));
+            when(portfolioViewAssembler.toAccountResponse(any(), any())).thenReturn(mock(AccountView.class));
 
             // When
-            AccountResponse response = service.addAccount(command);
+            AccountView response = service.addAccount(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -2219,10 +2219,10 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
-            when(portfolioMapper.toResponse(any(), any())).thenReturn(mock(PortfolioResponse.class));
+            when(portfolioViewAssembler.toResponse(any(), any())).thenReturn(mock(PortfolioView.class));
 
             // When
-            PortfolioResponse response = service.createPortfolio(command);
+            PortfolioView response = service.createPortfolio(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -2246,10 +2246,10 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
-            when(portfolioMapper.toResponse(any(), any())).thenReturn(mock(PortfolioResponse.class));
+            when(portfolioViewAssembler.toResponse(any(), any())).thenReturn(mock(PortfolioView.class));
 
             // When
-            PortfolioResponse response = service.createPortfolio(command);
+            PortfolioView response = service.createPortfolio(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -2451,7 +2451,7 @@ class PortfolioApplicationServiceTest {
         @Test
         @DisplayName("Should correctly calculate holdings and allow valid sell")
         void testValidateSellTransaction_FullCoverage() throws Exception {
-            PortfolioApplicationService portfolioApplicationService = new PortfolioApplicationService(portfolioRepository, transactionQueryService, marketDataService, commandValidator, portfolioMapper);
+            PortfolioApplicationService portfolioApplicationService = new PortfolioApplicationService(portfolioRepository, transactionQueryService, marketDataService, commandValidator, portfolioViewAssembler);
             // 1. Setup method access
             Method method = PortfolioApplicationService.class.getDeclaredMethod(
                 "validateSellTransaction", 

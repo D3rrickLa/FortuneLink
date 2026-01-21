@@ -1,6 +1,7 @@
 
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.repositories;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,5 +11,6 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 
 public interface SpringDataPortfolioRepository extends JpaRepository<PortfolioEntity, UUID>{
     Optional<PortfolioEntity> findByUserId(UUID userId);
+    List<PortfolioEntity> findAllByUserId(UUID userId);
     boolean existsByUserId(UUID userId);
 }

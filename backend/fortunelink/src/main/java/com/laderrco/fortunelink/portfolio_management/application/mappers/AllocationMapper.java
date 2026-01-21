@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationDetail;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationDetail;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.Precision;
@@ -30,7 +30,7 @@ public class AllocationMapper {
     /**
      * Type-safe method for AssetType allocations
      */
-    public static AllocationResponse toResponseFromAssetType(
+    public static AllocationView toResponseFromAssetType(
             Map<AssetType, Money> allocation,
             Money totalValue,
             Instant asOfDate) {
@@ -48,7 +48,7 @@ public class AllocationMapper {
     /**
      * Type-safe method for AccountType allocations
      */
-    public static AllocationResponse toResponseFromAccountType(
+    public static AllocationView toResponseFromAccountType(
             Map<AccountType, Money> allocation,
             Money totalValue,
             Instant asOfDate) {
@@ -66,7 +66,7 @@ public class AllocationMapper {
     /**
      * Type-safe method for Currency allocations
      */
-    public static AllocationResponse toResponseFromCurrency(
+    public static AllocationView toResponseFromCurrency(
             Map<ValidatedCurrency, Money> allocation,
             Money totalValue,
             Instant asOfDate) {
@@ -86,7 +86,7 @@ public class AllocationMapper {
      * This method assumes all allocations are AssetType
      */
     @Deprecated
-    public static AllocationResponse toResponse(
+    public static AllocationView toResponse(
             Map<String, Money> allocation,
             Money totalValue,
             Instant asOfDate) {
@@ -110,7 +110,7 @@ public class AllocationMapper {
      * @param asOfDate Timestamp for the allocation
      * @return AllocationResponse with details and percentages
      */
-    private static <T> AllocationResponse toResponse(
+    private static <T> AllocationView toResponse(
             Map<T, Money> allocation,
             Function<T, String> keyExtractor,
             Function<T, String> categoryNameExtractor,
@@ -122,7 +122,7 @@ public class AllocationMapper {
         Money safeTotal = totalValue != null ? totalValue : Money.ZERO("USD");
         
         if (allocation == null || allocation.isEmpty()) {
-            return new AllocationResponse(new HashMap<>(), safeTotal, responseDate);
+            return new AllocationView(new HashMap<>(), safeTotal, responseDate);
         }
         
         Map<String, AllocationDetail> allocationDetails = allocation.entrySet().stream()
@@ -136,7 +136,7 @@ public class AllocationMapper {
                 )
             ));
         
-        return new AllocationResponse(allocationDetails, safeTotal, responseDate);
+        return new AllocationView(allocationDetails, safeTotal, responseDate);
     }
 
     /**

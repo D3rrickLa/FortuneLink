@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.responses;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import java.time.Instant;
 
@@ -6,8 +6,8 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-public record NetWorthResponse(Money totalAssets, Money totalLiabilities, Money netWorth, Instant asOfDate, ValidatedCurrency currency) implements ClassValidation {
-    public NetWorthResponse {
+public record NetWorthView(Money totalAssets, Money totalLiabilities, Money netWorth, Instant asOfDate, ValidatedCurrency currency) implements ClassValidation {
+    public NetWorthView {
         ClassValidation.validateParameter(totalAssets); 
         ClassValidation.validateParameter(totalLiabilities); 
         ClassValidation.validateParameter(netWorth); 

@@ -10,7 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
@@ -50,7 +50,7 @@ public class TransactionMapperTest {
         when(transaction.getNotes()).thenReturn("Test note");
 
         // Act
-        TransactionResponse response = TransactionMapper.toResponse(transaction, null);
+        TransactionView response = TransactionMapper.toResponse(transaction, null);
 
         // Assert
         assertThat(response).isNotNull();
@@ -97,7 +97,7 @@ public class TransactionMapperTest {
         when(t2.calculateTotalCost()).thenReturn(Money.of(20, "USD"));
         when(t2.getTransactionDate()).thenReturn(Instant.now());
 
-        List<TransactionResponse> results = TransactionMapper.toResponseList(List.of(t1, t2));
+        List<TransactionView> results = TransactionMapper.toResponseList(List.of(t1, t2));
 
         assertThat(results).hasSize(2);
         assertThat(results.get(0).symbol()).isEqualTo("USD");

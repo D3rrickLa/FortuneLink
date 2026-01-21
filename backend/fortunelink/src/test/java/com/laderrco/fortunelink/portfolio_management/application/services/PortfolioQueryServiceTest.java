@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -40,23 +41,25 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.AllocationMapper;
-import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioMapper;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.application.models.AllocationType;
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AccountResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationDetail;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.NetWorthResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PerformanceResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.PortfolioResponse;
-import com.laderrco.fortunelink.portfolio_management.application.responses.TransactionHistoryResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationDetail;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationView;
+import com.laderrco.fortunelink.portfolio_management.application.views.NetWorthView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PerformanceView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.views.TransactionHistoryView;
+import com.laderrco.fortunelink.portfolio_management.application.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -111,7 +114,7 @@ class PortfolioQueryServiceTest {
     private TransactionQueryService transactionQueryService;
 
     @Mock
-    private PortfolioMapper portfolioMapper;
+    private PortfolioViewAssembler portfolioViewAssembler;
 
     @Mock
     private TransactionMapper transactionMapper;
@@ -148,6 +151,73 @@ class PortfolioQueryServiceTest {
         lenient().when(portfolio.getPortfolioCurrencyPreference()).thenReturn(testCurrency);
     }
 
+    // ==================== getPortfolios Tests ====================
+    @Test
+    @DisplayName("Should return portfolio when valid ID is provided")
+    void getPortfolio_Success() {
+        // Arrange
+        PortfolioId portfolioId = new PortfolioId(UUID.randomUUID());
+        GetPortfolioByIdQuery query = new GetPortfolioByIdQuery(portfolioId);
+        Portfolio mockPortfolio = mock(Portfolio.class); // Or create a real domain instance
+
+        when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(mockPortfolio));
+
+        // Act
+        Portfolio result = queryService.getPortfolio(query);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(mockPortfolio, result);
+        verify(portfolioRepository).findById(portfolioId);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when portfolio ID does not exist")
+    void getPortfolio_NotFound() {
+        // Arrange
+        PortfolioId portfolioId = new PortfolioId(UUID.randomUUID());
+        GetPortfolioByIdQuery query = new GetPortfolioByIdQuery(portfolioId);
+
+        when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(PortfolioNotFoundException.class, () -> queryService.getPortfolio(query));
+    }
+
+    @Test
+    @DisplayName("Should return list of portfolios for a user")
+    void getUserPortfolios_Success() {
+        // Arrange
+        UserId userId = new UserId(UUID.randomUUID());
+        GetPortfoliosByUserIdQuery query = new GetPortfoliosByUserIdQuery(userId);
+        List<Portfolio> mockList = List.of(mock(Portfolio.class), mock(Portfolio.class));
+
+        when(portfolioRepository.findAllByUserId(userId)).thenReturn(mockList);
+
+        // Act
+        List<Portfolio> result = queryService.getUserPortfolios(query);
+
+        // Assert
+        assertEquals(2, result.size());
+        verify(portfolioRepository).findAllByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("Should return empty list when user has no portfolios")
+    void getUserPortfolios_Empty() {
+        // Arrange
+        UserId userId = new UserId(UUID.randomUUID());
+        GetPortfoliosByUserIdQuery query = new GetPortfoliosByUserIdQuery(userId);
+
+        when(portfolioRepository.findAllByUserId(userId)).thenReturn(List.of());
+
+        // Act
+        List<Portfolio> result = queryService.getUserPortfolios(query);
+
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+
     // ==================== getNetWorth Tests ====================
 
     @Test
@@ -164,7 +234,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(totalAssets);
 
         // Act
-        NetWorthResponse response = queryService.getNetWorth(query);
+        NetWorthView response = queryService.getNetWorth(query);
 
         // Assert
         assertNotNull(response);
@@ -197,7 +267,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(totalAssets);
 
         // Act
-        NetWorthResponse response = queryService.getNetWorth(query);
+        NetWorthView response = queryService.getNetWorth(query);
 
         // Assert
         assertNotNull(response);
@@ -269,7 +339,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(timeWeightedReturn);
 
         // Act
-        PerformanceResponse response = queryService.getPortfolioPerformance(query);
+        PerformanceView response = queryService.getPortfolioPerformance(query);
 
         // Assert
         assertNotNull(response);
@@ -344,12 +414,12 @@ class PortfolioQueryServiceTest {
                 .thenReturn(totalValue);
 
         // Act
-        AllocationResponse response = queryService.getAssetAllocation(query);
+        AllocationView response = queryService.getAssetAllocation(query);
 
         // Assert
         assertNotNull(response);
-        assertNotNull(response.getAsOfDate()); // Verify it's not null anymore       
-        //  // Verify the allocations are present and have correct percentages
+        assertNotNull(response.getAsOfDate()); // Verify it's not null anymore
+        // // Verify the allocations are present and have correct percentages
         assertNotNull(response.getAllocations());
         assertEquals(3, response.getAllocations().size());
 
@@ -382,7 +452,7 @@ class PortfolioQueryServiceTest {
         // .thenReturn(expectedResponse);
 
         // Act
-        AllocationResponse response = queryService.getAssetAllocation(query);
+        AllocationView response = queryService.getAssetAllocation(query);
 
         // Assert
         assertNotNull(response);
@@ -420,7 +490,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(totalValue);
 
         // Act
-        AllocationResponse response = queryService.getAssetAllocation(query);
+        AllocationView response = queryService.getAssetAllocation(query);
 
         // Assert
         assertNotNull(response);
@@ -486,7 +556,7 @@ class PortfolioQueryServiceTest {
                 anyInt());
 
         // 3. Act
-        TransactionHistoryResponse response = queryService.getTransactionHistory(query);
+        TransactionHistoryView response = queryService.getTransactionHistory(query);
 
         // 4. Assert
         assertNotNull(response);
@@ -526,7 +596,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(transactionPage);
 
         // Act
-        TransactionHistoryResponse response = queryService.getTransactionHistory(query);
+        TransactionHistoryView response = queryService.getTransactionHistory(query);
 
         // Assert
         assertNotNull(response);
@@ -562,7 +632,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(transactionPage);
 
         // Act
-        TransactionHistoryResponse response = queryService.getTransactionHistory(query);
+        TransactionHistoryView response = queryService.getTransactionHistory(query);
 
         // Assert
         assertNotNull(response);
@@ -594,7 +664,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(transactionPage);
 
         // Act
-        TransactionHistoryResponse response = queryService.getTransactionHistory(query);
+        TransactionHistoryView response = queryService.getTransactionHistory(query);
 
         // Assert
         assertNotNull(response);
@@ -631,7 +701,7 @@ class PortfolioQueryServiceTest {
                 .thenReturn(transactionPage);
 
         // Act
-        TransactionHistoryResponse response = queryService.getTransactionHistory(query);
+        TransactionHistoryView response = queryService.getTransactionHistory(query);
 
         // Assert
         assertEquals(15, response.totalCount());
@@ -665,22 +735,22 @@ class PortfolioQueryServiceTest {
         GetAccountSummaryQuery query = new GetAccountSummaryQuery(userId, accountId);
 
         Account account = createMockAccount(accountId);
-        AccountResponse expectedResponse = mock(AccountResponse.class);
+        AccountView expectedResponse = mock(AccountView.class);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         when(portfolio.getAccount(accountId)).thenReturn(account);
-        when(portfolioMapper.toAccountResponse(account, marketDataService))
+        when(portfolioViewAssembler.toAccountResponse(account, marketDataService))
                 .thenReturn(expectedResponse);
 
         // Act
-        AccountResponse response = queryService.getAccountSummary(query);
+        AccountView response = queryService.getAccountSummary(query);
 
         // Assert
         assertNotNull(response);
         assertEquals(expectedResponse, response);
 
         verify(portfolio).getAccount(accountId);
-        verify(portfolioMapper).toAccountResponse(account, marketDataService);
+        verify(portfolioViewAssembler).toAccountResponse(account, marketDataService);
     }
 
     @Test
@@ -701,20 +771,20 @@ class PortfolioQueryServiceTest {
     void getPortfolioSummary_Success() {
         // Arrange
         GetPortfolioSummaryQuery query = new GetPortfolioSummaryQuery(userId);
-        PortfolioResponse expectedResponse = mock(PortfolioResponse.class);
+        PortfolioView expectedResponse = mock(PortfolioView.class);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(portfolioMapper.toResponse(portfolio, marketDataService))
+        when(portfolioViewAssembler.toResponse(portfolio, marketDataService))
                 .thenReturn(expectedResponse);
 
         // Act
-        PortfolioResponse response = queryService.getPortfolioSummary(query);
+        PortfolioView response = queryService.getPortfolioSummary(query);
 
         // Assert
         assertNotNull(response);
         assertEquals(expectedResponse, response);
 
-        verify(portfolioMapper).toResponse(portfolio, marketDataService);
+        verify(portfolioViewAssembler).toResponse(portfolio, marketDataService);
     }
 
     @Test

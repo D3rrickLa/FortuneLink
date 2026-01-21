@@ -14,10 +14,10 @@ import java.util.List;
  *   "assets": [...]
  * }
  */
-public record AccountResponse(
+public record AccountHttpResponse(
     String id,
     String name,
     String accountType,
     String baseCurrency,
-    List<AssetHoldingResponse> assets
+    List<AssetHoldingHttpResponse> assets
 ) {}

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.responses;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import java.time.Instant;
 import java.util.Map;
@@ -9,12 +9,12 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import lombok.Value;
 
 @Value
-public class AllocationResponse {
+public class AllocationView {
     private final Map<String, AllocationDetail> allocations;
     private final Money totalValue;
     private final Instant asOfDate;
     
-    public AllocationResponse(Map<String, AllocationDetail> allocations, Money totalValue, Instant asOfDate) {
+    public AllocationView(Map<String, AllocationDetail> allocations, Money totalValue, Instant asOfDate) {
         Objects.requireNonNull(allocations);
         Objects.requireNonNull(totalValue);
         Objects.requireNonNull(asOfDate);

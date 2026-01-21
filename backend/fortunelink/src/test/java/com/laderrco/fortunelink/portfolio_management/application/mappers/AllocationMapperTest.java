@@ -4,8 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationDetail;
-import com.laderrco.fortunelink.portfolio_management.application.responses.AllocationResponse;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationDetail;
+import com.laderrco.fortunelink.portfolio_management.application.views.AllocationView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.Precision;
@@ -48,7 +48,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("60.00").setScale(PRECISION), 
@@ -72,7 +72,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(new BigDecimal("10000.00"), USD);
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             AllocationDetail stockDetail = response.getAllocations().get("STOCK");
@@ -97,7 +97,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(new BigDecimal("10000.00"), USD);
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("50.00").setScale(PRECISION), 
@@ -118,7 +118,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertTrue(response.getAllocations().isEmpty());
@@ -133,7 +133,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(null, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(null, totalValue, TEST_TIME);
 
             // Assert
             assertTrue(response.getAllocations().isEmpty());
@@ -171,7 +171,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAccountType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAccountType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("50.00").setScale(PRECISION), 
@@ -192,7 +192,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAccountType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAccountType(allocation, totalValue, TEST_TIME);
 
             // Assert
             AllocationDetail detail = response.getAllocations().get("TFSA");
@@ -208,7 +208,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAccountType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAccountType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertTrue(response.getAllocations().isEmpty());
@@ -232,7 +232,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(new BigDecimal("100000.00"), USD);
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("50.00").setScale(PRECISION), 
@@ -253,7 +253,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
 
             // Assert
             AllocationDetail detail = response.getAllocations().get("USD");
@@ -273,7 +273,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(new BigDecimal("10000.00"), USD);
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("70.00").setScale(PRECISION), 
@@ -292,7 +292,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(10000, "USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromCurrency(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertTrue(response.getAllocations().isEmpty());
@@ -314,7 +314,7 @@ class AllocationMapperTest {
             Money totalValue = Money.ZERO("USD");
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("0.00").setScale(PRECISION), 
@@ -330,7 +330,7 @@ class AllocationMapperTest {
             );
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, null, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, null, TEST_TIME);
 
             // Assert
             assertEquals(Money.ZERO("USD"), response.getTotalValue());
@@ -347,7 +347,7 @@ class AllocationMapperTest {
             Instant before = Instant.now();
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, null);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, null);
 
             // Assert
             Instant after = Instant.now();
@@ -367,7 +367,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(new BigDecimal("10000.00"), USD);
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("99.99").setScale(PRECISION), 
@@ -388,7 +388,7 @@ class AllocationMapperTest {
             Money totalValue = Money.of(new BigDecimal("10000.00"), USD);
 
             // Act
-            AllocationResponse response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponseFromAssetType(allocation, totalValue, TEST_TIME);
 
             // Assert
             BigDecimal totalPercentage = response.getAllocations().values().stream()
@@ -418,7 +418,7 @@ class AllocationMapperTest {
 
             // Act
             @SuppressWarnings("deprecation")
-            AllocationResponse response = AllocationMapper.toResponse(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponse(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertEquals(new BigDecimal("60.00").setScale(PRECISION), 
@@ -435,7 +435,7 @@ class AllocationMapperTest {
 
             // Act
             @SuppressWarnings("deprecation")
-            AllocationResponse response = AllocationMapper.toResponse(allocation, totalValue, TEST_TIME);
+            AllocationView response = AllocationMapper.toResponse(allocation, totalValue, TEST_TIME);
 
             // Assert
             assertTrue(response.getAllocations().isEmpty());

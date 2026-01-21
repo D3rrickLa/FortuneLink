@@ -20,6 +20,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.FeeType;
@@ -28,6 +29,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -1597,6 +1599,79 @@ class CommandValidatorTest {
                 ValidatedCurrency.of("USD"),
                 "Desc",
                 true
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("UpdatePortfolioCommand Validation Tests")
+    class UpdatePortfolioCommandTests {
+        private String name = "Portfolio name";
+        @Test
+        @DisplayName("Should pass validation for valid portfolio command")
+        void shouldPassValidationForValidCommand() {
+            UpdatePortfolioCommand command = createValidPortfolioCommand();
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isTrue();
+            assertThat(result.errors()).isEmpty();
+        }
+        
+        @Test
+        @DisplayName("Should fail when userId is null")
+        void shouldFailWhenUserIdIsNull() {
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(
+                null,
+                name,
+                ValidatedCurrency.of("USD"),
+                null
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("UserId is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when userId is null")
+        void shouldFailWhenNameIsNull() {
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(
+                PortfolioId.randomId(),
+                null,
+                ValidatedCurrency.of("USD"),
+                null
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Portfolio name is required");
+        }
+        
+        @Test
+        @DisplayName("Should fail when default currency is null")
+        void shouldFailWhenDefaultCurrencyIsNull() {
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(
+                PortfolioId.randomId(),
+                name,
+                null,
+                null
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("Curency is required");
+        }
+        
+        private UpdatePortfolioCommand createValidPortfolioCommand() {
+            return new UpdatePortfolioCommand(
+                PortfolioId.randomId(),
+                name,
+                ValidatedCurrency.of("CAD"),
+                "Desc"
             );
         }
     }

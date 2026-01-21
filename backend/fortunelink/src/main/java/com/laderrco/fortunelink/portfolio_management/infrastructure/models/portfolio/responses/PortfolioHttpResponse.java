@@ -17,12 +17,12 @@ import java.util.List;
  *   "lastUpdated": "2024-01-15T10:30:00"
  * }
  */
-public record PortfolioResponse(
+public record PortfolioHttpResponse(
     String id,
     String userId,
     String name,
     String description,
-    List<AccountResponse> accounts,
+    List<AccountHttpResponse> accounts,
     LocalDateTime createdDate,
     LocalDateTime lastUpdated
 ) {}

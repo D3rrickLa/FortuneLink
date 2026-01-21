@@ -1,11 +1,11 @@
-package com.laderrco.fortunelink.portfolio_management.application.responses;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import java.util.List;
 
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
-public record TransactionHistoryResponse(List<TransactionResponse> transactions, int totalCount, int pageNumber, int pageSize, String dateRange) implements ClassValidation {
-    public TransactionHistoryResponse {
+public record TransactionHistoryView(List<TransactionView> transactions, int totalCount, int pageNumber, int pageSize, String dateRange) implements ClassValidation {
+    public TransactionHistoryView {
         ClassValidation.validateParameter(transactions);
         ClassValidation.validateParameter(totalCount);
         ClassValidation.validateParameter(pageNumber);

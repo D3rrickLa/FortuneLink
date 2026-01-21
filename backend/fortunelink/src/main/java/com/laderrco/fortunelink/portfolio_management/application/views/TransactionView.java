@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.responses;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -12,8 +12,8 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 // for the services
 // Single transaction representation; contains all transaction details
-public record TransactionResponse(TransactionId transactionId, TransactionType type, String symbol, BigDecimal quantity, Money price, List<Fee> fees, Money totalCost, Instant date, String notes) implements ClassValidation {
-    public TransactionResponse {
+public record TransactionView(TransactionId transactionId, TransactionType type, String symbol, BigDecimal quantity, Money price, List<Fee> fees, Money totalCost, Instant date, String notes) implements ClassValidation {
+    public TransactionView {
         // we might not even need this if you think about it because the validation result should handle everything, maybe just the response, but the commands are handled
         ClassValidation.validateParameter(transactionId);
         ClassValidation.validateParameter(type);

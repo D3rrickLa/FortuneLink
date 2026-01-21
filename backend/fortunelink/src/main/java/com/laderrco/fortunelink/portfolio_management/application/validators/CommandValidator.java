@@ -21,6 +21,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
@@ -373,6 +374,27 @@ public class CommandValidator implements ClassValidation {
         List<String> errors = new ArrayList<>();
         
         if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+        
+        if (command.name() == null) {
+            errors.add("Portfolio name is required");
+        }
+
+        if (command.defaultCurrency() == null) {
+            errors.add("Curency is required");
+        }
+        
+        return errors.isEmpty() 
+            ? ValidationResult.success() 
+            : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(UpdatePortfolioCommand command) {
+        ClassValidation.validateParameter(command);
+        List<String> errors = new ArrayList<>();
+        
+        if (command.id() == null) {
             errors.add("UserId is required");
         }
         
