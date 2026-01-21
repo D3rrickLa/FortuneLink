@@ -36,8 +36,6 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.config.json_
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-import lombok.NonNull;
-
 /**
  * Rdis cach config for App
  * 
@@ -112,9 +110,8 @@ public class RedisCacheConfig {
      */
     @Bean
     @SuppressWarnings("null")
-    public CacheManager cacheManager(
-            @NonNull RedisConnectionFactory connectionFactory,
-            @Qualifier("redisCacheObjectMapper") ObjectMapper redisCacheObjectMapper) {
+    @Qualifier("redisCacheObjectMapper") 
+    public CacheManager cacheManager(RedisConnectionFactory connectionFactory, ObjectMapper redisCacheObjectMapper) {
 
         StringRedisSerializer keySerializer = new StringRedisSerializer();
         GenericJackson2JsonRedisSerializer genericValueSerializer = new GenericJackson2JsonRedisSerializer(

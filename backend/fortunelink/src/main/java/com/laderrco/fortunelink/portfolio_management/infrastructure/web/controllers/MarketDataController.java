@@ -17,6 +17,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
@@ -63,7 +64,7 @@ public class MarketDataController {
 
         MarketAssetQuote quote = marketDataService
                 .getCurrentQuote(symbolId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Symbol not found: " + symbol));
+                .orElseThrow(() -> new SymbolNotFoundException("Symbol not found: " + symbol));
 
         PriceResponse response = mapper.toPriceResponse(symbol, quote);
 

@@ -11,15 +11,10 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 @Profile({ "local", "test" })
 @Service
 public class CacheEvictionService {
+
     private static final Logger log = LoggerFactory.getLogger(MarketDataServiceImpl.class);
 
-    /**
-     * Cache eviction methods (for admin/testing purposes).
-     * These allow manual cache clearing when needed.
-     */
-
-
-    @CacheEvict(value = "current-prices", key = "#symbol.value()")
+    @CacheEvict(value = "current-prices", key = "#symbol.primaryId")
     public void evictPriceCache(AssetIdentifier symbol) {
         log.info("Evicted price cache for symbol: {}", symbol.getPrimaryId());
     }
@@ -29,7 +24,8 @@ public class CacheEvictionService {
         log.info("Evicted all price caches");
     }
 
-    @CacheEvict(value = "asset-info", key = "#symbol.value()")
+    // 🔥 FIX IS HERE
+    @CacheEvict(value = "asset-info", key = "#symbol.primaryId")
     public void evictAssetInfoCache(AssetIdentifier symbol) {
         log.info("Evicted asset info cache for symbol: {}", symbol.getPrimaryId());
     }
