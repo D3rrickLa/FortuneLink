@@ -190,7 +190,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of())
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -224,7 +226,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(cad)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -287,7 +291,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -325,7 +331,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -364,7 +372,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(cad)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -400,7 +410,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -461,7 +473,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of())
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(ValidatedCurrency.USD)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -491,7 +505,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of())
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(ValidatedCurrency.USD)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -525,6 +541,8 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of())
+                    .name("portfolio name")
+                    .description("some portfolio Desc")
                     .portfolioCurrencyPreference(ValidatedCurrency.USD)
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
@@ -580,7 +598,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -623,7 +643,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(cad)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -679,7 +701,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -742,7 +766,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(tfsaAccount, rrspAccount))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(cad)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -775,7 +801,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -813,7 +841,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -844,7 +874,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of())
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(ValidatedCurrency.USD)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -903,7 +935,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -989,7 +1023,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -1040,7 +1076,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -1125,7 +1163,9 @@ class PerformanceCalculationServiceTest {
                     .portfolioId(portfolioId1)
                     .userId(userId1)
                     .accounts(List.of(account))
+                    .name("portfolio name")
                     .portfolioCurrencyPreference(usd)
+                    .description("some portfolio Desc")
                     .systemCreationDate(Instant.now())
                     .lastUpdatedAt(Instant.now())
                     .build();
@@ -1549,7 +1589,9 @@ class PerformanceCalculationServiceTest {
                 .portfolioId(portfolioId1)
                 .userId(userId1)
                 .accounts(List.of(account))
+                .name("Portfolio name")
                 .portfolioCurrencyPreference(currency)
+                .description("desc")
                 .systemCreationDate(Instant.now())
                 .lastUpdatedAt(Instant.now())
                 .build();

@@ -19,17 +19,17 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@RestController
-@RequiredArgsConstructor
-@RequestMapping("/api/portfolios")
-public class PortfolioController {
-    private final PortfolioApplicationService portfolioApplicationService;
-    private final PortfolioDtoMapper portfolioDtoMapper;
-    private final RequestDtoMapper requestMapper;
+// @RestController
+// @RequiredArgsConstructor
+// @RequestMapping("/api/portfolios")
+// public class PortfolioController {
+//     private final PortfolioApplicationService portfolioApplicationService;
+//     private final PortfolioDtoMapper portfolioDtoMapper;
+//     private final RequestDtoMapper requestMapper;
 
-    @PostMapping
-    public ResponseEntity<PortfolioResponse> createPortfolio(@Valid @RequestBody CreatePortfolioRequest request) {
-        CreatePortfolioCommand command = new CreatePortfolioCommand(new UserId(request.userId()), request.name(), ValidatedCurrency.of(request.currencyPreference()), request.description(), request.createAccount());
-        Portfolio portfolio = portfolioApplicationService.createPortfolio(command);
-    }
-}
+//     @PostMapping
+//     public ResponseEntity<PortfolioResponse> createPortfolio(@Valid @RequestBody CreatePortfolioRequest request) {
+//         CreatePortfolioCommand command = new CreatePortfolioCommand(new UserId(request.userId()), request.name(), ValidatedCurrency.of(request.currencyPreference()), request.description(), request.createAccount());
+//         Portfolio portfolio = portfolioApplicationService.createPortfolio(command);
+//     }
+// }

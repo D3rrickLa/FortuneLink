@@ -31,13 +31,13 @@ public class PortfolioEntity {
     @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AccountEntity> accounts;
 
-    @Column(name = "name", nullable =  false)
+    @Column(name = "portfolio_name", nullable =  false)
     private String name;
     
     @Column(name = "portfolio_currency_preference", length = 3)
     private String currencyPreference;
 
-    @Column(name = "description")
+    @Column(name = "portfolio_description")
     private String description;
     
     @Column(name = "created_at")
@@ -50,11 +50,13 @@ public class PortfolioEntity {
     private Integer version;
 
 
-    public PortfolioEntity(UUID id, UUID userId) {
+    public PortfolioEntity(UUID id, UUID userId, String name, String currencyPref, String description) {
         this.id = id;
         this.userId = userId;
         this.accounts = new ArrayList<>();
-        this.currencyPreference = null;
+        this.name = name;
+        this.currencyPreference = currencyPref;
+        this.description = description;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }

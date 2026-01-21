@@ -10,7 +10,9 @@
 CREATE TABLE portfolios (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE,
+    portfolio_name VARCHAR(255) NOT NULL,
     portfolio_currency_preference VARCHAR(3) NOT NULL,
+    portfolio_description VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version INTEGER NOT NULL DEFAULT 0,

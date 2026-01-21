@@ -356,7 +356,9 @@ class TransactionQueryRepositoryImplTest {
         PortfolioEntity entity = new PortfolioEntity();
         entity.setId(UUID.randomUUID());
         entity.setUserId(testUserId);
+        entity.setName("My portfolio");
         entity.setCurrencyPreference("USD");
+        entity.setDescription("Some desc");
         entity.setCreatedAt(testTime);
         entity.setUpdatedAt(testTime);
         entityManager.persist(entity); // persist immediately

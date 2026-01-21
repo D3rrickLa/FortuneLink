@@ -61,7 +61,15 @@ public class Portfolio implements ClassValidation {
     // Static Factory for NEW Portfolios (used by Application Services)
     public static Portfolio createNew(UserId userId, ValidatedCurrency currency, String name, String desc) {
         Instant time = Instant.now();
-        return new Portfolio(new PortfolioId(UUID.randomUUID()), userId, new ArrayList<>(), name, currency, desc, time, time);
+        String descCleaned = desc == null ? " " : desc;
+        return new Portfolio(
+            new PortfolioId(UUID.randomUUID()), 
+            userId, 
+            new ArrayList<>(), 
+            name, 
+            currency, 
+            descCleaned, 
+            time, time);
     }
 
     // used ONLY in the update Portfolio in application layer

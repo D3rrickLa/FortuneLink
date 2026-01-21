@@ -261,7 +261,9 @@ class PortfolioEntityMapperImplTest {
             PortfolioEntity entity = new PortfolioEntity();
             entity.setId(UUID.randomUUID());
             entity.setUserId(UUID.randomUUID());
+            entity.setName("Portfolio");
             entity.setCurrencyPreference("USD");
+            entity.setDescription("some descrption");
             entity.setAccounts(null);
             entity.setCreatedAt(testTime);
             entity.setUpdatedAt(testTime);
@@ -712,7 +714,9 @@ class PortfolioEntityMapperImplTest {
         PortfolioEntity entity = new PortfolioEntity();
         entity.setId(UUID.randomUUID());
         entity.setUserId(UUID.randomUUID());
+        entity.setName("PortfolioName");
         entity.setCurrencyPreference("USD");
+        entity.setDescription("some description");
         entity.setCreatedAt(testTime);
         entity.setUpdatedAt(testTime);
 

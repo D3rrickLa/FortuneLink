@@ -1570,7 +1570,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("Portfolio name is required");
         }
         
         @Test

@@ -11,7 +11,7 @@ public class PortfolioEntityTest {
     void testConstructor() {
         UUID portfolioId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        PortfolioEntity entity = new PortfolioEntity(portfolioId, userId);
+        PortfolioEntity entity = new PortfolioEntity(portfolioId, userId, "name", "USD", "desc");
 
         assertEquals(portfolioId, entity.getId());
         assertEquals(userId, entity.getUserId());
