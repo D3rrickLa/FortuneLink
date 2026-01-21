@@ -127,7 +127,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(UUID.randomUUID()),
                     new UserId(UUID.randomUUID()),
                     Collections.emptyList(),
+                    "Name",
                     ValidatedCurrency.of("USD"),
+                    "Desc",
                     testTime,
                     testTime);
 
@@ -168,7 +170,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(UUID.randomUUID()),
                     new UserId(UUID.randomUUID()),
                     List.of(account),
+                    "name",
                     ValidatedCurrency.of("USD"),
+                    "desc",
                     testTime,
                     testTime);
 
@@ -347,7 +351,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(existingEntity.getId()),
                     new UserId(existingEntity.getUserId()),
                     accounts,
+                    "Portfolio",
                     ValidatedCurrency.of("USD"),
+                    "USD",
                     testTime,
                     testTime);
 
@@ -386,7 +392,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(existingEntity.getId()),
                     new UserId(existingEntity.getUserId()),
                     List.of(updatedAccount),
+                    "Name",
                     ValidatedCurrency.of("USD"),
+                    "Desc",
                     testTime,
                     testTime);
 
@@ -473,7 +481,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(existingEntity.getId()),
                     new UserId(existingEntity.getUserId()),
                     List.of(updatedAccount),
+                    "Name",
                     ValidatedCurrency.of("USD"),
+                    "desc",
                     testTime,
                     testTime);
 
@@ -555,7 +565,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(existingEntity.getId()),
                     new UserId(existingEntity.getUserId()),
                     List.of(updatedAccount),
+                    "NAme",
                     ValidatedCurrency.of("USD"),
+                    "Desc",
                     testTime,
                     testTime);
 
@@ -611,7 +623,9 @@ class PortfolioEntityMapperImplTest {
                     new PortfolioId(existingEntity.getId()),
                     new UserId(existingEntity.getUserId()),
                     List.of(updatedAccount),
+                    "Name",
                     ValidatedCurrency.of("USD"),
+                    "Desc",
                     testTime,
                     testTime);
 
@@ -687,7 +701,9 @@ class PortfolioEntityMapperImplTest {
                 new PortfolioId(UUID.randomUUID()),
                 new UserId(UUID.randomUUID()),
                 List.of(account1, account2),
+                "Name",
                 ValidatedCurrency.of("USD"),
+                "Desc",
                 testTime,
                 testTime);
     }

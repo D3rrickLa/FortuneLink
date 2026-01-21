@@ -27,8 +27,8 @@ import lombok.RequiredArgsConstructor;
  * Mapper for converting Portfolio domain objects to response DTOs
  * Uses ExchangeRateService for currency conversions
  */
-@RequiredArgsConstructor
 @Component
+@RequiredArgsConstructor
 public class PortfolioMapper {
     
     private final ExchangeRateService exchangeRateService;

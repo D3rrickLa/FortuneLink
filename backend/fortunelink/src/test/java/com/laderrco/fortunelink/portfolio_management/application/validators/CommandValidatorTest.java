@@ -1527,7 +1527,7 @@ class CommandValidatorTest {
     @Nested
     @DisplayName("CreatePortfolioCommand Validation Tests")
     class CreatePortfolioCommandTests {
-        
+        private String name = "Portfolio name";
         @Test
         @DisplayName("Should pass validation for valid portfolio command")
         void shouldPassValidationForValidCommand() {
@@ -1544,7 +1544,26 @@ class CommandValidatorTest {
         void shouldFailWhenUserIdIsNull() {
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                 null,
+                name,
                 ValidatedCurrency.of("USD"),
+                null,
+                false
+            );
+            
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("UserId is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when userId is null")
+        void shouldFailWhenNameIsNull() {
+            CreatePortfolioCommand command = new CreatePortfolioCommand(
+                UserId.randomId(),
+                null,
+                ValidatedCurrency.of("USD"),
+                null,
                 false
             );
             
@@ -1559,6 +1578,8 @@ class CommandValidatorTest {
         void shouldFailWhenDefaultCurrencyIsNull() {
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                 UserId.randomId(),
+                name,
+                null,
                 null,
                 false
             );
@@ -1572,7 +1593,9 @@ class CommandValidatorTest {
         private CreatePortfolioCommand createValidPortfolioCommand() {
             return new CreatePortfolioCommand(
                 UserId.randomId(),
+                name,
                 ValidatedCurrency.of("USD"),
+                "Desc",
                 true
             );
         }

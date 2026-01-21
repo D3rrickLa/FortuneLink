@@ -376,6 +376,10 @@ public class CommandValidator implements ClassValidation {
             errors.add("UserId is required");
         }
         
+        if (command.name() == null) {
+            errors.add("Portfolio name is required");
+        }
+
         if (command.defaultCurrency() == null) {
             errors.add("Curency is required");
         }

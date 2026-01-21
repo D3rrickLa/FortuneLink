@@ -27,12 +27,18 @@ public class PortfolioEntity {
     
     @Column(name = "user_id", nullable =  false, unique = true)
     private UUID userId;
-
+    
     @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AccountEntity> accounts;
 
+    @Column(name = "name", nullable =  false)
+    private String name;
+    
     @Column(name = "portfolio_currency_preference", length = 3)
     private String currencyPreference;
+
+    @Column(name = "description")
+    private String description;
     
     @Column(name = "created_at")
     private Instant createdAt;

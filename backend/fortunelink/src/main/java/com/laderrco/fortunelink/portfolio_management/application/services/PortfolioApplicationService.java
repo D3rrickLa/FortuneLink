@@ -20,6 +20,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
@@ -64,7 +65,7 @@ import lombok.AllArgsConstructor;
  * This service handles all state-changing operations on the Portfolio aggregate.
  * All operations go through the Portfolio aggregate root to maintain consistency.
  * 
- * For read operations, see PortfolioQueryService.
+ * For read operations, see {@link PortfolioQueryService}.
  * 
  * TODO: Currently assumes 1 portfolio per user for MVP. Multi-portfolio support later.
  * TODO: Transaction edits/deletes are hard deletes with no cascade effect checks.
@@ -515,7 +516,7 @@ public class PortfolioApplicationService {
         }
 
         // create portfolio (domain logic)
-        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency());
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(), command.description());
 
         // add a default account if specified in command
         if (command.createDefaultAccount()) {
@@ -532,6 +533,18 @@ public class PortfolioApplicationService {
         Portfolio savePortfolio = portfolioRepository.save(portfolio);
 
         return portfolioMapper.toResponse(savePortfolio, marketDataService);
+    }
+
+    public PortfolioResponse updatePortfolio(UpdatePortfolioCommand command) {
+        Optional<Portfolio> existingPortfolio = portfolioRepository.findById(command.id());
+        if (existingPortfolio.isEmpty()) {
+            throw new PortfolioNotFoundException("Cannot find portfolio with id: " + command.id());
+        }
+
+        Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.defaultCurrency());
+        updatePortfolio = portfolioRepository.save(updatePortfolio);
+
+        return portfolioMapper.toResponse(updatePortfolio, marketDataService);
     }
 
     /**

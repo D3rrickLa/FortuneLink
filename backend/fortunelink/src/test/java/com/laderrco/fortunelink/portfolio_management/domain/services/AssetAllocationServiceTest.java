@@ -123,7 +123,7 @@ public class AssetAllocationServiceTest {
         void shouldCalculateCorrectAllocationForMultipleAssetTypes() {
             // 1. Arrange - Use a real Portfolio object (not a mock) to avoid stubbing
             // confusion
-            Portfolio portfolio = Portfolio.createNew(UserId.randomId(), ValidatedCurrency.USD);
+            Portfolio portfolio = Portfolio.createNew(UserId.randomId(), ValidatedCurrency.USD, "Portfolio name", "desc");
 
             Asset stockAsset = createAsset(AssetType.STOCK);
             Asset etfAsset = createAsset(AssetType.ETF);
@@ -239,7 +239,7 @@ public class AssetAllocationServiceTest {
         @DisplayName("Should return empty map when portfolio has no accounts")
         void shouldReturnEmptyMapWhenPortfolioIsEmpty() {
             // Arrange - Use a real object to avoid stubbing getAccounts()
-            Portfolio portfolio = Portfolio.createNew(UserId.randomId(), ValidatedCurrency.USD);
+            Portfolio portfolio = Portfolio.createNew(UserId.randomId(), ValidatedCurrency.USD, "Name of p", "desc");
 
             // Act
             Map<AccountType, Money> result = assetAllocationService.calculateAllocationByAccount(portfolio, time);

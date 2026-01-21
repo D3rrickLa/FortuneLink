@@ -1,0 +1,23 @@
+package com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses;
+
+import java.util.List;
+
+/**
+ * Response DTO for account details.
+ * 
+ * Example JSON:
+ * {
+ *   "id": "account-123",
+ *   "name": "My TFSA",
+ *   "accountType": "TFSA",
+ *   "baseCurrency": "CAD",
+ *   "assets": [...]
+ * }
+ */
+public record AccountResponse(
+    String id,
+    String name,
+    String accountType,
+    String baseCurrency,
+    List<AssetHoldingResponse> assets
+) {}

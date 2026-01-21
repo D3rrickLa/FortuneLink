@@ -77,7 +77,9 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                 new PortfolioId(entity.getId()),
                 new UserId(entity.getUserId()),
                 domainAccounts,
+                entity.getName(),
                 ValidatedCurrency.of(entity.getCurrencyPreference()),
+                entity.getDescription(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }

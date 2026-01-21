@@ -75,7 +75,8 @@ class PerformanceCalculationServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        performanceService = new PerformanceCalculationService(marketDataService, exchangeRateService, portfolioValuationService);
+        performanceService = new PerformanceCalculationService(marketDataService, exchangeRateService,
+                portfolioValuationService);
         portfolioId1 = PortfolioId.randomId();
         userId1 = UserId.randomId();
         assetId1 = AssetId.randomId();
@@ -163,7 +164,6 @@ class PerformanceCalculationServiceTest {
                     .thenReturn(Optional.of(negativeQuote));
             when(portfolioValuationService.calculateTotalValue(any(), any())).thenReturn(Money.of(1700, "USD"));
 
-
             // Handle potential currency conversion calls (identity conversion for USD to
             // USD)
             lenient().when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class), any()))
@@ -246,7 +246,6 @@ class PerformanceCalculationServiceTest {
             lenient().when(exchangeRateService.convert(any(Money.class), any(ValidatedCurrency.class), any()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(portfolioValuationService.calculateTotalValue(any(), any())).thenReturn(Money.of(2900, "CAD"));
-
 
             // --- Act ---
             Percentage totalReturn = performanceService.calculateTotalReturn(portfolio);
@@ -1145,6 +1144,8 @@ class PerformanceCalculationServiceTest {
     @Nested
     @DisplayName("Not implmented but need to test")
     public class TestsCADACBMethod {
+        private String name = "Portfolio name";
+
         @Test
         void calculateSellGainWithACB_shouldReturnZeroWhenPortoflioIsNull() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
@@ -1161,7 +1162,7 @@ class PerformanceCalculationServiceTest {
         void testCalculateRealizedGainsCAD_ACB_Success() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1193,7 +1194,7 @@ class PerformanceCalculationServiceTest {
         void testCalculateACB_IgnoresCashEvents() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1229,7 +1230,7 @@ class PerformanceCalculationServiceTest {
 
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1257,7 +1258,7 @@ class PerformanceCalculationServiceTest {
         void testCalculateRealizedGainsCAD_ACB_ReturnOfCapital() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1285,7 +1286,7 @@ class PerformanceCalculationServiceTest {
         void testCalculateRealizedGainsCAD_ACB_DividendDrip() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1323,7 +1324,7 @@ class PerformanceCalculationServiceTest {
         void testTransferOut_BranchCoverage() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1350,7 +1351,7 @@ class PerformanceCalculationServiceTest {
         void testZeroShares_BranchCoverage() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1375,7 +1376,7 @@ class PerformanceCalculationServiceTest {
         void testROC_ReducesCost() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1402,7 +1403,7 @@ class PerformanceCalculationServiceTest {
         void testROC_TriggersGain() {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);
@@ -1430,7 +1431,7 @@ class PerformanceCalculationServiceTest {
         void testDividend_Branches() throws Exception, IllegalAccessException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
-            Portfolio portfolio = new Portfolio(userId1, ValidatedCurrency.CAD);
+            Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
 
             TransactionId VALID_ID = mock(TransactionId.class);
             AccountId VAL_ACCOUNT_ID = mock(AccountId.class);

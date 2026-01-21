@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.requests;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 
 /**
@@ -15,12 +17,17 @@ import jakarta.validation.constraints.NotBlank;
 public record CreatePortfolioRequest(
     
     @NotBlank(message = "User ID is required")
-    String userId,
+    UUID userId,
     
     @NotBlank(message = "Portfolio name is required")
     String name,
     
-    String description  // Optional
+    @NotBlank(message = "Currency preference cannot be blank")
+    String currencyPreference,
+
+    String description, // Optional
+
+    boolean createAccount
 ) {
     // Compact constructor for validation
     public CreatePortfolioRequest {

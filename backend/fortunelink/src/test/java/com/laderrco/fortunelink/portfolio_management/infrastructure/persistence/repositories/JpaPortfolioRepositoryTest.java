@@ -65,7 +65,9 @@ class JpaPortfolioRepositoryTest {
 
         Portfolio portfolio = Portfolio.createNew(
                 userId,
-                ValidatedCurrency.USD);
+                ValidatedCurrency.USD,
+                "Name",
+                "Desc");
 
         PortfolioId portfolioId = portfolio.getPortfolioId();
         // when
@@ -102,7 +104,9 @@ class JpaPortfolioRepositoryTest {
                 portfolioId,
                 userId,
                 new ArrayList<>(),
+                "Name",
                 ValidatedCurrency.USD,
+                "Desc",
                 time,
                 time);
 
@@ -123,7 +127,9 @@ class JpaPortfolioRepositoryTest {
                 portfolioId,
                 userId,
                 new ArrayList<>(),
+                "Name",
                 ValidatedCurrency.USD,
+                "Desc",
                 time,
                 time);
 

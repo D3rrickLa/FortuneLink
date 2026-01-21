@@ -24,39 +24,51 @@ import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@Builder
+@Builder // TODO: impl
 public class Portfolio implements ClassValidation {
     private final PortfolioId portfolioId;
     private final UserId userId;
     private List<Account> accounts;
+    private final String name;
     private ValidatedCurrency portfolioCurrencyPreference;
+    private String description;
+
 
     private final Instant systemCreationDate;
     private Instant lastUpdatedAt;
 
-    private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts, ValidatedCurrency portfolioCurrencyPreference, Instant systemCreationDate, Instant updatedAt) {
+    private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts, String name, ValidatedCurrency portfolioCurrencyPreference, String description, Instant systemCreationDate, Instant updatedAt) {
         this.portfolioId = ClassValidation.validateParameter(portfolioId);
         this.userId = ClassValidation.validateParameter(userId);
         this.accounts = ClassValidation.validateParameter(accounts);
+        this.name = ClassValidation.validateParameter(name);
+        this.description = ClassValidation.validateParameter(description);
         this.portfolioCurrencyPreference = ClassValidation.validateParameter(portfolioCurrencyPreference);
         this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
         this.lastUpdatedAt = ClassValidation.validateParameter(updatedAt);
     }
     
     // Constructor for new portfolio
-    public Portfolio(UserId userId, ValidatedCurrency currency) {
-        this(PortfolioId.randomId(), ClassValidation.validateParameter(userId, "UserId cannot be null"), new ArrayList<>(), currency, Instant.now(), Instant.now());
+    public Portfolio(UserId userId, String name, ValidatedCurrency currency) {
+        this(PortfolioId.randomId(), ClassValidation.validateParameter(userId, "UserId cannot be null"), new ArrayList<>(), name, currency, "My Portfolio", Instant.now(), Instant.now());
     }
 
     // Static Factory for Reconstitution (used by Mappers/Repositories)
-    public static Portfolio reconstitute(PortfolioId id, UserId userId, List<Account> accounts, ValidatedCurrency currency, Instant created, Instant updated) {
-        return new Portfolio(id, userId, accounts, currency, created, updated);
+    public static Portfolio reconstitute(PortfolioId id, UserId userId, List<Account> accounts, String name, ValidatedCurrency currency, String desc, Instant created, Instant updated) {
+        return new Portfolio(id, userId, accounts, name, currency, desc, created, updated);
     }
 
     // Static Factory for NEW Portfolios (used by Application Services)
-    public static Portfolio createNew(UserId userId, ValidatedCurrency currency) {
+    public static Portfolio createNew(UserId userId, ValidatedCurrency currency, String name, String desc) {
         Instant time = Instant.now();
-        return new Portfolio(new PortfolioId(UUID.randomUUID()), userId, new ArrayList<>(), currency, time, time);
+        return new Portfolio(new PortfolioId(UUID.randomUUID()), userId, new ArrayList<>(), name, currency, desc, time, time);
+    }
+
+    // used ONLY in the update Portfolio in application layer
+    public Portfolio updatePortfolio(ValidatedCurrency newDefaultCurrency) {
+        this.portfolioCurrencyPreference = newDefaultCurrency;
+        updateMetadata();
+        return this;
     }
 
     public void addAccount(Account account) {

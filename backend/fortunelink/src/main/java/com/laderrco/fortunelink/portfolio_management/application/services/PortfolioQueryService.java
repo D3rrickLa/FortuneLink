@@ -6,7 +6,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +16,7 @@ import com.laderrco.fortunelink.portfolio_management.application.mappers.Transac
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
@@ -76,6 +76,26 @@ public class PortfolioQueryService {
     private final PortfolioMapper portfolioMapper;
     
     // Future: LiabilityQueryService liabilityQueryService // ACL interface for Loan Management context
+
+
+    // Standard 'get query' for the portoflio
+    /**
+     * Get portfolio by ID.
+     */
+    @Transactional(readOnly = true)
+    public Portfolio getPortfolio(GetPortfolioByIdQuery query) {
+        return portfolioRepository.findById( query.id())
+            .orElseThrow(() -> new PortfolioNotFoundException("Cannot find portfolio with id " + query.id()));
+    }
+    
+    /**
+     * Get all portfolios for a user.
+     */
+    // @Transactional(readOnly = true)
+    // public List<Portfolio> getUserPortfolios(GetPortfoliosByUserIdQuery query) {        
+    //     return portfolioRepository.findByUserId(query.id()).get();
+    //     }
+
 
     /**
      * Calculate net worth for a user's portfolio.

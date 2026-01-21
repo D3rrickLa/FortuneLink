@@ -115,14 +115,16 @@ class PortfolioApplicationServiceTest {
     private Account account;
     private MarketAssetInfo assetInfo;
     private MarketIdentifier identifier;
+    private String name;
 
     @BeforeEach
     void setUp() {
         userId = UserId.randomId();
         accountId = AccountId.randomId();
+        name = "Portfolio Name";
 
         // Create portfolio with account
-        portfolio = new Portfolio(userId, ValidatedCurrency.USD);
+        portfolio = new Portfolio(userId, name, ValidatedCurrency.USD);
         account = Account.createNew(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
         portfolio.addAccount(account);
 
@@ -272,7 +274,7 @@ class PortfolioApplicationServiceTest {
         @BeforeEach
         void setUp() {
             // Create a fresh portfolio for this test to ensure clean state
-            portfolio = new Portfolio(userId, ValidatedCurrency.USD);
+            portfolio = new Portfolio(userId, name, ValidatedCurrency.USD);
             account = Account.createNew(accountId, "Test Account", AccountType.NON_REGISTERED, ValidatedCurrency.USD);
             portfolio.addAccount(account);
 
@@ -2207,10 +2209,12 @@ class PortfolioApplicationServiceTest {
             UserId newUserId = UserId.randomId();
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                     newUserId,
+                    name,
                     ValidatedCurrency.USD,
+                    "desc here",
                     true);
 
-            Portfolio newPortfolio = new Portfolio(newUserId, ValidatedCurrency.USD);
+            Portfolio newPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
@@ -2232,10 +2236,12 @@ class PortfolioApplicationServiceTest {
             UserId newUserId = UserId.randomId();
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                     newUserId,
+                    name,
                     ValidatedCurrency.USD,
+                    null,
                     false);
 
-            Portfolio newPortfolio = new Portfolio(newUserId, ValidatedCurrency.USD);
+            Portfolio newPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
@@ -2257,7 +2263,9 @@ class PortfolioApplicationServiceTest {
             // Given
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                     userId,
+                    name,
                     ValidatedCurrency.USD,
+                    null,
                     true);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
@@ -2288,7 +2296,7 @@ class PortfolioApplicationServiceTest {
         void shouldDeleteEmptyPortfolio() {
             // Given - create a portfolio with no accounts
             UserId newUserId = UserId.randomId();
-            Portfolio emptyPortfolio = new Portfolio(newUserId, ValidatedCurrency.USD);
+            Portfolio emptyPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
 
             DeletePortfolioCommand command = new DeletePortfolioCommand(newUserId, true, false);
 
