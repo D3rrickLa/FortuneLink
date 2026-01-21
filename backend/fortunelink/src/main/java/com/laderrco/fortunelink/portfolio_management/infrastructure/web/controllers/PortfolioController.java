@@ -40,6 +40,6 @@ public class PortfolioController {
 
     @GetMapping("/{id}")
     public ResponseEntity<PortfolioHttpResponse> getPortfolio(@PathVariable UUID id) {
-        return null
+        return null;
     }
 }

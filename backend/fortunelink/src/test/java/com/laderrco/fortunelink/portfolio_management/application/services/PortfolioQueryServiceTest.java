@@ -57,6 +57,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.A
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PerformanceView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
@@ -163,7 +164,7 @@ class PortfolioQueryServiceTest {
         when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(mockPortfolio));
 
         // Act
-        Portfolio result = queryService.getPortfolio(query);
+        PortfolioView result = queryService.getPortfolioById(query);
 
         // Assert
         assertNotNull(result);
@@ -181,7 +182,7 @@ class PortfolioQueryServiceTest {
         when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(PortfolioNotFoundException.class, () -> queryService.getPortfolio(query));
+        assertThrows(PortfolioNotFoundException.class, () -> queryService.getPortfolioById(query));
     }
 
     @Test
@@ -195,7 +196,7 @@ class PortfolioQueryServiceTest {
         when(portfolioRepository.findAllByUserId(userId)).thenReturn(mockList);
 
         // Act
-        List<Portfolio> result = queryService.getUserPortfolios(query);
+        List<PortfolioSummaryView> result = queryService.getUserPortfolioSummaries(query);
 
         // Assert
         assertEquals(2, result.size());
@@ -212,7 +213,7 @@ class PortfolioQueryServiceTest {
         when(portfolioRepository.findAllByUserId(userId)).thenReturn(List.of());
 
         // Act
-        List<Portfolio> result = queryService.getUserPortfolios(query);
+        List<PortfolioSummaryView> result = queryService.getUserPortfolioSummaries(query);
 
         // Assert
         assertTrue(result.isEmpty());
@@ -739,7 +740,7 @@ class PortfolioQueryServiceTest {
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
         when(portfolio.getAccount(accountId)).thenReturn(account);
-        when(portfolioViewAssembler.toAccountResponse(account, marketDataService))
+        when(portfolioViewAssembler.assembleAccountView(account))
                 .thenReturn(expectedResponse);
 
         // Act
@@ -750,7 +751,7 @@ class PortfolioQueryServiceTest {
         assertEquals(expectedResponse, response);
 
         verify(portfolio).getAccount(accountId);
-        verify(portfolioViewAssembler).toAccountResponse(account, marketDataService);
+        verify(portfolioViewAssembler).assembleAccountView(account);
     }
 
     @Test
@@ -774,17 +775,17 @@ class PortfolioQueryServiceTest {
         PortfolioView expectedResponse = mock(PortfolioView.class);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
-        when(portfolioViewAssembler.toResponse(portfolio, marketDataService))
+        when(portfolioViewAssembler.assemblePortfolioView(portfolio))
                 .thenReturn(expectedResponse);
 
         // Act
-        PortfolioView response = queryService.getPortfolioSummary(query);
+        PortfolioView response = queryService.getUserPortfolioView(query);
 
         // Assert
         assertNotNull(response);
         assertEquals(expectedResponse, response);
 
-        verify(portfolioViewAssembler).toResponse(portfolio, marketDataService);
+        verify(portfolioViewAssembler).assemblePortfolioView(portfolio);
     }
 
     @Test
@@ -795,7 +796,7 @@ class PortfolioQueryServiceTest {
 
         // Act & Assert
         assertThrows(PortfolioNotFoundException.class,
-                () -> queryService.getPortfolioSummary(query));
+                () -> queryService.getUserPortfolioView(query));
     }
 
     // ==================== Helper Methods ====================

@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -35,14 +34,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.Portfolio
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
-import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 

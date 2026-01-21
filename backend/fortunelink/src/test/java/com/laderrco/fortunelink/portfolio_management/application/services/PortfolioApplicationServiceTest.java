@@ -2081,7 +2081,7 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
-            when(portfolioViewAssembler.toAccountResponse(any(), any())).thenReturn(mock(AccountView.class));
+            when(portfolioViewAssembler.assembleAccountView(any())).thenReturn(mock(AccountView.class));
 
             // When
             AccountView response = service.addAccount(command);
@@ -2219,7 +2219,7 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
-            when(portfolioViewAssembler.toResponse(any(), any())).thenReturn(mock(PortfolioView.class));
+            when(portfolioViewAssembler.assemblePortfolioView(any())).thenReturn(mock(PortfolioView.class));
 
             // When
             PortfolioView response = service.createPortfolio(command);
@@ -2246,7 +2246,7 @@ class PortfolioApplicationServiceTest {
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
-            when(portfolioViewAssembler.toResponse(any(), any())).thenReturn(mock(PortfolioView.class));
+            when(portfolioViewAssembler.assemblePortfolioView(any())).thenReturn(mock(PortfolioView.class));
 
             // When
             PortfolioView response = service.createPortfolio(command);

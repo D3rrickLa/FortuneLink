@@ -62,7 +62,7 @@ class PortfolioViewAssemblerTest {
 
     @BeforeEach
     void setUp() {
-        mapper = new PortfolioViewAssembler(exchangeRateService);
+        mapper = new PortfolioViewAssembler(exchangeRateService, marketDataService);
         portfolioId = PortfolioId.randomId();
         accountId = AccountId.randomId();
     }
@@ -75,7 +75,7 @@ class PortfolioViewAssemblerTest {
         @DisplayName("Should return null when portfolio is null")
         void shouldReturnNullForNullPortfolio() {
             // Act
-            PortfolioView response = mapper.toResponse(null, marketDataService);
+            PortfolioView response = mapper.assemblePortfolioView(null);
 
             // Assert
             assertNull(response);
@@ -94,7 +94,7 @@ class PortfolioViewAssemblerTest {
             
 
             // Act
-            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.assemblePortfolioView(portfolio);
 
             // Assert
             assertNotNull(response);
@@ -125,7 +125,7 @@ class PortfolioViewAssemblerTest {
             when(account2.calculateTotalValue(marketDataService)).thenReturn(Money.of(10000, "CAD"));
 
             // Act
-            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.assemblePortfolioView(portfolio);
 
             // Assert
             assertNotNull(response);
@@ -153,7 +153,7 @@ class PortfolioViewAssemblerTest {
             when(portfolio.getLastUpdatedAt()).thenReturn(NOW);
 
             // Act
-            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.assemblePortfolioView(portfolio);
 
             // Assert
             assertNotNull(response);
@@ -175,7 +175,7 @@ class PortfolioViewAssemblerTest {
             when(portfolio.getAssetsTotalValue(any(), any())).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            PortfolioView response = mapper.toResponse(portfolio, marketDataService);
+            PortfolioView response = mapper.assemblePortfolioView(portfolio);
 
             // Assert
             assertEquals(createdDate, response.createDate());
@@ -192,7 +192,7 @@ class PortfolioViewAssemblerTest {
         @DisplayName("Should return null when account is null")
         void shouldReturnNullForNullAccount() {
             // Act
-            AccountView response = mapper.toAccountResponse(null, marketDataService);
+            AccountView response = mapper.assembleAccountView(null);
 
             // Assert
             assertNull(response);
@@ -209,7 +209,7 @@ class PortfolioViewAssemblerTest {
             when(account.calculateTotalValue(marketDataService)).thenReturn(totalValue);
 
             // Act
-            AccountView response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.assembleAccountView(account);
 
             // Assert
             assertNotNull(response);
@@ -239,7 +239,7 @@ class PortfolioViewAssemblerTest {
             when(account.getSystemCreationDate()).thenReturn(NOW);
 
             // Act
-            AccountView response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.assembleAccountView(account);
 
             // Assert
             assertNotNull(response);
@@ -265,7 +265,7 @@ class PortfolioViewAssemblerTest {
             when(account.getSystemCreationDate()).thenReturn(NOW);
 
             // Act
-            AccountView response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.assembleAccountView(account);
 
             // Assert
             assertNotNull(response);
@@ -287,7 +287,7 @@ class PortfolioViewAssemblerTest {
             when(account.getSystemCreationDate()).thenReturn(NOW);
 
             // Act
-            AccountView response = mapper.toAccountResponse(account, marketDataService);
+            AccountView response = mapper.assembleAccountView(account);
 
             // Assert
             assertNotNull(response);
@@ -304,7 +304,7 @@ class PortfolioViewAssemblerTest {
         @DisplayName("Should return null when asset is null")
         void shouldReturnNullForNullAsset() {
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(null, Money.of(150, "USD"));
+            AssetView response = PortfolioViewAssembler.assembleAssetView(null, Money.of(150, "USD"));
 
             // Assert
             assertNull(response);
@@ -324,7 +324,7 @@ class PortfolioViewAssemblerTest {
             when(asset.getCostBasis()).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -348,7 +348,7 @@ class PortfolioViewAssemblerTest {
             when(asset.getCostPerUnit()).thenReturn(Money.of(0, "USD"));
             when(asset.getCostBasis()).thenReturn(Money.of(0, "USD"));
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, null);
+            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, null);
 
             // Assert
             assertNotNull(response);
@@ -372,7 +372,7 @@ class PortfolioViewAssemblerTest {
             lenient().when(asset.getCostBasis()).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -395,7 +395,7 @@ class PortfolioViewAssemblerTest {
             when(asset.getCostBasis()).thenReturn(Money.ZERO("USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -430,7 +430,7 @@ class PortfolioViewAssemblerTest {
             when(asset.calculateUnrealizedGainLoss(currentPrice)).thenReturn(Money.of(1000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertEquals(assetId, response.assetId());
@@ -457,7 +457,7 @@ class PortfolioViewAssemblerTest {
             lenient().when(asset.getCostBasis()).thenReturn(Money.of(50000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.toAssetResponse(asset, currentPrice);
+            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);

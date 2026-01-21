@@ -70,6 +70,8 @@ import lombok.AllArgsConstructor;
  * For read operations, see {@link PortfolioQueryService}.
  * 
  * TODO: Currently assumes 1 portfolio per user for MVP. Multi-portfolio support later.
+ * Additionally, we would need to some sort of policy in the 'creation' method, basically if it's not empty
+ * and if they are in the policy
  *      In a multi-portfolio world, a "Deposit" or "Trade" command cannot just say
  *      "deposit money for User X." It must say "deposit money into Portfolio Y
  *      belonging to User X."
@@ -455,7 +457,7 @@ public class PortfolioApplicationService {
         // Persist
         portfolioRepository.save(portfolio);
 
-        return portfolioAssembler.toAccountResponse(account, null);
+        return portfolioAssembler.assembleAccountView(account);
     }
 
     public void removeAccount(RemoveAccountCommand command) {
@@ -532,7 +534,7 @@ public class PortfolioApplicationService {
         // Persist
         Portfolio savePortfolio = portfolioRepository.save(portfolio);
 
-        return portfolioAssembler.toResponse(savePortfolio, marketDataService);
+        return portfolioAssembler.assemblePortfolioView(savePortfolio);
     }
 
     public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
@@ -544,7 +546,7 @@ public class PortfolioApplicationService {
         Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.defaultCurrency());
         updatePortfolio = portfolioRepository.save(updatePortfolio);
 
-        return portfolioAssembler.toResponse(updatePortfolio, marketDataService);
+        return portfolioAssembler.assemblePortfolioView(updatePortfolio);
     }
 
     /**
