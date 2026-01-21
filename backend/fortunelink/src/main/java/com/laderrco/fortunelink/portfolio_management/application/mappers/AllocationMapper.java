@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio_management.application.views.AllocationDetail;
-import com.laderrco.fortunelink.portfolio_management.application.views.AllocationView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationDetail;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.shared.enums.Precision;

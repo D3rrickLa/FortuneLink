@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
-import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.mappers.PortfolioDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.mappers.PortoflioRequestMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.requests.CreatePortfolioRequest;

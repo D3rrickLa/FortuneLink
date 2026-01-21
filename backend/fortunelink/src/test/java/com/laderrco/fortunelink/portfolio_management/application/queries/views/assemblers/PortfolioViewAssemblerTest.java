@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.views.assemblers;
+package com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -8,9 +8,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
-import com.laderrco.fortunelink.portfolio_management.application.views.AssetView;
-import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;

@@ -30,12 +30,12 @@ import com.laderrco.fortunelink.portfolio_management.application.exceptions.Port
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
-import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
-import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
-import com.laderrco.fortunelink.portfolio_management.application.views.TransactionView;
-import com.laderrco.fortunelink.portfolio_management.application.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;

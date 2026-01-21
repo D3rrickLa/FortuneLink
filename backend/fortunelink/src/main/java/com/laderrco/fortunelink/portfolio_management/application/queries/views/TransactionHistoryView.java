@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.views;
+package com.laderrco.fortunelink.portfolio_management.application.queries.views;
 
 import java.util.List;
 

@@ -6,9 +6,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
-import com.laderrco.fortunelink.portfolio_management.application.views.AssetView;
-import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses.AccountHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses.AssetHoldingHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses.PortfolioHttpResponse;
