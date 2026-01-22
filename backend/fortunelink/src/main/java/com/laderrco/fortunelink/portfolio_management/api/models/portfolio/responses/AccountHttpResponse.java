@@ -16,6 +16,7 @@ import java.util.List;
  */
 public record AccountHttpResponse(
     String id,
+    String portfolioId,
     String name,
     String accountType,
     String baseCurrency,

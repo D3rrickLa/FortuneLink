@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.respon
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PortfolioHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 
 /**
@@ -31,16 +32,30 @@ public class PortfolioDtoMapper {
     /**
      * Convert domain Portfolio to API response DTO.
      */
-    public PortfolioHttpResponse toResponse(PortfolioView portfolio) {
-        return new PortfolioHttpResponse(
+    public PortfolioHttpResponse toPortfolioResponse(PortfolioView portfolio) {
+        return PortfolioHttpResponse.of(
             portfolio.portfolioId().toString(),
             portfolio.userId().toString(),
             portfolio.name(),
             portfolio.description(),
             portfolio.accounts().stream()
-                .map(this::toAccountResponse)
+                .map(a -> toAccountResponse(portfolio.portfolioId().toString(), a))
                 .collect(Collectors.toList()),
             LocalDateTime.ofInstant(portfolio.createDate(), ZoneId.systemDefault()),
+            LocalDateTime.ofInstant(portfolio.lastUpdated(), ZoneId.systemDefault())
+        );
+    }
+
+    public PortfolioHttpResponse toPortfolioResponse(PortfolioSummaryView portfolio) {
+        return new PortfolioHttpResponse(
+            portfolio.id().toString(),
+            null,
+            null,
+            null,
+            null,
+            portfolio.totalValue().amount(),
+            portfolio.totalValue().currency().getCode(), 
+            null,
             LocalDateTime.ofInstant(portfolio.lastUpdated(), ZoneId.systemDefault())
         );
     }
@@ -48,9 +63,10 @@ public class PortfolioDtoMapper {
     /**
      * Convert application AccountResponse to API response DTO.
      */
-    public AccountHttpResponse toAccountResponse(AccountView account) {
+    public AccountHttpResponse toAccountResponse(String id, AccountView account) {
         return new AccountHttpResponse(
             account.accountId().toString(),
+            id,
             account.name(),
             account.type().name(),
             account.baseCurrency().toString(),

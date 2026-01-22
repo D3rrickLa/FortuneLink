@@ -127,7 +127,7 @@ class PortfolioTest {
         void testRepoConstructorIsSucess() {
             List<Account> accounts = List.of(createTestAccount("TEST 1", AccountType.CHEQUING),
                     createTestAccount("RRSP", AccountType.INVESTMENT));
-            Portfolio portfolio = Portfolio.reconstitute(PortfolioId.randomId(), userId, accounts, name, portfolioCurrency, "Desc",
+            Portfolio portfolio = Portfolio.reconstitute(PortfolioId.randomId(), userId, accounts, name, portfolioCurrency, "Desc", false, null, null,
                     Instant.now(), Instant.now());
             assertEquals(accounts, portfolio.getAccounts());
             assertEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());

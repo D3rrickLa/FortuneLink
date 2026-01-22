@@ -2079,15 +2079,16 @@ class PortfolioApplicationServiceTest {
         @Test
         @DisplayName("Should successfully add account")
         void shouldAddAccount() {
+            PortfolioId portfolioId = PortfolioId.randomId();
             // Given
             AddAccountCommand command = new AddAccountCommand(
-                    userId,
+                    portfolioId,
                     "New Account",
                     AccountType.TFSA,
                     ValidatedCurrency.CAD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
             when(portfolioViewAssembler.assembleAccountView(any())).thenReturn(mock(AccountView.class));
 
@@ -2102,16 +2103,17 @@ class PortfolioApplicationServiceTest {
         @Test
         @DisplayName("Should successfully remove empty account")
         void shouldRemoveEmptyAccount() {
+            PortfolioId portfolioId = PortfolioId.randomId();
             // Given
             AccountId newAccountId = AccountId.randomId();
             Account emptyAccount = Account.createNew(newAccountId, "Empty", AccountType.TFSA, ValidatedCurrency.CAD);
             emptyAccount.close();
             portfolio.addAccount(emptyAccount);
 
-            RemoveAccountCommand command = new RemoveAccountCommand(userId, newAccountId);
+            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, newAccountId);
 
             when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
 
             // When
             service.removeAccount(command);
@@ -2124,6 +2126,7 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw exception when removing non-empty account")
         void shouldThrowExceptionWhenRemovingNonEmptyAccount() {
             // Given - add an asset to the account to make it non-empty
+            PortfolioId portfolioId = PortfolioId.randomId();
             Transaction buyTx = new Transaction(
                     TransactionId.randomId(),
                     accountId,
@@ -2136,9 +2139,9 @@ class PortfolioApplicationServiceTest {
                     "Asset to prevent deletion");
             portfolio.recordTransaction(accountId, buyTx);
 
-            RemoveAccountCommand command = new RemoveAccountCommand(userId, accountId);
+            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, accountId);
             when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
 
             // Verify account actually has assets before the test
             Account accountToRemove = portfolio.getAccount(accountId);
@@ -2168,35 +2171,36 @@ class PortfolioApplicationServiceTest {
 
         @Test
         void addAccount_WhenPortfolioNotFound_ThrowsException() {
+            PortfolioId portfolioId = PortfolioId.randomId();
             AddAccountCommand command = new AddAccountCommand(
-                    userId,
+                    portfolioId,
                     "some name",
                     AccountType.CHEQUING,
                     ValidatedCurrency.USD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> service.addAccount(command));
         }
 
         @Test
         void removeAccount_WhenPortfolioNotFound_ThrowsException() {
+            PortfolioId portfolioId = PortfolioId.randomId();
             RemoveAccountCommand command = new RemoveAccountCommand(
-                    userId,
+                    portfolioId,
                     accountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> service.removeAccount(command));
         }
 
         @Test
         void removeAccount_WhenInvalidTransaction_ThrowsException() {
-            RemoveAccountCommand command = new RemoveAccountCommand(
-                    userId,
-                    accountId);
+            PortfolioId portfolioId = PortfolioId.randomId();
+            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, accountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));
 
@@ -2364,11 +2368,12 @@ class PortfolioApplicationServiceTest {
             // Given - create a portfolio with no accounts
             UserId newUserId = UserId.randomId();
             Portfolio emptyPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
+            PortfolioId portfolioId = emptyPortfolio.getPortfolioId();
 
-            DeletePortfolioCommand command = new DeletePortfolioCommand(newUserId, true, false);
+            DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, false);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.of(emptyPortfolio));
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(emptyPortfolio));
 
             // Verify portfolio is empty before deletion
             assertThat(emptyPortfolio.getAccounts()).isEmpty();
@@ -2386,7 +2391,8 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw exception when deleting without confirmation")
         void shouldThrowExceptionWhenDeletingWithoutConfirmation() {
             // Given
-            DeletePortfolioCommand command = new DeletePortfolioCommand(userId, false, true);
+            PortfolioId portfolioId = PortfolioId.randomId();
+            DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, false, true);
             // When/Then
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             assertThatThrownBy(() -> service.deletePortfolio(command))
@@ -2397,10 +2403,11 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw exception when deleting non-empty portfolio")
         void shouldThrowExceptionWhenDeletingNonEmptyPortfolio() {
             // Given - portfolio already has accounts from setUp()
-            DeletePortfolioCommand command = new DeletePortfolioCommand(userId, true, false);
+            PortfolioId portfolioId = PortfolioId.randomId();
+            DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
 
             // Verify portfolio actually has accounts before the test
             assertThat(portfolio.getAccounts()).isNotEmpty();
@@ -2433,13 +2440,11 @@ class PortfolioApplicationServiceTest {
 
         @Test
         void deletePortfolio_WhenPortfolioNotFound_ThrowsException() {
-            DeletePortfolioCommand command = new DeletePortfolioCommand(
-                    userId,
-                    true,
-                    true);
+            PortfolioId portfolioId = PortfolioId.randomId();
+            DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, false);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
+            // when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> service.deletePortfolio(command));
         }

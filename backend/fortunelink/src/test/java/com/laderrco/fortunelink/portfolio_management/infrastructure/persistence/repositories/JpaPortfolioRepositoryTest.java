@@ -107,6 +107,9 @@ class JpaPortfolioRepositoryTest {
                 "Name",
                 ValidatedCurrency.USD,
                 "Desc",
+                false,
+                null,
+                null,
                 time,
                 time);
 
@@ -130,6 +133,9 @@ class JpaPortfolioRepositoryTest {
                 "Name",
                 ValidatedCurrency.USD,
                 "Desc",
+                false,
+                null,
+                null,
                 time,
                 time);
 

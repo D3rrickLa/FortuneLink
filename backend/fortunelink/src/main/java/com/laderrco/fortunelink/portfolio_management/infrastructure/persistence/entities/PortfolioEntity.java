@@ -39,6 +39,12 @@ public class PortfolioEntity {
 
     @Column(name = "portfolio_description")
     private String description;
+
+    private Boolean deleted;
+
+    private Instant deletedAt;
+
+    private UUID deletedBy;
     
     @Column(name = "created_at")
     private Instant createdAt;

@@ -1,7 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.commands;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 
-public record RemoveAccountCommand(UserId userId, AccountId accountId) {
+public record RemoveAccountCommand(PortfolioId portfolioId, AccountId accountId) {
 }

@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,6 +24,22 @@ public record PortfolioHttpResponse(
     String name,
     String description,
     List<AccountHttpResponse> accounts,
+    BigDecimal totalValue,
+    String totalValueCurrency,
     LocalDateTime createdDate,
     LocalDateTime lastUpdated
-) {}
+) {
+    public PortfolioHttpResponse {}
+
+    public static PortfolioHttpResponse of(
+        String id,
+        String userId,
+        String name,
+        String description,
+        List<AccountHttpResponse> accounts,
+        LocalDateTime createdDate,
+        LocalDateTime lastUpdated
+    ) {
+        return new PortfolioHttpResponse(id, userId, name, description, accounts, null, description, createdDate, lastUpdated);
+    }
+}

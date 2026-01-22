@@ -4,8 +4,20 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreateAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreatePortfolioRequest;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetUsersPortfolioRequest;
+import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
@@ -22,12 +34,60 @@ public class PortoflioHttpMapper {
         );
     }
 
+    public GetPortfolioByIdQuery toCommand(String id) {
+        return new GetPortfolioByIdQuery(new PortfolioId(UUID.fromString(id)));
+    }
+
+    public GetPortfoliosByUserIdQuery toCommand(GetUsersPortfolioRequest request) {
+        return new GetPortfoliosByUserIdQuery(new UserId(UUID.fromString(request.id())));
+    }
+
+    public UpdatePortfolioCommand toCommand(String id, CreatePortfolioRequest request) {
+        return new UpdatePortfolioCommand(
+            toPortfolioId(id), 
+            request.name(),
+            toCurrency(request.currencyPreference()), 
+            request.description()
+        );
+    }
+    
+    public DeletePortfolioCommand toCommand(DeletePortfolioRequest request) {
+        return new DeletePortfolioCommand(
+            request.portfolioId(),
+            request.userId(),
+            request.confirmed(),
+            request.softDelete()
+        );
+    }
+
+    public AddAccountCommand toCommand(String id, CreateAccountRequest request) {
+        return new AddAccountCommand(
+            toPortfolioId(id),
+            request.name(),
+            AccountType.valueOf(request.accountType()),
+            toCurrency(request.baseCurrency())
+        );
+    }
+
+    public RemoveAccountCommand toCommand(String portoflioId, String accountId) {
+        return new RemoveAccountCommand(toPortfolioId(accountId), toAccountId(accountId));
+    }
 
     private ValidatedCurrency toCurrency(String currency) {
         return ValidatedCurrency.of(currency);
     }
 
-    private UserId toUserId(UUID id) {
-        return new UserId(id);
+    private UserId toUserId(String id) {
+        return new UserId(UUID.fromString(id));
     }
+
+    private PortfolioId toPortfolioId(String id) {
+        return new PortfolioId(UUID.fromString(id));
+    }
+
+    private AccountId toAccountId(String id) {
+        return new AccountId(UUID.fromString(id));
+    }
+
+
 }

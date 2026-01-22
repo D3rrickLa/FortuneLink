@@ -80,6 +80,9 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                 entity.getName(),
                 ValidatedCurrency.of(entity.getCurrencyPreference()),
                 entity.getDescription(),
+                entity.getDeleted() != null && entity.getDeleted(),  // NULL-safe: treat NULL as false
+                entity.getDeletedAt(),
+                new UserId(entity.getDeletedBy()),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }

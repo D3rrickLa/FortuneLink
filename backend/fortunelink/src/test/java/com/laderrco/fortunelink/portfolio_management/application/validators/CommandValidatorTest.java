@@ -1238,13 +1238,13 @@ class CommandValidatorTest {
             assertThat(result.isValid()).isTrue();
             assertThat(result.errors()).isEmpty();
         }
-        
+
         @Test
-        @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        @DisplayName("Should fail when account name is null")
+        void shouldFailWhenAccountPortfolioIdIsNull() {
             AddAccountCommand command = new AddAccountCommand(
                 null,
-                "My Account",
+                "null",
                 AccountType.TFSA,
                 ValidatedCurrency.of("USD")
             );
@@ -1252,14 +1252,14 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
-
         @Test
         @DisplayName("Should fail when account name is null")
         void shouldFailWhenAccountNameIsNull() {
+            PortfolioId portfolioId = PortfolioId.randomId();
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                portfolioId,
                 null,
                 AccountType.TFSA,
                 ValidatedCurrency.of("USD")
@@ -1277,7 +1277,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when account name is null or empty")
         void shouldFailWhenAccountNameIsNullOrEmpty(String accountName) {
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 accountName,
                 AccountType.TFSA,
                 ValidatedCurrency.of("USD")
@@ -1294,7 +1294,7 @@ class CommandValidatorTest {
         void shouldFailWhenAccountNameExceedsMaxLength() {
             String longName = "A".repeat(101);
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 longName,
                 AccountType.TFSA,
                 ValidatedCurrency.of("USD")
@@ -1310,7 +1310,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when account type is null")
         void shouldFailWhenAccountTypeIsNull() {
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 "My Account",
                 null,
                 ValidatedCurrency.of("USD")
@@ -1326,7 +1326,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when base currency is null")
         void shouldFailWhenBaseCurrencyIsNull() {
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 "My Account",
                 AccountType.TFSA,
                 null
@@ -1343,7 +1343,7 @@ class CommandValidatorTest {
         void shouldFailWhenAccountTypeIsInvalid() {
             AccountType accountType = mock(AccountType.class);
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 "My Account",
                 accountType,
                 ValidatedCurrency.USD
@@ -1361,7 +1361,7 @@ class CommandValidatorTest {
         void shouldFailWhenBaseCurrencyIsInvalid() {
             ValidatedCurrency currency = mock(ValidatedCurrency.class);
             AddAccountCommand command = new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 "My Account",
                 AccountType.TFSA,
                 currency
@@ -1376,7 +1376,7 @@ class CommandValidatorTest {
         
         private AddAccountCommand createValidAddAccountCommand() {
             return new AddAccountCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 "My TFSA Account",
                 AccountType.TFSA,
                 ValidatedCurrency.of("USD")
@@ -1407,13 +1407,13 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
         
         @Test
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
-                        RemoveAccountCommand command = new RemoveAccountCommand(UserId.randomId(), null);
+                        RemoveAccountCommand command = new RemoveAccountCommand(PortfolioId.randomId(), null);
 
             ValidationResult result = validator.validate(command);
             
@@ -1423,7 +1423,7 @@ class CommandValidatorTest {
         
 
         private RemoveAccountCommand createValidRemoveAccountCommand() {
-            return new RemoveAccountCommand(UserId.randomId(), AccountId.randomId());
+            return new RemoveAccountCommand(PortfolioId.randomId(), AccountId.randomId());
         }
     }
 
@@ -1683,6 +1683,7 @@ class CommandValidatorTest {
         @DisplayName("Should pass validation for valid portfolio command")
         void shouldPassValidationForValidCommand() {
             DeletePortfolioCommand command =  new DeletePortfolioCommand(
+                PortfolioId.randomId(),
                 UserId.randomId(),
                 true,
                 false
@@ -1706,8 +1707,24 @@ class CommandValidatorTest {
 
         @Test
         @DisplayName("Should fail when userId is null")
+        void shouldFailWhenPortfolioIdIsNull() {
+            DeletePortfolioCommand command = new DeletePortfolioCommand(
+                null,
+                UserId.randomId(),
+                true,
+                false
+            );
+            ValidationResult result = validator.validate(command);
+            
+            assertThat(result.isValid()).isFalse();
+            assertThat(result.errors()).contains("PortfolioId is required");
+        }
+
+        @Test
+        @DisplayName("Should fail when userId is null")
         void shouldFailWhenUserIdIsNull() {
             DeletePortfolioCommand command = new DeletePortfolioCommand(
+                PortfolioId.randomId(),
                 null,
                 false,
                 false
@@ -1723,6 +1740,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when not confirmed but soft delete is null")
         void shouldFailWhenSoftDeleteConfirmAndConfirmedNot() {
             DeletePortfolioCommand command = new DeletePortfolioCommand(
+                PortfolioId.randomId(),
                 UserId.randomId(),
                 false,
                 true
@@ -1736,6 +1754,7 @@ class CommandValidatorTest {
 
         private DeletePortfolioCommand createValidDeletePortfolioCommand() {
             return new DeletePortfolioCommand(
+                PortfolioId.randomId(),
                 UserId.randomId(),
                 true,
                 true
@@ -2135,7 +2154,7 @@ class CommandValidatorTest {
             // All enum values should be valid
             for (AccountType type : AccountType.values()) {
                 AddAccountCommand command = new AddAccountCommand(
-                    UserId.randomId(),
+                    PortfolioId.randomId(),
                     "Test Account",
                     type,
                     ValidatedCurrency.of("USD")

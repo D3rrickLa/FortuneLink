@@ -7,7 +7,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
@@ -33,29 +35,49 @@ public class Portfolio implements ClassValidation {
     private ValidatedCurrency portfolioCurrencyPreference;
     private String description;
 
+    private boolean deleted;
+    private Instant deletedAt;
+    private UserId deletedBy; // Track who deleted it
 
     private final Instant systemCreationDate;
     private Instant lastUpdatedAt;
 
-    private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts, String name, ValidatedCurrency portfolioCurrencyPreference, String description, Instant systemCreationDate, Instant updatedAt) {
+    private Portfolio(PortfolioId portfolioId, UserId userId, List<Account> accounts, String name,
+            ValidatedCurrency portfolioCurrencyPreference, String description, boolean deleted, Instant deletedAt,
+            UserId deletedBy, Instant systemCreationDate, Instant updatedAt) {
         this.portfolioId = ClassValidation.validateParameter(portfolioId);
         this.userId = ClassValidation.validateParameter(userId);
         this.accounts = ClassValidation.validateParameter(accounts);
         this.name = ClassValidation.validateParameter(name);
         this.description = ClassValidation.validateParameter(description);
+        this.deleted = deleted;
+        this.deletedAt = deletedAt;
+        this.deletedBy = deletedBy;
         this.portfolioCurrencyPreference = ClassValidation.validateParameter(portfolioCurrencyPreference);
         this.systemCreationDate = ClassValidation.validateParameter(systemCreationDate);
         this.lastUpdatedAt = ClassValidation.validateParameter(updatedAt);
     }
-    
+
     // Constructor for new portfolio
     public Portfolio(UserId userId, String name, ValidatedCurrency currency) {
-        this(PortfolioId.randomId(), ClassValidation.validateParameter(userId, "UserId cannot be null"), new ArrayList<>(), name, currency, "My Portfolio", Instant.now(), Instant.now());
+        this(PortfolioId.randomId(), ClassValidation.validateParameter(userId, "UserId cannot be null"),
+                new ArrayList<>(), name, currency, "My Portfolio", false, null, null, Instant.now(), Instant.now());
     }
 
     // Static Factory for Reconstitution (used by Mappers/Repositories)
-    public static Portfolio reconstitute(PortfolioId id, UserId userId, List<Account> accounts, String name, ValidatedCurrency currency, String desc, Instant created, Instant updated) {
-        return new Portfolio(id, userId, accounts, name, currency, desc, created, updated);
+    public static Portfolio reconstitute(
+            PortfolioId id,
+            UserId userId,
+            List<Account> accounts,
+            String name,
+            ValidatedCurrency currency,
+            String desc,
+            boolean deleted, // ADD
+            Instant deletedAt, // ADD
+            UserId deletedBy, // ADD (if tracking)
+            Instant created,
+            Instant updated) {
+        return new Portfolio(id, userId, accounts, name, currency, desc,deleted, deletedAt, deletedBy, created, updated);
     }
 
     // Static Factory for NEW Portfolios (used by Application Services)
@@ -63,13 +85,16 @@ public class Portfolio implements ClassValidation {
         Instant time = Instant.now();
         String descCleaned = desc == null ? " " : desc;
         return new Portfolio(
-            new PortfolioId(UUID.randomUUID()), 
-            userId, 
-            new ArrayList<>(), 
-            name, 
-            currency, 
-            descCleaned, 
-            time, time);
+                new PortfolioId(UUID.randomUUID()),
+                userId,
+                new ArrayList<>(),
+                name,
+                currency,
+                descCleaned,
+                false,
+                null,
+                null,
+                time, time);
     }
 
     // used ONLY in the update Portfolio in application layer
@@ -85,11 +110,17 @@ public class Portfolio implements ClassValidation {
         ClassValidation.validateParameter(account, "Account");
 
         if (this.accounts.stream().anyMatch(a -> a.getAccountId().equals(account.getAccountId()))) {
-            throw new IllegalStateException(String.format("Account with ID, %s, already exists here.", account.getAccountId()));
+            throw new IllegalStateException(
+                    String.format("Account with ID, %s, already exists here.", account.getAccountId()));
         }
 
-        if (this.accounts.stream().anyMatch(a -> a.getName().equals(account.getName()))) { // not ignore cases because it should be exact... when we check. We should allow though dumb, account_1 and AccOunt_1
-            throw new IllegalArgumentException(String.format("Account with name '%s' already exists in this account.", account.getName()));
+        if (this.accounts.stream().anyMatch(a -> a.getName().equals(account.getName()))) { // not ignore cases because
+                                                                                           // it should be exact... when
+                                                                                           // we check. We should allow
+                                                                                           // though dumb, account_1 and
+                                                                                           // AccOunt_1
+            throw new IllegalArgumentException(
+                    String.format("Account with name '%s' already exists in this account.", account.getName()));
         }
 
         this.accounts.add(account);
@@ -105,8 +136,11 @@ public class Portfolio implements ClassValidation {
     }
 
     /**
-     * We are blocking any accounts with transactions in it. we will only 'delete' accounts when no data is in it
-     * as we need historical data for reporting so when an account is 'deleted' hide it instead with 'closeAccount' method
+     * We are blocking any accounts with transactions in it. we will only 'delete'
+     * accounts when no data is in it
+     * as we need historical data for reporting so when an account is 'deleted' hide
+     * it instead with 'closeAccount' method
+     * 
      * @param accountId
      */
     public void removeAccount(AccountId accountId) {
@@ -121,14 +155,18 @@ public class Portfolio implements ClassValidation {
 
         // we don't need this, this is taking place inside the 'close' method in account
         // if (!account.getAssets().isEmpty()) {
-        //     throw new IllegalStateException(String.format("Cannot remove account '%s'. Account has existing assets, %d asset(s).", account.getName(), account.getAssets().size()));
+        // throw new IllegalStateException(String.format("Cannot remove account '%s'.
+        // Account has existing assets, %d asset(s).", account.getName(),
+        // account.getAssets().size()));
         // }
 
-        boolean hasTransaction  = account.getTransactions().isEmpty();
+        boolean hasTransaction = account.getTransactions().isEmpty();
 
         if (!hasTransaction) {
-        throw new IllegalStateException(
-            String.format("Cannot remove account '%s'. Account has transaction history. Closed accounts with history must be retained for audit purposes.",account.getName()));
+            throw new IllegalStateException(
+                    String.format(
+                            "Cannot remove account '%s'. Account has transaction history. Closed accounts with history must be retained for audit purposes.",
+                            account.getName()));
         }
 
         this.accounts.remove(account);
@@ -143,17 +181,19 @@ public class Portfolio implements ClassValidation {
 
     public void updateTransaction(AccountId accountId, TransactionId transactionId, Transaction updatedTransaction) {
         Account existingAccount = this.accounts.stream()
-            .filter(a -> a.getAccountId().equals(accountId))
-            .findFirst()
-            .orElseThrow(() -> new AccountNotFoundException("Account not found when trying to update this transaction"));
+                .filter(a -> a.getAccountId().equals(accountId))
+                .findFirst()
+                .orElseThrow(
+                        () -> new AccountNotFoundException("Account not found when trying to update this transaction"));
         existingAccount.updateTransaction(transactionId, updatedTransaction);
     }
 
     public void removeTransaction(AccountId accountId, TransactionId transactionId) {
         Account existingAccount = this.accounts.stream()
-            .filter(a -> a.getAccountId().equals(accountId))
-            .findFirst()
-            .orElseThrow(() -> new AccountNotFoundException("Account not found when trying to remove this transaction"));
+                .filter(a -> a.getAccountId().equals(accountId))
+                .findFirst()
+                .orElseThrow(
+                        () -> new AccountNotFoundException("Account not found when trying to remove this transaction"));
 
         existingAccount.removeTransaction(transactionId);
     }
@@ -161,45 +201,43 @@ public class Portfolio implements ClassValidation {
     public void correctAssetTicker(AccountId accountId, AssetIdentifier wrongTicker, AssetIdentifier correctTicker) {
         Account account = getAccount(accountId);
         Asset wrongAsset = account.getAsset(wrongTicker);
-        
+
         if (wrongAsset.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             // Asset exists but has no quantity - just remove it
             account.removeAsset(wrongAsset.getAssetId());
             updateMetadata();
             return;
         }
-        
+
         // Asset has quantity - need to swap via transactions
         Transaction sellWrong = new Transaction(
-            TransactionId.randomId(),
-            account.getAccountId(),
-            TransactionType.SELL,
-            wrongAsset.getAssetIdentifier(),
-            wrongAsset.getQuantity(),
-            wrongAsset.getCostPerUnit(),
-            Money.ZERO(wrongAsset.getCurrency()),
-            null,
-            Instant.now(),
-            "Correction: Wrong ticker entered",
-            false
-        );
-        
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.SELL,
+                wrongAsset.getAssetIdentifier(),
+                wrongAsset.getQuantity(),
+                wrongAsset.getCostPerUnit(),
+                Money.ZERO(wrongAsset.getCurrency()),
+                null,
+                Instant.now(),
+                "Correction: Wrong ticker entered",
+                false);
+
         recordTransaction(accountId, sellWrong);
-        
+
         Transaction buyCorrect = new Transaction(
-            TransactionId.randomId(),
-            account.getAccountId(),
-            TransactionType.BUY,
-            correctTicker,
-            wrongAsset.getQuantity(),
-            wrongAsset.getCostPerUnit(),
-            Money.ZERO(wrongAsset.getCurrency()),
-            null,
-            Instant.now(),
-            "Correction: Applied correct ticker",
-            false
-        );
-    
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.BUY,
+                correctTicker,
+                wrongAsset.getQuantity(),
+                wrongAsset.getCostPerUnit(),
+                Money.ZERO(wrongAsset.getCurrency()),
+                null,
+                Instant.now(),
+                "Correction: Applied correct ticker",
+                false);
+
         recordTransaction(accountId, buyCorrect);
     }
 
@@ -208,46 +246,68 @@ public class Portfolio implements ClassValidation {
         ClassValidation.validateParameter(updatedCurrency);
         this.portfolioCurrencyPreference = updatedCurrency;
     }
+
+    public void markAsDeleted(Instant deletedAt, UserId deletedBy) {
+        if (this.deleted) {
+            throw new PortfolioAlreadyDeletedException("Portfolio " + this.portfolioId + " is already deleted");
+        }
+
+        if (containsAccounts()) {
+            throw new PortfolioNotEmptyException("Cannot delete portfolio with " + accounts.size() + " account(s)");
+        }
+
+        this.deleted = true;
+        this.deletedAt = deletedAt;
+        this.deletedBy = deletedBy; // Audit: who performed the deletion
+        updateMetadata();
+    }
+
     // Update Portfolio Info ENDS //
 
     // Querying Methods STARTS //
-    
+
     public Account getAccount(AccountId accountId) throws AccountNotFoundException {
         return this.accounts.stream()
-            .filter(acc -> acc.getAccountId().equals(accountId))
-            .findFirst()
-            .orElseThrow(() -> new AccountNotFoundException(String.format("Account with id '%s' not found in this portfolio.", accountId.accountId())));
+                .filter(acc -> acc.getAccountId().equals(accountId))
+                .findFirst()
+                .orElseThrow(() -> new AccountNotFoundException(
+                        String.format("Account with id '%s' not found in this portfolio.", accountId.accountId())));
     }
-    
+
     public boolean containsAccounts() {
         return !this.getAccounts().isEmpty();
     }
-    
+
+    public boolean belongsToUser(UserId userId) {
+        return this.userId.equals(userId);
+    }
+
     /**
      * 
      * @param accountId
      * @param assetIdentifier
      * @param startDate
      * @param endDate
-     * @return 
+     * @return
      */
-    public List<Transaction> queryTransactions(AccountId accountId, AssetIdentifier assetIdentifier, Instant startDate, Instant endDate) {
+    public List<Transaction> queryTransactions(AccountId accountId, AssetIdentifier assetIdentifier, Instant startDate,
+            Instant endDate) {
         return this.accounts.stream()
-            .filter(account -> accountId == null || account.getAccountId().equals(accountId))
-            .flatMap(account -> account.getTransactions().stream())
-            .filter(tx -> assetIdentifier == null || assetIdentifier.equals(tx.getAssetIdentifier()))
-            .filter(tx -> {
-                Instant txDate = tx.getTransactionDate();
-                return (startDate == null || !txDate.isBefore(startDate)) &&
-                    (endDate == null || !txDate.isAfter(endDate));
-            })
-            .toList();
+                .filter(account -> accountId == null || account.getAccountId().equals(accountId))
+                .flatMap(account -> account.getTransactions().stream())
+                .filter(tx -> assetIdentifier == null || assetIdentifier.equals(tx.getAssetIdentifier()))
+                .filter(tx -> {
+                    Instant txDate = tx.getTransactionDate();
+                    return (startDate == null || !txDate.isBefore(startDate)) &&
+                            (endDate == null || !txDate.isAfter(endDate));
+                })
+                .toList();
     }
 
     public long getTransactionCount() {
         long count = this.accounts.stream()
-            .flatMap(a -> a.getTransactions().stream())
-            .count();
+                .flatMap(a -> a.getTransactions().stream())
+                .count();
 
         return count;
     }
@@ -262,40 +322,46 @@ public class Portfolio implements ClassValidation {
         ClassValidation.validateParameter(endDate, "End date");
 
         return this.accounts.stream()
-            .flatMap(account -> account.getTransactions().stream()) // flatMap -> to collect all transactions from all accounts.
-            .filter(tx -> {
-                Instant txDate = tx.getTransactionDate();
-                if (startDate == null) {
-                    return !txDate.isAfter(endDate); // everything up to endDate
-                }
-                return !txDate.isBefore(startDate) && !txDate.isAfter(endDate); // between start and end
-            })
-            .sorted(Comparator.comparing(Transaction::getTransactionDate))  // for chrono order
-            .toList();
+                .flatMap(account -> account.getTransactions().stream()) // flatMap -> to collect all transactions from
+                                                                        // all accounts.
+                .filter(tx -> {
+                    Instant txDate = tx.getTransactionDate();
+                    if (startDate == null) {
+                        return !txDate.isAfter(endDate); // everything up to endDate
+                    }
+                    return !txDate.isBefore(startDate) && !txDate.isAfter(endDate); // between start and end
+                })
+                .sorted(Comparator.comparing(Transaction::getTransactionDate)) // for chrono order
+                .toList();
     }
 
-    public List<Transaction> getTransactionsFromAccount(AccountId accountId) throws AccountNotFoundException { // Formally getTransactionsForAccount
+    public List<Transaction> getTransactionsFromAccount(AccountId accountId) throws AccountNotFoundException { // Formally
+                                                                                                               // getTransactionsForAccount
         Account account = getAccount(accountId);
         return account.getTransactions();
     }
 
-    public List<Transaction> getTransactionsFromAsset(AssetIdentifier assetIdentifier) { // Formally getTranssactionForAccount
+    public List<Transaction> getTransactionsFromAsset(AssetIdentifier assetIdentifier) { // Formally
+                                                                                         // getTranssactionForAccount
         return accounts.stream()
-            .flatMap(account -> account.getTransactions().stream())
-            .filter(tx -> assetIdentifier.equals(tx.getAssetIdentifier()))
-            .toList();
+                .flatMap(account -> account.getTransactions().stream())
+                .filter(tx -> assetIdentifier.equals(tx.getAssetIdentifier()))
+                .toList();
     }
-    
-    public Money getAssetsTotalValue(MarketDataService marketDataService, ExchangeRateService exchangeRateService) { // Formally getTotalAssets
+
+    public Money getAssetsTotalValue(MarketDataService marketDataService, ExchangeRateService exchangeRateService) { // Formally
+                                                                                                                     // getTotalAssets
         ClassValidation.validateParameter(marketDataService, "marketDataService required");
         ClassValidation.validateParameter(exchangeRateService, "exchangeRateService required");
 
         return this.accounts.stream()
-            .map(account -> {
-                Money amount = account.calculateTotalValue(marketDataService); // may be in different currency
-                return exchangeRateService.convert(amount, this.portfolioCurrencyPreference); // convert to portfolioCurrency (e.g., CAD)
-            }) 
-            .reduce(Money.ZERO(this.portfolioCurrencyPreference), Money::add);
+                .map(account -> {
+                    Money amount = account.calculateTotalValue(marketDataService); // may be in different currency
+                    return exchangeRateService.convert(amount, this.portfolioCurrencyPreference); // convert to
+                                                                                                  // portfolioCurrency
+                                                                                                  // (e.g., CAD)
+                })
+                .reduce(Money.ZERO(this.portfolioCurrencyPreference), Money::add);
     }
 
     // Querying Methods ENDS //
@@ -308,4 +374,3 @@ public class Portfolio implements ClassValidation {
 
     // PRIVATE HELPER ENDS //
 }
-

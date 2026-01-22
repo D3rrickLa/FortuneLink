@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -441,8 +442,8 @@ public class PortfolioApplicationService {
             throw new InvalidTransactionException("Invalid add account command", validationResult.errors());
         }
 
-        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException("Cannot find portfolio to add accouunt to:" + command.portfolioId()));
 
         // Create new account
         Account account = Account.createNew(
@@ -465,8 +466,8 @@ public class PortfolioApplicationService {
         if (!validationResult.isValid()) {
             throw new InvalidTransactionException("Invalid remove account command", validationResult.errors());
         }
-        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException("Cannot find portfolio to remove accouunt from:" + command.portfolioId()));
 
         Account account = portfolio.getAccount(command.accountId());
 
@@ -564,14 +565,20 @@ public class PortfolioApplicationService {
         }
 
         // Ensure deletion flag is set
+        // this might be redunant given the validation done in the commandValidator
         if (!command.confirmed()) {
             throw new PortfolioDeletionRequiresConfirmationException(
                     "Portfolio deletion requires explicit confirmation");
         }
 
-        Portfolio portfolio = portfolioRepository.findByUserId(command.userId())
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.userId()));
-
+        
+                // // Just uncomment this line later
+        // if (!portfolio.belongsToUser(command.userId())) {
+        //     throw new UnauthorizedPortfolioAccessException(...);
+        // }
+        
         // Check if portfolio can be deleted
         if (portfolio.containsAccounts()) {
             throw new PortfolioNotEmptyException(
@@ -579,18 +586,15 @@ public class PortfolioApplicationService {
                             "Portfolio has " + portfolio.getAccounts().size() + " account(s)");
         }
 
-        // two other options, either soft delete or hard delete, based on the command
-        // for now in the MVP, we are hard deleteing everything
         // if (command.softDelete()) {
-        // portfolio.markAsDeleted(LocalDateTime.now()); // don't know if we should add
-        // this.portfolioRepository.save(portfolio);
+        //     // Soft delete: Mark as deleted, preserve data
+        //      portfolio.markAsDeleted(LocalDateTime.now(), command.userId());
+        //     portfolioRepository.save(portfolio);
+        // } else {
+        //     // Hard delete: Permanent removal
+        //     portfolioRepository.delete(command.portfolioId());
         // }
-        // // Option C: Hard delete (permanent removal)
-        // else {
-        // portfolioRepository.delete(portfolio.getPortfolioId());
-        // }
-
-        portfolioRepository.delete(portfolio.getPortfolioId());
+        portfolioRepository.delete(command.portfolioId());
     }
 
     // ========================================================================

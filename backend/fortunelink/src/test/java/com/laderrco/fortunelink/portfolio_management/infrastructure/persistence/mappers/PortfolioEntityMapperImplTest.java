@@ -130,6 +130,9 @@ class PortfolioEntityMapperImplTest {
                     "Name",
                     ValidatedCurrency.of("USD"),
                     "Desc",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -173,6 +176,9 @@ class PortfolioEntityMapperImplTest {
                     "name",
                     ValidatedCurrency.of("USD"),
                     "desc",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -264,6 +270,7 @@ class PortfolioEntityMapperImplTest {
             entity.setName("Portfolio");
             entity.setCurrencyPreference("USD");
             entity.setDescription("some descrption");
+            entity.setDeletedBy(UUID.randomUUID());
             entity.setAccounts(null);
             entity.setCreatedAt(testTime);
             entity.setUpdatedAt(testTime);
@@ -356,6 +363,9 @@ class PortfolioEntityMapperImplTest {
                     "Portfolio",
                     ValidatedCurrency.of("USD"),
                     "USD",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -365,7 +375,10 @@ class PortfolioEntityMapperImplTest {
             mapper.updateEntityFromDomain(updatedDomain, existingEntity);
 
             // Then
-            assertThat(existingEntity.getAccounts()).hasSize(originalAccountCount + 2); // this was original + 1, changing it to 2, but don't really know why it failed at 1
+            assertThat(existingEntity.getAccounts()).hasSize(originalAccountCount + 2); // this was original + 1,
+                                                                                        // changing it to 2, but don't
+                                                                                        // really know why it failed at
+                                                                                        // 1
         }
 
         @Test
@@ -397,6 +410,9 @@ class PortfolioEntityMapperImplTest {
                     "Name",
                     ValidatedCurrency.of("USD"),
                     "Desc",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -486,6 +502,9 @@ class PortfolioEntityMapperImplTest {
                     "Name",
                     ValidatedCurrency.of("USD"),
                     "desc",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -570,6 +589,9 @@ class PortfolioEntityMapperImplTest {
                     "NAme",
                     ValidatedCurrency.of("USD"),
                     "Desc",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -628,6 +650,9 @@ class PortfolioEntityMapperImplTest {
                     "Name",
                     ValidatedCurrency.of("USD"),
                     "Desc",
+                    false,
+                    null,
+                    null,
                     testTime,
                     testTime);
 
@@ -706,6 +731,9 @@ class PortfolioEntityMapperImplTest {
                 "Name",
                 ValidatedCurrency.of("USD"),
                 "Desc",
+                false,
+                null,
+                null,
                 testTime,
                 testTime);
     }
@@ -719,6 +747,7 @@ class PortfolioEntityMapperImplTest {
         entity.setDescription("some description");
         entity.setCreatedAt(testTime);
         entity.setUpdatedAt(testTime);
+        entity.setDeletedBy(null);
 
         AccountEntity account = new AccountEntity();
         account.setId(UUID.randomUUID());
@@ -755,6 +784,8 @@ class PortfolioEntityMapperImplTest {
         asset.setCostBasisAmount(new BigDecimal("1500"));
         asset.setCostBasisCurrency("USD");
         account.getAssets().add(asset);
+
+
 
         // Add test transaction
         TransactionEntity tx = new TransactionEntity();
