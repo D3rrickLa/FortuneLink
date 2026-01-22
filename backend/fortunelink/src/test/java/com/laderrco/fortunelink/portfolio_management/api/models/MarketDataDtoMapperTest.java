@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.models;
+package com.laderrco.fortunelink.portfolio_management.api.models;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;

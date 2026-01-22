@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers;
+package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -25,7 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
-import com.laderrco.fortunelink.portfolio_management.api.web.controllers.MarketDataController;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
