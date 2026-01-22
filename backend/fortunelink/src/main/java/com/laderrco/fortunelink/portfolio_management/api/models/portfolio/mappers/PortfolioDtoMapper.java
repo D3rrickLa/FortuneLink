@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.mappers;
+package com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -6,12 +6,12 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AccountHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PortfolioHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses.AccountHttpResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses.AssetHoldingHttpResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses.PortfolioHttpResponse;
 
 /**
  * Maps between domain models and API DTOs.

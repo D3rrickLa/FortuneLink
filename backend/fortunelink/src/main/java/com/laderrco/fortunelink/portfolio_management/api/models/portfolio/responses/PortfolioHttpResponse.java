@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.responses;
+package com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses;
 
 import java.time.LocalDateTime;
 import java.util.List;

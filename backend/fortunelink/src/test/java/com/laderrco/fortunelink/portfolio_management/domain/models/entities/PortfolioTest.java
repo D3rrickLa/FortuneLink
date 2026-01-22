@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio_management.domain.models.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -131,6 +132,16 @@ class PortfolioTest {
             assertEquals(accounts, portfolio.getAccounts());
             assertEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());
         }
+
+        @Test
+        @DisplayName("Update portoflio")
+        void testUpdatePortfolioSuccess() {
+            Portfolio portfolio = Portfolio.createNew(userId, portfolioCurrency, name, "desc");
+            portfolio = portfolio.updatePortfolio("NAME 2", "DSEC2", ValidatedCurrency.EUR);
+
+            assertNotEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());
+        }
+
     }
 
     @Nested

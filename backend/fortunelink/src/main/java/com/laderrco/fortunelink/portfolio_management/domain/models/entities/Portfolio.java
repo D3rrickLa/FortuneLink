@@ -29,7 +29,7 @@ public class Portfolio implements ClassValidation {
     private final PortfolioId portfolioId;
     private final UserId userId;
     private List<Account> accounts;
-    private final String name;
+    private String name;
     private ValidatedCurrency portfolioCurrencyPreference;
     private String description;
 
@@ -73,8 +73,10 @@ public class Portfolio implements ClassValidation {
     }
 
     // used ONLY in the update Portfolio in application layer
-    public Portfolio updatePortfolio(ValidatedCurrency newDefaultCurrency) {
+    public Portfolio updatePortfolio(String name, String description, ValidatedCurrency newDefaultCurrency) {
         this.portfolioCurrencyPreference = newDefaultCurrency;
+        this.name = name;
+        this.description = description;
         updateMetadata();
         return this;
     }

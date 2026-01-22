@@ -1,12 +1,12 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.mappers;
+package com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers;
 
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 // maps between the request to the command used in application

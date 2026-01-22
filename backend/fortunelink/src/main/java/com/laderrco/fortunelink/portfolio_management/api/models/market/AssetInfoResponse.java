@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.models;
+package com.laderrco.fortunelink.portfolio_management.api.models.market;
 
 import java.math.BigDecimal;
 import java.time.Instant;

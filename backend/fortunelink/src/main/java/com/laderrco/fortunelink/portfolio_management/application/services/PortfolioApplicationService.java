@@ -543,7 +543,7 @@ public class PortfolioApplicationService {
             throw new PortfolioNotFoundException("Cannot find portfolio with id: " + command.id());
         }
 
-        Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.defaultCurrency());
+        Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.name(), command.description(), command.defaultCurrency());
         updatePortfolio = portfolioRepository.save(updatePortfolio);
 
         return portfolioAssembler.assemblePortfolioView(updatePortfolio);

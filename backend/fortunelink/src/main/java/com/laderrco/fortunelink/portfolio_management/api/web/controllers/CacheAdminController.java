@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers;
+package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import java.util.Collection;
 import java.util.HashMap;

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.models.portfolio.requests;
+package com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests;
 
 import java.util.UUID;
 

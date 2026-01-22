@@ -159,17 +159,29 @@ class PortfolioQueryServiceTest {
         // Arrange
         PortfolioId portfolioId = new PortfolioId(UUID.randomUUID());
         GetPortfolioByIdQuery query = new GetPortfolioByIdQuery(portfolioId);
-        Portfolio mockPortfolio = mock(Portfolio.class); // Or create a real domain instance
 
+        // 1. Mock the Domain Object
+        Portfolio mockPortfolio = mock(Portfolio.class);
+
+        // 2. Mock the View (The result you expect from the service)
+        // Using mock() here is fine for a quick test, or use a real PortfolioView
+        PortfolioView mockView = mock(PortfolioView.class);
+
+        // 3. Stub the Repository
         when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(mockPortfolio));
+
+        // 4. IMPORTANT: Stub the Assembler
+        // Without this, queryService calls assembler.assemble(...) and gets null
+        when(portfolioViewAssembler.assemblePortfolioView(mockPortfolio)).thenReturn(mockView);
 
         // Act
         PortfolioView result = queryService.getPortfolioById(query);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(mockPortfolio, result);
+        assertNotNull(result, "The result should not be null");
+        assertEquals(mockView, result);
         verify(portfolioRepository).findById(portfolioId);
+        verify(portfolioViewAssembler).assemblePortfolioView(mockPortfolio);
     }
 
     @Test
@@ -201,6 +213,7 @@ class PortfolioQueryServiceTest {
         // Assert
         assertEquals(2, result.size());
         verify(portfolioRepository).findAllByUserId(userId);
+
     }
 
     @Test

@@ -14,11 +14,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
+import com.laderrco.fortunelink.portfolio_management.api.web.controllers.MarketDataController;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers.MarketDataController;
 
 @WebMvcTest(MarketDataController.class)
 @Import({ DevSecurityConfig.class, RateLimitConfig.class })

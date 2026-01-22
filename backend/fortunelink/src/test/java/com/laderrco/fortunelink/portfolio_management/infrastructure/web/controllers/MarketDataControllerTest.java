@@ -21,6 +21,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+
+import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
+import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
+import com.laderrco.fortunelink.portfolio_management.api.web.controllers.MarketDataController;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
@@ -33,9 +38,6 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSe
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.AssetInfoResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 

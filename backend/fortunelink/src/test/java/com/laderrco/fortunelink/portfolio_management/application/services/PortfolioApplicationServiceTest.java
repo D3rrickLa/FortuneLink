@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -36,6 +37,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
@@ -82,6 +84,8 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
@@ -149,8 +153,7 @@ class PortfolioApplicationServiceTest {
                 "NASDAQ",
                 ValidatedCurrency.USD,
                 "Technology",
-                "SOME DESC"
-            );
+                "SOME DESC");
 
         identifier = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
     }
@@ -330,7 +333,6 @@ class PortfolioApplicationServiceTest {
             assertThat(assetBeforeSale).isNotNull();
             assertThat(assetBeforeSale.getQuantity()).isGreaterThanOrEqualTo(command.quantity());
 
-
             // When
             TransactionView response = service.recordAssetSale(command);
 
@@ -344,7 +346,6 @@ class PortfolioApplicationServiceTest {
             Portfolio savedPortfolio = captor.getValue();
             Account savedAccount = savedPortfolio.getAccount(accountId);
             Asset soldAsset = savedAccount.getAsset(assetInfo.toIdentifier());
-
 
             assertThat(soldAsset.getQuantity()).isEqualTo(BigDecimal.valueOf(5)); // 10 - 5 = 5 remaining
         }
@@ -393,24 +394,23 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw error test for lambda")
         void recordAssetSale_WhenAssetNotFound_ThrowsException() {
             // 1. Define the symbol
-            String symbol = "AAPL"; 
-            
+            String symbol = "AAPL";
+
             // 2. Ensure the command actually contains that symbol
             // (Assuming RecordSaleCommand is a record or has a constructor like this)
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
-                AccountId.randomId(),
-                symbol,
-                BigDecimal.TEN,
-                Money.of(20, "USD"),
-                null,
-                Instant.now(),
-                null
-            ); 
+                    UserId.randomId(),
+                    AccountId.randomId(),
+                    symbol,
+                    BigDecimal.TEN,
+                    Money.of(20, "USD"),
+                    null,
+                    Instant.now(),
+                    null);
 
             // 3. Mock the validator to pass
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            
+
             // 4. Mock the service using the SAME symbol
             when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.empty());
 
@@ -424,26 +424,24 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw error test for lambda")
         void recordAssetSale_WhenPortfolioNotFound_ThrowsException() {
             // 1. Define the symbol
-            String symbol = "AAPL"; 
-            
+            String symbol = "AAPL";
+
             // 2. Ensure the command actually contains that symbol
             // (Assuming RecordSaleCommand is a record or has a constructor like this)
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
-                AccountId.randomId(),
-                symbol,
-                BigDecimal.TEN,
-                Money.of(20, "USD"),
-                null,
-                Instant.now(),
-                null
-            ); 
+                    UserId.randomId(),
+                    AccountId.randomId(),
+                    symbol,
+                    BigDecimal.TEN,
+                    Money.of(20, "USD"),
+                    null,
+                    Instant.now(),
+                    null);
 
-            
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.ofNullable(mock(MarketAssetInfo.class)));
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL")))
+                    .thenReturn(Optional.ofNullable(mock(MarketAssetInfo.class)));
             when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
-            
 
             // 5. Assert the exception
             assertThrows(PortfolioNotFoundException.class, () -> {
@@ -499,18 +497,17 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw error test for lambda")
         void recordDeposit_WhenPortfolioNotFound_ThrowsException() {
             RecordDepositCommand command = new RecordDepositCommand(
-                userId, 
-                accountId,
-                Money.of(20, "USD"),
-                ValidatedCurrency.CAD, 
-                null,
-                Instant.now(),
-                null
-            );
-            
+                    userId,
+                    accountId,
+                    Money.of(20, "USD"),
+                    ValidatedCurrency.CAD,
+                    null,
+                    Instant.now(),
+                    null);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
-            
+
             assertThrows(PortfolioNotFoundException.class, () -> {
                 service.recordDeposit(command);
             });
@@ -583,17 +580,16 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw error test for lambda")
         void recordWithdrawal_WhenPortfolioNotFound_ThrowsException() {
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
-                userId, 
-                accountId,
-                Money.of(20, "USD"),
-                null,
-                Instant.now(),
-                null
-            );
-            
+                    userId,
+                    accountId,
+                    Money.of(20, "USD"),
+                    null,
+                    Instant.now(),
+                    null);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
-            
+
             assertThrows(PortfolioNotFoundException.class, () -> {
                 service.recordWithdrawal(command);
             });
@@ -719,20 +715,19 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw error test for lambda")
         void recordDividend_WhenPortfolioNotFound_ThrowsException() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                userId, 
-                accountId,
-                "AAPL",
-                Money.of(20, "USD"),
-                TransactionType.DIVIDEND,
-                false,
-                BigDecimal.ONE,
-                Instant.now(),
-                null
-            );
-            
+                    userId,
+                    accountId,
+                    "AAPL",
+                    Money.of(20, "USD"),
+                    TransactionType.DIVIDEND,
+                    false,
+                    BigDecimal.ONE,
+                    Instant.now(),
+                    null);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
-            
+
             assertThrows(PortfolioNotFoundException.class, () -> {
                 service.recordDividendIncome(command);
             });
@@ -1015,7 +1010,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1051,7 +1047,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -1083,7 +1080,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -1141,7 +1139,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1202,7 +1201,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -1278,7 +1278,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1343,7 +1344,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1379,7 +1381,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -1411,7 +1414,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -1506,7 +1510,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1593,7 +1598,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1668,7 +1674,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then - Should fail because sell1 reduced holdings to 40
@@ -1756,7 +1763,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1832,7 +1840,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -1908,7 +1917,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactions);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
@@ -1924,21 +1934,20 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should throw error test for lambda")
         void recorUpdateTransaction_WhenPortfolioNotFound_ThrowsException() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                userId, 
-                accountId,
-                TransactionId.randomId(),
-                TransactionType.BUY,
-                mock(AssetIdentifier.class),
-                BigDecimal.ONE,
-                Money.of(20, "USD"),
-                null,
-                Instant.now(),
-                null
-            );
-            
+                    userId,
+                    accountId,
+                    TransactionId.randomId(),
+                    TransactionType.BUY,
+                    mock(AssetIdentifier.class),
+                    BigDecimal.ONE,
+                    Money.of(20, "USD"),
+                    null,
+                    Instant.now(),
+                    null);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(command.userId())).thenReturn(Optional.empty());
-            
+
             assertThrows(PortfolioNotFoundException.class, () -> {
                 service.updateTransation(command);
             });
@@ -1988,7 +1997,8 @@ class PortfolioApplicationServiceTest {
             Page<Transaction> page = new PageImpl<>(transactionList);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class))).thenReturn(page.getContent());
+            when(transactionQueryService.getAllTransactions(any(TransactionSearchCriteria.class)))
+                    .thenReturn(page.getContent());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             // When
             service.deleteTransaction(command);
@@ -2010,23 +2020,22 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
-        
+
         @Test
         void deleteTransaction_WhenTransactionIdNotFoundInList_ThrowsException() {
             // Arrange
             TransactionId targetId = TransactionId.randomId();
-            
+
             DeleteTransactionCommand command = new DeleteTransactionCommand(
-                userId, 
-                accountId, 
-                targetId,
-                false,
-                "reason"
-            );
-            
+                    userId,
+                    accountId,
+                    targetId,
+                    false,
+                    "reason");
+
             // Mock validator
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            
+
             // Mock list with a DIFFERENT ID so the .filter() fails to find a match
             Transaction otherTransaction = mock(Transaction.class);
             when(otherTransaction.getTransactionId()).thenReturn(TransactionId.randomId());
@@ -2040,15 +2049,14 @@ class PortfolioApplicationServiceTest {
         void deleteTransaction_WhenPortfolioNotFound_ThrowsException() {
             // Arrange
             TransactionId targetId = TransactionId.randomId();
-            
+
             DeleteTransactionCommand command = new DeleteTransactionCommand(
-                userId, 
-                accountId, 
-                targetId,
-                false,
-                "reason"
-            );
-            
+                    userId,
+                    accountId,
+                    targetId,
+                    false,
+                    "reason");
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
 
             // 1. Transaction must be found first to reach the portfolio check
@@ -2157,15 +2165,15 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
+
         @Test
-        void addAccount_WhenPortfolioNotFound_ThrowsException() {            
+        void addAccount_WhenPortfolioNotFound_ThrowsException() {
             AddAccountCommand command = new AddAccountCommand(
-                userId, 
-                "some name",
-                AccountType.CHEQUING,
-                ValidatedCurrency.USD
-            );
-            
+                    userId,
+                    "some name",
+                    AccountType.CHEQUING,
+                    ValidatedCurrency.USD);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
@@ -2173,12 +2181,11 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        void removeAccount_WhenPortfolioNotFound_ThrowsException() {            
+        void removeAccount_WhenPortfolioNotFound_ThrowsException() {
             RemoveAccountCommand command = new RemoveAccountCommand(
-                userId, 
-                accountId
-            );
-            
+                    userId,
+                    accountId);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
@@ -2186,12 +2193,11 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        void removeAccount_WhenInvalidTransaction_ThrowsException() {            
+        void removeAccount_WhenInvalidTransaction_ThrowsException() {
             RemoveAccountCommand command = new RemoveAccountCommand(
-                userId, 
-                accountId
-            );
-            
+                    userId,
+                    accountId);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));
 
             assertThrows(InvalidTransactionException.class, () -> service.removeAccount(command));
@@ -2201,6 +2207,7 @@ class PortfolioApplicationServiceTest {
     @Nested
     @DisplayName("Portfolio Lifecycle Tests")
     class PortfolioLifecycleTests {
+        private ValidatedCurrency USD = ValidatedCurrency.USD;
 
         @Test
         @DisplayName("Should successfully create portfolio")
@@ -2290,6 +2297,66 @@ class PortfolioApplicationServiceTest {
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
 
+        // update portfolio
+        @Test
+        @DisplayName("Should update and return portfolio view when portfolio exists")
+        void updatePortfolio_Success() {
+            // Arrange
+            PortfolioId portfolioId = PortfolioId.randomId();
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(portfolioId, "Updated name", USD, "Desc 2");
+
+            Portfolio existingPortfolio = mock(Portfolio.class);
+            Portfolio updatedPortfolio = mock(Portfolio.class);
+            PortfolioView expectedView = mock(PortfolioView.class);
+
+            // 1. Stub the repository to find the existing portfolio
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(existingPortfolio));
+
+            // 2. Stub the domain logic: the update call returns the updated aggregate
+            when(existingPortfolio.updatePortfolio(anyString(), anyString(), any())).thenReturn(updatedPortfolio);
+
+            // 3. Stub the repository save: return the updated aggregate
+            when(portfolioRepository.save(updatedPortfolio)).thenReturn(updatedPortfolio);
+
+            // 4. Stub the assembler: map the aggregate to the view
+            when(portfolioViewAssembler.assemblePortfolioView(updatedPortfolio)).thenReturn(expectedView);
+
+            // Act
+            PortfolioView result = service.updatePortfolio(command);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(expectedView, result);
+
+            // Verify the full lifecycle
+            verify(portfolioRepository).findById(portfolioId);
+            verify(existingPortfolio).updatePortfolio(
+                    command.name(),
+                    command.description(),
+                    command.defaultCurrency());
+            verify(portfolioRepository).save(updatedPortfolio);
+            verify(portfolioViewAssembler).assemblePortfolioView(updatedPortfolio);
+        }
+
+        @Test
+        @DisplayName("Should throw Exception when portfolio to update is not found")
+        void updatePortfolio_NotFound() {
+            // Arrange
+            PortfolioId portfolioId = PortfolioId.randomId();
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(portfolioId, "Updated name", USD, "Desc 2");
+
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(PortfolioNotFoundException.class, () -> {
+                service.updatePortfolio(command);
+            });
+
+            // Verify that save and assemble were never called
+            verify(portfolioRepository, never()).save(any());
+            verify(portfolioViewAssembler, never()).assemblePortfolioView(any());
+        }
+
         // delete portfolio //
         @Test
         @DisplayName("Should successfully delete empty portfolio with confirmation")
@@ -2365,19 +2432,18 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        void deletePortfolio_WhenPortfolioNotFound_ThrowsException() {            
+        void deletePortfolio_WhenPortfolioNotFound_ThrowsException() {
             DeletePortfolioCommand command = new DeletePortfolioCommand(
-                userId, 
-                true,
-                true
-            );
-            
+                    userId,
+                    true,
+                    true);
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> service.deletePortfolio(command));
         }
-        }
+    }
 
     @Nested
     @DisplayName("Correct Asset Ticker Tests")
@@ -2404,7 +2470,7 @@ class PortfolioApplicationServiceTest {
                     accountId,
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
-                    
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
@@ -2415,15 +2481,15 @@ class PortfolioApplicationServiceTest {
             // Then
             verify(portfolioRepository).save(any(Portfolio.class));
         }
+
         @Test
-        void correctAssetTicket_WhenPortfolioNotFound_ThrowsException() {            
+        void correctAssetTicket_WhenPortfolioNotFound_ThrowsException() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
-                userId, 
-                accountId,
-                mock(AssetIdentifier.class),
-                mock(AssetIdentifier.class)
-            );
-            
+                    userId,
+                    accountId,
+                    mock(AssetIdentifier.class),
+                    mock(AssetIdentifier.class));
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
@@ -2431,14 +2497,13 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        void correctAssetTicket_WhenInvalidTransaction_ThrowsException() {            
+        void correctAssetTicket_WhenInvalidTransaction_ThrowsException() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
-                userId, 
-                accountId,
-                mock(AssetIdentifier.class),
-                mock(AssetIdentifier.class)
-            );
-            
+                    userId,
+                    accountId,
+                    mock(AssetIdentifier.class),
+                    mock(AssetIdentifier.class));
+
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));
 
             assertThrows(InvalidTransactionException.class, () -> service.correctAssetTicket(command));
@@ -2451,53 +2516,54 @@ class PortfolioApplicationServiceTest {
         @Test
         @DisplayName("Should correctly calculate holdings and allow valid sell")
         void testValidateSellTransaction_FullCoverage() throws Exception {
-            PortfolioApplicationService portfolioApplicationService = new PortfolioApplicationService(portfolioRepository, transactionQueryService, marketDataService, commandValidator, portfolioViewAssembler);
+            PortfolioApplicationService portfolioApplicationService = new PortfolioApplicationService(
+                    portfolioRepository, transactionQueryService, marketDataService, commandValidator,
+                    portfolioViewAssembler);
             // 1. Setup method access
             Method method = PortfolioApplicationService.class.getDeclaredMethod(
-                "validateSellTransaction", 
-                AssetIdentifier.class, BigDecimal.class, Instant.class, List.class, TransactionId.class
-            );
+                    "validateSellTransaction",
+                    AssetIdentifier.class, BigDecimal.class, Instant.class, List.class, TransactionId.class);
             method.setAccessible(true);
 
             // 2. Mock/Setup Data
             Instant sellDate = Instant.parse("2023-10-10T10:00:00Z");
             TransactionId excludeId = TransactionId.randomId();
-            
 
-            
             List<Transaction> transactions = List.of(
-                // 1. Branch: BUY (holdings + 10)
-                createMockTx(TransactionId.randomId(), TransactionType.BUY, new BigDecimal("10.0"), sellDate.minusSeconds(100)),
-                
-                // 2. Branch: SELL (holdings - 2)
-                createMockTx(TransactionId.randomId(), TransactionType.SELL, new BigDecimal("2.0"), sellDate.minusSeconds(50)),
-                
-                // 3. Branch: THE ELSE (Neither BUY nor SELL)
-                // This is what solves your coverage issue. Use a type like DIVIDEND or DEPOSIT.
-                createMockTx(TransactionId.randomId(), TransactionType.DIVIDEND, new BigDecimal("1.0"), sellDate.minusSeconds(40)),
-                
-                // 4. Branch: Exclude (Skip)
-                createMockTx(excludeId, TransactionType.BUY, new BigDecimal("100.0"), sellDate.minusSeconds(10))
-            );
+                    // 1. Branch: BUY (holdings + 10)
+                    createMockTx(TransactionId.randomId(), TransactionType.BUY, new BigDecimal("10.0"),
+                            sellDate.minusSeconds(100)),
+
+                    // 2. Branch: SELL (holdings - 2)
+                    createMockTx(TransactionId.randomId(), TransactionType.SELL, new BigDecimal("2.0"),
+                            sellDate.minusSeconds(50)),
+
+                    // 3. Branch: THE ELSE (Neither BUY nor SELL)
+                    // This is what solves your coverage issue. Use a type like DIVIDEND or DEPOSIT.
+                    createMockTx(TransactionId.randomId(), TransactionType.DIVIDEND, new BigDecimal("1.0"),
+                            sellDate.minusSeconds(40)),
+
+                    // 4. Branch: Exclude (Skip)
+                    createMockTx(excludeId, TransactionType.BUY, new BigDecimal("100.0"), sellDate.minusSeconds(10)));
 
             // Ensure we pass the service instance as the first argument
-            assertDoesNotThrow(() -> 
-                method.invoke(portfolioApplicationService, identifier, new BigDecimal("5.0"), sellDate, transactions, excludeId)
-            );
+            assertDoesNotThrow(() -> method.invoke(portfolioApplicationService, identifier, new BigDecimal("5.0"),
+                    sellDate, transactions, excludeId));
         }
 
-        private Transaction createMockTx(TransactionId transactionId, TransactionType sell, BigDecimal bigDecimal, Instant minusSeconds) {
+        private Transaction createMockTx(TransactionId transactionId, TransactionType sell, BigDecimal bigDecimal,
+                Instant minusSeconds) {
             return new Transaction(
-                transactionId, 
-                accountId, 
-                sell,
-                identifier, 
-                bigDecimal,
-                new Money(bigDecimal, ValidatedCurrency.USD),
-                null, 
-                minusSeconds,
-                null);
+                    transactionId,
+                    accountId,
+                    sell,
+                    identifier,
+                    bigDecimal,
+                    new Money(bigDecimal, ValidatedCurrency.USD),
+                    null,
+                    minusSeconds,
+                    null);
         }
-                
+
     }
 }

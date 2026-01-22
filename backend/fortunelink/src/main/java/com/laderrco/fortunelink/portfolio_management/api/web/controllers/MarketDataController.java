@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.web.controllers;
+package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import java.time.Instant;
 import java.util.List;
@@ -12,15 +12,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
+import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.AssetInfoResponse;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.MarketDataDtoMapper;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.models.PriceResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

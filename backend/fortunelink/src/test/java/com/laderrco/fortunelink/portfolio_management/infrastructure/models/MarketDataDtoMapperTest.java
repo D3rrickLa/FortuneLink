@@ -13,6 +13,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
+import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
