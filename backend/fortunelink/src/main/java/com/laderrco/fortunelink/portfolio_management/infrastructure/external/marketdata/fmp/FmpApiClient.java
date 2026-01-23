@@ -48,7 +48,7 @@ public class FmpApiClient {
     /**
      * Initialize HTTP client bean.
      */
-    public FmpApiClient(FmpConfigurationProperties config, @Qualifier("defaultObjectMapper") ObjectMapper objectMapper, HttpClient httpClient) {
+    public FmpApiClient(FmpConfigurationProperties config, @Qualifier("defaultObjectMapper") ObjectMapper objectMapper, @Qualifier("fmpHttpClient") HttpClient httpClient) {
         this.config = config;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;

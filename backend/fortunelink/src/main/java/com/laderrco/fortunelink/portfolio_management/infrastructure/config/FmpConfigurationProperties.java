@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.config;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -65,6 +66,7 @@ public class FmpConfigurationProperties {
     }
 
     @Bean
+    @Qualifier("fmpHttpClient")
     public HttpClient fmpHttpClient(FmpConfigurationProperties config) {
     return HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)

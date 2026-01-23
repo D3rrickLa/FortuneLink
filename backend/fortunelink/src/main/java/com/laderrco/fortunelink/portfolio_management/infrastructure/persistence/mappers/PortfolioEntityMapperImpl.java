@@ -291,7 +291,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                 domainTransactions,
                 entity.isActive(),
                 entity.getClosedDate(),
-                entity.getCreateDate(),
+                entity.getCreatedDate(),
                 entity.getLastUpdated());
     }
 }

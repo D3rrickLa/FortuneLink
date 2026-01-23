@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.config;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +18,7 @@ public class BankOfCanadaConfigurationProperties {
 
     private int timeoutSeconds = 10;
 
-    private boolean debugging = true;
+    private boolean debugLogging = true;
 
     public void validate() {
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -26,6 +27,7 @@ public class BankOfCanadaConfigurationProperties {
     }
 
     @Bean
+    @Qualifier("bocHttpClient")
     public HttpClient bocHttpClient(BankOfCanadaConfigurationProperties config) {
         return HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)

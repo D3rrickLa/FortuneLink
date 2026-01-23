@@ -307,7 +307,7 @@ class PortfolioEntityMapperImplTest {
             accountEntity.setActive(true);
             accountEntity.setAssets(null); // Trigger first emptyList() branch
             accountEntity.setTransactions(null); // Trigger second emptyList() branch
-            accountEntity.setCreateDate(testTime);
+            accountEntity.setCreatedDate(testTime);
             accountEntity.setLastUpdated(testTime);
 
             // Wrap in PortfolioEntity
@@ -935,7 +935,7 @@ class PortfolioEntityMapperImplTest {
         account.setPortfolio(entity);
         account.setAssets(new ArrayList<>());
         account.setTransactions(new ArrayList<>());
-        account.setCreateDate(testTime);
+        account.setCreatedDate(testTime);
         account.setLastUpdated(testTime);
 
         entity.setAccounts(new ArrayList<>(List.of(account)));

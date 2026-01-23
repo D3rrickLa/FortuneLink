@@ -346,7 +346,7 @@ class TransactionQueryRepositoryImplTest {
         account.setPortfolio(portfolio);
         account.setAssets(new ArrayList<>());
         account.setTransactions(new ArrayList<>());
-        account.setCreateDate(testTime);
+        account.setCreatedDate(testTime);
         account.setLastUpdated(testTime);
         // Use merge instead of persist
         return entityManager.getEntityManager().merge(account);

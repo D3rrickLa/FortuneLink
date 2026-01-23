@@ -51,6 +51,8 @@ public class AccountEntity {
     private String cashBalanceCurrency;
 
     private boolean isActive;
+
+    @Column(name = "closed_date")
     private Instant closedDate;
 
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -60,7 +62,7 @@ public class AccountEntity {
     private List<TransactionEntity> transactions = new ArrayList<>();
 
     @Column(name = "created_date")
-    private Instant createDate;
+    private Instant createdDate;
 
     @Column(name = "last_system_interaction")
     private Instant lastUpdated;

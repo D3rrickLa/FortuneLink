@@ -15,7 +15,7 @@ import com.laderrco.fortunelink.shared.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.RequiredArgsConstructor;
-
+// TODO: IMPL
 @Service
 @RequiredArgsConstructor
 public class ExchangeRateServiceImpl implements ExchangeRateService {
@@ -25,17 +25,31 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
     @Override
     public BigDecimal getExchangeRate(ValidatedCurrency from, ValidatedCurrency to) throws CurrencyAreTheSameException {
-        return BigDecimal.ONE;
+        if (from.equals(to)) {
+            throw new CurrencyAreTheSameException(from.getCode());
+        }
+
+        // latest rate
+        return provider.getExchangeRate(from, to, null);
     }
 
     @Override
     public Money convert(Money amount, ValidatedCurrency targetCurrency, Instant asOfDate) {
-        return amount;
+        ValidatedCurrency sourceCurrency = amount.currency();
+        // Same currency → no conversion
+        if (sourceCurrency.equals(targetCurrency)) {
+            return amount;
+        }
+
+        BigDecimal rate = provider.getExchangeRate(sourceCurrency, targetCurrency, asOfDate);
+        BigDecimal converted = amount.amount().multiply(rate);
+
+        return new Money(converted, targetCurrency);
     }
 
     @Override
     public Money convert(Money amount, ValidatedCurrency targetCurrency) {
-        return amount;
+        return convert(amount, targetCurrency, null);
     }
-    
+
 }
