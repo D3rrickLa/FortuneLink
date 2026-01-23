@@ -117,6 +117,12 @@ fmp:
   api-key: ${FMP_API_KEY}
   timeout-seconds: 10
   debug-logging: false
+# ============================================
+# BOC API
+# ============================================
+boc:
+  timeout-seconds: 10
+  debug-logging: false
 
 # ============================================
 # ACTUATOR & METRICS

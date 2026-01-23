@@ -35,6 +35,7 @@ public class BocApiClient {
         this.httpClient = httpClient;
 
         log.info("Bank of Canada API Client initialized with base URL: {}", config.getBaseUrl());
+        config.validate();
     }
 
     public BocExchangeRateResponse getLatestExchangeRate(String to, String from) {
