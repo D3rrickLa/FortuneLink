@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -176,7 +175,7 @@ class PortfolioEntityMapperImplTest {
                     "name",
                     ValidatedCurrency.of("USD"),
                     "desc",
-                    false,
+                    true,
                     null,
                     null,
                     testTime,
@@ -271,6 +270,7 @@ class PortfolioEntityMapperImplTest {
             entity.setCurrencyPreference("USD");
             entity.setDescription("some descrption");
             entity.setDeletedBy(UUID.randomUUID());
+            entity.setDeleted(null);
             entity.setAccounts(null);
             entity.setCreatedAt(testTime);
             entity.setUpdatedAt(testTime);
@@ -288,6 +288,51 @@ class PortfolioEntityMapperImplTest {
             assertThatThrownBy(() -> mapper.toDomain(null))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("PortfolioEntity cannot be null");
+        }
+
+        @Test
+        @DisplayName("Should handle null assets and transactions in AccountEntity")
+        void shouldHandleNullAssetsAndTransactionsInAccount() {
+            // Given
+            UUID accountId = UUID.randomUUID();
+
+            // Create an account with NULL collections
+            AccountEntity accountEntity = new AccountEntity();
+            accountEntity.setId(accountId);
+            accountEntity.setName("Null Collections Account");
+            accountEntity.setAccountType(AccountType.CHEQUING);
+            accountEntity.setBaseCurrency("USD");
+            accountEntity.setCashBalanceAmount(BigDecimal.ZERO);
+            accountEntity.setCashBalanceCurrency("USD");
+            accountEntity.setActive(true);
+            accountEntity.setAssets(null); // Trigger first emptyList() branch
+            accountEntity.setTransactions(null); // Trigger second emptyList() branch
+            accountEntity.setCreateDate(testTime);
+            accountEntity.setLastUpdated(testTime);
+
+            // Wrap in PortfolioEntity
+            PortfolioEntity portfolioEntity = createBasePortfolioEntity();
+            portfolioEntity.setAccounts(List.of(accountEntity));
+
+            // When
+            Portfolio domain = mapper.toDomain(portfolioEntity);
+
+            // Then
+            Account domainAccount = domain.getAccounts().get(0);
+            assertThat(domainAccount.getAssets()).isNotNull().isEmpty();
+            assertThat(domainAccount.getTransactions()).isNotNull().isEmpty();
+        }
+
+        private PortfolioEntity createBasePortfolioEntity() {
+            PortfolioEntity entity = new PortfolioEntity();
+            entity.setId(UUID.randomUUID());
+            entity.setUserId(UUID.randomUUID());
+            entity.setName("Test Portfolio");
+            entity.setCurrencyPreference("USD");
+            entity.setDescription("NULLLL");
+            entity.setCreatedAt(Instant.now());
+            entity.setUpdatedAt(Instant.now());
+            return entity;
         }
     }
 
@@ -317,19 +362,19 @@ class PortfolioEntityMapperImplTest {
         @DisplayName("Should update existing portfolio entity")
         void shouldReturnNewEmptyArrayListWhenEntityIsNull() {
             // Given
-            PortfolioEntity existingEntity = mock();
+            PortfolioEntity existingEntity = new PortfolioEntity();
             Portfolio updatedDomain = createTestPortfolio();
+            existingEntity.setAccounts(null);
 
             // Setup mocks
             setupMockMappers();
 
             // When
-            // when(existingEntity.getAccounts()).thenReturn(null);
             mapper.updateEntityFromDomain(updatedDomain, existingEntity);
 
             // Then
-            assertThat(existingEntity.getAccounts().isEmpty()).isEqualTo(true);
-            // assertThat(existingEntity.getCurrencyPreference()).isEqualTo("USD");
+            assertThat(existingEntity.getAccounts()).isNotNull();
+            assertThat(existingEntity.getAccounts()).hasSize(updatedDomain.getAccounts().size());
         }
 
         @Test
@@ -536,6 +581,136 @@ class PortfolioEntityMapperImplTest {
                     .isInstanceOf(NullPointerException.class)
                     .hasMessageContaining("Entity cannot be null");
         }
+
+        @Test
+        @DisplayName("Should initialize assets and create new asset when entity assets are null")
+        void shouldHandleNullAssetsAndCreateNew() {
+            // 1. Setup Domain with one Asset
+            UUID newAssetId = UUID.randomUUID();
+            Asset domainAsset = createTestAsset(newAssetId); // Helper to create domain asset
+            Account domainAccount = createAccountWithAssets(List.of(domainAsset));
+            Portfolio domain = createPortfolioWithAccounts(List.of(domainAccount));
+
+            // 2. Setup Entity with existing account but NULL assets list
+            PortfolioEntity entity = new PortfolioEntity();
+            AccountEntity accountEntity = new AccountEntity();
+            accountEntity.setId(domainAccount.getAccountId().accountId());
+            accountEntity.setAssets(null); // Trigger the IF branch
+            entity.setAccounts(new ArrayList<>(List.of(accountEntity)));
+
+            // 3. Mock the mapper behavior for the "else" branch
+            AssetEntity mappedAsset = new AssetEntity();
+            mappedAsset.setId(newAssetId);
+            when(assetMapper.toEntity(eq(domainAsset), any(AccountEntity.class))).thenReturn(mappedAsset);
+
+            // When
+            mapper.updateEntityFromDomain(domain, entity);
+
+            // Then
+            AccountEntity updatedAccount = entity.getAccounts().get(0);
+            assertThat(updatedAccount.getAssets()).isNotNull(); // Verifies IF branch
+            assertThat(updatedAccount.getAssets()).hasSize(1);
+            assertThat(updatedAccount.getAssets().get(0).getId()).isEqualTo(newAssetId); // Verifies ELSE branch
+        }
+
+        @Test
+        @DisplayName("Should initialize transactions list when entity transactions are null")
+        void shouldInitializeNullTransactions() {
+            // 1. Setup Domain with one Transaction
+            Transaction domainTx = createTestTransaction();
+            Account domainAccount = createAccountWithTransactions(List.of(domainTx));
+            Portfolio domain = createPortfolioWithAccounts(List.of(domainAccount));
+
+            // 2. Setup Entity with NULL transactions
+            PortfolioEntity entity = new PortfolioEntity();
+            AccountEntity accountEntity = new AccountEntity();
+            accountEntity.setId(domainAccount.getAccountId().accountId());
+            accountEntity.setTransactions(null); // Trigger the IF branch
+            entity.setAccounts(new ArrayList<>(List.of(accountEntity)));
+
+            // Mock mapper for the new transaction
+            when(txMapper.toEntity(any(), any())).thenReturn(new TransactionEntity());
+
+            // When
+            mapper.updateEntityFromDomain(domain, entity);
+
+            // Then
+            assertThat(entity.getAccounts().get(0).getTransactions()).isNotNull();
+            assertThat(entity.getAccounts().get(0).getTransactions()).isNotEmpty();
+        }
+
+        private Asset createTestAsset(UUID assetId) {
+            MarketIdentifier id = new MarketIdentifier(
+                    "AAPL", Collections.emptyMap(), AssetType.STOCK,
+                    "Apple", "shares", Collections.emptyMap());
+            return Asset.reconstitute(
+                    new AssetId(assetId),
+                    id,
+                    "USD",
+                    BigDecimal.valueOf(10),
+                    BigDecimal.valueOf(150.00),
+                    "USD",
+                    testTime,
+                    testTime);
+        }
+
+        private Transaction createTestTransaction() {
+            return Transaction.reconstitute(
+                    new TransactionId(UUID.randomUUID()),
+                    new AccountId(UUID.randomUUID()),
+                    TransactionType.BUY,
+                    new MarketIdentifier("AAPL", Collections.emptyMap(), AssetType.STOCK,
+                            "Apple", "shares", Collections.emptyMap()),
+                    BigDecimal.TEN,
+                    new Money(new BigDecimal("150"), ValidatedCurrency.of("USD")),
+                    null,
+                    Collections.emptyList(),
+                    testTime,
+                    null,
+                    false);
+        }
+
+        private Account createAccountWithAssets(List<Asset> assets) {
+            return Account.reconstitute(
+                    new AccountId(UUID.randomUUID()),
+                    "Test Account",
+                    AccountType.CHEQUING,
+                    ValidatedCurrency.of("USD"),
+                    Money.of(BigDecimal.ZERO, ValidatedCurrency.of("USD")),
+                    assets, // Injected assets
+                    Collections.emptyList(), // Empty transactions
+                    true,
+                    null, testTime, testTime);
+        }
+
+        private Account createAccountWithTransactions(List<Transaction> txs) {
+            return Account.reconstitute(
+                    new AccountId(UUID.randomUUID()),
+                    "Test Account",
+                    AccountType.CHEQUING,
+                    ValidatedCurrency.of("USD"),
+                    Money.of(BigDecimal.ZERO, ValidatedCurrency.of("USD")),
+                    Collections.emptyList(), // Empty assets
+                    txs, // Injected transactions
+                    true,
+                    null, testTime, testTime);
+        }
+
+        private Portfolio createPortfolioWithAccounts(List<Account> accounts) {
+            return Portfolio.reconstitute(
+                    new PortfolioId(UUID.randomUUID()),
+                    new UserId(UUID.randomUUID()),
+                    accounts,
+                    "Test Portfolio",
+                    ValidatedCurrency.of("USD"),
+                    "Description",
+                    false,
+                    null,
+                    null,
+                    Instant.now(),
+                    Instant.now());
+        }
+
     }
 
     @Nested
@@ -784,8 +959,6 @@ class PortfolioEntityMapperImplTest {
         asset.setCostBasisAmount(new BigDecimal("1500"));
         asset.setCostBasisCurrency("USD");
         account.getAssets().add(asset);
-
-
 
         // Add test transaction
         TransactionEntity tx = new TransactionEntity();

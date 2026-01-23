@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -586,15 +585,15 @@ public class PortfolioApplicationService {
                             "Portfolio has " + portfolio.getAccounts().size() + " account(s)");
         }
 
-        // if (command.softDelete()) {
-        //     // Soft delete: Mark as deleted, preserve data
-        //      portfolio.markAsDeleted(LocalDateTime.now(), command.userId());
-        //     portfolioRepository.save(portfolio);
-        // } else {
-        //     // Hard delete: Permanent removal
-        //     portfolioRepository.delete(command.portfolioId());
-        // }
-        portfolioRepository.delete(command.portfolioId());
+        if (command.softDelete()) {
+            // Soft delete: Mark as deleted, preserve data
+            portfolio.markAsDeleted(Instant.now(), command.userId());
+            portfolioRepository.save(portfolio);
+        } else {
+            // Hard delete: Permanent removal
+            portfolioRepository.delete(command.portfolioId());
+        }
+        // portfolioRepository.delete(command.portfolioId());
     }
 
     // ========================================================================

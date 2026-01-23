@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortoflioHttpMapper;
-import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.AddAssetRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreateAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
@@ -34,8 +32,6 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
-import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
-
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

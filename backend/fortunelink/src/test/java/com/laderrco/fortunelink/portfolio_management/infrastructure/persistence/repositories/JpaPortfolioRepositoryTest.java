@@ -5,16 +5,19 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.JdbcDatabaseContainer.NoDriverFoundException;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -24,7 +27,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.PortfolioEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.AssetEntityMapperImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.PortfolioEntityMapperImpl;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers.TransactionEntityMapperImpl;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -41,6 +46,12 @@ class JpaPortfolioRepositoryTest {
 
     @Autowired
     JpaPortfolioRepository repository;
+
+    @Autowired
+    private PortfolioEntityMapper portfolioMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Container
     @ServiceConnection
@@ -79,6 +90,28 @@ class JpaPortfolioRepositoryTest {
         assertThat(found).isPresent();
         assertThat(found.get().getPortfolioId()).isEqualTo(portfolioId);
         assertThat(found.get().getUserId()).isEqualTo(userId);
+    }
+
+    @Test
+    @DisplayName("Should map entities to domain objects correctly")
+    void shouldMapToDomainList() {
+        // Given
+        UserId testUserId = UserId.randomId();
+
+        // 1. Insert the user into the auth schema to satisfy the FK constraint
+        jdbcTemplate.update("INSERT INTO auth.users (id, email) VALUES (?, ?)",
+                testUserId.userId(), "test@example.com");
+
+        // 2. Now the database will allow this save
+        PortfolioEntity entity = createEntity("Main Portfolio", testUserId);
+        repository.save(portfolioMapper.toDomain(entity));
+
+        // When
+        List<Portfolio> entities = repository.findAllByUserId(testUserId);
+
+        // Then
+        assertThat(entities).hasSize(1);
+        assertThat(entities.get(0).getName()).isEqualTo("Main Portfolio");
     }
 
     @Test
@@ -145,5 +178,19 @@ class JpaPortfolioRepositoryTest {
 
         Optional<Portfolio> found = repository.findById(portfolioId);
         assertThat(found).isEmpty();
+    }
+
+    private PortfolioEntity createEntity(String name, UserId userId) {
+        PortfolioEntity entity = new PortfolioEntity();
+        entity.setId(UUID.randomUUID());
+        entity.setUserId(userId.userId());
+        entity.setName(name);
+        entity.setCurrencyPreference("USD");
+        entity.setDescription("name");
+        entity.setAccounts(List.of());
+        entity.setCreatedAt(Instant.now());
+        entity.setUpdatedAt(Instant.now());
+        // Set other mandatory fields
+        return entity;
     }
 }

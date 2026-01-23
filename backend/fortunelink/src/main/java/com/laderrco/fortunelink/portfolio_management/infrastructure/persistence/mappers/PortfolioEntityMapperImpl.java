@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -80,7 +81,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                 entity.getName(),
                 ValidatedCurrency.of(entity.getCurrencyPreference()),
                 entity.getDescription(),
-                entity.getDeleted() != null && entity.getDeleted(),  // NULL-safe: treat NULL as false
+                Optional.ofNullable(entity.getDeleted()).orElse(false),  // NULL-safe: treat NULL as false
                 entity.getDeletedAt(),
                 new UserId(entity.getDeletedBy()),
                 entity.getCreatedAt(),

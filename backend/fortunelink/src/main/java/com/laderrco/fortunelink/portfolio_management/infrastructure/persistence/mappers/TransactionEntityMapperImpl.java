@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.mappers;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,11 +39,11 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
 
         // 1. Reconstruct Value Objects
         Money price = new Money(entity.getPriceAmount(), ValidatedCurrency.of(entity.getPriceCurrency()));
-        
+
         // Handle nullable dividend amount
-        Money dividend = entity.getDividendAmount() != null 
-            ? new Money(entity.getDividendAmount(), ValidatedCurrency.of(entity.getDividendCurrency())) 
-            : null;
+        Money dividend = entity.getDividendAmount() != null
+                ? new Money(entity.getDividendAmount(), ValidatedCurrency.of(entity.getDividendCurrency()))
+                : null;
 
         // Assuming Fee mapping logic exists
         List<Fee> fees = new ArrayList<>();
@@ -57,17 +58,17 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
 
         // 2. Use the reconstitution factory
         return Transaction.reconstitute(
-            new TransactionId(entity.getId()),
-            accountId,
-            entity.getTransactionType(),
-            identifier,
-            entity.getQuantity(),
-            price,
-            dividend,
-            fees,
-            entity.getTransactionDate(),
-            entity.getNotes(),
-            entity.getIsDrip() // Ensure this exists in your Entity
+                new TransactionId(entity.getId()),
+                accountId,
+                entity.getTransactionType(),
+                identifier,
+                entity.getQuantity(),
+                price,
+                dividend,
+                fees,
+                entity.getTransactionDate(),
+                entity.getNotes(),
+                entity.getIsDrip() // Ensure this exists in your Entity
         );
     }
 
@@ -76,21 +77,20 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
         TransactionEntity entity = new TransactionEntity();
         entity.setId(domain.getTransactionId().transactionId());
         entity.setAccount(accountEntity);
-        entity.setPortfolioId(accountEntity.getId()); 
+        entity.setPortfolioId(accountEntity.getId());
         entity.setTransactionType(domain.getTransactionType());
-        
-        
+
         entity.setQuantity(domain.getQuantity());
         entity.setPriceAmount(domain.getPricePerUnit().amount());
         entity.setPriceCurrency(domain.getPricePerUnit().currency().getCode());
         // Map the flattened identifier fields
         mapIdentifierToEntity(entity, domain.getAssetIdentifier());
 
-        if (domain.getFees() != null) {
+        if (!domain.getFees().isEmpty()) {
             List<TransactionFeeEntity> feeEntities = domain.getFees().stream()
-                .map(this::mapFeeToEntity)
-                .toList();
-    
+                    .map(this::mapFeeToEntity)
+                    .toList();
+
             entity.setFees(feeEntities);
         }
 
@@ -107,20 +107,13 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
     }
 
     private void mapIdentifierToEntity(TransactionEntity entity, AssetIdentifier identifier) {
-        if (identifier == null) return;
+        if (identifier == null) {
+            return;
+        }
 
         switch (identifier) {
             case MarketIdentifier m -> {
-                // entity.setAssetType("MARKET"); // this is a problem technically
-                if (identifier.getAssetType() == AssetType.STOCK) {
-                    entity.setAssetType("STOCK"); 
-                }
-                else if (identifier.getAssetType() == AssetType.ETF) {
-                    entity.setAssetType("ETF"); 
-                }
-                else {
-                    throw new IllegalArgumentException("identifier must have a 'Market' style of AssetType");
-                }
+                entity.setAssetType(m.getAssetType().name());
                 entity.setPrimaryId(m.getPrimaryId());
                 entity.setSecondaryIds(m.secondaryIds());
                 entity.setDisplayName(m.name());
@@ -144,44 +137,40 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
 
     private AssetIdentifier mapSnapshotToIdentifier(TransactionEntity entity) {
         String type = entity.getAssetType();
-        if (type == null) return null;
 
         return switch (type.toUpperCase()) {
             case "STOCK", "ETF" -> new MarketIdentifier(
-                entity.getPrimaryId(), 
-                entity.getSecondaryIds(),
-                AssetType.valueOf(entity.getAssetType()), 
-                entity.getDisplayName(),
-                entity.getUnitOfTrade(), 
-                entity.getMetadata()
-            );
+                    entity.getPrimaryId(),
+                    entity.getSecondaryIds(),
+                    AssetType.valueOf(type),
+                    entity.getDisplayName(),
+                    entity.getUnitOfTrade(),
+                    entity.getMetadata());
             case "CASH" -> new CashIdentifier(
-                entity.getPrimaryId(), 
-                ValidatedCurrency.of(entity.getPrimaryId())
-            );
+                    entity.getPrimaryId(),
+                    ValidatedCurrency.of(entity.getPrimaryId()));
             case "CRYPTO" -> new CryptoIdentifier(
-                entity.getPrimaryId(), 
-                entity.getDisplayName(),
-                AssetType.valueOf(entity.getAssetType()), 
-                entity.getUnitOfTrade(),
-                entity.getMetadata()
-            );
+                    entity.getPrimaryId(),
+                    entity.getDisplayName(),
+                    AssetType.valueOf(type),
+                    entity.getUnitOfTrade(),
+                    entity.getMetadata());
             default -> throw new IllegalArgumentException("Unsupported asset snapshot type: " + type);
         };
     }
-    
+
     private TransactionFeeEntity mapFeeToEntity(Fee f) {
         TransactionFeeEntity feeEntity = new TransactionFeeEntity();
         feeEntity.setFeeType(f.feeType());
         feeEntity.setAmount(f.amountInNativeCurrency().amount());
         feeEntity.setCurrency(f.amountInNativeCurrency().currency().getCode());
-        
+
         if (f.exchangeRate() != null) {
             feeEntity.setRate(f.exchangeRate().rate());
             feeEntity.setFromCurrency(f.exchangeRate().from().getCode());
             feeEntity.setToCurrency(f.exchangeRate().to().getCode());
         }
-        
+
         feeEntity.setMetadata(f.metadata());
         feeEntity.setFeeDate(f.feeDate());
         return feeEntity;
@@ -189,44 +178,50 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
 
     private Fee mapFeeToDomain(TransactionFeeEntity f) {
         ExchangeRate rate = null;
-        
+
         // Only create the ExchangeRate if the data exists in DB
         if (f.getRate() != null) {
             rate = new ExchangeRate(
-                ValidatedCurrency.of(f.getFromCurrency()),
-                ValidatedCurrency.of(f.getToCurrency()),
-                f.getRate(),
-                f.getExchangeRateDate(),
-                f.getRateSource()
-            );
+                    ValidatedCurrency.of(f.getFromCurrency()),
+                    ValidatedCurrency.of(f.getToCurrency()),
+                    f.getRate(),
+                    f.getExchangeRateDate(),
+                    f.getRateSource());
+        } else {
+            // Fallback: 1:1 Identity Rate (e.g., USD -> USD)
+            ValidatedCurrency feeCurrency = ValidatedCurrency.of(f.getCurrency());
+            rate = new ExchangeRate(
+                    feeCurrency,
+                    feeCurrency,
+                    BigDecimal.ONE,
+                    f.getFeeDate(),
+                    "IDENTITY_FALLBACK");
         }
 
         return new Fee(
-            f.getFeeType(),
-            new Money(f.getAmount(), ValidatedCurrency.of(f.getCurrency())),
-            rate,
-            f.getMetadata() != null ? f.getMetadata() : Collections.emptyMap(),
-            f.getFeeDate()
-        );
+                f.getFeeType(),
+                new Money(f.getAmount(), ValidatedCurrency.of(f.getCurrency())),
+                rate,
+                f.getMetadata() != null ? f.getMetadata() : Collections.emptyMap(),
+                f.getFeeDate());
     }
 
     // This is technically a stuipd check becasue everything needs one
     private void validateEntityConsistency(TransactionEntity entity, AssetIdentifier identifier) {
         TransactionType type = entity.getTransactionType();
-        
+
         if (requiresAssetIdentifier(type) && identifier == null) {
             throw new IllegalStateException(
-                "Data integrity violation: Transaction " + entity.getId() + 
-                " of type " + type + " has no asset identifier. " +
-                "This indicates corrupted database state."
-            );
+                    "Data integrity violation: Transaction " + entity.getId() +
+                            " of type " + type + " has no asset identifier. " +
+                            "This indicates corrupted database state.");
         }
     }
 
     private boolean requiresAssetIdentifier(TransactionType type) {
-        return type == TransactionType.BUY || 
-            type == TransactionType.SELL || 
-            type == TransactionType.DIVIDEND || 
-            type == TransactionType.INTEREST;
+        return type == TransactionType.BUY ||
+                type == TransactionType.SELL ||
+                type == TransactionType.DIVIDEND ||
+                type == TransactionType.INTEREST;
     }
 }

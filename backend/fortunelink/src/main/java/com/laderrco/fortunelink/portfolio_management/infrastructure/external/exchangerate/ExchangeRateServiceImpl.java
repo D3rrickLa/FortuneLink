@@ -3,15 +3,25 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.external.ex
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateProvider;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.common.ExchangeRateMapper;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
-public class LocalExchangeRateService implements ExchangeRateService {
+@RequiredArgsConstructor
+public class ExchangeRateServiceImpl implements ExchangeRateService {
+    private static final Logger log = LoggerFactory.getLogger(ExchangeRateServiceImpl.class);
+    private final ExchangeRateMapper mapper;
+    private final ExchangeRateProvider provider;
 
     @Override
     public BigDecimal getExchangeRate(ValidatedCurrency from, ValidatedCurrency to) throws CurrencyAreTheSameException {

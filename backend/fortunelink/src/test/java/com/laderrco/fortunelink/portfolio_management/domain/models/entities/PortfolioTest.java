@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,7 +28,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
@@ -106,6 +109,7 @@ class PortfolioTest {
             assertThatThrownBy(() -> new Portfolio(null, name, portfolioCurrency))
                     .isInstanceOf(NullPointerException.class);
         }
+
         @Test
         @DisplayName("Should throw exception when userId is null")
         void shouldThrowExceptionWhenNameIsNull() {
@@ -127,7 +131,8 @@ class PortfolioTest {
         void testRepoConstructorIsSucess() {
             List<Account> accounts = List.of(createTestAccount("TEST 1", AccountType.CHEQUING),
                     createTestAccount("RRSP", AccountType.INVESTMENT));
-            Portfolio portfolio = Portfolio.reconstitute(PortfolioId.randomId(), userId, accounts, name, portfolioCurrency, "Desc", false, null, null,
+            Portfolio portfolio = Portfolio.reconstitute(PortfolioId.randomId(), userId, accounts, name,
+                    portfolioCurrency, "Desc", false, null, null,
                     Instant.now(), Instant.now());
             assertEquals(accounts, portfolio.getAccounts());
             assertEquals(portfolioCurrency, portfolio.getPortfolioCurrencyPreference());
@@ -153,6 +158,50 @@ class PortfolioTest {
             ValidatedCurrency newCur = ValidatedCurrency.GBP;
             portfolio.updateCurrencyPreference(newCur);
             assertEquals(newCur, portfolio.getPortfolioCurrencyPreference());
+        }
+
+        @Test
+        void markAsDeleted_ShouldSetDeletedFields_WhenPortfolioIsEmpty() {
+            // Arrange
+            Portfolio portfolio = new Portfolio(userId, name, portfolioCurrency);
+            Instant now = Instant.now();
+            UserId adminId = UserId.randomId();
+
+            // Act
+            portfolio.markAsDeleted(now, adminId);
+
+            // Assert
+            assertThat(portfolio.isDeleted()).isTrue();
+            // Assuming you have getters for these fields
+            assertThat(portfolio.getDeletedAt()).isEqualTo(now);
+            assertThat(portfolio.getDeletedBy()).isEqualTo(adminId);
+            assertTrue(portfolio.belongsToUser(userId));
+            assertFalse(portfolio.belongsToUser(adminId));
+        }
+
+        @Test
+        void markAsDeleted_ShouldThrowException_WhenPortfolioHasAccounts() {
+            // Arrange
+            Portfolio portfolio =  new Portfolio(userId, name, portfolioCurrency);
+            portfolio.addAccount(mock(Account.class));
+            Instant now = Instant.now();
+            UserId adminId = UserId.randomId();
+
+            // Act & Assert
+            assertThatThrownBy(() -> portfolio.markAsDeleted(now, adminId))
+                    .isInstanceOf(PortfolioNotEmptyException.class)
+                    .hasMessageContaining("Cannot delete portfolio with 1 account(s)");
+        }
+
+        @Test
+        void markAsDeleted_ShouldThrowException_WhenAlreadyDeleted() {
+            // Arrange
+            Portfolio portfolio =  new Portfolio(userId, name, portfolioCurrency);
+            portfolio.markAsDeleted(Instant.now(), UserId.randomId());
+
+            // Act & Assert
+            assertThatThrownBy(() -> portfolio.markAsDeleted(Instant.now(), UserId.randomId()))
+                    .isInstanceOf(PortfolioAlreadyDeletedException.class);
         }
 
     }

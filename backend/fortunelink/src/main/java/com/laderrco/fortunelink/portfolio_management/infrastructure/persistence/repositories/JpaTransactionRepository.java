@@ -15,6 +15,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
 
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.entities.TransactionEntity;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.queries.TransactionQuery;
@@ -57,7 +58,8 @@ public interface JpaTransactionRepository
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable);
 
-    // This is the one causing the %7 error - we'll keep it for reference but use Specs for the implementation
+    // This is the one causing the %7 error - we'll keep it for reference but use
+    // Specs for the implementation
     @Query("""
             SELECT t FROM TransactionEntity t
             WHERE (:portfolioId IS NULL OR t.portfolioId = :portfolioId)
@@ -80,7 +82,7 @@ public interface JpaTransactionRepository
 
     /**
      * Specification inner class to handle dynamic filtering.
-     * This avoids the PostgreSQL "could not determine data type" error by only 
+     * This avoids the PostgreSQL "could not determine data type" error by only
      * adding parameters to the query that are actually present.
      */
     class TransactionSpecifications {
@@ -110,7 +112,7 @@ public interface JpaTransactionRepository
                     predicates.add(cb.lessThanOrEqualTo(root.get("transactionDate"), query.endInstant()));
                 }
 
-                if (query.assetSymbols() != null && !query.assetSymbols().isEmpty()) {
+                if (!CollectionUtils.isEmpty(query.assetSymbols())) {
                     predicates.add(root.get("primaryId").in(query.assetSymbols()));
                 }
 

@@ -2388,6 +2388,32 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
+        @DisplayName("Should successfully delete empty portfolio with confirmation")
+        void shouldDeleteEmptyPortfolioSoftDelete() {
+            // Given - create a portfolio with no accounts
+            UserId newUserId = UserId.randomId();
+            Portfolio emptyPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
+            PortfolioId portfolioId = emptyPortfolio.getPortfolioId();
+
+            DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true);
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(emptyPortfolio));
+
+            // Verify portfolio is empty before deletion
+            assertThat(emptyPortfolio.getAccounts()).isEmpty();
+            assertThat(emptyPortfolio.containsAccounts()).isFalse();
+            
+            // When
+            service.deletePortfolio(command);
+            
+            // Then
+            verify(portfolioRepository).save(emptyPortfolio);
+            verify(portfolioRepository, never()).delete(any(PortfolioId.class));
+            assertThat(emptyPortfolio.getDeletedBy()).isEqualTo(userId);
+        }
+
+        @Test
         @DisplayName("Should throw exception when deleting without confirmation")
         void shouldThrowExceptionWhenDeletingWithoutConfirmation() {
             // Given
