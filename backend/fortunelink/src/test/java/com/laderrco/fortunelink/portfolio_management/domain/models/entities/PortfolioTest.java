@@ -28,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioAlreadyDeletedException;
@@ -666,7 +668,7 @@ class PortfolioTest {
 
         @Test
         @DisplayName("Should calculate total assets for portfolio with accounts")
-        void shouldCalculateTotalAssetsForPortfolioWithAccounts() {
+        void shouldCalculateTotalAssetsForPortfolioWithAccounts() throws JsonMappingException, JsonProcessingException {
             // Given
             portfolio.addAccount(account1);
             portfolio.addAccount(account2);
@@ -675,8 +677,13 @@ class PortfolioTest {
             Money account2Value = Money.of(new BigDecimal("5000"), ValidatedCurrency.CAD);
 
             // when(marketDataService.getCurrentPrice(any())).thenReturn(mock(Money.class));
-            when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
-                    .thenReturn(account1Value, account2Value);
+            try {
+                when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
+                        .thenReturn(account1Value, account2Value);
+            } catch (JsonProcessingException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
             // When
             Money totalAssets = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);

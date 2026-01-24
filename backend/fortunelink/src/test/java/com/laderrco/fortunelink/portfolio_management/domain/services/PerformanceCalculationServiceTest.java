@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Nested;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -90,7 +92,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should calculate positive total return correctly")
-        void calculateTotalReturn_PositiveReturn() {
+        void calculateTotalReturn_PositiveReturn() throws JsonMappingException, JsonProcessingException {
             // --- Arrange ---
             ValidatedCurrency usd = ValidatedCurrency.USD;
 
@@ -139,7 +141,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should calculate negative total return correctly")
-        void calculateTotalReturn_NegativeReturn() {
+        void calculateTotalReturn_NegativeReturn() throws JsonMappingException, JsonProcessingException {
             // --- Arrange ---
             ValidatedCurrency usd = ValidatedCurrency.USD;
             Portfolio portfolio = createPortfolioWithTransactions(usd);
@@ -206,7 +208,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should calculate return after withdrawal")
-        void calculateTotalReturn_WithWithdrawal() {
+        void calculateTotalReturn_WithWithdrawal() throws JsonMappingException, JsonProcessingException {
             // --- Arrange ---
             ValidatedCurrency cad = ValidatedCurrency.CAD;
             MarketIdentifier shopifySymbol = new MarketIdentifier("SHOP", null, AssetType.STOCK, "Shopify", "CAD",
@@ -1199,7 +1201,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should calculate simple ACB gain for two buys and one sell")
-        void testCalculateRealizedGainsCAD_ACB_Success() {
+        void testCalculateRealizedGainsCAD_ACB_Success() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1231,7 +1233,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should ignore cash-only transactions like Fees or Interest")
-        void testCalculateACB_IgnoresCashEvents() {
+        void testCalculateACB_IgnoresCashEvents() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1262,7 +1264,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should test true with phantom dist.")
-        void testPhantomDistributionIncreasesACB() {
+        void testPhantomDistributionIncreasesACB() throws JsonMappingException, JsonProcessingException {
             // 1. Buy 10 shares at $100 ($1000 total cost)
             // 2. Receive $50 Phantom Distribution (Total cost becomes $1050)
             // 3. Sell 10 shares at $110 ($1100 proceeds)
@@ -1295,7 +1297,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should handle ROC: reduce cost base and trigger gain if ACB goes negative")
-        void testCalculateRealizedGainsCAD_ACB_ReturnOfCapital() {
+        void testCalculateRealizedGainsCAD_ACB_ReturnOfCapital() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1323,7 +1325,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should increase ACB only when Dividend includes reinvested shares (DRIP)")
-        void testCalculateRealizedGainsCAD_ACB_DividendDrip() {
+        void testCalculateRealizedGainsCAD_ACB_DividendDrip() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1361,7 +1363,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should handle TRANSFER_OUT (decreases cost/shares without affecting gain)")
-        void testTransferOut_BranchCoverage() {
+        void testTransferOut_BranchCoverage() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1388,7 +1390,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("Should handle 0 shares edge case (avoids Division by Zero)")
-        void testZeroShares_BranchCoverage() {
+        void testZeroShares_BranchCoverage() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1413,7 +1415,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("ROC Scenario A: Reduce ACB but stay positive")
-        void testROC_ReducesCost() {
+        void testROC_ReducesCost() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);
@@ -1440,7 +1442,7 @@ class PerformanceCalculationServiceTest {
 
         @Test
         @DisplayName("ROC Scenario B: Negative ACB triggers Capital Gain")
-        void testROC_TriggersGain() {
+        void testROC_TriggersGain() throws JsonMappingException, JsonProcessingException {
             ExchangeRateService exchangeRateService = mock(ExchangeRateService.class);
             PerformanceCalculationService service = new PerformanceCalculationService(null, exchangeRateService, null);
             Portfolio portfolio = new Portfolio(userId1, name, ValidatedCurrency.CAD);

@@ -12,9 +12,11 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.BankOfCanadaConfigurationProperties;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.FmpApiException;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.bank_of_cad.dtos.BocExchangeRateResponse;
 
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +31,8 @@ public class BocApiClient {
     private final HttpClient httpClient;
 
     public BocApiClient(BankOfCanadaConfigurationProperties config,
-            @Qualifier("defaultObjectMapper") ObjectMapper objectMapper, @Qualifier("bocHttpClient") HttpClient httpClient) {
+            @Qualifier("defaultObjectMapper") ObjectMapper objectMapper,
+            @Qualifier("bocHttpClient") HttpClient httpClient) {
         this.config = config;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
@@ -58,11 +61,11 @@ public class BocApiClient {
 
         } catch (Exception e) {
             log.error("Failed to fetch latest exchange rate from Bank of Canada", e);
-            throw new RuntimeException("Failed to fetch latest exchange rate", e);
+            throw new BocApiException("Failed to fetch latest exchange rate", e);
         }
     }
 
-    public BocExchangeRateResponse getHistoricalExchangeRate(String to, String from, LocalDateTime startDate, LocalDateTime endDateTime) {
+    public BocExchangeRateResponse getHistoricalExchangeRate(String to, String from, LocalDateTime startDate, LocalDateTime endDateTime) throws JsonMappingException, JsonProcessingException {
         List<String> series = BocCurrencyPairResolver.resolveSeries(from, to);
 
         String url = new BocUrlBuilder(config.getBaseUrl())
@@ -81,9 +84,9 @@ public class BocApiClient {
 
             return objectMapper.readValue(jsonResponse, BocExchangeRateResponse.class);
 
-        } catch (Exception e) {
+        } catch (BocApiException e) {
             log.error("Failed to fetch historical exchange rates from Bank of Canada", e);
-            throw new RuntimeException("Failed to fetch historical exchange rates", e);
+            throw e; // or wrap if you really want
         }
     }
 
@@ -100,21 +103,21 @@ public class BocApiClient {
             if (response.statusCode() == 200) {
                 return response.body();
             } else if (response.statusCode() == 400) {
-                throw new FmpApiException("Invalid inputs for the request, please try again.");
+                throw new BocApiException("Invalid inputs for the request, please try again.");
             } else if (response.statusCode() == 404) {
-                throw new FmpApiException("BOC API endpoint not found: " + url);
+                throw new BocApiException("BOC API endpoint not found: " + url);
             } else if (response.statusCode() == 500) {
-                throw new FmpApiException("An unexpected serverside error has occurred.");
+                throw new BocApiException("An unexpected serverside error has occurred.");
             } else {
-                throw new FmpApiException(
+                throw new BocApiException(
                         String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body()));
             }
 
         } catch (IOException e) {
-            throw new FmpApiException("Network error calling FMP API", e);
+            throw new BocApiException("Network error calling FMP API", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new FmpApiException("Request interrupted", e);
+            throw new BocApiException("Request interrupted", e);
         }
     }
 }

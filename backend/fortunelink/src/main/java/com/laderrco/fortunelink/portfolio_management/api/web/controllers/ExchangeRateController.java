@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.CurrencyAreTheSameException;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import lombok.RequiredArgsConstructor;
@@ -34,8 +36,8 @@ public class ExchangeRateController {
             @RequestParam String from,
             @RequestParam String to) {
         try {
-            BigDecimal rate = exchangeRateService.getExchangeRate(ValidatedCurrency.of(from), ValidatedCurrency.of(to));
-            return ResponseEntity.ok(rate);
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(ValidatedCurrency.of(from), ValidatedCurrency.of(to));
+            return ResponseEntity.ok(rate.get().rate());
         } catch (CurrencyAreTheSameException e) {
             return ResponseEntity.badRequest().body(BigDecimal.ONE);
         } catch (Exception e) {

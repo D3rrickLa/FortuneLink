@@ -30,6 +30,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -127,7 +129,7 @@ public class PortfolioValuationServiceTest {
         Money totalValue = valuationService.calculateTotalValue(portfolio, Instant.now());
 
         // Assert
-        // 10 shares * $180 = $1800 + $500 cash = $2300
+        // 10 shares *  =  +  cash = 
         Money expectedValue = new Money(new BigDecimal("2300"), usd);
         assertEquals(expectedValue, totalValue);
 
@@ -136,7 +138,7 @@ public class PortfolioValuationServiceTest {
 
     @Test
     @DisplayName("Should calculate total assets correctly (Single Account/Asset)")
-    void calculateTotalAssets_SingleAccountSingleAsset() {
+    void calculateTotalAssets_SingleAccountSingleAsset() throws JsonMappingException, JsonProcessingException {
         // Arrange
         MarketIdentifier appleSymbol = new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null);
         Instant evaluationTime = Instant.now();
@@ -199,7 +201,7 @@ public class PortfolioValuationServiceTest {
 
     @Test
     @DisplayName("Should calculate portfolio value with multiple accounts and assets")
-    void calculateTotalValue_MultipleAccountsAndAssets() {
+    void calculateTotalValue_MultipleAccountsAndAssets() throws JsonMappingException, JsonProcessingException {
         // --- Arrange ---
         ValidatedCurrency cad = ValidatedCurrency.CAD;
 
@@ -393,7 +395,7 @@ public class PortfolioValuationServiceTest {
 
     @Test
     @DisplayName("Should calculate account value correctly in target currency")
-    void calculateAccountValue_Success_TriggerExchangeService() {
+    void calculateAccountValue_Success_TriggerExchangeService() throws JsonMappingException, JsonProcessingException {
         // Arrange
         ValidatedCurrency usd = ValidatedCurrency.USD;
         ValidatedCurrency eur = ValidatedCurrency.EUR;
@@ -497,7 +499,7 @@ public class PortfolioValuationServiceTest {
 
     @Test
     @DisplayName("Should call getHistoricalPrice when asOfDate is in the past")
-    void testCalculateAssetValue_HistoricalPath() {
+    void testCalculateAssetValue_HistoricalPath() throws JsonMappingException, JsonProcessingException {
         // 1. Setup - Initialize Mocks FIRST
         MarketDataService mockMarketData = mock(MarketDataService.class);
         ExchangeRateService mockExchange = mock(ExchangeRateService.class);
