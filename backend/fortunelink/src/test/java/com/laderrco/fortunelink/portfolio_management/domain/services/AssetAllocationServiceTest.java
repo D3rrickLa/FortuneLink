@@ -18,6 +18,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -61,7 +63,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should return empty map when portfolio value is zero")
-        void shouldReturnEmptyMapWhenPortfolioValueIsZero() {
+        void shouldReturnEmptyMapWhenPortfolioValueIsZero() throws JsonMappingException, JsonProcessingException {
             // Arrange
             Portfolio portfolio = createMockPortfolio();
             Money zeroMoney = Money.of(BigDecimal.ZERO, ValidatedCurrency.USD);
@@ -84,7 +86,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should calculate correct allocation for single asset type")
-        void shouldCalculateCorrectAllocationForSingleAssetType() {
+        void shouldCalculateCorrectAllocationForSingleAssetType() throws JsonMappingException, JsonProcessingException {
             // Arrange
             Portfolio portfolio = createPortfolioWithSingleAssetType();
             // Ensure this matches what your helper actually puts in the portfolio!
@@ -105,7 +107,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Service should group values by AssetType correctly")
-        void serviceShouldGroupByAssetType() {
+        void serviceShouldGroupByAssetType() throws JsonMappingException, JsonProcessingException {
             // Act
             Portfolio portfolio = createPortfolioWithSingleAssetType();
             Money stockValue = Money.of(new BigDecimal("10000.00"), ValidatedCurrency.USD);
@@ -120,7 +122,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should calculate correct allocation for multiple asset types")
-        void shouldCalculateCorrectAllocationForMultipleAssetTypes() {
+        void shouldCalculateCorrectAllocationForMultipleAssetTypes() throws JsonMappingException, JsonProcessingException {
             // 1. Arrange - Use a real Portfolio object (not a mock) to avoid stubbing
             // confusion
             Portfolio portfolio = Portfolio.createNew(UserId.randomId(), ValidatedCurrency.USD, "Portfolio name", "desc");
@@ -158,7 +160,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should aggregate multiple assets of same type correctly")
-        void shouldAggregateMultipleAssetsOfSameType() {
+        void shouldAggregateMultipleAssetsOfSameType() throws JsonMappingException, JsonProcessingException {
             // Arrange
             Portfolio portfolio = createPortfolioWithMultipleAssetsOfSameType();
 
@@ -195,7 +197,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should exclude assets with zero or negative value from allocation map")
-        void shouldExcludeNonPositiveValuesFromAllocation() {
+        void shouldExcludeNonPositiveValuesFromAllocation() throws JsonMappingException, JsonProcessingException {
             // 1. Arrange
             Portfolio portfolio = createPortfolioWithMultipleAssetTypes();
             // This helper likely adds STOCK, ETF, CRYPTO assets
@@ -250,7 +252,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should calculate correct allocation for multiple account types")
-        void shouldCalculateCorrectAllocationForMultipleAccountTypes() {
+        void shouldCalculateCorrectAllocationForMultipleAccountTypes() throws JsonMappingException, JsonProcessingException {
             // Arrange
             Portfolio portfolio = mock(Portfolio.class);
             // CRITICAL: Stub the currency preference
@@ -280,7 +282,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should aggregate multiple accounts of same type")
-        void shouldAggregateMultipleAccountsOfSameType() {
+        void shouldAggregateMultipleAccountsOfSameType() throws JsonMappingException, JsonProcessingException {
             // Arrange
             Portfolio portfolio = mock(Portfolio.class);
             when(portfolio.getPortfolioCurrencyPreference()).thenReturn(ValidatedCurrency.USD);
@@ -349,7 +351,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should calculate correct allocation for multiple currencies")
-        void shouldCalculateCorrectAllocationForMultipleCurrencies() {
+        void shouldCalculateCorrectAllocationForMultipleCurrencies() throws JsonMappingException, JsonProcessingException {
             // 1. Arrange
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
@@ -446,7 +448,7 @@ public class AssetAllocationServiceTest {
 
         @Test
         @DisplayName("Should handle very small allocation percentages")
-        void shouldHandleVerySmallAllocationPercentages() {
+        void shouldHandleVerySmallAllocationPercentages() throws JsonMappingException, JsonProcessingException {
             // Arrange
             Portfolio portfolio = createPortfolioWithVerySmallAllocations();
 

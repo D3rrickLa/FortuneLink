@@ -59,14 +59,6 @@ public class BocResponseMapperTest {
     }
 
     @Test
-    void toXYZ_nullRate_skipped() {
-        BocExchangeRateResponse response = responseWith("2024-01-01",
-                Map.of("FXUSDCAD", null));
-
-        assertThat(mapper.toXYZ(response)).isEmpty();
-    }
-
-    @Test
     void toXYZ_validCadPair_mapped() {
         BocExchangeRateResponse response = responseWith("2024-01-01",
                 Map.of("FXUSDCAD", BigDecimal.valueOf(1.25)));

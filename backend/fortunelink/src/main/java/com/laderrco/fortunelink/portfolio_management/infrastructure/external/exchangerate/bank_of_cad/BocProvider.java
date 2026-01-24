@@ -10,8 +10,6 @@ import java.util.List;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateProvider;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.ExchangeRateUnavailableException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.bank_of_cad.dtos.BocExchangeRateResponse;
@@ -30,14 +28,13 @@ public class BocProvider implements ExchangeRateProvider {
     private final BocResponseMapper mapper;
 
     @Override
-    public ProviderExchangeRate getExchangeRate(ValidatedCurrency from, ValidatedCurrency to, Instant asOf)
-            throws JsonMappingException, JsonProcessingException {
+    public ProviderExchangeRate getExchangeRate(ValidatedCurrency from, ValidatedCurrency to, Instant asOf) {
         if (from.equals(to)) {
             return new ProviderExchangeRate(from.getCode(), to.getCode(), BigDecimal.ONE, LocalDate.now(),
                     "INTERNAL CALL");
         }
 
-        BocExchangeRateResponse response;
+        BocExchangeRateResponse response = null;
 
         // ---- Latest rate ----
         if (asOf == null) {
@@ -49,7 +46,6 @@ public class BocProvider implements ExchangeRateProvider {
         else {
             LocalDate date = asOf.atZone(ZoneOffset.UTC).toLocalDate();
 
-            // single-day clamp (BOC may return empty on weekends/holidays)
             response = bocApiClient.getHistoricalExchangeRate(
                     to.getCode(),
                     from.getCode(),

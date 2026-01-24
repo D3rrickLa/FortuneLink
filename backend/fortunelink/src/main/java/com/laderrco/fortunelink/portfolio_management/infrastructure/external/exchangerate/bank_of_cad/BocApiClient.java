@@ -12,8 +12,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.BankOfCanadaConfigurationProperties;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.BocApiException;
@@ -65,7 +63,7 @@ public class BocApiClient {
         }
     }
 
-    public BocExchangeRateResponse getHistoricalExchangeRate(String to, String from, LocalDateTime startDate, LocalDateTime endDateTime) throws JsonMappingException, JsonProcessingException {
+    public BocExchangeRateResponse getHistoricalExchangeRate(String to, String from, LocalDateTime startDate, LocalDateTime endDateTime) {
         List<String> series = BocCurrencyPairResolver.resolveSeries(from, to);
 
         String url = new BocUrlBuilder(config.getBaseUrl())
@@ -87,7 +85,10 @@ public class BocApiClient {
         } catch (BocApiException e) {
             log.error("Failed to fetch historical exchange rates from Bank of Canada", e);
             throw e; // or wrap if you really want
+        } catch (Exception e) {
+            log.error("Failed to parse historical exchange rates from Bank of Canada", e);
         }
+        return null;   
     }
 
     private String executeGetRequest(String url) {

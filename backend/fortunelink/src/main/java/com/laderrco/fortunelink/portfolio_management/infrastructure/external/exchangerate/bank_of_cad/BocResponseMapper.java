@@ -121,8 +121,8 @@ public class BocResponseMapper {
 
     private ProviderExchangeRate findRate(List<ProviderExchangeRate> rates, String base, String target) {
         return rates.stream()
-        .filter(r -> r.fromCurrency().equals(base) && r.toCurrency().equals(target))
-        .findFirst()
-        .orElse(null);
+                .filter(r -> r.fromCurrency().equals(base) && r.toCurrency().equals(target))
+                .findFirst()
+                .orElse(null);
     }
 }

@@ -78,14 +78,14 @@ public class BankOfCanadaConfigurationPropertiesTest {
     @DisplayName("HttpClient bean should be created with configured timeout")
     void shouldCreateHttpClientWithCorrectTimeout() {
         contextRunner
-                .withPropertyValues("boc.timeout-seconds=5")
+                .withPropertyValues("boc.timeout-seconds=10")
                 .run(context -> {
                     assertThat(context).hasBean("bocHttpClient");
                     HttpClient client = context.getBean("bocHttpClient", HttpClient.class);
 
                     // We verify the configuration indirectly via the property check
                     // as HttpClient doesn't expose timeout via getter easily
-                    assertThat(client.connectTimeout()).isPresent().contains(Duration.ofSeconds(5));
+                    assertThat(client.connectTimeout()).isPresent().contains(Duration.ofSeconds(10));
                     assertThat(client.followRedirects()).isEqualTo(HttpClient.Redirect.NORMAL);
                 });
     }

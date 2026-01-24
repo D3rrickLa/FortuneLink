@@ -358,7 +358,7 @@ public class PortfolioValuationServiceTest {
 
     @Test
     @DisplayName("Should calculate account value correctly")
-    void calculateAccountValue_Success() {
+    void calculateAccountValue_Success() throws JsonMappingException, JsonProcessingException {
         // Arrange
         ValidatedCurrency usd = ValidatedCurrency.USD;
         MarketIdentifier teslaSymbol = new MarketIdentifier("TSLA", null, AssetType.STOCK, "Tesla", "USD", null);
@@ -447,7 +447,7 @@ public class PortfolioValuationServiceTest {
 
     @Test
     @DisplayName("Should calculate asset value correctly")
-    void calculateAssetValue_Success() {
+    void calculateAssetValue_Success() throws JsonMappingException, JsonProcessingException {
         // Arrange
         ValidatedCurrency usd = ValidatedCurrency.USD;
         CryptoIdentifier bitcoinSymbol = new CryptoIdentifier("BTC", "Bitcoin", AssetType.CRYPTO, "USD", null);
@@ -547,7 +547,7 @@ public class PortfolioValuationServiceTest {
 
         @Test
         @DisplayName("Should call getCurrentPrice when asOfDate is null")
-        void testCalculateAssetValue_NullDate() {
+        void testCalculateAssetValue_NullDate() throws JsonMappingException, JsonProcessingException {
             // 1. Initialize Mocks
             // Use the class-level @Mock fields or local ones, but be consistent!
             // Here we use local ones to match your style
@@ -587,7 +587,7 @@ public class PortfolioValuationServiceTest {
 
         @Test
         @DisplayName("Should call getCurrentPrice when asOfDate is very recent (e.g., 1 second ago)")
-        void testCalculateAssetValue_RecentDate() {
+        void testCalculateAssetValue_RecentDate() throws JsonMappingException, JsonProcessingException {
             Asset mockAsset = mock(Asset.class);
             AssetIdentifier assetId = mock(AssetIdentifier.class);
             MarketAssetQuote currentAaplQuote = new MarketAssetQuote(

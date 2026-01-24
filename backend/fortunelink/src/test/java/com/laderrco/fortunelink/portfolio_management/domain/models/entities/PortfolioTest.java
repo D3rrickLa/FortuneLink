@@ -676,14 +676,8 @@ class PortfolioTest {
             Money account1Value = Money.of(new BigDecimal("10000"), ValidatedCurrency.CAD);
             Money account2Value = Money.of(new BigDecimal("5000"), ValidatedCurrency.CAD);
 
-            // when(marketDataService.getCurrentPrice(any())).thenReturn(mock(Money.class));
-            try {
-                when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
-                        .thenReturn(account1Value, account2Value);
-            } catch (JsonProcessingException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            when(exchangeRateService.convert(any(Money.class), eq(portfolioCurrency)))
+                    .thenReturn(account1Value, account2Value);
 
             // When
             Money totalAssets = portfolio.getAssetsTotalValue(marketDataService, exchangeRateService);
