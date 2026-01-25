@@ -26,11 +26,11 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 public class PortoflioHttpMapper {
     public CreatePortfolioCommand toCommand(CreatePortfolioRequest request) {
         return new CreatePortfolioCommand(
-            toUserId(request.userId()),
-            request.name(),
-            toCurrency(request.currencyPreference()),
-            request.description(),
-            request.createAccount()
+            toUserId(request.getUserId()),
+            request.getName(),
+            toCurrency(request.getCurrencyPreference()),
+            request.getDescription(),
+            request.getCreateAccount()
         );
     }
 
@@ -39,33 +39,33 @@ public class PortoflioHttpMapper {
     }
 
     public GetPortfoliosByUserIdQuery toCommand(GetUsersPortfolioRequest request) {
-        return new GetPortfoliosByUserIdQuery(new UserId(UUID.fromString(request.id())));
+        return new GetPortfoliosByUserIdQuery(new UserId(UUID.fromString(request.userId())));
     }
 
     public UpdatePortfolioCommand toCommand(String id, CreatePortfolioRequest request) {
         return new UpdatePortfolioCommand(
             toPortfolioId(id), 
-            request.name(),
-            toCurrency(request.currencyPreference()), 
-            request.description()
+            request.getName(),
+            toCurrency(request.getCurrencyPreference()), 
+            request.getDescription()
         );
     }
     
     public DeletePortfolioCommand toCommand(DeletePortfolioRequest request) {
         return new DeletePortfolioCommand(
-            request.portfolioId(),
-            request.userId(),
-            request.confirmed(),
-            request.softDelete()
+            toPortfolioId(request.getPortfolioId()),
+            toUserId(request.getUserId()),
+            request.getConfirmed(),
+            request.getSoftDelete()
         );
     }
 
     public AddAccountCommand toCommand(String id, CreateAccountRequest request) {
         return new AddAccountCommand(
             toPortfolioId(id),
-            request.name(),
-            AccountType.valueOf(request.accountType()),
-            toCurrency(request.baseCurrency())
+            request.getName(),
+            AccountType.valueOf(request.getAccountType()),
+            toCurrency(request.getBaseCurrency())
         );
     }
 

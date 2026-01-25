@@ -4,9 +4,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,7 +21,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
 import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
@@ -41,7 +41,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @AutoConfigureMockMvc
-@Import({ DevSecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
+@Import({ DevSecurityConfig.class, RateLimitConfig.class })
 @WebMvcTest({MarketDataController.class, GlobalExceptionHandler.class})
 class MarketDataControllerTest {
 
@@ -313,6 +313,16 @@ class MarketDataControllerTest {
         mockMvc.perform(get("/api/market-data/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.service").value("market-data"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+    @Test
+    void healthCheck_up_degraded() throws Exception {
+        when(marketDataService.isSymbolSupported(any())).thenReturn(false);
+
+        mockMvc.perform(get("/api/market-data/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DEGRADED"))
                 .andExpect(jsonPath("$.service").value("market-data"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }

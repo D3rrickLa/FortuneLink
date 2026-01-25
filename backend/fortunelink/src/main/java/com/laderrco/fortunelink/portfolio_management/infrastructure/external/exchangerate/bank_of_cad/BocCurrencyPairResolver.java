@@ -5,7 +5,8 @@ import java.util.List;
 public class BocCurrencyPairResolver {
     private static final String CAD = "CAD";
 
-    private BocCurrencyPairResolver() {}
+    private BocCurrencyPairResolver() {
+    }
 
     /**
      * Resolves BOC FX series needed to satisfy a currency request.

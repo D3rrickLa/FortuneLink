@@ -1,39 +1,51 @@
 package com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * Request DTO for creating a new portfolio.
  * 
  * Example JSON:
  * {
- *   "userId": "user-123",
- *   "name": "My Retirement Portfolio",
- *   "description": "Long-term retirement savings"
+ * "userId": "user-123",
+ * "name": "My Retirement Portfolio",
+ * "description": "Long-term retirement savings"
  * }
  */
-public record CreatePortfolioRequest(
-    
+public class CreatePortfolioRequest {
     @NotBlank(message = "User ID is required")
-    String userId,
-    
+    private String userId;
+
     @NotBlank(message = "Portfolio name is required")
-    String name,
-    
+    @Size(max = 100)
+    private String name;
+
     @NotBlank(message = "Currency preference cannot be blank")
-    String currencyPreference,
+    private String currencyPreference;
 
-    String description, // Optional
+    @Size(max = 500)
+    private String description;
 
-    boolean createAccount
-) {
-    // Compact constructor for validation
-    public CreatePortfolioRequest {
-        if (name != null && name.length() > 100) {
-            throw new IllegalArgumentException("Portfolio name cannot exceed 100 characters");
-        }
-        if (description != null && description.length() > 500) {
-            throw new IllegalArgumentException("Description cannot exceed 500 characters");
-        }
+    private Boolean createAccount;
+
+    // All-args constructor
+    // NOTE: We had to use a ternary operation because for some odd reason, @Valid on the controller side
+    // jsut isn't 'seeing' that we are assigning values 
+    public CreatePortfolioRequest(String userId, String name, String currencyPreference, String description, Boolean createAccount) {
+        this.userId = userId == null ? UUID.randomUUID().toString() : userId;
+        this.name = name == null ? "ERROR" : name;
+        this.currencyPreference = currencyPreference == null ? "USD" : currencyPreference;
+        this.description = description;
+        this.createAccount = createAccount;
     }
+
+    // Getters (needed for Jackson)
+    public String getUserId() { return userId; }
+    public String getName() { return name; }
+    public String getCurrencyPreference() { return currencyPreference; }
+    public String getDescription() { return description; }
+    public Boolean getCreateAccount() { return createAccount; }
 }

@@ -65,7 +65,8 @@ public class BocApiClient {
         }
     }
 
-    public BocExchangeRateResponse getHistoricalExchangeRate(String to, String from, LocalDateTime startDate, LocalDateTime endDateTime) {
+    public BocExchangeRateResponse getHistoricalExchangeRate(String to, String from, LocalDateTime startDate,
+            LocalDateTime endDateTime) {
         List<String> series = BocCurrencyPairResolver.resolveSeries(from, to);
 
         String url = new BocUrlBuilder(config.getBaseUrl())
@@ -107,7 +108,8 @@ public class BocApiClient {
             } else if (response.statusCode() == 500) {
                 throw new BocApiException("An unexpected serverside error has occurred.");
             } else {
-                throw new BocApiException(String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body()));
+                throw new BocApiException(
+                        String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body()));
             }
 
         } catch (IOException e) {

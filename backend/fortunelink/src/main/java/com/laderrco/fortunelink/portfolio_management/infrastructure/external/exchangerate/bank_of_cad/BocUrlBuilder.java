@@ -47,9 +47,9 @@ public class BocUrlBuilder {
         String query = queryParams.isEmpty()
                 ? ""
                 : "?" + queryParams.entrySet()
-                    .stream()
-                    .map(e -> encode(e.getKey()) + "=" + encode(e.getValue()))
-                    .collect(Collectors.joining("&"));
+                        .stream()
+                        .map(e -> encode(e.getKey()) + "=" + encode(e.getValue()))
+                        .collect(Collectors.joining("&"));
 
         return baseUrl + path + query;
     }

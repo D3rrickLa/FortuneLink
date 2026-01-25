@@ -122,7 +122,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Catch-all for unexpected errors (500 Internal Server Error).
-     * IMPORTANT: Don't leak internal details to clients!
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
@@ -133,6 +132,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error("Internal Server Error")
                 .message("An unexpected error occurred. Please try again later.")
+                .details(ex.getMessage())
                 .path(getPath(request))
                 .build();
 

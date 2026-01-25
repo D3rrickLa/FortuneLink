@@ -25,7 +25,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRat
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.common.ExchangeRateMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.common.ProviderExchangeRate;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
-import com.laderrco.fortunelink.shared.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
