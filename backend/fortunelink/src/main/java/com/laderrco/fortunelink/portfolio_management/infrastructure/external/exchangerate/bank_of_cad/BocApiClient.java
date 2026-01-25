@@ -12,9 +12,11 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.BankOfCanadaConfigurationProperties;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.BocApiException;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.BocParsingException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.bank_of_cad.dtos.BocExchangeRateResponse;
 
 import lombok.extern.slf4j.Slf4j;
@@ -75,20 +77,15 @@ public class BocApiClient {
 
         try {
             String jsonResponse = executeGetRequest(url);
-
-            if (config.isDebugLogging()) {
-                log.debug("BOC Response: {}", jsonResponse);
-            }
-
             return objectMapper.readValue(jsonResponse, BocExchangeRateResponse.class);
 
         } catch (BocApiException e) {
-            log.error("Failed to fetch historical exchange rates from Bank of Canada", e);
-            throw e; // or wrap if you really want
-        } catch (Exception e) {
-            log.error("Failed to parse historical exchange rates from Bank of Canada", e);
+            // Logged in executeGetRequest already, but we rethrow to bubble up
+            throw e;
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse Bank of Canada JSON response", e);
+            throw new BocParsingException("Malformed data received from BOC", e);
         }
-        return null;   
     }
 
     private String executeGetRequest(String url) {
@@ -110,8 +107,7 @@ public class BocApiClient {
             } else if (response.statusCode() == 500) {
                 throw new BocApiException("An unexpected serverside error has occurred.");
             } else {
-                throw new BocApiException(
-                        String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body()));
+                throw new BocApiException(String.format("FMP API error: HTTP %d - %s", response.statusCode(), response.body()));
             }
 
         } catch (IOException e) {

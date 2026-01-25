@@ -19,6 +19,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNo
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.SymbolNotFoundException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -154,22 +155,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle validation errors from @Valid.
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<List<String>> handleValidationErrors(MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.toList());
-
-        return ResponseEntity
-                .badRequest()
-                .body(errors);
-    }
-
-    /**
      * Handle domain exceptions (if you create custom ones).
      */
     @ExceptionHandler(AccountNotFoundException.class)
@@ -194,6 +179,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(error);
+    }
+
+    /**
+     * Handle validation errors from @Valid.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<List<String>> handleValidationErrors(MethodArgumentNotValidException ex) {
+        List<String> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.toList());
+
+        return ResponseEntity
+                .badRequest()
+                .body(errors);
     }
 
     /**

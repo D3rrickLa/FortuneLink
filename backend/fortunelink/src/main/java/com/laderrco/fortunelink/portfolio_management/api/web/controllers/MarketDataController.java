@@ -15,12 +15,12 @@ import org.springframework.web.server.ResponseStatusException;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

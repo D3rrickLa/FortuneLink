@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -12,7 +13,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRat
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.common.ExchangeRateMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.common.ProviderExchangeRate;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
-import com.laderrco.fortunelink.shared.exceptions.CurrencyAreTheSameException;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,13 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     @Override
     public Optional<ExchangeRate> getExchangeRate(ValidatedCurrency from, ValidatedCurrency to) {
         if (from.equals(to)) {
-            throw new CurrencyAreTheSameException(from.getCode());
+            // Return a synthetic 1:1 exchange rate without calling the provider
+            return Optional.of(new ExchangeRate(
+                    from,
+                    to,
+                    BigDecimal.ONE,
+                    Instant.now(),
+                    "INTERNAL_SYSTEM"));
         }
 
         // latest rate

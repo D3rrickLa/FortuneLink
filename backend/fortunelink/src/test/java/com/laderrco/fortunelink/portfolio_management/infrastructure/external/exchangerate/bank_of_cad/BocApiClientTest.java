@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,9 +22,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.BankOfCanadaConfigurationProperties;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.BocApiException;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.BocParsingException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.bank_of_cad.dtos.BocExchangeRateResponse;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +45,9 @@ class BocApiClientTest {
     private HttpResponse<Object> httpResponse;
 
     private BocApiClient client;
+
+    private LocalDateTime start = LocalDateTime.now();
+    private LocalDateTime end = LocalDateTime.now().plus(Duration.ofDays(30));
 
     @BeforeEach
     void setup() {
@@ -74,7 +80,6 @@ class BocApiClientTest {
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpResponse.body()).thenReturn("bad-json");
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
-
 
         when(objectMapper.readValue(anyString(), eq(BocExchangeRateResponse.class)))
                 .thenThrow(new BocApiException("boom"));
@@ -187,5 +192,48 @@ class BocApiClientTest {
                 () -> client.getLatestExchangeRate("USD", "CAD"));
 
         assertTrue(Thread.currentThread().isInterrupted());
+    }
+
+    @Test
+    void getHistoricalExchangeRate_ShouldThrowBocApiException_WhenServerReturns404()
+            throws IOException, InterruptedException {
+        // Arrange
+        when(httpClient.send(any(), any()))
+                .thenThrow(new BocApiException("BOC API endpoint not found", 404));
+
+        // Act & Assert
+        assertThrows(BocApiException.class, () -> {
+            client.getHistoricalExchangeRate("USD", "CAD", start, end);
+        });
+    }
+
+    @Test
+    void getHistoricalExchangeRate_ShouldThrowBocApiException_WhenServerReturnsError()
+            throws IOException, InterruptedException {
+        // Arrange
+        when(httpClient.send(any(), any()))
+                .thenThrow(new BocApiException("Service Unavailable", 503));
+
+        // Act & Assert
+        assertThrows(BocApiException.class, () -> {
+            client.getHistoricalExchangeRate("USD", "CAD", start, end);
+        });
+    }
+    @Test
+    void shouldThrowParsingException_WhenMapperFails() throws IOException, InterruptedException {
+        // 1. Setup valid-ish string from the "network"
+        String mockJson = "{\"bad\": \"data\"}";
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpResponse.body()).thenReturn(mockJson);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+
+        // 2. Force the ObjectMapper to throw the checked exception
+        when(objectMapper.readValue(eq(mockJson), eq(BocExchangeRateResponse.class)))
+                .thenThrow(new JsonMappingException(null, "Forced parsing failure"));
+
+        // 3. Verify the service wraps it in your custom BocParsingException
+        assertThrows(BocParsingException.class, () -> {
+            client.getHistoricalExchangeRate("USD", "CAD", start, end);
+        });
     }
 }

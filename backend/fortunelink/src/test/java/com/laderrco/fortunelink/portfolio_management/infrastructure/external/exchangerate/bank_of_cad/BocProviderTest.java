@@ -19,7 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.ExchangeRateUnavailableException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.ExchangeRateUnavailableException;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.bank_of_cad.dtos.BocExchangeRateResponse;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.common.ProviderExchangeRate;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;

@@ -26,6 +26,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfo
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.ErrorType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
@@ -36,7 +37,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataS
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
