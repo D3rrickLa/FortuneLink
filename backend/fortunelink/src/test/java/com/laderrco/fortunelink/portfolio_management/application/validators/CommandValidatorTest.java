@@ -77,7 +77,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
                 null,
                 AccountId.randomId(),
@@ -92,7 +92,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
         
         @Test
@@ -332,7 +332,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             RecordSaleCommand command = new RecordSaleCommand(
                 null,
                 AccountId.randomId(),
@@ -347,7 +347,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
         
         @Test
@@ -531,7 +531,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             RecordDepositCommand command = new RecordDepositCommand(
                 null,
                 AccountId.randomId(),
@@ -545,7 +545,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
 
         @Test
@@ -661,7 +661,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
                 null,
                 AccountId.randomId(),
@@ -674,7 +674,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
         
         @Test
@@ -760,7 +760,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 null,
                 AccountId.randomId(),
@@ -776,7 +776,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
 
         @Test
@@ -953,7 +953,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             Fee validFee = new Fee(
                 FeeType.ACCOUNT_MAINTENANCE,
                 new Money(BigDecimal.valueOf(5), ValidatedCurrency.USD), 
@@ -974,7 +974,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
 
         @Test
@@ -1092,7 +1092,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                 null,
                 AccountId.randomId(),
@@ -1109,7 +1109,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is requried");
+            assertThat(result.errors()).contains("PortfolioId is requried");
         }
         
         @Test
@@ -1401,7 +1401,7 @@ class CommandValidatorTest {
 
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             RemoveAccountCommand command = new RemoveAccountCommand(null, AccountId.randomId());
             
             ValidationResult result = validator.validate(command);
@@ -1444,7 +1444,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             DeleteTransactionCommand command = new DeleteTransactionCommand(
                 null,
                 AccountId.randomId(),
@@ -1456,7 +1456,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
         
         @Test
@@ -1509,7 +1509,7 @@ class CommandValidatorTest {
             assertThat(result.isValid()).isFalse();
             assertThat(result.errors()).hasSize(3);
             assertThat(result.errors()).containsExactlyInAnyOrder(
-                "UserId is required",
+                "PortfolioId is required",
                 "AccountId is required",
                 "TransactionId is required"
             );
@@ -1543,7 +1543,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                 null,
                 name,
@@ -1620,7 +1620,7 @@ class CommandValidatorTest {
         
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             UpdatePortfolioCommand command = new UpdatePortfolioCommand(
                 null,
                 name,
@@ -1777,7 +1777,7 @@ class CommandValidatorTest {
 
         @Test
         @DisplayName("Should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
+        void shouldFailWhenPortfolioIdIsNull() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                 null,
                 AccountId.randomId(),
@@ -1788,7 +1788,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("UserId is required");
+            assertThat(result.errors()).contains("PortfolioId is required");
         }
 
         @Test

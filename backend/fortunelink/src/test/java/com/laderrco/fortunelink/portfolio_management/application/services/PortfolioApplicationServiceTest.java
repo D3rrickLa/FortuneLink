@@ -45,6 +45,7 @@ import com.laderrco.fortunelink.portfolio_management.application.exceptions.Inva
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
@@ -2256,7 +2257,7 @@ class PortfolioApplicationServiceTest {
             Portfolio newPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(newPortfolio.getPortfolioId())).thenReturn(Optional.empty());
+            // when(portfolioRepository.findById(newPortfolio.getPortfolioId())).thenReturn(Optional.empty());
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
             when(portfolioViewAssembler.assemblePortfolioView(any())).thenReturn(mock(PortfolioView.class));
 
@@ -2270,8 +2271,8 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when portfolio already exists")
-        void shouldThrowExceptionWhenPortfolioExists() {
+        @DisplayName("Should throw exception when user has reached portfolio limit")
+        void shouldThrowExceptionWhenPortfolioLimitReached() {
             // Given
             CreatePortfolioCommand command = new CreatePortfolioCommand(
                     userId,
@@ -2281,11 +2282,17 @@ class PortfolioApplicationServiceTest {
                     true);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
+
+            // Change: Mock the count instead of an Optional find
+            // We return 1 (or more) to trigger the "limit reached" logic
+            when(portfolioRepository.countByUserId(userId)).thenReturn(1L);
 
             // When/Then
             assertThatThrownBy(() -> service.createPortfolio(command))
-                    .isInstanceOf(PortfolioAlreadyExistsException.class);
+                    // Suggestion: Rename exception to PortfolioLimitReachedException
+                    // to better reflect the new business logic
+                    .isInstanceOf(PortfolioLimitReachedException.class)
+                    .hasMessageContaining("limit");
         }
 
         @Test
@@ -2404,10 +2411,10 @@ class PortfolioApplicationServiceTest {
             // Verify portfolio is empty before deletion
             assertThat(emptyPortfolio.getAccounts()).isEmpty();
             assertThat(emptyPortfolio.containsAccounts()).isFalse();
-            
+
             // When
             service.deletePortfolio(command);
-            
+
             // Then
             verify(portfolioRepository).save(emptyPortfolio);
             verify(portfolioRepository, never()).delete(any(PortfolioId.class));

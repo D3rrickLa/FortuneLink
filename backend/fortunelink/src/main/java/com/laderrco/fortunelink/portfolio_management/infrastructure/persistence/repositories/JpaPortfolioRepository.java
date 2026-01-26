@@ -44,6 +44,11 @@ public class JpaPortfolioRepository implements PortfolioRepository {
     }
 
     @Override
+    public Long countByUserId(UserId userId) {
+        return jpaRepo.countByUserId(userId.userId());
+    }
+
+    @Override
     public Portfolio save(Portfolio portfolio) {
         UUID portfolioUuid = portfolio.getPortfolioId().portfolioId();
         Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");

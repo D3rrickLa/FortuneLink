@@ -17,5 +17,7 @@ public interface PortfolioRepository {
 
     List<Portfolio> findAllByUserId(UserId userId);
 
+    Long countByUserId(UserId userId);
+
     void delete(PortfolioId id);
 }
