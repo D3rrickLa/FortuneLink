@@ -49,9 +49,9 @@ class GlobalExceptionHandlerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.error").value("INTERNAL_SERVER_ERROR"))
                 // Note: We check for your "friendly" message, not the "Boom" message
-                .andExpect(jsonPath("$.message").value("An unexpected error occurred. Please try again later."))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred."))
                 .andExpect(jsonPath("$.path").value("/api/market-data/price/AAPL"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }

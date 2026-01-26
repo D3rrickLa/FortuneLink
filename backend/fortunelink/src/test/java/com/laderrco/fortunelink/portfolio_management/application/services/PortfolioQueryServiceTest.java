@@ -238,7 +238,7 @@ class PortfolioQueryServiceTest {
     void getNetWorth_Success_WithAsOfDate() {
         // Arrange
         Instant asOfDate = Instant.now().minusSeconds(86400);
-        ViewNetWorthQuery query = new ViewNetWorthQuery(userId, asOfDate);
+        ViewNetWorthQuery query = new ViewNetWorthQuery(portfolioId, asOfDate);
 
         Money totalAssets = new Money(new BigDecimal("50000.00"), testCurrency);
         // Money totalLiabilities = new Money(new BigDecimal("20000.00"), testCurrency);
@@ -267,7 +267,7 @@ class PortfolioQueryServiceTest {
     void getNetWorth_Success_WithoutAsOfDate() {
         // Arrange
         // Pass null as asOfDate - the service should use current time internally
-        ViewNetWorthQuery query = new ViewNetWorthQuery(userId, null);
+        ViewNetWorthQuery query = new ViewNetWorthQuery(portfolioId, null);
 
         Money totalAssets = new Money(new BigDecimal("50000.00"), testCurrency);
 
@@ -303,7 +303,7 @@ class PortfolioQueryServiceTest {
     @Test
     void getNetWorth_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
-        ViewNetWorthQuery query = new ViewNetWorthQuery(userId, null);
+        ViewNetWorthQuery query = new ViewNetWorthQuery(portfolioId, null);
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -327,7 +327,7 @@ class PortfolioQueryServiceTest {
         // Using a fixed point in time is safer for tests, but keeping your logic:
         Instant startDate = Instant.now().minusSeconds(86400 * 365);
         Instant endDate = Instant.now();
-        ViewPerformanceQuery query = new ViewPerformanceQuery(userId, accountId, startDate, endDate);
+        ViewPerformanceQuery query = new ViewPerformanceQuery(portfolioId, accountId, startDate, endDate);
 
         // Mock Data
         List<Transaction> transactionList = new ArrayList<>();
@@ -386,7 +386,7 @@ class PortfolioQueryServiceTest {
     void getPortfolioPerformance_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
         ViewPerformanceQuery query = new ViewPerformanceQuery(
-                userId,
+                portfolioId,
                 accountId,
                 Instant.now().minusSeconds(86400),
                 Instant.now());
@@ -410,7 +410,7 @@ class PortfolioQueryServiceTest {
     void getAssetAllocation_ByType_Success() {
         // Arrange
         AnalyzeAllocationQuery query = new AnalyzeAllocationQuery(
-                userId,
+                portfolioId,
                 AllocationType.BY_TYPE,
                 null);
 
@@ -446,7 +446,7 @@ class PortfolioQueryServiceTest {
     void getAssetAllocation_ByAccount_Success() {
         // Arrange
         AnalyzeAllocationQuery query = new AnalyzeAllocationQuery(
-                userId,
+                portfolioId,
                 AllocationType.BY_ACCOUNT,
                 time);
 
@@ -457,7 +457,7 @@ class PortfolioQueryServiceTest {
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
         // AllocationResponse expectedResponse = mock(AllocationResponse.class);
 
-        when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+        when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
         when(assetAllocationService.calculateAllocationByAccount(portfolio, time))
                 .thenReturn(allocationMap);
         when(portfolioValuationService.calculateTotalValue(portfolio, time))
@@ -486,7 +486,7 @@ class PortfolioQueryServiceTest {
     void getAssetAllocation_ByCurrency_Success() {
         // Arrange
         AnalyzeAllocationQuery query = new AnalyzeAllocationQuery(
-                userId,
+                portfolioId,
                 AllocationType.BY_CURRENCY,
                 time);
 
@@ -497,7 +497,7 @@ class PortfolioQueryServiceTest {
 
         Money totalValue = new Money(new BigDecimal("100000.00"), testCurrency);
 
-        when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
+        when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
         when(assetAllocationService.calculateAllocationByCurrency(portfolio, time))
                 .thenReturn(allocationMap);
         when(portfolioValuationService.calculateTotalValue(portfolio, time))
@@ -533,7 +533,7 @@ class PortfolioQueryServiceTest {
     void getAssetAllocation_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
         AnalyzeAllocationQuery query = new AnalyzeAllocationQuery(
-                userId,
+                portfolioId,
                 AllocationType.BY_TYPE,
                 time);
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
@@ -552,7 +552,7 @@ class PortfolioQueryServiceTest {
         Instant endDate = Instant.now();
         // Assuming your query object uses page 1, size 10
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, accountId, startDate, endDate, null, 1, 10);
+                portfolioId, accountId, startDate, endDate, null, 1, 10);
 
         List<Transaction> transactions = createMockTransactions(5);
         // PageRequest.of(0, 10) because your log showed the code calling with 0
@@ -592,7 +592,7 @@ class PortfolioQueryServiceTest {
         // Arrange
         // User asks for page 1
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, null, null, null, null, 1, 10);
+                portfolioId, null, null, null, null, 1, 10);
 
         List<Transaction> transactions = createMockTransactions(15);
         List<Transaction> pageTransactions = transactions.subList(0, 10);
@@ -633,7 +633,7 @@ class PortfolioQueryServiceTest {
         // Arrange
         Instant endDate = Instant.now();
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, accountId, null, endDate, null, 1, 10);
+                portfolioId, accountId, null, endDate, null, 1, 10);
 
         List<Transaction> transactions = createMockTransactionsWithAccount(accountId, 5);
         if (transactions.isEmpty()) {
@@ -665,7 +665,7 @@ class PortfolioQueryServiceTest {
         // Arrange
         Instant startDate = Instant.now().minusSeconds(86400 * 30);
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, null, startDate, null, TransactionType.BUY, 1, 10);
+                portfolioId, null, startDate, null, TransactionType.BUY, 1, 10);
 
         List<Transaction> transactions = createMockTransactions(8);
         if (transactions.isEmpty()) {
@@ -697,7 +697,7 @@ class PortfolioQueryServiceTest {
         // Arrange
         // Requesting page 2 with size 5
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, null, null, null, null, 2, 5);
+                portfolioId, null, null, null, null, 2, 5);
 
         List<Transaction> pageTransactions = createMockTransactions(5);
 
@@ -732,7 +732,7 @@ class PortfolioQueryServiceTest {
     void getTransactionHistory_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                userId, null, null, null, null, 1, 10);
+                portfolioId, null, null, null, null, 1, 10);
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -746,7 +746,7 @@ class PortfolioQueryServiceTest {
     void getAccountSummary_Success() throws NoSuchMethodException, InstantiationException, IllegalAccessException,
             IllegalArgumentException, InvocationTargetException {
         // Arrange
-        GetAccountSummaryQuery query = new GetAccountSummaryQuery(userId, accountId);
+        GetAccountSummaryQuery query = new GetAccountSummaryQuery(portfolioId, accountId);
 
         Account account = createMockAccount(accountId);
         AccountView expectedResponse = mock(AccountView.class);
@@ -770,7 +770,7 @@ class PortfolioQueryServiceTest {
     @Test
     void getAccountSummary_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
-        GetAccountSummaryQuery query = new GetAccountSummaryQuery(userId, accountId);
+        GetAccountSummaryQuery query = new GetAccountSummaryQuery(portfolioId, accountId);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
@@ -784,7 +784,7 @@ class PortfolioQueryServiceTest {
     @Test
     void getPortfolioSummary_Success() {
         // Arrange
-        GetPortfolioSummaryQuery query = new GetPortfolioSummaryQuery(userId);
+        GetPortfolioSummaryQuery query = new GetPortfolioSummaryQuery(portfolioId);
         PortfolioView expectedResponse = mock(PortfolioView.class);
 
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.of(portfolio));
@@ -804,7 +804,7 @@ class PortfolioQueryServiceTest {
     @Test
     void getPortfolioSummary_ThrowsException_WhenPortfolioNotFound() {
         // Arrange
-        GetPortfolioSummaryQuery query = new GetPortfolioSummaryQuery(userId);
+        GetPortfolioSummaryQuery query = new GetPortfolioSummaryQuery(portfolioId);
         when(portfolioRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         // Act & Assert

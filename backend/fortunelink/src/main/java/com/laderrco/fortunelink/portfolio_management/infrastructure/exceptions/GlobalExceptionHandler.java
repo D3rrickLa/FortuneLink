@@ -1,10 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -15,6 +12,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
@@ -37,153 +40,29 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Handle symbol not found (404 Not Found).
-     */
-    @ExceptionHandler(SymbolNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleSymbolNotFound(
-            SymbolNotFoundException ex,
-            WebRequest request) {
-
-        log.warn("Symbol not found: {}", ex.getMessage());
-
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("Not Found")
-                .message(ex.getMessage())
-                .path(getPath(request))
-                .build();
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    // --- 404 NOT FOUND ---
+    @ExceptionHandler({
+            PortfolioNotFoundException.class,
+            AccountNotFoundException.class,
+            AssetNotFoundException.class,
+            SymbolNotFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex, WebRequest request) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", ex.getMessage(), request);
     }
 
-    /**
-     * Handle general market data errors (503 Service Unavailable).
-     * This includes API rate limits, network issues, etc.
-     */
-    @ExceptionHandler(MarketDataException.class)
-    public ResponseEntity<ErrorResponse> handleMarketDataException(
-            MarketDataException ex,
-            WebRequest request) {
-
-        log.error("Market data service error: {}", ex.getMessage(), ex);
-
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
-                .error("Service Unavailable")
-                .message("Market data service is temporarily unavailable. Please try again later.")
-                .details(ex.getMessage())
-                .path(getPath(request))
-                .build();
-
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    // --- 400 BAD REQUEST / VALIDATION ---
+    @ExceptionHandler({
+            IllegalArgumentException.class,
+            InvalidCommandException.class,
+            InvalidTransactionException.class
+    })
+    public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException ex, WebRequest request) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex.getMessage(), request);
     }
 
-    /**
-     * Handle illegal arguments (400 Bad Request).
-     * E.g., invalid symbol format
-     */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(
-            IllegalArgumentException ex,
-            WebRequest request) {
-
-        log.warn("Invalid request: {}", ex.getMessage());
-
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Bad Request")
-                .message(ex.getMessage())
-                .path(getPath(request))
-                .build();
-
-        return ResponseEntity.badRequest().body(error);
-    }
-
-    /**
-     * Handles status responses
-     * 
-     * @param ex
-     * @return
-     */
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", ex.getStatusCode().value());
-        body.put("error", "Not Found");
-        body.put("message", ex.getReason());
-
-        return new ResponseEntity<>(body, ex.getStatusCode());
-    }
-
-    /**
-     * Catch-all for unexpected errors (500 Internal Server Error).
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
-        log.error("Unexpected error occurred", ex);
-
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
-                .message("An unexpected error occurred. Please try again later.")
-                .details(ex.getMessage())
-                .path(getPath(request))
-                .build();
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-    }
-
-    /**
-     * Handle portfolio not found.
-     */
-    @ExceptionHandler(PortfolioNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handlePortfolioNotFound(PortfolioNotFoundException ex) {
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("PORTFOLIO_NOT_FOUND")
-                .message("An unexpected error occurred. Please try again later.")
-                .build();
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-    }
-
-    /**
-     * Handle domain exceptions (if you create custom ones).
-     */
-    @ExceptionHandler(AccountNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleAccountNotFound(AccountNotFoundException ex) {
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("ACCOUNT_NOT_FOUND")
-                .message(ex.getMessage())
-                .build();
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-    }
-
-    @ExceptionHandler(AssetNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleAssetNotFound(AssetNotFoundException ex) {
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("ASSET_NOT_FOUND")
-                .message(ex.getMessage())
-                .build();
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(error);
-    }
-
-    /**
-     * Handle validation errors from @Valid.
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<List<String>> handleValidationErrors(MethodArgumentNotValidException ex) {
         List<String> errors = ex.getBindingResult()
@@ -191,17 +70,63 @@ public class GlobalExceptionHandler {
                 .stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.toList());
-
-        return ResponseEntity
-                .badRequest()
-                .body(errors);
+        return ResponseEntity.badRequest().body(errors);
     }
 
-    /**
-     * Extract request path from WebRequest.
-     */
-    private String getPath(WebRequest request) {
-        return request.getDescription(false).replace("uri=", "");
+    // --- 409 CONFLICT (Business Rules) ---
+    @ExceptionHandler({
+            PortfolioAlreadyExistsException.class,
+            AccountNotEmptyException.class,
+            PortfolioNotEmptyException.class,
+            PortfolioDeletionRequiresConfirmationException.class
+    })
+    public ResponseEntity<ErrorResponse> handleBusinessConflicts(RuntimeException ex, WebRequest request) {
+        log.warn("Business rule violation: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException ex, WebRequest request) {
+        return buildResponse(
+                (HttpStatus) ex.getStatusCode(),
+                ex.getStatusCode().toString(),
+                ex.getReason(),
+                null,
+                request);
+    }
+
+    // --- 503 SERVICE UNAVAILABLE ---
+    @ExceptionHandler(MarketDataException.class)
+    public ResponseEntity<ErrorResponse> handleMarketDataException(MarketDataException ex, WebRequest request) {
+        log.error("External service error: {}", ex.getMessage());
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
+                "Market data service is temporarily unavailable.", ex.getMessage(), request);
+    }
+
+    // --- 500 INTERNAL SERVER ERROR ---
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
+        log.error("Unexpected error", ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "An unexpected error occurred.",
+                request);
+    }
+
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String error, String message, String details,
+            WebRequest request) {
+        ErrorResponse body = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(status.value())
+                .error(error)
+                .message(message)
+                .details(details)
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        return ResponseEntity.status(status).body(body);
+    }
+
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String error, String message,
+            WebRequest request) {
+        return buildResponse(status, error, message, " ", request);
     }
 
     /**

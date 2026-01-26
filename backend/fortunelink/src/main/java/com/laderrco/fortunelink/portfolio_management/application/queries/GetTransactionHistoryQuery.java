@@ -4,15 +4,15 @@ import java.time.Instant;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 
 /* 
     Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are optional
 */
-public record GetTransactionHistoryQuery(UserId userId, AccountId accountId, Instant startDate, Instant endDate, TransactionType transactionType, int pageNumber, int pageSize) implements ClassValidation {
+public record GetTransactionHistoryQuery(PortfolioId portfolioId, AccountId accountId, Instant startDate, Instant endDate, TransactionType transactionType, int pageNumber, int pageSize) implements ClassValidation {
     public GetTransactionHistoryQuery {
-        ClassValidation.validateParameter(userId);
+        ClassValidation.validateParameter(portfolioId);
         // accountId can be null (means all accounts)
         // startDate can be null (means from beginning)
         // endDate can be null (means until now)
@@ -34,8 +34,8 @@ public record GetTransactionHistoryQuery(UserId userId, AccountId accountId, Ins
     }
     
     // Convenience constructor with defaults
-    public GetTransactionHistoryQuery(UserId userId) {
-        this(userId, null, null, null, null, 0, 20);
+    public GetTransactionHistoryQuery(PortfolioId portfolioId) {
+        this(portfolioId, null, null, null, null, 0, 20);
     }
 
     // update this if you want sorting later

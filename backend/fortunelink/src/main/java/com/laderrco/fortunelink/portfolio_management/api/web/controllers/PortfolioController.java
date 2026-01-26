@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioDtoMapper;
-import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortoflioHttpMapper;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioHttpMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreateAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
@@ -45,7 +45,7 @@ public class PortfolioController {
     private final PortfolioApplicationService portfolioApplicationService;
     private final PortfolioQueryService portfolioQueryService;
     private final PortfolioDtoMapper portfolioDtoMapper;
-    private final PortoflioHttpMapper requestMapper;
+    private final PortfolioHttpMapper requestMapper;
 
     @PostMapping
     public ResponseEntity<PortfolioHttpResponse> createPortfolio(@Valid @RequestBody CreatePortfolioRequest request) {

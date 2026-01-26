@@ -14,8 +14,7 @@ import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate exchangeRate,
-        Map<String, String> metadata, Instant feeDate) implements ClassValidation {
+public record Fee(FeeType feeType, Money amountInNativeCurrency, ExchangeRate exchangeRate, Map<String, String> metadata, Instant feeDate) implements ClassValidation {
     public Fee {
         feeType = ClassValidation.validateParameter(feeType, "Fee Type");
         amountInNativeCurrency = ClassValidation.validateParameter(amountInNativeCurrency, "Amount In Native Currency");

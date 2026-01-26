@@ -1,6 +1,8 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.config;
 
 import java.util.Map;
+import java.util.Objects;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,7 +46,6 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
     
     @Override
-    @SuppressWarnings("nulls")
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         
         // Skip rate limiting if disabled (dev environment)
@@ -54,6 +55,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         
         // Wrap the requet so Spring cand ready the body after interceptor
         if (!(request instanceof ContentCachingRequestWrapper)) {
+            Objects.requireNonNull(request);
             request = new ContentCachingRequestWrapper(request);
         }
 

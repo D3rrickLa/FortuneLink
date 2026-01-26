@@ -3,7 +3,9 @@ package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.containsString;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -30,7 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioDtoMapper;
-import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortoflioHttpMapper;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioHttpMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreateAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
@@ -42,6 +45,9 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Create
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
@@ -49,6 +55,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
@@ -77,7 +84,7 @@ class PortfolioControllerTest {
     private PortfolioDtoMapper portfolioDtoMapper;
 
     @MockitoBean
-    private PortoflioHttpMapper requestMapper;
+    private PortfolioHttpMapper requestMapper;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -149,6 +156,7 @@ class PortfolioControllerTest {
     }
 
     // ================= UPDATE PORTFOLIO =================
+    @SuppressWarnings("null")
     @Test
     void updatePortfolio_ShouldReturnUpdatedPortfolio() throws Exception {
 
@@ -222,6 +230,7 @@ class PortfolioControllerTest {
     }
 
     // ================= ADD ACCOUNT =================
+    @SuppressWarnings("null")
     @Test
     void addAccount_ShouldReturnAccountResponse() throws Exception {
         // --- Arrange: request payload ---
@@ -285,5 +294,68 @@ class PortfolioControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(portfolioApplicationService).removeAccount(command);
+    }
+
+    @SuppressWarnings("null")
+    @Test
+    void getPortfolio_ShouldReturn404_WhenNotFound() throws Exception {
+        String portfolioId = "non-existent";
+        // 1. Setup Mock to throw the exception
+        given(portfolioQueryService.getPortfolioById(any()))
+                .willThrow(new PortfolioNotFoundException("Portfolio not found: " + portfolioId));
+
+        // 2. Perform request and verify ExceptionHandler response
+        mockMvc.perform(get("/api/portfolios/" + portfolioId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value(containsString(portfolioId)));
+    }
+
+    @SuppressWarnings("null")
+    @Test
+    void createPortfolio_ShouldReturn409_WhenUserAlreadyHasPortfolio() throws Exception {
+        // Mock the mapping and service call
+        given(requestMapper.toCommand(any(CreatePortfolioRequest.class))).willReturn(mock(CreatePortfolioCommand.class));
+        given(portfolioApplicationService.createPortfolio(any()))
+                .willThrow(new PortfolioAlreadyExistsException("User already has a portfolio"));
+
+        String jsonRequest = "{\"userId\": \"user123\", \"name\": \"My Portfolio\", \"defaultCurrency\": \"USD\"}";
+
+        mockMvc.perform(post("/api/portfolios")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("User already has a portfolio"));
+    }
+
+    @SuppressWarnings("null")
+    @Test
+    void deletePortfolio_ShouldReturn409_WhenPortfolioIsNotEmpty() throws Exception {
+        given(requestMapper.toCommand(any(DeletePortfolioRequest.class))).willReturn(mock(DeletePortfolioCommand.class));
+        doThrow(new PortfolioNotEmptyException("Cannot delete portfolio with accounts"))
+                .when(portfolioApplicationService).deletePortfolio(any());
+
+        mockMvc.perform(delete("/api/portfolios/123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"confirmed\": true}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(containsString("accounts")));
+    }
+
+    @SuppressWarnings("null")
+    @Test
+    void addAccount_ShouldReturn400_WhenCommandIsInvalid() throws Exception {
+        given(requestMapper.toCommand(anyString(), any(CreateAccountRequest.class))).willReturn(mock(AddAccountCommand.class));
+        given(portfolioApplicationService.addAccount(any()))
+                .willThrow(new InvalidTransactionException("Invalid currency", List.of("Currency not supported")));
+
+        String jsonRequest = "{\"accountName\": \"Savings\", \"accountType\": \"CASH\", \"baseCurrency\": \"XYZ\"}";
+
+        mockMvc.perform(post("/api/portfolios/123/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
     }
 }

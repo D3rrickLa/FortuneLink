@@ -5,8 +5,8 @@ import java.util.List;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-public record RecordWithdrawalCommand(UserId userId, AccountId accountId, Money amount, List<Fee> fees, Instant transactionDate, String notes) {
+public record RecordWithdrawalCommand(PortfolioId portfolioId, AccountId accountId, Money amount, List<Fee> fees, Instant transactionDate, String notes) {
 }

@@ -350,7 +350,7 @@ class MarketDataControllerTest {
         mockMvc.perform(get("/api/market-data/price/{symbol}", symbol))
                 .andExpect(status().isNotFound()) // 404
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.error").value("RESOURCE_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("Symbol not found: INVALID"));
     }
 
@@ -364,10 +364,10 @@ class MarketDataControllerTest {
         mockMvc.perform(get("/api/market-data/price/AAPL"))
                 .andExpect(status().isServiceUnavailable()) // 503
                 .andExpect(jsonPath("$.status").value(503))
-                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.error").value("SERVICE_UNAVAILABLE"))
                 // Note: Your handler overrides the message for 503s for security
                 .andExpect(jsonPath("$.message")
-                        .value("Market data service is temporarily unavailable. Please try again later."))
+                        .value("Market data service is temporarily unavailable."))
                 .andExpect(jsonPath("$.details").value("API rate limit exceeded"));
     }
 

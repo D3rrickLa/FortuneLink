@@ -34,7 +34,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.Portfolio
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
@@ -101,7 +101,7 @@ public class PortfolioQueryService {
     public PortfolioView getUserPortfolioView(GetPortfolioSummaryQuery query) {
         Objects.requireNonNull(query, "GetPortfolioSummaryQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.userId());
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
         return portfolioAssembler.assemblePortfolioView(portfolio);
     }
 
@@ -126,7 +126,7 @@ public class PortfolioQueryService {
     public NetWorthView getNetWorth(ViewNetWorthQuery query) {
         Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.userId());
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
         Instant calculationDate = query.asOfDate() != null
                 ? query.asOfDate()
                 : Instant.now();
@@ -152,7 +152,7 @@ public class PortfolioQueryService {
     public PerformanceView getPortfolioPerformance(ViewPerformanceQuery query) {
         Objects.requireNonNull(query, "ViewPerformanceQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.userId());
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
 
         TransactionSearchCriteria criteria = TransactionSearchCriteria.builder()
                 .portfolioId(portfolio.getPortfolioId())
@@ -194,7 +194,7 @@ public class PortfolioQueryService {
     public AllocationView getAssetAllocation(AnalyzeAllocationQuery query) {
         Objects.requireNonNull(query, "AnalyzeAllocationQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.userId());
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
         Instant asOfDate = query.asOfDate() != null
                 ? query.asOfDate()
                 : Instant.now();
@@ -223,7 +223,7 @@ public class PortfolioQueryService {
     public TransactionHistoryView getTransactionHistory(GetTransactionHistoryQuery query) {
         Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.userId());
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
 
         LocalDateTime startDate = query.startDate() != null
                 ? LocalDateTime.ofInstant(query.startDate(), ZoneOffset.UTC)
@@ -268,7 +268,7 @@ public class PortfolioQueryService {
     public AccountView getAccountSummary(GetAccountSummaryQuery query) {
         Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.userId());
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
         Account account = portfolio.getAccount(query.accountId());
 
         return portfolioAssembler.assembleAccountView(account);
@@ -280,8 +280,8 @@ public class PortfolioQueryService {
      * Centralizes the current "one portfolio per user" policy and
      * provides a single seam for future multi-portfolio evolution.
      */
-    private Portfolio loadUserPortfolio(UserId userId) {
-        return portfolioRepository.findByUserId(userId)
-                .orElseThrow(() -> new PortfolioNotFoundException(userId));
+    private Portfolio loadUserPortfolio(PortfolioId portfolioId) {
+        return portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 }

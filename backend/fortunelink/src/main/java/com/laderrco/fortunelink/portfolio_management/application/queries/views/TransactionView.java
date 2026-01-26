@@ -10,8 +10,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-// for the services
-// Single transaction representation; contains all transaction details
 public record TransactionView(TransactionId transactionId, TransactionType type, String symbol, BigDecimal quantity, Money price, List<Fee> fees, Money totalCost, Instant date, String notes) implements ClassValidation {
     public TransactionView {
         // we might not even need this if you think about it because the validation result should handle everything, maybe just the response, but the commands are handled

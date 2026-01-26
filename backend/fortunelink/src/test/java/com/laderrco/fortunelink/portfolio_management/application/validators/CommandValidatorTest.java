@@ -99,7 +99,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 "AAPL",
                 BigDecimal.TEN,
@@ -121,7 +121,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when symbol is null or empty")
         void shouldFailWhenSymbolIsNullOrEmpty(String symbol) {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 symbol,
                 BigDecimal.TEN,
@@ -142,7 +142,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail for invalid symbol format")
         void shouldFailForInvalidSymbolFormat(String symbol) {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 symbol,
                 BigDecimal.TEN,
@@ -162,7 +162,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when quantity is invalid")
         void shouldFailWhenQuantityIsInvalid() {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.ZERO,
@@ -182,7 +182,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when price amount is invalid")
         void shouldFailWhenPriceAmountIsInvalid() {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -205,7 +205,7 @@ class CommandValidatorTest {
         void shouldFailWhenCurrencyIsNull() {
             Money money = mock(Money.class);
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -228,7 +228,7 @@ class CommandValidatorTest {
         void shouldFailWhenCurrencyCodeIsInvalid() {
             Money money = mock(Money.class);
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -254,7 +254,7 @@ class CommandValidatorTest {
             Fee invalidFee = mock(Fee.class);
             Money money = mock(Money.class);
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -278,7 +278,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when transaction date is in future")
         void shouldFailWhenDateIsInFuture() {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -303,7 +303,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             return new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -354,7 +354,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 "AAPL",
                 BigDecimal.TEN,
@@ -374,7 +374,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when symbol is invalid")
         void shouldFailWhenSymbolIsInvalid() {
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "",
                 BigDecimal.TEN,
@@ -394,7 +394,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when symbol is invalid Null")
         void shouldFailWhenSymbolIsInvalidNull() {
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 null,
                 BigDecimal.TEN,
@@ -415,7 +415,7 @@ class CommandValidatorTest {
         void shouldFailWhenCurrencyIsNull() {
             Money money = mock(Money.class);
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 null,
                 BigDecimal.TEN,
@@ -437,7 +437,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when symbol is invalid Wrong Format")
         void shouldFailWhenSymbolIsInvalidTooLong() {
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "ApPL",
                 BigDecimal.TEN,
@@ -457,7 +457,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when Money is negative")
         void shouldFailWhenMoneyIsNegative() {
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -477,7 +477,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when Quantity is negative")
         void shouldFailWhenQuantityIsNegative() {
             RecordSaleCommand command = new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.valueOf(-1),
@@ -502,7 +502,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             return new RecordSaleCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 BigDecimal.TEN,
@@ -552,7 +552,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             RecordDepositCommand command = new RecordDepositCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
                 ValidatedCurrency.of("USD"),
@@ -571,7 +571,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when amount is invalid")
         void shouldFailWhenAmountIsInvalid() {
             RecordDepositCommand command = new RecordDepositCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-1000), ValidatedCurrency.of("USD")),
                 ValidatedCurrency.of("USD"),
@@ -590,7 +590,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when currency is null")
         void shouldFailWhenCurrencyIsNull() {
             RecordDepositCommand command = new RecordDepositCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
                 null,
@@ -609,7 +609,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when Money is negative")
         void shouldFailWhenMoneyIsNegative() {
             RecordDepositCommand command = new RecordDepositCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-1000), ValidatedCurrency.of("USD")),
                 ValidatedCurrency.USD,
@@ -633,7 +633,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             return new RecordDepositCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
                 ValidatedCurrency.of("USD"),
@@ -681,7 +681,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 new Money(BigDecimal.valueOf(500), ValidatedCurrency.of("USD")),
                 null,
@@ -699,7 +699,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when Money is negative")
         void shouldFailWhenMoneyIsNegative() {
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-500), ValidatedCurrency.of("USD")),
                 null,
@@ -722,7 +722,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             return new RecordWithdrawalCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(500), ValidatedCurrency.of("USD")),
                 List.of(validFee),
@@ -783,7 +783,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 "AAPL",
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -804,7 +804,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when symbol is empty")
         void shouldFailWhenSymbolIsEmpty() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "",
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -825,7 +825,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when symbol is null")
         void shouldFailWhenSymbolIsNull() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 null,
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -846,7 +846,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when income type is invalid")
         void shouldFailWhenIncomeTypeIsInvalid() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -867,7 +867,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when type is null")
         void shouldFailWhenTypeIsNull() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -888,7 +888,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when shares is null but isDrip is true")
         void shouldFailWhenSharesRecievedIsNullAndIsDripIsTrue() {
             assertThrows(IllegalArgumentException.class, () ->new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -904,7 +904,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when amount is invalid")
         void shouldFailWhenAmountIsInvalid() {
             RecordIncomeCommand command = new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 new Money(BigDecimal.valueOf(-10), ValidatedCurrency.of("USD")),
@@ -923,7 +923,7 @@ class CommandValidatorTest {
         
         private RecordIncomeCommand createValidIncomeCommand(TransactionType type) {
             return new RecordIncomeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "AAPL",
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
@@ -988,7 +988,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             RecordFeeCommand command = new RecordFeeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 ValidatedCurrency.of("USD"),
@@ -1014,7 +1014,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             RecordFeeCommand command = new RecordFeeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 null,
@@ -1040,7 +1040,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             RecordFeeCommand command = new RecordFeeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-10), ValidatedCurrency.of("USD")),
                 ValidatedCurrency.of("USD"),
@@ -1064,7 +1064,7 @@ class CommandValidatorTest {
                 Instant.now()
             );
             return new RecordFeeCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 ValidatedCurrency.of("USD"),
@@ -1116,7 +1116,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when date is in future")
         void shouldFailWhenDateIsInFuture() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 TransactionId.randomId(),
                 TransactionType.BUY,
@@ -1138,7 +1138,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when quantity is zero or negative")
         void shouldFailWhenQuantityIsZeroOrNegative() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 TransactionId.randomId(),
                 TransactionType.BUY,
@@ -1160,7 +1160,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when price is zero or negative")
         void shouldFailWhenPriceIsZeroOrNegative() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 TransactionId.randomId(),
                 TransactionType.BUY,
@@ -1182,7 +1182,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when required fields are null")
         void shouldFailWhenRequiredFieldsAreNull() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 null,
                 null,
@@ -1210,7 +1210,7 @@ class CommandValidatorTest {
             );
             AssetIdentifier cAssetIdentifier = new CashIdentifier("USD");
             return new UpdateTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 TransactionId.randomId(),
                 TransactionType.BUY,
@@ -1463,7 +1463,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             DeleteTransactionCommand command = new DeleteTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 TransactionId.randomId(),
                 false,
@@ -1480,7 +1480,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when transactionId is null")
         void shouldFailWhenTransactionIdIsNull() {
             DeleteTransactionCommand command = new DeleteTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 null,
                 true,
@@ -1517,7 +1517,7 @@ class CommandValidatorTest {
         
         private DeleteTransactionCommand createValidDeleteCommand() {
             return new DeleteTransactionCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 TransactionId.randomId(),
                 true,
@@ -1795,7 +1795,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 null,
                 new CashIdentifier("USD"),
                 new CashIdentifier("CAD")
@@ -1811,7 +1811,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when wrong id is null")
         void shouldFailWhenWrongIdIsNull() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 null,
                 new CashIdentifier("CAD")
@@ -1827,7 +1827,7 @@ class CommandValidatorTest {
         @DisplayName("Should fail when rightId is null")
         void shouldFailWhenRightIdIsNull() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new CashIdentifier("USD"),
                 null
@@ -1841,7 +1841,7 @@ class CommandValidatorTest {
 
         private CorrectAssetTickerCommand createValidCorrectAssetTickerCommand() {
             return new CorrectAssetTickerCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 new CashIdentifier("USD"),
                 new CashIdentifier("CAD")
@@ -2123,7 +2123,7 @@ class CommandValidatorTest {
         @DisplayName("Should handle command with all valid edge values")
         void shouldHandleCommandWithValidEdgeValues() {
             RecordPurchaseCommand command = new RecordPurchaseCommand(
-                UserId.randomId(),
+                PortfolioId.randomId(),
                 AccountId.randomId(),
                 "A",
                 new BigDecimal("0.00000001"),
