@@ -15,10 +15,12 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Delete
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
@@ -71,6 +73,10 @@ public class PortfolioHttpMapper {
         );
     }
 
+    public GetAssetQueryView toAssetQuery(String portfolioId, String accountId, String assetId) {
+        return new GetAssetQueryView(toPortfolioId(portfolioId), toAccountId(accountId), toAssetId(assetId));
+    }
+
     public RemoveAccountCommand toCommand(String portoflioId, String accountId) {
         return new RemoveAccountCommand(toPortfolioId(accountId), toAccountId(accountId));
     }
@@ -93,6 +99,10 @@ public class PortfolioHttpMapper {
 
     private AccountId toAccountId(String id) {
         return new AccountId(UUID.fromString(id));
+    }
+
+    private AssetId toAssetId(String id) {
+        return new AssetId(UUID.fromString(id));
     }
 
 

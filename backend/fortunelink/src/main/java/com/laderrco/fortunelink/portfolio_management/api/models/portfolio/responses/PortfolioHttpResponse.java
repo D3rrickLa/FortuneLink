@@ -30,16 +30,4 @@ public record PortfolioHttpResponse(
     LocalDateTime lastUpdated
 ) {
     public PortfolioHttpResponse {}
-
-    public static PortfolioHttpResponse of(
-        String id,
-        String userId,
-        String name,
-        String description,
-        List<AccountHttpResponse> accounts,
-        LocalDateTime createdDate,
-        LocalDateTime lastUpdated
-    ) {
-        return new PortfolioHttpResponse(id, userId, name, description, accounts, null, description, createdDate, lastUpdated);
-    }
 }

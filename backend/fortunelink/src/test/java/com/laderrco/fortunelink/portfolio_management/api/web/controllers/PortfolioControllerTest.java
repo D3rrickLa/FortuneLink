@@ -16,6 +16,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,11 +26,14 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +44,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.reques
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetUsersPortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AccountHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PortfolioHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
@@ -48,16 +54,20 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Update
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
@@ -65,6 +75,7 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateL
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 @AutoConfigureMockMvc
 @Import({ DevSecurityConfig.class, RateLimitConfig.class })
@@ -315,7 +326,8 @@ class PortfolioControllerTest {
     @Test
     void createPortfolio_ShouldReturn409_WhenUserAlreadyHasPortfolio() throws Exception {
         // Mock the mapping and service call
-        given(requestMapper.toCommand(any(CreatePortfolioRequest.class))).willReturn(mock(CreatePortfolioCommand.class));
+        given(requestMapper.toCommand(any(CreatePortfolioRequest.class)))
+                .willReturn(mock(CreatePortfolioCommand.class));
         given(portfolioApplicationService.createPortfolio(any()))
                 .willThrow(new PortfolioAlreadyExistsException("User already has a portfolio"));
 
@@ -332,7 +344,8 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void deletePortfolio_ShouldReturn409_WhenPortfolioIsNotEmpty() throws Exception {
-        given(requestMapper.toCommand(any(DeletePortfolioRequest.class))).willReturn(mock(DeletePortfolioCommand.class));
+        given(requestMapper.toCommand(any(DeletePortfolioRequest.class)))
+                .willReturn(mock(DeletePortfolioCommand.class));
         doThrow(new PortfolioNotEmptyException("Cannot delete portfolio with accounts"))
                 .when(portfolioApplicationService).deletePortfolio(any());
 
@@ -346,7 +359,8 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void addAccount_ShouldReturn400_WhenCommandIsInvalid() throws Exception {
-        given(requestMapper.toCommand(anyString(), any(CreateAccountRequest.class))).willReturn(mock(AddAccountCommand.class));
+        given(requestMapper.toCommand(anyString(), any(CreateAccountRequest.class)))
+                .willReturn(mock(AddAccountCommand.class));
         given(portfolioApplicationService.addAccount(any()))
                 .willThrow(new InvalidTransactionException("Invalid currency", List.of("Currency not supported")));
 
@@ -357,5 +371,52 @@ class PortfolioControllerTest {
                 .content(jsonRequest))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+    }
+
+    @SuppressWarnings("null")
+    @Test
+    void testGetAsset_Success() throws Exception {
+        // 1. Arrange: Use UUID strings for the web layer
+        UUID portfolioIdStr = UUID.randomUUID();
+        UUID accountIdStr = UUID.randomUUID();
+        UUID assetIdStr = UUID.randomUUID();
+
+        // Mock the Query Object creation (Internal to the controller)
+        GetAssetQueryView mockQuery = new GetAssetQueryView(new PortfolioId(portfolioIdStr),
+                new AccountId(accountIdStr), new AssetId(assetIdStr));
+        when(requestMapper.toAssetQuery(portfolioIdStr.toString(), accountIdStr.toString(), assetIdStr.toString()))
+                .thenReturn(mockQuery);
+
+        // 2. Mock the View (Populating all fields to pass record validation)
+        AssetView mockView = new AssetView(
+                new AssetId(assetIdStr), // Domain ID type
+                "AAPL",
+                AssetType.STOCK,
+                new BigDecimal("10.00"),
+                Money.of(1500, "USD"), // costBasis
+                Money.of(150, "USD"), // avgCost
+                Money.of(175, "USD"), // currentPrice
+                Money.of(1750, "USD"), // currentValue
+                Money.of(250, "USD"), // unrealizedGain
+                Percentage.of(16.67), // unrealizedGainPercentage
+                Instant.now(), // acquiredDate
+                Instant.now() // lastUpdated
+        );
+
+        when(portfolioQueryService.getAssetSummary(mockQuery)).thenReturn(mockView);
+
+        // Mock the final DTO mapping
+        AssetHoldingHttpResponse mockResponse = new AssetHoldingHttpResponse(assetIdStr.toString(), "AAPL",
+                AssetType.STOCK.name(), BigDecimal.valueOf(10.00d), BigDecimal.valueOf(150), LocalDateTime.now());
+        when(portfolioDtoMapper.toAssetResponse(mockView)).thenReturn(mockResponse);
+
+        // 3. Act
+        mockMvc.perform(get("/api/portfolios/{pId}/accounts/{aId}/assets/{asId}",
+                portfolioIdStr.toString(), accountIdStr.toString(), assetIdStr.toString())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(assetIdStr.toString()))
+                .andExpect(jsonPath("$.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.quantity").value(10.00));
     }
 }

@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +48,7 @@ import com.laderrco.fortunelink.portfolio_management.application.models.Allocati
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
@@ -55,6 +58,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPer
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationDetail;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PerformanceView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
@@ -62,6 +66,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -72,6 +77,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetTy
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
@@ -823,6 +829,105 @@ class PortfolioQueryServiceTest {
                 () -> queryService.getUserPortfolioView(query));
     }
 
+    // get asset summary
+    @Test
+    void shouldReturnPopulatedAssetView_WhenAssetExists() {
+        // 1. Arrange IDs using UUID strings
+        UUID pIdStr = UUID.randomUUID();
+        UUID aIdStr = UUID.randomUUID();
+        UUID asIdStr = UUID.randomUUID();
+
+        GetAssetQueryView query = new GetAssetQueryView(new PortfolioId(pIdStr), new AccountId(aIdStr),
+                new AssetId(asIdStr));
+
+        // 2. Mock Domain Objects (Portfolio -> Account -> Asset)
+        Asset mockAsset = mock(Asset.class);
+        AssetId assetId = new AssetId(asIdStr);
+        AssetIdentifier identifier = new SymbolIdentifier("AAPL");
+
+        when(mockAsset.getAssetId()).thenReturn(assetId);
+        when(mockAsset.getAssetIdentifier()).thenReturn(identifier);
+        when(mockAsset.getQuantity()).thenReturn(BigDecimal.TEN);
+        when(mockAsset.calculateUnrealizedGainLoss(any())).thenReturn(Money.of(30, "USD"));
+        when(mockAsset.calculateCurrentValue(any())).thenReturn(Money.of(30, "USD"));
+        when(mockAsset.getCostBasis()).thenReturn(Money.of(100, "USD"));
+        when(mockAsset.getCostPerUnit()).thenReturn(Money.of(30, "USD"));
+        when(mockAsset.getAcquiredOn()).thenReturn(Instant.now().minusSeconds(3600));
+        when(mockAsset.getLastSystemInteraction()).thenReturn(Instant.now());
+
+        Account mockAccount = mock(Account.class);
+        when(mockAccount.getAssets()).thenReturn(Collections.singletonList(mockAsset));
+
+        Portfolio mockPortfolio = mock(Portfolio.class);
+        when(mockPortfolio.findAccount(any())).thenReturn(Optional.of(mockAccount));
+
+        // Mock the repository/loading logic
+        when(portfolioRepository.findById(any())).thenReturn(Optional.of(mockPortfolio));
+
+        // 3. Mock the External Market Price
+        Money currentPrice = Money.of(180, "USD");
+        when(marketDataService.getCurrentPrice(identifier)).thenReturn(currentPrice);
+
+        // 4. Act
+        AssetView result = queryService.getAssetSummary(query);
+
+        // 5. Assert
+        assertNotNull(result);
+        assertEquals(assetId, result.assetId());
+        assertEquals(currentPrice, result.currentPrice());
+
+        // Verify the flow
+        verify(marketDataService).getCurrentPrice(identifier);
+    }
+
+    @Test
+    void shouldThrowAccountNotFoundException_WhenAccountDoesNotExist() {
+        // Arrange
+        PortfolioId pId = new PortfolioId(UUID.randomUUID());
+        AccountId aId = new AccountId(UUID.randomUUID());
+        AssetId asId = new AssetId(UUID.randomUUID());
+        GetAssetQueryView query = new GetAssetQueryView(pId, aId, asId);
+
+        Portfolio mockPortfolio = mock(Portfolio.class);
+        // Simulate portfolio exists, but account does NOT exist within it
+        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(mockPortfolio));
+        when(mockPortfolio.findAccount(aId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(AccountNotFoundException.class, () -> {
+            queryService.getAssetSummary(query);
+        });
+
+        verify(marketDataService, never()).getCurrentPrice(any());
+    }
+
+    @Test
+    void shouldThrowAssetNotFoundException_WhenAssetDoesNotExistInAccount() {
+        // Arrange
+        PortfolioId pId = new PortfolioId(UUID.randomUUID());
+        AccountId aId = new AccountId(UUID.randomUUID());
+        AssetId asId = new AssetId(UUID.randomUUID());
+        GetAssetQueryView query = new GetAssetQueryView(pId, aId, asId);
+
+        Asset otherAsset = mock(Asset.class);
+        when(otherAsset.getAssetId()).thenReturn(new AssetId(UUID.randomUUID())); // Different ID
+
+        Account mockAccount = mock(Account.class);
+        when(mockAccount.getAssets()).thenReturn(List.of(otherAsset)); // List without our target asset
+
+        Portfolio mockPortfolio = mock(Portfolio.class);
+        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(mockPortfolio));
+        when(mockPortfolio.findAccount(aId)).thenReturn(Optional.of(mockAccount));
+
+        // Act & Assert
+        assertThrows(AssetNotFoundException.class, () -> {
+            queryService.getAssetSummary(query);
+        });
+
+        // Verification: We should never attempt to fetch market data for a non-existent
+        // asset
+        verify(marketDataService, never()).getCurrentPrice(any());
+    }
     // ==================== Helper Methods ====================
 
     private List<Transaction> createMockTransactions(int count) {

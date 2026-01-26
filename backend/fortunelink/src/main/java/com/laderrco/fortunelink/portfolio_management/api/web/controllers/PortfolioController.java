@@ -20,15 +20,18 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.reques
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetUsersPortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AccountHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PortfolioHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
@@ -63,7 +66,8 @@ public class PortfolioController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PortfolioHttpResponse>> getUserPortfolios(@PathVariable GetUsersPortfolioRequest userId) {
+    public ResponseEntity<List<PortfolioHttpResponse>> getUserPortfolios(
+            @PathVariable GetUsersPortfolioRequest userId) {
         GetPortfoliosByUserIdQuery query = requestMapper.toCommand(userId);
         List<PortfolioSummaryView> portfolios = portfolioQueryService.getUserPortfolioSummaries(query);
 
@@ -75,7 +79,8 @@ public class PortfolioController {
     }
 
     @PutMapping("/{portfolioId}")
-    public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@PathVariable String portfolioId, @Valid @RequestBody CreatePortfolioRequest request) {
+    public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@PathVariable String portfolioId,
+            @Valid @RequestBody CreatePortfolioRequest request) {
         UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, request);
         PortfolioView portfolio = portfolioApplicationService.updatePortfolio(command);
         PortfolioHttpResponse response = portfolioDtoMapper.toPortfolioResponse(portfolio);
@@ -90,7 +95,8 @@ public class PortfolioController {
     }
 
     @PostMapping("/{id}/accounts")
-    public ResponseEntity<AccountHttpResponse> addAccount(@PathVariable String id, @Valid @RequestBody CreateAccountRequest request) {
+    public ResponseEntity<AccountHttpResponse> addAccount(@PathVariable String id,
+            @Valid @RequestBody CreateAccountRequest request) {
         AddAccountCommand command = requestMapper.toCommand(id, request);
         AccountView account = portfolioApplicationService.addAccount(command);
         return ResponseEntity.ok(portfolioDtoMapper.toAccountResponse(id, account));
@@ -108,53 +114,12 @@ public class PortfolioController {
         return ResponseEntity.noContent().build();
     }
 
-    // DO NOT KNOW IF IMMA KEEP THESE
-    // /**
-    // * Add an asset to an account.
-    // *
-    // * POST /api/portfolios/{portfolioId}/accounts/{accountId}/assets
-    // * Body: {
-    // * "symbol": "AAPL",
-    // * "assetType": "STOCK",
-    // * "quantity": 10,
-    // * "costBasis": 1500.00,
-    // * "acquiredDate": "2024-01-15T10:00:00"
-    // * }
-    // */
-    // @PostMapping("/{portfolioId}/accounts/{accountId}/assets")
-    // public ResponseEntity<PortfolioResponse> addAsset(
-    // @PathVariable String portfolioId,
-    // @PathVariable String accountId,
-    // @Valid @RequestBody AddAssetRequest request) {
+    @GetMapping("/{portfolioId}/accounts/{accountId}/assets/{assetId}")
+    public ResponseEntity<AssetHoldingHttpResponse> getAsset(@PathVariable String portfolioId, @PathVariable String accountId, @PathVariable String assetId) {
+        // We create a Query object just like your other methods
+        GetAssetQueryView query = requestMapper.toAssetQuery(portfolioId, accountId, assetId);
+        AssetView asset = portfolioQueryService.getAssetSummary(query);
 
-    // Portfolio portfolio = portfolioService.addAsset(
-    // portfolioId,
-    // accountId,
-    // request.symbol(),
-    // request.assetType(),
-    // request.quantity(),
-    // request.costBasis(),
-    // request.acquiredDate()
-    // );
-
-    // return ResponseEntity
-    // .status(HttpStatus.CREATED)
-    // .body(mapper.toResponse(portfolio));
-    // }
-
-    // /**
-    // * Remove an asset from an account.
-    // *
-    // * DELETE /api/portfolios/{portfolioId}/accounts/{accountId}/assets/{assetId}
-    // */
-    // @DeleteMapping("/{portfolioId}/accounts/{accountId}/assets/{assetId}")
-    // public ResponseEntity<PortfolioResponse> removeAsset(
-    // @PathVariable String portfolioId,
-    // @PathVariable String accountId,
-    // @PathVariable String assetId) {
-
-    // Portfolio portfolio = portfolioService.removeAsset(portfolioId, accountId,
-    // assetId);
-    // return ResponseEntity.ok(mapper.toResponse(portfolio));
-    // }
+        return ResponseEntity.ok(portfolioDtoMapper.toAssetResponse(asset));
+    }
 }

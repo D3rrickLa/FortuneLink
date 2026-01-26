@@ -368,7 +368,7 @@ public class PortfolioApplicationService {
 
         // 4. Find the specific transaction to update
         Transaction existingTransaction = accountTransactions.stream()
-                .filter(t -> identifiersMatch(t.getAssetIdentifier(), command.identifier()))
+                .filter(t -> t.getTransactionId().equals(command.transactionId()))
                 .findFirst()
                 .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
 
@@ -388,15 +388,24 @@ public class PortfolioApplicationService {
         // 6. CRITICAL validation: For SELL transactions, verify sufficient holdings
         if (command.type() == TransactionType.SELL) {
             List<Transaction> assetTransactions = accountTransactions.stream()
-                    .filter(t -> identifiersMatch(t.getAssetIdentifier(), command.identifier()))
-                    .sorted(Comparator.comparing(Transaction::getTransactionDate))
-                    .collect(Collectors.toList());
+                // Compare the string value (Symbol) rather than the Object reference
+                .filter(t -> t.getAssetIdentifier().getPrimaryId().equalsIgnoreCase(command.identifier().getPrimaryId()))
+                
+                // for the future if we have collision, I.e. CRYPTO = GOLD and STOCK = GOLD
+                // .filter(t -> t.getAssetIdentifier().getPrimaryId().equalsIgnoreCase(command.identifier().getPrimaryId()) 
+                //&& t.getAssetIdentifier().getType() == command.identifier().getType())
+                // this is done in the validate sell transaction method
+                // AND exclude the transaction we are currently editing
+                // .filter(t -> !t.getTransactionId().equals(existingTransaction.getTransactionId()))
+                .sorted(Comparator.comparing(Transaction::getTransactionDate))
+                .collect(Collectors.toList());
+
 
             validateSellTransaction(
                     command.identifier(),
                     command.quantity(),
                     command.date(),
-                    assetTransactions,
+                    assetTransactions, // Now only contains other transactions
                     existingTransaction.getTransactionId());
         }
 
@@ -680,11 +689,5 @@ public class PortfolioApplicationService {
                 command.fee(),
                 command.date(),
                 command.notes());
-    }
-
-    private boolean identifiersMatch(AssetIdentifier a, AssetIdentifier b) {
-        if (a == null || b == null)
-            return false;
-        return Objects.equals(a.getPrimaryId(), b.getPrimaryId());
     }
 }

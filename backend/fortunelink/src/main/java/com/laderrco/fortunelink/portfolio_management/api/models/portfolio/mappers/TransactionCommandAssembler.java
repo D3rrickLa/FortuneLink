@@ -143,6 +143,8 @@ public class TransactionCommandAssembler {
                 toTransactionId(transactionId), softDelete, notes);
     }
 
+    public
+
     private List<Fee> toFees(
             List<FeeRequest> feeRequests,
             ValidatedCurrency accountBaseCurrency,

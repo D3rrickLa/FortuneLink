@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,6 +18,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mapper
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeleteTransactionRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.RecordTransactionRequest;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
@@ -26,10 +28,13 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 import jakarta.validation.Valid;
@@ -182,6 +187,39 @@ public class TransactionController {
         applicationService.deleteTransaction(command);
 
         return ResponseEntity.noContent().build();
+    }
+
+    // we beed a get method
+    @GetMapping("/{transactionId}")
+    public ResponseEntity<TransactionResponse> getTransaction(@PathVariable String transactionId) {
+        // 1. Map the request path to a Query object
+        GetTransactionByIdQuery query = requestMapper.toTransactionQuery(transactionId);
+
+        // 2. Fetch the view from the Query Service
+        TransactionView transaction = portfolioQueryService.getTransactionDetails(query);
+
+        // 3. Map to the HTTP Response DTO
+        return ResponseEntity.ok(portfolioDtoMapper.toTransactionResponse(transaction));
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<PagedTransactionResponse> getTransactionHistory(
+            @RequestParam String portfolioId,
+            @RequestParam(required = false) String accountId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) TransactionType type) {
+
+        // 1. Mapper converts params to your GetTransactionHistoryQuery record
+        GetTransactionHistoryQuery query = requestMapper.toHistoryQuery(
+                portfolioId, accountId, type, page, size);
+
+        // 2. Query Service returns a Page/List of Views
+        // Note: This likely calls a different service method than the "Single ID" one
+        Page<TransactionView> history = portfolioQueryService.getTransactionHistory(query);
+
+        // 3. Map the Page to a Paged Response DTO
+        return ResponseEntity.ok(portfolioDtoMapper.toPagedResponse(history));
     }
 
     // ------------------- HELPER -------------------

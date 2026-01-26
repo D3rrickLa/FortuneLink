@@ -33,7 +33,7 @@ public class PortfolioDtoMapper {
      * Convert domain Portfolio to API response DTO.
      */
     public PortfolioHttpResponse toPortfolioResponse(PortfolioView portfolio) {
-        return PortfolioHttpResponse.of(
+        return new PortfolioHttpResponse(
             portfolio.portfolioId().toString(),
             portfolio.userId().toString(),
             portfolio.name(),
@@ -41,6 +41,8 @@ public class PortfolioDtoMapper {
             portfolio.accounts().stream()
                 .map(a -> toAccountResponse(portfolio.portfolioId().toString(), a))
                 .collect(Collectors.toList()),
+            portfolio.totalValue().amount(),
+            portfolio.totalValue().currency().getCode(),
             LocalDateTime.ofInstant(portfolio.createDate(), ZoneId.systemDefault()),
             LocalDateTime.ofInstant(portfolio.lastUpdated(), ZoneId.systemDefault())
         );

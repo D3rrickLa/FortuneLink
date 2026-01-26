@@ -15,6 +15,7 @@ import com.laderrco.fortunelink.portfolio_management.application.mappers.Transac
 import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
 import com.laderrco.fortunelink.portfolio_management.application.queries.AnalyzeAllocationQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
@@ -23,6 +24,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNet
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PerformanceView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
@@ -31,13 +33,16 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.T
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.AssetAllocationService;
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PerformanceCalculationService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -73,6 +78,7 @@ public class PortfolioQueryService {
     private final PerformanceCalculationService performanceCalculationService;
     private final AssetAllocationService assetAllocationService;
     private final PortfolioValuationService portfolioValuationService;
+    private final MarketDataService marketDataService;
 
     // View Assemblers
     private final PortfolioViewAssembler portfolioAssembler;
@@ -274,6 +280,22 @@ public class PortfolioQueryService {
             .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
         return portfolioAssembler.assembleAccountView(account);
+    }
+
+    public AssetView getAssetSummary(GetAssetQueryView query) {
+        Objects.requireNonNull(query, "GetAssetQueryView cannot be null");
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
+        Account account = portfolio.findAccount(query.accountId())
+            .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
+
+        Asset asset = account.getAssets().stream()
+            .filter(a -> a.getAssetId().equals(query.assetId()))
+            .findFirst()
+            .orElseThrow(() -> new AssetNotFoundException(query.assetId(), query.accountId()));
+
+        // NEW: Fetch current market price from a PriceService or Cache
+        Money latestPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+        return PortfolioViewAssembler.assembleAssetView(asset, latestPrice);
     }
 
     /**
