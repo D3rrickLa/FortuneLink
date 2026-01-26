@@ -12,15 +12,26 @@ import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.FeeRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.RecordTransactionRequest;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -44,6 +55,92 @@ public class TransactionCommandAssembler {
                 fees,
                 request.getTransactionDate().toInstant(ZoneOffset.UTC),
                 request.getNotes());
+    }
+
+    public RecordSaleCommand toSaleCommand(String portfolioId, String accountId, ValidatedCurrency accountBaseCurrency,
+            RecordTransactionRequest request) {
+        Money price = toMoney(request.getPrice(), request.getPriceCurrency());
+
+        List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
+
+        return new RecordSaleCommand(
+                toPortfolioId(portfolioId),
+                toAccountId(accountId),
+                request.getSymbol(),
+                request.getQuantity(),
+                price,
+                fees,
+                request.getTransactionDate().toInstant(ZoneOffset.UTC),
+                request.getNotes());
+    }
+
+    public RecordIncomeCommand toDividendCommand(String portfolioId, String accountId,
+            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+        Money price = toMoney(request.getPrice(), request.getPriceCurrency());
+        return new RecordIncomeCommand(
+                toPortfolioId(portfolioId),
+                toAccountId(accountId),
+                request.getSymbol(),
+                price,
+                TransactionType.valueOf(request.getTransactionType()),
+                request.getIsDrip(),
+                request.getSharesReceived(),
+                request.getTransactionDate().toInstant(ZoneOffset.UTC),
+                request.getNotes());
+    }
+
+    public RecordDepositCommand toDepositCommand(String portfolioId, String accountId,
+            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+        Money price = toMoney(request.getPrice(), request.getPriceCurrency());
+        List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
+        return new RecordDepositCommand(
+                toPortfolioId(portfolioId),
+                toAccountId(accountId),
+                price,
+                fees,
+                request.getTransactionDate().toInstant(ZoneOffset.UTC),
+                request.getNotes());
+    }
+
+    public RecordWithdrawalCommand toWithdrawalCommand(String portfolioId, String accountId,
+            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+        Money price = toMoney(request.getPrice(), request.getPriceCurrency());
+        List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
+        return new RecordWithdrawalCommand(
+                toPortfolioId(portfolioId),
+                toAccountId(accountId),
+                price,
+                fees,
+                request.getTransactionDate().toInstant(ZoneOffset.UTC),
+                request.getNotes());
+    }
+
+    public UpdateTransactionCommand toUpdateCommand(String portfolioId, String accountId,
+            String transactionId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+        Money price = toMoney(request.getPrice(), request.getPriceCurrency());
+        List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
+        AssetIdentifier identifier = null;
+        if (request.isAssetTransaction()) {
+            // Convert symbol to AssetIdentifier
+            identifier = new SymbolIdentifier(request.getSymbol());
+        }
+        return new UpdateTransactionCommand(
+                toPortfolioId(portfolioId),
+                toAccountId(accountId),
+                toTransactionId(transactionId),
+                TransactionType.valueOf(request.getTransactionType()),
+                identifier,
+                request.getQuantity(),
+                price,
+                fees,
+                request.getTransactionDate().toInstant(ZoneOffset.UTC),
+                request.getNotes());
+    }
+
+    public DeleteTransactionCommand toDeleteCommand(String portfolioId, String accountId,
+            String transactionId, boolean softDelete, @Nullable String notes) {
+        return new DeleteTransactionCommand(toPortfolioId(portfolioId), toAccountId(accountId),
+                toTransactionId(transactionId), softDelete, notes);
     }
 
     private List<Fee> toFees(
@@ -85,5 +182,9 @@ public class TransactionCommandAssembler {
 
     private AccountId toAccountId(String id) {
         return new AccountId(UUID.fromString(id));
+    }
+
+    private TransactionId toTransactionId(String id) {
+        return new TransactionId(UUID.fromString(id));
     }
 }

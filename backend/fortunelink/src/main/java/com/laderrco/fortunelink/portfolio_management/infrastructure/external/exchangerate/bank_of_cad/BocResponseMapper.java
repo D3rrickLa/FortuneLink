@@ -93,8 +93,7 @@ public class BocResponseMapper {
             // ---- Direct CAD pair ----
             if (CAD.equals(baseCurrency) || CAD.equals(targetCurrency)) {
                 rates.stream()
-                        .filter(r -> r.fromCurrency().equals(baseCurrency)
-                                && r.toCurrency().equals(targetCurrency))
+                        .filter(r -> r.fromCurrency().equals(baseCurrency) && r.toCurrency().equals(targetCurrency))
                         .findFirst()
                         .ifPresent(result::add);
                 continue;

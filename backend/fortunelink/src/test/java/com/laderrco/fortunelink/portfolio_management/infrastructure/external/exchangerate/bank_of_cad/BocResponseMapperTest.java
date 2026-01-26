@@ -1,13 +1,17 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.external.exchangerate.bank_of_cad;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -327,6 +331,251 @@ public class BocResponseMapperTest {
         assertTrue(result.isEmpty(), "Non-CAD involved series should be skipped");
     }
 
+    @Test
+    void returns_direct_rate_when_base_is_cad() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("CAD", "USD", 0.75, date),
+                createRate("EUR", "CAD", 1.45, date) // noise
+        ));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "CAD", "USD");
+
+        assertEquals(1, result.size());
+        assertEquals(new BigDecimal("0.75"), result.get(0).rate());
+    }
+
+    @Test
+    void returns_direct_rate_when_target_is_cad() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "CAD", 1.45, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "CAD");
+
+        assertEquals(1, result.size());
+        assertEquals(new BigDecimal("1.45"), result.get(0).rate());
+    }
+
+    @Test
+    void throws_when_base_and_target_are_same() {
+        BocExchangeRateResponse response = responseWithRates(List.of());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> mapper.toXYZ(response, "USD", "USD"));
+    }
+
+    @Test
+    void skips_direct_cad_branch_when_neither_currency_is_cad() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "USD", 1.1, date)));
+
+        mapper.toXYZ(response, "EUR", "USD");
+
+        // assertion is indirect: if CAD branch ran, coverage would show it
+    }
+
+    @Test
+    void direct_cad_filter_fails_when_target_currency_does_not_match() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("CAD", "EUR", 0.70, date) // wrong target
+        ));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "CAD", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void direct_cad_filter_fails_when_base_currency_does_not_match() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("USD", "CAD", 1.33, date) // wrong base
+        ));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "CAD", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void computes_cross_rate_when_both_legs_exist() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "CAD", 1.5, date),
+                createRate("CAD", "USD", 0.8, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertEquals(1, result.size());
+        assertEquals(new BigDecimal("1.20"), result.get(0).rate());
+    }
+
+    @Test
+    void skips_cross_rate_when_base_to_cad_missing() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("CAD", "USD", 0.8, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void skips_cross_rate_when_cad_to_target_missing() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "CAD", 1.5, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findRate_filters_out_when_both_base_and_target_do_not_match() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("GBP", "JPY", 180.0, date), // FF
+                createRate("EUR", "CAD", 1.5, date) // noise to enter cross path
+        ));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findRate_true_true_match() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "CAD", 1.5, date),
+                createRate("CAD", "USD", 0.8, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void findRate_true_false() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "USD", 1.1, date), // base matches, target wrong
+                createRate("CAD", "USD", 0.8, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findRate_false_true() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("GBP", "CAD", 1.7, date), // target matches CAD, base wrong
+                createRate("CAD", "USD", 0.8, date)));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findRate_false_false() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("GBP", "JPY", 180.0, date), // FF
+                createRate("EUR", "CAD", 1.5, date) // noise
+        ));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void cross_currency_path_executes_findRate() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "CAD", 1.5, date),
+                createRate("CAD", "USD", 0.8, date)));
+
+        mapper.toXYZ(response, "EUR", "USD");
+    }
+
+    @Test
+    void explicitly_executes_findRate_all_branches() {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        BocExchangeRateResponse response = responseWithRates(List.of(
+                createRate("EUR", "CAD", 1.5, date), // baseToCad
+                createRate("CAD", "USD", 0.8, date), // cadToTarget
+                createRate("GBP", "JPY", 180.0, date) // FF case
+        ));
+
+        List<ProviderExchangeRate> result = mapper.toXYZ(response, "EUR", "USD");
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void findRate_via_reflection_covers_all_branches() throws Exception {
+        LocalDate date = LocalDate.of(2024, 1, 1);
+
+        List<ProviderExchangeRate> rates = List.of(
+                createRate("EUR", "USD", 1.1, date), // TT candidate
+                createRate("EUR", "CAD", 1.5, date), // TF
+                createRate("GBP", "USD", 1.3, date), // FT
+                createRate("GBP", "JPY", 180.0, date) // FF
+        );
+
+        Method method = BocResponseMapper.class.getDeclaredMethod(
+                "findRate",
+                List.class,
+                String.class,
+                String.class);
+        method.setAccessible(true);
+
+        // TT
+        ProviderExchangeRate tt = (ProviderExchangeRate) method.invoke(mapper, rates, "EUR", "USD");
+        assertNotNull(tt);
+
+        // TF
+        ProviderExchangeRate tf = (ProviderExchangeRate) method.invoke(mapper, rates, "EUR", "CHF");
+        assertNull(tf);
+
+        // FT
+        ProviderExchangeRate ft = (ProviderExchangeRate) method.invoke(mapper, rates, "AUD", "USD");
+        assertNull(ft);
+
+        // FF
+        ProviderExchangeRate ff = (ProviderExchangeRate) method.invoke(mapper, rates, "AUD", "CHF");
+        assertNull(ff);
+    }
+
+    private ProviderExchangeRate createRate(String string, String string2, double d, LocalDate today) {
+        return new ProviderExchangeRate(string, string2, BigDecimal.valueOf(d), today, "");
+    }
+
     // --- Helper Methods ---
     private BocExchangeRateResponse.Observation createBaseObservation(String date) {
         BocExchangeRateResponse.Observation obs = new BocExchangeRateResponse.Observation();
@@ -363,6 +612,50 @@ public class BocResponseMapperTest {
     private BocExchangeRateResponse wrapInResponse(BocExchangeRateResponse.Observation... observations) {
         BocExchangeRateResponse response = new BocExchangeRateResponse();
         response.setObservations(Arrays.asList(observations));
+        return response;
+    }
+
+    private BocExchangeRateResponse responseWithRates(
+            List<ProviderExchangeRate> rates) {
+        BocExchangeRateResponse response = new BocExchangeRateResponse();
+
+        Map<String, BocExchangeRateResponse.SeriesDetail> seriesDetail = new HashMap<>();
+
+        List<BocExchangeRateResponse.Observation> observations = rates.stream()
+                .collect(Collectors.groupingBy(ProviderExchangeRate::date))
+                .entrySet()
+                .stream()
+                .map(entry -> {
+                    BocExchangeRateResponse.Observation obs = new BocExchangeRateResponse.Observation();
+
+                    obs.setDate(entry.getKey().toString());
+
+                    for (ProviderExchangeRate rate : entry.getValue()) {
+                        // Stable fake key, but MUST match seriesDetail
+                        String key = "FX" + rate.fromCurrency() + rate.toCurrency();
+
+                        BocExchangeRateResponse.Observation.Rate r = new BocExchangeRateResponse.Observation.Rate();
+                        r.setValue(rate.rate());
+
+                        obs.getRates().put(key, r);
+
+                        // ---- seriesDetail ----
+                        BocExchangeRateResponse.SeriesDetail sd = new BocExchangeRateResponse.SeriesDetail();
+
+                        BocExchangeRateResponse.SeriesDetail.Dimension dim = new BocExchangeRateResponse.SeriesDetail.Dimension();
+                        dim.setKey(rate.fromCurrency() + rate.toCurrency());
+
+                        sd.setDimension(dim);
+                        seriesDetail.put(key, sd);
+                    }
+
+                    return obs;
+                })
+                .toList();
+
+        response.setObservations(observations);
+        response.setSeriesDetail(seriesDetail);
+
         return response;
     }
 

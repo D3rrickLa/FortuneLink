@@ -161,14 +161,15 @@ public class FeeTest {
         Fee fee = Fee.builder()
                 .feeType(FeeType.COMMISSION)
                 .amountInNativeCurrency(money(5))
-                .metadata(Map.of("Description", "Commission fee"))
+                // .metadata(Map.of("Description", "Commission fee"))
                 .exchangeRate(exchangeRate())
                 .feeDate(now)
+                .addMetadata("Sector", "Tec")
                 .build();
 
         assertThat(fee.feeType()).isEqualTo(FeeType.COMMISSION);
         assertThat(fee.amountInNativeCurrency().amount()).isEqualTo(BigDecimal.valueOf(5).setScale(Precision.getMoneyPrecision()));
-        assertThat(fee.metadata().get("Description")).isEqualTo("Commission fee");
+        assertThat(fee.metadata().get("Sector")).isEqualTo("Tec");
         assertThat(fee.feeDate()).isEqualTo(now);
     }
 

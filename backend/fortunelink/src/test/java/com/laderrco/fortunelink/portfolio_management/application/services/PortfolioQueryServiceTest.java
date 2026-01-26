@@ -61,6 +61,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -126,7 +127,6 @@ class PortfolioQueryServiceTest {
     @InjectMocks
     private PortfolioQueryService queryService;
 
-    private UserId userId;
     private PortfolioId portfolioId;
     private AccountId accountId;
     private Portfolio portfolio;
@@ -135,7 +135,6 @@ class PortfolioQueryServiceTest {
 
     @BeforeEach
     void setUp() {
-        userId = new UserId(UUID.randomUUID());
         portfolioId = new PortfolioId(UUID.randomUUID());
         accountId = new AccountId(UUID.randomUUID());
         testCurrency = ValidatedCurrency.USD;
@@ -752,7 +751,7 @@ class PortfolioQueryServiceTest {
         AccountView expectedResponse = mock(AccountView.class);
 
         when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
-        when(portfolio.getAccount(accountId)).thenReturn(account);
+        when(portfolio.findAccount(accountId)).thenReturn(Optional.of(account));
         when(portfolioViewAssembler.assembleAccountView(account))
                 .thenReturn(expectedResponse);
 
@@ -763,7 +762,7 @@ class PortfolioQueryServiceTest {
         assertNotNull(response);
         assertEquals(expectedResponse, response);
 
-        verify(portfolio).getAccount(accountId);
+        verify(portfolio).findAccount(accountId);
         verify(portfolioViewAssembler).assembleAccountView(account);
     }
 
@@ -776,6 +775,18 @@ class PortfolioQueryServiceTest {
 
         // Act & Assert
         assertThrows(PortfolioNotFoundException.class,
+                () -> queryService.getAccountSummary(query));
+    }
+
+    @Test
+    void getAccountSummary_ThrowsException_WhenAccountNotFound() {
+        // Arrange
+        GetAccountSummaryQuery query = new GetAccountSummaryQuery(portfolioId, AccountId.randomId());
+
+        when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.ofNullable(mock(Portfolio.class)));
+
+        // Act & Assert
+        assertThrows(AccountNotFoundException.class,
                 () -> queryService.getAccountSummary(query));
     }
 

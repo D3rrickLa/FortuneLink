@@ -536,7 +536,6 @@ class CommandValidatorTest {
                 null,
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 null,
                 Instant.now(),
                 "notes"
@@ -555,7 +554,6 @@ class CommandValidatorTest {
                 PortfolioId.randomId(),
                 null,
                 new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 null,
                 Instant.now(),
                 "notes"
@@ -574,7 +572,6 @@ class CommandValidatorTest {
                 PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-1000), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 null,
                 Instant.now(),
                 "notes"
@@ -586,24 +583,6 @@ class CommandValidatorTest {
             assertThat(result.errors()).anyMatch(e -> e.contains("Amount"));
         }
         
-        @Test
-        @DisplayName("Should fail when currency is null")
-        void shouldFailWhenCurrencyIsNull() {
-            RecordDepositCommand command = new RecordDepositCommand(
-                PortfolioId.randomId(),
-                AccountId.randomId(),
-                new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
-                null,
-                null,
-                Instant.now(),
-                "notes"
-            );
-            
-            ValidationResult result = validator.validate(command);
-            
-            assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Currency is required");
-        }
 
         @Test
         @DisplayName("Should fail when Money is negative")
@@ -612,7 +591,6 @@ class CommandValidatorTest {
                 PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(-1000), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.USD,
                 null,
                 Instant.now(),
                 "notes"
@@ -636,7 +614,6 @@ class CommandValidatorTest {
                 PortfolioId.randomId(),
                 AccountId.randomId(),
                 new Money(BigDecimal.valueOf(1000), ValidatedCurrency.of("USD")),
-                ValidatedCurrency.of("USD"),
                 List.of(validFee),
                 Instant.now().minus(Duration.ofHours(36)),
                 "Test deposit"

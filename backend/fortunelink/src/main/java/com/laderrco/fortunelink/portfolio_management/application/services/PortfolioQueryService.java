@@ -30,6 +30,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -269,7 +270,8 @@ public class PortfolioQueryService {
         Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
         Portfolio portfolio = loadUserPortfolio(query.portfolioId());
-        Account account = portfolio.getAccount(query.accountId());
+        Account account = portfolio.findAccount(query.accountId())
+            .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
         return portfolioAssembler.assembleAccountView(account);
     }

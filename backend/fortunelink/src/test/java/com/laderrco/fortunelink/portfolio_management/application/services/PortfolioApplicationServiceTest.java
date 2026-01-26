@@ -43,7 +43,6 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Update
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
-import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
@@ -201,8 +200,8 @@ class PortfolioApplicationServiceTest {
             verify(portfolioRepository).save(captor.capture());
             Portfolio savedPortfolio = captor.getValue();
 
-            Account savedAccount = savedPortfolio.getAccount(accountId);
-            assertThat(savedAccount.getAssets()).hasSize(1);
+            Optional<Account> savedAccount = savedPortfolio.findAccount(accountId);
+            assertThat(savedAccount.get().getAssets()).hasSize(1);
         }
 
         @Test
@@ -244,6 +243,28 @@ class PortfolioApplicationServiceTest {
             // When/Then
             assertThatThrownBy(() -> service.recordAssetPurchase(command))
                     .isInstanceOf(PortfolioNotFoundException.class);
+        }
+
+        @Test
+        void recordAssetPurchase_WhenAccountNotFound_ThrowsException() {
+            AccountId mockAccountId = AccountId.randomId();
+            command = new RecordPurchaseCommand(
+                    portfolio.getPortfolioId(),
+                    mockAccountId,
+                    "AAPL",
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Test purchase");
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
+
+            assertThatThrownBy(() -> service.recordAssetPurchase(command))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining(mockAccountId.toString());
         }
 
         @Test
@@ -330,8 +351,8 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // Verify the asset exists before selling (for debugging)
-            Account accountBeforeSale = portfolio.getAccount(accountId);
-            Asset assetBeforeSale = accountBeforeSale.getAsset(assetInfo.toIdentifier());
+            Optional<Account> accountBeforeSale = portfolio.findAccount(accountId);
+            Asset assetBeforeSale = accountBeforeSale.get().getAsset(assetInfo.toIdentifier());
             assertThat(assetBeforeSale).isNotNull();
             assertThat(assetBeforeSale.getQuantity()).isGreaterThanOrEqualTo(command.quantity());
 
@@ -346,8 +367,8 @@ class PortfolioApplicationServiceTest {
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
             Portfolio savedPortfolio = captor.getValue();
-            Account savedAccount = savedPortfolio.getAccount(accountId);
-            Asset soldAsset = savedAccount.getAsset(assetInfo.toIdentifier());
+            Optional<Account> savedAccount = savedPortfolio.findAccount(accountId);
+            Asset soldAsset = savedAccount.get().getAsset(assetInfo.toIdentifier());
 
             assertThat(soldAsset.getQuantity()).isEqualTo(BigDecimal.valueOf(5)); // 10 - 5 = 5 remaining
         }
@@ -450,6 +471,28 @@ class PortfolioApplicationServiceTest {
                 service.recordAssetSale(command);
             });
         }
+
+        @Test
+        void recordAssetSale_WhenAccountNotFound_ThrowsException() {
+            AccountId mockAccountId = AccountId.randomId();
+            command = new RecordSaleCommand(
+                    portfolio.getPortfolioId(),
+                    mockAccountId,
+                    "AAPL",
+                    BigDecimal.valueOf(5),
+                    new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Test sale");
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
+
+            assertThatThrownBy(() -> service.recordAssetSale(command))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining(mockAccountId.toString());
+        }
     }
 
     @Nested
@@ -464,7 +507,6 @@ class PortfolioApplicationServiceTest {
                     portfolio.getPortfolioId(),
                     accountId,
                     new Money(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
-                    ValidatedCurrency.USD,
                     null,
                     Instant.now(),
                     "Deposit");
@@ -502,7 +544,6 @@ class PortfolioApplicationServiceTest {
                     portfolio.getPortfolioId(),
                     accountId,
                     Money.of(20, "USD"),
-                    ValidatedCurrency.CAD,
                     null,
                     Instant.now(),
                     null);
@@ -513,6 +554,26 @@ class PortfolioApplicationServiceTest {
             assertThrows(PortfolioNotFoundException.class, () -> {
                 service.recordDeposit(command);
             });
+        }
+
+        @Test
+        void recordDeposit_WhenAccountNotFound_ThrowsException() {
+            AccountId mockAccountId = AccountId.randomId();
+            RecordDepositCommand command = new RecordDepositCommand(
+                    portfolio.getPortfolioId(),
+                    mockAccountId,
+                    new Money(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Deposit");
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            // when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
+
+            assertThatThrownBy(() -> service.recordDeposit(command))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining(mockAccountId.toString());
         }
     }
 
@@ -596,6 +657,27 @@ class PortfolioApplicationServiceTest {
                 service.recordWithdrawal(command);
             });
         }
+
+        @Test
+        void recordWidthdrawal_WhenAccountNotFound_ThrowsException() {
+            AccountId mockAccountId = AccountId.randomId();
+            RecordWithdrawalCommand command = new RecordWithdrawalCommand(
+                    portfolio.getPortfolioId(),
+                    mockAccountId,
+                    new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Withdrawal");
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            // when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
+
+            assertThatThrownBy(() -> service.recordWithdrawal(command))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining(mockAccountId.toString());
+        }
+
     }
 
     @Nested
@@ -734,6 +816,29 @@ class PortfolioApplicationServiceTest {
                 service.recordDividendIncome(command);
             });
         }
+
+        @Test
+        void recordWidthdrawal_WhenAccountNotFound_ThrowsException() {
+            AccountId mockAccountId = AccountId.randomId();
+            RecordIncomeCommand command = new RecordIncomeCommand(
+                    portfolio.getPortfolioId(),
+                    mockAccountId,
+                    "AAPL",
+                    new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
+                    TransactionType.DIVIDEND,
+                    false,
+                    BigDecimal.ONE,
+                    Instant.now(),
+                    "Dividend");
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
+
+            assertThatThrownBy(() -> service.recordDividendIncome(command))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining(mockAccountId.toString());
+        }
+
     }
 
     @Nested
@@ -758,7 +863,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
-            Money cashBeforeFee = portfolio.getAccount(accountId).getCashBalance();
+            Money cashBeforeFee = portfolio.findAccount(accountId).get().getCashBalance();
 
             // When
             TransactionView response = service.recordFee(command);
@@ -771,8 +876,8 @@ class PortfolioApplicationServiceTest {
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
             Portfolio savedPortfolio = captor.getValue();
-            Account savedAccount = savedPortfolio.getAccount(accountId);
-            Money cashAfterFee = savedAccount.getCashBalance();
+            Optional<Account> savedAccount = savedPortfolio.findAccount(accountId);
+            Money cashAfterFee = savedAccount.get().getCashBalance();
 
             assertThat(cashAfterFee.amount()).isLessThan(cashBeforeFee.amount());
         }
@@ -2146,8 +2251,8 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
 
             // Verify account actually has assets before the test
-            Account accountToRemove = portfolio.getAccount(accountId);
-            assertThat(accountToRemove.getAssets()).isNotEmpty();
+            Optional<Account> accountToRemove = portfolio.findAccount(accountId);
+            assertThat(accountToRemove.get().getAssets()).isNotEmpty();
 
             // When/Then
             assertThatThrownBy(() -> service.removeAccount(command))
@@ -2200,6 +2305,22 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
+        void removeAccount_WhenAccountNotFound_ThrowsException() {
+            PortfolioId portfolioId = PortfolioId.randomId();
+            AccountId mockAccountId = AccountId.randomId();
+            RemoveAccountCommand command = new RemoveAccountCommand(
+                    portfolioId, mockAccountId);
+
+            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
+            // when(portfolio.findAccount(any())).thenReturn();
+
+            assertThatThrownBy(() -> service.removeAccount(command))
+                    .isInstanceOf(AccountNotFoundException.class)
+                    .hasMessageContaining(mockAccountId.toString());
+        }
+
+        @Test
         void removeAccount_WhenInvalidTransaction_ThrowsException() {
             PortfolioId portfolioId = PortfolioId.randomId();
             RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, accountId);
@@ -2230,7 +2351,7 @@ class PortfolioApplicationServiceTest {
             Portfolio newPortfolio = new Portfolio(newUserId, name, ValidatedCurrency.USD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findByUserId(newUserId)).thenReturn(Optional.empty());
+            when(portfolioRepository.countByUserId(newUserId)).thenReturn(0L);
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(newPortfolio);
             when(portfolioViewAssembler.assemblePortfolioView(any())).thenReturn(mock(PortfolioView.class));
 

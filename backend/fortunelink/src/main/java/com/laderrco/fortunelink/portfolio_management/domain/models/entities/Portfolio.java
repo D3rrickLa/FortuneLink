@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
@@ -77,7 +78,8 @@ public class Portfolio implements ClassValidation {
             UserId deletedBy, // ADD (if tracking)
             Instant created,
             Instant updated) {
-        return new Portfolio(id, userId, accounts, name, currency, desc,deleted, deletedAt, deletedBy, created, updated);
+        return new Portfolio(id, userId, accounts, name, currency, desc, deleted, deletedAt, deletedBy, created,
+                updated);
     }
 
     // Static Factory for NEW Portfolios (used by Application Services)
@@ -129,9 +131,7 @@ public class Portfolio implements ClassValidation {
 
     public void closeAccount(AccountId accountId) {
         ClassValidation.validateParameter(accountId, "AccountId");
-
-        Account account = getAccount(accountId);
-        account.close();
+        getAccountOrThrow(accountId).close();
         updateMetadata();
     }
 
@@ -145,28 +145,16 @@ public class Portfolio implements ClassValidation {
      */
     public void removeAccount(AccountId accountId) {
         ClassValidation.validateParameter(accountId, "AccountId");
-
-        // just a dedicated method
-        Account account = getAccount(accountId);
+        Account account = getAccountOrThrow(accountId);
 
         if (account.isActive()) {
             throw new IllegalStateException("Account cannot be removed, please close the account first");
         }
 
-        // we don't need this, this is taking place inside the 'close' method in account
-        // if (!account.getAssets().isEmpty()) {
-        // throw new IllegalStateException(String.format("Cannot remove account '%s'.
-        // Account has existing assets, %d asset(s).", account.getName(),
-        // account.getAssets().size()));
-        // }
-
-        boolean hasTransaction = account.getTransactions().isEmpty();
-
-        if (!hasTransaction) {
-            throw new IllegalStateException(
-                    String.format(
-                            "Cannot remove account '%s'. Account has transaction history. Closed accounts with history must be retained for audit purposes.",
-                            account.getName()));
+        if (!account.getTransactions().isEmpty()) {
+            throw new IllegalStateException(String.format(
+                    "Account '%s' has transaction history and cannot be deleted from the database.",
+                    account.getName()));
         }
 
         this.accounts.remove(account);
@@ -174,8 +162,7 @@ public class Portfolio implements ClassValidation {
     }
 
     public void recordTransaction(AccountId accountId, Transaction transaction) throws AccountNotFoundException {
-        Account account = getAccount(accountId);
-        account.recordTransaction(transaction);
+        getAccountOrThrow(accountId).recordTransaction(transaction);
         updateMetadata();
     }
 
@@ -199,7 +186,7 @@ public class Portfolio implements ClassValidation {
     }
 
     public void correctAssetTicker(AccountId accountId, AssetIdentifier wrongTicker, AssetIdentifier correctTicker) {
-        Account account = getAccount(accountId);
+        Account account = getAccountOrThrow(accountId);
         Asset wrongAsset = account.getAsset(wrongTicker);
 
         if (wrongAsset.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
@@ -266,12 +253,10 @@ public class Portfolio implements ClassValidation {
 
     // Querying Methods STARTS //
 
-    public Account getAccount(AccountId accountId) throws AccountNotFoundException {
+    public Optional<Account> findAccount(AccountId accountId) {
         return this.accounts.stream()
                 .filter(acc -> acc.getAccountId().equals(accountId))
-                .findFirst()
-                .orElseThrow(() -> new AccountNotFoundException(
-                        String.format("Account with id '%s' not found in this portfolio.", accountId.accountId())));
+                .findFirst();
     }
 
     public boolean containsAccounts() {
@@ -337,8 +322,8 @@ public class Portfolio implements ClassValidation {
 
     public List<Transaction> getTransactionsFromAccount(AccountId accountId) throws AccountNotFoundException { // Formally
                                                                                                                // getTransactionsForAccount
-        Account account = getAccount(accountId);
-        return account.getTransactions();
+        Optional<Account> account = findAccount(accountId);
+        return account.get().getTransactions();
     }
 
     public List<Transaction> getTransactionsFromAsset(AssetIdentifier assetIdentifier) { // Formally
@@ -372,5 +357,9 @@ public class Portfolio implements ClassValidation {
         this.lastUpdatedAt = Instant.now();
     }
 
+    private Account getAccountOrThrow(AccountId accountId) { // internal portfolio logic
+        return findAccount(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId, this.portfolioId));
+    }
     // PRIVATE HELPER ENDS //
 }

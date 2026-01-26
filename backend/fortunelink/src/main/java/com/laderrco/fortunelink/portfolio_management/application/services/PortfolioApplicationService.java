@@ -2,7 +2,9 @@ package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -25,7 +27,6 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Update
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
-import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
@@ -71,13 +72,16 @@ import lombok.AllArgsConstructor;
  * 
  * For read operations, see {@link PortfolioQueryService}.
  * 
- * TODO: Currently assumes 1 portfolio per user for MVP. Multi-portfolio support later.
- * Additionally, we would need to some sort of policy in the 'creation' method, basically if it's not empty
+ * TODO: Currently assumes 1 portfolio per user for MVP. Multi-portfolio support
+ * later.
+ * Additionally, we would need to some sort of policy in the 'creation' method,
+ * basically if it's not empty
  * and if they are in the policy
- *      In a multi-portfolio world, a "Deposit" or "Trade" command cannot just say
- *      "deposit money for User X." It must say "deposit money into Portfolio Y
- *      belonging to User X."
- *      public record DepositCommand(PortfolioId portfolioId, UserId userId, BigDecimal amount) {} <- is what we need to do
+ * In a multi-portfolio world, a "Deposit" or "Trade" command cannot just say
+ * "deposit money for User X." It must say "deposit money into Portfolio Y
+ * belonging to User X."
+ * public record DepositCommand(PortfolioId portfolioId, UserId userId,
+ * BigDecimal amount) {} <- is what we need to do
  * 
  */
 @Service
@@ -118,7 +122,8 @@ public class PortfolioApplicationService {
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
         // 4. Find account within portfolio
-        Account account = portfolio.getAccount(command.accountId());
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
 
         // 5. Create transaction entity
         Transaction transaction = new Transaction(
@@ -163,7 +168,9 @@ public class PortfolioApplicationService {
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
-        Account account = portfolio.getAccount(command.accountId());
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+
         Asset asset = account.getAsset(assetInfo.toIdentifier());
 
         if (asset.getQuantity().compareTo(command.quantity()) < 0) {
@@ -196,13 +203,14 @@ public class PortfolioApplicationService {
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
-        Account account = portfolio.getAccount(command.accountId());
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
                 account.getAccountId(),
                 TransactionType.DEPOSIT,
-                new CashIdentifier(command.currency().toString()),
+                new CashIdentifier(command.amount().currency().toString()),
                 BigDecimal.ONE,
                 command.amount(),
                 command.fees(),
@@ -224,8 +232,11 @@ public class PortfolioApplicationService {
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
-        Account account = portfolio.getAccount(command.accountId());
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
 
+        // TODO Delegate Business Logic to the Domain (Tell, Don't Ask)
+        // The Portfolio or Account should handle the "Sufficient Cash" check internally
         Money withdrawalAmount = command.amount();
 
         // check sufficient cash
@@ -236,7 +247,7 @@ public class PortfolioApplicationService {
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
                 account.getAccountId(),
-                TransactionType.DEPOSIT,
+                TransactionType.WITHDRAWAL,
                 new CashIdentifier(command.amount().currency().toString()),
                 BigDecimal.ONE,
                 withdrawalAmount,
@@ -245,6 +256,9 @@ public class PortfolioApplicationService {
                 command.notes());
 
         portfolio.recordTransaction(account.getAccountId(), transaction);
+
+        // end of delegation
+
         portfolioRepository.save(portfolio);
 
         return TransactionMapper.toResponse(transaction, null);
@@ -260,7 +274,8 @@ public class PortfolioApplicationService {
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
-        Account account = portfolio.getAccount(command.accountId());
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
 
         AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
@@ -298,7 +313,8 @@ public class PortfolioApplicationService {
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
-        Account account = portfolio.getAccount(command.accountId());
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
@@ -352,7 +368,7 @@ public class PortfolioApplicationService {
 
         // 4. Find the specific transaction to update
         Transaction existingTransaction = accountTransactions.stream()
-                .filter(t -> t.getTransactionId().equals(command.transactionId()))
+                .filter(t -> identifiersMatch(t.getAssetIdentifier(), command.identifier()))
                 .findFirst()
                 .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
 
@@ -372,8 +388,8 @@ public class PortfolioApplicationService {
         // 6. CRITICAL validation: For SELL transactions, verify sufficient holdings
         if (command.type() == TransactionType.SELL) {
             List<Transaction> assetTransactions = accountTransactions.stream()
-                    .filter(t -> t.getAssetIdentifier().equals(command.identifier()))
-                    .sorted((t1, t2) -> t1.getTransactionDate().compareTo(t2.getTransactionDate()))
+                    .filter(t -> identifiersMatch(t.getAssetIdentifier(), command.identifier()))
+                    .sorted(Comparator.comparing(Transaction::getTransactionDate))
                     .collect(Collectors.toList());
 
             validateSellTransaction(
@@ -442,7 +458,8 @@ public class PortfolioApplicationService {
         }
 
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException("Cannot find portfolio to add accouunt to:" + command.portfolioId()));
+                .orElseThrow(() -> new PortfolioNotFoundException(
+                        "Cannot find portfolio to add accouunt to:" + command.portfolioId()));
 
         // Create new account
         Account account = Account.createNew(
@@ -466,15 +483,13 @@ public class PortfolioApplicationService {
             throw new InvalidTransactionException("Invalid remove account command", validationResult.errors());
         }
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException("Cannot find portfolio to remove accouunt from:" + command.portfolioId()));
+                .orElseThrow(() -> new PortfolioNotFoundException(
+                        "Cannot find portfolio to remove accouunt from:" + command.portfolioId()));
 
-        Account account;
-        try {
-            account = portfolio.getAccount(command.accountId());
-            
-        } catch (AccountNotFoundException e) {
-            throw new AccountNotFoundException("Account cannot be found with id " + command.accountId() + " in portoflio " + command.portfolioId());
-        }
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(
+                        String.format("Account %s not found in portfolio %s",
+                                command.accountId(), command.portfolioId())));
 
         // Check if account is empty
         if (!account.getAssets().isEmpty()) {
@@ -550,7 +565,8 @@ public class PortfolioApplicationService {
             throw new PortfolioNotFoundException("Cannot find portfolio with id: " + command.id());
         }
 
-        Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.name(), command.description(), command.defaultCurrency());
+        Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.name(), command.description(),
+                command.defaultCurrency());
         updatePortfolio = portfolioRepository.save(updatePortfolio);
 
         return portfolioAssembler.assemblePortfolioView(updatePortfolio);
@@ -579,12 +595,12 @@ public class PortfolioApplicationService {
 
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-        
-                // // Just uncomment this line later
+
+        // // Just uncomment this line later
         // if (!portfolio.belongsToUser(command.userId())) {
-        //     throw new UnauthorizedPortfolioAccessException(...);
+        // throw new UnauthorizedPortfolioAccessException(...);
         // }
-        
+
         // Check if portfolio can be deleted
         if (portfolio.containsAccounts()) {
             throw new PortfolioNotEmptyException(
@@ -664,5 +680,11 @@ public class PortfolioApplicationService {
                 command.fee(),
                 command.date(),
                 command.notes());
+    }
+
+    private boolean identifiersMatch(AssetIdentifier a, AssetIdentifier b) {
+        if (a == null || b == null)
+            return false;
+        return Objects.equals(a.getPrimaryId(), b.getPrimaryId());
     }
 }

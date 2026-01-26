@@ -144,10 +144,6 @@ public class CommandValidator implements ClassValidation {
             errors.addAll(amountValidation.errors());
         }
         
-        if (command.currency() == null) {
-            errors.add("Currency is required");
-        }
-        
         ValidationResult dateValidation = validateDate(LocalDateTime.ofInstant(command.transactionDate(), ZoneOffset.UTC));
         if (!dateValidation.isValid()) {
             errors.addAll(dateValidation.errors());

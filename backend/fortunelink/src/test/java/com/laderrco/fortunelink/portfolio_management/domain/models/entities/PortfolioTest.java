@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -361,7 +362,7 @@ class PortfolioTest {
 
             assertThatThrownBy(() -> portfolio.removeAccount(account1.getAccountId()))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Cannot remove account");
+                    .hasMessageContaining("has transaction history and cannot be deleted from the database.");
 
         }
 
@@ -617,22 +618,10 @@ class PortfolioTest {
         @DisplayName("Should successfully get existing account")
         void shouldGetExistingAccount() throws AccountNotFoundException {
             // When
-            Account retrievedAccount = portfolio.getAccount(account.getAccountId());
+            Optional<Account> retrievedAccount = portfolio.findAccount(account.getAccountId());
 
             // Then
-            assertThat(retrievedAccount).isEqualTo(account);
-        }
-
-        @Test
-        @DisplayName("Should throw exception when getting non-existent account")
-        void shouldThrowExceptionWhenGettingNonExistentAccount() {
-            // Given
-            AccountId nonExistentId = AccountId.randomId();
-
-            // When & Then
-            assertThatThrownBy(() -> portfolio.getAccount(nonExistentId))
-                    .isInstanceOf(AccountNotFoundException.class)
-                    .hasMessageContaining("not found in this portfolio");
+            assertThat(retrievedAccount.get()).isEqualTo(account);
         }
     }
 
