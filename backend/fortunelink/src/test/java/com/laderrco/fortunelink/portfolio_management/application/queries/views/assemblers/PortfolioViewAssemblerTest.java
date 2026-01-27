@@ -409,7 +409,7 @@ class PortfolioViewAssemblerTest {
         @DisplayName("Should return null when asset is null")
         void shouldReturnNullForNullAsset() {
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(null, Money.of(150, "USD"));
+            AssetView response = assembler.assembleAssetView(null, Money.of(150, "USD"));
 
             // Assert
             assertNull(response);
@@ -429,7 +429,7 @@ class PortfolioViewAssemblerTest {
             when(asset.getCostBasis()).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
+            AssetView response = assembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -453,7 +453,7 @@ class PortfolioViewAssemblerTest {
             when(asset.getCostPerUnit()).thenReturn(Money.of(0, "USD"));
             when(asset.getCostBasis()).thenReturn(Money.of(0, "USD"));
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, null);
+            AssetView response = assembler.assembleAssetView(asset, null);
 
             // Assert
             assertNotNull(response);
@@ -477,7 +477,7 @@ class PortfolioViewAssemblerTest {
             lenient().when(asset.getCostBasis()).thenReturn(Money.of(10000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
+            AssetView response = assembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -500,7 +500,7 @@ class PortfolioViewAssemblerTest {
             when(asset.getCostBasis()).thenReturn(Money.ZERO("USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
+            AssetView response = assembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);
@@ -536,7 +536,7 @@ class PortfolioViewAssemblerTest {
             when(asset.calculateUnrealizedGainLoss(currentPrice)).thenReturn(Money.of(1000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
+            AssetView response = assembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertEquals(assetId, response.assetId());
@@ -563,7 +563,7 @@ class PortfolioViewAssemblerTest {
             lenient().when(asset.getCostBasis()).thenReturn(Money.of(50000, "USD"));
 
             // Act
-            AssetView response = PortfolioViewAssembler.assembleAssetView(asset, currentPrice);
+            AssetView response = assembler.assembleAssetView(asset, currentPrice);
 
             // Assert
             assertNotNull(response);

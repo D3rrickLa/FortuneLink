@@ -579,7 +579,7 @@ class PortfolioQueryServiceTest {
 
         // 4. Assert
         assertNotNull(response);
-        assertEquals(5, response.totalCount()); // This should now be 5 because transactionPage total is 5L
+        assertEquals(5, response.totalElements()); // This should now be 5 because transactionPage total is 5L
 
         // 5. Verify
         ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
@@ -619,7 +619,7 @@ class PortfolioQueryServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(15, response.totalCount());
+        assertEquals(15, response.totalElements());
         assertEquals("All time", response.dateRange());
 
         ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
@@ -655,7 +655,7 @@ class PortfolioQueryServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(5, response.totalCount());
+        assertEquals(5, response.totalElements());
 
         ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
                 .forClass(TransactionSearchCriteria.class);
@@ -687,7 +687,7 @@ class PortfolioQueryServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(8, response.totalCount());
+        assertEquals(8, response.totalElements());
 
         ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
                 .forClass(TransactionSearchCriteria.class);
@@ -723,7 +723,7 @@ class PortfolioQueryServiceTest {
         TransactionHistoryView response = queryService.getTransactionHistory(query);
 
         // Assert
-        assertEquals(15, response.totalCount());
+        assertEquals(15, response.totalElements());
         // Note: Check if your response mapper adds +1 back to the page number for the
         // user
         assertEquals(2, response.pageNumber());

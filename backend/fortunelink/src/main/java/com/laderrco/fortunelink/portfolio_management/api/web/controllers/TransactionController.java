@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
+import java.time.Instant;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,8 +20,8 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mapper
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeleteTransactionRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.RecordTransactionRequest;
-import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
-import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PagedTransactionHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
@@ -28,20 +30,20 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
-import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/portfolios/{portfolioId}/accounts/{accountId}")
+@RequestMapping("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
 
@@ -51,10 +53,46 @@ public class TransactionController {
     private final TransactionDtoMapper transactionDtoMapper;
     private final TransactionCommandAssembler transactionCommandAssembler;
 
+    // ------------------- GET TRANSACTIONS -------------------
+    @GetMapping("/{transactionId}")
+    public ResponseEntity<TransactionHttpResponse> getTransaction(@PathVariable String portfolioId,
+            @PathVariable String accountId, @PathVariable String transactionId) {
+        GetTransactionByIdQuery query = transactionCommandAssembler.toTransactionQuery(portfolioId, accountId,
+                transactionId);
+
+        TransactionView transaction = queryService.getTransactionDetails(query);
+
+        return ResponseEntity.ok(transactionDtoMapper.toResponse(accountId, transaction));
+    }
+
+    @GetMapping
+    public ResponseEntity<PagedTransactionHttpResponse> getTransactionHistory(
+            @PathVariable String portfolioId,
+            @PathVariable String accountId,
+            @RequestParam(required = false) Instant startDate,
+            @RequestParam(required = false) Instant endDate,
+            @RequestParam(required = false) String type,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        GetTransactionHistoryQuery query = transactionCommandAssembler.toHistoryQuery(
+                portfolioId,
+                accountId,
+                type,
+                startDate,
+                endDate,
+                page,
+                size);
+
+        TransactionHistoryView history = queryService.getTransactionHistory(query);
+
+        return ResponseEntity.ok(transactionDtoMapper.toPagedResponse(accountId, history));
+    }
+    
     // ------------------- CREATE TRANSACTIONS -------------------
 
     @PostMapping("/buy")
-    public ResponseEntity<TransactionResponse> buy(
+    public ResponseEntity<TransactionHttpResponse> buy(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
             @Valid @RequestBody RecordTransactionRequest request) {
@@ -74,7 +112,7 @@ public class TransactionController {
     }
 
     @PostMapping("/sell")
-    public ResponseEntity<TransactionResponse> sell(
+    public ResponseEntity<TransactionHttpResponse> sell(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
             @Valid @RequestBody RecordTransactionRequest request) {
@@ -94,7 +132,7 @@ public class TransactionController {
     }
 
     @PostMapping("/dividends")
-    public ResponseEntity<TransactionResponse> dividend(
+    public ResponseEntity<TransactionHttpResponse> dividend(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
             @Valid @RequestBody RecordTransactionRequest request) {
@@ -114,7 +152,7 @@ public class TransactionController {
     }
 
     @PostMapping("/deposit")
-    public ResponseEntity<TransactionResponse> deposit(
+    public ResponseEntity<TransactionHttpResponse> deposit(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
             @Valid @RequestBody RecordTransactionRequest request) {
@@ -132,7 +170,7 @@ public class TransactionController {
     }
 
     @PostMapping("/withdrawal")
-    public ResponseEntity<TransactionResponse> withdrawal(
+    public ResponseEntity<TransactionHttpResponse> withdrawal(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
             @Valid @RequestBody RecordTransactionRequest request) {
@@ -151,8 +189,8 @@ public class TransactionController {
 
     // ------------------- UPDATE TRANSACTIONS -------------------
 
-    @PutMapping("/update/{transactionId}")
-    public ResponseEntity<TransactionResponse> update(
+    @PutMapping("{transactionId}")
+    public ResponseEntity<TransactionHttpResponse> update(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
             @PathVariable String transactionId,
@@ -171,7 +209,7 @@ public class TransactionController {
 
     // ------------------- DELETE TRANSACTIONS -------------------
 
-    @DeleteMapping("/delete/{transactionId}")
+    @DeleteMapping("{transactionId}")
     public ResponseEntity<Void> delete(
             @PathVariable String portfolioId,
             @PathVariable String accountId,
@@ -187,39 +225,6 @@ public class TransactionController {
         applicationService.deleteTransaction(command);
 
         return ResponseEntity.noContent().build();
-    }
-
-    // we beed a get method
-    @GetMapping("/{transactionId}")
-    public ResponseEntity<TransactionResponse> getTransaction(@PathVariable String transactionId) {
-        // 1. Map the request path to a Query object
-        GetTransactionByIdQuery query = requestMapper.toTransactionQuery(transactionId);
-
-        // 2. Fetch the view from the Query Service
-        TransactionView transaction = portfolioQueryService.getTransactionDetails(query);
-
-        // 3. Map to the HTTP Response DTO
-        return ResponseEntity.ok(portfolioDtoMapper.toTransactionResponse(transaction));
-    }
-
-    @GetMapping("/transactions")
-    public ResponseEntity<PagedTransactionResponse> getTransactionHistory(
-            @RequestParam String portfolioId,
-            @RequestParam(required = false) String accountId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) TransactionType type) {
-
-        // 1. Mapper converts params to your GetTransactionHistoryQuery record
-        GetTransactionHistoryQuery query = requestMapper.toHistoryQuery(
-                portfolioId, accountId, type, page, size);
-
-        // 2. Query Service returns a Page/List of Views
-        // Note: This likely calls a different service method than the "Single ID" one
-        Page<TransactionView> history = portfolioQueryService.getTransactionHistory(query);
-
-        // 3. Map the Page to a Paged Response DTO
-        return ResponseEntity.ok(portfolioDtoMapper.toPagedResponse(history));
     }
 
     // ------------------- HELPER -------------------

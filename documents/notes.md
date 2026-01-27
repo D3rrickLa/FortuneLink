@@ -1161,3 +1161,10 @@ TAG/OUTPUT[
 1) "current-prices::AAPL"
 
 ^ that is in our redis, that is wrong
+
+
+
+
+--- jan 01 -27 --- 
+to make this 'future proof' we acan use 'ai agents to get information regarding a stock'
+along with user sentiment 

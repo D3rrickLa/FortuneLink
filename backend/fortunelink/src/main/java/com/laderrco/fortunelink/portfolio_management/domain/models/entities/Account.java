@@ -216,7 +216,7 @@ public class Account implements ClassValidation {
         return this.transactions.stream()
             .filter(t -> t.getTransactionId().equals(transactionId))
             .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException());
+            .orElseThrow(() -> new TransactionNotFoundException("Transaction cannot be be found with id, " + transactionId));
     }
 
     public Money calculateTotalValue(MarketDataService marketDataService) {

@@ -10,9 +10,11 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.A
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
@@ -147,7 +149,7 @@ public class PortfolioViewAssembler {
      * @param currentPrice current market price for the asset (may be null)
      * @return an {@link AssetView}, or {@code null} if asset is null
      */
-    public static AssetView assembleAssetView(Asset asset, Money currentPrice) {
+    public AssetView assembleAssetView(Asset asset, Money currentPrice) {
         if (asset == null) {
             return null;
         }
@@ -181,6 +183,20 @@ public class PortfolioViewAssembler {
                 unrealizedGainPercentage,
                 asset.getAcquiredOn(),
                 asset.getLastSystemInteraction());
+    }
+
+    public TransactionView assembleTransactionView(Transaction transaction) {
+        return new TransactionView(
+            transaction.getTransactionId(),
+            transaction.getTransactionType(),
+            transaction.getAssetIdentifier().getPrimaryId(),
+            transaction.getQuantity(),
+            transaction.getPricePerUnit(),
+            transaction.getFees(),
+            transaction.calculateTotalCost(),
+            transaction.getTransactionDate(),
+            transaction.getNotes()
+        );
     }
 
     /**

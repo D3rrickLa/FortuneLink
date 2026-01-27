@@ -19,6 +19,8 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionByIdQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
@@ -143,7 +145,23 @@ public class TransactionCommandAssembler {
                 toTransactionId(transactionId), softDelete, notes);
     }
 
-    public
+    public GetTransactionHistoryQuery toHistoryQuery(String portfolioId, String accountId, String transactionType,
+            Instant startDate, Instant endDate, int page, int size) {
+        return new GetTransactionHistoryQuery(
+                toPortfolioId(portfolioId),
+                toAccountId(accountId),
+                startDate,
+                endDate,
+                TransactionType.valueOf(transactionType),
+                page,
+                size);
+
+    }
+
+    public GetTransactionByIdQuery toTransactionQuery(String portfolioId, String accountId, String transactionId) {
+        return new GetTransactionByIdQuery(toPortfolioId(portfolioId), toAccountId(accountId),
+                toTransactionId(transactionId));
+    }
 
     private List<Fee> toFees(
             List<FeeRequest> feeRequests,

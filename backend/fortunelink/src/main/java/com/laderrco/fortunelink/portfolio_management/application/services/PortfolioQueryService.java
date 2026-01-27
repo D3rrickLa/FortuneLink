@@ -19,12 +19,14 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetAsse
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AllocationView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.DateRangeView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PerformanceView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
@@ -225,6 +227,48 @@ public class PortfolioQueryService {
     }
 
     /**
+     * Retrieves summary information for a specific account.
+     */
+    public AccountView getAccountSummary(GetAccountSummaryQuery query) {
+        Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
+
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
+        Account account = portfolio.findAccount(query.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
+
+        return portfolioAssembler.assembleAccountView(account);
+    }
+
+    public AssetView getAssetSummary(GetAssetQueryView query) {
+        Objects.requireNonNull(query, "GetAssetQueryView cannot be null");
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
+        Account account = portfolio.findAccount(query.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
+
+        // todo this is technically not needed as we have a 'getAsset(id)' that does
+        // this
+        Asset asset = account.getAssets().stream()
+                .filter(a -> a.getAssetId().equals(query.assetId()))
+                .findFirst()
+                .orElseThrow(() -> new AssetNotFoundException(query.assetId(), query.accountId()));
+
+        // NEW: Fetch current market price from a PriceService or Cache
+        Money latestPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+        return portfolioAssembler.assembleAssetView(asset, latestPrice);
+    }
+
+    public TransactionView getTransactionDetails(GetTransactionByIdQuery query) {
+        Objects.requireNonNull(query, "GetTransactionByIdQuery cannot be null");
+
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
+        Account account = portfolio.findAccount(query.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
+
+        Transaction transaction = account.getTransaction(query.transactionId());
+        return portfolioAssembler.assembleTransactionView(transaction);
+    }
+
+    /**
      * Retrieves paginated transaction history with optional filters.
      */
     public TransactionHistoryView getTransactionHistory(GetTransactionHistoryQuery query) {
@@ -250,52 +294,26 @@ public class PortfolioQueryService {
             criteriaBuilder.accountId(query.accountId());
         }
 
+        int pageNumber = query.pageNumber() > 0 ? query.pageNumber() : 1;
+        int pageIndex = pageNumber - 1;
+        int pageSize = Math.min(query.pageSize(), 100);
+
         Page<Transaction> transactionPage = transactionQueryService.queryTransactions(
                 criteriaBuilder.build(),
-                query.pageNumber() - 1,
-                query.pageSize());
+                pageIndex,
+                pageSize);
 
         List<TransactionView> transactions = TransactionMapper.toResponseList(transactionPage.getContent());
-
-        String dateRange = query.startDate() != null && query.endDate() != null
-                ? query.startDate() + " to " + query.endDate()
-                : "All time";
 
         return new TransactionHistoryView(
                 transactions,
                 (int) transactionPage.getTotalElements(),
-                query.pageNumber(),
-                query.pageSize(),
-                dateRange);
-    }
-
-    /**
-     * Retrieves summary information for a specific account.
-     */
-    public AccountView getAccountSummary(GetAccountSummaryQuery query) {
-        Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
-
-        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
-        Account account = portfolio.findAccount(query.accountId())
-            .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
-
-        return portfolioAssembler.assembleAccountView(account);
-    }
-
-    public AssetView getAssetSummary(GetAssetQueryView query) {
-        Objects.requireNonNull(query, "GetAssetQueryView cannot be null");
-        Portfolio portfolio = loadUserPortfolio(query.portfolioId());
-        Account account = portfolio.findAccount(query.accountId())
-            .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
-
-        Asset asset = account.getAssets().stream()
-            .filter(a -> a.getAssetId().equals(query.assetId()))
-            .findFirst()
-            .orElseThrow(() -> new AssetNotFoundException(query.assetId(), query.accountId()));
-
-        // NEW: Fetch current market price from a PriceService or Cache
-        Money latestPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
-        return PortfolioViewAssembler.assembleAssetView(asset, latestPrice);
+                pageNumber,
+                pageSize,
+                transactionPage.getTotalPages(),
+                transactionPage.hasNext(),
+                transactionPage.hasPrevious(),
+                new DateRangeView(query.startDate(), query.endDate()));
     }
 
     /**

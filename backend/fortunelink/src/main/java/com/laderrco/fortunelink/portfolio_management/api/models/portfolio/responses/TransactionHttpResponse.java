@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
  *   "recordedAt": "2024-01-15T10:30:05"
  * }
  */
-public record TransactionResponse(
+public record TransactionHttpResponse(
     String id,
     String accountId,
     String transactionType,

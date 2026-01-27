@@ -33,7 +33,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mapper
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeleteTransactionRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.RecordTransactionRequest;
-import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
@@ -85,7 +85,7 @@ class TransactionControllerTest {
     private static final String ACCOUNT_ID = UUID.randomUUID().toString();
     private static final String TRANSACTION_ID = UUID.randomUUID().toString();
 
-    private TransactionResponse responses;
+    private TransactionHttpResponse responses;
 
     @BeforeEach
     void setup() {
@@ -96,7 +96,7 @@ class TransactionControllerTest {
                 .thenReturn(accountView);
 
         when(accountView.baseCurrency()).thenReturn(ValidatedCurrency.of("USD"));
-        responses = new TransactionResponse(
+        responses = new TransactionHttpResponse(
                 "tx-1", // id
                 ACCOUNT_ID, // accountId
                 "BUY", // transactionType
@@ -139,7 +139,7 @@ class TransactionControllerTest {
     void buy_returnsCreatedTransaction() throws Exception {
         RecordTransactionRequest request = sampleAssetRequest();
         TransactionView view = mock(TransactionView.class);
-        TransactionResponse response = responses;
+        TransactionHttpResponse response = responses;
 
         when(transactionCommandAssembler.toPurchaseCommand(anyString(), anyString(), any(), any()))
                 .thenReturn(mock(RecordPurchaseCommand.class));
@@ -159,7 +159,7 @@ class TransactionControllerTest {
     void sell_returnsCreatedTransaction() throws Exception {
         RecordTransactionRequest request = sampleAssetRequest();
         TransactionView view = mock(TransactionView.class);
-        TransactionResponse response = responses;
+        TransactionHttpResponse response = responses;
 
         when(transactionCommandAssembler.toSaleCommand(anyString(), anyString(), any(), any()))
                 .thenReturn(mock(RecordSaleCommand.class));
@@ -179,7 +179,7 @@ class TransactionControllerTest {
     void dividend_returnsCreatedTransaction() throws Exception {
         RecordTransactionRequest request = sampleAssetRequest();
         TransactionView view = mock(TransactionView.class);
-        TransactionResponse response = responses;
+        TransactionHttpResponse response = responses;
 
         when(transactionCommandAssembler.toDividendCommand(anyString(), anyString(), any(), any()))
                 .thenReturn(mock(RecordIncomeCommand.class));
@@ -199,7 +199,7 @@ class TransactionControllerTest {
     void deposit_returnsCreatedTransaction() throws Exception {
         RecordTransactionRequest request = sampleCashRequest();
         TransactionView view = mock(TransactionView.class);
-        TransactionResponse response = responses;
+        TransactionHttpResponse response = responses;
 
         when(transactionCommandAssembler.toDepositCommand(anyString(), anyString(), any(), any()))
                 .thenReturn(mock(RecordDepositCommand.class));
@@ -219,7 +219,7 @@ class TransactionControllerTest {
     void withdrawal_returnsCreatedTransaction() throws Exception {
         RecordTransactionRequest request = sampleCashRequest();
         TransactionView view = mock(TransactionView.class);
-        TransactionResponse response = responses;
+        TransactionHttpResponse response = responses;
 
         when(transactionCommandAssembler.toWithdrawalCommand(anyString(), anyString(), any(), any()))
                 .thenReturn(mock(RecordWithdrawalCommand.class));
@@ -239,7 +239,7 @@ class TransactionControllerTest {
     void update_returnsOkTransaction() throws Exception {
         RecordTransactionRequest request = sampleAssetRequest();
         TransactionView view = mock(TransactionView.class);
-        TransactionResponse response = responses;
+        TransactionHttpResponse response = responses;
 
         when(transactionCommandAssembler.toUpdateCommand(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(mock(UpdateTransactionCommand.class));
