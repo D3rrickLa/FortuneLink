@@ -96,12 +96,11 @@ public class CommandValidator implements ClassValidation {
         if (command.accountId() == null) {
             errors.add("AccountId is required");
         }
-        
-        if (command.symbol() == null || command.symbol().trim().isEmpty()) {
-            errors.add("Asset symbol is required");
-        } else if (!isValidSymbol(command.symbol())) {
-            errors.add("Invalid asset symbol format");
+
+        if (command.assetId() == null) {
+            errors.add("AssetId is required");
         }
+        
         
         ValidationResult quantityValidation = validateQuantity(command.quantity());
         if (!quantityValidation.isValid()) {
@@ -192,10 +191,11 @@ public class CommandValidator implements ClassValidation {
         if (command.accountId() == null) {
             errors.add("AccountId is required");
         }
-        
-        if (command.symbol() == null || command.symbol().trim().isEmpty()) {
-            errors.add("Asset symbol is required");
+
+        if (command.assetId() == null) {
+            errors.add("AssetId is required");
         }
+        
         
         ValidationResult amountValidation = validateAmount(command.amount().amount());
         if (!amountValidation.isValid()) {
@@ -440,8 +440,8 @@ public class CommandValidator implements ClassValidation {
             errors.add("AccountId is required");
         }
 
-        if (command.wrongAssetIdentifier() == null) {
-            errors.add("Wrong AssetIdentifier is required");
+        if (command.wrongAssetId() == null) {
+            errors.add("Wrong AssetId is required");
         }
 
         if (command.correctAssetIdentifier() == null) {

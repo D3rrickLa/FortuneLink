@@ -73,12 +73,14 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
+import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -296,6 +298,7 @@ class PortfolioApplicationServiceTest {
     class RecordAssetSaleTests {
 
         private RecordSaleCommand command;
+        private AssetId assetId;
 
         @BeforeEach
         void setUp() {
@@ -330,10 +333,18 @@ class PortfolioApplicationServiceTest {
                     "Buy for test");
             portfolio.recordTransaction(accountId, buyTx);
 
+            this.assetId = portfolio.findAccount(accountId)
+                    .get()
+                    .getAssets()
+                    .stream()
+                    .findFirst() // Since it's the only asset
+                    .get()
+                    .getAssetId();
+
             command = new RecordSaleCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    "AAPL",
+                    assetId,
                     BigDecimal.valueOf(5),
                     new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
                     null,
@@ -342,35 +353,39 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("Should successfully record asset sale")
+        @DisplayName("Should successfully record asset sale and update quantity")
         void shouldRecordAssetSale() {
             // Given
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            // when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
-            when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
-            // Verify the asset exists before selling (for debugging)
-            Optional<Account> accountBeforeSale = portfolio.findAccount(accountId);
-            Asset assetBeforeSale = accountBeforeSale.get().getAsset(assetInfo.toIdentifier());
-            assertThat(assetBeforeSale).isNotNull();
-            assertThat(assetBeforeSale.getQuantity()).isGreaterThanOrEqualTo(command.quantity());
+            // Mock save to return the modified portfolio
+            when(portfolioRepository.save(any(Portfolio.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             // When
             TransactionView response = service.recordAssetSale(command);
 
             // Then
             assertThat(response).isNotNull();
-            verify(portfolioRepository).save(any(Portfolio.class));
 
-            // Verify the sale reduced the asset quantity
+            // Capture the portfolio that was sent to the database
             ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
             verify(portfolioRepository).save(captor.capture());
-            Portfolio savedPortfolio = captor.getValue();
-            Optional<Account> savedAccount = savedPortfolio.findAccount(accountId);
-            Asset soldAsset = savedAccount.get().getAsset(assetInfo.toIdentifier());
 
-            assertThat(soldAsset.getQuantity()).isEqualTo(BigDecimal.valueOf(5)); // 10 - 5 = 5 remaining
+            Portfolio savedPortfolio = captor.getValue();
+
+            // Verify account exists
+            Optional<Account> savedAccount = savedPortfolio.findAccount(accountId);
+            assertThat(savedAccount).isPresent();
+
+            // Verify the asset exists and quantity is updated
+            // Use .getAsset() which you defined in your Account class
+            Asset soldAsset = savedAccount.get().getAsset(assetId);
+
+            assertThat(soldAsset).isNotNull();
+            // Use isEqualByComparingTo for BigDecimals to ignore scale (5.0 vs 5)
+            assertThat(soldAsset.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(5));
         }
 
         @Test
@@ -380,7 +395,7 @@ class PortfolioApplicationServiceTest {
             RecordSaleCommand largeCommand = new RecordSaleCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    "AAPL",
+                    assetId,
                     BigDecimal.valueOf(100), // Trying to sell 100, but only own 10
                     new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
                     null,
@@ -388,7 +403,6 @@ class PortfolioApplicationServiceTest {
                     "Large sale");
 
             when(commandValidator.validate(largeCommand)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
@@ -414,47 +428,42 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw error test for lambda")
+        @DisplayName("Should throw AssetNotFoundException when account exists but asset does not")
         void recordAssetSale_WhenAssetNotFound_ThrowsException() {
-            // 1. Define the symbol
-            String symbol = "AAPL";
-
-            // 2. Ensure the command actually contains that symbol
-            // (Assuming RecordSaleCommand is a record or has a constructor like this)
-            RecordSaleCommand command = new RecordSaleCommand(
-                    PortfolioId.randomId(),
-                    AccountId.randomId(),
-                    symbol,
+            // 1. Setup a command with VALID portfolio/account IDs but a RANDOM asset ID
+            RecordSaleCommand invalidAssetCommand = new RecordSaleCommand(
+                    portfolio.getPortfolioId(), // Use the ID from your @BeforeEach setup
+                    accountId, // Use the ID from your @BeforeEach setup
+                    AssetId.randomId(), // This is what will trigger the error
                     BigDecimal.TEN,
-                    Money.of(20, "USD"),
+                    new Money(BigDecimal.valueOf(20), ValidatedCurrency.USD),
                     null,
                     Instant.now(),
                     null);
 
-            // 3. Mock the validator to pass
-            when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
+            // 2. Mock Validator
+            when(commandValidator.validate(invalidAssetCommand)).thenReturn(ValidationResult.success());
 
-            // 4. Mock the service using the SAME symbol
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.empty());
+            // 3. Mock Repository to return the setup portfolio
+            when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
-            // 5. Assert the exception
+            // 4. Assert the specific exception
+            // AssetNotFoundException happens because findAccount succeeds, but
+            // getAsset(randomId) fails.
             assertThrows(AssetNotFoundException.class, () -> {
-                service.recordAssetSale(command);
+                service.recordAssetSale(invalidAssetCommand);
             });
         }
 
         @Test
         @DisplayName("Should throw error test for lambda")
         void recordAssetSale_WhenPortfolioNotFound_ThrowsException() {
-            // 1. Define the symbol
-            String symbol = "AAPL";
-
             // 2. Ensure the command actually contains that symbol
             // (Assuming RecordSaleCommand is a record or has a constructor like this)
             RecordSaleCommand command = new RecordSaleCommand(
                     PortfolioId.randomId(),
                     AccountId.randomId(),
-                    symbol,
+                    assetId,
                     BigDecimal.TEN,
                     Money.of(20, "USD"),
                     null,
@@ -462,8 +471,6 @@ class PortfolioApplicationServiceTest {
                     null);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL")))
-                    .thenReturn(Optional.ofNullable(mock(MarketAssetInfo.class)));
             when(portfolioRepository.findById(command.portfolioId())).thenReturn(Optional.empty());
 
             // 5. Assert the exception
@@ -478,7 +485,7 @@ class PortfolioApplicationServiceTest {
             command = new RecordSaleCommand(
                     portfolio.getPortfolioId(),
                     mockAccountId,
-                    "AAPL",
+                    assetId,
                     BigDecimal.valueOf(5),
                     new Money(BigDecimal.valueOf(160), ValidatedCurrency.USD),
                     null,
@@ -486,7 +493,6 @@ class PortfolioApplicationServiceTest {
                     "Test sale");
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             assertThatThrownBy(() -> service.recordAssetSale(command))
@@ -704,10 +710,18 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should successfully record dividend income without DRIP")
         void shouldRecordDividendWithoutDrip() {
             // Given
+            AssetId realAssetId = portfolio.findAccount(accountId)
+                    .orElseThrow()
+                    .getAssets()
+                    .stream()
+                    .findFirst() // Assumes AAPL is the first/only asset added in @BeforeEach
+                    .orElseThrow()
+                    .getAssetId();
+
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    "AAPL",
+                    realAssetId,
                     new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
                     false,
@@ -715,10 +729,12 @@ class PortfolioApplicationServiceTest {
                     Instant.now(),
                     "Dividend");
 
+            // 3. MOCKING
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            // Use any() for the identifier since we just need the info for the View
+            when(marketDataService.getAssetInfo(any())).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
-            when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
+            when(portfolioRepository.save(any(Portfolio.class))).thenAnswer(i -> i.getArgument(0));
 
             // When
             TransactionView response = service.recordDividendIncome(command);
@@ -731,29 +747,52 @@ class PortfolioApplicationServiceTest {
         @Test
         @DisplayName("Should successfully record dividend income with DRIP")
         void shouldRecordDividendWithDrip() {
-            // Given
+            // 1. GET THE REAL ID from the setup portfolio
+            // This ensures the service can actually find the asset in the account
+            AssetId realAssetId = portfolio.findAccount(accountId)
+                    .orElseThrow()
+                    .getAssets()
+                    .stream()
+                    .findFirst() // Assumes AAPL is the first/only asset added in @BeforeEach
+                    .orElseThrow()
+                    .getAssetId();
+
+            // 2. USE THE REAL ID in the command
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    "AAPL",
+                    realAssetId, // <--- No longer random!
                     new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
                     true,
-                    BigDecimal.valueOf(0.5), // Bought 0.5 shares
+                    BigDecimal.valueOf(0.5),
                     Instant.now(),
                     "DRIP Dividend");
 
+            // 3. MOCKING
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(marketDataService.getAssetInfo(SymbolIdentifier.of("AAPL"))).thenReturn(Optional.of(assetInfo));
+            // Use any() for the identifier since we just need the info for the View
+            when(marketDataService.getAssetInfo(any())).thenReturn(Optional.of(assetInfo));
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
-            when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
+            when(portfolioRepository.save(any(Portfolio.class))).thenAnswer(i -> i.getArgument(0));
 
-            // When
+            // 4. WHEN
             TransactionView response = service.recordDividendIncome(command);
 
-            // Then
+            // 5. THEN
             assertThat(response).isNotNull();
-            verify(portfolioRepository).save(any(Portfolio.class));
+
+            // Capture the saved portfolio to verify the DRIP increased the quantity
+            ArgumentCaptor<Portfolio> captor = ArgumentCaptor.forClass(Portfolio.class);
+            verify(portfolioRepository).save(captor.capture());
+
+            Asset updatedAsset = captor.getValue()
+                    .findAccount(accountId).get()
+                    .getAsset(realAssetId);
+
+            // If you started with 10 shares and DRIP'd 0.5, you should have 10.5
+            assertThat(updatedAsset.getQuantity().setScale(5))
+                    .isEqualByComparingTo(BigDecimal.valueOf(100.5).setScale(5));
         }
 
         @Test
@@ -771,27 +810,27 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when asset info not found")
-        void shouldThrowExceptionsWhenAssetInfoIsNotFound() {
+        @DisplayName("Should throw AssetNotFoundException when asset ID is valid but not in account")
+        void shouldThrowExceptionsWhenAssetNotFound() {
             // Given
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    null,
+                    AssetId.randomId(), // FIX: Use a random ID, not null
                     new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
                     true,
-                    BigDecimal.valueOf(0.5), // Bought 0.5 shares
+                    BigDecimal.valueOf(0.5),
                     Instant.now(),
                     "DRIP Dividend");
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
+            // When & Then
             assertThatThrownBy(() -> service.recordDividendIncome(command))
-                    .isInstanceOf(AssetNotFoundException.class);
+                    .isInstanceOf(AssetNotFoundException.class); // Now this will pass
 
-            // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
 
@@ -801,7 +840,7 @@ class PortfolioApplicationServiceTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    "AAPL",
+                    AssetId.randomId(),
                     Money.of(20, "USD"),
                     TransactionType.DIVIDEND,
                     false,
@@ -823,7 +862,7 @@ class PortfolioApplicationServiceTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
                     mockAccountId,
-                    "AAPL",
+                    AssetId.randomId(),
                     new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
                     false,
@@ -1123,7 +1162,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1159,7 +1198,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Transaction date cannot be in the future");
         }
@@ -1192,7 +1231,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Quantity must be positive");
         }
@@ -1252,7 +1291,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1313,7 +1352,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Insufficient holdings");
 
@@ -1391,7 +1430,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1457,7 +1496,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1493,7 +1532,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Price must be positive");
         }
@@ -1526,7 +1565,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(TransactionNotFoundException.class);
         }
 
@@ -1537,7 +1576,7 @@ class PortfolioApplicationServiceTest {
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("ERROR"));
 
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(InvalidTransactionException.class);
 
             // Verify no save was attempted
@@ -1623,7 +1662,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1711,7 +1750,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1786,7 +1825,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then - Should fail because sell1 reduced holdings to 40
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Insufficient holdings")
                     .hasMessageContaining("Available: 40")
@@ -1876,7 +1915,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -1952,7 +1991,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
 
             // When/Then
-            assertThatThrownBy(() -> service.updateTransation(command))
+            assertThatThrownBy(() -> service.updateTransaction(command))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Insufficient holdings")
                     .hasMessageContaining("Available: 50")
@@ -2030,7 +2069,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
 
             // When
-            TransactionView response = service.updateTransation(command);
+            TransactionView response = service.updateTransaction(command);
 
             // Then
             assertThat(response).isNotNull();
@@ -2056,7 +2095,7 @@ class PortfolioApplicationServiceTest {
             when(portfolioRepository.findById(command.portfolioId())).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> {
-                service.updateTransation(command);
+                service.updateTransaction(command);
             });
         }
     }
@@ -2612,7 +2651,7 @@ class PortfolioApplicationServiceTest {
         @Test
         @DisplayName("Should successfully correct asset ticker")
         void shouldCorrectAssetTicker() {
-            // Given
+            // 1. Given: Record the initial "wrong" transaction
             Transaction buyTx = new Transaction(
                     TransactionId.randomId(),
                     accountId,
@@ -2623,23 +2662,41 @@ class PortfolioApplicationServiceTest {
                     null,
                     Instant.now(),
                     "Wrong ticker");
+
             portfolio.recordTransaction(accountId, buyTx);
 
+            // 2. FIX: Capture the REAL AssetId that was generated by the recordTransaction
+            // logic
+            AssetId generatedId = portfolio.findAccount(accountId)
+                    .orElseThrow()
+                    .getAssets()
+                    .stream()
+                    .filter(a -> a.getAssetIdentifier().getPrimaryId().equals("AAPL"))
+                    .findFirst()
+                    .orElseThrow()
+                    .getAssetId();
+
+            // 3. Use that real ID in your command
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    new MarketIdentifier("AAPL", null, AssetType.STOCK, "Appled", "USD", null),
+                    generatedId, // <--- No longer random!
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null));
 
+            // 4. Mocks
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findById(portfolio.getPortfolioId())).thenReturn(Optional.of(portfolio));
-            when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
+            when(portfolioRepository.save(any(Portfolio.class))).thenAnswer(i -> i.getArgument(0));
 
-            // When
+            // 5. When
             service.correctAssetTicket(command);
 
-            // Then
+            // 6. Then
             verify(portfolioRepository).save(any(Portfolio.class));
+
+            // Optional: Verify the name actually changed in the asset
+            Asset correctedAsset = portfolio.findAccount(accountId).get().getAssets().stream().findFirst().get();
+            assertThat(correctedAsset.getAssetIdentifier().displayName()).isEqualTo("Apple");
         }
 
         @Test
@@ -2647,7 +2704,7 @@ class PortfolioApplicationServiceTest {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    mock(AssetIdentifier.class),
+                    mock(AssetId.class),
                     mock(AssetIdentifier.class));
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
@@ -2661,7 +2718,7 @@ class PortfolioApplicationServiceTest {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                     portfolio.getPortfolioId(),
                     accountId,
-                    mock(AssetIdentifier.class),
+                    mock(AssetId.class),
                     mock(AssetIdentifier.class));
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));

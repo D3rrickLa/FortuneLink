@@ -58,9 +58,9 @@ public class PortfolioController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PortfolioHttpResponse> getPortfolio(@PathVariable String id) {
-        GetPortfolioByIdQuery query = requestMapper.toCommand(id);
+    @GetMapping("/{portfolioId}")
+    public ResponseEntity<PortfolioHttpResponse> getPortfolio(@PathVariable String portfolioId) {
+        GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId);
         PortfolioView portfolio = portfolioQueryService.getPortfolioById(query);
         return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolio));
     }

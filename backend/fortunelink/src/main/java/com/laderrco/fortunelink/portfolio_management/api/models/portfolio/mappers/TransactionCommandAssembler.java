@@ -26,6 +26,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
@@ -64,11 +65,13 @@ public class TransactionCommandAssembler {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
 
         List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
-
+        if (request.getAssetId() == null) {
+            throw new IllegalArgumentException("Asset ID is required for sales");
+        }
         return new RecordSaleCommand(
                 toPortfolioId(portfolioId),
                 toAccountId(accountId),
-                request.getSymbol(),
+                toAssetId(request.getAssetId()), // id for sell while purcahse is symbol
                 request.getQuantity(),
                 price,
                 fees,
@@ -82,7 +85,7 @@ public class TransactionCommandAssembler {
         return new RecordIncomeCommand(
                 toPortfolioId(portfolioId),
                 toAccountId(accountId),
-                request.getSymbol(),
+                toAssetId(request.getAssetId()),
                 price,
                 TransactionType.valueOf(request.getTransactionType()),
                 request.getIsDrip(),
@@ -202,6 +205,10 @@ public class TransactionCommandAssembler {
 
     private AccountId toAccountId(String id) {
         return new AccountId(UUID.fromString(id));
+    }
+
+    private AssetId toAssetId(String id) {
+        return new AssetId(UUID.fromString(id));
     }
 
     private TransactionId toTransactionId(String id) {

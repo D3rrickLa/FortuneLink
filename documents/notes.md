@@ -1168,3 +1168,8 @@ TAG/OUTPUT[
 --- jan 01 -27 --- 
 to make this 'future proof' we acan use 'ai agents to get information regarding a stock'
 along with user sentiment 
+
+
+we have a 'flaw' with some of our commands and account id. it uses asset identifier when is should have used asset id
+thinkg about it, asset id it brital af as in a cyrpto and a stock can technically have the same 'symbol/primaryid' and we 
+won't knwo which one it is

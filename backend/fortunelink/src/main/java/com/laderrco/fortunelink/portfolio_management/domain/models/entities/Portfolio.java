@@ -14,6 +14,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.Portfolio
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
@@ -185,9 +186,9 @@ public class Portfolio implements ClassValidation {
         existingAccount.removeTransaction(transactionId);
     }
 
-    public void correctAssetTicker(AccountId accountId, AssetIdentifier wrongTicker, AssetIdentifier correctTicker) {
+    public void correctAssetTicker(AccountId accountId, AssetId wrongTickerAssetId, AssetIdentifier correctTicker) {
         Account account = getAccountOrThrow(accountId);
-        Asset wrongAsset = account.getAsset(wrongTicker);
+        Asset wrongAsset = account.getAsset(wrongTickerAssetId);
 
         if (wrongAsset.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             // Asset exists but has no quantity - just remove it

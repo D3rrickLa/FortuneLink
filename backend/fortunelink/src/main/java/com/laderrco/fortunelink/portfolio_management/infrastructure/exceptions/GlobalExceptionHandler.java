@@ -1,3 +1,4 @@
+
 package com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions;
 
 import java.time.Instant;

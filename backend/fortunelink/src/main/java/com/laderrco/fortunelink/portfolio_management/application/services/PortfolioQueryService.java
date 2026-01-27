@@ -35,7 +35,6 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.T
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
-import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
@@ -241,19 +240,17 @@ public class PortfolioQueryService {
 
     public AssetView getAssetSummary(GetAssetQueryView query) {
         Objects.requireNonNull(query, "GetAssetQueryView cannot be null");
+
         Portfolio portfolio = loadUserPortfolio(query.portfolioId());
         Account account = portfolio.findAccount(query.accountId())
-                .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
+                .orElseThrow(() -> new AccountNotFoundException(
+                        query.accountId(), query.portfolioId()));
 
-        // todo this is technically not needed as we have a 'getAsset(id)' that does
-        // this
-        Asset asset = account.getAssets().stream()
-                .filter(a -> a.getAssetId().equals(query.assetId()))
-                .findFirst()
-                .orElseThrow(() -> new AssetNotFoundException(query.assetId(), query.accountId()));
+        // Use AssetId, not AssetIdentifier
+        Asset asset = account.getAsset(query.assetId());
 
-        // NEW: Fetch current market price from a PriceService or Cache
         Money latestPrice = marketDataService.getCurrentPrice(asset.getAssetIdentifier());
+
         return portfolioAssembler.assembleAssetView(asset, latestPrice);
     }
 
@@ -305,6 +302,9 @@ public class PortfolioQueryService {
 
         List<TransactionView> transactions = TransactionMapper.toResponseList(transactionPage.getContent());
 
+        DateRangeView dateRange = (query.startDate() == null && query.endDate() == null)
+                ? DateRangeView.allTime()
+                : new DateRangeView(query.startDate(), query.endDate());
         return new TransactionHistoryView(
                 transactions,
                 (int) transactionPage.getTotalElements(),
@@ -313,7 +313,7 @@ public class PortfolioQueryService {
                 transactionPage.getTotalPages(),
                 transactionPage.hasNext(),
                 transactionPage.hasPrevious(),
-                new DateRangeView(query.startDate(), query.endDate()));
+                dateRange);
     }
 
     /**

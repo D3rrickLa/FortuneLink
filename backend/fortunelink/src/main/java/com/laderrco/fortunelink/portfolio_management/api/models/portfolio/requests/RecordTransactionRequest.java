@@ -13,20 +13,22 @@ import lombok.Data;
 public class RecordTransactionRequest {
 
     @NotBlank(message = "Transaction type is required")
-    private String transactionType; // BUY, SELL, DEPOSIT, WITHDRAWAL, DIVIDEND, INTEREST, FEE
+    private String transactionType;
 
-    // Asset-specific fields
+    // For BUY - new purchases
     private String symbol;
+    
+    // For SELL/DIVIDEND - existing assets
+    private String assetId;
+
     private BigDecimal quantity;
     private BigDecimal price;
     private String priceCurrency;
     private List<FeeRequest> fees;
-
-    // Always required
+    
     @NotNull(message = "Transaction date is required")
     private LocalDateTime transactionDate;
-
-    // Optional fields
+    
     private String notes;
     private Boolean isDrip;
     private BigDecimal sharesReceived;

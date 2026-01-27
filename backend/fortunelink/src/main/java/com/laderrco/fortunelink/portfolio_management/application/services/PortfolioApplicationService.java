@@ -53,9 +53,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import jakarta.transaction.Transactional;
@@ -116,6 +119,7 @@ public class PortfolioApplicationService {
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
                 .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
+        // TODO REPLACE WITH THE PRIVATE HELPERS BELOW
         // 3. Load portfolio aggregate
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
@@ -123,6 +127,17 @@ public class PortfolioApplicationService {
         // 4. Find account within portfolio
         Account account = portfolio.findAccount(command.accountId())
                 .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+
+        // TODO LATER add conversion
+        ValidatedCurrency accountCurrency = account.getBaseCurrency();
+        Money transactionPrice = command.price();
+
+        // Simple check - just validate they match for MVP
+        if (!accountCurrency.equals(transactionPrice.currency())) {
+            throw new CurrencyMismatchException(
+                    String.format("Account currency is %s but transaction is in %s",
+                            accountCurrency, transactionPrice.currency()));
+        }
 
         // 5. Create transaction entity
         Transaction transaction = new Transaction(
@@ -157,32 +172,39 @@ public class PortfolioApplicationService {
     public TransactionView recordAssetSale(RecordSaleCommand command) {
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
-            throw new InvalidTransactionException("Invalid sale command", validationResult.errors());
+            throw new InvalidTransactionException("Invalid sale command",
+                    validationResult.errors());
         }
-
-        AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
-                .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
         Account account = portfolio.findAccount(command.accountId())
-                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+                .orElseThrow(() -> new AccountNotFoundException(
+                        command.accountId(), command.portfolioId()));
 
-        Asset asset = account.getAsset(assetInfo.toIdentifier());
+        // Get the SPECIFIC asset by ID, not symbol
+        Asset asset = account.getAsset(command.assetId());
 
+        // Validate sufficient quantity
         if (asset.getQuantity().compareTo(command.quantity()) < 0) {
-            throw new InsufficientFundsException(command.symbol(), command.quantity(), asset.getQuantity());
+            throw new InsufficientFundsException(
+                    asset.getAssetIdentifier().getPrimaryId(),
+                    command.quantity(),
+                    asset.getQuantity());
         }
+
+        // Fetch market data for enrichment (optional, for the view)
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(
+                asset.getAssetIdentifier()).orElse(null);
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
                 account.getAccountId(),
                 TransactionType.SELL,
-                assetInfo.toIdentifier(), // Convert to domain value object
+                asset.getAssetIdentifier(),
                 command.quantity(),
-                command.price(), // User's actual purchase price
+                command.price(),
                 command.fees(),
                 command.transactionDate(),
                 command.notes());
@@ -276,23 +298,35 @@ public class PortfolioApplicationService {
         Account account = portfolio.findAccount(command.accountId())
                 .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
 
-        AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
-                .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
+        // Get the specific asset that generated the dividend
+        Asset asset = account.getAsset(command.assetId());
+
+        // Optionally fetch market data for enrichment (for the response view)
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(asset.getAssetIdentifier())
+                .orElse(null);
 
         // For DRIP: quantity represents shares purchased with the dividend
-        // For non-DRIP: quantity is 1 (tracking the icnome event)
-        BigDecimal quantity = command.isDrip() ? command.sharesRecieved() : BigDecimal.ONE;
+        // For non-DRIP: quantity is 1 (tracking the income event)
+        BigDecimal quantity;
+        Money pricePerShare;
+
+        if (command.isDrip() && command.sharesReceived() != null) {
+            quantity = command.sharesReceived();
+            pricePerShare = command.amount().divide(command.sharesReceived());
+        } else {
+            quantity = BigDecimal.ONE;
+            pricePerShare = command.amount();
+        }
 
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
                 account.getAccountId(),
                 TransactionType.DIVIDEND,
-                assetInfo.toIdentifier(),
+                asset.getAssetIdentifier(), // Use the asset's identifier, not from market data
                 quantity,
-                command.amount().divide(command.sharesRecieved()),
+                pricePerShare,
                 command.amount(),
-                null,
+                null, // No fees for dividends typically
                 command.transactionDate(),
                 command.notes(),
                 command.isDrip());
@@ -347,7 +381,7 @@ public class PortfolioApplicationService {
      * Note: Currently does NOT recalculate cost basis or realized gains.
      * This is a known limitation for MVP.
      */
-    public TransactionView updateTransation(UpdateTransactionCommand command) {
+    public TransactionView updateTransaction(UpdateTransactionCommand command) {
         // 1. Validate command
         ValidationResult validationResult = commandValidator.validate(command);
         if (!validationResult.isValid()) {
@@ -387,18 +421,20 @@ public class PortfolioApplicationService {
         // 6. CRITICAL validation: For SELL transactions, verify sufficient holdings
         if (command.type() == TransactionType.SELL) {
             List<Transaction> assetTransactions = accountTransactions.stream()
-                // Compare the string value (Symbol) rather than the Object reference
-                .filter(t -> t.getAssetIdentifier().getPrimaryId().equalsIgnoreCase(command.identifier().getPrimaryId()))
-                
-                // for the future if we have collision, I.e. CRYPTO = GOLD and STOCK = GOLD
-                // .filter(t -> t.getAssetIdentifier().getPrimaryId().equalsIgnoreCase(command.identifier().getPrimaryId()) 
-                //&& t.getAssetIdentifier().getType() == command.identifier().getType())
-                // this is done in the validate sell transaction method
-                // AND exclude the transaction we are currently editing
-                // .filter(t -> !t.getTransactionId().equals(existingTransaction.getTransactionId()))
-                .sorted(Comparator.comparing(Transaction::getTransactionDate))
-                .collect(Collectors.toList());
+                    // Compare the string value (Symbol) rather than the Object reference
+                    .filter(t -> t.getAssetIdentifier().getPrimaryId()
+                            .equalsIgnoreCase(command.identifier().getPrimaryId()))
 
+                    // for the future if we have collision, I.e. CRYPTO = GOLD and STOCK = GOLD
+                    // .filter(t ->
+                    // t.getAssetIdentifier().getPrimaryId().equalsIgnoreCase(command.identifier().getPrimaryId())
+                    // && t.getAssetIdentifier().getType() == command.identifier().getType())
+                    // this is done in the validate sell transaction method
+                    // AND exclude the transaction we are currently editing
+                    // .filter(t ->
+                    // !t.getTransactionId().equals(existingTransaction.getTransactionId()))
+                    .sorted(Comparator.comparing(Transaction::getTransactionDate))
+                    .collect(Collectors.toList());
 
             validateSellTransaction(
                     command.identifier(),
@@ -518,7 +554,7 @@ public class PortfolioApplicationService {
 
         portfolio.correctAssetTicker(
                 command.accountId(),
-                command.wrongAssetIdentifier(),
+                command.wrongAssetId(),
                 command.correctAssetIdentifier());
 
         portfolioRepository.save(portfolio);
@@ -688,5 +724,15 @@ public class PortfolioApplicationService {
                 command.fee(),
                 command.date(),
                 command.notes());
+    }
+
+    private Portfolio loadPortfolio(PortfolioId portfolioId) {
+        return portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+    }
+
+    private Account getAccount(Portfolio portfolio, AccountId accountId) {
+        return portfolio.findAccount(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId, portfolio.getPortfolioId()));
     }
 }

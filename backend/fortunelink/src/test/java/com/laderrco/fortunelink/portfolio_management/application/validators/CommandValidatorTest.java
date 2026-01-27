@@ -29,6 +29,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
@@ -336,7 +337,7 @@ class CommandValidatorTest {
             RecordSaleCommand command = new RecordSaleCommand(
                 null,
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 BigDecimal.TEN,
                 new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
                 null,
@@ -356,7 +357,7 @@ class CommandValidatorTest {
             RecordSaleCommand command = new RecordSaleCommand(
                 PortfolioId.randomId(),
                 null,
-                "AAPL",
+                AssetId.randomId(),
                 BigDecimal.TEN,
                 new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
                 null,
@@ -369,30 +370,11 @@ class CommandValidatorTest {
             assertThat(result.isValid()).isFalse();
             assertThat(result.errors()).contains("AccountId is required");
         }
-        
-        @Test
-        @DisplayName("Should fail when symbol is invalid")
-        void shouldFailWhenSymbolIsInvalid() {
-            RecordSaleCommand command = new RecordSaleCommand(
-                PortfolioId.randomId(),
-                AccountId.randomId(),
-                "",
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
-                null,
-                Instant.now(),
-                "notes"
-            );
-            
-            ValidationResult result = validator.validate(command);
-            
-            assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Asset symbol is required");
-        }
+
 
         @Test
-        @DisplayName("Should fail when symbol is invalid Null")
-        void shouldFailWhenSymbolIsInvalidNull() {
+        @DisplayName("Should fail when asset id is invalid Null")
+        void shouldFailWhenSymbolIdInvalidNull() {
             RecordSaleCommand command = new RecordSaleCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
@@ -407,7 +389,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Asset symbol is required");
+            assertThat(result.errors()).contains("AssetId is required");
         }
 
         @Test
@@ -433,25 +415,25 @@ class CommandValidatorTest {
             
         }
 
-        @Test
-        @DisplayName("Should fail when symbol is invalid Wrong Format")
-        void shouldFailWhenSymbolIsInvalidTooLong() {
-            RecordSaleCommand command = new RecordSaleCommand(
-                PortfolioId.randomId(),
-                AccountId.randomId(),
-                "ApPL",
-                BigDecimal.TEN,
-                new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
-                null,
-                Instant.now().minus(Duration.ofDays(1)),
-                "notes"
-            );
+        // @Test
+        // @DisplayName("Should fail when symbol is invalid Wrong Format")
+        // void shouldFailWhenSymbolIsInvalidTooLong() {
+        //     RecordSaleCommand command = new RecordSaleCommand(
+        //         PortfolioId.randomId(),
+        //         AccountId.randomId(),
+        //         "ApPL",
+        //         BigDecimal.TEN,
+        //         new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
+        //         null,
+        //         Instant.now().minus(Duration.ofDays(1)),
+        //         "notes"
+        //     );
             
-            ValidationResult result = validator.validate(command);
+        //     ValidationResult result = validator.validate(command);
             
-            assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Invalid asset symbol format");
-        }
+        //     assertThat(result.isValid()).isFalse();
+        //     assertThat(result.errors()).contains("Invalid asset symbol format");
+        // }
 
         @Test
         @DisplayName("Should fail when Money is negative")
@@ -459,7 +441,7 @@ class CommandValidatorTest {
             RecordSaleCommand command = new RecordSaleCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 BigDecimal.TEN,
                 new Money(BigDecimal.valueOf(-160), ValidatedCurrency.of("USD")),
                 null,
@@ -479,7 +461,7 @@ class CommandValidatorTest {
             RecordSaleCommand command = new RecordSaleCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 BigDecimal.valueOf(-1),
                 new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
                 null,
@@ -504,7 +486,7 @@ class CommandValidatorTest {
             return new RecordSaleCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 BigDecimal.TEN,
                 new Money(BigDecimal.valueOf(160), ValidatedCurrency.of("USD")),
                 List.of(validFee),
@@ -741,7 +723,7 @@ class CommandValidatorTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 null,
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 TransactionType.DIVIDEND,
                 false,
@@ -762,7 +744,7 @@ class CommandValidatorTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 null,
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 TransactionType.DIVIDEND,
                 false,
@@ -777,30 +759,30 @@ class CommandValidatorTest {
             assertThat(result.errors()).contains("AccountId is required");
         }
         
-        @Test
-        @DisplayName("Should fail when symbol is empty")
-        void shouldFailWhenSymbolIsEmpty() {
-            RecordIncomeCommand command = new RecordIncomeCommand(
-                PortfolioId.randomId(),
-                AccountId.randomId(),
-                "",
-                new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
-                TransactionType.DIVIDEND,
-                false,
-                BigDecimal.TEN,
-                Instant.now(),
-                "notes"
-            );
+        // @Test
+        // @DisplayName("Should fail when symbol is empty")
+        // void shouldFailWhenSymbolIsEmpty() {
+        //     RecordIncomeCommand command = new RecordIncomeCommand(
+        //         PortfolioId.randomId(),
+        //         AccountId.randomId(),
+        //         "",
+        //         new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
+        //         TransactionType.DIVIDEND,
+        //         false,
+        //         BigDecimal.TEN,
+        //         Instant.now(),
+        //         "notes"
+        //     );
             
-            ValidationResult result = validator.validate(command);
+        //     ValidationResult result = validator.validate(command);
             
-            assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Asset symbol is required");
-        }
+        //     assertThat(result.isValid()).isFalse();
+        //     assertThat(result.errors()).contains("Asset symbol is required");
+        // }
 
         @Test
         @DisplayName("Should fail when symbol is null")
-        void shouldFailWhenSymbolIsNull() {
+        void shouldFailWhenAssetIdIsNull() {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
@@ -816,7 +798,7 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Asset symbol is required");
+            assertThat(result.errors()).contains("AssetId is required");
         }
         
         @Test
@@ -825,7 +807,7 @@ class CommandValidatorTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 TransactionType.BUY, // Invalid type
                 false,
@@ -846,7 +828,7 @@ class CommandValidatorTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 null,
                 false,
@@ -867,7 +849,7 @@ class CommandValidatorTest {
             assertThrows(IllegalArgumentException.class, () ->new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 TransactionType.DIVIDEND,
                 true,
@@ -883,7 +865,7 @@ class CommandValidatorTest {
             RecordIncomeCommand command = new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.valueOf(-10), ValidatedCurrency.of("USD")),
                 TransactionType.DIVIDEND,
                 false,
@@ -902,7 +884,7 @@ class CommandValidatorTest {
             return new RecordIncomeCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                "AAPL",
+                AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.of("USD")),
                 type,
                 false,
@@ -1758,7 +1740,7 @@ class CommandValidatorTest {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                 null,
                 AccountId.randomId(),
-                new CashIdentifier("USD"),
+                AssetId.randomId(),
                 new CashIdentifier("CAD")
             );
             
@@ -1774,7 +1756,7 @@ class CommandValidatorTest {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                 PortfolioId.randomId(),
                 null,
-                new CashIdentifier("USD"),
+                AssetId.randomId(),
                 new CashIdentifier("CAD")
             );
             
@@ -1797,16 +1779,16 @@ class CommandValidatorTest {
             ValidationResult result = validator.validate(command);
             
             assertThat(result.isValid()).isFalse();
-            assertThat(result.errors()).contains("Wrong AssetIdentifier is required");
+            assertThat(result.errors()).contains("Wrong AssetId is required");
         }
 
         @Test
         @DisplayName("Should fail when rightId is null")
-        void shouldFailWhenRightIdIsNull() {
+        void shouldFailWhenRighIdentifierIsNull() {
             CorrectAssetTickerCommand command = new CorrectAssetTickerCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                new CashIdentifier("USD"),
+                AssetId.randomId(),
                 null
             );
             
@@ -1820,7 +1802,7 @@ class CommandValidatorTest {
             return new CorrectAssetTickerCommand(
                 PortfolioId.randomId(),
                 AccountId.randomId(),
-                new CashIdentifier("USD"),
+                AssetId.randomId(),
                 new CashIdentifier("CAD")
             );
         }

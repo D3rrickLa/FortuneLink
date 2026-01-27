@@ -131,7 +131,7 @@ class PortfolioControllerTest {
         when(portfolioQueryService.getPortfolioById(query)).thenReturn(view);
         when(portfolioDtoMapper.toPortfolioResponse(view)).thenReturn(response);
 
-        mockMvc.perform(get("/api/portfolios/{id}", PORTFOLIO_ID))
+        mockMvc.perform(get("/api/portfolios/{portfolioId}", PORTFOLIO_ID))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }

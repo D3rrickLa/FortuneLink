@@ -1,8 +1,10 @@
 package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,6 +36,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.reques
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.RecordTransactionRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
@@ -146,9 +149,10 @@ class TransactionControllerTest {
         when(applicationService.recordAssetPurchase(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
-        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/buy", PORTFOLIO_ID, ACCOUNT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/buy", PORTFOLIO_ID, ACCOUNT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
@@ -166,9 +170,10 @@ class TransactionControllerTest {
         when(applicationService.recordAssetSale(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
-        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/sell", PORTFOLIO_ID, ACCOUNT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/sell", PORTFOLIO_ID, ACCOUNT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
@@ -186,7 +191,8 @@ class TransactionControllerTest {
         when(applicationService.recordDividendIncome(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
-        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/dividends", PORTFOLIO_ID, ACCOUNT_ID)
+        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/dividends", PORTFOLIO_ID,
+                ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -206,7 +212,8 @@ class TransactionControllerTest {
         when(applicationService.recordDeposit(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
-        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/deposit", PORTFOLIO_ID, ACCOUNT_ID)
+        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/deposit", PORTFOLIO_ID,
+                ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -226,7 +233,8 @@ class TransactionControllerTest {
         when(applicationService.recordWithdrawal(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
-        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/withdrawal", PORTFOLIO_ID, ACCOUNT_ID)
+        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/withdrawal", PORTFOLIO_ID,
+                ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -243,44 +251,54 @@ class TransactionControllerTest {
 
         when(transactionCommandAssembler.toUpdateCommand(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(mock(UpdateTransactionCommand.class));
-        when(applicationService.updateTransation(any())).thenReturn(view);
+        when(applicationService.updateTransaction(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
-        mockMvc.perform(put("/api/portfolios/{portfolioId}/accounts/{accountId}/update/{transactionId}", PORTFOLIO_ID,
-                ACCOUNT_ID, TRANSACTION_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                put("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}", PORTFOLIO_ID,
+                        ACCOUNT_ID, TRANSACTION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
 
     // ------------------- DELETE -------------------
-    @SuppressWarnings("null")
     @Test
     void delete_returnsNoContent() throws Exception {
-        DeleteTransactionRequest request = new DeleteTransactionRequest("some notes");
-        request.setNotes("Some note");
+        // 1. Arrange
+        DeleteTransactionRequest request = new DeleteTransactionRequest("Some note");
+
+        // Ensure the assembler returns a non-null command for the service
+        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), anyBoolean(), any()))
+                .thenReturn(mock(DeleteTransactionCommand.class));
 
         doNothing().when(applicationService).deleteTransaction(any());
 
-        mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}/delete/{transactionId}",
+        // 2. Act: Corrected the URL to match the @DeleteMapping
+        mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
                 PORTFOLIO_ID, ACCOUNT_ID, TRANSACTION_ID)
                 .param("softDelete", "true")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
+                // 3. Assert
                 .andExpect(status().isNoContent());
     }
 
-    @SuppressWarnings("null")
     @Test
     void delete_returnsNoContentNullRequestParam() throws Exception {
+        // 1. Arrange
+        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), anyBoolean(), isNull()))
+                .thenReturn(mock(DeleteTransactionCommand.class));
+
         doNothing().when(applicationService).deleteTransaction(any());
 
-        mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}/delete/{transactionId}",
+        // 2. Act: Corrected the URL
+        mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
                 PORTFOLIO_ID, ACCOUNT_ID, TRANSACTION_ID)
                 .param("softDelete", "true")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(null)))
+                .contentType(MediaType.APPLICATION_JSON)) // Removed .content(null) for cleaner test
+                // 3. Assert
                 .andExpect(status().isNoContent());
     }
 

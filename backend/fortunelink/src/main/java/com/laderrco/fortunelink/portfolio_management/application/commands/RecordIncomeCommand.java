@@ -5,24 +5,14 @@ import java.time.Instant;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 // might want to make a IncomeType.java
-public record RecordIncomeCommand(PortfolioId portfolioId, AccountId accountId, String symbol, Money amount, TransactionType type, boolean isDrip, BigDecimal sharesRecieved, Instant transactionDate, String notes) {
+public record RecordIncomeCommand(PortfolioId portfolioId, AccountId accountId, AssetId assetId, Money amount, TransactionType type, boolean isDrip, BigDecimal sharesReceived, Instant transactionDate, String notes) {
     public RecordIncomeCommand {
-        /*
-            true null
-            true !null, negative
-            true !null, 0
-            true !null, 1
-
-            false null
-            false !null, negative
-            false !null, 0
-            false !null, 1
-        */
-        if (isDrip && (sharesRecieved == null || sharesRecieved.compareTo(BigDecimal.ZERO) <= 0)) {
+        if (isDrip && (sharesReceived == null || sharesReceived.compareTo(BigDecimal.ZERO) <= 0)) {
             throw new IllegalArgumentException("Shares recieved must be provided for DRIP transaction");
         }
     }

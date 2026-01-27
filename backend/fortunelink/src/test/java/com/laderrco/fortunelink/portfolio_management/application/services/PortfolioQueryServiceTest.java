@@ -619,8 +619,15 @@ class PortfolioQueryServiceTest {
 
         // Assert
         assertNotNull(response);
+        assertNotNull(response);
         assertEquals(15, response.totalElements());
-        assertEquals("All time", response.dateRange());
+
+        // Check the label specifically
+        assertEquals("All time", response.dateRange().getLabel());
+
+        // Double check that the underlying data is actually null as expected
+        assertNull(response.dateRange().startDate());
+        assertNull(response.dateRange().endDate());
 
         ArgumentCaptor<TransactionSearchCriteria> criteriaCaptor = ArgumentCaptor
                 .forClass(TransactionSearchCriteria.class);
@@ -831,53 +838,67 @@ class PortfolioQueryServiceTest {
 
     // get asset summary
     @Test
+    @DisplayName("Should return populated AssetView when asset exists")
     void shouldReturnPopulatedAssetView_WhenAssetExists() {
-        // 1. Arrange IDs using UUID strings
+        // 1. Arrange IDs
         UUID pIdStr = UUID.randomUUID();
         UUID aIdStr = UUID.randomUUID();
         UUID asIdStr = UUID.randomUUID();
-
-        GetAssetQueryView query = new GetAssetQueryView(new PortfolioId(pIdStr), new AccountId(aIdStr),
-                new AssetId(asIdStr));
-
-        // 2. Mock Domain Objects (Portfolio -> Account -> Asset)
-        Asset mockAsset = mock(Asset.class);
         AssetId assetId = new AssetId(asIdStr);
         AssetIdentifier identifier = new SymbolIdentifier("AAPL");
 
-        when(mockAsset.getAssetId()).thenReturn(assetId);
-        when(mockAsset.getAssetIdentifier()).thenReturn(identifier);
-        when(mockAsset.getQuantity()).thenReturn(BigDecimal.TEN);
-        when(mockAsset.calculateUnrealizedGainLoss(any())).thenReturn(Money.of(30, "USD"));
-        when(mockAsset.calculateCurrentValue(any())).thenReturn(Money.of(30, "USD"));
-        when(mockAsset.getCostBasis()).thenReturn(Money.of(100, "USD"));
-        when(mockAsset.getCostPerUnit()).thenReturn(Money.of(30, "USD"));
-        when(mockAsset.getAcquiredOn()).thenReturn(Instant.now().minusSeconds(3600));
-        when(mockAsset.getLastSystemInteraction()).thenReturn(Instant.now());
+        GetAssetQueryView query = new GetAssetQueryView(
+                new PortfolioId(pIdStr),
+                new AccountId(aIdStr),
+                assetId);
 
+        // 2. Mock Asset
+        Asset mockAsset = mock(Asset.class);
+        lenient().when(mockAsset.getAssetId()).thenReturn(assetId);
+        lenient().when(mockAsset.getAssetIdentifier()).thenReturn(identifier);
+        lenient().when(mockAsset.getQuantity()).thenReturn(BigDecimal.TEN);
+        lenient().when(mockAsset.calculateUnrealizedGainLoss(any())).thenReturn(Money.of(30, "USD"));
+        lenient().when(mockAsset.calculateCurrentValue(any())).thenReturn(Money.of(30, "USD"));
+        lenient().when(mockAsset.getCostBasis()).thenReturn(Money.of(100, "USD"));
+        lenient().when(mockAsset.getCostPerUnit()).thenReturn(Money.of(30, "USD"));
+        lenient().when(mockAsset.getAcquiredOn()).thenReturn(Instant.now().minusSeconds(3600));
+        lenient().when(mockAsset.getLastSystemInteraction()).thenReturn(Instant.now());
+
+        // 3. Mock Account - FIX: Stub the getAsset method
         Account mockAccount = mock(Account.class);
-        when(mockAccount.getAssets()).thenReturn(Collections.singletonList(mockAsset));
+        // when(mockAccount.getAssets()).thenReturn(Collections.singletonList(mockAsset));
+        // This prevents the NPE
+        when(mockAccount.getAsset(assetId)).thenReturn(mockAsset);
 
+        // 4. Mock Portfolio
         Portfolio mockPortfolio = mock(Portfolio.class);
         when(mockPortfolio.findAccount(any())).thenReturn(Optional.of(mockAccount));
 
-        // Mock the repository/loading logic
+        // Mock Repository
         when(portfolioRepository.findById(any())).thenReturn(Optional.of(mockPortfolio));
 
-        // 3. Mock the External Market Price
+        // 5. Mock Market Data
         Money currentPrice = Money.of(180, "USD");
         when(marketDataService.getCurrentPrice(identifier)).thenReturn(currentPrice);
 
-        // 4. Act
+        // 6. FIX: Stub the PortfolioAssembler
+        // Create the expected view object that the assembler should produce
+        AssetView expectedView = mock(AssetView.class);
+        when(expectedView.assetId()).thenReturn(assetId);
+        when(expectedView.currentPrice()).thenReturn(currentPrice);
+
+        when(portfolioViewAssembler.assembleAssetView(eq(mockAsset), eq(currentPrice)))
+                .thenReturn(expectedView);
+
+        // 7. Act
         AssetView result = queryService.getAssetSummary(query);
 
-        // 5. Assert
-        assertNotNull(result);
+        // 8. Assert
+        assertNotNull(result, "The result should not be null. Check if portfolioAssembler is stubbed.");
         assertEquals(assetId, result.assetId());
         assertEquals(currentPrice, result.currentPrice());
 
-        // Verify the flow
-        verify(marketDataService).getCurrentPrice(identifier);
+        verify(portfolioViewAssembler).assembleAssetView(any(), any());
     }
 
     @Test
@@ -902,30 +923,55 @@ class PortfolioQueryServiceTest {
     }
 
     @Test
+    @DisplayName("Should throw AssetNotFoundException when querying an ID that doesn't exist in a real Portfolio")
     void shouldThrowAssetNotFoundException_WhenAssetDoesNotExistInAccount() {
-        // Arrange
-        PortfolioId pId = new PortfolioId(UUID.randomUUID());
-        AccountId aId = new AccountId(UUID.randomUUID());
-        AssetId asId = new AssetId(UUID.randomUUID());
-        GetAssetQueryView query = new GetAssetQueryView(pId, aId, asId);
+        // 1. Arrange: Setup the real Aggregate Hierarchy
+        AccountId aId = AccountId.randomId();
+        AssetId ghostId = AssetId.randomId(); // The ID that doesn't exist
 
-        Asset otherAsset = mock(Asset.class);
-        when(otherAsset.getAssetId()).thenReturn(new AssetId(UUID.randomUUID())); // Different ID
+        // Create a REAL Portfolio (The Aggregate Root)
+        Portfolio realPortfolio = new Portfolio(
+                UserId.randomId(),
+                "Main Wealth Portfolio",
+                ValidatedCurrency.USD);
 
-        Account mockAccount = mock(Account.class);
-        when(mockAccount.getAssets()).thenReturn(List.of(otherAsset)); // List without our target asset
+        // Create and add a REAL Account via the Portfolio
+        PortfolioId pId = realPortfolio.getPortfolioId();
+        GetAssetQueryView query = new GetAssetQueryView(pId, aId, ghostId);
+        Account realAccount = Account.createNew(
+                aId,
+                "Investment Account",
+                AccountType.INVESTMENT,
+                ValidatedCurrency.USD);
+        realPortfolio.addAccount(realAccount);
 
-        Portfolio mockPortfolio = mock(Portfolio.class);
-        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(mockPortfolio));
-        when(mockPortfolio.findAccount(aId)).thenReturn(Optional.of(mockAccount));
+        // Record a transaction THROUGH THE PORTFOLIO to create an initial asset
+        // This ensures internal lists are initialized and the domain logic runs
+        Transaction initialBuy = new Transaction(
+                TransactionId.randomId(),
+                aId,
+                TransactionType.BUY,
+                new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple Inc", "USD", null),
+                BigDecimal.valueOf(10),
+                new Money(BigDecimal.valueOf(150), ValidatedCurrency.USD),
+                null,
+                Instant.now(),
+                "Seed Purchase");
 
-        // Act & Assert
+        // The Portfolio is the only one that should call this
+        realPortfolio.recordTransaction(aId, initialBuy);
+
+        // Mock the repository to return our fully-initialized real Portfolio
+        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(realPortfolio));
+
+        // 2. Act & Assert
+        // The Service will load the realPortfolio, find the realAccount,
+        // and call account.getAsset(ghostId).
         assertThrows(AssetNotFoundException.class, () -> {
             queryService.getAssetSummary(query);
         });
 
-        // Verification: We should never attempt to fetch market data for a non-existent
-        // asset
+        // 3. Verification
         verify(marketDataService, never()).getCurrentPrice(any());
     }
     // ==================== Helper Methods ====================

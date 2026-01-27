@@ -185,7 +185,7 @@ class PortfolioTest {
         @Test
         void markAsDeleted_ShouldThrowException_WhenPortfolioHasAccounts() {
             // Arrange
-            Portfolio portfolio =  new Portfolio(userId, name, portfolioCurrency);
+            Portfolio portfolio = new Portfolio(userId, name, portfolioCurrency);
             portfolio.addAccount(mock(Account.class));
             Instant now = Instant.now();
             UserId adminId = UserId.randomId();
@@ -199,7 +199,7 @@ class PortfolioTest {
         @Test
         void markAsDeleted_ShouldThrowException_WhenAlreadyDeleted() {
             // Arrange
-            Portfolio portfolio =  new Portfolio(userId, name, portfolioCurrency);
+            Portfolio portfolio = new Portfolio(userId, name, portfolioCurrency);
             portfolio.markAsDeleted(Instant.now(), UserId.randomId());
 
             // Act & Assert
@@ -529,16 +529,12 @@ class PortfolioTest {
         @DisplayName("Should swap wrong ticker for correct ticker via transactions when quantity > 0")
         void shouldSwapTickersViaTransactions() {
             // Given
-            AssetIdentifier wrongTicker = new MarketIdentifier("FB", null, AssetType.STOCK, "Facebook", "USD", null); // Old
-                                                                                                                      // Facebook
-                                                                                                                      // ticker
+            AssetIdentifier wrongTicker = new MarketIdentifier("FB", null, AssetType.STOCK, "Facebook", "USD", null);
             AssetIdentifier correctTicker = new MarketIdentifier("META", null, AssetType.STOCK, "META", "USD", null);
             BigDecimal quantity = new BigDecimal("10");
 
-            // Setup an account with the "wrong" asset already in it
-            // Note: Assuming recordTransaction or a setup method adds the initial asset
             Asset initialAsset = Asset.builder()
-                    .assetId(assetId1)
+                    .assetId(assetId1) // The old ID
                     .assetIdentifier(wrongTicker)
                     .currency(ValidatedCurrency.USD)
                     .quantity(quantity)
@@ -551,21 +547,29 @@ class PortfolioTest {
             portfolio.addAccount(account1);
 
             // When
-            portfolio.correctAssetTicker(account1.getAccountId(), wrongTicker, correctTicker);
+            portfolio.correctAssetTicker(account1.getAccountId(), assetId1, correctTicker);
 
             // Then
-            // 1. The old asset should be gone (or have 0 quantity depending on your logic)
-            assertThat(account1.getAssets()).noneMatch(a -> a.getAssetIdentifier().equals(wrongTicker));
+            // 1. The old ticker should no longer exist in the active assets
+            assertThat(account1.getAssets())
+                    .noneMatch(a -> a.getAssetIdentifier().equals(wrongTicker));
 
-            // 2. The new asset should exist with the correct quantity
-            Asset newAsset = account1.getAsset(correctTicker);
+            // 2. Find the new asset by its TICKER/IDENTIFIER (since the ID changed)
+            Asset newAsset = account1.getAssets().stream()
+                    .filter(a -> a.getAssetIdentifier().equals(correctTicker))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("New asset with correct ticker not found"));
+
             assertThat(newAsset.getQuantity()).isEqualByComparingTo(quantity);
+            // Note: newAsset.getAssetId() will NOT be equal to assetId1
+            assertThat(newAsset.getAssetId()).isNotEqualTo(assetId1);
 
-            // 3. Two correction transactions should have been recorded
+            // 3. Verify Transaction History
             List<Transaction> history = account1.getTransactions();
             assertThat(history).hasSize(2);
-            assertThat(history.get(0).getTransactionType()).isEqualTo(TransactionType.SELL);
-            assertThat(history.get(1).getTransactionType()).isEqualTo(TransactionType.BUY);
+            assertThat(history).extracting(Transaction::getTransactionType)
+                    .containsExactly(TransactionType.SELL, TransactionType.BUY);
+
             assertThat(history.get(1).getAssetIdentifier()).isEqualTo(correctTicker);
         }
 
@@ -591,7 +595,7 @@ class PortfolioTest {
             portfolio.addAccount(account1);
 
             // When
-            portfolio.correctAssetTicker(account1.getAccountId(), wrongTicker, correctTicker);
+            portfolio.correctAssetTicker(account1.getAccountId(), assetId1, correctTicker);
 
             // Then
             assertThat(account1.getAssets()).isEmpty();

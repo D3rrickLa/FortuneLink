@@ -202,7 +202,7 @@ public class TransactionController {
         UpdateTransactionCommand command = transactionCommandAssembler.toUpdateCommand(portfolioId, accountId,
                 transactionId, accountCurrency, request);
 
-        TransactionView view = applicationService.updateTransation(command);
+        TransactionView view = applicationService.updateTransaction(command);
 
         return ResponseEntity.ok(transactionDtoMapper.toResponse(accountId, view));
     }
@@ -219,8 +219,7 @@ public class TransactionController {
 
         String notes = request != null ? request.getNotes() : null;
 
-        DeleteTransactionCommand command = transactionCommandAssembler.toDeleteCommand(
-                portfolioId, accountId, transactionId, softDelete, notes);
+        DeleteTransactionCommand command = transactionCommandAssembler.toDeleteCommand(portfolioId, accountId, transactionId, softDelete, notes);
 
         applicationService.deleteTransaction(command);
 
