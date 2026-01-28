@@ -131,8 +131,7 @@ public class PortfolioApplicationService {
 
         // If currencies don't match, convert to account currency
         if (!accountCurrency.equals(transactionPrice.currency())) {
-            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(transactionPrice.currency(),
-                    accountCurrency);
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(transactionPrice.currency(), accountCurrency);
             convertedPrice = transactionPrice.convert(rate.get());
         }
 
@@ -314,7 +313,8 @@ public class PortfolioApplicationService {
         BigDecimal quantity;
         Money pricePerShare;
 
-        if (command.isDrip() && command.sharesReceived() != null) {
+        if (command.isDrip()) {
+            // no null check for shares recieved as we have a check in the command
             quantity = command.sharesReceived();
             pricePerShare = command.amount().divide(command.sharesReceived());
         } else {
