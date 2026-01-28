@@ -1,0 +1,49 @@
+services:
+  # Redis for caching
+  redis:
+    image: redis:latest
+    container_name: fortunelink-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-fortunelink_dev_password}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - fortunelink-network
+    restart: unless-stopped
+
+  # Optional: Redis Commander (GUI for viewing cache)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: fortunelink-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-fortunelink_dev_password}
+    ports:
+      - "8081:8081"
+    networks:
+      - fortunelink-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+    profiles:
+      - dev  # Only start in dev mode
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  fortunelink-network:
+    driver: bridge
+
+# Usage:
+# Start Redis only:          docker-compose up -d redis
+# Start with GUI:            docker-compose --profile dev up -d
+# Stop:                      docker-compose down
+# View logs:                 docker-compose logs -f redis
+# Access Redis Commander:    http://localhost:8081

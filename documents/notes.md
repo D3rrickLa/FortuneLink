@@ -668,6 +668,10 @@ Add that dividend tracking
 Repeat
 Each cycle, use the app for a week, find the most annoying missing feature, add ONLY that.
 
+
+if ever in teh ftureu we want brokerage integration
+1. mark transation as soruce: manual vs source: brokerage and only allow editing/deleting for manual, brokerage is read-only
+
 ~~~
 
 Data flow
@@ -694,36 +698,478 @@ COMMUNITY & SOCIAL CONTEXT
 - 'comments' can be nested (replies)
 
 
+----------- 
+we can probably break the portfolio_management into smaller parts and work on those each... probably just going to leave it
 
-Tomorrow (Sunday):
-Build the frontend:
 
-Create Next.js project (15 min)
-Build transaction form (45 min)
-Connect to your backend (30 min)
-Display transactions in table (30 min)
+  const [formData, setFormData] = useState({
+    userId: "f8db6ee5-561e-4631-ba62-c4944a9ff983",
+    creationDateTime: "",
+    type: "BUY",
+    ticker: "",
+    quantity: "",
+    amount: ""
+  });
 
-Total: ~2 hours
-Then deploy both:
+above is a Transaction, we need to make that
+userId -> User
+creationDateTime -> Instant, use that for everything
+type -> Enum Type
+Ticker -> some class that has that as the UUID and probably their identitifer (now thinking about it... if this is for the future,
+need to be flexible in some ways we should call this identifier and branch off from there, but portfolio usually means stock so...
+we should use that number -> ISIN),
+quantity -> BigDecimal
+Amount -> Money
 
-Backend → Railway (free tier)
-Frontend → Vercel (free tier)
 
----
-In Next.js you have:
+Transaction V2
+    AccountId (which has PortfolioId which has UserId)
+    TransactionId
+    creationTimestamp
+    transctionType 
+    AssetIdentifier
+    Quantity
+    PricePerUnit
+    Fee (should be a list)
+    Amount (this can be implied, which is QTY * PPU + FEE), Crypto might be an issue... with how 100 worth of BTC isn't really thanks to NETWORK
+        for FIAT do AssetValue (QTY * PPU) + FEE
+        for Crypto, we would need the original amount spent... or okay we do this, we first get price with no fees, then subtract fees
+            and from there we do the subtract amount / original amount to get the QTY
+
+
+probably not going to do domain events, don't really get them, seems simple to add if needed
+
+
+-----
+## Summary: Integration Flow
 ```
-app/layout.tsx      (master layout - like app.component)
-app/page.tsx        (home page content)
-```
+Controller/API Layer
+    ↓
+Application Service (orchestrates use cases)
+    ↓
+Domain Service (complex business logic)
+    ↓
+Portfolio Aggregate (domain model)
+    ↓
+Repository (persistence)
 
----
-
-## How Next.js Works (File-based Routing)
+## The Flow
 ```
-app/
-├── layout.tsx           // Wraps EVERYTHING (navbar, etc.)
-├── page.tsx             // Home page (/)
-├── dashboard/
-│   └── page.tsx         // Dashboard page (/dashboard)
-└── transactions/
-    └── page.tsx         // Transactions page (/transactions)
+Application Service
+    ↓ (calls)
+Domain Service (PortfolioValuationService)
+    ↓ (calls)
+Portfolio.getAccounts()
+    ↓ (iterates and calls)
+Account.calculateTotalValue()
+    ↓ (calls)
+Asset.calculateCurrentValue()
+
+```
+@Configuration
+public class DomainServiceConfiguration {
+    
+    @Bean
+    public PortfolioValuationService portfolioValuationService() {
+        return new PortfolioValuationService();
+    }
+    
+    @Bean
+    public PerformanceCalculationService performanceCalculationService() {
+        return new PerformanceCalculationService();
+    }
+    
+    @Bean
+    public AssetAllocationService assetAllocationService(
+        PortfolioValuationService valuationService
+    ) {
+        return new AssetAllocationService(valuationService);
+    }
+}
+```
+How Domain Services Work
+Domain Services are called by either:
+
+Application Services (use case orchestration)
+Portfolio itself (when Portfolio needs complex calculations)
+Other parts of the domain layer
+
+They don't have their own lifecycle - they're just utility classes with business logic that doesn't naturally belong to a single entity.
+
+
+-----
+for the application layer, we use DTOS for input and output
+
+## What to build in the application layer
+1. Use Case Services (Command Handlers)
+Portfolio Management Use Cases
+
+- RecordAssetPurchaseUseCase - Handles buying new assets; orchestrates creating a BUY transaction, updating portfolio holdings, and persisting changes.
+- RecordAssetSaleUseCase - Handles selling assets; creates a SELL transaction, calculates realized gains/losses, updates holdings, and persists.
+- RecordDepositUseCase - Handles cash deposits; creates a DEPOSIT transaction, updates cash holdings in the specified account.
+- RecordWithdrawalUseCase - Handles cash withdrawals; creates a WITHDRAWAL transaction, reduces cash holdings, ensures sufficient balance.
+- RecordDividendIncomeUseCase - Handles dividend/interest income; creates DIVIDEND/INTEREST transaction, increases cash holdings.
+- RecordFeeUseCase - Handles transaction fees; creates FEE transaction, deducts from cash holdings.
+- AddNewAccountUseCase - Creates new accounts (TFSA, RRSP, etc.); validates account type and adds to portfolio.
+- RemoveAccountUseCase - Removes empty accounts; validates account has no assets before deletion.
+
+Query Services (Read Operations)
+
+- ViewNetWorthQuery - Retrieves current net worth; fetches portfolio, queries market data service for current prices, calculates total value.
+- ViewPortfolioPerformanceQuery - Displays performance metrics; uses PerformanceCalculationService to calculate returns, gains/losses over specified period.
+- AnalyzeAssetAllocationQuery - Shows asset distribution; uses AssetAllocationService to breakdown by type, account, or currency.
+- GetTransactionHistoryQuery - Retrieves transaction list; fetches and filters transactions by date range or type.
+- GetAccountSummaryQuery - Shows individual account details; retrieves specific account with holdings and calculated values.
+
+2. Command DTOs (Input Objects)
+
+- RecordPurchaseCommand - Contains userId, accountId, symbol, quantity, price, fee, date, notes; represents all data needed to record a purchase.
+- RecordSaleCommand - Contains userId, accountId, symbol, quantity, price, fee, date, notes; represents all data needed to record a sale.
+- RecordDepositCommand - Contains userId, accountId, amount, currency, date, notes; represents deposit transaction data.
+- RecordWithdrawalCommand - Contains userId, accountId, amount, currency, date, notes; represents withdrawal transaction data.
+- RecordIncomeCommand - Contains userId, accountId, symbol, amount, incomeType (dividend/interest), date; represents passive income.
+- AddAccountCommand - Contains userId, accountName, accountType, baseCurrency; represents new account creation.
+- RemoveAccountCommand - Contains userId, accountId; represents account deletion request.
+
+3. Query DTOs (Input for Queries)
+
+- ViewNetWorthQuery - Contains userId, optional asOfDate; specifies which portfolio and point in time.
+- ViewPerformanceQuery - Contains userId, startDate, endDate, optional accountId; defines performance calculation parameters.
+- AnalyzeAllocationQuery - Contains userId, allocationType (by type/account/currency); specifies how to breakdown allocation.
+- GetTransactionHistoryQuery - Contains userId, optional startDate, endDate, transactionType, accountId; filters transaction list.
+- GetAccountSummaryQuery - Contains userId, accountId; identifies which account to retrieve.
+
+4. Response DTOs (Output Objects)
+
+- PortfolioResponse - Contains portfolioId, userId, accounts[], transactionCount, lastUpdated; represents complete portfolio state.
+- NetWorthResponse - Contains totalAssets, totalLiabilities, netWorth, asOfDate, currency; represents calculated net worth.
+- PerformanceResponse - Contains totalReturn, realizedGains, unrealizedGains, timeWeightedReturn, period; represents performance metrics.
+- AllocationResponse - Contains Map of category → percentage/value; represents asset distribution breakdown.
+- TransactionResponse - Contains transactionId, type, symbol, quantity, price, fee, date, notes; represents single transaction.
+- TransactionHistoryResponse - Contains List<TransactionResponse>, totalCount, dateRange; represents paginated transaction list.
+- AccountResponse - Contains accountId, name, type, assets[], totalValue, currency; represents single account with holdings.
+
+5. Exception Classes
+
+- PortfolioNotFoundException - Thrown when portfolio doesn't exist for given userId; used in all use cases.
+- AccountNotFoundException - Thrown when specified account doesn't exist; used in transaction recording.
+- InsufficientFundsException - Thrown when withdrawal/purchase exceeds available cash; used in withdrawal and purchase use cases.
+- InsufficientHoldingsException - Thrown when selling more shares than owned; used in RecordAssetSaleUseCase.
+- InvalidTransactionException - Thrown when transaction data is invalid; used for business rule violations.
+- AccountNotEmptyException - Thrown when trying to delete account with assets; used in RemoveAccountUseCase.
+
+6. Validation Classes
+
+- CommandValidator - Validates command DTOs before processing; checks for null values, valid dates, positive amounts, valid symbols.
+- QuantityValidator - Validates quantity values; ensures positive non-zero values for purchases/sales.
+- DateValidator - Validates transaction dates; ensures not in future, within reasonable historical range.
+
+7. Mapper Classes
+
+- PortfolioMapper - Converts Portfolio entity → PortfolioResponse DTO; handles nested account and asset conversions.
+- TransactionMapper - Converts Transaction entity → TransactionResponse DTO; maps all transaction fields.
+- AccountMapper - Converts Account entity → AccountResponse DTO; includes asset summaries.
+- AllocationMapper - Converts allocation calculations → AllocationResponse DTO; formats percentages and categories.
+
+8. Application Service Interfaces (Optional but Recommended)
+
+- IPortfolioManagementService - Interface defining all portfolio use cases; allows for easier testing and dependency injection.
+- IPortfolioQueryService - Interface defining all query operations; separates read from write operations (CQRS pattern).
+
+
+
+--- Dec 14th --- th DRIP issue
+TLDR: we can't drip when we record a dividend in the application layer
+The solution is to add a isDrip feild in the Transaction.java and impelment logic in the Account.java 
+
+
+--- dec 17th --- updates
+- fixed drip
+- did both the services layer code, need to check if i impelmented the other stuff
+- unit test after
+
+- THEN ONTO INFRA
+
+--- finished testing on dec 30th --- 
+we will now work on infra
+
+phase 1 -> db/presistence layer (db config) ✅
+step 1 -> create the db
+step 2 -> set up the Entities
+step 4-> set up JPA repo interfaces
+step 4 -> create an entity mapper (domain to jpa entity)
+step 5 -> implement repo interfaces (from domain layer)
+step 6 -> integration test with full persitence layer
+
+
+^ this is all under step one
+
+new note, we will be using flyway, basically from what i read it is a dev tool used in conjuction with JPA.
+Flyway will run first to ensure the tables exist, this is the standard table, as in this is what we expect.
+Then JPA will look for an entity, and see that if it matches or not.
+
+But what is Flyway? -> git for DB, we don't manually run SQL commands to creating or updating tables, we
+ write 'migrations script' and Flyway auto executes them in order when your app starts
+
+
+phase 2: External API integration (MarketDataService) ✅ 🟨
+phase 3: REST Controllers (HTTP endpoints) 🟨
+phase 4: Authentication (Supabase integration)
+
+
+--- jan 02  2026
+Repositories	@DataJpaTest	SQL/HQL correctness, Filters, Pagination.
+Mappers	        JUnit 5	        Field matching, List conversion, Null handling.
+Entities	    JUnit 5	        Validation rules, ID equality, Basic constraints
+
+
+
+----
+TODO: Look into how we can add AI agents into the applications
+
+
+----- jan 16 2026 ---
+known issue, i think i was confusing how hte web controller interacts with the data 
+coming from the api. from what i see we are doing some duplicates sets, mainly the
+market data dto mapper and assetinfo response...
+
+
+also, if we want 'chart info' we need to include the yahoo chart stuff, might put that off for a minute though
+
+we should also 'redis' the information as well as long term store that history data
+
+[
+	{
+		"symbol": "AAPL",
+		"name": "Apple Inc.",
+		"price": 232.8,
+		"changePercentage": 2.1008,
+		"change": 4.79,
+		"volume": 44489128,
+		"dayLow": 226.65,
+		"dayHigh": 233.13,
+		"yearHigh": 260.1,
+		"yearLow": 164.08,
+		"marketCap": 3500823120000,
+		"priceAvg50": 240.2278,
+		"priceAvg200": 219.98755,
+		"exchange": "NASDAQ",
+		"open": 227.2,
+		"previousClose": 228.01,
+		"timestamp": 1738702801
+	}
+]
+
+
+[
+  {
+    "symbol": "AAPL",
+    "price": 255.53,
+    "marketCap": 3775801225282,
+    "beta": 1.093,
+    "lastDividend": 1.03,
+    "range": "169.21-288.62",
+    "change": -2.68,
+    "changePercentage": -1.03792,
+    "volume": 70054453,
+    "averageVolume": 45960616,
+    "companyName": "Apple Inc.",
+    "currency": "USD",
+    "cik": "0000320193",
+    "isin": "US0378331005",
+    "cusip": "037833100",
+    "exchangeFullName": "NASDAQ Global Select",
+    "exchange": "NASDAQ",
+    "industry": "Consumer Electronics",
+    "website": "https://www.apple.com",
+    "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, a line of smartphones; Mac, a line of personal computers; iPad, a line of multi-purpose tablets; and wearables, home, and accessories comprising AirPods, Apple TV, Apple Watch, Beats products, and HomePod. It also provides AppleCare support and cloud services; and operates various platforms, including the App Store that allow customers to discover and download applications and digital content, such as books, music, video, games, and podcasts, as well as advertising services include third-party licensing arrangements and its own advertising platforms. In addition, the company offers various subscription-based services, such as Apple Arcade, a game subscription service; Apple Fitness+, a personalized fitness service; Apple Music, which offers users a curated listening experience with on-demand radio stations; Apple News+, a subscription news and magazine service; Apple TV+, which offers exclusive original content; Apple Card, a co-branded credit card; and Apple Pay, a cashless payment service, as well as licenses its intellectual property. The company serves consumers, and small and mid-sized businesses; and the education, enterprise, and government markets. It distributes third-party applications for its products through the App Store. The company also sells its products through its retail and online stores, and direct sales force; and third-party cellular network carriers, wholesalers, retailers, and resellers. Apple Inc. was founded in 1976 and is headquartered in Cupertino, California.",
+    "ceo": "Timothy D. Cook",
+    "sector": "Technology",
+    "country": "US",
+    "fullTimeEmployees": "164000",
+    "phone": "(408) 996-1010",
+    "address": "One Apple Park Way",
+    "city": "Cupertino",
+    "state": "CA",
+    "zip": "95014",
+    "image": "https://images.financialmodelingprep.com/symbol/AAPL.png",
+    "ipoDate": "1980-12-12",
+    "defaultImage": false,
+    "isEtf": false,
+    "isActivelyTrading": true,
+    "isAdr": false,
+    "isFund": false
+  }
+]
+
+
+[
+  {
+    "symbol": "VFV.TO",
+    "price": 171.34,
+    "marketCap": 27584495386,
+    "beta": 0.96,
+    "lastDividend": 1.52767,
+    "range": "121.61-172.18",
+    "change": 0.14,
+    "changePercentage": 0.0817757,
+    "volume": 284321,
+    "averageVolume": 280626,
+    "companyName": "Vanguard S&P 500 Index ETF",
+    "currency": "CAD",
+    "cik": null,
+    "isin": "CA92205Y1051",
+    "cusip": "92205Y105",
+    "exchangeFullName": "Toronto Stock Exchange",
+    "exchange": "TSX",
+    "industry": "Asset Management",
+    "website": null,
+    "description": "Vanguard S&P 500 Index ETF seeks to track, to the extent reasonably possible and before fees and expenses, the performance of a broad U.S. equity index that measures the investment return of large-capitalization U.S. stocks. Currently, this Vanguard ETF seeks to track the S&P 500 Index (or any successor thereto). It invests directly or indirectly primarily in stocks of U.S. companies.",
+    "ceo": "",
+    "sector": "Financial Services",
+    "country": "CA",
+    "fullTimeEmployees": null,
+    "phone": null,
+    "address": null,
+    "city": null,
+    "state": null,
+    "zip": null,
+    "image": "https://images.financialmodelingprep.com/symbol/VFV.TO.png",
+    "ipoDate": "2012-11-08",
+    "defaultImage": false,
+    "isEtf": true,
+    "isActivelyTrading": true,
+    "isAdr": false,
+    "isFund": false
+  }
+]
+
+
+{
+    "symbol": "VFV.TO",
+    "name": "Vanguard S&P 500 Index ETF",
+    "assetType": "ETF",
+    "currency": "$",
+    "exchange": "TSX",
+    "currentPrice": null,
+    "sector": "Financial Services",
+    "marketCap": null,
+    "peRatio": null,
+    "fiftyTwoWeekHigh": null,
+    "fiftyTwoWeekLow": null,
+    "averageVolume": null,
+    "source": "API CALL"
+}
+this is wrong, also the source is hard coded, we need to change that in the MarketAssetInfo in domain layer
+
+---- jan 17th 26--- 
+this is how the data flows from endpoint and back, or atleast how it should operate
+
+endpoint/asset-info/example -> MarketDataController -> marketDataService (get AssetInfo) -> mapper.toProviderSymbol() (this is kind of a useless step), UPDATE ON THAT: we removed it, it was stupid -> providerFetchAssetInfo(...) -> our implementation of the MarketDataProvider int (i.e. FmpProvider) -> apiClient (fmpApiClient).fetchAssetInfo(...) -> a response:
+    @Override
+    public Optional<ProviderAssetInfo> fetchAssetInfo(String symbol) {
+        FmpProfileResponse response = fmpApiClient.getProfile(symbol);
+
+        return Optional.of(mapper.toProviderAssetInfo(response));
+    }
+    OR
+    @Override
+    public Optional<ProviderAssetInfo> fetchAssetInfo(String symbol) {
+        FmpProfileResponse response = fmpApiClient.getProfile(symbol);
+
+        return Optional.of(mapper.toProviderAssetInfo(response));
+    }
+
+-> conversion back to the intenral provider structure or either ProviderQuote or ProviderAssetInfo
+-> back to the market data serivce impl -> converts to MarketAssetInfo (domain value object) via mapper.toAssetInfo(providerInfo)
+-> MarketDataController -> AssetInfoResponse -> response entity
+
+
+infrastructure/
+├── config/
+├── persistence/ (Repositories)
+├── external/
+│   ├── fmp/ (Financial Modeling Prep - specific provider)
+│   │   ├── FmpApiClient.java
+│   │   ├── FmpResponseMapper.java
+│   │   ├── FmpProvider.java (Implements MarketDataProvider)
+│   │   └── dtos/ (Provider-specific JSON/XML objects)
+│   │       ├── FmpProfileResponse.java
+│   │       └── FmpQuoteResponse.java
+│   └── common/ (If you have multiple providers)
+│       ├── ProviderQuote.java
+│       └── ProviderAssetInfo.java
+├── marketdata/
+│   └── MarketDataServiceImpl.java (The orchestration logic)
+└── exceptions/
+
+
+infrastructure/
+└── external/
+    ├── marketdata/       <-- Capability 1
+    │   ├── fmp/          (Implementation)
+    │   └── MarketDataServiceImpl.java
+    └── exchangerate/     <-- Capability 2
+        ├── fixio/        (Implementation)
+        └── ExchangeRateServiceImpl.java
+
+TAG/OUTPUT[
+  {
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "price": 255.517,
+    "changePercentage": -1.04295,
+    "change": -2.693,
+    "volume": 72142773,
+    "dayLow": 254.93,
+    "dayHigh": 258.9,
+    "yearHigh": 288.62,
+    "yearLow": 169.21,
+    "marketCap": 3775609234912.9995,
+    "priceAvg50": 271.5098,
+    "priceAvg200": 234.05525,
+    "exchange": "NASDAQ",
+    "open": 257.88,
+    "previousClose": 258.21,
+    "timestamp": 1768597201
+  }
+]
+
+
+[
+  {
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "price": 255.517,
+    "changePercentage": -1.04295,
+    "change": -2.693,
+    "volume": 72142773,
+    "dayLow": 254.93,
+    "dayHigh": 258.9,
+    "yearHigh": 288.62,
+    "yearLow": 169.21,
+    "marketCap": 3775609234912.9995,
+    "priceAvg50": 271.5098,
+    "priceAvg200": 234.05525,
+    "exchange": "NASDAQ",
+    "open": 257.88,
+    "previousClose": 258.21,
+    "timestamp": 1768597201
+  }
+]
+
+1) "current-prices::AAPL"
+
+^ that is in our redis, that is wrong
+
+
+
+
+--- jan 01 -27 --- 
+to make this 'future proof' we acan use 'ai agents to get information regarding a stock'
+along with user sentiment 
+
+
+we have a 'flaw' with some of our commands and account id. it uses asset identifier when is should have used asset id
+thinkg about it, asset id it brital af as in a cyrpto and a stock can technically have the same 'symbol/primaryid' and we 
+won't knwo which one it is

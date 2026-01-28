@@ -1,0 +1,35 @@
+# DON'T DELETE THIS, THIS IS MEANT FOR OUR JPA REPO TESTS
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///testdb
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: none   # Use Flyway for schema creation, not Hibernate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    schemas:
+      - public
+    locations: classpath:db/migration
+    # This prevents Flyway from failing if @BeforeAll already did something
+    baseline-on-migrate: true
+db:
+  # If 'json' fails, try 'jsonb' or 'varchar' here for the H2 profile
+  jsonColumnType: jsonb
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+
+postgres:
+  version: ${POSTGRES_VERSION}

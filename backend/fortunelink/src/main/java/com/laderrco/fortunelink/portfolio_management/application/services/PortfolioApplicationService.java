@@ -1,0 +1,742 @@
+package com.laderrco.fortunelink.portfolio_management.application.services;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CorrectAssetTickerCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordFeeCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordIncomeCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordPurchaseCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordSaleCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
+import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionMapper;
+import com.laderrco.fortunelink.portfolio_management.application.models.TransactionSearchCriteria;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
+import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
+import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.TransactionNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
+import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
+import com.laderrco.fortunelink.shared.valueobjects.Money;
+
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+
+/**
+ * Application service for portfolio command operations (writes).
+ * 
+ * This service handles all state-changing operations on the Portfolio
+ * aggregate.
+ * All operations go through the Portfolio aggregate root to maintain
+ * consistency.
+ * 
+ * For read operations, see {@link PortfolioQueryService}.
+ * 
+ * TODO: Currently assumes 1 portfolio per user for MVP. Multi-portfolio support
+ * later.
+ * Additionally, we would need to some sort of policy in the 'creation' method,
+ * basically if it's not empty
+ * and if they are in the policy
+ * In a multi-portfolio world, a "Deposit" or "Trade" command cannot just say
+ * "deposit money for User X." It must say "deposit money into Portfolio Y
+ * belonging to User X."
+ * public record DepositCommand(PortfolioId portfolioId, UserId userId,
+ * BigDecimal amount) {} <- is what we need to do
+ * 
+ */
+@Service
+@Transactional
+@AllArgsConstructor
+public class PortfolioApplicationService {
+    // Domain Repository (aggregate root)
+    private final PortfolioRepository portfolioRepository;
+
+    // Application Services
+    private final TransactionQueryService transactionQueryService;
+    // Domain Services
+    private final MarketDataService marketDataService;
+    private final ExchangeRateService exchangeRateService;
+
+    // Application Utilities
+    private final CommandValidator commandValidator;
+    private final PortfolioViewAssembler portfolioAssembler;
+
+    // ========================================================================
+    // TRANSACTION RECORDING COMMANDS
+    // ========================================================================
+
+    public TransactionView recordAssetPurchase(RecordPurchaseCommand command) {
+        // 1. Validate command
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid purchase command", validationResult.errors());
+        }
+
+        // 2. Fetch asset information from market data service
+        AssetIdentifier identifier = SymbolIdentifier.of(command.symbol());
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
+                .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
+
+        // 3. Load portfolio and account
+        Portfolio portfolio = loadPortfolio(command.portfolioId());
+        Account account = getAccount(portfolio, command.accountId());
+
+        // 4. Handle currency conversion
+        ValidatedCurrency accountCurrency = account.getBaseCurrency();
+        Money transactionPrice = command.price();
+        Money convertedPrice = transactionPrice;
+
+        // If currencies don't match, convert to account currency
+        if (!accountCurrency.equals(transactionPrice.currency())) {
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(transactionPrice.currency(), accountCurrency);
+            convertedPrice = transactionPrice.convert(rate.get());
+        }
+
+        // 5. Create transaction entity (using converted price)
+        Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.BUY,
+                assetInfo.toIdentifier(),
+                command.quantity(),
+                convertedPrice, // ← Use converted price in account currency
+                command.fees(),
+                command.transactionDate(),
+                command.notes());
+
+        // 6. Calculate total cost (now in account currency)
+        Money totalCost = transaction.calculateTotalCost();
+
+        // 7. Business rule: Check sufficient cash
+        if (!account.hasSufficientCash(totalCost)) {
+            throw new InsufficientFundsException(totalCost, account.getCashBalance(), command.accountId());
+        }
+
+        // 8. Apply transaction to portfolio (domain logic)
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+
+        // 9. Persist aggregate
+        portfolioRepository.save(portfolio);
+
+        // 10. Return response
+        return TransactionMapper.toResponse(transaction, assetInfo);
+    }
+
+    public TransactionView recordAssetSale(RecordSaleCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid sale command",
+                    validationResult.errors());
+        }
+
+        Portfolio portfolio = loadPortfolio(command.portfolioId());
+        Account account = getAccount(portfolio, command.accountId());
+
+        // Get the SPECIFIC asset by ID, not symbol
+        Asset asset = account.getAsset(command.assetId());
+
+        // Validate sufficient quantity
+        if (asset.getQuantity().compareTo(command.quantity()) < 0) {
+            throw new InsufficientFundsException(
+                    asset.getAssetIdentifier().getPrimaryId(),
+                    command.quantity(),
+                    asset.getQuantity());
+        }
+
+        // Handle currency conversion for sale price
+        ValidatedCurrency accountCurrency = account.getBaseCurrency();
+        Money salePrice = command.price();
+        Money convertedSalePrice = salePrice;
+
+        // If currencies don't match, convert to account currency
+        if (!accountCurrency.equals(salePrice.currency())) {
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(salePrice.currency(), accountCurrency);
+            convertedSalePrice = salePrice.convert(rate.get());
+        }
+
+        // Fetch market data for enrichment (optional, for the view)
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(
+                asset.getAssetIdentifier()).orElse(null);
+
+        Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.SELL,
+                asset.getAssetIdentifier(),
+                command.quantity(),
+                convertedSalePrice, // ← Use converted price
+                command.fees(),
+                command.transactionDate(),
+                command.notes());
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, assetInfo);
+    }
+
+    public TransactionView recordDeposit(RecordDepositCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid deposit command", validationResult.errors());
+        }
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+
+        Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.DEPOSIT,
+                new CashIdentifier(command.amount().currency().toString()),
+                BigDecimal.ONE,
+                command.amount(),
+                command.fees(),
+                command.transactionDate(),
+                command.notes());
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, null);
+    }
+
+    public TransactionView recordWithdrawal(RecordWithdrawalCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid withdrawal command", validationResult.errors());
+        }
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+
+        // TODO Delegate Business Logic to the Domain (Tell, Don't Ask)
+        // The Portfolio or Account should handle the "Sufficient Cash" check internally
+        Money withdrawalAmount = command.amount();
+
+        // check sufficient cash
+        if (!account.hasSufficientCash(withdrawalAmount)) {
+            throw new InsufficientFundsException(withdrawalAmount, account.getCashBalance(), command.accountId());
+        }
+
+        Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.WITHDRAWAL,
+                new CashIdentifier(command.amount().currency().toString()),
+                BigDecimal.ONE,
+                withdrawalAmount,
+                command.fees(),
+                command.transactionDate(),
+                command.notes());
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+
+        // end of delegation
+
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, null);
+
+    }
+
+    public TransactionView recordDividendIncome(RecordIncomeCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid income command", validationResult.errors());
+        }
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+
+        // Get the specific asset that generated the dividend
+        Asset asset = account.getAsset(command.assetId());
+
+        // Optionally fetch market data for enrichment (for the response view)
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(asset.getAssetIdentifier())
+                .orElse(null);
+
+        // For DRIP: quantity represents shares purchased with the dividend
+        // For non-DRIP: quantity is 1 (tracking the income event)
+        BigDecimal quantity;
+        Money pricePerShare;
+
+        if (command.isDrip()) {
+            // no null check for shares recieved as we have a check in the command
+            quantity = command.sharesReceived();
+            pricePerShare = command.amount().divide(command.sharesReceived());
+        } else {
+            quantity = BigDecimal.ONE;
+            pricePerShare = command.amount();
+        }
+
+        Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.DIVIDEND,
+                asset.getAssetIdentifier(), // Use the asset's identifier, not from market data
+                quantity,
+                pricePerShare,
+                command.amount(),
+                null, // No fees for dividends typically
+                command.transactionDate(),
+                command.notes(),
+                command.isDrip());
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, assetInfo);
+    }
+
+    public TransactionView recordFee(RecordFeeCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid fee command", validationResult.errors());
+        }
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
+
+        Transaction transaction = new Transaction(
+                TransactionId.randomId(),
+                account.getAccountId(),
+                TransactionType.FEE,
+                new CashIdentifier(command.currency().toString()),
+                BigDecimal.ONE,
+                command.totalAmount(), // total value amount in fees
+                command.fees(),
+                command.transactionDate(),
+                command.notes());
+
+        portfolio.recordTransaction(account.getAccountId(), transaction);
+        portfolioRepository.save(portfolio);
+
+        return TransactionMapper.toResponse(transaction, null);
+
+    }
+
+    // ========================================================================
+    // TRANSACTION UPDATE/DELETE COMMANDS
+    // ========================================================================
+
+    /**
+     * Update an existing transaction.
+     * 
+     * Validation includes:
+     * - Ensuring updated transaction doesn't violate business rules
+     * - For SELL transactions: verify sufficient holdings at that point in time
+     * 
+     * Note: Currently does NOT recalculate cost basis or realized gains.
+     * This is a known limitation for MVP.
+     */
+    public TransactionView updateTransaction(UpdateTransactionCommand command) {
+        // 1. Validate command
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid update command");
+        }
+
+        // 2. Get portfolio
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        // 3. Get all transactions for the account using TransactionQueryService
+        TransactionSearchCriteria criteria = TransactionSearchCriteria.builder()
+                .accountId(command.accountId())
+                .build();
+
+        List<Transaction> accountTransactions = transactionQueryService.getAllTransactions(criteria);
+
+        // 4. Find the specific transaction to update
+        Transaction existingTransaction = accountTransactions.stream()
+                .filter(t -> t.getTransactionId().equals(command.transactionId()))
+                .findFirst()
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
+
+        // 5. Basic validations
+        if (command.date().isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Transaction date cannot be in the future");
+        }
+
+        if (command.quantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+
+        if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price must be positive");
+        }
+
+        // 6. CRITICAL validation: For SELL transactions, verify sufficient holdings
+        if (command.type() == TransactionType.SELL) {
+            List<Transaction> assetTransactions = accountTransactions.stream()
+                    // Compare the string value (Symbol) rather than the Object reference
+                    .filter(t -> t.getAssetIdentifier().getPrimaryId()
+                            .equalsIgnoreCase(command.identifier().getPrimaryId()))
+
+                    // for the future if we have collision, I.e. CRYPTO = GOLD and STOCK = GOLD
+                    // .filter(t ->
+                    // t.getAssetIdentifier().getPrimaryId().equalsIgnoreCase(command.identifier().getPrimaryId())
+                    // && t.getAssetIdentifier().getType() == command.identifier().getType())
+                    // this is done in the validate sell transaction method
+                    // AND exclude the transaction we are currently editing
+                    // .filter(t ->
+                    // !t.getTransactionId().equals(existingTransaction.getTransactionId()))
+                    .sorted(Comparator.comparing(Transaction::getTransactionDate))
+                    .collect(Collectors.toList());
+
+            validateSellTransaction(
+                    command.identifier(),
+                    command.quantity(),
+                    command.date(),
+                    assetTransactions, // Now only contains other transactions
+                    existingTransaction.getTransactionId());
+        }
+
+        // 7. Create updated transaction
+        Transaction updatedTransaction = createUpdatedTransaction(existingTransaction, command);
+
+        // 8. Update transaction in portfolio aggregate
+        portfolio.updateTransaction(command.accountId(), command.transactionId(), updatedTransaction);
+
+        // 9. Save portfolio
+        portfolioRepository.save(portfolio);
+
+        // 10. Return response
+        return TransactionMapper.toResponse(updatedTransaction, null);
+
+    }
+
+    /**
+     * Delete a transaction.
+     * 
+     * WARNINGS:
+     * - This is a HARD delete (permanent removal)
+     * - No cascade effect checks (might make subsequent sells invalid)
+     * - Consider soft deletes for audit trail in production
+     */
+    public void deleteTransaction(DeleteTransactionCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid delete command");
+        }
+
+        TransactionSearchCriteria criteria = TransactionSearchCriteria.builder()
+                .accountId(command.accountId())
+                .build();
+
+        List<Transaction> accountTransactions = transactionQueryService.getAllTransactions(criteria);
+
+        Transaction transaction = accountTransactions.stream() // Verify transaction exists
+                .filter(t -> t.getTransactionId().equals(command.transactionId()))
+                .findFirst()
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        portfolio.removeTransaction(command.accountId(), transaction.getTransactionId());
+
+        portfolioRepository.save(portfolio);
+    }
+
+    // ========================================================================
+    // ACCOUNT MANAGEMENT COMMANDS
+    // ========================================================================
+
+    public AccountView addAccount(AddAccountCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid add account command", validationResult.errors());
+        }
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(
+                        "Cannot find portfolio to add accouunt to:" + command.portfolioId()));
+
+        // Create new account
+        Account account = Account.createNew(
+                AccountId.randomId(),
+                command.accountName(),
+                command.accountType(),
+                command.baseCurrency());
+
+        // Add to portfolio (domain logic checks for duplicates)
+        portfolio.addAccount(account);
+
+        // Persist
+        portfolioRepository.save(portfolio);
+
+        return portfolioAssembler.assembleAccountView(account);
+    }
+
+    public void removeAccount(RemoveAccountCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Invalid remove account command", validationResult.errors());
+        }
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(
+                        "Cannot find portfolio to remove accouunt from:" + command.portfolioId()));
+
+        Account account = portfolio.findAccount(command.accountId())
+                .orElseThrow(() -> new AccountNotFoundException(
+                        String.format("Account %s not found in portfolio %s",
+                                command.accountId(), command.portfolioId())));
+
+        // Check if account is empty
+        if (!account.getAssets().isEmpty()) {
+            throw new AccountNotEmptyException(command.accountId(), account.getAssets().size());
+        }
+
+        portfolio.removeAccount(command.accountId());
+        portfolioRepository.save(portfolio);
+    }
+
+    public void correctAssetTicket(CorrectAssetTickerCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidTransactionException("Correcting asset ticket command", validationResult.errors());
+        }
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        portfolio.correctAssetTicker(
+                command.accountId(),
+                command.wrongAssetId(),
+                command.correctAssetIdentifier());
+
+        portfolioRepository.save(portfolio);
+
+    }
+
+    // ========================================================================
+    // PORTFOLIO LIFECYCLE COMMANDS
+    // ========================================================================
+
+    /**
+     * Create initial portfolio for a new user.
+     * 
+     * MVP: One portfolio per user.
+     */
+    public PortfolioView createPortfolio(CreatePortfolioCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidCommandException("Invalid create portfolio command", validationResult.errors());
+        }
+
+        long currentCount = portfolioRepository.countByUserId(command.userId());
+        int maxPortfoliosAllowed = 1;
+
+        if (currentCount >= maxPortfoliosAllowed) {
+            throw new PortfolioLimitReachedException("User reached portfolio limit.");
+        }
+
+        // create portfolio (domain logic)
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(),
+                command.description());
+
+        // add a default account if specified in command
+        if (command.createDefaultAccount()) {
+            Account defaultAccount = Account.createNew(
+                    AccountId.randomId(),
+                    "Default Account",
+                    AccountType.NON_REGISTERED,
+                    command.defaultCurrency());
+            portfolio.addAccount(defaultAccount);
+        }
+
+        // Persist
+        Portfolio savePortfolio = portfolioRepository.save(portfolio);
+
+        return portfolioAssembler.assemblePortfolioView(savePortfolio);
+    }
+
+    public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
+        Optional<Portfolio> existingPortfolio = portfolioRepository.findById(command.id());
+        if (existingPortfolio.isEmpty()) {
+            throw new PortfolioNotFoundException("Cannot find portfolio with id: " + command.id());
+        }
+
+        Portfolio updatePortfolio = existingPortfolio.get().updatePortfolio(command.name(), command.description(),
+                command.defaultCurrency());
+        updatePortfolio = portfolioRepository.save(updatePortfolio);
+
+        return portfolioAssembler.assemblePortfolioView(updatePortfolio);
+    }
+
+    /**
+     * Delete a portfolio.
+     * 
+     * Requires explicit confirmation flag.
+     * Portfolio must be empty (no accounts/transactions).
+     * 
+     * MVP: Hard delete. Consider soft delete for production.
+     */
+    public void deletePortfolio(DeletePortfolioCommand command) {
+        ValidationResult validationResult = commandValidator.validate(command);
+        if (!validationResult.isValid()) {
+            throw new InvalidCommandException("Invalid delete portfolio command", validationResult.errors());
+        }
+
+        // Ensure deletion flag is set
+        // this might be redunant given the validation done in the commandValidator
+        if (!command.confirmed()) {
+            throw new PortfolioDeletionRequiresConfirmationException(
+                    "Portfolio deletion requires explicit confirmation");
+        }
+
+        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        // // Just uncomment this line later
+        // if (!portfolio.belongsToUser(command.userId())) {
+        // throw new UnauthorizedPortfolioAccessException(...);
+        // }
+
+        // Check if portfolio can be deleted
+        if (portfolio.containsAccounts()) {
+            throw new PortfolioNotEmptyException(
+                    "Cannot delete portfolio with existing accounts/transactions. " +
+                            "Portfolio has " + portfolio.getAccounts().size() + " account(s)");
+        }
+
+        if (command.softDelete()) {
+            // Soft delete: Mark as deleted, preserve data
+            portfolio.markAsDeleted(Instant.now(), command.userId());
+            portfolioRepository.save(portfolio);
+        } else {
+            // Hard delete: Permanent removal
+            portfolioRepository.delete(command.portfolioId());
+        }
+        // portfolioRepository.delete(command.portfolioId());
+    }
+
+    // ========================================================================
+    // PRIVATE HELPER METHODS
+    // ========================================================================
+
+    /**
+     * Validates that a SELL transaction has sufficient holdings at that point in
+     * time.
+     * 
+     * This prevents selling shares you don't own by checking holdings
+     * chronologically up to the sell date.
+     */
+    private void validateSellTransaction(AssetIdentifier symbol, BigDecimal sellQuantity, Instant sellDate,
+            List<Transaction> assetTransactions,
+            TransactionId excludeTransactionId) {
+        BigDecimal holdings = BigDecimal.ZERO;
+
+        // Calculate holdings up to the sell date, excluding the transaction being
+        // updated
+        for (Transaction t : assetTransactions) {
+            if (t.getTransactionId().equals(excludeTransactionId)) {
+                continue; // Skip the transaction being updated
+            }
+
+            if (t.getTransactionDate().isAfter(sellDate)) {
+                break; // Stop at transactions after the sell date
+            }
+
+            if (t.getTransactionType() == TransactionType.BUY) {
+                holdings = holdings.add(t.getQuantity());
+            } else if (t.getTransactionType() == TransactionType.SELL) {
+                holdings = holdings.subtract(t.getQuantity());
+            } else {
+
+            }
+        }
+
+        // Check if we have enough shares to sell
+        if (holdings.compareTo(sellQuantity) < 0) {
+            throw new IllegalStateException(
+                    String.format(
+                            "Insufficient holdings at %s. Available: %s, Attempting to sell: %s",
+                            sellDate,
+                            holdings,
+                            sellQuantity));
+        }
+    }
+
+    /**
+     * Creates an updated transaction from existing transaction and command.
+     */
+    private Transaction createUpdatedTransaction(Transaction existing, UpdateTransactionCommand command) {
+        return new Transaction(
+                existing.getTransactionId(), // Keep same ID
+                existing.getAccountId(),
+                command.type(),
+                command.identifier(),
+                command.quantity(),
+                command.price(),
+                command.fee(),
+                command.date(),
+                command.notes());
+    }
+
+    private Portfolio loadPortfolio(PortfolioId portfolioId) {
+        return portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+    }
+
+    private Account getAccount(Portfolio portfolio, AccountId accountId) {
+        return portfolio.findAccount(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId, portfolio.getPortfolioId()));
+    }
+}
