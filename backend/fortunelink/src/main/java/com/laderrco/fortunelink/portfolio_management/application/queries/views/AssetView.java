@@ -9,6 +9,9 @@ import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
+import lombok.Builder;
+
+@Builder
 public record AssetView(
         AssetId assetId,
         String symbol,

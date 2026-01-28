@@ -8,6 +8,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.Builder;
+
+@Builder
 public record PortfolioView(PortfolioId portfolioId, UserId userId, String name, String description, List<AccountView> accounts, Money totalValue, long transactionCount, Instant createDate, Instant lastUpdated) implements ClassValidation {
     public PortfolioView {
         ClassValidation.validateParameter(portfolioId);

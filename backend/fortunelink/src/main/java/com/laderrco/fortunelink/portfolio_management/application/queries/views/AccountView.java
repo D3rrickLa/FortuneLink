@@ -9,6 +9,9 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
+import lombok.Builder;
+
+@Builder
 public record AccountView(AccountId accountId, String name, AccountType type, List<AssetView> assets, ValidatedCurrency baseCurrency, Money cashBalance, Money totalValue, Instant createdDate) implements ClassValidation {
     public AccountView { 
         ClassValidation.validateParameter(accountId);
