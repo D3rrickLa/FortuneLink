@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
@@ -20,15 +22,17 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(properties = {
-    "spring.jpa.hibernate.ddl-auto=create", // Changed from update to create
+    "spring.jpa.hibernate.ddl-auto=none",
     "spring.flyway.enabled=false",
     "spring.data.redis.repositories.enabled=false",
-    "spring.cache.type=none",
-    "fortunelink.cache.enabled=false"
+    "spring.cache.type=none"
 })
 public class Phase2CompletionTest {
     @Autowired
     private MarketDataService marketDataService;
+
+    @MockitoBean // This kills the dependency on the real FmpProvider/FmpApiClient
+    private MarketDataProvider marketDataProvider;
 
     @Test
     @Disabled("Manual verification test")
