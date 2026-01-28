@@ -12,11 +12,14 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.A
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CashIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.CryptoIdentifier;
@@ -25,6 +28,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
@@ -587,6 +591,74 @@ class PortfolioViewAssemblerTest {
             Percentage actual = (Percentage) calculateGainPercentage.invoke(null, mock(Money.class), null);
             assertEquals(new Percentage(BigDecimal.ZERO), actual);
         }
+    }
+
+    @Nested
+    @DisplayName("testing assemble transaction view ")
+    public class AssembleTransactionViewTests {
+
+        @Test
+        @DisplayName("assembleTransactionView should map all fields correctly")
+        void assembleTransactionView_mapsFields() {
+            // Arrange
+            TransactionId txId = TransactionId.randomId();
+            AssetIdentifier assetIdentifier = SymbolIdentifier.of("AAPL");
+            Instant now = Instant.now();
+
+            Transaction transaction = new Transaction(
+                    txId,
+                    AccountId.randomId(),
+                    TransactionType.BUY,
+                    assetIdentifier,
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(100), ValidatedCurrency.USD),
+                    new Money(BigDecimal.valueOf(5), ValidatedCurrency.USD),
+                    null, now,
+                    "Test transaction", false);
+
+            PortfolioViewAssembler assembler = new PortfolioViewAssembler(null, null);
+
+            // Act
+            TransactionView view = assembler.assembleTransactionView(transaction);
+
+            // Assert
+            assertNotNull(view);
+            assertEquals(txId, view.transactionId());
+            assertEquals(TransactionType.BUY, view.type());
+            assertEquals("AAPL", view.symbol());
+            assertEquals(BigDecimal.TEN, view.quantity());
+            assertEquals(transaction.getPricePerUnit(), view.price());
+            assertEquals(transaction.getFees(), view.fees());
+            assertEquals(transaction.calculateTotalCost(), view.totalCost());
+            assertEquals(now, view.date());
+            assertEquals("Test transaction", view.notes());
+        }
+
+        @Test
+        @DisplayName("assembleTransactionView should handle null fees")
+        void assembleTransactionView_nullFees() {
+            // Arrange
+            Transaction transaction = new Transaction(
+                    TransactionId.randomId(),
+                    AccountId.randomId(),
+                    TransactionType.SELL,
+                    SymbolIdentifier.of("MSFT"),
+                    BigDecimal.ONE,
+                    new Money(BigDecimal.valueOf(250), ValidatedCurrency.USD),
+                    null, // no fees
+                    Instant.now(),
+                    null);
+
+            PortfolioViewAssembler assembler = new PortfolioViewAssembler(null, null);
+
+            // Act
+            TransactionView view = assembler.assembleTransactionView(transaction);
+
+            // Assert
+            assertTrue(view.fees().isEmpty());
+            assertEquals(transaction.calculateTotalCost(), view.totalCost());
+        }
+
     }
 
     // ========== Test Helper Methods ==========

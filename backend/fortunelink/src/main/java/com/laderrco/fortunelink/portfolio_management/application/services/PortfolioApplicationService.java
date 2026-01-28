@@ -56,9 +56,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import jakarta.transaction.Transactional;
@@ -95,9 +97,9 @@ public class PortfolioApplicationService {
 
     // Application Services
     private final TransactionQueryService transactionQueryService;
-
     // Domain Services
     private final MarketDataService marketDataService;
+    private final ExchangeRateService exchangeRateService;
 
     // Application Utilities
     private final CommandValidator commandValidator;
@@ -119,39 +121,35 @@ public class PortfolioApplicationService {
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(identifier)
                 .orElseThrow(() -> new AssetNotFoundException("Asset not found: " + command.symbol()));
 
-        // TODO REPLACE WITH THE PRIVATE HELPERS BELOW
-        // 3. Load portfolio aggregate
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+        // 3. Load portfolio and account
+        Portfolio portfolio = loadPortfolio(command.portfolioId());
+        Account account = getAccount(portfolio, command.accountId());
 
-        // 4. Find account within portfolio
-        Account account = portfolio.findAccount(command.accountId())
-                .orElseThrow(() -> new AccountNotFoundException(command.accountId(), command.portfolioId()));
-
-        // TODO LATER add conversion
+        // 4. Handle currency conversion
         ValidatedCurrency accountCurrency = account.getBaseCurrency();
         Money transactionPrice = command.price();
+        Money convertedPrice = transactionPrice;
 
-        // Simple check - just validate they match for MVP
+        // If currencies don't match, convert to account currency
         if (!accountCurrency.equals(transactionPrice.currency())) {
-            throw new CurrencyMismatchException(
-                    String.format("Account currency is %s but transaction is in %s",
-                            accountCurrency, transactionPrice.currency()));
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(transactionPrice.currency(),
+                    accountCurrency);
+            convertedPrice = transactionPrice.convert(rate.get());
         }
 
-        // 5. Create transaction entity
+        // 5. Create transaction entity (using converted price)
         Transaction transaction = new Transaction(
                 TransactionId.randomId(),
                 account.getAccountId(),
                 TransactionType.BUY,
                 assetInfo.toIdentifier(),
                 command.quantity(),
-                command.price(), // actual purchase price
+                convertedPrice, // ← Use converted price in account currency
                 command.fees(),
                 command.transactionDate(),
                 command.notes());
 
-        // 6. Calculate total cost
+        // 6. Calculate total cost (now in account currency)
         Money totalCost = transaction.calculateTotalCost();
 
         // 7. Business rule: Check sufficient cash
@@ -176,12 +174,8 @@ public class PortfolioApplicationService {
                     validationResult.errors());
         }
 
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.findAccount(command.accountId())
-                .orElseThrow(() -> new AccountNotFoundException(
-                        command.accountId(), command.portfolioId()));
+        Portfolio portfolio = loadPortfolio(command.portfolioId());
+        Account account = getAccount(portfolio, command.accountId());
 
         // Get the SPECIFIC asset by ID, not symbol
         Asset asset = account.getAsset(command.assetId());
@@ -194,6 +188,17 @@ public class PortfolioApplicationService {
                     asset.getQuantity());
         }
 
+        // Handle currency conversion for sale price
+        ValidatedCurrency accountCurrency = account.getBaseCurrency();
+        Money salePrice = command.price();
+        Money convertedSalePrice = salePrice;
+
+        // If currencies don't match, convert to account currency
+        if (!accountCurrency.equals(salePrice.currency())) {
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(salePrice.currency(), accountCurrency);
+            convertedSalePrice = salePrice.convert(rate.get());
+        }
+
         // Fetch market data for enrichment (optional, for the view)
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(
                 asset.getAssetIdentifier()).orElse(null);
@@ -204,7 +209,7 @@ public class PortfolioApplicationService {
                 TransactionType.SELL,
                 asset.getAssetIdentifier(),
                 command.quantity(),
-                command.price(),
+                convertedSalePrice, // ← Use converted price
                 command.fees(),
                 command.transactionDate(),
                 command.notes());

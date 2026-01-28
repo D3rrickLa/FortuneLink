@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -11,14 +12,17 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,12 +33,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.dtos.DateRangeResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.dtos.PaginationMeta;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioHttpMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.TransactionCommandAssembler;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.TransactionDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeleteTransactionRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.RecordTransactionRequest;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PagedTransactionHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.TransactionHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordDepositCommand;
@@ -44,7 +51,10 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Record
 import com.laderrco.fortunelink.portfolio_management.application.commands.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionByIdQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
@@ -264,6 +274,7 @@ class TransactionControllerTest {
     }
 
     // ------------------- DELETE -------------------
+    @SuppressWarnings("null")
     @Test
     void delete_returnsNoContent() throws Exception {
         // 1. Arrange
@@ -285,6 +296,7 @@ class TransactionControllerTest {
                 .andExpect(status().isNoContent());
     }
 
+    @SuppressWarnings("null")
     @Test
     void delete_returnsNoContentNullRequestParam() throws Exception {
         // 1. Arrange
@@ -300,6 +312,61 @@ class TransactionControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)) // Removed .content(null) for cleaner test
                 // 3. Assert
                 .andExpect(status().isNoContent());
+    }
+    // ---------------- GET /{transactionId} ----------------
+
+    @Test
+    @DisplayName("GET transaction by id returns 200")
+    void getTransaction_returnsOk() throws Exception {
+        TransactionView transactionView = mock(TransactionView.class);
+        TransactionHttpResponse response = mock(TransactionHttpResponse.class);
+        GetTransactionByIdQuery query = mock(GetTransactionByIdQuery.class);
+
+        when(transactionCommandAssembler.toTransactionQuery(any(), any(), any()))
+                .thenReturn(query);
+
+        when(queryService.getTransactionDetails(query))
+                .thenReturn(transactionView);
+
+        when(transactionDtoMapper.toResponse(any(), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(get(
+                "/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
+                "portfolio-1",
+                "account-1",
+                "tx-1"))
+                .andExpect(status().isOk());
+    }
+
+    // ---------------- GET transaction history ----------------
+
+    @Test
+    @DisplayName("GET transaction history returns 200")
+    void getTransactionHistory_returnsOk() throws Exception {
+        GetTransactionHistoryQuery query = mock(GetTransactionHistoryQuery.class);
+        TransactionHistoryView historyView = mock(TransactionHistoryView.class);
+        PagedTransactionHttpResponse response = mock();
+
+        // Use anyInt() for primitives
+        when(transactionCommandAssembler.toHistoryQuery(
+                any(), any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(query);
+
+        when(queryService.getTransactionHistory(query))
+                .thenReturn(historyView);
+
+        when(transactionDtoMapper.toPagedResponse(any(), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(get(
+                "/api/portfolios/{portfolioId}/accounts/{accountId}/transactions",
+                "portfolio-1",
+                "account-1")
+                .param("type", "BUY")
+                .param("page", "1")
+                .param("size", "20"))
+                .andExpect(status().isOk());
     }
 
     private PortfolioId toPortfolioId(String id) {

@@ -78,6 +78,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.shared.enums.Precision;
@@ -95,6 +96,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @DisplayName("Portfolio Application Service Tests")
 class PortfolioApplicationServiceTest {
 
+    public static final Instant TIME = Instant.now();
+
     @Mock
     private PortfolioRepository portfolioRepository;
 
@@ -106,6 +109,9 @@ class PortfolioApplicationServiceTest {
 
     @Mock
     private MarketDataService marketDataService;
+
+    @Mock
+    private ExchangeRateService exchangeRateService;
 
     @Mock
     private CommandValidator commandValidator;
@@ -270,6 +276,109 @@ class PortfolioApplicationServiceTest {
         }
 
         @Test
+        @DisplayName("Should convert sale price when sale currency differs from account currency")
+        void recordAssetSale_ShouldConvertCurrency() {
+            // ---------- IDs ----------
+            PortfolioId portfolioId = PortfolioId.randomId();
+            AccountId accountId = AccountId.randomId();
+
+            // ---------- Portfolio + Account ----------
+            Portfolio portfolio = new Portfolio(
+                    UserId.randomId(),
+                    "Test Portfolio",
+                    ValidatedCurrency.USD);
+
+            Account account = Account.createNew(
+                    accountId,
+                    "USD Account",
+                    AccountType.INVESTMENT,
+                    ValidatedCurrency.USD);
+
+            portfolio.addAccount(account);
+
+            // ---------- Seed CASH ----------
+            Transaction deposit = new Transaction(
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.DEPOSIT,
+                    mock(),
+                    BigDecimal.valueOf(10_000),
+                    new Money(BigDecimal.ONE, ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Initial cash");
+
+            portfolio.recordTransaction(accountId, deposit);
+
+            // ---------- Seed ASSET via BUY (creates Asset internally) ----------
+            AssetIdentifier aapl = SymbolIdentifier.of("AAPL");
+
+            Transaction buy = new Transaction(
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    aapl,
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(100), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Seed asset");
+
+            portfolio.recordTransaction(accountId, buy);
+
+            // ---------- Persist stub ----------
+            when(portfolioRepository.findById(portfolioId))
+                    .thenReturn(Optional.of(portfolio));
+
+            when(commandValidator.validate(any(RecordSaleCommand.class)))
+                    .thenReturn(ValidationResult.success());
+
+            // ---------- Sale command (EUR price) ----------
+            Money salePriceEur = new Money(
+                    BigDecimal.valueOf(100),
+                    ValidatedCurrency.EUR);
+
+            RecordSaleCommand command = new RecordSaleCommand(
+                    portfolioId,
+                    accountId,
+                    account.getAssets().get(0).getAssetId(), // real asset ID
+                    BigDecimal.ONE,
+                    salePriceEur,
+                    null,
+                    Instant.now(),
+                    "Sell in EUR");
+
+            // ---------- Exchange rate ----------
+            ExchangeRate eurToUsd = new ExchangeRate(
+                    ValidatedCurrency.EUR,
+                    ValidatedCurrency.USD,
+                    BigDecimal.valueOf(1.2), TIME, "");
+
+            when(exchangeRateService.getExchangeRate(
+                    ValidatedCurrency.EUR,
+                    ValidatedCurrency.USD)).thenReturn(Optional.of(eurToUsd));
+
+            // ---------- Market data (optional) ----------
+            when(marketDataService.getAssetInfo(any()))
+                    .thenReturn(Optional.empty());
+
+            // ---------- ACT ----------
+            TransactionView result = service.recordAssetSale(command);
+
+            // ---------- ASSERT ----------
+            assertEquals(
+                    new BigDecimal("120.00"),
+                    result.price().amount().setScale(2));
+            assertEquals(
+                    ValidatedCurrency.USD,
+                    result.price().currency());
+
+            // ---------- VERIFY ----------
+            verify(exchangeRateService)
+                    .getExchangeRate(ValidatedCurrency.EUR, ValidatedCurrency.USD);
+        }
+
+        @Test
         @DisplayName("Should throw exception when insufficient funds")
         void shouldThrowExceptionWhenInsufficientFunds() {
             // Given
@@ -291,6 +400,7 @@ class PortfolioApplicationServiceTest {
             assertThatThrownBy(() -> service.recordAssetPurchase(largeCommand))
                     .isInstanceOf(InsufficientFundsException.class);
         }
+
     }
 
     @Nested
@@ -412,6 +522,8 @@ class PortfolioApplicationServiceTest {
             // Verify no save was attempted
             verify(portfolioRepository, never()).save(any(Portfolio.class));
         }
+
+        //
 
         @Test
         @DisplayName("Should throw exception when validation result is not valid")
@@ -876,6 +988,168 @@ class PortfolioApplicationServiceTest {
             assertThatThrownBy(() -> service.recordDividendIncome(command))
                     .isInstanceOf(AccountNotFoundException.class)
                     .hasMessageContaining(mockAccountId.toString());
+        }
+
+        @Test
+        @DisplayName("Dividend DRIP with shares received should calculate quantity and price per share")
+        void recordDividendIncome_DripWithShares() {
+            PortfolioId portfolioId = PortfolioId.randomId();
+            AccountId accountId = AccountId.randomId();
+
+            Portfolio portfolio = new Portfolio(UserId.randomId(), "Test", ValidatedCurrency.USD);
+            Account account = Account.createNew(accountId, "Account", AccountType.INVESTMENT, ValidatedCurrency.USD);
+            portfolio.addAccount(account);
+
+            // Seed asset via BUY
+            Transaction buy = new Transaction(
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    SymbolIdentifier.of("AAPL"),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(100), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Seed");
+            portfolio.recordTransaction(accountId, buy);
+
+            Asset asset = account.getAssets().get(0);
+
+            when(portfolioRepository.findById(portfolioId))
+                    .thenReturn(Optional.of(portfolio));
+            when(commandValidator.validate(any(RecordIncomeCommand.class)))
+                    .thenReturn(ValidationResult.success());
+            when(marketDataService.getAssetInfo(any()))
+                    .thenReturn(Optional.empty());
+
+            Money dividendAmount = new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD);
+
+            RecordIncomeCommand command = new RecordIncomeCommand(
+                    portfolioId,
+                    accountId,
+                    asset.getAssetId(),
+                    dividendAmount,
+                    TransactionType.DIVIDEND,
+                    true, // DRIP
+                    BigDecimal.valueOf(2), // shares received
+                    Instant.now(),
+                    "DRIP dividend");
+
+            TransactionView result = service.recordDividendIncome(command);
+
+            // IF branch assertions
+            assertEquals(BigDecimal.valueOf(2), result.quantity());
+            assertEquals(
+                    new BigDecimal("25.00"),
+                    result.price().amount().setScale(2));
+            assertEquals(ValidatedCurrency.USD, result.price().currency());
+        }
+
+        @Test
+        @DisplayName("Dividend DRIP with shares received should calculate quantity and price per share")
+        void recordDividendIncome_DripWithShares2() {
+            PortfolioId portfolioId = PortfolioId.randomId();
+            AccountId accountId = AccountId.randomId();
+
+            Portfolio portfolio = new Portfolio(UserId.randomId(), "Test", ValidatedCurrency.USD);
+            Account account = Account.createNew(accountId, "Account", AccountType.INVESTMENT, ValidatedCurrency.USD);
+            portfolio.addAccount(account);
+
+            // Seed asset via BUY
+            Transaction buy = new Transaction(
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    SymbolIdentifier.of("AAPL"),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(100), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Seed");
+            portfolio.recordTransaction(accountId, buy);
+
+            Asset asset = account.getAssets().get(0);
+
+            when(portfolioRepository.findById(portfolioId))
+                    .thenReturn(Optional.of(portfolio));
+            when(commandValidator.validate(any(RecordIncomeCommand.class)))
+                    .thenReturn(ValidationResult.success());
+            when(marketDataService.getAssetInfo(any()))
+                    .thenReturn(Optional.empty());
+
+            Money dividendAmount = new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD);
+
+            RecordIncomeCommand command = new RecordIncomeCommand(
+                    portfolioId,
+                    accountId,
+                    asset.getAssetId(),
+                    dividendAmount,
+                    TransactionType.DIVIDEND,
+                    true, // DRIP
+                    BigDecimal.valueOf(2), // shares received
+                    Instant.now(),
+                    "DRIP dividend");
+
+            TransactionView result = service.recordDividendIncome(command);
+
+            // IF branch assertions
+            assertEquals(BigDecimal.valueOf(2), result.quantity());
+            assertEquals(
+                    new BigDecimal("25.00"),
+                    result.price().amount().setScale(2));
+            assertEquals(ValidatedCurrency.USD, result.price().currency());
+        }
+
+        @Test
+        @DisplayName("Dividend non-DRIP fallback branch executes")
+        void recordDividendIncome_NonDripFallbackBranch() {
+            PortfolioId portfolioId = PortfolioId.randomId();
+            AccountId accountId = AccountId.randomId();
+
+            Portfolio portfolio = new Portfolio(UserId.randomId(), "Test", ValidatedCurrency.USD);
+            Account account = Account.createNew(accountId, "Account", AccountType.INVESTMENT, ValidatedCurrency.USD);
+            portfolio.addAccount(account);
+
+            Transaction buy = new Transaction(
+                    TransactionId.randomId(),
+                    accountId,
+                    TransactionType.BUY,
+                    SymbolIdentifier.of("AAPL"),
+                    BigDecimal.TEN,
+                    new Money(BigDecimal.valueOf(100), ValidatedCurrency.USD),
+                    null,
+                    Instant.now(),
+                    "Seed");
+            portfolio.recordTransaction(accountId, buy);
+
+            Asset asset = account.getAssets().get(0);
+
+            when(portfolioRepository.findById(portfolioId))
+                    .thenReturn(Optional.of(portfolio));
+            when(commandValidator.validate(any(RecordIncomeCommand.class)))
+                    .thenReturn(ValidationResult.success());
+            when(marketDataService.getAssetInfo(any()))
+                    .thenReturn(Optional.empty());
+
+            Money dividendAmount = new Money(BigDecimal.valueOf(40), ValidatedCurrency.USD);
+
+            // Fallback branch: isDrip false, shares null
+            RecordIncomeCommand command = new RecordIncomeCommand(
+                    portfolioId,
+                    accountId,
+                    asset.getAssetId(),
+                    dividendAmount,
+                    TransactionType.DIVIDEND,
+                    false, // DRIP false
+                    null, // shares null
+                    Instant.now(),
+                    "Fallback dividend");
+
+            TransactionView result = service.recordDividendIncome(command);
+
+            // ELSE branch assertions
+            assertEquals(BigDecimal.ONE, result.quantity());
+            assertEquals(dividendAmount.amount(), result.price().amount());
         }
 
     }
@@ -2734,7 +3008,8 @@ class PortfolioApplicationServiceTest {
         @DisplayName("Should correctly calculate holdings and allow valid sell")
         void testValidateSellTransaction_FullCoverage() throws Exception {
             PortfolioApplicationService portfolioApplicationService = new PortfolioApplicationService(
-                    portfolioRepository, transactionQueryService, marketDataService, commandValidator,
+                    portfolioRepository, transactionQueryService, marketDataService, exchangeRateService,
+                    commandValidator,
                     portfolioViewAssembler);
             // 1. Setup method access
             Method method = PortfolioApplicationService.class.getDeclaredMethod(

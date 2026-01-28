@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -52,6 +53,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetAsse
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewNetWorthQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.ViewPerformanceQuery;
@@ -64,10 +66,12 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
+import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.assemblers.PortfolioViewAssembler;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Asset;
 import com.laderrco.fortunelink.portfolio_management.domain.models.entities.Portfolio;
@@ -597,7 +601,7 @@ class PortfolioQueryServiceTest {
         // Arrange
         // User asks for page 1
         GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-                portfolioId, null, null, null, null, 1, 10);
+                portfolioId, null, null, null, null, 0, 10);
 
         List<Transaction> transactions = createMockTransactions(15);
         List<Transaction> pageTransactions = transactions.subList(0, 10);
@@ -995,6 +999,106 @@ class PortfolioQueryServiceTest {
             transactions.add(transaction);
         }
         return transactions;
+    }
+
+    @Test
+    @DisplayName("Should return TransactionView when transaction exists in account")
+    void getTransactionDetails_ShouldReturnView_WhenTransactionExists() {
+        // 1. Arrange IDs
+        PortfolioId pId = PortfolioId.randomId();
+        AccountId aId = AccountId.randomId();
+        TransactionId tId = TransactionId.randomId();
+        GetTransactionByIdQuery query = new GetTransactionByIdQuery(pId, aId, tId);
+
+        // 2. Setup Real Domain Objects
+        Portfolio portfolio = new Portfolio(UserId.randomId(), "Test Portfolio", ValidatedCurrency.USD);
+        Account account = Account.createNew(aId, "Trading", AccountType.INVESTMENT, ValidatedCurrency.USD);
+        portfolio.addAccount(account);
+
+        // Create a real transaction and record it so the account's internal list is
+        // populated
+        Transaction transaction = new Transaction(
+                tId,
+                aId,
+                TransactionType.BUY,
+                new MarketIdentifier("MSFT", null, AssetType.STOCK, "Microsoft", "USD", null),
+                BigDecimal.ONE,
+                new Money(BigDecimal.valueOf(400), ValidatedCurrency.USD),
+                null,
+                Instant.now(),
+                "Bought 1 MSFT");
+        // This call is critical: it puts the transaction in the account's internal list
+        portfolio.recordTransaction(aId, transaction);
+
+        // 3. Mock Repository & Assembler
+        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(portfolio));
+
+        TransactionView expectedView = mock(TransactionView.class);
+        when(portfolioViewAssembler.assembleTransactionView(any(Transaction.class))).thenReturn(expectedView);
+
+        // 4. Act
+        TransactionView result = queryService.getTransactionDetails(query);
+
+        // 5. Assert
+        assertNotNull(result);
+        verify(portfolioViewAssembler).assembleTransactionView(argThat(t -> t.getTransactionId().equals(tId)));
+    }
+
+    @Test
+    @DisplayName("Should throw TransactionNotFoundException when ID does not exist")
+    void getTransactionDetails_ShouldThrowException_WhenTransactionMissing() {
+        // Arrange
+        PortfolioId pId = PortfolioId.randomId();
+        AccountId aId = AccountId.randomId();
+        TransactionId missingId = TransactionId.randomId();
+        GetTransactionByIdQuery query = new GetTransactionByIdQuery(pId, aId, missingId);
+
+        Portfolio portfolio = new Portfolio(UserId.randomId(), "Empty Portfolio", ValidatedCurrency.USD);
+        Account account = Account.createNew(aId, "Trading", AccountType.INVESTMENT, ValidatedCurrency.USD);
+        portfolio.addAccount(account);
+
+        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(portfolio));
+
+        // Act & Assert
+        assertThrows(TransactionNotFoundException.class, () -> {
+            queryService.getTransactionDetails(query);
+        });
+    }
+
+    @Test
+    @DisplayName("Should throw AccountNotFoundException when account does not exist in the portfolio")
+    void getTransactionDetails_ShouldThrowAccountNotFoundException_WhenAccountIsMissing() {
+        // 1. Arrange IDs
+        PortfolioId pId = PortfolioId.randomId();
+        AccountId missingAccountId = AccountId.randomId(); // ID that won't be in the portfolio
+        TransactionId tId = TransactionId.randomId();
+
+        GetTransactionByIdQuery query = new GetTransactionByIdQuery(
+                pId,
+                missingAccountId,
+                tId);
+
+        // 2. Setup a REAL Portfolio with NO accounts
+        Portfolio portfolio = new Portfolio(
+                UserId.randomId(),
+                "Empty Test Portfolio",
+                ValidatedCurrency.USD);
+
+        // 3. Mock Repository to return our portfolio
+        // This allows loadUserPortfolio(query.portfolioId()) to succeed
+        when(portfolioRepository.findById(pId)).thenReturn(Optional.of(portfolio));
+
+        // 4. Act & Assert
+        AccountNotFoundException exception = assertThrows(AccountNotFoundException.class, () -> {
+            queryService.getTransactionDetails(query);
+        });
+
+        // Verify the exception contains the correct metadata
+        assertTrue(exception.getMessage().contains(missingAccountId.toString()));
+        assertTrue(exception.getMessage().contains(pId.toString()));
+
+        // Verify we never even tried to find a transaction or call the assembler
+        verifyNoInteractions(portfolioViewAssembler);
     }
 
     private List<Transaction> createMockTransactionsWithAccount(AccountId accountId, int count) {

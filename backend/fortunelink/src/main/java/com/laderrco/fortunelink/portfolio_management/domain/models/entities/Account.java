@@ -144,16 +144,17 @@ public class Account implements ClassValidation {
         updateMetadata();
     }
 
-    void addAsset(Asset asset) { // validates cash available <- think we mean that hte account should have money
-                                 // in it before we add a full asset
+    void addAsset(Asset asset) {
         ClassValidation.validateParameter(asset);
 
         boolean alreadyExists = this.assets.stream()
-                .anyMatch(a -> a.getAssetIdentifier().getPrimaryId().equals(a.getAssetIdentifier().getPrimaryId()));
+                .anyMatch(existing -> existing.getAssetIdentifier().getPrimaryId()
+                        .equals(asset.getAssetIdentifier().getPrimaryId()));
 
         if (alreadyExists) {
-            throw new IllegalStateException(String.format("Asset with identifier %s already exists in this account",
-                    asset.getAssetIdentifier().getPrimaryId()));
+            throw new IllegalStateException(
+                    "Asset with identifier %s already exists in this account"
+                            .formatted(asset.getAssetIdentifier().getPrimaryId()));
         }
 
         this.assets.add(asset);

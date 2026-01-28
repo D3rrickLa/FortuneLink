@@ -35,6 +35,8 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -151,6 +153,39 @@ class JpaPortfolioRepositoryTest {
         // 4. Verify
         Optional<Portfolio> result = repository.findByUserId(userId);
         assertThat(result).isPresent();
+    }
+
+    @Test
+    void testCountByUserId() {
+        // 1. Arrange IDs
+        PortfolioId portfolioId = new PortfolioId(UUID.randomUUID());
+        UserId userId = new UserId(UUID.randomUUID());
+
+        // 2. SEED THE USER: This satisfies the fk_user constraint
+        jdbcTemplate.update("INSERT INTO auth.users (id, email) VALUES (?, ?)",
+                userId.userId(), "test-count@example.com");
+
+        // 3. Reconstitute the domain object
+        Instant time = LocalDateTime.of(2025, 01, 01, 0, 0).toInstant(ZoneOffset.UTC);
+        Portfolio portfolio = Portfolio.reconstitute(
+                portfolioId,
+                userId,
+                new ArrayList<>(),
+                "Name",
+                ValidatedCurrency.USD,
+                "Desc",
+                false,
+                null,
+                null,
+                time,
+                time);
+
+        // 4. Act & Assert
+        repository.save(portfolio);
+        Long actual = repository.countByUserId(userId);
+
+        // Asserting 1L matches the count we just saved
+        assertThat(actual).isEqualTo(1L);
     }
 
     @Test

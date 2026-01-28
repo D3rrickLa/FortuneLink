@@ -9,11 +9,22 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-// might want to make a IncomeType.java
-public record RecordIncomeCommand(PortfolioId portfolioId, AccountId accountId, AssetId assetId, Money amount, TransactionType type, boolean isDrip, BigDecimal sharesReceived, Instant transactionDate, String notes) {
+public record RecordIncomeCommand(
+        PortfolioId portfolioId,
+        AccountId accountId,
+        AssetId assetId,
+        Money amount,
+        TransactionType type,
+        boolean isDrip,
+        BigDecimal sharesReceived,
+        Instant transactionDate,
+        String notes
+) {
     public RecordIncomeCommand {
         if (isDrip && (sharesReceived == null || sharesReceived.compareTo(BigDecimal.ZERO) <= 0)) {
-            throw new IllegalArgumentException("Shares recieved must be provided for DRIP transaction");
+            throw new IllegalArgumentException(
+                    "Shares received must be provided and greater than zero for DRIP transaction"
+            );
         }
     }
 }

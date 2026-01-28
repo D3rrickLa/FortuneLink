@@ -64,15 +64,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex.getMessage(), request);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<List<String>> handleValidationErrors(MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.toList());
-        return ResponseEntity.badRequest().body(errors);
-    }
+    // @ExceptionHandler(MethodArgumentNotValidException.class)
+    // public ResponseEntity<List<String>> handleValidationErrors(MethodArgumentNotValidException ex) {
+    //     List<String> errors = ex.getBindingResult()
+    //             .getFieldErrors()
+    //             .stream()
+    //             .map(error -> error.getField() + ": " + error.getDefaultMessage())
+    //             .collect(Collectors.toList());
+    //     return ResponseEntity.badRequest().body(errors);
+    // }
 
     // --- 409 CONFLICT (Business Rules) ---
     @ExceptionHandler({
