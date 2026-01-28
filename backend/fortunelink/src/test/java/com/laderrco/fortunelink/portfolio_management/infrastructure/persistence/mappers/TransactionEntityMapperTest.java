@@ -83,7 +83,7 @@ class TransactionEntityMapperTest {
             assertThat(domain.getTransactionType()).isEqualTo(TransactionType.BUY);
             assertThat(domain.getQuantity()).isEqualByComparingTo(new BigDecimal("10"));
             assertThat(domain.getPricePerUnit().amount()).isEqualByComparingTo(new BigDecimal("150.00"));
-            assertThat(domain.getPricePerUnit().currency().getSymbol()).isEqualTo("US$");
+            assertThat(domain.getPricePerUnit().currency().getCode()).isEqualTo("USD");
 
             assertThat(domain.getAssetIdentifier()).isInstanceOf(MarketIdentifier.class);
             MarketIdentifier identifier = (MarketIdentifier) domain.getAssetIdentifier();
