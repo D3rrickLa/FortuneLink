@@ -30,7 +30,7 @@ jobs:
 
     - name: Build and Test with Maven
       # Combined into a single env block to prevent YAML parsing errors
-      run: mvn -B package --file ./backend/fortunelink/pom.xml
+      run: mvn -B package -Duser.language=en -Duser.country=CA --file ./backend/fortunelink/pom.xml
       env:
         POSTGRES_VERSION: 16-alpine
         FMP_BASE_URL: http://localhost
