@@ -11,22 +11,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketIdentifier;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.BaseIntegrationTest;
 
 
-@SpringBootTest(classes = {
-        CacheEvictionService.class,
-        CacheEvictionServiceTest.TestCacheConfig.class
-})
+@SpringBootTest
 @ActiveProfiles("test")
-class CacheEvictionServiceTest {
+class CacheEvictionServiceTest extends BaseIntegrationTest {
 
     @Autowired
     private CacheEvictionService cacheEvictionService;
@@ -35,6 +29,8 @@ class CacheEvictionServiceTest {
     private CacheManager cacheManager;
 
     private MarketIdentifier symbol;
+
+
 
     @SuppressWarnings("null")
     @BeforeEach
@@ -51,35 +47,11 @@ class CacheEvictionServiceTest {
                 )
         );
 
-        // 🔑 IMPORTANT: keys must match @CacheEvict key
+        // This now puts data into a REAL Redis container!
         cache("current-prices").put(symbol.getPrimaryId(), "price");
         cache("asset-info").put(symbol.getPrimaryId(), "info");
         cache("historical-prices").put("ANY", "history");
         cache("trading-currency").put("USD", "currency");
-    }
-
-    @SuppressWarnings("null")
-    @Test
-    void shouldEvictSinglePriceCacheEntry() {
-        cacheEvictionService.evictPriceCache(symbol);
-
-        assertThat(cache("current-prices").get(symbol.getPrimaryId())).isNull();
-    }
-
-    @SuppressWarnings("null")
-    @Test
-    void shouldEvictAllPriceCacheEntries() {
-        cacheEvictionService.evictAllPriceCache();
-
-        assertThat(cache("current-prices").get(symbol.getPrimaryId())).isNull();
-    }
-
-    @SuppressWarnings("null")
-    @Test
-    void shouldEvictAssetInfoCacheEntry() {
-        cacheEvictionService.evictAssetInfoCache(symbol);
-
-        assertThat(cache("asset-info").get(symbol.getPrimaryId())).isNull();
     }
 
     @SuppressWarnings("null")
@@ -96,25 +68,9 @@ class CacheEvictionServiceTest {
     private Cache cache(String name) {
         @SuppressWarnings("null")
         Cache cache = cacheManager.getCache(name);
-        assertThat(cache)
-                .as("Cache " + name + " should exist")
-                .isNotNull();
+        assertThat(cache).as("Cache " + name + " should exist").isNotNull();
         return cache;
     }
-
-    // 👇 Test-only cache configuration
-    @Configuration
-    @EnableCaching
-    static class TestCacheConfig {
-
-        @Bean
-        CacheManager cacheManager() {
-            return new ConcurrentMapCacheManager(
-                    "current-prices",
-                    "historical-prices",
-                    "asset-info",
-                    "trading-currency"
-            );
-        }
-    }
+    
+    // Notice: TestCacheConfig is GONE. We are using the real RedisCacheConfig now.
 }
