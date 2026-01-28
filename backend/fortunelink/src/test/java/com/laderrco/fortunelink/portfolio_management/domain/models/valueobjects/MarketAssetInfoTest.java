@@ -53,7 +53,7 @@ public class MarketAssetInfoTest {
 
     @Test
     void testToIdentifierSucess() {
-        MarketIdentifier testIdentifier = new MarketIdentifier(symbol, null, assetType, name, "US$",
+        MarketIdentifier testIdentifier = new MarketIdentifier(symbol, null, assetType, name, "USD",
                 Map.of("Sector", sector, "Exchange", exchange));
         assertEquals(testIdentifier, testMarketAssetInfo.toIdentifier());
     }

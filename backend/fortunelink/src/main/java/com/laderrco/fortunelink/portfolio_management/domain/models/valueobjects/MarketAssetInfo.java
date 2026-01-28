@@ -36,7 +36,7 @@ public class MarketAssetInfo {
                 null,
                 this.assetType, // STOCK, ETF, CRYPTO, etc.
                 this.name, // Full asset name
-                this.currency.getSymbol(), // Asset's native currency
+                this.currency.getCode(), // Asset's native currency
                 Map.of("Exchange", this.exchange, "Sector", this.sector) // NYSE, NASDAQ, etc. Technology, Finance, etc.
         );
     }
