@@ -20,7 +20,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(properties = {
-    "spring.jpa.hibernate.ddl-auto=none",
+    "spring.jpa.hibernate.ddl-auto=update",
     "spring.flyway.enabled=false",
     "spring.data.redis.repositories.enabled=false", // Disable Redis
     "spring.cache.type=none",                       // Disable Caching
