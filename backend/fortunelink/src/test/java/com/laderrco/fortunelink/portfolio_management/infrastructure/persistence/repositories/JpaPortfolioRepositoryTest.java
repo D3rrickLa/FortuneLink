@@ -35,8 +35,6 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.persistence.
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @DataJpaTest
 @ActiveProfiles("test")

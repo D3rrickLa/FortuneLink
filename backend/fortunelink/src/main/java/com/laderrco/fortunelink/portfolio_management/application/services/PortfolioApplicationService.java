@@ -59,7 +59,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.repositories.Portfol
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
-import com.laderrco.fortunelink.shared.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
