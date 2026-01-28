@@ -379,6 +379,7 @@ Another feasibility that came to mind, algorithms for user content... How does I
 ### Frontend
 
 - React / Next.js – Core framework for UI with server-side rendering support
+- with a Bun runtime
 - Tailwind CSS – Utility-first CSS framework for styling
 
 ### Backend 
