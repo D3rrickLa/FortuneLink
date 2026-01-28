@@ -1,292 +1,101 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
-        <relativePath /> <!-- lookup parent from repository -->
-    </parent>
-    <groupId>com.laderrco</groupId>
-    <artifactId>fortunelink</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>fortunelink</name>
-    <description>Demo project for Spring Boot</description>
-    <url />
-    <licenses>
-        <license />
-    </licenses>
-    <developers>
-        <developer />
-    </developers>
-    <scm>
-        <connection />
-        <developerConnection />
-        <tag />
-        <url />
-    </scm>
-    <properties>
-        <java.version>25</java.version>
-        <testcontainers.version>1.21.4</testcontainers.version>
-    </properties>
-    <dependencies>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.5.0</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.laderrco</groupId>
+	<artifactId>fortunelink</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>fortunelink</name>
+	<description>Demo project for Spring Boot</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>25</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
 
-        <!-- ======================= -->
-        <!-- Spring Boot Starters -->
-        <!-- ======================= -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
+	</dependencies>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-graphql</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-
-        <!-- ======================= -->
-        <!-- Caching, Redis & Rate Limiting -->
-        <!-- ======================= -->
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-cache</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-        </dependency>
-
-        <!-- Bucket4j for rate limiting -->
-        <dependency>
-            <groupId>com.bucket4j</groupId>
-            <artifactId>bucket4j-core</artifactId>
-            <version>8.7.0</version>
-        </dependency>
-
-        <!-- Bucket4j Redis integration -->
-        <dependency>
-            <groupId>com.bucket4j</groupId>
-            <artifactId>bucket4j-redis</artifactId>
-            <version>8.7.0</version>
-        </dependency>
-
-        <!-- ======================= -->
-        <!-- Database & Migration -->
-        <!-- ======================= -->
-
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-        </dependency>
-
-        <!-- JSONB / Hibernate Utilities -->
-        <dependency>
-            <groupId>io.hypersistence</groupId>
-            <artifactId>hypersistence-utils-hibernate-60</artifactId>
-            <version>3.9.0</version>
-        </dependency>
-
-
-        <!-- ======================= -->
-        <!-- API Documentation -->
-        <!-- ======================= -->
-
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.7.0</version>
-        </dependency>
-
-
-        <!-- ======================= -->
-        <!-- Development Tools -->
-        <!-- ======================= -->
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-
-        <!-- ======================= -->
-        <!-- Testing -->
-        <!-- ======================= -->
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.graphql</groupId>
-            <artifactId>spring-graphql-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- This is here to fix a test container issue -->
-        <!-- Testcontainers core -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <version>${testcontainers.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- JUnit 5 integration (REQUIRED for @Container) -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${testcontainers.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- PostgreSQL container -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${testcontainers.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.wiremock</groupId>
-            <artifactId>wiremock</artifactId>
-            <version>3.13.2</version>
-            <scope>test</scope>
-        </dependency>
-
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-            <!-- 
-				need (this and the surefire because in the debug console while testing, says self-attaching 
-			 	will no longer work in future releases, do this instead. the log below
-                    Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in
-                    future releases of the JDK. Please add Mockito as an agent to your build as described in
-                    Mockito's documentation:
-                 
-                    WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide
-                                this warning
-                    WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for
-                                more information
-                    WARNING: Dynamic loading of agents will be disallowed by default in a future release
-                    OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because
-                                bootstrap classpath has been appended
-			-->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>properties</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>
-                        @{argLine} -javaagent:${org.mockito:mockito-core:jar} -XX:+AllowRedefinitionToAddDeleteMethods
-                    </argLine>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>
