@@ -20,8 +20,11 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(properties = {
-    "spring.jpa.hibernate.ddl-auto=none", // Stops Hibernate from validating/changing schema
-    "spring.flyway.enabled=false"         // Disables Flyway for this test
+    "spring.jpa.hibernate.ddl-auto=none",
+    "spring.flyway.enabled=false",
+    "spring.data.redis.repositories.enabled=false", // Disable Redis
+    "spring.cache.type=none",                       // Disable Caching
+    "fortunelink.cache.enabled=false"              // Disable your custom cache
 })
 public class Phase2CompletionTest {
     @Autowired
