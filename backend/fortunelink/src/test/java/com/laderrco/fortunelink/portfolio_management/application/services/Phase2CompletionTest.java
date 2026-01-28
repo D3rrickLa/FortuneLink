@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.*;
     "spring.data.redis.repositories.enabled=false",
     "spring.cache.type=none"
 })
+@ActiveProfiles("local")
 public class Phase2CompletionTest {
     @Autowired
     private MarketDataService marketDataService;
