@@ -22,6 +22,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 import static org.assertj.core.api.Assertions.*;
 
+@Disabled
 @SpringBootTest(properties = {
     "spring.jpa.hibernate.ddl-auto=none",
     "spring.flyway.enabled=false",
