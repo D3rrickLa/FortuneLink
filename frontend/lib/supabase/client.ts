@@ -1,3 +1,4 @@
+// ew only use thsi for login, singup, logout page/items + client components
 import { createBrowserClient } from '@supabase/ssr'
 export function createClient() {
   return createBrowserClient(

@@ -1,3 +1,5 @@
+// this is wired into the middleware.ts
+// it refreshes tokens and redirect unauth users, replaces auth-helpers-nextjs
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
