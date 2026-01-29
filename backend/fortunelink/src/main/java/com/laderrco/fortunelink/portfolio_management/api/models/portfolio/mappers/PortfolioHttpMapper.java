@@ -28,9 +28,9 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 // maps between the request to the command used in application
 @Component
 public class PortfolioHttpMapper {
-    public CreatePortfolioCommand toCommand(CreatePortfolioRequest request) {
+    public CreatePortfolioCommand toCommand(CreatePortfolioRequest request, UUID userId) {
         return new CreatePortfolioCommand(
-            toUserId(request.getUserId()),
+            toUserId(userId.toString()),
             request.getName(),
             toCurrency(request.getCurrencyPreference()),
             request.getDescription(),

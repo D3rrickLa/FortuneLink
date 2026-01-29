@@ -23,7 +23,6 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetAsse
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 
 class PortfolioHttpMapperTest {
 
@@ -39,14 +38,13 @@ class PortfolioHttpMapperTest {
     void toCommand_createPortfolio() {
         String userId = UUID.randomUUID().toString();
         CreatePortfolioRequest req = new CreatePortfolioRequest(
-                userId,
                 "My Portfolio",
                 "USD",
                 "Desc",
                 true
         );
 
-        CreatePortfolioCommand cmd = mapper.toCommand(req);
+        CreatePortfolioCommand cmd = mapper.toCommand(req, UUID.fromString(userId));
 
         assertEquals(userId, cmd.userId().userId().toString());
         assertEquals("My Portfolio", cmd.name());
@@ -77,7 +75,6 @@ class PortfolioHttpMapperTest {
     void toCommand_updatePortfolio() {
         String portfolioId = UUID.randomUUID().toString();
         CreatePortfolioRequest req = new CreatePortfolioRequest(
-                UserId.randomId().toString(),
                 "Updated Name",
                 "EUR",
                 "Updated Desc",

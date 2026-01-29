@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,23 +23,10 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.external.mar
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Admin endpoints for cache management.
- * 
- * WARNING: These endpoints should be secured in production!
- * Consider adding @PreAuthorize("hasRole('ADMIN')") or similar.
- * 
- * Endpoints:
- * - GET /api/admin/cache/stats - View cache statistics
- * - DELETE /api/admin/cache/{name} - Clear specific cache
- * - DELETE /api/admin/cache - Clear all caches
- * - DELETE /api/admin/cache/{name}/{key} - Clear specific cache entry
- */
+@Profile({ "local", "test" })
 @RestController
 @RequestMapping("/api/admin/cache")
 @RequiredArgsConstructor
-// @PreAuthorize("hasRole('ADMIN')") // TODO: Add security in Phase 5
-// (Authentication)
 public class CacheAdminController {
 
     private final CacheManager cacheManager;

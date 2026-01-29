@@ -1,15 +1,16 @@
 package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,11 +37,11 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.P
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.security.AuthenticatedUser;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/portfolios")
@@ -51,13 +52,16 @@ public class PortfolioController {
     private final PortfolioHttpMapper requestMapper;
 
     @PostMapping
-    public ResponseEntity<PortfolioHttpResponse> createPortfolio(@Valid @RequestBody CreatePortfolioRequest request) {
-        CreatePortfolioCommand command = requestMapper.toCommand(request);
+    public ResponseEntity<PortfolioHttpResponse> createPortfolio(
+            @Valid @RequestBody CreatePortfolioRequest request,
+            @AuthenticatedUser UUID userId) {
+        CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
         PortfolioView portfolio = portfolioApplicationService.createPortfolio(command);
         PortfolioHttpResponse response = portfolioDtoMapper.toPortfolioResponse(portfolio);
         return ResponseEntity.ok(response);
     }
 
+    // If we want only the owner can access, inject @AuthenticatedUser UUID userId and pass it to the query service
     @GetMapping("/{portfolioId}")
     public ResponseEntity<PortfolioHttpResponse> getPortfolio(@PathVariable String portfolioId) {
         GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId);
@@ -115,7 +119,8 @@ public class PortfolioController {
     }
 
     @GetMapping("/{portfolioId}/accounts/{accountId}/assets/{assetId}")
-    public ResponseEntity<AssetHoldingHttpResponse> getAsset(@PathVariable String portfolioId, @PathVariable String accountId, @PathVariable String assetId) {
+    public ResponseEntity<AssetHoldingHttpResponse> getAsset(@PathVariable String portfolioId,
+            @PathVariable String accountId, @PathVariable String assetId) {
         // We create a Query object just like your other methods
         GetAssetQueryView query = requestMapper.toAssetQuery(portfolioId, accountId, assetId);
         AssetView asset = portfolioQueryService.getAssetSummary(query);

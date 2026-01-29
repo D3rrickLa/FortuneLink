@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.api.web.controllers;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,13 +10,16 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -30,6 +34,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mappers.PortfolioHttpMapper;
@@ -55,6 +60,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.views.A
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.PortfolioNotFoundException;
@@ -72,7 +78,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
 
 @AutoConfigureMockMvc
-@Import({ DevSecurityConfig.class, RateLimitConfig.class })
+@Import({ DevSecurityConfig.class, RateLimitConfig.class, AuthenticationUserService.class })
 @WebMvcTest({ PortfolioController.class, GlobalExceptionHandler.class })
 class PortfolioControllerTest {
 
@@ -103,16 +109,18 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void createPortfolio_ShouldReturnCreatedPortfolio() throws Exception {
-        CreatePortfolioRequest request = new CreatePortfolioRequest(USER_ID, "Personal", "USD", "desc", false);
+        UUID mockUserId = UUID.randomUUID();
+        CreatePortfolioRequest request = new CreatePortfolioRequest("Personal", "USD", "desc", false);
         CreatePortfolioCommand command = mock(CreatePortfolioCommand.class);
         PortfolioView view = mock(PortfolioView.class);
         PortfolioHttpResponse response = mock(PortfolioHttpResponse.class);
 
-        when(requestMapper.toCommand(any(CreatePortfolioRequest.class))).thenReturn(command);
+        when(requestMapper.toCommand(any(CreatePortfolioRequest.class), any())).thenReturn(command);
         when(portfolioApplicationService.createPortfolio(command)).thenReturn(view);
         when(portfolioDtoMapper.toPortfolioResponse(view)).thenReturn(response);
 
         mockMvc.perform(post("/api/portfolios")
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -166,8 +174,7 @@ class PortfolioControllerTest {
     void updatePortfolio_ShouldReturnUpdatedPortfolio() throws Exception {
 
         // --- Request payload ---
-        CreatePortfolioRequest request = new CreatePortfolioRequest(
-                USER_ID, "Portfolio Name", "USD", "DESC", false);
+        CreatePortfolioRequest request = new CreatePortfolioRequest("Portfolio Name", "USD", "DESC", false);
 
         // --- Mock service & mapper ---
         PortfolioView view = new PortfolioView(
@@ -320,7 +327,7 @@ class PortfolioControllerTest {
     @Test
     void createPortfolio_ShouldReturn409_WhenUserAlreadyHasPortfolio() throws Exception {
         // Mock the mapping and service call
-        given(requestMapper.toCommand(any(CreatePortfolioRequest.class)))
+        given(requestMapper.toCommand(any(CreatePortfolioRequest.class), any()))
                 .willReturn(mock(CreatePortfolioCommand.class));
         given(portfolioApplicationService.createPortfolio(any()))
                 .willThrow(new PortfolioAlreadyExistsException("User already has a portfolio"));

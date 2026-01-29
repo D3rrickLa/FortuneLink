@@ -588,8 +588,7 @@ public class PortfolioApplicationService {
         }
 
         // create portfolio (domain logic)
-        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(),
-                command.description());
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(), command.description());
 
         // add a default account if specified in command
         if (command.createDefaultAccount()) {
