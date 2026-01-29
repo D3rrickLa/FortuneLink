@@ -38,17 +38,18 @@ public class PortfolioHttpMapper {
         );
     }
 
-    public GetPortfolioByIdQuery toCommand(String id) {
-        return new GetPortfolioByIdQuery(new PortfolioId(UUID.fromString(id)));
+    public GetPortfolioByIdQuery toCommand(String id, UUID userId) {
+        return new GetPortfolioByIdQuery(toPortfolioId(id), toUserId(userId.toString()));
     }
 
     public GetPortfoliosByUserIdQuery toCommand(GetUsersPortfolioRequest request) {
         return new GetPortfoliosByUserIdQuery(new UserId(UUID.fromString(request.userId())));
     }
 
-    public UpdatePortfolioCommand toCommand(String id, CreatePortfolioRequest request) {
+    public UpdatePortfolioCommand toCommand(String id, CreatePortfolioRequest request, UUID userId) {
         return new UpdatePortfolioCommand(
-            toPortfolioId(id), 
+            toPortfolioId(id),
+            toUserId(userId.toString()),
             request.getName(),
             toCurrency(request.getCurrencyPreference()), 
             request.getDescription()

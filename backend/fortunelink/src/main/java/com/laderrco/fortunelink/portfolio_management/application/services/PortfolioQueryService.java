@@ -93,7 +93,7 @@ public class PortfolioQueryService {
     public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
         Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
 
-        Portfolio portfolio = portfolioRepository.findById(query.id())
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(query.id(), query.userId())
                 .orElseThrow(() -> new PortfolioNotFoundException("Cannot find portfolio with id " + query.id()));
 
         return portfolioAssembler.assemblePortfolioView(portfolio);

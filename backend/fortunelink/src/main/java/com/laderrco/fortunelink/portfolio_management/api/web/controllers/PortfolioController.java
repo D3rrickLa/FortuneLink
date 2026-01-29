@@ -39,6 +39,7 @@ import com.laderrco.fortunelink.portfolio_management.application.services.Portfo
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.security.AuthenticatedUser;
 
+import jakarta.annotation.Nonnull;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -52,79 +53,144 @@ public class PortfolioController {
     private final PortfolioHttpMapper requestMapper;
 
     @PostMapping
-    public ResponseEntity<PortfolioHttpResponse> createPortfolio(
-            @Valid @RequestBody CreatePortfolioRequest request,
-            @AuthenticatedUser UUID userId) {
+    public ResponseEntity<PortfolioHttpResponse> createPortfolio(@Valid @RequestBody CreatePortfolioRequest request, @AuthenticatedUser UUID userId) {
         CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
-        PortfolioView portfolio = portfolioApplicationService.createPortfolio(command);
-        PortfolioHttpResponse response = portfolioDtoMapper.toPortfolioResponse(portfolio);
-        return ResponseEntity.ok(response);
+        PortfolioView portfolioView = portfolioApplicationService.createPortfolio(command);
+        return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
     }
 
-    // If we want only the owner can access, inject @AuthenticatedUser UUID userId and pass it to the query service
-    @GetMapping("/{portfolioId}")
-    public ResponseEntity<PortfolioHttpResponse> getPortfolio(@PathVariable String portfolioId) {
-        GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId);
-        PortfolioView portfolio = portfolioQueryService.getPortfolioById(query);
-        return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolio));
+    @GetMapping("/{portfolioId")
+    public ResponseEntity<PortfolioHttpResponse> getPortfolio(
+        @Nonnull
+        @PathVariable String portfolioId,
+        @AuthenticatedUser UUID userId
+    ) {
+        GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId, userId);
+        PortfolioView portfolioView = portfolioQueryService.getPortfolioById(query);
+        return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PortfolioHttpResponse>> getUserPortfolios(
-            @PathVariable GetUsersPortfolioRequest userId) {
-        GetPortfoliosByUserIdQuery query = requestMapper.toCommand(userId);
-        List<PortfolioSummaryView> portfolios = portfolioQueryService.getUserPortfolioSummaries(query);
+    @GetMapping("/user/me")
+    public
 
-        List<PortfolioHttpResponse> response = portfolios.stream()
-                .map(portfolioDtoMapper::toPortfolioResponse)
-                .collect(Collectors.toList());
+    // @PostMapping
+    // public ResponseEntity<PortfolioHttpResponse> createPortfolio(
+    //         @Valid @RequestBody CreatePortfolioRequest request,
+    //         @AuthenticatedUser UUID userId) {
+    //     CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
+    //     PortfolioView portfolio = portfolioApplicationService.createPortfolio(command);
+    //     PortfolioHttpResponse response = portfolioDtoMapper.toPortfolioResponse(portfolio);
+    //     return ResponseEntity.ok(response);
+    // }
 
-        return ResponseEntity.ok(response);
-    }
+    // // If we want only the owner can access, inject @AuthenticatedUser UUID userId
+    // // and pass it to the query service
+    // @Deprecated
+    // @GetMapping("/{portfolioId}")
+    // public ResponseEntity<PortfolioHttpResponse> getPortfolio(@PathVariable String portfolioId) {
+    //     GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId);
+    //     PortfolioView portfolio = portfolioQueryService.getPortfolioById(query);
+    //     return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolio));
+    // }
 
-    @PutMapping("/{portfolioId}")
-    public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@PathVariable String portfolioId,
-            @Valid @RequestBody CreatePortfolioRequest request) {
-        UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, request);
-        PortfolioView portfolio = portfolioApplicationService.updatePortfolio(command);
-        PortfolioHttpResponse response = portfolioDtoMapper.toPortfolioResponse(portfolio);
-        return ResponseEntity.ok(response);
-    }
+    // @Deprecated
+    // @GetMapping("/user/{userId}")
+    // public ResponseEntity<List<PortfolioHttpResponse>> getUserPortfolios(
+    //         @PathVariable GetUsersPortfolioRequest userId) {
+    //     GetPortfoliosByUserIdQuery query = requestMapper.toCommand(userId);
+    //     List<PortfolioSummaryView> portfolios = portfolioQueryService.getUserPortfolioSummaries(query);
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePortfolio(@PathVariable String id, @RequestBody DeletePortfolioRequest request) {
-        DeletePortfolioCommand command = requestMapper.toCommand(request);
-        portfolioApplicationService.deletePortfolio(command);
-        return ResponseEntity.noContent().build();
-    }
+    //     List<PortfolioHttpResponse> response = portfolios.stream()
+    //             .map(portfolioDtoMapper::toPortfolioResponse)
+    //             .collect(Collectors.toList());
 
-    @PostMapping("/{id}/accounts")
-    public ResponseEntity<AccountHttpResponse> addAccount(@PathVariable String id,
-            @Valid @RequestBody CreateAccountRequest request) {
-        AddAccountCommand command = requestMapper.toCommand(id, request);
-        AccountView account = portfolioApplicationService.addAccount(command);
-        return ResponseEntity.ok(portfolioDtoMapper.toAccountResponse(id, account));
-    }
+    //     return ResponseEntity.ok(response);
+    // }
 
-    /**
-     * Remove an account from a portfolio.
-     * 
-     * DELETE /api/portfolios/{id}/accounts/{accountId}
-     */
-    @DeleteMapping("/{id}/accounts/{accountId}")
-    public ResponseEntity<Void> removeAccount(@PathVariable String id, @PathVariable String accountId) {
-        RemoveAccountCommand command = requestMapper.toCommand(id, accountId);
-        portfolioApplicationService.removeAccount(command);
-        return ResponseEntity.noContent().build();
-    }
+    // // THIS IS BROKEN
+    // /*
+    //  * [
+    //  * {
+    //  * "id": "PortfolioId[portfolioId=34544865-3624-4516-9f67-179231a5c32b]",
+    //  * "userId": null,
+    //  * "name": null,
+    //  * "description": null,
+    //  * "accounts": null,
+    //  * "totalValue": 0E-34,
+    //  * "totalValueCurrency": "USD",
+    //  * "createdDate": null,
+    //  * "lastUpdated": "2026-01-29T01:10:47.594363"
+    //  * }
+    //  * ]
+    //  */
+    // @GetMapping("/user/me")
+    // public ResponseEntity<List<PortfolioHttpResponse>> getUserPortfolios(
+    //         @AuthenticatedUser UUID userId) {
 
-    @GetMapping("/{portfolioId}/accounts/{accountId}/assets/{assetId}")
-    public ResponseEntity<AssetHoldingHttpResponse> getAsset(@PathVariable String portfolioId,
-            @PathVariable String accountId, @PathVariable String assetId) {
-        // We create a Query object just like your other methods
-        GetAssetQueryView query = requestMapper.toAssetQuery(portfolioId, accountId, assetId);
-        AssetView asset = portfolioQueryService.getAssetSummary(query);
+    //     GetPortfoliosByUserIdQuery query = requestMapper.toCommand(new GetUsersPortfolioRequest(userId.toString()));
+    //     List<PortfolioSummaryView> portfolios = portfolioQueryService.getUserPortfolioSummaries(query);
 
-        return ResponseEntity.ok(portfolioDtoMapper.toAssetResponse(asset));
-    }
+    //     List<PortfolioHttpResponse> response = portfolios.stream()
+    //             .map(portfolioDtoMapper::toPortfolioResponse)
+    //             .collect(Collectors.toList());
+
+    //     return ResponseEntity.ok(response);
+    // }
+
+    // @PutMapping("/{portfolioId}")
+    // public ResponseEntity<PortfolioHttpResponse> updatePortfolio(
+    //         @PathVariable String portfolioId,
+    //         @Valid @RequestBody CreatePortfolioRequest request,
+    //         @AuthenticatedUser UUID userId) {
+
+    //     UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, request, userId);
+    //     PortfolioView portfolio = portfolioApplicationService.updatePortfolio(command);
+    //     return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolio));
+    // }
+
+    // @PutMapping("/{portfolioId}")
+    // public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@PathVariable String portfolioId,
+    //         @Valid @RequestBody CreatePortfolioRequest request) {
+    //     UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, request);
+    //     PortfolioView portfolio = portfolioApplicationService.updatePortfolio(command);
+    //     PortfolioHttpResponse response = portfolioDtoMapper.toPortfolioResponse(portfolio);
+    //     return ResponseEntity.ok(response);
+    // }
+
+    // @DeleteMapping("/{id}")
+    // public ResponseEntity<Void> deletePortfolio(@PathVariable String id, @RequestBody DeletePortfolioRequest request) {
+    //     DeletePortfolioCommand command = requestMapper.toCommand(request);
+    //     portfolioApplicationService.deletePortfolio(command);
+    //     return ResponseEntity.noContent().build();
+    // }
+
+    // @PostMapping("/{id}/accounts")
+    // public ResponseEntity<AccountHttpResponse> addAccount(@PathVariable String id,
+    //         @Valid @RequestBody CreateAccountRequest request) {
+    //     AddAccountCommand command = requestMapper.toCommand(id, request);
+    //     AccountView account = portfolioApplicationService.addAccount(command);
+    //     return ResponseEntity.ok(portfolioDtoMapper.toAccountResponse(id, account));
+    // }
+
+    // /**
+    //  * Remove an account from a portfolio.
+    //  * 
+    //  * DELETE /api/portfolios/{id}/accounts/{accountId}
+    //  */
+    // @DeleteMapping("/{id}/accounts/{accountId}")
+    // public ResponseEntity<Void> removeAccount(@PathVariable String id, @PathVariable String accountId) {
+    //     RemoveAccountCommand command = requestMapper.toCommand(id, accountId);
+    //     portfolioApplicationService.removeAccount(command);
+    //     return ResponseEntity.noContent().build();
+    // }
+
+    // @GetMapping("/{portfolioId}/accounts/{accountId}/assets/{assetId}")
+    // public ResponseEntity<AssetHoldingHttpResponse> getAsset(@PathVariable String portfolioId,
+    //         @PathVariable String accountId, @PathVariable String assetId) {
+    //     // We create a Query object just like your other methods
+    //     GetAssetQueryView query = requestMapper.toAssetQuery(portfolioId, accountId, assetId);
+    //     AssetView asset = portfolioQueryService.getAssetSummary(query);
+
+    //     return ResponseEntity.ok(portfolioDtoMapper.toAssetResponse(asset));
+    // }
 }

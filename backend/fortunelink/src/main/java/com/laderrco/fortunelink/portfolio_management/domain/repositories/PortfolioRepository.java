@@ -15,6 +15,9 @@ public interface PortfolioRepository {
 
     Optional<Portfolio> findByUserId(UserId userId);
 
+    // This query ensures the record MUST belong to the user to be returned
+    Optional<Portfolio> findByIdAndUserId(PortfolioId id, UserId userId);
+
     List<Portfolio> findAllByUserId(UserId userId);
 
     Long countByUserId(UserId userId);
