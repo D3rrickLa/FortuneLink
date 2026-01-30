@@ -57,6 +57,7 @@ import com.laderrco.fortunelink.portfolio_management.application.services.Portfo
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
@@ -94,13 +95,14 @@ class TransactionControllerTest {
     private static final String PORTFOLIO_ID = UUID.randomUUID().toString();
     private static final String ACCOUNT_ID = UUID.randomUUID().toString();
     private static final String TRANSACTION_ID = UUID.randomUUID().toString();
+    private static final UUID USER_ID = UUID.randomUUID();
 
     private TransactionHttpResponse responses;
 
     @BeforeEach
     void setup() {
-        when(portfolioHttpMapper.toCommand(anyString(), any(GetAccountRequest.class)))
-                .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toAccountId(ACCOUNT_ID)));
+        when(portfolioHttpMapper.toCommand(anyString(), any(), any(GetAccountRequest.class)))
+                .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toUserId(USER_ID), toAccountId(ACCOUNT_ID)));
 
         when(queryService.getAccountSummary(any(GetAccountSummaryQuery.class)))
                 .thenReturn(accountView);
@@ -151,7 +153,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toPurchaseCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toPurchaseCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordPurchaseCommand.class));
         when(applicationService.recordAssetPurchase(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -172,7 +174,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toSaleCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toSaleCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordSaleCommand.class));
         when(applicationService.recordAssetSale(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -193,7 +195,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toDividendCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toDividendCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordIncomeCommand.class));
         when(applicationService.recordDividendIncome(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -214,7 +216,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toDepositCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toDepositCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordDepositCommand.class));
         when(applicationService.recordDeposit(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -235,7 +237,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toWithdrawalCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toWithdrawalCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordWithdrawalCommand.class));
         when(applicationService.recordWithdrawal(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -256,7 +258,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toUpdateCommand(anyString(), anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toUpdateCommand(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(UpdateTransactionCommand.class));
         when(applicationService.updateTransaction(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -278,7 +280,7 @@ class TransactionControllerTest {
         DeleteTransactionRequest request = new DeleteTransactionRequest("Some note");
 
         // Ensure the assembler returns a non-null command for the service
-        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), anyBoolean(), any()))
+        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), any(), anyBoolean(), any()))
                 .thenReturn(mock(DeleteTransactionCommand.class));
 
         doNothing().when(applicationService).deleteTransaction(any());
@@ -297,7 +299,7 @@ class TransactionControllerTest {
     @Test
     void delete_returnsNoContentNullRequestParam() throws Exception {
         // 1. Arrange
-        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), anyBoolean(), isNull()))
+        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), any(), anyBoolean(), isNull()))
                 .thenReturn(mock(DeleteTransactionCommand.class));
 
         doNothing().when(applicationService).deleteTransaction(any());
@@ -319,7 +321,7 @@ class TransactionControllerTest {
         TransactionHttpResponse response = mock(TransactionHttpResponse.class);
         GetTransactionByIdQuery query = mock(GetTransactionByIdQuery.class);
 
-        when(transactionCommandAssembler.toTransactionQuery(any(), any(), any()))
+        when(transactionCommandAssembler.toTransactionQuery(any(), any(), any(), any()))
                 .thenReturn(query);
 
         when(queryService.getTransactionDetails(query))
@@ -347,7 +349,7 @@ class TransactionControllerTest {
 
         // Use anyInt() for primitives
         when(transactionCommandAssembler.toHistoryQuery(
-                any(), any(), any(), any(), any(), anyInt(), anyInt()))
+                any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(query);
 
         when(queryService.getTransactionHistory(query))
@@ -372,5 +374,9 @@ class TransactionControllerTest {
 
     private AccountId toAccountId(String id) {
         return new AccountId(UUID.fromString(id));
+    }
+
+    private UserId toUserId(UUID id) {
+        return new UserId(id);
     }
 }

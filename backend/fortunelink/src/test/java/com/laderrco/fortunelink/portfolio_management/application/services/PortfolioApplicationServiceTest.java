@@ -177,6 +177,7 @@ class PortfolioApplicationServiceTest {
         void setUp() {
             command = new RecordPurchaseCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     "AAPL",
                     BigDecimal.TEN,
@@ -224,6 +225,7 @@ class PortfolioApplicationServiceTest {
 
             RecordPurchaseCommand multiCurrencyCommand = new RecordPurchaseCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     "AAPL",
                     BigDecimal.TEN,
@@ -320,6 +322,7 @@ class PortfolioApplicationServiceTest {
             AccountId mockAccountId = AccountId.randomId();
             command = new RecordPurchaseCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     mockAccountId,
                     "AAPL",
                     BigDecimal.TEN,
@@ -402,6 +405,7 @@ class PortfolioApplicationServiceTest {
 
             RecordSaleCommand command = new RecordSaleCommand(
                     portfolioId,
+                    userId,
                     accountId,
                     account.getAssets().get(0).getAssetId(), // real asset ID
                     BigDecimal.ONE,
@@ -446,6 +450,7 @@ class PortfolioApplicationServiceTest {
             // Given
             RecordPurchaseCommand largeCommand = new RecordPurchaseCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     "AAPL",
                     BigDecimal.valueOf(1000), // Too many shares
@@ -515,6 +520,7 @@ class PortfolioApplicationServiceTest {
 
             command = new RecordSaleCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     assetId,
                     BigDecimal.valueOf(5),
@@ -566,6 +572,7 @@ class PortfolioApplicationServiceTest {
             // Given - we only own 10 shares from setUp
             RecordSaleCommand largeCommand = new RecordSaleCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     assetId,
                     BigDecimal.valueOf(100), // Trying to sell 100, but only own 10
@@ -607,6 +614,7 @@ class PortfolioApplicationServiceTest {
             // 1. Setup a command with VALID portfolio/account IDs but a RANDOM asset ID
             RecordSaleCommand invalidAssetCommand = new RecordSaleCommand(
                     portfolio.getPortfolioId(), // Use the ID from your @BeforeEach setup
+                    userId,
                     accountId, // Use the ID from your @BeforeEach setup
                     AssetId.randomId(), // This is what will trigger the error
                     BigDecimal.TEN,
@@ -636,6 +644,7 @@ class PortfolioApplicationServiceTest {
             // (Assuming RecordSaleCommand is a record or has a constructor like this)
             RecordSaleCommand command = new RecordSaleCommand(
                     PortfolioId.randomId(),
+                    UserId.randomId(),
                     AccountId.randomId(),
                     assetId,
                     BigDecimal.TEN,
@@ -658,6 +667,7 @@ class PortfolioApplicationServiceTest {
             AccountId mockAccountId = AccountId.randomId();
             command = new RecordSaleCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     mockAccountId,
                     assetId,
                     BigDecimal.valueOf(5),
@@ -685,6 +695,7 @@ class PortfolioApplicationServiceTest {
             // Given
             RecordDepositCommand command = new RecordDepositCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     new Money(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
                     null,
@@ -722,6 +733,7 @@ class PortfolioApplicationServiceTest {
         void recordDeposit_WhenPortfolioNotFound_ThrowsException() {
             RecordDepositCommand command = new RecordDepositCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     Money.of(20, "USD"),
                     null,
@@ -741,6 +753,7 @@ class PortfolioApplicationServiceTest {
             AccountId mockAccountId = AccountId.randomId();
             RecordDepositCommand command = new RecordDepositCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     mockAccountId,
                     new Money(BigDecimal.valueOf(1000), ValidatedCurrency.USD),
                     null,
@@ -767,6 +780,7 @@ class PortfolioApplicationServiceTest {
             // Given
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
                     null,
@@ -791,6 +805,7 @@ class PortfolioApplicationServiceTest {
             // Given
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     new Money(BigDecimal.valueOf(50000), ValidatedCurrency.USD), // More than available
                     null,
@@ -824,6 +839,7 @@ class PortfolioApplicationServiceTest {
         void recordWithdrawal_WhenPortfolioNotFound_ThrowsException() {
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     accountId,
                     Money.of(20, "USD"),
                     null,
@@ -843,6 +859,7 @@ class PortfolioApplicationServiceTest {
             AccountId mockAccountId = AccountId.randomId();
             RecordWithdrawalCommand command = new RecordWithdrawalCommand(
                     portfolio.getPortfolioId(),
+                    userId,
                     mockAccountId,
                     new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
                     null,
@@ -894,7 +911,7 @@ class PortfolioApplicationServiceTest {
 
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     realAssetId,
                     new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
@@ -934,7 +951,7 @@ class PortfolioApplicationServiceTest {
             // 2. USE THE REAL ID in the command
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     realAssetId, // <--- No longer random!
                     new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
@@ -989,7 +1006,7 @@ class PortfolioApplicationServiceTest {
             // Given
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     AssetId.randomId(), // FIX: Use a random ID, not null
                     new Money(BigDecimal.valueOf(75), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
@@ -1013,7 +1030,7 @@ class PortfolioApplicationServiceTest {
         void recordDividend_WhenPortfolioNotFound_ThrowsException() {
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     AssetId.randomId(),
                     Money.of(20, "USD"),
                     TransactionType.DIVIDEND,
@@ -1035,7 +1052,7 @@ class PortfolioApplicationServiceTest {
             AccountId mockAccountId = AccountId.randomId();
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolio.getPortfolioId(),
-                    mockAccountId,
+                    userId, mockAccountId,
                     AssetId.randomId(),
                     new Money(BigDecimal.valueOf(50), ValidatedCurrency.USD),
                     TransactionType.DIVIDEND,
@@ -1088,7 +1105,7 @@ class PortfolioApplicationServiceTest {
 
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolioId,
-                    accountId,
+                    userId, accountId,
                     asset.getAssetId(),
                     dividendAmount,
                     TransactionType.DIVIDEND,
@@ -1143,7 +1160,7 @@ class PortfolioApplicationServiceTest {
 
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolioId,
-                    accountId,
+                    userId, accountId,
                     asset.getAssetId(),
                     dividendAmount,
                     TransactionType.DIVIDEND,
@@ -1198,7 +1215,7 @@ class PortfolioApplicationServiceTest {
             // Fallback branch: isDrip false, shares null
             RecordIncomeCommand command = new RecordIncomeCommand(
                     portfolioId,
-                    accountId,
+                    userId, accountId,
                     asset.getAssetId(),
                     dividendAmount,
                     TransactionType.DIVIDEND,
@@ -1475,7 +1492,7 @@ class PortfolioApplicationServiceTest {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     transactionId,
                     TransactionType.BUY,
                     identifier,
@@ -1511,7 +1528,7 @@ class PortfolioApplicationServiceTest {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     transactionId,
                     TransactionType.BUY,
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
@@ -1545,7 +1562,7 @@ class PortfolioApplicationServiceTest {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     transactionId,
                     TransactionType.BUY,
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
@@ -1604,7 +1621,7 @@ class PortfolioApplicationServiceTest {
             // Now update the sell to 60 shares (still within the 100 we own)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sellTxId,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -1666,7 +1683,7 @@ class PortfolioApplicationServiceTest {
             // Try to update sell to 150 shares (more than the 100 we own)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sellTxId,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -1743,7 +1760,7 @@ class PortfolioApplicationServiceTest {
             // So selling 70 should be exactly at the limit
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sell1Id,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -1809,7 +1826,7 @@ class PortfolioApplicationServiceTest {
             // With exclusion: holdings = 100 (buy), can sell 90
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sellTxId,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -1845,7 +1862,7 @@ class PortfolioApplicationServiceTest {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     transactionId,
                     TransactionType.BUY,
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
@@ -1879,7 +1896,7 @@ class PortfolioApplicationServiceTest {
             // Given
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     TransactionId.randomId(), // Different ID
                     TransactionType.BUY,
                     new MarketIdentifier("AAPL", null, AssetType.STOCK, "Apple", "USD", null),
@@ -1975,7 +1992,7 @@ class PortfolioApplicationServiceTest {
             // Update sell to 100 (should work: 30 + 40 + 30 = 100 shares available)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sellTxId,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -2063,7 +2080,7 @@ class PortfolioApplicationServiceTest {
             // Update sell3 to 120 (maximum possible)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sell3Id,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -2139,7 +2156,7 @@ class PortfolioApplicationServiceTest {
             // Holdings: 100 (buy) - 60 (sell1) = 40, but trying to sell 50
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sell2Id,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -2228,7 +2245,7 @@ class PortfolioApplicationServiceTest {
             TransactionId sell2Id = sell2.getTransactionId();
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sell2Id,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -2305,7 +2322,7 @@ class PortfolioApplicationServiceTest {
             // Should fail because only 50 shares available at sell time (buy2 is after)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sellTxId,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -2382,7 +2399,7 @@ class PortfolioApplicationServiceTest {
             // Update sell to 80 (valid because 100 shares available at sell time)
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     sellTxId,
                     TransactionType.SELL,
                     assetInfo.toIdentifier(),
@@ -2417,7 +2434,7 @@ class PortfolioApplicationServiceTest {
         void recorUpdateTransaction_WhenPortfolioNotFound_ThrowsException() {
             UpdateTransactionCommand command = new UpdateTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     TransactionId.randomId(),
                     TransactionType.BUY,
                     mock(AssetIdentifier.class),
@@ -2467,7 +2484,7 @@ class PortfolioApplicationServiceTest {
             // Given
             DeleteTransactionCommand command = new DeleteTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     transactionId,
                     false,
                     null);
@@ -2510,7 +2527,7 @@ class PortfolioApplicationServiceTest {
 
             DeleteTransactionCommand command = new DeleteTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     targetId,
                     false,
                     "reason");
@@ -2534,7 +2551,7 @@ class PortfolioApplicationServiceTest {
 
             DeleteTransactionCommand command = new DeleteTransactionCommand(
                     portfolio.getPortfolioId(),
-                    accountId,
+                    userId, accountId,
                     targetId,
                     false,
                     "reason");
@@ -2565,7 +2582,7 @@ class PortfolioApplicationServiceTest {
             // Given
             AddAccountCommand command = new AddAccountCommand(
                     portfolioId,
-                    "New Account",
+                    userId, "New Account",
                     AccountType.TFSA,
                     ValidatedCurrency.CAD);
 
@@ -2592,7 +2609,7 @@ class PortfolioApplicationServiceTest {
             emptyAccount.close();
             portfolio.addAccount(emptyAccount);
 
-            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, newAccountId);
+            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, userId, newAccountId);
 
             when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
             when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
@@ -2621,7 +2638,7 @@ class PortfolioApplicationServiceTest {
                     "Asset to prevent deletion");
             portfolio.recordTransaction(accountId, buyTx);
 
-            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, accountId);
+            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, userId, accountId);
             when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
             when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
 
@@ -2656,7 +2673,7 @@ class PortfolioApplicationServiceTest {
             PortfolioId portfolioId = PortfolioId.randomId();
             AddAccountCommand command = new AddAccountCommand(
                     portfolioId,
-                    "some name",
+                    userId, "some name",
                     AccountType.CHEQUING,
                     ValidatedCurrency.USD);
 
@@ -2671,7 +2688,7 @@ class PortfolioApplicationServiceTest {
             PortfolioId portfolioId = PortfolioId.randomId();
             RemoveAccountCommand command = new RemoveAccountCommand(
                     portfolioId,
-                    accountId);
+                    userId, accountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
@@ -2684,7 +2701,7 @@ class PortfolioApplicationServiceTest {
             PortfolioId portfolioId = PortfolioId.randomId();
             AccountId mockAccountId = AccountId.randomId();
             RemoveAccountCommand command = new RemoveAccountCommand(
-                    portfolioId, mockAccountId);
+                    portfolioId, userId, mockAccountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
             when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
@@ -2698,7 +2715,7 @@ class PortfolioApplicationServiceTest {
         @Test
         void removeAccount_WhenInvalidTransaction_ThrowsException() {
             PortfolioId portfolioId = PortfolioId.randomId();
-            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, accountId);
+            RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, userId, accountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.failure("reason"));
 
@@ -2811,7 +2828,7 @@ class PortfolioApplicationServiceTest {
         void updatePortfolio_Success() {
             // Arrange
             PortfolioId portfolioId = PortfolioId.randomId();
-            UpdatePortfolioCommand command = new UpdatePortfolioCommand(portfolioId, "Updated name", USD, "Desc 2");
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(portfolioId, userId, "Updated name", USD, "Desc 2");
 
             Portfolio existingPortfolio = mock(Portfolio.class);
             Portfolio updatedPortfolio = mock(Portfolio.class);
@@ -2851,7 +2868,7 @@ class PortfolioApplicationServiceTest {
         void updatePortfolio_NotFound() {
             // Arrange
             PortfolioId portfolioId = PortfolioId.randomId();
-            UpdatePortfolioCommand command = new UpdatePortfolioCommand(portfolioId, "Updated name", USD, "Desc 2");
+            UpdatePortfolioCommand command = new UpdatePortfolioCommand(portfolioId, userId, "Updated name", USD, "Desc 2");
 
             when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
 

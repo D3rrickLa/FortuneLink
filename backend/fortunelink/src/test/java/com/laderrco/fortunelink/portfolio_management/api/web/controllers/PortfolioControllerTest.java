@@ -135,7 +135,7 @@ class PortfolioControllerTest {
         PortfolioView view = mock(PortfolioView.class);
         PortfolioHttpResponse response = mock(PortfolioHttpResponse.class);
 
-        when(requestMapper.toCommand(PORTFOLIO_ID)).thenReturn(query);
+        when(requestMapper.toCommand(PORTFOLIO_ID, UUID.randomUUID())).thenReturn(query);
         when(portfolioQueryService.getPortfolioById(query)).thenReturn(view);
         when(portfolioDtoMapper.toPortfolioResponse(view)).thenReturn(response);
 
@@ -199,7 +199,7 @@ class PortfolioControllerTest {
                 LocalDateTime.now(),
                 LocalDateTime.now());
 
-        when(requestMapper.toCommand(anyString(), any(CreatePortfolioRequest.class)))
+        when(requestMapper.toCommand(anyString(), any(), any(CreatePortfolioRequest.class)))
                 .thenReturn(mock(UpdatePortfolioCommand.class));
         when(portfolioApplicationService.updatePortfolio(any())).thenReturn(view);
         when(portfolioDtoMapper.toPortfolioResponse(any(PortfolioView.class))).thenReturn(response);
@@ -221,15 +221,13 @@ class PortfolioControllerTest {
     @Test
     void deletePortfolio_ShouldReturnNoContent() throws Exception {
         DeletePortfolioRequest request = new DeletePortfolioRequest(
-                PORTFOLIO_ID,
-                USER_ID,
                 true, // confirmed
                 false // softDelete
         );
 
         DeletePortfolioCommand command = mock(DeletePortfolioCommand.class);
 
-        when(requestMapper.toCommand(any(DeletePortfolioRequest.class))).thenReturn(command);
+        when(requestMapper.toCommand(any(), any(), any(DeletePortfolioRequest.class))).thenReturn(command);
         doNothing().when(portfolioApplicationService).deletePortfolio(eq(command));
 
         mockMvc.perform(delete("/api/portfolios/{id}", PORTFOLIO_ID)
@@ -272,7 +270,7 @@ class PortfolioControllerTest {
                 List.of());
 
         // --- Mocks ---
-        when(requestMapper.toCommand(eq(PORTFOLIO_ID), any(CreateAccountRequest.class)))
+        when(requestMapper.toCommand(eq(PORTFOLIO_ID), any(), any(CreateAccountRequest.class)))
                 .thenReturn(mock(AddAccountCommand.class));
 
         when(portfolioApplicationService.addAccount(any(AddAccountCommand.class)))
@@ -300,7 +298,7 @@ class PortfolioControllerTest {
         RemoveAccountCommand command = mock(RemoveAccountCommand.class);
         String accountId = UUID.randomUUID().toString();
 
-        when(requestMapper.toCommand(PORTFOLIO_ID, accountId)).thenReturn(command);
+        when(requestMapper.toCommand(PORTFOLIO_ID, UUID.fromString(USER_ID), accountId)).thenReturn(command);
 
         mockMvc.perform(delete("/api/portfolios/{id}/accounts/{accountId}", PORTFOLIO_ID, accountId))
                 .andExpect(status().isNoContent());
@@ -345,7 +343,7 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void deletePortfolio_ShouldReturn409_WhenPortfolioIsNotEmpty() throws Exception {
-        given(requestMapper.toCommand(any(DeletePortfolioRequest.class)))
+        given(requestMapper.toCommand(any(), any(), any(DeletePortfolioRequest.class)))
                 .willReturn(mock(DeletePortfolioCommand.class));
         doThrow(new PortfolioNotEmptyException("Cannot delete portfolio with accounts"))
                 .when(portfolioApplicationService).deletePortfolio(any());
@@ -360,7 +358,7 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void addAccount_ShouldReturn400_WhenCommandIsInvalid() throws Exception {
-        given(requestMapper.toCommand(anyString(), any(CreateAccountRequest.class)))
+        given(requestMapper.toCommand(anyString(), any(), any(CreateAccountRequest.class)))
                 .willReturn(mock(AddAccountCommand.class));
         given(portfolioApplicationService.addAccount(any()))
                 .willThrow(new InvalidTransactionException("Invalid currency", List.of("Currency not supported")));
@@ -383,9 +381,9 @@ class PortfolioControllerTest {
         UUID assetIdStr = UUID.randomUUID();
 
         // Mock the Query Object creation (Internal to the controller)
-        GetAssetQueryView mockQuery = new GetAssetQueryView(new PortfolioId(portfolioIdStr),
-                new AccountId(accountIdStr), new AssetId(assetIdStr));
-        when(requestMapper.toAssetQuery(portfolioIdStr.toString(), accountIdStr.toString(), assetIdStr.toString()))
+        GetAssetQueryView mockQuery = new GetAssetQueryView(new PortfolioId(portfolioIdStr), new UserId(UUID.fromString(USER_ID)),
+                new AccountId(accountIdStr),  new AssetId(assetIdStr));
+        when(requestMapper.toAssetQuery(portfolioIdStr.toString(), UUID.fromString(USER_ID), accountIdStr.toString(), assetIdStr.toString()))
                 .thenReturn(mockQuery);
 
         // 2. Mock the View (Populating all fields to pass record validation)

@@ -131,7 +131,8 @@ public class PortfolioApplicationService {
 
         // If currencies don't match, convert to account currency
         if (!accountCurrency.equals(transactionPrice.currency())) {
-            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(transactionPrice.currency(), accountCurrency);
+            Optional<ExchangeRate> rate = exchangeRateService.getExchangeRate(transactionPrice.currency(),
+                    accountCurrency);
             convertedPrice = transactionPrice.convert(rate.get());
         }
 
@@ -505,10 +506,9 @@ public class PortfolioApplicationService {
             throw new InvalidTransactionException("Invalid add account command", validationResult.errors());
         }
 
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
                 .orElseThrow(() -> new PortfolioNotFoundException(
-                        "Cannot find portfolio to add accouunt to:" + command.portfolioId()));
-
+                        "Portfolio not found or access denied for ID: " + command.portfolioId()));
         // Create new account
         Account account = Account.createNew(
                 AccountId.randomId(),
@@ -530,9 +530,9 @@ public class PortfolioApplicationService {
         if (!validationResult.isValid()) {
             throw new InvalidTransactionException("Invalid remove account command", validationResult.errors());
         }
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
                 .orElseThrow(() -> new PortfolioNotFoundException(
-                        "Cannot find portfolio to remove accouunt from:" + command.portfolioId()));
+                        "Cannot find portfolio to remove account from: " + command.portfolioId()));
 
         Account account = portfolio.findAccount(command.accountId())
                 .orElseThrow(() -> new AccountNotFoundException(
@@ -588,7 +588,8 @@ public class PortfolioApplicationService {
         }
 
         // create portfolio (domain logic)
-        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(), command.description());
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(),
+                command.description());
 
         // add a default account if specified in command
         if (command.createDefaultAccount()) {

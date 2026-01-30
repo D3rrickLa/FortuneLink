@@ -39,11 +39,13 @@ class TransactionCommandAssemblerTest {
 
     private ExchangeRateService exchangeRateService;
     private TransactionCommandAssembler assembler;
+    private UUID userId;
 
     @BeforeEach
     void setUp() {
         exchangeRateService = mock(ExchangeRateService.class);
         assembler = new TransactionCommandAssembler(exchangeRateService);
+        userId = UUID.randomUUID();
     }
 
     @Test
@@ -51,6 +53,7 @@ class TransactionCommandAssemblerTest {
     void toPurchaseCommand_mapsCorrectly() {
         String portfolioId = UUID.randomUUID().toString();
         String accountId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
 
         RecordTransactionRequest req = new RecordTransactionRequest();
         req.setSymbol("AAPL");
@@ -65,7 +68,7 @@ class TransactionCommandAssemblerTest {
                 .thenReturn(Optional.of(new ExchangeRate(ValidatedCurrency.USD, ValidatedCurrency.USD, BigDecimal.ONE,
                         Instant.now(), "desc")));
 
-        RecordPurchaseCommand cmd = assembler.toPurchaseCommand(portfolioId, accountId, ValidatedCurrency.USD, req);
+        RecordPurchaseCommand cmd = assembler.toPurchaseCommand(portfolioId, accountId, userId, ValidatedCurrency.USD, req);
 
         assertEquals(portfolioId, cmd.portfolioId().portfolioId().toString());
         assertEquals(accountId, cmd.accountId().accountId().toString());
@@ -81,6 +84,7 @@ class TransactionCommandAssemblerTest {
     void toPurchaseCommand_mapsCorrectlyEmptyFees() {
         String portfolioId = UUID.randomUUID().toString();
         String accountId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
 
         RecordTransactionRequest req = new RecordTransactionRequest();
         req.setSymbol("AAPL");
@@ -95,7 +99,7 @@ class TransactionCommandAssemblerTest {
                 .thenReturn(Optional.of(new ExchangeRate(ValidatedCurrency.USD, ValidatedCurrency.USD, BigDecimal.ONE,
                         Instant.now(), "desc")));
 
-        RecordPurchaseCommand cmd = assembler.toPurchaseCommand(portfolioId, accountId, ValidatedCurrency.USD, req);
+        RecordPurchaseCommand cmd = assembler.toPurchaseCommand(portfolioId, accountId, userId, ValidatedCurrency.USD, req);
 
         assertEquals(portfolioId, cmd.portfolioId().portfolioId().toString());
         assertEquals(accountId, cmd.accountId().accountId().toString());
@@ -124,7 +128,7 @@ class TransactionCommandAssemblerTest {
                 .thenReturn(Optional.of(new ExchangeRate(ValidatedCurrency.USD, ValidatedCurrency.USD, BigDecimal.ONE,
                         Instant.now(), "desc")));
 
-        RecordPurchaseCommand cmd = assembler.toPurchaseCommand(portfolioId, accountId, ValidatedCurrency.USD, req);
+        RecordPurchaseCommand cmd = assembler.toPurchaseCommand(portfolioId, accountId, userId, ValidatedCurrency.USD, req);
 
         assertEquals(portfolioId, cmd.portfolioId().portfolioId().toString());
         assertEquals(accountId, cmd.accountId().accountId().toString());
@@ -145,7 +149,7 @@ class TransactionCommandAssemblerTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> assembler.toSaleCommand(PortfolioId.randomId().portfolioId().toString(),
-                        AccountId.randomId().accountId().toString(), ValidatedCurrency.USD, req));
+                        AccountId.randomId().accountId().toString(), userId, ValidatedCurrency.USD, req));
     }
 
     @Test
@@ -157,14 +161,15 @@ class TransactionCommandAssemblerTest {
         req.setPrice(BigDecimal.valueOf(50));
         req.setPriceCurrency("USD");
         req.setTransactionDate(LocalDateTime.now());
-        req.setFees(List.of(new FeeRequest(FeeType.BROKERAGE, BigDecimal.valueOf(5), "USD", LocalDateTime.now(), Map.of("Sector", "Tech"))));
+        req.setFees(List.of(new FeeRequest(FeeType.BROKERAGE, BigDecimal.valueOf(5), "USD", LocalDateTime.now(),
+                Map.of("Sector", "Tech"))));
 
         when(exchangeRateService.getExchangeRate(any(), any()))
                 .thenReturn(Optional.of(new ExchangeRate(ValidatedCurrency.USD, ValidatedCurrency.USD, BigDecimal.ONE,
                         Instant.now(), "desc")));
 
-        RecordSaleCommand cmd = assembler.toSaleCommand(PortfolioId.randomId().portfolioId().toString(),
-                AccountId.randomId().accountId().toString(), ValidatedCurrency.USD, req);
+        RecordSaleCommand cmd = assembler.toSaleCommand(PortfolioId.randomId().portfolioId().toString(), 
+                AccountId.randomId().accountId().toString(), userId, ValidatedCurrency.USD, req);
         assertEquals(req.getAssetId(), cmd.assetId().assetId().toString());
     }
 
@@ -177,12 +182,14 @@ class TransactionCommandAssemblerTest {
         req.setPrice(BigDecimal.valueOf(50));
         req.setPriceCurrency("USD");
         req.setTransactionDate(LocalDateTime.now());
-        req.setFees(List.of(new FeeRequest(FeeType.BROKERAGE, BigDecimal.valueOf(5), "USD", LocalDateTime.now(), Map.of("Sector", "Tech"))));
+        req.setFees(List.of(new FeeRequest(FeeType.BROKERAGE, BigDecimal.valueOf(5), "USD", LocalDateTime.now(),
+                Map.of("Sector", "Tech"))));
 
         when(exchangeRateService.getExchangeRate(any(), any())).thenReturn(Optional.empty());
 
-        assertThrows( IllegalArgumentException.class,() -> assembler.toSaleCommand(PortfolioId.randomId().portfolioId().toString(),
-                AccountId.randomId().accountId().toString(), ValidatedCurrency.USD, req));
+        assertThrows(IllegalArgumentException.class,
+                () -> assembler.toSaleCommand(PortfolioId.randomId().portfolioId().toString(),
+                        AccountId.randomId().accountId().toString(), userId, ValidatedCurrency.USD, req));
     }
 
     @Test
@@ -198,7 +205,7 @@ class TransactionCommandAssemblerTest {
         req.setTransactionDate(LocalDateTime.now());
 
         RecordIncomeCommand cmd = assembler.toDividendCommand(PortfolioId.randomId().portfolioId().toString(),
-                AccountId.randomId().accountId().toString(), ValidatedCurrency.USD, req);
+                AccountId.randomId().accountId().toString(), userId, ValidatedCurrency.USD, req);
         assertEquals("DIVIDEND", cmd.type().name());
         assertTrue(cmd.isDrip());
         assertEquals(BigDecimal.TEN, cmd.sharesReceived());
@@ -217,7 +224,7 @@ class TransactionCommandAssemblerTest {
                         Instant.now(), "desc")));
 
         RecordDepositCommand cmd = assembler.toDepositCommand(PortfolioId.randomId().portfolioId().toString(),
-                AccountId.randomId().accountId().toString(), ValidatedCurrency.USD, req);
+                AccountId.randomId().accountId().toString(), userId, ValidatedCurrency.USD, req);
         assertEquals(BigDecimal.valueOf(1000).setScale(Precision.getMoneyPrecision()), cmd.amount().amount());
     }
 
@@ -234,7 +241,7 @@ class TransactionCommandAssemblerTest {
                         Instant.now(), "desc")));
 
         RecordWithdrawalCommand cmd = assembler.toWithdrawalCommand(PortfolioId.randomId().portfolioId().toString(),
-                AccountId.randomId().accountId().toString(), ValidatedCurrency.USD, req);
+                AccountId.randomId().accountId().toString(), userId, ValidatedCurrency.USD, req);
         assertEquals(BigDecimal.valueOf(200).setScale(Precision.getMoneyPrecision()), cmd.amount().amount());
     }
 
@@ -269,6 +276,7 @@ class TransactionCommandAssemblerTest {
                 portfolioId,
                 accountId,
                 transactionId,
+                userId,
                 ValidatedCurrency.USD,
                 req);
 
@@ -313,6 +321,7 @@ class TransactionCommandAssemblerTest {
                 portfolioId,
                 accountId,
                 transactionId,
+                userId,
                 ValidatedCurrency.USD,
                 req);
 
@@ -333,7 +342,7 @@ class TransactionCommandAssemblerTest {
         String accountId = UUID.randomUUID().toString();
         String transactionId = UUID.randomUUID().toString();
 
-        DeleteTransactionCommand cmd = assembler.toDeleteCommand(portfolioId, accountId, transactionId, true, "notes");
+        DeleteTransactionCommand cmd = assembler.toDeleteCommand(portfolioId, accountId, transactionId, userId, true, "notes");
 
         assertEquals(transactionId, cmd.transactionId().transactionId().toString());
         assertTrue(cmd.softDelete());
@@ -346,7 +355,7 @@ class TransactionCommandAssemblerTest {
         Instant start = Instant.now();
         Instant end = start.plusSeconds(3600);
         GetTransactionHistoryQuery query = assembler.toHistoryQuery(PortfolioId.randomId().portfolioId().toString(),
-                AccountId.randomId().accountId().toString(), "BUY", start, end, 1, 20);
+                AccountId.randomId().accountId().toString(), userId, "BUY", start, end, 1, 20);
         assertEquals("BUY", query.transactionType().name());
         assertEquals(1, query.pageNumber());
         assertEquals(20, query.pageSize());
@@ -360,7 +369,7 @@ class TransactionCommandAssemblerTest {
         String accountId = UUID.randomUUID().toString();
         String transactionId = UUID.randomUUID().toString();
 
-        GetTransactionByIdQuery query = assembler.toTransactionQuery(portfolioId, accountId, transactionId);
+        GetTransactionByIdQuery query = assembler.toTransactionQuery(portfolioId, accountId, transactionId, userId);
 
         // Assertions
         assertEquals(transactionId, query.transactionId().transactionId().toString());

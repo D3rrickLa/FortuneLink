@@ -46,7 +46,7 @@ public class PortfolioHttpMapper {
         return new GetPortfoliosByUserIdQuery(new UserId(UUID.fromString(request.userId())));
     }
 
-    public UpdatePortfolioCommand toCommand(String id, CreatePortfolioRequest request, UUID userId) {
+    public UpdatePortfolioCommand toCommand(String id, UUID userId, CreatePortfolioRequest request) {
         return new UpdatePortfolioCommand(
             toPortfolioId(id),
             toUserId(userId.toString()),
@@ -56,34 +56,35 @@ public class PortfolioHttpMapper {
         );
     }
     
-    public DeletePortfolioCommand toCommand(DeletePortfolioRequest request) {
+    public DeletePortfolioCommand toCommand(String portfolioId, UUID userId, DeletePortfolioRequest request) {
         return new DeletePortfolioCommand(
-            toPortfolioId(request.getPortfolioId()),
-            toUserId(request.getUserId()),
+            toPortfolioId(portfolioId),
+            toUserId(userId.toString()),
             request.getConfirmed(),
             request.getSoftDelete()
         );
     }
 
-    public AddAccountCommand toCommand(String id, CreateAccountRequest request) {
+    public AddAccountCommand toCommand(String id, UUID userUuid, CreateAccountRequest request) {
         return new AddAccountCommand(
             toPortfolioId(id),
+            toUserId(userUuid.toString()),
             request.getName(),
             AccountType.valueOf(request.getAccountType()),
             toCurrency(request.getBaseCurrency())
         );
     }
 
-    public GetAssetQueryView toAssetQuery(String portfolioId, String accountId, String assetId) {
-        return new GetAssetQueryView(toPortfolioId(portfolioId), toAccountId(accountId), toAssetId(assetId));
+    public GetAssetQueryView toAssetQuery(String portfolioId, UUID userId, String accountId, String assetId) {
+        return new GetAssetQueryView(toPortfolioId(portfolioId), toUserId(userId.toString()), toAccountId(accountId), toAssetId(assetId));
     }
 
-    public RemoveAccountCommand toCommand(String portoflioId, String accountId) {
-        return new RemoveAccountCommand(toPortfolioId(accountId), toAccountId(accountId));
+    public RemoveAccountCommand toCommand(String portoflioId, UUID userId, String accountId) {
+        return new RemoveAccountCommand(toPortfolioId(portoflioId), toUserId(userId.toString()), toAccountId(accountId));
     }
 
-    public GetAccountSummaryQuery toCommand(String portfolioId, GetAccountRequest request) {
-        return new GetAccountSummaryQuery(toPortfolioId(portfolioId), toAccountId(request.accountId()));
+    public GetAccountSummaryQuery toCommand(String portfolioId, UUID userUuid, GetAccountRequest request) {
+        return new GetAccountSummaryQuery(toPortfolioId(portfolioId), toUserId(userUuid.toString()), toAccountId(request.accountId()));
     }
 
     private ValidatedCurrency toCurrency(String currency) {
