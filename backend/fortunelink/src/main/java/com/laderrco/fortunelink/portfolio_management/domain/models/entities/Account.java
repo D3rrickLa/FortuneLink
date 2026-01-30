@@ -213,8 +213,6 @@ public class Account implements ClassValidation {
 
     public Asset getAsset(AssetId assetId) throws AssetNotFoundException {
         ClassValidation.validateParameter(assetId);
-        System.out.println(assetId);
-        System.out.println(this.assets);
         return this.assets.stream()
                 .filter(a -> a.getAssetId().equals(assetId))
                 .findFirst()

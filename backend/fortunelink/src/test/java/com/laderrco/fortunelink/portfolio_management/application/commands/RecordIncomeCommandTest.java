@@ -18,6 +18,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.enums.Transac
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
@@ -25,30 +26,30 @@ public class RecordIncomeCommandTest {
     @Test
     void testConstructorExceptionIsDripTrueSharesNegative() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RecordIncomeCommand(null, null, null, null, null, true, BigDecimal.valueOf(-2), null, null));
+                () -> new RecordIncomeCommand(null, null, null, null, null, null, true, BigDecimal.valueOf(-2), null, null));
     }
 
     @Test
     void testConstructorExceptionIsDripTrueSharesIsZero() {
         assertThrows(IllegalArgumentException.class,
-                () -> new RecordIncomeCommand(null, null, null, null, null, true, BigDecimal.valueOf(0), null, null));
+                () -> new RecordIncomeCommand(null, null, null, null, null, null, true, BigDecimal.valueOf(0), null, null));
     }
 
     @Test
     void testConstructorExceptionIsDripTrueSharesIsOne() {
         assertDoesNotThrow(
-                () -> new RecordIncomeCommand(null, null, null, null, null, true, BigDecimal.valueOf(1), null, null));
+                () -> new RecordIncomeCommand(null, null, null, null, null, null, true, BigDecimal.valueOf(1), null, null));
     }
 
     @Test
     void testConstructorExceptionIsDripFalseSharesIsNull() {
-        assertDoesNotThrow(() -> new RecordIncomeCommand(null, null, null, null, null, false, null, null, null));
+        assertDoesNotThrow(() -> new RecordIncomeCommand(null, null, null, null, null, null, false, null, null, null));
     }
 
     @Test
     void testConstructorExceptionIsDripFalseSharesIsOne() {
         assertDoesNotThrow(
-                () -> new RecordIncomeCommand(null, null, null, null, null, false, BigDecimal.valueOf(1), null, null));
+                () -> new RecordIncomeCommand(null, null, null, null, null, null, false, BigDecimal.valueOf(1), null, null));
     }
 
     @Test
@@ -56,6 +57,7 @@ public class RecordIncomeCommandTest {
     void dripTrueSharesNull_throws() {
         assertThrows(IllegalArgumentException.class, () -> new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -71,6 +73,7 @@ public class RecordIncomeCommandTest {
     void dripTrueSharesZeroOrNegative_throws() {
         assertThrows(IllegalArgumentException.class, () -> new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -82,6 +85,7 @@ public class RecordIncomeCommandTest {
 
         assertThrows(IllegalArgumentException.class, () -> new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -97,6 +101,7 @@ public class RecordIncomeCommandTest {
     void dripTrueSharesPositive_succeeds() {
         RecordIncomeCommand cmd = new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -116,6 +121,7 @@ public class RecordIncomeCommandTest {
     void dripFalseSharesNull_succeeds() {
         RecordIncomeCommand cmd = new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -135,6 +141,7 @@ public class RecordIncomeCommandTest {
     void dripFalseSharesPositive_succeeds() {
         RecordIncomeCommand cmd = new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -154,6 +161,7 @@ public class RecordIncomeCommandTest {
     void dripFalseSharesZeroOrNegative_succeeds() {
         RecordIncomeCommand cmdZero = new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),
@@ -165,6 +173,7 @@ public class RecordIncomeCommandTest {
 
         RecordIncomeCommand cmdNegative = new RecordIncomeCommand(
                 PortfolioId.randomId(),
+                UserId.randomId(),
                 AccountId.randomId(),
                 AssetId.randomId(),
                 new Money(BigDecimal.TEN, ValidatedCurrency.USD),

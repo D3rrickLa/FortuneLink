@@ -92,6 +92,10 @@ public class CommandValidator implements ClassValidation {
         if (command.portfolioId() == null) {
             errors.add("PortfolioId is required");
         }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
         
         if (command.accountId() == null) {
             errors.add("AccountId is required");
@@ -132,6 +136,9 @@ public class CommandValidator implements ClassValidation {
         
         if (command.portfolioId() == null) {
             errors.add("PortfolioId is required");
+        }
+        if (command.userId() == null) {
+            errors.add("UserId is required");
         }
         
         if (command.accountId() == null) {
@@ -188,6 +195,10 @@ public class CommandValidator implements ClassValidation {
             errors.add("PortfolioId is required");
         }
         
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
         if (command.accountId() == null) {
             errors.add("AccountId is required");
         }
@@ -252,8 +263,13 @@ public class CommandValidator implements ClassValidation {
         ClassValidation.validateParameter(command);
         List<String> errors = new ArrayList<>();
         if (command.portfolioId() == null) {
-            errors.add("PortfolioId is requried");
+            errors.add("PortfolioId is required");
         }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
         if(command.date() == null) {
             errors.add("UpdateDate is required");
         }

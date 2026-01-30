@@ -36,6 +36,11 @@ public class JpaPortfolioRepository implements PortfolioRepository {
     }
 
     @Override
+    public Optional<Portfolio> findByIdAndUserId(PortfolioId id, UserId userId) {
+        return jpaRepo.findByIdAndUserId(id.portfolioId(), userId.userId()).map(portfolioMapper::toDomain);
+    }
+
+    @Override
     public List<Portfolio> findAllByUserId(UserId userId) {
         List<PortfolioEntity> portfolios = jpaRepo.findAllByUserId(userId.userId());
         return portfolios.stream()
@@ -76,4 +81,5 @@ public class JpaPortfolioRepository implements PortfolioRepository {
         Objects.requireNonNull(portfolioUuid, "Portfolio ID cannot be null");
         jpaRepo.deleteById(portfolioUuid);
     }
+
 }
