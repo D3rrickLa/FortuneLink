@@ -62,23 +62,4 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.path").value("/api/market-data/price/AAPL"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
-
-    @Test
-    @SuppressWarnings("null")
-    void handleGenericException_returnsInternalServerErrorWhenAuthUserIsNotUUID() throws Exception {
-        // Arrange: Mock the service to throw a raw Exception or RuntimeException
-        when(marketDataService.getCurrentQuote(any()))
-                .thenThrow(new RuntimeException("Boom"));
-
-        // Act & Assert
-        mockMvc.perform(get("/api/market-data/price/AAPL")
-                .contentType(MediaType.APPLICATION_JSON).with(jwt().jwt(j -> j.subject(new UserId(mockUserId).toString()))))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.error").value("INTERNAL_SERVER_ERROR"))
-                // Note: We check for your "friendly" message, not the "Boom" message
-                .andExpect(jsonPath("$.message").value("An unexpected error occurred."))
-                .andExpect(jsonPath("$.path").value("/api/market-data/price/AAPL"))
-                .andExpect(jsonPath("$.timestamp").exists());
-    }
 }

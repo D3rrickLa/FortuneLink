@@ -9,6 +9,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +24,8 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.external.mar
 
 import lombok.RequiredArgsConstructor;
 
-@Profile({ "local", "test" })
+// @Profile({ "local", "test" })
+@PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("/api/admin/cache")
 @RequiredArgsConstructor

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 
-@Profile({ "local", "test" })
+// @Profile({ "local", "test" })
 @Service
 public class CacheEvictionService {
 
@@ -24,7 +24,6 @@ public class CacheEvictionService {
         log.info("Evicted all price caches");
     }
 
-    // 🔥 FIX IS HERE
     @CacheEvict(value = "asset-info", key = "#symbol.primaryId")
     public void evictAssetInfoCache(AssetIdentifier symbol) {
         log.info("Evicted asset info cache for symbol: {}", symbol.getPrimaryId());

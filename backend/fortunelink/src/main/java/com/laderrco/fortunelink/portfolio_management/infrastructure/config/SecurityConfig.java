@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/admin/cache/**").hasRole("ADMIN")
                         .requestMatchers("api/v1/public/**", "/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .build();

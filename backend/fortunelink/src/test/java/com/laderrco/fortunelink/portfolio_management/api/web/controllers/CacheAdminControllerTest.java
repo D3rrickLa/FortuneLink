@@ -19,7 +19,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,7 +28,7 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateL
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.CacheEvictionService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.MarketDataServiceImpl;
 
-@ActiveProfiles({ "local", "test" })
+// @ActiveProfiles({ "local", "test" })
 @WebMvcTest(CacheAdminController.class)
 @Import({ DevSecurityConfig.class, RateLimitConfig.class })
 class CacheAdminControllerTest {
