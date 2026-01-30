@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.infrastructure.config;
+package com.laderrco.fortunelink.portfolio_management.infrastructure.test_env;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
+
 @Profile("test")
 @Configuration
 public class TestAuthorizationServerConfig {
@@ -35,7 +36,7 @@ public class TestAuthorizationServerConfig {
         return (selector, context) -> selector.select(jwkSet);
     }
 
-    private static RSAKey generateRsa() {
+    static RSAKey generateRsa() {
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
             generator.initialize(2048);

@@ -12,7 +12,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Profile("!local")
+// Real config - active everywhere except local/test
+@Profile("!local & !test")
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {

@@ -29,6 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -61,12 +62,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.test_env.TestSecurityConfig;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
-
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
-@Import({ SecurityConfig.class, RateLimitConfig.class })
+@Import({ TestSecurityConfig.class, RateLimitConfig.class })
 @WebMvcTest({ TransactionController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class TransactionControllerTest {
 

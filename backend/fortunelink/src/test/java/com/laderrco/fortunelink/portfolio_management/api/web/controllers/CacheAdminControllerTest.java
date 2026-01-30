@@ -22,17 +22,19 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.CacheEvictionService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.MarketDataServiceImpl;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.test_env.TestSecurityConfig;
 
 @WebMvcTest(CacheAdminController.class)
-@Import({ SecurityConfig.class, RateLimitConfig.class })
+@Import({ TestSecurityConfig.class, RateLimitConfig.class })
+@ActiveProfiles("test")
 class CacheAdminControllerTest {
 
     @Autowired

@@ -33,6 +33,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -77,7 +78,7 @@ import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.G
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 import com.laderrco.fortunelink.shared.valueobjects.Percentage;
-
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Import({ DevSecurityConfig.class, RateLimitConfig.class, AuthenticationUserService.class })
 @WebMvcTest({ PortfolioController.class, GlobalExceptionHandler.class })

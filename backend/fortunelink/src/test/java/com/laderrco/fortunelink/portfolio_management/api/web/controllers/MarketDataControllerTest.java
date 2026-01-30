@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -38,14 +39,15 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.test_env.TestSecurityConfig;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @AutoConfigureMockMvc
-@Import({ SecurityConfig.class, RateLimitConfig.class })
+@Import({ TestSecurityConfig.class, RateLimitConfig.class })
 @WebMvcTest({ MarketDataController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
+@ActiveProfiles("test")  // tell Spring to use the test profile
 class MarketDataControllerTest {
 
     @Autowired

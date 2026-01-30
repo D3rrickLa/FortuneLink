@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,13 +29,13 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.reques
 import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.test_env.TestSecurityConfig;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
-
-@Import({ SecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
+@ActiveProfiles("test")
+@Import({ TestSecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
 @WebMvcTest({ ExchangeRateController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class ExchangeRateControllerTest {
 

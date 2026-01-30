@@ -32,7 +32,7 @@ jobs:
 
     - name: Build and Test with Maven
       working-directory: ./backend/fortunelink
-      run: mvn -B clean package -X -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
+      run: mvn -B clean test package -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
       env:
         POSTGRES_VERSION: 16-alpine
         DB_USERNAME: unused
