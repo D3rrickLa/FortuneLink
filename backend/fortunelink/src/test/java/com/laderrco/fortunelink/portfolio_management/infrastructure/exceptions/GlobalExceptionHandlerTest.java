@@ -2,9 +2,12 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,12 +19,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.web.controllers.MarketDataController;
+import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 
 @WebMvcTest(MarketDataController.class)
-@Import({ DevSecurityConfig.class, RateLimitConfig.class })
+@Import({ SecurityConfig.class, RateLimitConfig.class, AuthenticationUserService.class })
 class GlobalExceptionHandlerTest {
 
     @Autowired
@@ -32,6 +36,8 @@ class GlobalExceptionHandlerTest {
 
     @MockitoBean
     private MarketDataDtoMapper mapper;
+
+    private UUID mockUserId = UUID.randomUUID();
 
     // ---------------------------------------------------
     // Generic Exception Handler Test
@@ -46,7 +52,7 @@ class GlobalExceptionHandlerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/market-data/price/AAPL")
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON).with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.error").value("INTERNAL_SERVER_ERROR"))

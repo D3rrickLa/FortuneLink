@@ -108,8 +108,7 @@ public class GlobalExceptionHandler {
                 request);
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String error, String message, String details,
-            WebRequest request) {
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String error, String message, String details, WebRequest request) {
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(Instant.now())
                 .status(status.value())
@@ -121,8 +120,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String error, String message,
-            WebRequest request) {
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String error, String message, WebRequest request) {
         return buildResponse(status, error, message, " ", request);
     }
 

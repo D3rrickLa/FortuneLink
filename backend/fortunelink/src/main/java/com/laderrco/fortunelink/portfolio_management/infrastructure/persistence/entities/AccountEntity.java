@@ -23,11 +23,9 @@ import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 @Data
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity

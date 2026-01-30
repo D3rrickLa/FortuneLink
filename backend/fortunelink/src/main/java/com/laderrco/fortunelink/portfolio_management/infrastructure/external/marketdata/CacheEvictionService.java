@@ -3,12 +3,11 @@ package com.laderrco.fortunelink.portfolio_management.infrastructure.external.ma
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.AssetIdentifier;
 
-@Profile({ "local", "test" })
+// @Profile({ "local", "test" })
 @Service
 public class CacheEvictionService {
 
@@ -24,7 +23,6 @@ public class CacheEvictionService {
         log.info("Evicted all price caches");
     }
 
-    // 🔥 FIX IS HERE
     @CacheEvict(value = "asset-info", key = "#symbol.primaryId")
     public void evictAssetInfoCache(AssetIdentifier symbol) {
         log.info("Evicted asset info cache for symbol: {}", symbol.getPrimaryId());

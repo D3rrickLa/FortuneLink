@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -28,6 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -53,18 +55,20 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetTran
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.test_env.TestSecurityConfig;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
-
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
-@Import({ DevSecurityConfig.class, RateLimitConfig.class })
-@WebMvcTest({ TransactionController.class, GlobalExceptionHandler.class })
+@Import({ TestSecurityConfig.class, RateLimitConfig.class })
+@WebMvcTest({ TransactionController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class TransactionControllerTest {
 
     @Autowired
@@ -94,13 +98,15 @@ class TransactionControllerTest {
     private static final String PORTFOLIO_ID = UUID.randomUUID().toString();
     private static final String ACCOUNT_ID = UUID.randomUUID().toString();
     private static final String TRANSACTION_ID = UUID.randomUUID().toString();
+    private static final UUID USER_ID = UUID.randomUUID();
 
     private TransactionHttpResponse responses;
 
     @BeforeEach
     void setup() {
-        when(portfolioHttpMapper.toCommand(anyString(), any(GetAccountRequest.class)))
-                .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toAccountId(ACCOUNT_ID)));
+        when(portfolioHttpMapper.toCommand(anyString(), any(), any(GetAccountRequest.class)))
+                .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toUserId(USER_ID),
+                        toAccountId(ACCOUNT_ID)));
 
         when(queryService.getAccountSummary(any(GetAccountSummaryQuery.class)))
                 .thenReturn(accountView);
@@ -151,13 +157,14 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toPurchaseCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toPurchaseCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordPurchaseCommand.class));
         when(applicationService.recordAssetPurchase(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
 
         mockMvc.perform(
                 post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/buy", PORTFOLIO_ID, ACCOUNT_ID)
+                        .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -172,7 +179,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toSaleCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toSaleCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordSaleCommand.class));
         when(applicationService.recordAssetSale(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -180,6 +187,7 @@ class TransactionControllerTest {
         mockMvc.perform(
                 post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/sell", PORTFOLIO_ID, ACCOUNT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -193,7 +201,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toDividendCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toDividendCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordIncomeCommand.class));
         when(applicationService.recordDividendIncome(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -201,6 +209,7 @@ class TransactionControllerTest {
         mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/dividends", PORTFOLIO_ID,
                 ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -214,7 +223,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toDepositCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toDepositCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordDepositCommand.class));
         when(applicationService.recordDeposit(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -222,6 +231,7 @@ class TransactionControllerTest {
         mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/deposit", PORTFOLIO_ID,
                 ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -235,7 +245,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toWithdrawalCommand(anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toWithdrawalCommand(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(RecordWithdrawalCommand.class));
         when(applicationService.recordWithdrawal(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -243,6 +253,7 @@ class TransactionControllerTest {
         mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/withdrawal", PORTFOLIO_ID,
                 ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -256,7 +267,7 @@ class TransactionControllerTest {
         TransactionView view = mock(TransactionView.class);
         TransactionHttpResponse response = responses;
 
-        when(transactionCommandAssembler.toUpdateCommand(anyString(), anyString(), anyString(), any(), any()))
+        when(transactionCommandAssembler.toUpdateCommand(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(mock(UpdateTransactionCommand.class));
         when(applicationService.updateTransaction(any())).thenReturn(view);
         when(transactionDtoMapper.toResponse(anyString(), eq(view))).thenReturn(response);
@@ -265,6 +276,7 @@ class TransactionControllerTest {
                 put("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}", PORTFOLIO_ID,
                         ACCOUNT_ID, TRANSACTION_ID)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -278,7 +290,7 @@ class TransactionControllerTest {
         DeleteTransactionRequest request = new DeleteTransactionRequest("Some note");
 
         // Ensure the assembler returns a non-null command for the service
-        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), anyBoolean(), any()))
+        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), any(), anyBoolean(), any()))
                 .thenReturn(mock(DeleteTransactionCommand.class));
 
         doNothing().when(applicationService).deleteTransaction(any());
@@ -288,6 +300,7 @@ class TransactionControllerTest {
                 PORTFOLIO_ID, ACCOUNT_ID, TRANSACTION_ID)
                 .param("softDelete", "true")
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 // 3. Assert
                 .andExpect(status().isNoContent());
@@ -297,7 +310,7 @@ class TransactionControllerTest {
     @Test
     void delete_returnsNoContentNullRequestParam() throws Exception {
         // 1. Arrange
-        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), anyBoolean(), isNull()))
+        when(transactionCommandAssembler.toDeleteCommand(any(), any(), any(), any(), anyBoolean(), isNull()))
                 .thenReturn(mock(DeleteTransactionCommand.class));
 
         doNothing().when(applicationService).deleteTransaction(any());
@@ -306,12 +319,14 @@ class TransactionControllerTest {
         mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
                 PORTFOLIO_ID, ACCOUNT_ID, TRANSACTION_ID)
                 .param("softDelete", "true")
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .contentType(MediaType.APPLICATION_JSON)) // Removed .content(null) for cleaner test
                 // 3. Assert
                 .andExpect(status().isNoContent());
     }
     // ---------------- GET /{transactionId} ----------------
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction by id returns 200")
     void getTransaction_returnsOk() throws Exception {
@@ -319,7 +334,7 @@ class TransactionControllerTest {
         TransactionHttpResponse response = mock(TransactionHttpResponse.class);
         GetTransactionByIdQuery query = mock(GetTransactionByIdQuery.class);
 
-        when(transactionCommandAssembler.toTransactionQuery(any(), any(), any()))
+        when(transactionCommandAssembler.toTransactionQuery(any(), any(), any(), any()))
                 .thenReturn(query);
 
         when(queryService.getTransactionDetails(query))
@@ -332,12 +347,13 @@ class TransactionControllerTest {
                 "/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
                 "portfolio-1",
                 "account-1",
-                "tx-1"))
+                "tx-1").with(jwt().jwt(j -> j.subject(USER_ID.toString()))))
                 .andExpect(status().isOk());
     }
 
     // ---------------- GET transaction history ----------------
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction history returns 200")
     void getTransactionHistory_returnsOk() throws Exception {
@@ -347,7 +363,7 @@ class TransactionControllerTest {
 
         // Use anyInt() for primitives
         when(transactionCommandAssembler.toHistoryQuery(
-                any(), any(), any(), any(), any(), anyInt(), anyInt()))
+                any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(query);
 
         when(queryService.getTransactionHistory(query))
@@ -362,7 +378,8 @@ class TransactionControllerTest {
                 "account-1")
                 .param("type", "BUY")
                 .param("page", "1")
-                .param("size", "20"))
+                .param("size", "20")
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString()))))
                 .andExpect(status().isOk());
     }
 
@@ -372,5 +389,9 @@ class TransactionControllerTest {
 
     private AccountId toAccountId(String id) {
         return new AccountId(UUID.fromString(id));
+    }
+
+    private UserId toUserId(UUID id) {
+        return new UserId(id);
     }
 }

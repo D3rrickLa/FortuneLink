@@ -1,22 +1,29 @@
 package com.laderrco.fortunelink.portfolio_management.infrastructure.config;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import lombok.NonNull;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.security.AuthenticatedUserResolver;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
-    @NonNull
-    private final RateLimitInterceptor rateLimitInterceptor;
 
-    public WebConfig(RateLimitInterceptor rateLimitInterceptor) {
-        this.rateLimitInterceptor = rateLimitInterceptor;
-    }
+    private final RateLimitInterceptor rateLimitInterceptor;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
+
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(authenticatedUserResolver);
+    }    
 
     /**
      * Register rate limit interceptor for API endpoints.

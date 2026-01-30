@@ -68,11 +68,9 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
     public Portfolio toDomain(PortfolioEntity entity) {
         Objects.requireNonNull(entity, "PortfolioEntity cannot be null");
 
-        List<Account> domainAccounts = entity.getAccounts() != null
-                ? entity.getAccounts().stream()
-                        .map(this::mapAccountToDomain)
-                        .toList()
-                : Collections.emptyList();
+        List<Account> domainAccounts = entity.getAccounts().stream()
+                .map(this::mapAccountToDomain)
+                .toList();
 
         return Portfolio.reconstitute(
                 new PortfolioId(entity.getId()),
@@ -81,7 +79,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                 entity.getName(),
                 ValidatedCurrency.of(entity.getCurrencyPreference()),
                 entity.getDescription(),
-                Optional.ofNullable(entity.getDeleted()).orElse(false),  // NULL-safe: treat NULL as false
+                Optional.ofNullable(entity.getDeleted()).orElse(false), // NULL-safe: treat NULL as false
                 entity.getDeletedAt(),
                 new UserId(entity.getDeletedBy()),
                 entity.getCreatedAt(),
@@ -279,14 +277,30 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                         .toList()
                 : Collections.emptyList();
 
+        Money cashBalance = new Money(
+                entity.getCashBalanceAmount(),
+                ValidatedCurrency.of(entity.getCashBalanceCurrency()));
+
+        boolean isNew = entity.getCreatedDate() == null; // new entity has no persisted timestamps
+
+        if (isNew) {
+            // Use createAccount factory if you have initial data
+            return Account.createAccount(
+                    new AccountId(entity.getId()),
+                    entity.getName(),
+                    entity.getAccountType(),
+                    ValidatedCurrency.of(entity.getBaseCurrency()),
+                    cashBalance,
+                    domainAssets,
+                    domainTransactions);
+        }
+
         return Account.reconstitute(
                 new AccountId(entity.getId()),
                 entity.getName(),
-                entity.getAccountType(), // Direct enum access
+                entity.getAccountType(),
                 ValidatedCurrency.of(entity.getBaseCurrency()),
-                new Money(
-                        entity.getCashBalanceAmount(),
-                        ValidatedCurrency.of(entity.getCashBalanceCurrency())),
+                cashBalance,
                 domainAssets,
                 domainTransactions,
                 entity.isActive(),

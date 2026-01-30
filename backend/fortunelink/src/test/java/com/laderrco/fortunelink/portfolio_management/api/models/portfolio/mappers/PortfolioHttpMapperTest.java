@@ -23,7 +23,6 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetAsse
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AccountType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 
 class PortfolioHttpMapperTest {
 
@@ -39,14 +38,13 @@ class PortfolioHttpMapperTest {
     void toCommand_createPortfolio() {
         String userId = UUID.randomUUID().toString();
         CreatePortfolioRequest req = new CreatePortfolioRequest(
-                userId,
                 "My Portfolio",
                 "USD",
                 "Desc",
                 true
         );
 
-        CreatePortfolioCommand cmd = mapper.toCommand(req);
+        CreatePortfolioCommand cmd = mapper.toCommand(req, UUID.fromString(userId));
 
         assertEquals(userId, cmd.userId().userId().toString());
         assertEquals("My Portfolio", cmd.name());
@@ -59,7 +57,8 @@ class PortfolioHttpMapperTest {
     @DisplayName("PortfolioId string maps to GetPortfolioByIdQuery")
     void toCommand_getPortfolioById() {
         String id = UUID.randomUUID().toString();
-        GetPortfolioByIdQuery query = mapper.toCommand(id);
+        UUID userId = UUID.randomUUID();
+        GetPortfolioByIdQuery query = mapper.toCommand(id, userId);
         assertEquals(id, query.id().portfolioId().toString());
     }
 
@@ -76,14 +75,14 @@ class PortfolioHttpMapperTest {
     @DisplayName("UpdatePortfolioRequest maps to UpdatePortfolioCommand")
     void toCommand_updatePortfolio() {
         String portfolioId = UUID.randomUUID().toString();
+        UUID userUuid = UUID.randomUUID();
         CreatePortfolioRequest req = new CreatePortfolioRequest(
-                UserId.randomId().toString(),
                 "Updated Name",
                 "EUR",
                 "Updated Desc",
                 true);
 
-        UpdatePortfolioCommand cmd = mapper.toCommand(portfolioId, req);
+        UpdatePortfolioCommand cmd = mapper.toCommand(portfolioId, userUuid, req);
 
         assertEquals(portfolioId, cmd.id().portfolioId().toString());
         assertEquals("Updated Name", cmd.name());
@@ -95,17 +94,15 @@ class PortfolioHttpMapperTest {
     @DisplayName("DeletePortfolioRequest maps to DeletePortfolioCommand")
     void toCommand_deletePortfolio() {
         String portfolioId = UUID.randomUUID().toString();
-        String userId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
         DeletePortfolioRequest req = new DeletePortfolioRequest(
-                portfolioId,
-                userId,
                 true,
                 false);
 
-        DeletePortfolioCommand cmd = mapper.toCommand(req);
+        DeletePortfolioCommand cmd = mapper.toCommand(portfolioId, userId, req);
 
         assertEquals(portfolioId, cmd.portfolioId().portfolioId().toString());
-        assertEquals(userId, cmd.userId().userId().toString());
+        assertEquals(userId, cmd.userId().userId());
         assertTrue(cmd.confirmed());
         assertFalse(cmd.softDelete());
     }
@@ -114,12 +111,13 @@ class PortfolioHttpMapperTest {
     @DisplayName("CreateAccountRequest maps to AddAccountCommand")
     void toCommand_addAccount() {
         String portfolioId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
         CreateAccountRequest req = new CreateAccountRequest(
                 "Account 1",
                 "INVESTMENT",
                 "USD");
 
-        AddAccountCommand cmd = mapper.toCommand(portfolioId, req);
+        AddAccountCommand cmd = mapper.toCommand(portfolioId, userId, req);
 
         assertEquals(portfolioId, cmd.portfolioId().portfolioId().toString());
         assertEquals("Account 1", cmd.accountName());
@@ -131,10 +129,11 @@ class PortfolioHttpMapperTest {
     @DisplayName("PortfolioId/AccountId/AssetId strings map to GetAssetQueryView")
     void toAssetQuery() {
         String portfolioId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
         String accountId = UUID.randomUUID().toString();
         String assetId = UUID.randomUUID().toString();
 
-        GetAssetQueryView query = mapper.toAssetQuery(portfolioId, accountId, assetId);
+        GetAssetQueryView query = mapper.toAssetQuery(portfolioId, userId, accountId, assetId);
 
         assertEquals(portfolioId, query.portfolioId().portfolioId().toString());
         assertEquals(accountId, query.accountId().accountId().toString());
@@ -146,11 +145,12 @@ class PortfolioHttpMapperTest {
     void toCommand_removeAccount() {
         String portfolioId = UUID.randomUUID().toString();
         String accountId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
 
-        RemoveAccountCommand cmd = mapper.toCommand(portfolioId, accountId);
+        RemoveAccountCommand cmd = mapper.toCommand(portfolioId, userId, accountId);
 
         // The mapper currently has a bug: it uses accountId for portfolioId
-        assertEquals(accountId, cmd.portfolioId().portfolioId().toString()); // matches current code
+        assertEquals(portfolioId, cmd.portfolioId().portfolioId().toString()); // matches current code
         assertEquals(accountId, cmd.accountId().accountId().toString());
     }
 
@@ -159,11 +159,12 @@ class PortfolioHttpMapperTest {
     void toCommand_getAccountSummary() {
         String portfolioId = UUID.randomUUID().toString();
         String accountId = UUID.randomUUID().toString();
+        UUID userId = UUID.randomUUID();
         GetAccountRequest req = new GetAccountRequest(
             accountId
         );
 
-        GetAccountSummaryQuery query = mapper.toCommand(portfolioId, req);
+        GetAccountSummaryQuery query = mapper.toCommand(portfolioId, userId, req);
 
         assertEquals(portfolioId, query.portfolioId().portfolioId().toString());
         assertEquals(accountId, query.accountId().accountId().toString());

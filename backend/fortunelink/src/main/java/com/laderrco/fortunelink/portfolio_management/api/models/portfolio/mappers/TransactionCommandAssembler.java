@@ -29,6 +29,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.TransactionId;
+import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
@@ -44,13 +45,14 @@ public class TransactionCommandAssembler {
     private final ExchangeRateService exchangeRateService;
 
     public RecordPurchaseCommand toPurchaseCommand(String portfolioId, String accountId,
-            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+            UUID userId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
 
         List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
 
         return new RecordPurchaseCommand(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 request.getSymbol(),
                 request.getQuantity(),
@@ -60,7 +62,7 @@ public class TransactionCommandAssembler {
                 request.getNotes());
     }
 
-    public RecordSaleCommand toSaleCommand(String portfolioId, String accountId, ValidatedCurrency accountBaseCurrency,
+    public RecordSaleCommand toSaleCommand(String portfolioId, String accountId, UUID userId, ValidatedCurrency accountBaseCurrency,
             RecordTransactionRequest request) {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
 
@@ -70,6 +72,7 @@ public class TransactionCommandAssembler {
         }
         return new RecordSaleCommand(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 toAssetId(request.getAssetId()), // id for sell while purcahse is symbol
                 request.getQuantity(),
@@ -80,10 +83,11 @@ public class TransactionCommandAssembler {
     }
 
     public RecordIncomeCommand toDividendCommand(String portfolioId, String accountId,
-            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+            UUID userId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
         return new RecordIncomeCommand(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 toAssetId(request.getAssetId()),
                 price,
@@ -95,11 +99,12 @@ public class TransactionCommandAssembler {
     }
 
     public RecordDepositCommand toDepositCommand(String portfolioId, String accountId,
-            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+            UUID userId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
         List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
         return new RecordDepositCommand(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 price,
                 fees,
@@ -108,11 +113,12 @@ public class TransactionCommandAssembler {
     }
 
     public RecordWithdrawalCommand toWithdrawalCommand(String portfolioId, String accountId,
-            ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+            UUID userId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
         List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
         return new RecordWithdrawalCommand(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 price,
                 fees,
@@ -121,7 +127,7 @@ public class TransactionCommandAssembler {
     }
 
     public UpdateTransactionCommand toUpdateCommand(String portfolioId, String accountId,
-            String transactionId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
+            String transactionId, UUID userId, ValidatedCurrency accountBaseCurrency, RecordTransactionRequest request) {
         Money price = toMoney(request.getPrice(), request.getPriceCurrency());
         List<Fee> fees = toFees(request.getFees(), accountBaseCurrency, request.getTransactionDate());
         AssetIdentifier identifier = null;
@@ -131,6 +137,7 @@ public class TransactionCommandAssembler {
         }
         return new UpdateTransactionCommand(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 toTransactionId(transactionId),
                 TransactionType.valueOf(request.getTransactionType()),
@@ -143,15 +150,16 @@ public class TransactionCommandAssembler {
     }
 
     public DeleteTransactionCommand toDeleteCommand(String portfolioId, String accountId,
-            String transactionId, boolean softDelete, @Nullable String notes) {
-        return new DeleteTransactionCommand(toPortfolioId(portfolioId), toAccountId(accountId),
+            String transactionId, UUID userId, boolean softDelete, @Nullable String notes) {
+        return new DeleteTransactionCommand(toPortfolioId(portfolioId), toUserId(userId), toAccountId(accountId),
                 toTransactionId(transactionId), softDelete, notes);
     }
 
-    public GetTransactionHistoryQuery toHistoryQuery(String portfolioId, String accountId, String transactionType,
+    public GetTransactionHistoryQuery toHistoryQuery(String portfolioId, String accountId, UUID userId, String transactionType,
             Instant startDate, Instant endDate, int page, int size) {
         return new GetTransactionHistoryQuery(
                 toPortfolioId(portfolioId),
+                toUserId(userId),
                 toAccountId(accountId),
                 startDate,
                 endDate,
@@ -161,9 +169,13 @@ public class TransactionCommandAssembler {
 
     }
 
-    public GetTransactionByIdQuery toTransactionQuery(String portfolioId, String accountId, String transactionId) {
-        return new GetTransactionByIdQuery(toPortfolioId(portfolioId), toAccountId(accountId),
+    public GetTransactionByIdQuery toTransactionQuery(String portfolioId, String accountId, String transactionId, UUID userUuid) {
+        return new GetTransactionByIdQuery(toPortfolioId(portfolioId), toUserId(userUuid), toAccountId(accountId),
                 toTransactionId(transactionId));
+    }
+
+    private UserId toUserId(UUID userUuid) {
+        return new UserId(userUuid);
     }
 
     private List<Fee> toFees(

@@ -271,7 +271,7 @@ class PortfolioEntityMapperImplTest {
             entity.setDescription("some descrption");
             entity.setDeletedBy(UUID.randomUUID());
             entity.setDeleted(null);
-            entity.setAccounts(null);
+            entity.setAccounts(List.of());
             entity.setCreatedAt(testTime);
             entity.setUpdatedAt(testTime);
 
@@ -280,6 +280,45 @@ class PortfolioEntityMapperImplTest {
 
             // Then
             assertThat(domain.getAccounts()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should handle entity with null accounts list")
+        void shouldHandleNewAccountCreation() {
+            // Given
+            PortfolioEntity entity = new PortfolioEntity();
+            AccountEntity accountEntity = new AccountEntity(
+                UUID.randomUUID(),
+                entity,
+                "NAME",
+                AccountType.CHEQUING,
+                "USD",
+                BigDecimal.TEN,
+                "CAD",
+                true,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                null,
+                1
+            );
+            entity.setId(UUID.randomUUID());
+            entity.setUserId(UUID.randomUUID());
+            entity.setName("Portfolio");
+            entity.setCurrencyPreference("USD");
+            entity.setDescription("some descrption");
+            entity.setDeletedBy(UUID.randomUUID());
+            entity.setDeleted(null);
+            entity.setAccounts(List.of(accountEntity));
+            entity.setCreatedAt(testTime);
+            entity.setUpdatedAt(testTime);
+
+            // When
+            Portfolio domain = mapper.toDomain(entity);
+
+            // Then
+            assertThat(domain.getAccounts().size()).isEqualTo(1);
         }
 
         @Test
