@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -53,6 +54,7 @@ import com.laderrco.fortunelink.portfolio_management.application.queries.GetTran
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.AccountView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionHistoryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioApplicationService;
 import com.laderrco.fortunelink.portfolio_management.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
@@ -65,7 +67,7 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 @AutoConfigureMockMvc
 @Import({ DevSecurityConfig.class, RateLimitConfig.class })
-@WebMvcTest({ TransactionController.class, GlobalExceptionHandler.class })
+@WebMvcTest({ TransactionController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class TransactionControllerTest {
 
     @Autowired
@@ -102,7 +104,8 @@ class TransactionControllerTest {
     @BeforeEach
     void setup() {
         when(portfolioHttpMapper.toCommand(anyString(), any(), any(GetAccountRequest.class)))
-                .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toUserId(USER_ID), toAccountId(ACCOUNT_ID)));
+                .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toUserId(USER_ID),
+                        toAccountId(ACCOUNT_ID)));
 
         when(queryService.getAccountSummary(any(GetAccountSummaryQuery.class)))
                 .thenReturn(accountView);
@@ -160,6 +163,7 @@ class TransactionControllerTest {
 
         mockMvc.perform(
                 post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/buy", PORTFOLIO_ID, ACCOUNT_ID)
+                        .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -182,6 +186,7 @@ class TransactionControllerTest {
         mockMvc.perform(
                 post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/sell", PORTFOLIO_ID, ACCOUNT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -203,6 +208,7 @@ class TransactionControllerTest {
         mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/dividends", PORTFOLIO_ID,
                 ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -224,6 +230,7 @@ class TransactionControllerTest {
         mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/deposit", PORTFOLIO_ID,
                 ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -245,6 +252,7 @@ class TransactionControllerTest {
         mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/withdrawal", PORTFOLIO_ID,
                 ACCOUNT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -267,6 +275,7 @@ class TransactionControllerTest {
                 put("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}", PORTFOLIO_ID,
                         ACCOUNT_ID, TRANSACTION_ID)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
@@ -290,6 +299,7 @@ class TransactionControllerTest {
                 PORTFOLIO_ID, ACCOUNT_ID, TRANSACTION_ID)
                 .param("softDelete", "true")
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .content(objectMapper.writeValueAsString(request)))
                 // 3. Assert
                 .andExpect(status().isNoContent());
@@ -308,12 +318,14 @@ class TransactionControllerTest {
         mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
                 PORTFOLIO_ID, ACCOUNT_ID, TRANSACTION_ID)
                 .param("softDelete", "true")
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString())))
                 .contentType(MediaType.APPLICATION_JSON)) // Removed .content(null) for cleaner test
                 // 3. Assert
                 .andExpect(status().isNoContent());
     }
     // ---------------- GET /{transactionId} ----------------
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction by id returns 200")
     void getTransaction_returnsOk() throws Exception {
@@ -334,12 +346,13 @@ class TransactionControllerTest {
                 "/api/portfolios/{portfolioId}/accounts/{accountId}/transactions/{transactionId}",
                 "portfolio-1",
                 "account-1",
-                "tx-1"))
+                "tx-1").with(jwt().jwt(j -> j.subject(USER_ID.toString()))))
                 .andExpect(status().isOk());
     }
 
     // ---------------- GET transaction history ----------------
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction history returns 200")
     void getTransactionHistory_returnsOk() throws Exception {
@@ -364,7 +377,8 @@ class TransactionControllerTest {
                 "account-1")
                 .param("type", "BUY")
                 .param("page", "1")
-                .param("size", "20"))
+                .param("size", "20")
+                .with(jwt().jwt(j -> j.subject(USER_ID.toString()))))
                 .andExpect(status().isOk());
     }
 

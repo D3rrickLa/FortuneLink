@@ -59,7 +59,7 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
     }
 
-    @GetMapping("/{portfolioId")
+    @GetMapping("/{portfolioId}")
     public ResponseEntity<PortfolioHttpResponse> getPortfolio(@Nonnull @PathVariable String portfolioId, @AuthenticatedUser UUID userId) {
         GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId, userId);
         PortfolioView portfolioView = portfolioQueryService.getPortfolioById(query);
@@ -94,7 +94,7 @@ public class PortfolioController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{portfolio}")
+    @PutMapping("/{portfolioId}")
     public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@Nonnull @PathVariable String portfolioId, @AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
         UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, userId, request);
         PortfolioView portfolioView = portfolioApplicationService.updatePortfolio(command);

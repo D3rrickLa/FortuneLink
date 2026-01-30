@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -100,6 +101,13 @@ class PortfolioControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private UUID mockUserId;
+
+    @BeforeEach
+    void init() {
+        mockUserId = UUID.randomUUID();
+    }
+
     private static final String PORTFOLIO_ID = UUID.randomUUID().toString();
     private static final String USER_ID = UUID.randomUUID().toString();
 
@@ -135,11 +143,12 @@ class PortfolioControllerTest {
         PortfolioView view = mock(PortfolioView.class);
         PortfolioHttpResponse response = mock(PortfolioHttpResponse.class);
 
-        when(requestMapper.toCommand(PORTFOLIO_ID, UUID.randomUUID())).thenReturn(query);
+        when(requestMapper.toCommand(PORTFOLIO_ID, mockUserId)).thenReturn(query);
         when(portfolioQueryService.getPortfolioById(query)).thenReturn(view);
         when(portfolioDtoMapper.toPortfolioResponse(view)).thenReturn(response);
 
-        mockMvc.perform(get("/api/portfolios/{portfolioId}", PORTFOLIO_ID))
+        mockMvc.perform(get("/api/portfolios/{portfolioId}", PORTFOLIO_ID)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString())))) // Simulates the JWT
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
@@ -148,7 +157,7 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void getUserPortfolios_ShouldReturnList() throws Exception {
-        GetUsersPortfolioRequest userRequest = new GetUsersPortfolioRequest(USER_ID);
+        GetUsersPortfolioRequest userRequest = new GetUsersPortfolioRequest(mockUserId.toString());
         GetPortfoliosByUserIdQuery query = mock(GetPortfoliosByUserIdQuery.class);
 
         PortfolioSummaryView summary1 = mock(PortfolioSummaryView.class);
@@ -163,7 +172,8 @@ class PortfolioControllerTest {
         when(portfolioDtoMapper.toPortfolioResponse(summary1)).thenReturn(resp1);
         when(portfolioDtoMapper.toPortfolioResponse(summary2)).thenReturn(resp2);
 
-        mockMvc.perform(get("/api/portfolios/user/{userId}", USER_ID))
+        mockMvc.perform(get("/api/portfolios/user/me")
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString())))) // Simulates the JWT
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(List.of(resp1, resp2))));
     }
@@ -205,6 +215,7 @@ class PortfolioControllerTest {
         when(portfolioDtoMapper.toPortfolioResponse(any(PortfolioView.class))).thenReturn(response);
         mockMvc.perform(put("/api/portfolios/{portfolioId}", PORTFOLIO_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -232,6 +243,7 @@ class PortfolioControllerTest {
 
         mockMvc.perform(delete("/api/portfolios/{id}", PORTFOLIO_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isNoContent());
@@ -280,8 +292,9 @@ class PortfolioControllerTest {
                 .thenReturn(response);
 
         // --- Act & Assert ---
-        mockMvc.perform(post("/api/portfolios/{id}/accounts", PORTFOLIO_ID)
+        mockMvc.perform(post("/api/portfolios/{portfolioId}/accounts", PORTFOLIO_ID)
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -293,14 +306,17 @@ class PortfolioControllerTest {
     }
 
     // ================= REMOVE ACCOUNT =================
+    @SuppressWarnings("null")
     @Test
     void removeAccount_ShouldReturnNoContent() throws Exception {
         RemoveAccountCommand command = mock(RemoveAccountCommand.class);
         String accountId = UUID.randomUUID().toString();
 
-        when(requestMapper.toCommand(PORTFOLIO_ID, UUID.fromString(USER_ID), accountId)).thenReturn(command);
+        when(requestMapper.toCommand(eq(PORTFOLIO_ID), eq(mockUserId), eq(accountId))).thenReturn(command);
 
-        mockMvc.perform(delete("/api/portfolios/{id}/accounts/{accountId}", PORTFOLIO_ID, accountId))
+        mockMvc.perform(delete("/api/portfolios/{portfolioId}/accounts/{accountId}", PORTFOLIO_ID, accountId)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
+        )
                 .andExpect(status().isNoContent());
 
         verify(portfolioApplicationService).removeAccount(command);
@@ -315,7 +331,10 @@ class PortfolioControllerTest {
                 .willThrow(new PortfolioNotFoundException("Portfolio not found: " + portfolioId));
 
         // 2. Perform request and verify ExceptionHandler response
-        mockMvc.perform(get("/api/portfolios/" + portfolioId))
+        mockMvc.perform(get("/api/portfolios/" + portfolioId)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
+        )
+
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("RESOURCE_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value(containsString(portfolioId)));
@@ -324,17 +343,30 @@ class PortfolioControllerTest {
     @SuppressWarnings("null")
     @Test
     void createPortfolio_ShouldReturn409_WhenUserAlreadyHasPortfolio() throws Exception {
-        // Mock the mapping and service call
-        given(requestMapper.toCommand(any(CreatePortfolioRequest.class), any()))
-                .willReturn(mock(CreatePortfolioCommand.class));
-        given(portfolioApplicationService.createPortfolio(any()))
+        // 1. Arrange: Ensure the Request and JSON actually match
+        CreatePortfolioRequest request = new CreatePortfolioRequest("My Portfolio", "USD", "desc", false);
+
+        // Use the objectMapper to generate the JSON so it's guaranteed to match the
+        // Request object
+        String jsonRequest = objectMapper.writeValueAsString(request);
+
+        // Use a mock for the command to avoid constructor logic issues in the test
+        CreatePortfolioCommand mockCommand = mock(CreatePortfolioCommand.class);
+
+        // Align the stubbing
+        given(requestMapper.toCommand(any(CreatePortfolioRequest.class), eq(mockUserId)))
+                .willReturn(mockCommand);
+
+        // Trigger the 409 Conflict exception
+        given(portfolioApplicationService.createPortfolio(eq(mockCommand)))
                 .willThrow(new PortfolioAlreadyExistsException("User already has a portfolio"));
 
-        String jsonRequest = "{\"userId\": \"user123\", \"name\": \"My Portfolio\", \"defaultCurrency\": \"USD\"}";
-
+        // 2. Act & Assert
         mockMvc.perform(post("/api/portfolios")
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString())))
                 .content(jsonRequest))
+                .andDo(print()) // Always good for debugging
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("CONFLICT"))
                 .andExpect(jsonPath("$.message").value("User already has a portfolio"));
@@ -350,6 +382,7 @@ class PortfolioControllerTest {
 
         mockMvc.perform(delete("/api/portfolios/123")
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content("{\"confirmed\": true}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value(containsString("accounts")));
@@ -367,13 +400,14 @@ class PortfolioControllerTest {
 
         mockMvc.perform(post("/api/portfolios/123/accounts")
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(jsonRequest))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
     }
 
-    @SuppressWarnings("null")
     @Test
+    @SuppressWarnings("null")
     void testGetAsset_Success() throws Exception {
         // 1. Arrange: Use UUID strings for the web layer
         UUID portfolioIdStr = UUID.randomUUID();
@@ -381,9 +415,12 @@ class PortfolioControllerTest {
         UUID assetIdStr = UUID.randomUUID();
 
         // Mock the Query Object creation (Internal to the controller)
-        GetAssetQueryView mockQuery = new GetAssetQueryView(new PortfolioId(portfolioIdStr), new UserId(UUID.fromString(USER_ID)),
-                new AccountId(accountIdStr),  new AssetId(assetIdStr));
-        when(requestMapper.toAssetQuery(portfolioIdStr.toString(), UUID.fromString(USER_ID), accountIdStr.toString(), assetIdStr.toString()))
+        GetAssetQueryView mockQuery = new GetAssetQueryView(new PortfolioId(portfolioIdStr),
+                new UserId(UUID.fromString(USER_ID)),
+                new AccountId(accountIdStr), new AssetId(assetIdStr));
+        // FIX: Use mockUserId here to match the JWT subject
+        when(requestMapper.toAssetQuery(eq(portfolioIdStr.toString()), eq(mockUserId), eq(accountIdStr.toString()),
+                eq(assetIdStr.toString())))
                 .thenReturn(mockQuery);
 
         // 2. Mock the View (Populating all fields to pass record validation)
@@ -410,10 +447,12 @@ class PortfolioControllerTest {
         when(portfolioDtoMapper.toAssetResponse(mockView)).thenReturn(mockResponse);
 
         // 3. Act
-        mockMvc.perform(get("/api/portfolios/{pId}/accounts/{aId}/assets/{asId}",
+        mockMvc.perform(get("/api/portfolios/{portfolioId}/accounts/{accountId}/assets/{assetId}",
                 portfolioIdStr.toString(), accountIdStr.toString(), assetIdStr.toString())
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON)
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
+                .andDo(print())
                 .andExpect(jsonPath("$.id").value(assetIdStr.toString()))
                 .andExpect(jsonPath("$.symbol").value("AAPL"))
                 .andExpect(jsonPath("$.quantity").value(10.00));

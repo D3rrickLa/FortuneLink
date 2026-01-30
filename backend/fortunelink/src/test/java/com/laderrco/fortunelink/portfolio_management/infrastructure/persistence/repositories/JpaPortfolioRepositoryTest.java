@@ -154,6 +154,45 @@ class JpaPortfolioRepositoryTest {
     }
 
     @Test
+    void findByIdAndUserId_shouldReturnPortfolio() throws NoDriverFoundException, SQLException {
+        // 1. Create the ID
+        UUID rawUserId = UUID.randomUUID();
+        UserId userId = new UserId(rawUserId);
+
+        // 2. INSERT the user into the auth schema so the FK is satisfied
+        // We use the postgres container connection to do this manually
+        try (var conn = postgres.createConnection("")) {
+            var st = conn.createStatement();
+            st.execute(String.format(
+                    "INSERT INTO auth.users (id, email) VALUES ('%s', 'test@example.com')",
+                    rawUserId));
+        }
+
+        // 3. Now you can safely save the portfolio
+        PortfolioId portfolioId = new PortfolioId(UUID.randomUUID());
+        Instant time = LocalDateTime.of(2025, 01, 01, 0, 0).toInstant(ZoneOffset.UTC);
+
+        Portfolio portfolio = Portfolio.reconstitute(
+                portfolioId,
+                userId,
+                new ArrayList<>(),
+                "Name",
+                ValidatedCurrency.USD,
+                "Desc",
+                false,
+                null,
+                null,
+                time,
+                time);
+
+        repository.save(portfolio);
+
+        // 4. Verify
+        Optional<Portfolio> result = repository.findByIdAndUserId(portfolioId, userId);
+        assertThat(result).isPresent();
+    }
+
+    @Test
     void testCountByUserId() {
         // 1. Arrange IDs
         PortfolioId portfolioId = new PortfolioId(UUID.randomUUID());

@@ -2587,7 +2587,7 @@ class PortfolioApplicationServiceTest {
                     ValidatedCurrency.CAD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
             when(portfolioRepository.save(any(Portfolio.class))).thenReturn(portfolio);
             when(portfolioViewAssembler.assembleAccountView(any())).thenReturn(mock(AccountView.class));
 
@@ -2612,7 +2612,7 @@ class PortfolioApplicationServiceTest {
             RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, userId, newAccountId);
 
             when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
 
             // When
             service.removeAccount(command);
@@ -2640,7 +2640,7 @@ class PortfolioApplicationServiceTest {
 
             RemoveAccountCommand command = new RemoveAccountCommand(portfolioId, userId, accountId);
             when(commandValidator.validate(any(RemoveAccountCommand.class))).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
 
             // Verify account actually has assets before the test
             Optional<Account> accountToRemove = portfolio.findAccount(accountId);
@@ -2678,7 +2678,7 @@ class PortfolioApplicationServiceTest {
                     ValidatedCurrency.USD);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
+            when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> service.addAccount(command));
         }
@@ -2691,7 +2691,7 @@ class PortfolioApplicationServiceTest {
                     userId, accountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.empty());
+            when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.empty());
 
             assertThrows(PortfolioNotFoundException.class, () -> service.removeAccount(command));
         }
@@ -2704,7 +2704,7 @@ class PortfolioApplicationServiceTest {
                     portfolioId, userId, mockAccountId);
 
             when(commandValidator.validate(command)).thenReturn(ValidationResult.success());
-            when(portfolioRepository.findById(portfolioId)).thenReturn(Optional.of(portfolio));
+            when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
             // when(portfolio.findAccount(any())).thenReturn();
 
             assertThatThrownBy(() -> service.removeAccount(command))

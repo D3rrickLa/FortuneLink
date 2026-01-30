@@ -13,7 +13,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,10 +23,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
 import com.laderrco.fortunelink.portfolio_management.api.models.market.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.PriceResponse;
+import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.SymbolNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
@@ -42,7 +46,7 @@ import com.laderrco.fortunelink.shared.valueobjects.Money;
 
 @AutoConfigureMockMvc
 @Import({ DevSecurityConfig.class, RateLimitConfig.class })
-@WebMvcTest({MarketDataController.class, GlobalExceptionHandler.class})
+@WebMvcTest({ MarketDataController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class MarketDataControllerTest {
 
     @Autowired
@@ -53,11 +57,17 @@ class MarketDataControllerTest {
 
     @MockitoBean
     private MarketDataDtoMapper mapper;
+    private UUID mockUserId;
 
+    @BeforeEach
+    void init() {
+        mockUserId = UUID.randomUUID();
+    }
     // ---------------------------------------------------
     // /price/{symbol}
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void getCurrentPrice_success() throws Exception {
         SymbolIdentifier symbolId = new SymbolIdentifier("AAPL");
@@ -67,10 +77,10 @@ class MarketDataControllerTest {
         PriceResponse response = PriceResponse.of("AAPL", BigDecimal.valueOf(150.25), "USD");
 
         when(marketDataService.getCurrentQuote(any(SymbolIdentifier.class)))
-            .thenReturn(Optional.of(quote));
+                .thenReturn(Optional.of(quote));
         when(mapper.toPriceResponse("AAPL", quote)).thenReturn(response);
 
-        mockMvc.perform(get("/api/market-data/price/AAPL"))
+        mockMvc.perform(get("/api/market-data/price/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value("AAPL"))
                 .andExpect(jsonPath("$.price").value(150.25))
@@ -81,6 +91,7 @@ class MarketDataControllerTest {
     // /prices?symbols=AAPL,GOOGL
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void getBatchPrices_success() throws Exception {
         AssetIdentifier aapl = new SymbolIdentifier("AAPL");
@@ -126,7 +137,8 @@ class MarketDataControllerTest {
         when(mapper.toPriceResponseMap(prices)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/prices")
-                .param("symbols", "AAPL", "GOOGL"))
+                .param("symbols", "AAPL", "GOOGL")
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.AAPL.price").value(150))
                 .andExpect(jsonPath("$.GOOGL.price").value(2800));
@@ -136,6 +148,7 @@ class MarketDataControllerTest {
     // /asset-info/{symbol}
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void getAssetInfo_success() throws Exception {
         SymbolIdentifier symbolId = new SymbolIdentifier("AAPL");
@@ -183,10 +196,10 @@ class MarketDataControllerTest {
         when(marketDataService.getAssetInfo(symbolId))
                 .thenReturn(Optional.of(assetInfo));
         when(marketDataService.getCurrentQuote(any()))
-            .thenReturn(Optional.of(applQuote));
+                .thenReturn(Optional.of(applQuote));
         when(mapper.toAssetInfoResponse(assetInfo, applQuote)).thenReturn(response);
 
-        mockMvc.perform(get("/api/market-data/asset-info/AAPL"))
+        mockMvc.perform(get("/api/market-data/asset-info/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value("AAPL"))
                 .andExpect(jsonPath("$.name").value("Apple Inc."))
@@ -194,14 +207,15 @@ class MarketDataControllerTest {
 
     }
 
+    @SuppressWarnings("null")
     @Test
     void getAssetInfo_notFound() throws Exception {
         when(marketDataService.getAssetInfo(any())).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/market-data/asset-info/UNKNOWN"))
+        mockMvc.perform(get("/api/market-data/asset-info/UNKNOWN").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andDo(print())
                 .andExpect(status().isNotFound());
-                // .andExpect(status().reason(containsString("Asset not found")));
+        // .andExpect(status().reason(containsString("Asset not found")));
 
     }
 
@@ -209,6 +223,7 @@ class MarketDataControllerTest {
     // /asset-info (batch)
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void getBatchAssetInfo_success() throws Exception {
         AssetIdentifier aapl = new SymbolIdentifier("AAPL");
@@ -251,7 +266,7 @@ class MarketDataControllerTest {
                 null,
                 null,
                 null,
-                "INTERNAL", 
+                "INTERNAL",
                 null));
 
         when(marketDataService.getBatchAssetInfo(anyList())).thenReturn(serviceResult);
@@ -259,7 +274,8 @@ class MarketDataControllerTest {
         when(mapper.toAssetInfoResponseMap(serviceResult, serviceResult2)).thenReturn(response);
 
         mockMvc.perform(get("/api/market-data/asset-info")
-                .param("symbols", "AAPL"))
+                .param("symbols", "AAPL")
+                .with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.AAPL.name").value("Apple Inc."));
     }
@@ -268,12 +284,13 @@ class MarketDataControllerTest {
     // /currency/{symbol}
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void getTradingCurrency_success() throws Exception {
         when(marketDataService.getTradingCurrency(any()))
                 .thenReturn(ValidatedCurrency.of("USD"));
 
-        mockMvc.perform(get("/api/market-data/currency/AAPL"))
+        mockMvc.perform(get("/api/market-data/currency/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("USD"));
     }
@@ -282,22 +299,24 @@ class MarketDataControllerTest {
     // /supported/{symbol}
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void isSymbolSupported_true() throws Exception {
         when(marketDataService.isSymbolSupported(any()))
                 .thenReturn(true);
 
-        mockMvc.perform(get("/api/market-data/supported/AAPL"))
+        mockMvc.perform(get("/api/market-data/supported/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
     }
 
+    @SuppressWarnings("null")
     @Test
     void isSymbolSupported_false() throws Exception {
         when(marketDataService.isSymbolSupported(any()))
                 .thenReturn(false);
 
-        mockMvc.perform(get("/api/market-data/supported/XYZ"))
+        mockMvc.perform(get("/api/market-data/supported/XYZ").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("false"));
     }
@@ -306,39 +325,44 @@ class MarketDataControllerTest {
     // /health
     // ---------------------------------------------------
 
+    @SuppressWarnings("null")
     @Test
     void healthCheck_up() throws Exception {
         when(marketDataService.isSymbolSupported(any())).thenReturn(true);
 
-        mockMvc.perform(get("/api/market-data/health"))
+        mockMvc.perform(get("/api/market-data/health").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.service").value("market-data"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
+
+    @SuppressWarnings("null")
     @Test
     void healthCheck_up_degraded() throws Exception {
         when(marketDataService.isSymbolSupported(any())).thenReturn(false);
 
-        mockMvc.perform(get("/api/market-data/health"))
+        mockMvc.perform(get("/api/market-data/health").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DEGRADED"))
                 .andExpect(jsonPath("$.service").value("market-data"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
+    @SuppressWarnings("null")
     @Test
     void healthCheck_down() throws Exception {
         when(marketDataService.isSymbolSupported(any()))
                 .thenThrow(new RuntimeException("Connection failed"));
 
-        mockMvc.perform(get("/api/market-data/health"))
+        mockMvc.perform(get("/api/market-data/health").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value("DOWN"))
                 .andExpect(jsonPath("$.service").value("market-data"))
                 .andExpect(jsonPath("$.error").value("Connection failed"));
     }
 
+    @SuppressWarnings("null")
     @Test
     void getPrice_ShouldReturn404_WhenSymbolNotFound() throws Exception {
         // Arrange: Force the service to throw the specific exception
@@ -347,13 +371,15 @@ class MarketDataControllerTest {
                 .thenThrow(new SymbolNotFoundException("Symbol not found: " + symbol));
 
         // Act & Assert
-        mockMvc.perform(get("/api/market-data/price/{symbol}", symbol))
+        mockMvc.perform(
+                get("/api/market-data/price/{symbol}", symbol).with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isNotFound()) // 404
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("RESOURCE_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("Symbol not found: INVALID"));
     }
 
+    @SuppressWarnings("null")
     @Test
     void getPrice_ShouldReturn503_WhenMarketDataFails() throws Exception {
         // Arrange: Simulate a provider timeout or rate limit
@@ -361,7 +387,7 @@ class MarketDataControllerTest {
                 .thenThrow(new MarketDataException("API rate limit exceeded", ErrorType.RATE_LIMIT_EXCEEDED));
 
         // Act & Assert
-        mockMvc.perform(get("/api/market-data/price/AAPL"))
+        mockMvc.perform(get("/api/market-data/price/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isServiceUnavailable()) // 503
                 .andExpect(jsonPath("$.status").value(503))
                 .andExpect(jsonPath("$.error").value("SERVICE_UNAVAILABLE"))
@@ -371,6 +397,7 @@ class MarketDataControllerTest {
                 .andExpect(jsonPath("$.details").value("API rate limit exceeded"));
     }
 
+    @SuppressWarnings("null")
     @Test
     void getPrice_ShouldReturn400_WhenIllegalArgumentThrown() throws Exception {
         // Arrange: Simulate bad input validation in the service
@@ -378,7 +405,7 @@ class MarketDataControllerTest {
                 .thenThrow(new IllegalArgumentException("Invalid symbol format"));
 
         // Act & Assert
-        mockMvc.perform(get("/api/market-data/price/!!!"))
+        mockMvc.perform(get("/api/market-data/price/!!!").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isBadRequest()) // 400
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Invalid symbol format"));
