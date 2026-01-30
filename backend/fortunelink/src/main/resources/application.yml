@@ -1,9 +1,6 @@
 spring:
   application:
     name: fortunelink
-  
-  # profiles:
-  #   active: local # Default to local so it works out-of-the-box for you
 
 
   config:
@@ -66,7 +63,7 @@ spring:
           issuer-uri: ${SUPABASE_PROJ_URL} # This is the iss field in a jwt
           # we technically don't need this because the way we set up the path,
           # oauth2 will discover the jwk-set-uri
-          jwk-set-uri: ${SUPABASE_PROJ_URL}/jwks # fetching public keys to verify JWT signatures
+          # jwk-set-uri: ${SUPABASE_PROJ_URL}/jwks # fetching public keys to verify JWT signatures
 
 # ============================================
 # APPLICATION CACHING

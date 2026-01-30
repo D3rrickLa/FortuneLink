@@ -1,5 +1,11 @@
 # DON'T DELETE THIS, THIS IS MEANT FOR OUR JPA REPO TESTS
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+          
   datasource:
     url: jdbc:tc:postgresql:16-alpine:///testdb
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver

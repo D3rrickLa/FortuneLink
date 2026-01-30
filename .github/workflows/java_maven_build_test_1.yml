@@ -43,4 +43,5 @@ jobs:
         REDIS_HOST: localhost
         REDIS_PORT: 6379
         REDIS_PASSWORD: unused
-        SUPABASE_PROJ_URL: http://localhost
+        SUPABASE_PROJ_URL: http://localhost:9000
+        SPRING_PROFILES_ACTIVE: test
