@@ -325,7 +325,6 @@ class TransactionControllerTest {
     }
     // ---------------- GET /{transactionId} ----------------
 
-    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction by id returns 200")
     void getTransaction_returnsOk() throws Exception {
@@ -352,7 +351,6 @@ class TransactionControllerTest {
 
     // ---------------- GET transaction history ----------------
 
-    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction history returns 200")
     void getTransactionHistory_returnsOk() throws Exception {
