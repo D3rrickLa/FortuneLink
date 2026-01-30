@@ -24,9 +24,10 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 
 @WebMvcTest(MarketDataController.class)
-@Import({ DevSecurityConfig.class, RateLimitConfig.class, AuthenticationUserService.class })
+@Import({ SecurityConfig.class, RateLimitConfig.class, AuthenticationUserService.class })
 class GlobalExceptionHandlerTest {
 
     @Autowired

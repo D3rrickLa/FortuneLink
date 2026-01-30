@@ -29,12 +29,13 @@ import com.laderrco.fortunelink.portfolio_management.application.services.Authen
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 import com.laderrco.fortunelink.shared.valueobjects.ExchangeRate;
 import com.laderrco.fortunelink.shared.valueobjects.Money;
 
-@Import({ DevSecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
+@Import({ SecurityConfig.class, RateLimitConfig.class }) // Explicitly pulls in your permitAll() logic
 @WebMvcTest({ ExchangeRateController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class ExchangeRateControllerTest {
 

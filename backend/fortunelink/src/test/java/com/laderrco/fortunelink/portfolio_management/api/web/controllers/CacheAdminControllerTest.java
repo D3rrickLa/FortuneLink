@@ -19,18 +19,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.CacheEvictionService;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.external.marketdata.MarketDataServiceImpl;
 
-// @ActiveProfiles({ "local", "test" })
 @WebMvcTest(CacheAdminController.class)
-@Import({ DevSecurityConfig.class, RateLimitConfig.class })
+@Import({ SecurityConfig.class, RateLimitConfig.class })
 class CacheAdminControllerTest {
 
     @Autowired
@@ -63,7 +63,7 @@ class CacheAdminControllerTest {
     void getCacheStats_ShouldReturnNames() throws Exception {
         when(cacheManager.getCacheNames()).thenReturn(List.of("cache1", "cache2"));
 
-        mockMvc.perform(get("/api/admin/cache/stats").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(get("/api/admin/cache/stats").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cacheNames").isArray())
                 .andExpect(jsonPath("$.cacheCount").value(2));
@@ -76,7 +76,7 @@ class CacheAdminControllerTest {
         Cache mockCache = mock(Cache.class);
         when(cacheManager.getCache("test-cache")).thenReturn(mockCache);
 
-        mockMvc.perform(delete("/api/admin/cache/test-cache").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache/test-cache").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Cache cleared successfully"));
 
@@ -89,7 +89,7 @@ class CacheAdminControllerTest {
     void clearCache_ShouldReturn404WhenMissing() throws Exception {
         when(cacheManager.getCache("unknown")).thenReturn(null);
 
-        mockMvc.perform(delete("/api/admin/cache/unknown").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache/unknown").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -104,7 +104,7 @@ class CacheAdminControllerTest {
         when(cacheManager.getCacheNames()).thenReturn(List.of("c1", "c2"));
         when(cacheManager.getCache(Objects.requireNonNull(anyString()))).thenReturn(mockCache);
 
-        mockMvc.perform(delete("/api/admin/cache").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clearedCaches").isArray());
 
@@ -120,7 +120,7 @@ class CacheAdminControllerTest {
         Cache mockCache = mock(Cache.class);
         when(cacheManager.getCache("prices")).thenReturn(mockCache);
 
-        mockMvc.perform(delete("/api/admin/cache/prices/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache/prices/AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.key").value("AAPL"));
 
@@ -131,7 +131,7 @@ class CacheAdminControllerTest {
     @Test
     @DisplayName("DELETE /price/{symbol} should call eviction service")
     void evictPriceCache_ShouldUseEvictionService() throws Exception {
-        mockMvc.perform(delete("/api/admin/cache/price/TSLA").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache/price/TSLA").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value("TSLA"));
 
@@ -142,7 +142,7 @@ class CacheAdminControllerTest {
     @Test
     @DisplayName("POST /warm should call service for all symbols")
     void warmCache_ShouldCallMarketDataService() throws Exception {
-        mockMvc.perform(post("/api/admin/cache/warm").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(post("/api/admin/cache/warm").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Cache warming completed"))
                 .andExpect(jsonPath("$.symbolsWarmed").isNumber());
@@ -161,7 +161,7 @@ class CacheAdminControllerTest {
         when(cacheManager.getCache("ghost-cache")).thenReturn(null);
 
         // 2. Act & Assert
-        mockMvc.perform(delete("/api/admin/cache").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk()) // The loop handles null, so it still succeeds
                 .andExpect(jsonPath("$.message").value("All caches cleared successfully"))
                 .andExpect(jsonPath("$.clearedCaches[0]").value("ghost-cache"));
@@ -179,7 +179,7 @@ class CacheAdminControllerTest {
         when(cacheManager.getCache(invalidCache)).thenReturn(null);
 
         // 2. Act & Assert
-        mockMvc.perform(delete("/api/admin/cache/{name}/{key}", invalidCache, "AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
+        mockMvc.perform(delete("/api/admin/cache/{name}/{key}", invalidCache, "AAPL").with(jwt().jwt(j -> j.subject(mockUserId.toString())).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isNotFound()); // Matches your cache == null check
 
         // Verify we never tried to evict anything because the cache was null

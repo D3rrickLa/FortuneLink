@@ -62,11 +62,12 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
 import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 
 @AutoConfigureMockMvc
-@Import({ DevSecurityConfig.class, RateLimitConfig.class })
+@Import({ SecurityConfig.class, RateLimitConfig.class })
 @WebMvcTest({ TransactionController.class, GlobalExceptionHandler.class, AuthenticationUserService.class })
 class TransactionControllerTest {
 
