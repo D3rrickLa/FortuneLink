@@ -43,7 +43,7 @@ jobs:
         REDIS_HOST: localhost
         REDIS_PORT: 6379
         REDIS_PASSWORD: unused
-        SUPABAE_PROJ_URL: http://localhost
+        SUPABASE_PROJ_URL: http://localhost
 
     # - name: Update dependency graph
     #   uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
