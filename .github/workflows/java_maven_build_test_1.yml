@@ -31,8 +31,8 @@ jobs:
         cache: maven
 
     - name: Build and Test with Maven
-      # Combined into a single env block to prevent YAML parsing errors
-      run: mvn -B package -e -X -Duser.language=en -Duser.country=CA --file ./backend/fortunelink/pom.xml
+      working-directory: ./backend/fortunelink
+      run: mvn -B clean package -X --file pom.xml
       env:
         POSTGRES_VERSION: 16-alpine
         DB_USERNAME: unused

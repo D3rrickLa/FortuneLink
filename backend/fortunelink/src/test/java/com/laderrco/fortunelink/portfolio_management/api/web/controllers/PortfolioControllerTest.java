@@ -217,7 +217,7 @@ class PortfolioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
+                // .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(PORTFOLIO_ID))
                 .andExpect(jsonPath("$.userId").value(USER_ID))
@@ -245,7 +245,7 @@ class PortfolioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
+                // .andDo(print())
                 .andExpect(status().isNoContent());
 
         verify(portfolioApplicationService).deletePortfolio(command);
@@ -296,7 +296,7 @@ class PortfolioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(jwt().jwt(j -> j.subject(mockUserId.toString()))) // Simulates the JWT
                 .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
+                // .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.portfolioId").value(PORTFOLIO_ID))
                 .andExpect(jsonPath("$.id").value(accountView.accountId().accountId().toString()))
@@ -366,7 +366,7 @@ class PortfolioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(jwt().jwt(j -> j.subject(mockUserId.toString())))
                 .content(jsonRequest))
-                .andDo(print()) // Always good for debugging
+                // .andDo(print()) 
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("CONFLICT"))
                 .andExpect(jsonPath("$.message").value("User already has a portfolio"));
@@ -452,7 +452,7 @@ class PortfolioControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
                 .andExpect(status().isOk())
-                .andDo(print())
+                // .andDo(print())
                 .andExpect(jsonPath("$.id").value(assetIdStr.toString()))
                 .andExpect(jsonPath("$.symbol").value("AAPL"))
                 .andExpect(jsonPath("$.quantity").value(10.00));

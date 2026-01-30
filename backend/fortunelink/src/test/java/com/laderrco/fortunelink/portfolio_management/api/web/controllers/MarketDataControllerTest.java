@@ -214,7 +214,7 @@ class MarketDataControllerTest {
         when(marketDataService.getAssetInfo(any())).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/market-data/asset-info/UNKNOWN").with(jwt().jwt(j -> j.subject(mockUserId.toString()))))
-                .andDo(print())
+                // .andDo(print())
                 .andExpect(status().isNotFound());
         // .andExpect(status().reason(containsString("Asset not found")));
 
