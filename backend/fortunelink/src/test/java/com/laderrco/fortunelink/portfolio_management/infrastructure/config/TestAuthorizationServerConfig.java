@@ -9,13 +9,13 @@ import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
-
+@Profile("test")
 @Configuration
 public class TestAuthorizationServerConfig {
 
