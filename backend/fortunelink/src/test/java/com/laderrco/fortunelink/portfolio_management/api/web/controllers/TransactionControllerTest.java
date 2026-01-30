@@ -60,7 +60,6 @@ import com.laderrco.fortunelink.portfolio_management.application.services.Portfo
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
@@ -326,6 +325,7 @@ class TransactionControllerTest {
     }
     // ---------------- GET /{transactionId} ----------------
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction by id returns 200")
     void getTransaction_returnsOk() throws Exception {
@@ -352,6 +352,7 @@ class TransactionControllerTest {
 
     // ---------------- GET transaction history ----------------
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("GET transaction history returns 200")
     void getTransactionHistory_returnsOk() throws Exception {

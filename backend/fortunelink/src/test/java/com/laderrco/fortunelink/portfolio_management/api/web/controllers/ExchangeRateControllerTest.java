@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.ConvertRequest;
 import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;

@@ -20,9 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.laderrco.fortunelink.portfolio_management.api.models.market.MarketDataDtoMapper;
 import com.laderrco.fortunelink.portfolio_management.api.web.controllers.MarketDataController;
 import com.laderrco.fortunelink.portfolio_management.application.services.AuthenticationUserService;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 

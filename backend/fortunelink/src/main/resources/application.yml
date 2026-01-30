@@ -161,4 +161,6 @@ logging:
     com.fortunelink: INFO
     org.springframework.cache: INFO
     io.lettuce.core: INFO
+    org.hibernate.SQL: ERROR # Change from DEBUG to ERROR
+    org.hibernate.type.descriptor.sql: ERROR
 

@@ -4,7 +4,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,7 +37,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.SymbolIdentifier;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio_management.infrastructure.config.DevSecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.RateLimitConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.config.SecurityConfig;
 import com.laderrco.fortunelink.portfolio_management.infrastructure.exceptions.GlobalExceptionHandler;
