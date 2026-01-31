@@ -52,6 +52,11 @@ public class PortfolioController {
     private final PortfolioDtoMapper portfolioDtoMapper;
     private final PortfolioHttpMapper requestMapper;
 
+    @GetMapping("health-check")
+    public ResponseEntity<String> check() {
+        return ResponseEntity.ok("Backend is reachable!");
+    }
+
     @PostMapping
     public ResponseEntity<PortfolioHttpResponse> createPortfolio(@AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
         CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
