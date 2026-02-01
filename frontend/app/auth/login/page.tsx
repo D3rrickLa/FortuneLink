@@ -1,5 +1,6 @@
 'use client';
 import { createClient } from '@/lib/utils/supabase/client';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -53,6 +54,21 @@ export default function LoginPage() {
                 >
                     Login
                 </button>
+
+                <div className="relative flex py-5 items-center">
+                    <div className="flex-grow border-t border-gray-300"></div>
+                    <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
+                    <div className="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <div className="text-center">
+                    <Link
+                        href="./signup"
+                        className="text-blue-500 hover:text-blue-700 font-medium transition-colors"
+                    >
+                        Create Account
+                    </Link>
+                </div>
             </form>
         </div>
     );

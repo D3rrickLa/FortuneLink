@@ -41,6 +41,7 @@
      id: string
      userId: string
      accounts: Account[]
+     portfolioName?: string
      netWorth?: Money
      createdDate: string
      lastUpdated: string

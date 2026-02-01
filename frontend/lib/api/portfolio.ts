@@ -13,8 +13,19 @@ export const portfolioApi = {
             throw error;
         }
     },
+
+    createPortfolio: async (request: {name: string; currencyPreference: string; description?: string; createAccount?: boolean;}): Promise<Portfolio> => {
+        const { data } = await apiClient.post('/api/portfolios', request);
+        return data;
+    },
+
     getPortfolio: async (userId: string): Promise<Portfolio> => {
         const { data } = await apiClient.get(`/api/portfolios/${userId}`)
+        return data
+    },
+
+    addAccount: async (portfolioId: string, account: Partial<Account>): Promise<Account> => {
+        const { data } = await apiClient.post(`/api/portfolios/${portfolioId}/accounts`, account)
         return data
     },
 
@@ -31,8 +42,4 @@ export const portfolioApi = {
         return data
     },
 
-    addAccount: async (portfolioId: string, account: Partial<Account>): Promise<Account> => {
-        const { data } = await apiClient.post(`/api/portfolios/${portfolioId}/accounts`, account)
-        return data
-    },
 }
