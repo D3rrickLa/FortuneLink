@@ -19,6 +19,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.mapper
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreateAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.DeletePortfolioRequest;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetAccountRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.requests.GetUsersPortfolioRequest;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AccountHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
@@ -28,6 +29,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Create
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.RemoveAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetAssetQueryView;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio_management.application.queries.GetPortfoliosByUserIdQuery;
@@ -43,6 +45,10 @@ import jakarta.annotation.Nonnull;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/*
+NOTE: the get portoflio stuff are suppor to be a lightweight get method showing identitiy, ownership and jsut basic details
+we have other speicifc method for like accounts and such
+*/
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/portfolios")
@@ -57,13 +63,6 @@ public class PortfolioController {
         return ResponseEntity.ok("Backend is reachable!");
     }
 
-    @PostMapping
-    public ResponseEntity<PortfolioHttpResponse> createPortfolio(@AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
-        CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
-        PortfolioView portfolioView = portfolioApplicationService.createPortfolio(command);
-        return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
-    }
-
     @GetMapping("/{portfolioId}")
     public ResponseEntity<PortfolioHttpResponse> getPortfolio(@Nonnull @PathVariable String portfolioId, @AuthenticatedUser UUID userId) {
         GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId, userId);
@@ -72,7 +71,7 @@ public class PortfolioController {
     }
 
     // THIS IS BROKEN
-    // LONG TERM: DON'T USE PORTOFLIOHTTPREPSONSE, USE A NEW ONE CALLED PORTOFLIOSUMMARYHTTPRESPONSE
+    // LONG TERM: DON'T USE PortfolioHttpREsponse, USE A NEW ONE CALLED PortfolioSummaryHttpResponse
     /*
      * [
      * {
@@ -100,6 +99,13 @@ public class PortfolioController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping
+    public ResponseEntity<PortfolioHttpResponse> createPortfolio(@AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
+        CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
+        PortfolioView portfolioView = portfolioApplicationService.createPortfolio(command);
+        return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
+    }
+
     @PutMapping("/{portfolioId}")
     public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@Nonnull @PathVariable String portfolioId, @AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
         UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, userId, request);
@@ -112,6 +118,27 @@ public class PortfolioController {
         DeletePortfolioCommand command = requestMapper.toCommand(portfolioId, userId, request);
         portfolioApplicationService.deletePortfolio(command);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{portfolioId}/accounts/{accountId}")
+    public ResponseEntity<AccountHttpResponse> getAccount(@PathVariable String portfolioId,  @AuthenticatedUser UUID userId, @PathVariable String accountId) {
+        // Fetch the account view from the service
+        GetAccountRequest request = new GetAccountRequest(accountId);
+        GetAccountSummaryQuery query = requestMapper.toAccountQuery(portfolioId, userId, request);
+        AccountView account = portfolioQueryService.getAccountSummary(query);
+        return ResponseEntity.ok(portfolioDtoMapper.toAccountResponse(portfolioId, account));
+    }
+
+    @GetMapping("/{portfolioId}/accounts")
+    public ResponseEntity<List<AccountHttpResponse>> listAccounts(@PathVariable String portfolioId, @AuthenticatedUser UUID userId) {
+        // Fetch the list of account views
+        List<AccountView> accounts = portfolioQueryService.listAccountSummaries(portfolioId, userId);
+    
+        List<AccountHttpResponse> response = accounts.stream()
+            .map(account -> portfolioDtoMapper.toAccountResponse(portfolioId, account))
+            .toList();
+
+    return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{portfolioId}/accounts")

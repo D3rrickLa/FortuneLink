@@ -324,7 +324,7 @@ public class TransactionController {
             UUID userId) {
 
         GetAccountSummaryQuery summaryQuery =
-                portfolioHttpMapper.toCommand(
+                portfolioHttpMapper.toAccountQuery(
                         portfolioId,
                         userId,
                         new GetAccountRequest(accountId)

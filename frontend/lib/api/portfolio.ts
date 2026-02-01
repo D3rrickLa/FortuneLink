@@ -30,7 +30,19 @@ export interface AssetHoldingRequest {
     acquiredDate: string;
 }
 
-// TODO: CONFIRM THE ROUTES
+/*
+/portfolio
+  → GET portfolios (summary)
+
+/portfolio/[portfolioId]
+  → GET accounts for portfolio
+  → Create Account lives here
+
+/portfolio/[portfolioId]/accounts/[accountId]
+  → GET account details
+  → GET transactions
+  → Add Transaction
+*/
 export const portfolioApi = {
     checkHealth: async () => {
         try {
@@ -52,30 +64,41 @@ export const portfolioApi = {
         return data
     },
 
+    // THIS RETURNS A SUMMARY OF THE PORTOFLIOS NOT THE ACOCUNTS
     getMyPortfolios: async (): Promise<Portfolio[]> => {
-        const { data } = await apiClient.get(
-            '/api/portfolios/user/me'
-        )
+        const { data } = await apiClient.get('/api/portfolios/user/me')
+        console.log(data)
         return data
     },
 
     updatePortfolio: async (portfolioId: string, request: CreatePortfolioRequest): Promise<Portfolio> => {
-        const { data } = await apiClient.put(`/api/portfolios/${portfolioId}`,request)
+        const { data } = await apiClient.put(`/api/portfolios/${portfolioId}`, request)
         return data
     },
 
     deletePortfolio: async (portfolioId: string, request: DeletePortfolioRequest): Promise<void> => {
-        await apiClient.delete(`/api/portfolios/${portfolioId}`, {data: request})
+        await apiClient.delete(`/api/portfolios/${portfolioId}`, { data: request })
     },
 
     // ---------- Accounts ----------
+
+    listAccounts: async (portfolioId: string): Promise<Account[]> => {
+        const { data } = await apiClient.get(`/api/portfolios/${portfolioId}/accounts`)
+        return data
+    },
+
+    // NEW: get a single account by ID
+    getAccount: async (portfolioId: string, accountId: string): Promise<Account> => {
+        const { data } = await apiClient.get(`/api/portfolios/${portfolioId}/accounts/${accountId}`)
+        return data
+    },
 
     addAccount: async (portfolioId: string, request: CreateAccountRequest): Promise<Account> => {
         const { data } = await apiClient.post(`/api/portfolios/${portfolioId}/accounts`, request)
         return data
     },
 
-    removeAccount: async (portfolioId: string, accountId: string ): Promise<void> => {
+    removeAccount: async (portfolioId: string, accountId: string): Promise<void> => {
         await apiClient.delete(`/api/portfolios/${portfolioId}/accounts/${accountId}`)
     },
 

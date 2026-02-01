@@ -104,7 +104,7 @@ class TransactionControllerTest {
 
     @BeforeEach
     void setup() {
-        when(portfolioHttpMapper.toCommand(anyString(), any(), any(GetAccountRequest.class)))
+        when(portfolioHttpMapper.toAccountQuery(anyString(), any(), any(GetAccountRequest.class)))
                 .thenReturn(new GetAccountSummaryQuery(toPortfolioId(PORTFOLIO_ID), toUserId(USER_ID),
                         toAccountId(ACCOUNT_ID)));
 

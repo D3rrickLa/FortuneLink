@@ -164,7 +164,7 @@ class PortfolioHttpMapperTest {
             accountId
         );
 
-        GetAccountSummaryQuery query = mapper.toCommand(portfolioId, userId, req);
+        GetAccountSummaryQuery query = mapper.toAccountQuery(portfolioId, userId, req);
 
         assertEquals(portfolioId, query.portfolioId().portfolioId().toString());
         assertEquals(accountId, query.accountId().accountId().toString());

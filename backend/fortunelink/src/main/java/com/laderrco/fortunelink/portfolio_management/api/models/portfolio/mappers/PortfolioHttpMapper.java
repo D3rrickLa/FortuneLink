@@ -74,16 +74,16 @@ public class PortfolioHttpMapper {
             toCurrency(request.getBaseCurrency())
         );
     }
+    
+    public RemoveAccountCommand toCommand(String portoflioId, UUID userId, String accountId) {
+        return new RemoveAccountCommand(toPortfolioId(portoflioId), toUserId(userId.toString()), toAccountId(accountId));
+    }
 
     public GetAssetQueryView toAssetQuery(String portfolioId, UUID userId, String accountId, String assetId) {
         return new GetAssetQueryView(toPortfolioId(portfolioId), toUserId(userId.toString()), toAccountId(accountId), toAssetId(assetId));
     }
 
-    public RemoveAccountCommand toCommand(String portoflioId, UUID userId, String accountId) {
-        return new RemoveAccountCommand(toPortfolioId(portoflioId), toUserId(userId.toString()), toAccountId(accountId));
-    }
-
-    public GetAccountSummaryQuery toCommand(String portfolioId, UUID userUuid, GetAccountRequest request) {
+    public GetAccountSummaryQuery toAccountQuery(String portfolioId, UUID userUuid, GetAccountRequest request) {
         return new GetAccountSummaryQuery(toPortfolioId(portfolioId), toUserId(userUuid.toString()), toAccountId(request.accountId()));
     }
 

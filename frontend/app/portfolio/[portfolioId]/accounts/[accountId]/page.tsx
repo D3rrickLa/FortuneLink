@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { portfolioApi } from '@/lib/api/portfolio'
 import { transactionApi } from '@/lib/api/transactions'
-import type { AssetHolding, Transaction } from '@/types/portfolio'
+import type { Account, AssetHolding, Transaction } from '@/types/portfolio'
 
 export default function AccountPage() {
   const router = useRouter()
@@ -13,28 +13,29 @@ export default function AccountPage() {
     accountId: string
   }>()
 
+  const [account, setAccount] = useState<Account | null>(null)
   const [assets, setAssets] = useState<AssetHolding[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Assets
-        // (Assumes backend aggregates holdings per account)
-        const account = await portfolioApi.getPortfolioById(portfolioId)
-        const currentAccount = account.accounts.find(a => a.id === accountId)
+        // 1️⃣ Fetch account details
+        const acc = await portfolioApi.getAccount(portfolioId, accountId)
+        setAccount(acc)
+        setAssets(acc.assets ?? [])
 
-        setAssets(currentAccount?.assets ?? [])
-
-        // Transactions
+        // 2️⃣ Fetch transactions
         const txs = await transactionApi.getTransactionsForAccount(
           portfolioId,
           accountId
         )
         setTransactions(txs)
-      } catch (err) {
+      } catch (err: any) {
         console.error(err)
+        setError('Failed to load account data')
       } finally {
         setLoading(false)
       }
@@ -43,14 +44,13 @@ export default function AccountPage() {
     loadData()
   }, [portfolioId, accountId])
 
-  if (loading) {
-    return <div className="p-6">Loading account…</div>
-  }
+  if (loading) return <div className="p-6">Loading account…</div>
+  if (error) return <div className="p-6 text-red-500">{error}</div>
 
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Account Overview</h1>
+        <h1 className="text-2xl font-bold">{account?.name || 'Account Overview'}</h1>
         <button
           onClick={() =>
             router.push(
@@ -79,6 +79,9 @@ export default function AccountPage() {
                 <p className="text-sm text-gray-500">
                   Quantity: {asset.quantity}
                 </p>
+                <p className="text-sm text-gray-500">
+                  Cost Basis: {asset.costBasis.toLocaleString()} {asset.costBasis.currency}
+                </p>
               </li>
             ))}
           </ul>
@@ -99,8 +102,14 @@ export default function AccountPage() {
                   {tx.transactionType} {tx.symbol}
                 </p>
                 <p className="text-sm text-gray-500">
-                  {tx.quantity} @ {tx.price} {tx.priceCurrency}
+                  {tx.quantity} @ {tx.price.amount.toLocaleString()} {tx.price.currency}
                 </p>
+                {tx.fee && (
+                  <p className="text-sm text-gray-400">
+                    Fee: {tx.fee.amount.toLocaleString()} {tx.fee.currency}
+                  </p>
+                )}
+                {tx.notes && <p className="text-sm text-gray-400">Notes: {tx.notes}</p>}
               </li>
             ))}
           </ul>

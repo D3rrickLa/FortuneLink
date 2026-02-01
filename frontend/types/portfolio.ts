@@ -3,80 +3,72 @@
 export type Currency = 'USD' | 'CAD' | 'EUR' | 'GBP'
 
 export type AssetType =
-  | 'STOCK'
-  | 'ETF'
-  | 'CRYPTO'
-  | 'CASH'
-  | 'BOND'
-  | 'REAL_ESTATE'
+    | 'STOCK'
+    | 'ETF'
+    | 'CRYPTO'
+    | 'CASH'
+    | 'BOND'
+    | 'REAL_ESTATE'
 
 export type TransactionType =
-  | 'BUY'
-  | 'SELL'
-  | 'DEPOSIT'
-  | 'WITHDRAWAL'
-  | 'DIVIDEND'
-  | 'INTEREST'
-  | 'FEE'
+    | 'BUY'
+    | 'SELL'
+    | 'DEPOSIT'
+    | 'WITHDRAWAL'
+    | 'DIVIDEND'
+    | 'INTEREST'
+    | 'FEE'
 
 export type AccountType =
-  | 'TFSA'
-  | 'RRSP'
-  | 'NON_REGISTERED'
-  | 'INVESTMENT'
-  | 'CHEQUING'
-  | 'SAVINGS'
-
-// ===== Portfolio =====
+    | 'TFSA'
+    | 'RRSP'
+    | 'NON_REGISTERED'
+    | 'INVESTMENT'
+    | 'CHEQUING'
+    | 'SAVINGS'
 
 export interface Portfolio {
-  id: string
-  userId: string
-  name: string
-  description: string
-  accounts: Account[]
-  totalValue: number
-  totalValueCurrency: Currency
-  createdDate: string // ISO string from LocalDateTime
-  lastUpdated: string // ISO string from LocalDateTime
+    id: string
+    userId: string
+    name: string
+    description: string
+    accounts: Account[]
+    totalValue?: { amount: number; currency: Currency } // derived from currentValue of assets
+    createdDate: string
+    lastUpdated: string
 }
-
-// ===== Account =====
 
 export interface Account {
-  id: string
-  portfolioId: string
-  name: string
-  accountType: AccountType
-  baseCurrency: Currency
-  assets: AssetHolding[]
+    id: string
+    portfolioId: string
+    name: string
+    accountType: AccountType
+    baseCurrency: Currency
+    assets: AssetHolding[]
+    totalValue?: { amount: number; currency: Currency } // optional
 }
-
-// ===== Asset =====
 
 export interface AssetHolding {
-  id: string
-  symbol: string
-  assetType: AssetType
-  quantity: number
-  costBasis: number
-  acquiredDate: string // ISO string
+    id: string
+    symbol: string
+    assetType: AssetType
+    quantity: number
+    costBasis: { amount: number; currency: Currency }
+    currentValue?: { amount: number; currency: Currency } // optional
+    acquiredDate: string
 }
 
-// ===== Transaction =====
-
 export interface Transaction {
-  id: string
-  accountId: string
-  transactionType: TransactionType
-  symbol: string
-  quantity: number
-  price: number
-  priceCurrency: Currency
-  fee: number
-  totalCost: number
-  netAmount: number
-  transactionDate: string // ISO string
-  notes: string
-  recordedAt: string // ISO string
+    id: string
+    accountId: string
+    transactionType: TransactionType
+    symbol: string
+    quantity: number
+    price: { amount: number; currency: Currency }
+    fee?: { amount: number; currency: Currency }
+    totalCost?: { amount: number; currency: Currency }
+    netAmount?: { amount: number; currency: Currency }
+    transactionDate: string
+    notes?: string
+    recordedAt: string
 }

@@ -6,6 +6,8 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -237,6 +239,16 @@ public class PortfolioQueryService {
                 .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
         return portfolioAssembler.assembleAccountView(account);
+    }
+
+    public List<AccountView> listAccountSummaries(String portfolioId, UUID userId) {
+    // Reuse the logic that checks ownership and loads the data
+    Portfolio portfolio = loadUserPortfolio(new PortfolioId(UUID.fromString(portfolioId)), new UserId(userId));
+    
+    // Map the internal account collection to views
+    return portfolio.getAccounts().stream()
+            .map(portfolioAssembler::assembleAccountView)
+            .toList();
     }
 
     public AssetView getAssetSummary(GetAssetQueryView query) {
