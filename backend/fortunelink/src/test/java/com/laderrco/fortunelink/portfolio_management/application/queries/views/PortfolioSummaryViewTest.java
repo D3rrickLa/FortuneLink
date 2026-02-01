@@ -19,7 +19,7 @@ public class PortfolioSummaryViewTest {
         Instant time = Instant.now();
         PortfolioSummaryView summaryView = new PortfolioSummaryView(
                 id,
-                name, totalValue, time);
+                name, "DES", totalValue, 0, time, time);
 
         assertAll(
             () -> assertEquals(id, summaryView.id()),

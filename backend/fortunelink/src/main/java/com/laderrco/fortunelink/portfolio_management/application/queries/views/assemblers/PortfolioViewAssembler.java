@@ -120,7 +120,10 @@ public class PortfolioViewAssembler {
         return new PortfolioSummaryView(
                 portfolio.getPortfolioId(),
                 portfolio.getName(),
+                portfolio.getDescription(),
                 portfolio.getAssetsTotalValue(marketDataService, exchangeRateService),
+                portfolio.getAccounts().size(),
+                portfolio.getSystemCreationDate(),
                 portfolio.getLastUpdatedAt());
     }
 

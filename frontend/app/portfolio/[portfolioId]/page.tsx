@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { portfolioApi } from '@/lib/api/portfolio'
-import type { Account } from '@/types/portfolio'
+import type { Account, AssetHolding } from '@/types/portfolio'
 
 export default function PortfolioDetailPage() {
   const router = useRouter()
@@ -30,6 +30,13 @@ export default function PortfolioDetailPage() {
 
   if (loading) return <div className="p-6">Loading accounts…</div>
   if (error) return <div className="p-6 text-red-500">{error}</div>
+
+  const getAccountValue = (account: Account) => {
+    return account.assets.reduce(
+      (sum, asset) => sum + (asset.currentValue?.amount ?? asset.costBasis.amount),
+      0
+    )
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -57,7 +64,8 @@ export default function PortfolioDetailPage() {
             >
               <p className="font-medium">{account.name}</p>
               <p className="text-sm text-gray-500">
-                {account.accountType} · {account.baseCurrency}
+                {account.accountType} · Net Worth: {getAccountValue(account).toLocaleString()}{' '}
+                {account.baseCurrency}
               </p>
             </li>
           ))}

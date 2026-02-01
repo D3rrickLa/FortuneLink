@@ -64,20 +64,16 @@ public class TransactionController {
             @PathVariable String transactionId,
             @AuthenticatedUser UUID userId) {
 
-        GetTransactionByIdQuery query =
-                transactionCommandAssembler.toTransactionQuery(
-                        portfolioId,
-                        accountId,
-                        transactionId,
-                        userId
-                );
+        GetTransactionByIdQuery query = transactionCommandAssembler.toTransactionQuery(
+                portfolioId,
+                accountId,
+                transactionId,
+                userId);
 
-        TransactionView transaction =
-                queryService.getTransactionDetails(query);
+        TransactionView transaction = queryService.getTransactionDetails(query);
 
         return ResponseEntity.ok(
-                transactionDtoMapper.toResponse(accountId, transaction)
-        );
+                transactionDtoMapper.toResponse(accountId, transaction));
     }
 
     // ------------------- GET TRANSACTION HISTORY -------------------
@@ -93,24 +89,21 @@ public class TransactionController {
             @RequestParam(defaultValue = "20") int size,
             @AuthenticatedUser UUID userId) {
 
-        GetTransactionHistoryQuery query =
-                transactionCommandAssembler.toHistoryQuery(
-                        portfolioId,
-                        accountId,
-                        userId,
-                        type,
-                        startDate,
-                        endDate,
-                        page,
-                        size
-                );
+        type = type == null ? "ALL" : type;
+        GetTransactionHistoryQuery query = transactionCommandAssembler.toHistoryQuery(
+                portfolioId,
+                accountId,
+                userId,
+                type,
+                startDate,
+                endDate,
+                page,
+                size);
 
-        TransactionHistoryView history =
-                queryService.getTransactionHistory(query);
+        TransactionHistoryView history = queryService.getTransactionHistory(query);
+        PagedTransactionHttpResponse response = transactionDtoMapper.toPagedResponse(accountId, history);
 
-        return ResponseEntity.ok(
-                transactionDtoMapper.toPagedResponse(accountId, history)
-        );
+        return ResponseEntity.ok(response);
     }
 
     // ------------------- CREATE TRANSACTIONS -------------------
@@ -127,17 +120,14 @@ public class TransactionController {
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
-        RecordPurchaseCommand command =
-                transactionCommandAssembler.toPurchaseCommand(
-                        portfolioId,
-                        accountId,
-                        userId,
-                        accountCurrency,
-                        request
-                );
+        RecordPurchaseCommand command = transactionCommandAssembler.toPurchaseCommand(
+                portfolioId,
+                accountId,
+                userId,
+                accountCurrency,
+                request);
 
-        TransactionView view =
-                applicationService.recordAssetPurchase(command);
+        TransactionView view = applicationService.recordAssetPurchase(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(transactionDtoMapper.toResponse(accountId, view));
@@ -155,17 +145,14 @@ public class TransactionController {
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
-        RecordSaleCommand command =
-                transactionCommandAssembler.toSaleCommand(
-                        portfolioId,
-                        accountId,
-                        userId,
-                        accountCurrency,
-                        request
-                );
+        RecordSaleCommand command = transactionCommandAssembler.toSaleCommand(
+                portfolioId,
+                accountId,
+                userId,
+                accountCurrency,
+                request);
 
-        TransactionView view =
-                applicationService.recordAssetSale(command);
+        TransactionView view = applicationService.recordAssetSale(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(transactionDtoMapper.toResponse(accountId, view));
@@ -183,17 +170,14 @@ public class TransactionController {
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
-        RecordIncomeCommand command =
-                transactionCommandAssembler.toDividendCommand(
-                        portfolioId,
-                        accountId,
-                        userId,
-                        accountCurrency,
-                        request
-                );
+        RecordIncomeCommand command = transactionCommandAssembler.toDividendCommand(
+                portfolioId,
+                accountId,
+                userId,
+                accountCurrency,
+                request);
 
-        TransactionView view =
-                applicationService.recordDividendIncome(command);
+        TransactionView view = applicationService.recordDividendIncome(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(transactionDtoMapper.toResponse(accountId, view));
@@ -211,17 +195,14 @@ public class TransactionController {
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
-        RecordDepositCommand command =
-                transactionCommandAssembler.toDepositCommand(
-                        portfolioId,
-                        accountId,
-                        userId,
-                        accountCurrency,
-                        request
-                );
+        RecordDepositCommand command = transactionCommandAssembler.toDepositCommand(
+                portfolioId,
+                accountId,
+                userId,
+                accountCurrency,
+                request);
 
-        TransactionView view =
-                applicationService.recordDeposit(command);
+        TransactionView view = applicationService.recordDeposit(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(transactionDtoMapper.toResponse(accountId, view));
@@ -239,17 +220,14 @@ public class TransactionController {
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
-        RecordWithdrawalCommand command =
-                transactionCommandAssembler.toWithdrawalCommand(
-                        portfolioId,
-                        accountId,
-                        userId,
-                        accountCurrency,
-                        request
-                );
+        RecordWithdrawalCommand command = transactionCommandAssembler.toWithdrawalCommand(
+                portfolioId,
+                accountId,
+                userId,
+                accountCurrency,
+                request);
 
-        TransactionView view =
-                applicationService.recordWithdrawal(command);
+        TransactionView view = applicationService.recordWithdrawal(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(transactionDtoMapper.toResponse(accountId, view));
@@ -270,22 +248,18 @@ public class TransactionController {
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
-        UpdateTransactionCommand command =
-                transactionCommandAssembler.toUpdateCommand(
-                        portfolioId,
-                        accountId,
-                        transactionId,
-                        userId,
-                        accountCurrency,
-                        request
-                );
+        UpdateTransactionCommand command = transactionCommandAssembler.toUpdateCommand(
+                portfolioId,
+                accountId,
+                transactionId,
+                userId,
+                accountCurrency,
+                request);
 
-        TransactionView view =
-                applicationService.updateTransaction(command);
+        TransactionView view = applicationService.updateTransaction(command);
 
         return ResponseEntity.ok(
-                transactionDtoMapper.toResponse(accountId, view)
-        );
+                transactionDtoMapper.toResponse(accountId, view));
     }
 
     // ------------------- DELETE TRANSACTION -------------------
@@ -301,15 +275,13 @@ public class TransactionController {
 
         String notes = request != null ? request.getNotes() : null;
 
-        DeleteTransactionCommand command =
-                transactionCommandAssembler.toDeleteCommand(
-                        portfolioId,
-                        accountId,
-                        transactionId,
-                        userId,
-                        softDelete,
-                        notes
-                );
+        DeleteTransactionCommand command = transactionCommandAssembler.toDeleteCommand(
+                portfolioId,
+                accountId,
+                transactionId,
+                userId,
+                softDelete,
+                notes);
 
         applicationService.deleteTransaction(command);
 
@@ -323,12 +295,10 @@ public class TransactionController {
             String accountId,
             UUID userId) {
 
-        GetAccountSummaryQuery summaryQuery =
-                portfolioHttpMapper.toAccountQuery(
-                        portfolioId,
-                        userId,
-                        new GetAccountRequest(accountId)
-                );
+        GetAccountSummaryQuery summaryQuery = portfolioHttpMapper.toAccountQuery(
+                portfolioId,
+                userId,
+                new GetAccountRequest(accountId));
 
         return queryService.getAccountSummary(summaryQuery);
     }

@@ -27,6 +27,18 @@ export type AccountType =
     | 'CHEQUING'
     | 'SAVINGS'
 
+
+export interface PortfolioSummary {
+    id: string
+    name: string | null
+    description?: string | null
+    totalValue: number
+    currency: string
+    numberOfAccounts?: number
+    createdDate: string
+    lastUpdated: string
+}
+
 export interface Portfolio {
     id: string
     userId: string

@@ -24,6 +24,7 @@ import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.reques
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AccountHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.AssetHoldingHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PortfolioHttpResponse;
+import com.laderrco.fortunelink.portfolio_management.api.models.portfolio.responses.PortfolioSummaryHttpResponse;
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
@@ -64,14 +65,16 @@ public class PortfolioController {
     }
 
     @GetMapping("/{portfolioId}")
-    public ResponseEntity<PortfolioHttpResponse> getPortfolio(@Nonnull @PathVariable String portfolioId, @AuthenticatedUser UUID userId) {
+    public ResponseEntity<PortfolioHttpResponse> getPortfolio(@Nonnull @PathVariable String portfolioId,
+            @AuthenticatedUser UUID userId) {
         GetPortfolioByIdQuery query = requestMapper.toCommand(portfolioId, userId);
         PortfolioView portfolioView = portfolioQueryService.getPortfolioById(query);
         return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
     }
 
     // THIS IS BROKEN
-    // LONG TERM: DON'T USE PortfolioHttpREsponse, USE A NEW ONE CALLED PortfolioSummaryHttpResponse
+    // LONG TERM: DON'T USE PortfolioHttpREsponse, USE A NEW ONE CALLED
+    // PortfolioSummaryHttpResponse
     /*
      * [
      * {
@@ -88,40 +91,53 @@ public class PortfolioController {
      * ]
      */
     @GetMapping("/user/me")
-    public ResponseEntity<List<PortfolioHttpResponse>> getUserPortfolios(@AuthenticatedUser UUID userId) {
+    public ResponseEntity<List<PortfolioSummaryHttpResponse>> getUserPortfolios(@AuthenticatedUser UUID userId) {
         GetPortfoliosByUserIdQuery query = requestMapper.toCommand(new GetUsersPortfolioRequest(userId.toString()));
-        List<PortfolioSummaryView> portfolios = portfolioQueryService.getUserPortfolioSummaries(query);
+        List<PortfolioSummaryView> summaries = portfolioQueryService.getUserPortfolioSummaries(query);
 
-        List<PortfolioHttpResponse> response = portfolios.stream()
-            .map(portfolioDtoMapper::toPortfolioResponse)
-            .collect(Collectors.toList());
+        List<PortfolioSummaryHttpResponse> response = summaries.stream()
+                .map(summary -> new PortfolioSummaryHttpResponse(
+                        summary.id().portfolioId().toString(),
+                        summary.name(),
+                        summary.description(),
+                        summary.totalValue().amount(),
+                        summary.totalValue().currency().getCode(),
+                        summary.numberOfAccounts(),
+                        summary.createdDate(),
+                        summary.lastUpdated()))
+                .collect(Collectors.toList());
 
+        IO.println(response);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioHttpResponse> createPortfolio(@AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
+    public ResponseEntity<PortfolioHttpResponse> createPortfolio(@AuthenticatedUser UUID userId,
+            @Valid @RequestBody CreatePortfolioRequest request) {
         CreatePortfolioCommand command = requestMapper.toCommand(request, userId);
         PortfolioView portfolioView = portfolioApplicationService.createPortfolio(command);
         return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
     }
 
     @PutMapping("/{portfolioId}")
-    public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@Nonnull @PathVariable String portfolioId, @AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
+    public ResponseEntity<PortfolioHttpResponse> updatePortfolio(@Nonnull @PathVariable String portfolioId,
+            @AuthenticatedUser UUID userId, @Valid @RequestBody CreatePortfolioRequest request) {
         UpdatePortfolioCommand command = requestMapper.toCommand(portfolioId, userId, request);
         PortfolioView portfolioView = portfolioApplicationService.updatePortfolio(command);
         return ResponseEntity.ok(portfolioDtoMapper.toPortfolioResponse(portfolioView));
     }
-    
+
     @DeleteMapping("/{portfolioId}")
-    public ResponseEntity<Void> deletePortfolio(@PathVariable String portfolioId, @AuthenticatedUser UUID userId, @RequestBody DeletePortfolioRequest request) {
+    public ResponseEntity<Void> deletePortfolio(@PathVariable String portfolioId, @AuthenticatedUser UUID userId,
+            @RequestBody DeletePortfolioRequest request) {
         DeletePortfolioCommand command = requestMapper.toCommand(portfolioId, userId, request);
         portfolioApplicationService.deletePortfolio(command);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{portfolioId}/accounts/{accountId}")
-    public ResponseEntity<AccountHttpResponse> getAccount(@PathVariable String portfolioId,  @AuthenticatedUser UUID userId, @PathVariable String accountId) {
+    public ResponseEntity<AccountHttpResponse> getAccount(@PathVariable String portfolioId,
+            @AuthenticatedUser UUID userId, @PathVariable String accountId) {
         // Fetch the account view from the service
         GetAccountRequest request = new GetAccountRequest(accountId);
         GetAccountSummaryQuery query = requestMapper.toAccountQuery(portfolioId, userId, request);
@@ -130,19 +146,21 @@ public class PortfolioController {
     }
 
     @GetMapping("/{portfolioId}/accounts")
-    public ResponseEntity<List<AccountHttpResponse>> listAccounts(@PathVariable String portfolioId, @AuthenticatedUser UUID userId) {
+    public ResponseEntity<List<AccountHttpResponse>> listAccounts(@PathVariable String portfolioId,
+            @AuthenticatedUser UUID userId) {
         // Fetch the list of account views
         List<AccountView> accounts = portfolioQueryService.listAccountSummaries(portfolioId, userId);
-    
-        List<AccountHttpResponse> response = accounts.stream()
-            .map(account -> portfolioDtoMapper.toAccountResponse(portfolioId, account))
-            .toList();
 
-    return ResponseEntity.ok(response);
+        List<AccountHttpResponse> response = accounts.stream()
+                .map(account -> portfolioDtoMapper.toAccountResponse(portfolioId, account))
+                .toList();
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{portfolioId}/accounts")
-    public ResponseEntity<AccountHttpResponse> addAccount(@PathVariable String portfolioId, @AuthenticatedUser UUID userId, @Valid @RequestBody CreateAccountRequest request) {
+    public ResponseEntity<AccountHttpResponse> addAccount(@PathVariable String portfolioId,
+            @AuthenticatedUser UUID userId, @Valid @RequestBody CreateAccountRequest request) {
         AddAccountCommand command = requestMapper.toCommand(portfolioId, userId, request);
         AccountView account = portfolioApplicationService.addAccount(command);
         return ResponseEntity.ok(portfolioDtoMapper.toAccountResponse(portfolioId, account));
@@ -171,7 +189,6 @@ public class PortfolioController {
         GetAssetQueryView query = requestMapper.toAssetQuery(portfolioId, userId, accountId, assetId);
         AssetView asset = portfolioQueryService.getAssetSummary(query);
 
-        return ResponseEntity.ok(portfolioDtoMapper.toAssetResponse(asset)
-        );
+        return ResponseEntity.ok(portfolioDtoMapper.toAssetResponse(asset));
     }
 }

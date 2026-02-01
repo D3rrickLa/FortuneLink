@@ -116,8 +116,8 @@ class PortfolioDtoMapperTest {
         PortfolioSummaryView summary = new PortfolioSummaryView(
                 PortfolioId.randomId(),
                 "My Portfolio",
-                new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
-                now);
+                null, new Money(BigDecimal.valueOf(500), ValidatedCurrency.USD),
+                0, now, now);
 
         PortfolioHttpResponse response = mapper.toPortfolioResponse(summary);
 

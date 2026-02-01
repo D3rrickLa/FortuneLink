@@ -1,6 +1,6 @@
 // lib/api/portfolio.ts
 import { apiClient } from './client'
-import type { Portfolio, Transaction, Account } from '@/types/portfolio'
+import type { Portfolio, Transaction, Account, PortfolioSummary } from '@/types/portfolio'
 
 
 export interface CreatePortfolioRequest {
@@ -65,7 +65,7 @@ export const portfolioApi = {
     },
 
     // THIS RETURNS A SUMMARY OF THE PORTOFLIOS NOT THE ACOCUNTS
-    getMyPortfolios: async (): Promise<Portfolio[]> => {
+    getMyPortfolios: async (): Promise<PortfolioSummary[]> => {
         const { data } = await apiClient.get('/api/portfolios/user/me')
         console.log(data)
         return data

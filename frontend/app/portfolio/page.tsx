@@ -4,18 +4,29 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { portfolioApi } from '@/lib/api/portfolio'
-import type { Portfolio } from '@/types/portfolio'
+
+export interface PortfolioSummary {
+  id: string
+  name: string | null
+  description?: string | null
+  totalValue: number
+  currency: string
+  numberOfAccounts?: number
+  createdDate: string
+  lastUpdated: string
+}
 
 export default function PortfolioPage() {
   const router = useRouter()
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([])
+  const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadPortfolios = async () => {
       try {
-        const data = await portfolioApi.getMyPortfolios()
+        // Directly use backend response, no mapping needed
+        const data: PortfolioSummary[] = await portfolioApi.getMyPortfolios()
         setPortfolios(data)
       } catch (err: any) {
         console.error(err)
@@ -24,15 +35,20 @@ export default function PortfolioPage() {
         setLoading(false)
       }
     }
+
     loadPortfolios()
   }, [])
 
   if (loading) return <div className="p-10 text-center">Loading portfolios…</div>
+
   if (error)
     return (
       <div className="p-10 text-center text-red-500">
         <p>{error}</p>
-        <button onClick={() => window.location.reload()} className="mt-4 underline">
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 underline"
+        >
           Retry
         </button>
       </div>
@@ -51,19 +67,29 @@ export default function PortfolioPage() {
       </div>
 
       {portfolios.length === 0 ? (
-        <p className="text-gray-500 italic">You haven’t created a portfolio yet.</p>
+        <p className="text-gray-500 italic">
+          You haven’t created a portfolio yet.
+        </p>
       ) : (
         <ul className="space-y-3">
-          {portfolios.map(portfolio => (
+          {portfolios.map((portfolio) => (
             <li
               key={portfolio.id}
               className="border rounded p-4 hover:bg-gray-50 cursor-pointer"
               onClick={() => router.push(`/portfolio/${portfolio.id}`)}
             >
-              <p className="font-medium">{portfolio.name || portfolio.id}</p>
+              <p className="font-medium">
+                {portfolio.name ?? 'Untitled Portfolio'}
+              </p>
+              {portfolio.description && (
+                <p className="text-sm text-gray-500">{portfolio.description}</p>
+              )}
               <p className="text-sm text-gray-500">
-                Net Worth: {portfolio.totalValue?.toLocaleString() ?? 0}{' '}
-                {portfolio.totalValue?.currency ?? 'USD'}
+                Net Worth: {portfolio.totalValue.toLocaleString()} {portfolio.currency} •{' '}
+                {portfolio.numberOfAccounts ?? 0} accounts
+              </p>
+              <p className="text-xs text-gray-400">
+                Last updated: {new Date(portfolio.lastUpdated).toLocaleDateString()}
               </p>
             </li>
           ))}
