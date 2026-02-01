@@ -34,7 +34,7 @@ public class PortfolioDtoMapper {
      */
     public PortfolioHttpResponse toPortfolioResponse(PortfolioView portfolio) {
         return new PortfolioHttpResponse(
-            portfolio.portfolioId().toString(),
+            portfolio.portfolioId().portfolioId().toString(),
             portfolio.userId().toString(),
             portfolio.name(),
             portfolio.description(),
