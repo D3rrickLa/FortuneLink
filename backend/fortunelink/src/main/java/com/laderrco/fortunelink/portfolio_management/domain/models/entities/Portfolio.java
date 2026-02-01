@@ -49,7 +49,9 @@ public class Portfolio implements ClassValidation {
             UserId deletedBy, Instant systemCreationDate, Instant updatedAt) {
         this.portfolioId = ClassValidation.validateParameter(portfolioId);
         this.userId = ClassValidation.validateParameter(userId);
-        this.accounts = ClassValidation.validateParameter(accounts);
+
+        // have to do it like this because the db or a mapper calling recon is returning a List.of() which are immutable
+        this.accounts = (accounts != null) ? new ArrayList<>(accounts) : new ArrayList<>();
         this.name = ClassValidation.validateParameter(name);
         this.description = ClassValidation.validateParameter(description);
         this.deleted = deleted;
@@ -116,12 +118,12 @@ public class Portfolio implements ClassValidation {
             throw new IllegalStateException(
                     String.format("Account with ID, %s, already exists here.", account.getAccountId()));
         }
-
-        if (this.accounts.stream().anyMatch(a -> a.getName().equals(account.getName()))) { // not ignore cases because
-                                                                                           // it should be exact... when
-                                                                                           // we check. We should allow
-                                                                                           // though dumb, account_1 and
-                                                                                           // AccOunt_1
+        // not ignore cases because
+        // it should be exact... when
+        // we check. We should allow
+        // though dumb, account_1 and
+        // Account_1
+        if (this.accounts.stream().anyMatch(a -> a.getName().equals(account.getName()))) {
             throw new IllegalArgumentException(
                     String.format("Account with name '%s' already exists in this account.", account.getName()));
         }

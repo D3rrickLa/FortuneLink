@@ -50,7 +50,7 @@ public class PortfolioDtoMapper {
 
     public PortfolioHttpResponse toPortfolioResponse(PortfolioSummaryView portfolio) {
         return new PortfolioHttpResponse(
-            portfolio.id().toString(),
+            portfolio.id().portfolioId().toString(),
             null,
             null,
             null,
@@ -67,7 +67,7 @@ public class PortfolioDtoMapper {
      */
     public AccountHttpResponse toAccountResponse(String id, AccountView account) {
         return new AccountHttpResponse(
-            account.accountId().toString(),
+            account.accountId().accountId().toString(),
             id,
             account.name(),
             account.type().name(),
@@ -83,7 +83,7 @@ public class PortfolioDtoMapper {
      */
     public AssetHoldingHttpResponse toAssetResponse(AssetView asset) {
         return new AssetHoldingHttpResponse(
-            asset.assetId().toString(),
+            asset.assetId().assetId().toString(),
             asset.symbol(),
             asset.type().toString(),
             asset.quantity(),

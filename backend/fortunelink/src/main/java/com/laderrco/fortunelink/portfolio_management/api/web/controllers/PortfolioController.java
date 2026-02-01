@@ -72,6 +72,7 @@ public class PortfolioController {
     }
 
     // THIS IS BROKEN
+    // LONG TERM: DON'T USE PORTOFLIOHTTPREPSONSE, USE A NEW ONE CALLED PORTOFLIOSUMMARYHTTPRESPONSE
     /*
      * [
      * {
