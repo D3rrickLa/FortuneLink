@@ -71,7 +71,7 @@ export interface AssetHolding {
 }
 
 export interface Transaction {
-    id: string
+    assetId: string
     accountId: string
     transactionType: TransactionType
     symbol: string

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { transactionApi } from '@/lib/api/transactions'
 import type { Transaction } from '@/types/portfolio'
 
@@ -12,10 +12,8 @@ export default function AddTransactionPage() {
         accountId: string
     }>()
 
-    // --- Form state ---
+    const [symbol, setSymbol] = useState('')
     const [transactionType, setTransactionType] = useState<'BUY' | 'SELL'>('BUY')
-    const [symbol, setSymbol] = useState('')         // BUY only
-    const [assetId, setAssetId] = useState('')       // SELL only
     const [quantity, setQuantity] = useState<number>(0)
     const [price, setPrice] = useState<number>(0)
     const [fee, setFee] = useState<number>(0)
@@ -29,23 +27,19 @@ export default function AddTransactionPage() {
         setError(null)
 
         try {
-            // Construct Transaction for frontend interface
-            const newTx: Omit<Transaction, 'assetId' | 'recordedAt'> = {
+            const newTx: Omit<Transaction, 'id' | 'recordedAt'> = {
+                symbol,
                 transactionType,
-                symbol: transactionType === 'BUY' ? symbol : '',
                 quantity,
                 price: { amount: price, currency: 'USD' },
                 fee: fee > 0 ? { amount: fee, currency: 'USD' } : undefined,
-                totalCost: undefined,
-                netAmount: undefined,
-                transactionDate: new Date().toISOString(),
-                notes: notes || undefined
+                notes: notes || undefined,
+                accountId: '',
+                transactionDate: ''
             }
 
-            // Call API
             await transactionApi.addTransaction(portfolioId, accountId, newTx)
 
-            // Redirect back to account page
             router.push(`/portfolio/${portfolioId}/accounts/${accountId}`)
         } catch (err: any) {
             console.error(err)
@@ -62,9 +56,19 @@ export default function AddTransactionPage() {
             {error && <p className="text-red-500 mb-4">{error}</p>}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Transaction Type */}
                 <div>
-                    <label className="block mb-1 font-medium">Transaction Type</label>
+                    <label className="block mb-1 font-medium">Symbol</label>
+                    <input
+                        type="text"
+                        value={symbol}
+                        onChange={e => setSymbol(e.target.value.toUpperCase())}
+                        className="w-full border px-3 py-2 rounded"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block mb-1 font-medium">Type</label>
                     <select
                         value={transactionType}
                         onChange={e => setTransactionType(e.target.value as 'BUY' | 'SELL')}
@@ -75,32 +79,6 @@ export default function AddTransactionPage() {
                     </select>
                 </div>
 
-                {/* Symbol / AssetId */}
-                {transactionType === 'BUY' ? (
-                    <div>
-                        <label className="block mb-1 font-medium">Symbol</label>
-                        <input
-                            type="text"
-                            value={symbol}
-                            onChange={e => setSymbol(e.target.value.toUpperCase())}
-                            className="w-full border px-3 py-2 rounded"
-                            required
-                        />
-                    </div>
-                ) : (
-                    <div>
-                        <label className="block mb-1 font-medium">Asset ID</label>
-                        <input
-                            type="text"
-                            value={assetId}
-                            onChange={e => setAssetId(e.target.value)}
-                            className="w-full border px-3 py-2 rounded"
-                            required
-                        />
-                    </div>
-                )}
-
-                {/* Quantity */}
                 <div>
                     <label className="block mb-1 font-medium">Quantity</label>
                     <input
@@ -114,7 +92,6 @@ export default function AddTransactionPage() {
                     />
                 </div>
 
-                {/* Price */}
                 <div>
                     <label className="block mb-1 font-medium">Price</label>
                     <input
@@ -128,7 +105,6 @@ export default function AddTransactionPage() {
                     />
                 </div>
 
-                {/* Fee */}
                 <div>
                     <label className="block mb-1 font-medium">Fee (optional)</label>
                     <input
@@ -141,7 +117,6 @@ export default function AddTransactionPage() {
                     />
                 </div>
 
-                {/* Notes */}
                 <div>
                     <label className="block mb-1 font-medium">Notes</label>
                     <textarea
@@ -152,7 +127,6 @@ export default function AddTransactionPage() {
                     />
                 </div>
 
-                {/* Submit */}
                 <button
                     type="submit"
                     disabled={submitting}
