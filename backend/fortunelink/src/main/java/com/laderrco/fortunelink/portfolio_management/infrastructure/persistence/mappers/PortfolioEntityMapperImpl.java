@@ -129,6 +129,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
 
             if (accountEntity != null) {
                 // Update existing account
+                IO.println("WE SHOULD BE IN HERE");
                 updateAccountEntity(domainAccount, accountEntity);
                 mergedAccounts.add(accountEntity);
             } else {
@@ -180,15 +181,13 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
                 .collect(Collectors.toSet());
 
         for (Asset domainAsset : domainAssets) {
-            UUID assetId = domainAsset.getAssetId().assetId();
-            AssetEntity assetEntity = existingAssets.get(assetId);
-
-            if (assetEntity != null) {
-                // Update existing asset
-                assetMapper.updateEntityFromDomain(domainAsset, assetEntity);
+            AssetEntity existing = existingAssets.get(domainAsset.getAssetId().assetId());
+            if (existing != null) {
+                assetMapper.updateEntityFromDomain(domainAsset, existing);
             } else {
-                // Create new asset
+                IO.println("SHOULD CREATE NEW");
                 AssetEntity newAsset = assetMapper.toEntity(domainAsset, accountEntity);
+                newAsset.setAccount(accountEntity);
                 accountEntity.getAssets().add(newAsset);
             }
         }

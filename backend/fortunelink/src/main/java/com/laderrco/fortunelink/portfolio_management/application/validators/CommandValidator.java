@@ -505,10 +505,10 @@ public class CommandValidator implements ClassValidation {
             return ValidationResult.failure("Transaction date is required");
         }
 
-        if (date.isAfter(LocalDateTime.now())) {
+        if (date.toInstant(ZoneOffset.UTC).isAfter(Instant.now())) {
             return ValidationResult.failure("Transaction date cannot be in the future");
         }
-
+        
         // Prevent transactions too far in the past (e.g., 50 years)
         if (date.isBefore(LocalDateTime.now().minusYears(50))) {
             return ValidationResult.failure("Transaction date is too far in the past");

@@ -73,8 +73,8 @@ public class RedisCacheConfig {
         module.addSerializer(MarketAssetInfo.class, new MarketAssetInfoSerializer());
         module.addDeserializer(MarketAssetInfo.class, new MarketAssetInfoDeserializer());
 
-        module.addSerializer(ValidatedCurrency.class, new ValidatedCurrencySerializer());
-        module.addDeserializer(ValidatedCurrency.class, new ValidatedCurrencyDeserializer());
+        // module.addSerializer(ValidatedCurrency.class, new ValidatedCurrencySerializer());
+        // module.addDeserializer(ValidatedCurrency.class, new ValidatedCurrencyDeserializer());
 
         mapper.registerModule(module);
 

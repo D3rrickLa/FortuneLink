@@ -116,7 +116,7 @@ public class TransactionController {
             @AuthenticatedUser UUID userId) {
 
         request.validateFields();
-            IO.println("BUYING RIGHT NOW");
+        IO.println("BUYING RIGHT NOW");
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 
@@ -127,6 +127,7 @@ public class TransactionController {
                 accountCurrency,
                 request);
 
+        IO.println("command good");
         TransactionView view = applicationService.recordAssetPurchase(command);
 
         return ResponseEntity.status(HttpStatus.CREATED)

@@ -2,6 +2,13 @@ package com.laderrco.fortunelink.shared.enums;
 
 import java.util.Currency;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.json_serializers.ValidatedCurrencyDeserializer;
+import com.laderrco.fortunelink.portfolio_management.infrastructure.config.json_serializers.ValidatedCurrencySerializer;
+
+@JsonSerialize(using = ValidatedCurrencySerializer.class)
+@JsonDeserialize(using = ValidatedCurrencyDeserializer.class)
 public class ValidatedCurrency {
     private final Currency currency;
 

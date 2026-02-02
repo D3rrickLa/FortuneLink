@@ -34,7 +34,6 @@ public class AssetEntityMapperImpl implements AssetEntityMapper, ClassValidation
         
         // Version is managed by JPA @Version - DO NOT set it manually
         // JPA will initialize it to 0 on first persist
-        
         return entity;
     }
 
@@ -92,6 +91,7 @@ public class AssetEntityMapperImpl implements AssetEntityMapper, ClassValidation
     @Override
     public Asset toDomain(AssetEntity entity) {
         ClassValidation.validateParameter(entity, "Entity cannot be null");
+        IO.println("FIRING ASSET TO DOMAIN");
         return Asset.reconstitute(
             new AssetId(entity.getId()),
             toIdentifier(entity),

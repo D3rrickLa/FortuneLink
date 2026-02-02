@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.domain.Persistable;
 
 import com.laderrco.fortunelink.portfolio_management.domain.models.enums.AssetType;
 
@@ -20,7 +21,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -56,9 +60,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "assets")
-public class AssetEntity {
+public class AssetEntity implements Persistable<UUID> {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    // @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -67,10 +71,11 @@ public class AssetEntity {
 
     // Discriminator for Reconstitution
     @Column(name = "identifier_type")
-    private String identifierType; 
+    private String identifierType;
 
     // Identifier Data
-    private String primaryId; // part of ALL, NOTE: cash Id gives only the Symbol as we can build the record from there
+    private String primaryId; // part of ALL, NOTE: cash Id gives only the Symbol as we can build the record
+                              // from there
 
     // @Type(JsonBinaryType.class)
     @JdbcTypeCode(SqlTypes.JSON)
@@ -96,7 +101,23 @@ public class AssetEntity {
 
     @Column(name = "last_system_interaction")
     private Instant lastInteraction;
-    
+
     @Version
     private Integer version;
+
+    @Transient
+    private boolean isNew = true;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return version == null;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+
 }

@@ -517,8 +517,6 @@ public class PortfolioApplicationService {
                 command.accountType(),
                 command.baseCurrency());
         
-        IO.println("ACCOUNT HERE");
-        IO.println(account.toString());
         // Add to portfolio (domain logic checks for duplicates)
         portfolio.addAccount(account);
 

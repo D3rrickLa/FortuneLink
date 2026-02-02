@@ -98,6 +98,8 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
             entity.setDividendAmount(domain.getDividendAmount().amount());
             entity.setDividendCurrency(domain.getDividendAmount().currency().getCode());
             entity.setIsDrip(domain.isDrip());
+        } else {
+            entity.setIsDrip(Boolean.FALSE);
         }
 
         entity.setTransactionDate(domain.getTransactionDate());
