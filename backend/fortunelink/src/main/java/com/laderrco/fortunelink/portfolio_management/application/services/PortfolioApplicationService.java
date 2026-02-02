@@ -26,6 +26,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Update
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.AccountNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioAlreadyExistsException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
@@ -587,6 +588,11 @@ public class PortfolioApplicationService {
             throw new PortfolioLimitReachedException("User reached portfolio limit.");
         }
 
+        // dup check
+        if (portfolioRepository.existsByUserId(command.userId())) {
+            throw new PortfolioAlreadyExistsException("User already has a portfolio");
+        }
+        
         // create portfolio (domain logic)
         Portfolio portfolio = Portfolio.createNew(command.userId(), command.defaultCurrency(), command.name(),
                 command.description());

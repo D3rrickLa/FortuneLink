@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -153,6 +154,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         entity.setCashBalanceCurrency(domain.getCashBalance().currency().getCode());
         entity.setActive(domain.isActive());
         entity.setClosedDate(domain.getClosedDate());
+        entity.setLastUpdated(domain.getLastSystemInteraction());
 
         // Merge assets
         mergeAssets(domain.getAssets(), entity);
@@ -170,9 +172,12 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         }
 
         Map<UUID, AssetEntity> existingAssets = accountEntity.getAssets().stream()
-                .collect(Collectors.toMap(AssetEntity::getId, asset -> asset));
+                .collect(Collectors.toMap(AssetEntity::getId, Function.identity()));
 
-        List<AssetEntity> mergedAssets = new ArrayList<>();
+        // Track domain asset IDs
+        Set<UUID> domainAssetIds = domainAssets.stream()
+                .map(a -> a.getAssetId().assetId())
+                .collect(Collectors.toSet());
 
         for (Asset domainAsset : domainAssets) {
             UUID assetId = domainAsset.getAssetId().assetId();
@@ -181,16 +186,16 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
             if (assetEntity != null) {
                 // Update existing asset
                 assetMapper.updateEntityFromDomain(domainAsset, assetEntity);
-                mergedAssets.add(assetEntity);
             } else {
                 // Create new asset
                 AssetEntity newAsset = assetMapper.toEntity(domainAsset, accountEntity);
-                mergedAssets.add(newAsset);
+                accountEntity.getAssets().add(newAsset);
             }
         }
 
-        accountEntity.getAssets().clear();
-        accountEntity.getAssets().addAll(mergedAssets);
+        // Remove assets that no longer exist in the domain
+        accountEntity.getAssets().removeIf(
+                assetEntity -> !domainAssetIds.contains(assetEntity.getId()));
     }
 
     /**
@@ -218,6 +223,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
             } else {
                 // New transaction
                 TransactionEntity newTx = txMapper.toEntity(domainTx, accountEntity);
+                newTx.setPortfolioId(accountEntity.getPortfolio().getId());
                 mergedTxs.add(newTx);
             }
         }

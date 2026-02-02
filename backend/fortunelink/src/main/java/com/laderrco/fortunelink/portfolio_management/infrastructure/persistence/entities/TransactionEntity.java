@@ -43,10 +43,9 @@ public class TransactionEntity {
     @JoinColumn(name = "account_id", nullable = false)
     private AccountEntity account;
 
-    // Denormalized portfolio reference for query performance
-    @Column(name = "portfolio_id", nullable = false)
-    private UUID portfolioId;
-
+    // Denormalized for queries - NOT a relationship, just a value
+    @Column(name = "portfolio_id", nullable = false, updatable = false)
+    private UUID portfolioId; // Copied from account.portfolioId at creation time
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
     private TransactionType transactionType;
@@ -54,17 +53,17 @@ public class TransactionEntity {
     // Asset snapshot fields
     @Column(name = "primary_id", nullable = false)
     private String primaryId;
-    
+
     @Column(name = "asset_type", nullable = false)
     private String assetType;
-    
+
     @Column(name = "display_name")
     private String displayName; // name of asset
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "secondary_ids", columnDefinition = "jsonb")
     private Map<String, String> secondaryIds;
-    
+
     @Column(name = "unit_of_trade")
     private String unitOfTrade;
 
@@ -75,10 +74,10 @@ public class TransactionEntity {
     // Transaction details
     @Column(nullable = false)
     private BigDecimal quantity;
-    
+
     @Column(name = "price_amount", nullable = false)
     private BigDecimal priceAmount;
-    
+
     @Column(name = "price_currency", nullable = false)
     private String priceCurrency;
 
@@ -89,10 +88,10 @@ public class TransactionEntity {
     // DRIP support
     @Column(name = "dividend_amount")
     private BigDecimal dividendAmount;
-    
+
     @Column(name = "dividend_currency")
     private String dividendCurrency;
-    
+
     @Column(name = "is_drip")
     private Boolean isDrip;
 

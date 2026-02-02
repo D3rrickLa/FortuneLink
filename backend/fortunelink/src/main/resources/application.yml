@@ -23,6 +23,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    schemas: public, auth  # Flyway manages both
     locations: classpath:db/migration
 
   # ============================================

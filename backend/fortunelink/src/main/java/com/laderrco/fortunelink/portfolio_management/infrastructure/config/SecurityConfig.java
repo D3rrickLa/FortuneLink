@@ -35,7 +35,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults()) // Enable CORS delegation to WebMvcConfigurer
-                .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.decoder(jwtDecoder())))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/admin/cache/**").hasRole("ADMIN")

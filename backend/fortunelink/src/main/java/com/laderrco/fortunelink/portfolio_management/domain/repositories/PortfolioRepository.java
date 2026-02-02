@@ -13,13 +13,16 @@ public interface PortfolioRepository {
 
     Optional<Portfolio> findById(PortfolioId id);
 
+    
     Optional<Portfolio> findByUserId(UserId userId);
 
     // This query ensures the record MUST belong to the user to be returned
     Optional<Portfolio> findByIdAndUserId(PortfolioId id, UserId userId);
-
+    
     List<Portfolio> findAllByUserId(UserId userId);
-
+    
+    boolean existsByUserId(UserId userId);
+    
     Long countByUserId(UserId userId);
 
     void delete(PortfolioId id);

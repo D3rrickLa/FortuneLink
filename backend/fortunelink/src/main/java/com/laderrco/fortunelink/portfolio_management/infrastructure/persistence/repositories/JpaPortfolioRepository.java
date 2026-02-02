@@ -82,4 +82,9 @@ public class JpaPortfolioRepository implements PortfolioRepository {
         jpaRepo.deleteById(portfolioUuid);
     }
 
+    @Override
+    public boolean existsByUserId(UserId userId) {
+        return jpaRepo.existsByUserId(userId.userId());
+    }
+
 }
