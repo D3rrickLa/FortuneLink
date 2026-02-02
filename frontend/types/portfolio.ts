@@ -81,6 +81,8 @@ export interface Transaction {
     totalCost?: { amount: number; currency: Currency }
     netAmount?: { amount: number; currency: Currency }
     transactionDate: string
+    isDrip?: boolean
+    sharesReceived?: number
     notes?: string
     recordedAt: string
 }

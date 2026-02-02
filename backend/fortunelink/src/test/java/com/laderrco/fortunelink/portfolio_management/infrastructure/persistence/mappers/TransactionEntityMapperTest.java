@@ -374,7 +374,6 @@ class TransactionEntityMapperTest {
             // Then
             assertThat(entity.getId()).isEqualTo(domain.getTransactionId().transactionId());
             assertThat(entity.getAccount()).isEqualTo(testAccountEntity);
-            assertThat(entity.getPortfolioId()).isEqualTo(testAccountEntity.getId());
             assertThat(entity.getTransactionType()).isEqualTo(TransactionType.BUY);
             assertThat(entity.getQuantity()).isEqualByComparingTo(new BigDecimal("10"));
             assertThat(entity.getPriceAmount()).isEqualByComparingTo(new BigDecimal("150.00"));

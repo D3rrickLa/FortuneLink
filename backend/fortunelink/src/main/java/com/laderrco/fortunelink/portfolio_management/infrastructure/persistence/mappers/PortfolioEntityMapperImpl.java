@@ -123,7 +123,7 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         for (Account domainAccount : domainAccounts) {
             UUID accountId = domainAccount.getAccountId().accountId();
             processedIds.add(accountId);
-
+            IO.println("AMOGNUS");
             AccountEntity accountEntity = existingAccounts.get(accountId);
 
             if (accountEntity != null) {
@@ -153,6 +153,8 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         entity.setCashBalanceCurrency(domain.getCashBalance().currency().getCode());
         entity.setActive(domain.isActive());
         entity.setClosedDate(domain.getClosedDate());
+        // entity.setCreatedDate(domain.getSystemCreationDate());
+        entity.setLastUpdated(domain.getLastSystemInteraction());
 
         // Merge assets
         mergeAssets(domain.getAssets(), entity);
@@ -172,25 +174,20 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         Map<UUID, AssetEntity> existingAssets = accountEntity.getAssets().stream()
                 .collect(Collectors.toMap(AssetEntity::getId, asset -> asset));
 
-        List<AssetEntity> mergedAssets = new ArrayList<>();
+        // List<AssetEntity> mergedAssets = new ArrayList<>();
 
         for (Asset domainAsset : domainAssets) {
-            UUID assetId = domainAsset.getAssetId().assetId();
-            AssetEntity assetEntity = existingAssets.get(assetId);
-
-            if (assetEntity != null) {
-                // Update existing asset
-                assetMapper.updateEntityFromDomain(domainAsset, assetEntity);
-                mergedAssets.add(assetEntity);
+            AssetEntity existing = existingAssets.get(domainAsset.getAssetId());
+            if (existing != null) {
+                assetMapper.updateEntityFromDomain(domainAsset, existing);
             } else {
-                // Create new asset
                 AssetEntity newAsset = assetMapper.toEntity(domainAsset, accountEntity);
-                mergedAssets.add(newAsset);
+                accountEntity.getAssets().add(newAsset);
             }
         }
 
-        accountEntity.getAssets().clear();
-        accountEntity.getAssets().addAll(mergedAssets);
+        // Optionally remove assets no longer in domain
+        accountEntity.getAssets().removeIf(a -> !domainAssets.contains(a.getId()));
     }
 
     /**
@@ -241,6 +238,8 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         entity.setCashBalanceCurrency(account.getCashBalance().currency().getCode());
         entity.setActive(account.isActive());
         entity.setClosedDate(account.getClosedDate());
+        entity.setCreatedDate(account.getSystemCreationDate());
+        entity.setLastUpdated(account.getLastSystemInteraction());
 
         // Set bidirectional parent relationship
         entity.setPortfolio(portfolioEntity);

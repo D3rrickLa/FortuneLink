@@ -116,18 +116,19 @@ public class TransactionController {
             @AuthenticatedUser UUID userId) {
 
         request.validateFields();
-
+        
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
-
+        
         RecordPurchaseCommand command = transactionCommandAssembler.toPurchaseCommand(
                 portfolioId,
                 accountId,
                 userId,
                 accountCurrency,
                 request);
-
+        
         TransactionView view = applicationService.recordAssetPurchase(command);
+        IO.println("passes transaction view");
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(transactionDtoMapper.toResponse(accountId, view));

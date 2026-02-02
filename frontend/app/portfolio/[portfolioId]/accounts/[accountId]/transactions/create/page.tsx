@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { transactionApi } from '@/lib/api/transactions'
 import type { Transaction } from '@/types/portfolio'
+import { CreateTransactionInput } from '@/lib/api/transaction.types'
 
 export default function AddTransactionPage() {
     const router = useRouter()
@@ -29,25 +30,35 @@ export default function AddTransactionPage() {
         setError(null)
 
         try {
-            // Construct Transaction for frontend interface
-            const newTx: Omit<Transaction, 'assetId' | 'recordedAt'> = {
-                transactionType,
-                symbol: transactionType === 'BUY' ? symbol : '',
-                quantity,
-                price: { amount: price, currency: 'USD' },
-                fee: fee > 0 ? { amount: fee, currency: 'USD' } : undefined,
-                totalCost: undefined,
-                netAmount: undefined,
-                transactionDate: new Date().toISOString(),
-                notes: notes || undefined
+            let newTx: CreateTransactionInput
+
+            if (transactionType === 'BUY') {
+                newTx = {
+                    transactionType: 'BUY',
+                    symbol,
+                    quantity,
+                    price: { amount: price, currency: 'USD' },
+                    fee: fee > 0 ? { amount: fee, currency: 'USD' } : undefined,
+                    transactionDate: new Date().toISOString(),
+                    notes: notes || undefined,
+                }
+            } else {
+                newTx = {
+                    transactionType: 'SELL',
+                    assetId,
+                    quantity,
+                    price: { amount: price, currency: 'USD' },
+                    fee: fee > 0 ? { amount: fee, currency: 'USD' } : undefined,
+                    transactionDate: new Date().toISOString(),
+                    notes: notes || undefined,
+                }
             }
 
-            // Call API
+
             await transactionApi.addTransaction(portfolioId, accountId, newTx)
 
-            // Redirect back to account page
             router.push(`/portfolio/${portfolioId}/accounts/${accountId}`)
-        } catch (err: any) {
+        } catch (err) {
             console.error(err)
             setError('Failed to add transaction')
         } finally {

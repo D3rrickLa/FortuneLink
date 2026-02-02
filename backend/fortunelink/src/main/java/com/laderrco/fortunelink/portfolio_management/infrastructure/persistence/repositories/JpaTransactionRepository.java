@@ -62,15 +62,13 @@ public interface JpaTransactionRepository
     // Specs for the implementation
     @Query("""
             SELECT t FROM TransactionEntity t
-            WHERE (:portfolioId IS NULL OR t.portfolioId = :portfolioId)
-              AND (:accountId IS NULL OR t.account.id = :accountId)
+            WHERE (:accountId IS NULL OR t.account.id = :accountId)
               AND (:transactionType IS NULL OR t.transactionType = :transactionType)
               AND (:startDate IS NULL OR t.transactionDate >= :startDate)
               AND (:endDate IS NULL OR t.transactionDate <= :endDate)
               AND (:#{#symbols == null} = true OR t.primaryId IN :symbols)
             """)
     Page<TransactionEntity> findWithFilters(
-            @Param("portfolioId") UUID portfolioId,
             @Param("accountId") UUID accountId,
             @Param("transactionType") String transactionType,
             @Param("startDate") Instant startDate,

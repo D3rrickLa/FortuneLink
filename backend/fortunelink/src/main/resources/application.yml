@@ -18,7 +18,7 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create-drop
 
   flyway:
     enabled: true
@@ -155,7 +155,7 @@ management:
 # ============================================
 logging:
   level:
-    com.fortunelink: INFO
+    com.fortunelink: DEBUG
     org.springframework.cache: INFO
     io.lettuce.core: INFO
     org.hibernate.SQL: ERROR # Change from DEBUG to ERROR

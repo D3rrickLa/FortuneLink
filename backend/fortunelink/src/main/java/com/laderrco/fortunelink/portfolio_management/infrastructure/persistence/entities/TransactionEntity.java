@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -43,9 +44,9 @@ public class TransactionEntity {
     @JoinColumn(name = "account_id", nullable = false)
     private AccountEntity account;
 
-    // Denormalized portfolio reference for query performance
-    @Column(name = "portfolio_id", nullable = false)
-    private UUID portfolioId;
+    // // Denormalized portfolio reference for query performance
+    // @Column(name = "portfolio_id", nullable = false)
+    // private UUID portfolioId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
@@ -101,7 +102,8 @@ public class TransactionEntity {
 
     private String notes;
 
-    @Column(name = "created_date", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
     private Instant createdAt;
 
     @Version

@@ -68,7 +68,7 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
                 fees,
                 entity.getTransactionDate(),
                 entity.getNotes(),
-                entity.getIsDrip() // Ensure this exists in your Entity
+                Boolean.TRUE.equals(entity.getIsDrip()) // Ensure this exists in your Entity
         );
     }
 
@@ -77,7 +77,6 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
         TransactionEntity entity = new TransactionEntity();
         entity.setId(domain.getTransactionId().transactionId());
         entity.setAccount(accountEntity);
-        entity.setPortfolioId(accountEntity.getId());
         entity.setTransactionType(domain.getTransactionType());
 
         entity.setQuantity(domain.getQuantity());
@@ -99,7 +98,11 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
             entity.setDividendCurrency(domain.getDividendAmount().currency().getCode());
             entity.setIsDrip(domain.isDrip());
         }
+        else {
+            entity.setIsDrip(Boolean.FALSE);
+        }
 
+        
         entity.setTransactionDate(domain.getTransactionDate());
         entity.setNotes(domain.getNotes());
 

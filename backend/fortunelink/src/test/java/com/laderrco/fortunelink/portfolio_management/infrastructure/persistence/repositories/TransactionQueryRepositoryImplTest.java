@@ -316,7 +316,6 @@ class TransactionQueryRepositoryImplTest {
         TransactionEntity entity = new TransactionEntity();
         entity.setId(UUID.randomUUID());
         entity.setAccount(account);
-        entity.setPortfolioId(portfolioId);
         entity.setTransactionType(type);
         entity.setQuantity(new BigDecimal("10"));
         entity.setPriceAmount(new BigDecimal("150.00"));

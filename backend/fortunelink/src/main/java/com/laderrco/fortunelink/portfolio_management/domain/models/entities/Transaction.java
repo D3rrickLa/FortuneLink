@@ -168,7 +168,7 @@ public class Transaction implements ClassValidation {
 
     // Helper method to get dividend amount (for DRIP transactions)
     public Money getDividendAmount() {
-        if (!isDrip || dividendAmount == null) {
+        if (isDrip || dividendAmount == null) {
             throw new IllegalStateException("This is not a DRIP transaction");
         }
         return dividendAmount;

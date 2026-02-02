@@ -2,31 +2,34 @@
 import { apiClient } from './client'
 import type { Transaction } from '@/types/portfolio'
 
-export const mapTransactionToRequest = (tx: Omit<Transaction, 'id' | 'recordedAt'>) => {
+import type { CreateTransactionInput } from './transaction.types'
+
+export const mapTransactionToRequest = (tx: CreateTransactionInput) => {
     return {
-        transactionType: tx.transactionType,           // 'BUY' | 'SELL' | etc
-        symbol: tx.symbol,                             // for BUY
-        assetId: tx.id,                           // for SELL / DIVIDEND
+        transactionType: tx.transactionType,
+        symbol: tx.transactionType === 'BUY' ? tx.symbol : undefined,
         quantity: tx.quantity,
         price: tx.price.amount,
         priceCurrency: tx.price.currency,
         fees: tx.fee ? [{ amount: tx.fee.amount, currency: tx.fee.currency }] : [],
-        transactionDate: tx.transactionDate,          // ISO string
+        transactionDate: tx.transactionDate,
         notes: tx.notes,
-        isDrip: tx.isDrip ?? false,
-        sharesReceived: tx.sharesReceived ?? 0,
+        isDrip: tx.transactionType === 'BUY' ? tx.isDrip ?? false : undefined,
+        sharesReceived:
+            tx.transactionType === 'BUY' ? tx.sharesReceived ?? 0 : undefined,
     }
 }
-
 export const transactionApi = {
     addTransaction: async (
         portfolioId: string,
         accountId: string,
-        tx: Omit<Transaction, 'id' | 'recordedAt'>,
+        tx: CreateTransactionInput
     ): Promise<Transaction> => {
         const request = mapTransactionToRequest(tx)
 
         const path = tx.transactionType === 'BUY' ? '/buy' : '/sell'
+
+        console.log(path)
 
         const { data } = await apiClient.post(
             `/api/portfolios/${portfolioId}/accounts/${accountId}/transactions${path}`,

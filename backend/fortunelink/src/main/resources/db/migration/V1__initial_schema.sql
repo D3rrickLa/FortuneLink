@@ -18,8 +18,8 @@ CREATE TABLE portfolios (
     deleted_by UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+    version INTEGER NOT NULL DEFAULT 0
+    -- CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
 -- Accounts table
@@ -81,7 +81,6 @@ CREATE TABLE assets (
 -- Transactions table (Immutable History)
 CREATE TABLE transactions (
     id UUID PRIMARY KEY,
-    portfolio_id UUID NOT NULL,
     account_id UUID NOT NULL,
     transaction_type VARCHAR(50) NOT NULL,
     
@@ -106,10 +105,9 @@ CREATE TABLE transactions (
     is_drip BOOLEAN NOT NULL DEFAULT false,
     transaction_date TIMESTAMPTZ NOT NULL,
     notes TEXT,
-    created_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT fk_transaction_portfolio FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE,
     CONSTRAINT fk_transaction_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
 
@@ -143,7 +141,7 @@ CREATE INDEX idx_accounts_portfolio_id ON accounts(portfolio_id);
 CREATE INDEX idx_assets_account_id ON assets(account_id);
 CREATE INDEX idx_assets_identity ON assets(identifier_type, primary_id);
 CREATE INDEX idx_assets_secondary_ids ON assets USING GIN (secondary_ids);
-CREATE INDEX idx_transactions_portfolio_date ON transactions(portfolio_id, transaction_date DESC);
+CREATE INDEX idx_transactions_account_date ON transactions(account_id, transaction_date DESC);
 CREATE INDEX idx_transactions_account_id ON transactions(account_id);
 
 -- Documentation
