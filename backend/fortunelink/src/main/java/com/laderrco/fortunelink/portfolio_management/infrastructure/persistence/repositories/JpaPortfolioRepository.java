@@ -61,8 +61,10 @@ public class JpaPortfolioRepository implements PortfolioRepository {
         PortfolioEntity entity = jpaRepo.findById(portfolioUuid)
                 .orElseGet(() -> {
                     PortfolioEntity newEntity = new PortfolioEntity(portfolio.getPortfolioId().portfolioId(),
-                            portfolio.getUserId().userId(), portfolio.getName(),
-                            portfolio.getPortfolioCurrencyPreference().getCode(), portfolio.getDescription());
+                            portfolio.getUserId().userId(), 
+                            portfolio.getName(),
+                            portfolio.getPortfolioCurrencyPreference().getCode(), 
+                            portfolio.getDescription());
                     return newEntity;
                 });
 

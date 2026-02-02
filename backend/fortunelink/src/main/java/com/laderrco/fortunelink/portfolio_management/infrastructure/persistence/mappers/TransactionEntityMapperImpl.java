@@ -68,7 +68,7 @@ public class TransactionEntityMapperImpl implements TransactionEntityMapper {
                 fees,
                 entity.getTransactionDate(),
                 entity.getNotes(),
-                entity.getIsDrip() // Ensure this exists in your Entity
+                Boolean.TRUE.equals(entity.getIsDrip()) // Ensure this exists in your Entity
         );
     }
 

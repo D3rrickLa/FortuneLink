@@ -247,6 +247,8 @@ public class PortfolioEntityMapperImpl implements PortfolioEntityMapper {
         entity.setCashBalanceCurrency(account.getCashBalance().currency().getCode());
         entity.setActive(account.isActive());
         entity.setClosedDate(account.getClosedDate());
+        entity.setCreatedDate(account.getSystemCreationDate());
+        entity.setLastUpdated(account.getLastSystemInteraction());
 
         // Set bidirectional parent relationship
         entity.setPortfolio(portfolioEntity);

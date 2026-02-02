@@ -116,7 +116,7 @@ public class TransactionController {
             @AuthenticatedUser UUID userId) {
 
         request.validateFields();
-
+            IO.println("BUYING RIGHT NOW");
         AccountView accountView = getAccountView(portfolioId, accountId, userId);
         ValidatedCurrency accountCurrency = accountView.baseCurrency();
 

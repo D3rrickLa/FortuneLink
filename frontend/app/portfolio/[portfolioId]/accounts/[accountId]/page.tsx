@@ -21,8 +21,12 @@ export default function AccountPage() {
 
     useEffect(() => {
         const loadData = async () => {
+            if (!portfolioId || !accountId) return; // Guard against undefined params
+
             try {
-                setLoading(true); // Reset loading state if params change
+                setLoading(true);
+                setError(null);
+
                 const [acc, txs] = await Promise.all([
                     portfolioApi.getAccount(portfolioId, accountId),
                     transactionApi.getTransactionsForAccount(portfolioId, accountId)
@@ -30,8 +34,16 @@ export default function AccountPage() {
 
                 setAccount(acc);
                 setAssets(acc?.assets ?? []);
-                // Force an empty array if txs is falsy
-                setTransactions(Array.isArray(txs) ? txs : []);
+                
+                // Ensure txs is handled correctly even if the API returns a single object instead of array
+                const txArray = Array.isArray(txs) ? txs : txs ? [txs] : [];
+                
+                // Sort by date (newest first) to ensure they show up in a logical order
+                const sortedTxs = [...txArray].sort((a, b) => 
+                    new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
+                );
+                
+                setTransactions(sortedTxs);
 
             } catch (err: any) {
                 console.error("Fetch Error:", err);
@@ -49,65 +61,84 @@ export default function AccountPage() {
 
     return (
         <div className="container mx-auto p-6">
-            {/* ---------- Header ---------- */}
+            {/* Header */}
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">{account?.name || 'Account Overview'}</h1>
+                <div>
+                    <h1 className="text-2xl font-bold">{account?.name || 'Account Overview'}</h1>
+                    <p className="text-gray-500">ID: {accountId}</p>
+                </div>
                 <button
                     onClick={() =>
-                        router.push(
-                            `/portfolio/${portfolioId}/accounts/${accountId}/transactions/create`
-                        )
+                        router.push(`/portfolio/${portfolioId}/accounts/${accountId}/transactions/create`)
                     }
-                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition-colors"
                 >
                     Add Transaction
                 </button>
             </div>
 
-            {/* ---------- Holdings ---------- */}
+            {/* Holdings */}
             <section className="mb-8">
                 <h2 className="text-xl font-semibold mb-3">Holdings</h2>
                 {assets.length === 0 ? (
-                    <p className="text-gray-500 italic">
+                    <p className="text-gray-500 italic border p-4 rounded bg-gray-50">
                         No holdings yet. Add a transaction to get started.
                     </p>
                 ) : (
-                    <ul className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {assets.map(asset => (
-                            <li key={asset.id} className="border rounded p-3">
-                                <p className="font-medium">{asset.symbol}</p>
-                                <p className="text-sm text-gray-500">Quantity: {asset.quantity}</p>
-                                <p className="text-sm text-gray-500">
-                                    Cost Basis: {asset.costBasis.toLocaleString()} {asset.costBasis.currency}
-                                </p>
-                            </li>
+                            <div key={asset.id} className="border rounded-lg p-4 shadow-sm">
+                                <p className="font-bold text-lg">{asset.symbol}</p>
+                                <div className="mt-2 space-y-1">
+                                    <p className="text-sm text-gray-600">Quantity: <span className="font-medium text-black">{asset.quantity}</span></p>
+                                    <p className="text-sm text-gray-600">
+                                        Cost Basis: <span className="font-medium text-black">{asset.costBasis.amount.toLocaleString()} {asset.costBasis.currency}</span>
+                                    </p>
+                                </div>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 )}
             </section>
 
-            {/* ---------- Transactions ---------- */}
+            {/* Transactions */}
             <section>
                 <h2 className="text-xl font-semibold mb-3">Transactions</h2>
                 {transactions.length === 0 ? (
-                    <p className="text-gray-500 italic">No transactions yet.</p>
+                    <p className="text-gray-500 italic border p-4 rounded bg-gray-50">No transactions found for this account.</p>
                 ) : (
-                    <ul className="space-y-2">
-                        {transactions.map(tx => (
-                            <li key={tx.id} className="border rounded p-3">
-                                <p className="font-medium">
-                                    {tx.transactionType ?? 'UNKNOWN'} {tx.symbol ?? ''}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                    {tx.quantity ?? 0} @ {tx.price?.amount?.toLocaleString() ?? 0}{' '}
-                                    {tx.price?.currency ?? ''}
-                                </p>
-                                {tx.fee && (
-                                    <p className="text-sm text-gray-400">
-                                        Fee: {tx.fee.amount.toLocaleString()} {tx.fee.currency}
+                    <ul className="space-y-3">
+                        {transactions.map((tx, index) => (
+                            <li key={tx.id || `${tx.assetId}-${index}`} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mr-2 ${
+                                            tx.transactionType === 'BUY' ? 'bg-green-100 text-green-700' : 
+                                            tx.transactionType === 'DEPOSIT' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                            {tx.transactionType}
+                                        </span>
+                                        <span className="font-bold">{tx.symbol || 'Cash'}</span>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {tx.quantity} units @ {tx.price?.amount?.toLocaleString()} {tx.price?.currency}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-gray-400">
+                                            {tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString() : 'No Date'}
+                                        </p>
+                                        {tx.fee && (
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Fee: {tx.fee.amount.toLocaleString()} {tx.fee.currency}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                {tx.notes && (
+                                    <p className="text-sm text-gray-500 mt-2 italic border-t pt-2">
+                                        Note: {tx.notes}
                                     </p>
                                 )}
-                                {tx.notes && <p className="text-sm text-gray-400">Notes: {tx.notes}</p>}
                             </li>
                         ))}
                     </ul>
