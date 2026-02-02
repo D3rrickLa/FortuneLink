@@ -68,17 +68,14 @@ public class RedisCacheConfig {
     public ObjectMapper redisCacheObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
 
-        // Register custom serializers
+        // Custom module for MarketAssetInfo
         SimpleModule module = new SimpleModule();
         module.addSerializer(MarketAssetInfo.class, new MarketAssetInfoSerializer());
         module.addDeserializer(MarketAssetInfo.class, new MarketAssetInfoDeserializer());
 
-        // module.addSerializer(ValidatedCurrency.class, new ValidatedCurrencySerializer());
-        // module.addDeserializer(ValidatedCurrency.class, new ValidatedCurrencyDeserializer());
-
         mapper.registerModule(module);
 
-        // Other modules
+        // Common modules
         mapper.registerModule(new ParameterNamesModule());
         mapper.registerModule(new Jdk8Module());
         mapper.registerModule(new JavaTimeModule());
@@ -101,7 +98,6 @@ public class RedisCacheConfig {
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.registerModule(new ParameterNamesModule());  // ADD THIS - needed for Records
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        // NO activateDefaultTyping here!
         return mapper;
 
     }
@@ -115,8 +111,7 @@ public class RedisCacheConfig {
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory, ObjectMapper redisCacheObjectMapper) {
 
         StringRedisSerializer keySerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer genericValueSerializer = new GenericJackson2JsonRedisSerializer(
-                redisCacheObjectMapper);
+        GenericJackson2JsonRedisSerializer genericValueSerializer = new GenericJackson2JsonRedisSerializer(redisCacheObjectMapper);
 
         // Typed serializer for Money
         Jackson2JsonRedisSerializer<Money> moneySerializer = new Jackson2JsonRedisSerializer<>(

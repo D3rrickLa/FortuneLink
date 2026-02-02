@@ -1173,3 +1173,7 @@ along with user sentiment
 we have a 'flaw' with some of our commands and account id. it uses asset identifier when is should have used asset id
 thinkg about it, asset id it brital af as in a cyrpto and a stock can technically have the same 'symbol/primaryid' and we 
 won't knwo which one it is
+
+
+-- feb 1st 2026-- 
+frontend issue and backend if we buy 'nvda' swtich, it shows up as 2 holdings, also no transactions..

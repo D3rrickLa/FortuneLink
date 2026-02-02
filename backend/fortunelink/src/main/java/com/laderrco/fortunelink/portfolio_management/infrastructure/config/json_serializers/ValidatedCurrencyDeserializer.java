@@ -10,6 +10,10 @@ import com.laderrco.fortunelink.shared.enums.ValidatedCurrency;
 public class ValidatedCurrencyDeserializer extends JsonDeserializer<ValidatedCurrency> {
     @Override
     public ValidatedCurrency deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        return ValidatedCurrency.of(p.getValueAsString());
+        String code = p.getValueAsString();
+        if (code == null || code.isBlank()) {
+            return null; // or throw a custom exception
+        }
+        return ValidatedCurrency.of(code);
     }
 }

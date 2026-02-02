@@ -34,15 +34,15 @@ export default function AccountPage() {
 
                 setAccount(acc);
                 setAssets(acc?.assets ?? []);
-                
+
                 // Ensure txs is handled correctly even if the API returns a single object instead of array
                 const txArray = Array.isArray(txs) ? txs : txs ? [txs] : [];
-                
+
                 // Sort by date (newest first) to ensure they show up in a logical order
-                const sortedTxs = [...txArray].sort((a, b) => 
+                const sortedTxs = [...txArray].sort((a, b) =>
                     new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
                 );
-                
+
                 setTransactions(sortedTxs);
 
             } catch (err: any) {
@@ -92,7 +92,10 @@ export default function AccountPage() {
                                 <div className="mt-2 space-y-1">
                                     <p className="text-sm text-gray-600">Quantity: <span className="font-medium text-black">{asset.quantity}</span></p>
                                     <p className="text-sm text-gray-600">
-                                        Cost Basis: <span className="font-medium text-black">{asset.costBasis.amount.toLocaleString()} {asset.costBasis.currency}</span>
+                                        Cost Basis:
+                                        <span className="font-medium text-black">
+                                            {asset.costBasis?.amount?.toLocaleString() ?? '0.00'} {asset.costBasis?.currency ?? ''}
+                                        </span>
                                     </p>
                                 </div>
                             </div>
@@ -112,10 +115,9 @@ export default function AccountPage() {
                             <li key={tx.id || `${tx.assetId}-${index}`} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mr-2 ${
-                                            tx.transactionType === 'BUY' ? 'bg-green-100 text-green-700' : 
-                                            tx.transactionType === 'DEPOSIT' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
-                                        }`}>
+                                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mr-2 ${tx.transactionType === 'BUY' ? 'bg-green-100 text-green-700' :
+                                                tx.transactionType === 'DEPOSIT' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                            }`}>
                                             {tx.transactionType}
                                         </span>
                                         <span className="font-bold">{tx.symbol || 'Cash'}</span>
