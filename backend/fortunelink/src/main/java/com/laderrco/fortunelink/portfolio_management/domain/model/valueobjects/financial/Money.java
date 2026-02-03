@@ -74,6 +74,14 @@ public record Money(BigDecimal amount, Currency currency) implements ClassValida
         return this.amount.compareTo(BigDecimal.ZERO) == 0;
     }
 
+    public Money abs() {
+        return new Money(this.amount.abs(), this.currency);
+    }
+
+    public Money negate() {
+        return new Money(this.amount.negate(), this.currency);
+    }
+
     public boolean exceeds(Money other) {
         isSameCurrency(other.currency(), "exceeds");
         return this.amount.compareTo(other.amount) > 0;

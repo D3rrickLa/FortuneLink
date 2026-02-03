@@ -9,11 +9,11 @@ import lombok.ToString;
 public class Currency {
     private final java.util.Currency currency;
 
-    private static final Currency CAD  = new Currency("CAD");
-    private static final Currency EUR  = new Currency("EUR");
-    private static final Currency GBP  = new Currency("GBP");
-    private static final Currency JPY  = new Currency("JPY");
-    private static final Currency USD  = new Currency("USD");
+    public static final Currency CAD  = new Currency("CAD");
+    public static final Currency EUR  = new Currency("EUR");
+    public static final Currency GBP  = new Currency("GBP");
+    public static final Currency JPY  = new Currency("JPY");
+    public static final Currency USD  = new Currency("USD");
 
     private Currency(String locale) {
         this.currency = java.util.Currency.getInstance(locale);

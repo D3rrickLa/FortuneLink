@@ -38,7 +38,8 @@ public enum FeeType {
     GAS(MISCELLANEOUS),
     ADVISORY_FEE(MISCELLANEOUS),
     PLATFORM_FEE(MISCELLANEOUS),
-    OTHER(MISCELLANEOUS);
+    OTHER(MISCELLANEOUS), 
+    NONE(MISCELLANEOUS);
 
     private final FeeCategory category;
 
