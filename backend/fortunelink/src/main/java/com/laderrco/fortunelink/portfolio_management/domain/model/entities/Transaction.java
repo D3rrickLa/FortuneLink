@@ -1,154 +1,82 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
+import io.micrometer.common.lang.Nullable;
+import lombok.Builder;
+
 /*
 
 
 
 */
+@Builder
 public record Transaction(
-        TransactionId id,
+        TransactionId transactionId,
         AccountId accountId,
         TransactionType transactionType,
-        AssetSymbol assetSymbol, // nullable only if quantityDelta == 0
-        Quantity quantityDelta,
-        Money cashDelta,
+        Money cashDelta, // cash impact, what left/came into the bank account
+        @Nullable TradeExecution execution, // only trade types have this
         List<Fee> fees,
         Instant occurredAt,
         String notes,
-
-        // optional
-        TransactionId relatedTransactionId,
-        Map<String, String> metadata) implements ClassValidation {
+        @Nullable TransactionId relatedTransactionId,
+        TransactionMetadata metadata) implements ClassValidation {
 
     public Transaction {
-        ClassValidation.validateParameter(id);
-        ClassValidation.validateParameter(accountId);
-        ClassValidation.validateParameter(transactionType);
-        ClassValidation.validateParameter(quantityDelta);
-        ClassValidation.validateParameter(cashDelta);
-        ClassValidation.validateParameter(fees);
-        ClassValidation.validateParameter(occurredAt);
 
-        notes = notes.trim();
         fees = List.copyOf(fees);
-        metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
+        notes = notes.trim();
 
-        validateInvariants(transactionType, assetSymbol, quantityDelta, cashDelta);
-    }
+        boolean requiresExecution = switch (transactionType) {
+            case BUY, SELL, DIVIDEND_REINVEST, SPLIT -> true;
+            default -> false;
+        };
 
-    private static void validateInvariants(
-            TransactionType type,
-            AssetSymbol asset,
-            Quantity qty,
-            Money cash) {
-        if (qty.isNonZero() && asset == null) {
+        if (requiresExecution && execution == null) {
+            throw new IllegalArgumentException(String.format("%s requires trade execution details", transactionType));
+        }
+
+        if (!requiresExecution && execution != null) {
             throw new IllegalArgumentException(
-                    "Asset symbol required when quantity changes");
+                    String.format("%s cannot have  trade execution details", transactionType));
         }
 
-        if (qty.isZero() && cash.isZero()) {
-            throw new IllegalArgumentException(
-                    "Transaction must affect cash or holdings");
-        }
+    }
 
-        // Optional semantic checks (safe to keep)
-        switch (type) {
-            case BUY -> {
-                if (!qty.isPositive())
-                    throw new IllegalArgumentException("BUY quantity must be positive");
-                if (!cash.isNegative())
-                    throw new IllegalArgumentException("BUY must reduce cash");
-            }
-            case SELL -> {
-                if (!qty.isNegative())
-                    throw new IllegalArgumentException("SELL quantity must be negative");
-                if (!cash.isPositive())
-                    throw new IllegalArgumentException("SELL must increase cash");
-            }
-            case DEPOSIT -> {
-                if (qty.isNonZero())
-                    throw new IllegalArgumentException("DEPOSIT cannot affect holdings");
-                if (!cash.isPositive())
-                    throw new IllegalArgumentException("DEPOSIT must increase cash");
-            }
-            case WITHDRAWAL -> {
-                if (qty.isNonZero())
-                    throw new IllegalArgumentException("WITHDRAWAL cannot affect holdings");
-                if (!cash.isNegative())
-                    throw new IllegalArgumentException("WITHDRAWAL must decrease cash");
-            }
-            case DIVIDEND, INTEREST -> {
-                if (!cash.isPositive())
-                    throw new IllegalArgumentException(type + " must increase cash");
-                // Dividend can be either cash-only OR reinvested (quantity > 0)
-            }
-            case FEE -> {
-                if (!cash.isNegative())
-                    throw new IllegalArgumentException("FEE must decrease cash");
-            }
-            // case SPLIT -> {
-            // if (!qty.isNonZero())
-            // throw new IllegalArgumentException("SPLIT must affect holdings");
-            // if (!cash.isZero())
-            // throw new IllegalArgumentException("SPLIT should not affect cash");
-            // }
-            case TRANSFER_IN -> {
-                // Can affect both cash and holdings depending on transfer type
-            }
-            case TRANSFER_OUT -> {
-                // Can affect both cash and holdings depending on transfer type
-            }
-            default -> {
-
-            }
+    public record TradeExecution(AssetSymbol assetSymbol, Quantity quantity, Price pricePerUnit) {
+        public Money grossValue() {
+            return pricePerUnit.pricePerUnit().multiply(quantity.amount());
         }
     }
 
-    /* -------- Domain Queries -------- */
-
-    public Money netCashImpact() {
-        return cashDelta.subtract(totalFees());
-    }
-
-    public Money totalFees() {
-        if (fees.isEmpty()) {
-            return Money.ZERO(cashDelta.currency());
+    public record TransactionMetadata(Map<String, String> values) {
+        public TransactionMetadata {
+            values = values == null ? Map.of() : Map.copyOf(values);
         }
-        return fees.stream()
-                .map(Fee::amountInNativeCurrency)
-                .reduce(Money.ZERO(cashDelta.currency()), Money::add);
+
+        public String get(String key) {
+            return values.get(key);
+        }
+
+        public TransactionMetadata with(String key, String value) {
+            Map<String, String> copy = new HashMap<>(values);
+            copy.put(key, value);
+            return new TransactionMetadata(copy);
+        }
     }
 
-    public boolean affectsHoldings() {
-        return quantityDelta.isNonZero();
-    }
-
-    public boolean isIncrease() {
-        return quantityDelta.isPositive();
-    }
-
-    public boolean isDecrease() {
-        return quantityDelta.isNegative();
-    }
-
-    public boolean isTaxable() {
-        return transactionType.isTaxable();
-    }
-
-    public Money costBasisDelta() {
-        return transactionType.calculateCostBasisDelta(cashDelta, totalFees());
-    }
 }

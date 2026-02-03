@@ -28,6 +28,6 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) i
     }
 
     public Money proportionalCost(Quantity sold) {
-        return costBasis.multiply(sold.divide(quantity));
+        return costBasis.multiply(sold.divide(quantity.amount()).amount());
     }
 }
