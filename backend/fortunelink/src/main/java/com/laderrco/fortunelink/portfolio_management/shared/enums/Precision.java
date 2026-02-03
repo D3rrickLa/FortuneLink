@@ -12,7 +12,7 @@ public enum Precision {
     PERCENTAGE(8),
     STOCK(6),
     DIVISION(10),
-    QUANTITY(5);
+    QUANTITY(8);
 
     private final int precision;
 

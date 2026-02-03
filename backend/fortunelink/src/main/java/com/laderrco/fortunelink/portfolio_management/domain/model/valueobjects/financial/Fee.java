@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyMismatchException;
-import com.laderrco.fortunelink.portfolio_management.domain.model.ClassValidation;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.FeeType;
+import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
 // VO probably shouldn’t implement the validator interface; just call validation statically.
 public record Fee(

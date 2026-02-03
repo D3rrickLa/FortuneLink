@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyMismatchException;
-import com.laderrco.fortunelink.portfolio_management.domain.model.ClassValidation;
+import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 import com.laderrco.fortunelink.portfolio_management.shared.enums.Precision;
 import com.laderrco.fortunelink.portfolio_management.shared.enums.Rounding;
 

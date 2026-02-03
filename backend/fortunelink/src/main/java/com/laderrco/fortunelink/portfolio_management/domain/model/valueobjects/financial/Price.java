@@ -1,6 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial;
 
-import com.laderrco.fortunelink.portfolio_management.domain.model.ClassValidation;
+import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
 public record Price(Money pricePerUnit) implements ClassValidation {
 

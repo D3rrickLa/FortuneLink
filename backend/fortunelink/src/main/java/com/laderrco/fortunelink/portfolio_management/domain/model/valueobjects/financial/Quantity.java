@@ -3,16 +3,20 @@ package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import com.laderrco.fortunelink.portfolio_management.domain.model.ClassValidation;
+import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
+import com.laderrco.fortunelink.portfolio_management.shared.enums.Precision;
+import com.laderrco.fortunelink.portfolio_management.shared.enums.Rounding;
 
 public record Quantity(BigDecimal amount) implements ClassValidation {
-    // TODO add a better scale factor in @Link{Precision.java}
+    private static final int QUANTITY_PRECISION = Precision.QUANTITY.getDecimalPlaces();
+    private static final RoundingMode Q_ROUNDING_MODE = Rounding.QUANTITY.getMode();
+
     public Quantity {
         ClassValidation.validateParameter(amount, "amount cannot be null");
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
         }
         // Optional: scale if needed for fractional units
-        amount = amount.setScale(8, RoundingMode.HALF_EVEN);
+        amount = amount.setScale(QUANTITY_PRECISION, RoundingMode.HALF_EVEN);
     }
 
     public static final Quantity ZERO = new Quantity(BigDecimal.ZERO);
@@ -36,6 +40,34 @@ public record Quantity(BigDecimal amount) implements ClassValidation {
         if (factor.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Factor cannot be negative");
         }
-        return new Quantity(this.amount.multiply(factor).setScale(8, RoundingMode.HALF_EVEN));
+        return new Quantity(this.amount.multiply(factor).setScale(QUANTITY_PRECISION, RoundingMode.HALF_EVEN));
+    }
+
+    public Quantity divide(BigDecimal divisor) {
+        ClassValidation.validateParameter(divisor, "factor");
+        if (divisor.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Divisor cannot be negative");
+        }
+        return new Quantity(this.amount.divide(divisor, QUANTITY_PRECISION, Q_ROUNDING_MODE));
+    }
+
+    public int compareTo(Quantity other) {
+        return this.amount.compareTo(other.amount());
+    }
+
+    public boolean isPositive() {
+        return amount.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public boolean isNegative() {
+        return amount.compareTo(BigDecimal.ZERO) < 0;
+    }
+
+    public boolean isZero() {
+        return amount.compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    public boolean isNonZero() {
+        return !isZero();
     }
 }

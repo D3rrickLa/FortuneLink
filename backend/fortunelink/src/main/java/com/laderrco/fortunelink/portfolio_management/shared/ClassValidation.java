@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.model;
+package com.laderrco.fortunelink.portfolio_management.shared;
 
 import java.util.Objects;
 
