@@ -1173,3 +1173,12 @@ along with user sentiment
 we have a 'flaw' with some of our commands and account id. it uses asset identifier when is should have used asset id
 thinkg about it, asset id it brital af as in a cyrpto and a stock can technically have the same 'symbol/primaryid' and we 
 won't knwo which one it is
+
+
+
+-- feb 3---
+no asset.java anymore, if you think about it kind of makes sense, the averaging of stuff is bad for tax and just general upkeeping
+instead it's repalced by the transaction + position + tax lot combo and we return the position to the user frontend
+we only care about the transaction
+
+tax lots is for cost basis tracking while position is the current view

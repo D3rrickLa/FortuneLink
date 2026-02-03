@@ -70,4 +70,8 @@ public record Quantity(BigDecimal amount) implements ClassValidation {
     public boolean isNonZero() {
         return !isZero();
     }
+
+    public Quantity abs() {
+        return new Quantity(this.amount.abs());
+    }
 }

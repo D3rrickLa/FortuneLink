@@ -14,20 +14,21 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) i
         ClassValidation.validateParameter(acquiredDate);
     }
 
-    /** Calculates gain for selling a portion of this lot at given price */
-    public Money calculateGain(Money sellPrice, Quantity sellQuantity) {
-        if (sellQuantity.compareTo(quantity) > 0) {
+    /** Proportion of cost for a partial sale */
+    public Money proportionalCost(Quantity soldQuantity) {
+        if (soldQuantity.compareTo(quantity) > 0) {
             throw new IllegalArgumentException("Cannot sell more than lot quantity");
         }
-
-        // Proportional gain
-        Money costPortion = costBasis.multiply(sellQuantity.divide(quantity.amount()).amount());
-        Money proceeds = sellPrice.multiply(sellQuantity.amount());
-
-        return proceeds.subtract(costPortion);
+        return costBasis.multiply(soldQuantity.divide(quantity.amount()).amount());
     }
 
-    public Money proportionalCost(Quantity sold) {
-        return costBasis.multiply(sold.divide(quantity.amount()).amount());
+    /** Reduce this lot by sold quantity, returns new TaxLot */
+    public TaxLot reduce(Quantity soldQuantity) {
+        if (soldQuantity.compareTo(quantity) > 0) {
+            throw new IllegalArgumentException("Cannot reduce by more than lot quantity");
+        }
+        Money newCost = costBasis.subtract(proportionalCost(soldQuantity));
+        Quantity newQty = quantity.subtract(soldQuantity);
+        return new TaxLot(newQty, newCost, acquiredDate);
     }
 }

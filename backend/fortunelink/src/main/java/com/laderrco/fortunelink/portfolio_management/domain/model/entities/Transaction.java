@@ -15,6 +15,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
+
 // we can't derived the cashDelta, that is with a mindset from trading only, what if we get charged only a fee?
 // that is where cashDelta comes in
 // NOTE: NO CALCULATIONS HERE, JSUT ASSERTIONS
@@ -74,6 +75,11 @@ public record Transaction(
 
     public boolean isTrade() {
         return execution != null;
+    }
+
+    public Money costBasisDelta() {
+        Money totalFeesInTxCurrency = calculateTotalFeesInAccountCurrency();
+        return transactionType.calculateCostBasisDelta(cashDelta, totalFeesInTxCurrency);
     }
 
     private void validateCashConsistency() {
