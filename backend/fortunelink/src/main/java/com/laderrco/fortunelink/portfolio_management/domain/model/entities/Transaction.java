@@ -23,14 +23,15 @@ public record Transaction(
         TransactionType transactionType,
         TradeExecution execution, // nullable
         Money cashDelta, // ALWAYS Account Currency, is the final settled amount that hit the account,
-                         // fees backed in and is the ONLY source of truth
-                         // this is also we why don't need an exchange rate for trading
+                         // fees baked in and is the ONLY source of truth
+                         // this is also why we don't need an exchange rate for trading
                          // we should have already known how much USD 1000 cost us
         List<Fee> fees, // Fees should already have an account currency conversion if needed
         Instant occurredAt,
         String notes,
-        TransactionId relatedTransactionId,
-        TransactionMetadata metadata) implements ClassValidation {
+        TransactionId relatedTransactionId, // nullable
+        TransactionMetadata metadata) // nullable
+        implements ClassValidation {
 
     public Transaction {
         ClassValidation.validateParameter(transactionId);
@@ -43,6 +44,7 @@ public record Transaction(
 
         fees = List.copyOf(fees);
         notes = notes.trim();
+
         boolean requiresExecution = switch (transactionType) {
             case BUY, SELL -> true;
             default -> false;
@@ -75,11 +77,23 @@ public record Transaction(
     }
 
     private void validateCashConsistency() {
-        Money totalFees = calculateTotalFeesInAccountCurrency();
         if (execution == null) {
             // non-trade transactions don't need deep validation
             return;
         }
+        // Validate cash delta sign matches transaction type
+        boolean cashIsNegative = cashDelta.isNegative();
+        boolean expectNegative = transactionType == TransactionType.BUY;
+
+        if (cashIsNegative != expectNegative) {
+            throw new IllegalArgumentException(
+                    String.format("%s transaction should have %s cashDelta, got: %s",
+                            transactionType,
+                            expectNegative ? "negative" : "positive",
+                            cashDelta));
+        }
+
+        Money totalFees = calculateTotalFeesInAccountCurrency();
         Money gross = execution.grossValue();
 
         Money expected = switch (transactionType) {

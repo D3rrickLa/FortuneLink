@@ -22,36 +22,48 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
         ClassValidation.validateParameter(assetSymbol, "Asset symbol cannot be null");
         ClassValidation.validateParameter(type, "Asset type cannot be null");
         lots = lots == null ? List.of() : List.copyOf(lots);
+
+        // Validate all lots match Acc. currency
+        for (TaxLot lot : lots) {
+            if (!lot.costBasis().currency().equals(accountCurrency)) {
+                throw new IllegalArgumentException(
+                        String.format("TaxLot currency (%s) doesn't match account currency (%s)",
+                                lot.costBasis().currency(), accountCurrency));
+            }
+        }
     }
 
-    /** Add a purchase (BUY) → adds a new TaxLot */
+    // empty position
+    public static Position empty(AssetSymbol symbol, AssetType type, Currency currency) {
+        return new Position(symbol, type, currency, List.of());
+    }
+
+    // Add a purchase - buy - adding to a new TaxLot
     public Position addPurchase(Quantity qty, Money costBasis, Instant acquiredDate) {
         if (qty.isNegative()) {
-            throw new IllegalArgumentException("Purchase quantity must be positive");
+            throw new IllegalArgumentException("Purchase quantity must be positive, got: " + qty);
         }
+
         if (costBasis.isNegative()) {
-            throw new IllegalArgumentException("Cost basis cannot be negative");
+            throw new IllegalArgumentException("Cost basis cannot be negative, got: " + costBasis);
         }
+        
+        if (!costBasis.currency().equals(accountCurrency)) {
+            throw new IllegalArgumentException(
+                    String.format("Cost basis currency (%s) must match account currency (%s)",
+                            costBasis.currency(), accountCurrency));
+        }
+
         if (qty.isZero() || costBasis.isZero()) {
             return this; // nothing to add
         }
+
         List<TaxLot> newLots = new ArrayList<>(lots);
         newLots.add(new TaxLot(qty, costBasis, acquiredDate));
         return new Position(assetSymbol, type, accountCurrency, newLots);
     }
 
-    /**
-     * Reduces position by sale quantity using FIFO (First-In-First-Out) tax lot
-     * accounting.
-     * Returns detailed information about the sale for tax reporting and performance
-     * tracking.
-     * 
-     * @param sellQty      Quantity to sell (must be positive)
-     * @param saleProceeds Net proceeds from sale (after fees, in account currency)
-     * @return SaleResult containing new position, cost basis, consumed lots, and
-     *         realized gain/loss
-     * @throws IllegalStateException if trying to sell more than available
-     */
+    // reduces position by sale qty via FIFO
     public SaleResult reduceBySale(Quantity sellQty, Money saleProceeds) {
         if (sellQty.isZero()) {
             return new SaleResult(
@@ -63,6 +75,12 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
 
         if (sellQty.isNegative()) {
             throw new IllegalArgumentException("Sell quantity must be positive, got: " + sellQty);
+        }
+
+        if (!saleProceeds.currency().equals(accountCurrency)) {
+            throw new IllegalArgumentException(
+                    String.format("Sale proceeds currency (%s) must match account currency (%s)",
+                            saleProceeds.currency(), accountCurrency));
         }
 
         List<TaxLot> remaining = new ArrayList<>();
@@ -109,10 +127,9 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
                 realizedGainLoss);
     }
 
-    /** Apply a transaction to this position */
-    public Position apply(Transaction tx) {
+    public ApplyResult apply(Transaction tx) {
         if (tx.execution() == null || tx.execution().quantity().isZero()) {
-            return this;
+            return new ApplyResult.NoChange(this);
         }
 
         Quantity qty = tx.execution().quantity();
@@ -120,19 +137,22 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
         if (qty.isPositive()) {
             // BUY: Add new tax lot
             Money lotCostBasis = tx.cashDelta().abs();
-            return addPurchase(qty, lotCostBasis, tx.occurredAt());
+            Position updated = addPurchase(qty, lotCostBasis, tx.occurredAt());
+            return new ApplyResult.Purchase(updated);
 
         } else if (qty.isNegative()) {
             // SELL: Reduce position with full tracking
             Money saleProceeds = tx.cashDelta(); // Already net of fees
             SaleResult result = reduceBySale(qty.abs(), saleProceeds);
 
-            // TODO: might want to store/log the realized gain somewhere
-            // For now, we just return the new position
-            return result.newPosition();
+            return new ApplyResult.Sale(
+                    result.newPosition(),
+                    result.costBasisRealized(),
+                    result.lotsConsumed(),
+                    result.realizedGainLoss());
         }
 
-        return this;
+        return new ApplyResult.NoChange(this);
     }
 
     /** Unmodifiable view of lots */
@@ -154,6 +174,11 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
                 .reduce(Money.ZERO(accountCurrency), Money::add);
     }
 
+    /** Check if position is empty (no shares held) */
+    public boolean isEmpty() {
+        return getTotalQuantity().isZero();
+    }
+
     /**
      * Calculates unrealized gain/loss for current holdings.
      * 
@@ -161,6 +186,11 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
      * @return Unrealized gain/loss (current value - cost basis)
      */
     public Money calculateUnrealizedGain(Money currentPrice) {
+        if (!currentPrice.currency().equals(accountCurrency)) {
+            throw new IllegalArgumentException(
+                    String.format("Price currency (%s) must match account currency (%s)",
+                            currentPrice.currency(), accountCurrency));
+        }
         Money currentValue = currentPrice.multiply(getTotalQuantity().amount());
         Money costBasis = getTotalCostBasis();
         return currentValue.subtract(costBasis);
@@ -173,6 +203,11 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
      * @return Total market value
      */
     public Money calculateCurrentValue(Money currentPrice) {
+        if (!currentPrice.currency().equals(accountCurrency)) {
+            throw new IllegalArgumentException(
+                    String.format("Price currency (%s) must match account currency (%s)",
+                            currentPrice.currency(), accountCurrency));
+        }
         return currentPrice.multiply(getTotalQuantity().amount());
     }
 
@@ -185,4 +220,34 @@ public record Position(AssetSymbol assetSymbol, AssetType type, Currency account
             lotsConsumed = List.copyOf(lotsConsumed);
         }
     }
+
+    public sealed interface ApplyResult {
+        Position newPosition();
+
+        /**
+         * Transaction resulted in a purchase (BUY)
+         */
+        record Purchase(Position newPosition) implements ApplyResult {
+        }
+
+        /**
+         * Transaction resulted in a sale (SELL)
+         */
+        record Sale(
+                Position newPosition,
+                Money costBasisRealized,
+                List<TaxLot> lotsConsumed,
+                Money realizedGainLoss) implements ApplyResult {
+            public Sale {
+                lotsConsumed = List.copyOf(lotsConsumed);
+            }
+        }
+
+        /**
+         * Transaction didn't change the position (no trade execution)
+         */
+        record NoChange(Position newPosition) implements ApplyResult {
+        }
+    }
+
 }
