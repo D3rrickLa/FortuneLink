@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
@@ -19,7 +21,12 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) i
         if (soldQuantity.compareTo(quantity) > 0) {
             throw new IllegalArgumentException("Cannot sell more than lot quantity");
         }
-        return costBasis.multiply(soldQuantity.divide(quantity.amount()).amount());
+
+        // Use BigDecimal for precision
+        BigDecimal proportion = soldQuantity.amount()
+                .divide(quantity.amount(), 10, RoundingMode.HALF_UP);
+
+        return costBasis.multiply(proportion);
     }
 
     /** Reduce this lot by sold quantity, returns new TaxLot */

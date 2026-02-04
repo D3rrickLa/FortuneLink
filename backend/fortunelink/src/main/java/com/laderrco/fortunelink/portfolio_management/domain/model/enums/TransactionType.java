@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.enums;
 
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
-
 public enum TransactionType {
     BUY(true, true, true),
     SELL(true, true, true),
@@ -38,21 +36,5 @@ public enum TransactionType {
 
     public boolean requiresExecution() {
         return requiresExecution;
-    }
-
-    /**
-     * Calculate cost basis delta for a transaction of this type
-     * Default: for trades, it's cashDelta - fees; others may override
-     *
-     * @param cashDelta
-     * @param totalFees
-     * @return 
-     */
-    public Money calculateCostBasisDelta(Money cashDelta, Money totalFees) {
-        if (affectsHoldings) {
-            return cashDelta.add(totalFees); // Buying adds cost basis, selling reduces cost basis
-        } else {
-            return Money.ZERO(cashDelta.currency()); // Non-holdings transactions do not affect cost basis
-        }
     }
 }

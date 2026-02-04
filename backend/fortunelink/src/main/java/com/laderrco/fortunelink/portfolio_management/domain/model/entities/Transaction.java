@@ -2,17 +2,15 @@ package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.TradeExecution;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
@@ -63,7 +61,6 @@ public record Transaction(
 
     public Money calculateTotalFeesInAccountCurrency() {
         Currency accountCurrency = cashDelta.currency();
-
         return fees.stream()
                 .map(Fee::accountAmount)
                 .reduce(Money.ZERO(accountCurrency), Money::add);
@@ -75,11 +72,6 @@ public record Transaction(
 
     public boolean isTrade() {
         return execution != null;
-    }
-
-    public Money costBasisDelta() {
-        Money totalFeesInTxCurrency = calculateTotalFeesInAccountCurrency();
-        return transactionType.calculateCostBasisDelta(cashDelta, totalFeesInTxCurrency);
     }
 
     private void validateCashConsistency() {
@@ -105,71 +97,6 @@ public record Transaction(
                     "Cash delta (%s) doesn't match expected (%s). " +
                             "Difference: %s (tolerance: %s)",
                     cashDelta, expected, diff, tolerance));
-        }
-    }
-
-    // know what was traded, not the account who paid for it
-    public record TradeExecution(AssetSymbol asset, Quantity quantity, Money pricePerUnit) {
-        public TradeExecution {
-            ClassValidation.validateParameter(asset, "Asset symbol cannot be null");
-            ClassValidation.validateParameter(quantity, "Quantity cannot be null");
-            ClassValidation.validateParameter(pricePerUnit, "Price per unit cannot be null");
-
-            // Domain validation
-            if (quantity.isZero()) {
-                throw new IllegalArgumentException("Trade quantity cannot be zero");
-            }
-
-            if (pricePerUnit.isNegative()) {
-                throw new IllegalArgumentException(
-                        "Price per unit cannot be negative (got: " + pricePerUnit + ")");
-            }
-        }
-
-        /**
-         * Gross value of the trade before fees.
-         * This is quantity × price, representing the market value.
-         */
-        public Money grossValue() {
-            return pricePerUnit.multiply(quantity.amount().abs());
-        }
-    }
-
-    public record TransactionMetadata(Map<String, String> values) {
-        public TransactionMetadata {
-            values = values == null ? Map.of() : Map.copyOf(values);
-        }
-
-        public static TransactionMetadata empty() {
-            return new TransactionMetadata(Map.of());
-        }
-
-        public String get(String key) {
-            return values.get(key);
-        }
-
-        public String getOrDefault(String key, String defaultValue) {
-            return values.getOrDefault(key, defaultValue);
-        }
-
-        public TransactionMetadata with(String key, String value) {
-            Map<String, String> copy = new HashMap<>(values);
-            copy.put(key, value);
-            return new TransactionMetadata(copy);
-        }
-
-        public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
-            Map<String, String> copy = new HashMap<>(values);
-            copy.putAll(additionalMetadata);
-            return new TransactionMetadata(copy);
-        }
-
-        public boolean containsKey(String key) {
-            return values.containsKey(key);
-        }
-
-        public boolean isEmpty() {
-            return values.isEmpty();
         }
     }
 }
