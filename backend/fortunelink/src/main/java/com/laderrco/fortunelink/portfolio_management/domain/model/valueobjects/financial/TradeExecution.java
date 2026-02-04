@@ -1,7 +1,5 @@
-package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects;
+package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial;
 
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 

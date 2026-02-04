@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects;
+package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial;
 
 import java.time.Instant;
 

@@ -1,11 +1,9 @@
-package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects;
+package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
 public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) implements ClassValidation {

@@ -5,11 +5,11 @@ import java.time.Instant;
 import java.util.List;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.TradeExecution;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.TradeExecution;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
