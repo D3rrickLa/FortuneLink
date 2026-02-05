@@ -57,7 +57,7 @@ public final record FifoPosition(AssetSymbol assetSymbol, AssetType type, Curren
                 consumedLots.add(
                         new TaxLot(remainingToSell, partialCost, lot.acquiredDate()));
 
-                remainingLots.add(lot.reduce(remainingToSell));
+                remainingLots.add(lot.remainingAfter(remainingToSell));
                 realizedCost = realizedCost.add(partialCost);
                 remainingToSell = Quantity.ZERO;
             }
@@ -87,14 +87,10 @@ public final record FifoPosition(AssetSymbol assetSymbol, AssetType type, Curren
 
         if (delta.isPositive()) {
             Money lotCost = tx.cashDelta().abs();
-
-            return new ApplyResult.Purchase(
-                    addPurchase(delta, lotCost, tx.occurredAt()));
+            return new ApplyResult.Purchase(addPurchase(delta, lotCost, tx.occurredAt().timestamp()));
         }
 
-        SaleResult result = reduceBySale(
-                delta.abs(),
-                tx.cashDelta());
+        SaleResult result = reduceBySale(delta.abs(), tx.cashDelta());
 
         return new ApplyResult.Sale(
                 result.newPosition(),
