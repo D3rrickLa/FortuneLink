@@ -1182,3 +1182,11 @@ instead it's repalced by the transaction + position + tax lot combo and we retur
 we only care about the transaction
 
 tax lots is for cost basis tracking while position is the current view
+
+--- feb  5 2026 -- -
+basically this is how it works
+
+when we report on an asset we use the 'positions' to do so. with the projecters
+helping in the act of doing so. said positions are in two types. FIFO and ACB.
+Basically, in WS when yo usee that stats info about what you have purchases so far
+that is was we are doing

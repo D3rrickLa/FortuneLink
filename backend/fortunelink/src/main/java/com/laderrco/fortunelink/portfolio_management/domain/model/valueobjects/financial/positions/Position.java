@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
+package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
