@@ -92,6 +92,11 @@ public record Money(BigDecimal amount, Currency currency) implements ClassValida
         return this.amount.compareTo(other.amount) >= 0;
     }
 
+    public boolean isLessThan(Money other) {
+        isSameCurrency(other.currency(), "isLessThan");
+        return this.amount.compareTo(other.amount) < 0;
+    }
+
     @Override
     public int compareTo(Money other) {
         isSameCurrency(other.currency(), "compareTo");
@@ -117,4 +122,5 @@ public record Money(BigDecimal amount, Currency currency) implements ClassValida
             throw new CurrencyMismatchException(this.currency, otherCurrency);
         }
     }
+
 }
