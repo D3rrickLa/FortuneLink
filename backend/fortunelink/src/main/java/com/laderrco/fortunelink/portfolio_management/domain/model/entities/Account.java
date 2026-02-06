@@ -57,7 +57,10 @@ public class Account implements ClassValidation {
     public void applyCashFlow(Money amount, String reason) {
         requireActive();
         ClassValidation.validateParameter(amount, "amount");
-
+        
+        // zeros allowed because think of rebates of 0. stupid but valid
+        // we don't need to validate addition base on currency
+        // because Money.java does the validation
         if (amount.isPositive()) {
             cashBalance = cashBalance.add(amount);
         } else if (amount.isNegative()) {
@@ -87,48 +90,34 @@ public class Account implements ClassValidation {
         touch();
     }
 
-    public PositionResult recordTrade(Transaction tx) {
+    public void updatePosition(AssetSymbol symbol, Position newPosition) {
         requireActive();
-        ClassValidation.validateParameter(tx, "transaction");
+        ClassValidation.validateParameter(symbol, "symbol");
+        ClassValidation.validateParameter(newPosition, "newPosition");
 
-        AssetSymbol symbol = tx.execution().asset();
-        Position current = positions.getOrDefault(
-                symbol,
-                AcbPosition.empty(symbol, tx.metadata().assetType(), accountCurrency) // polymorphic empty position
-        );
-
-        PositionResult result = current.apply(tx);
-
-        if (!result.isNoChange()) {
-            Position updated = result.getUpdatedPosition();
-            if (updated.getTotalQuantity().isZero()) {
-                positions.remove(symbol);
-            } else {
-                positions.put(symbol, updated);
-            }
+        // Validate position belongs to this symbol
+        if (!newPosition.symbol().equals(symbol)) {
+            throw new IllegalArgumentException(
+                    "Position symbol mismatch: expected " + symbol + ", got " + newPosition.symbol());
         }
 
-        // Update cash balance if transaction has a cash delta
-        if (tx.cashDelta() != null && !tx.cashDelta().isZero()) {
-            Money newCash = cashBalance.add(tx.cashDelta());
-            if (newCash.isNegative()) {
-                throw new IllegalStateException("Insufficient cash balance after applying transaction");
-            }
-            cashBalance = newCash;
+        if (newPosition.getTotalQuantity().isZero()) {
+            // Position closed - remove it
+            positions.remove(symbol);
+        } else {
+            // Position updated/created
+            positions.put(symbol, newPosition);
         }
 
         touch();
-        return result;
     }
 
-    /**
-     * Transfers (in or out) are treated the same as trades, unless
-     * domain rules require different handling.
-     */
-    public PositionResult recordTransfer(Transaction tx) {
-        return recordTrade(tx);
+    public boolean hasSufficientCash(Money requiredAmount) {
+        validateCurrency(requiredAmount);
+        return cashBalance.amount().compareTo(requiredAmount.amount()) >= 0;
     }
 
+    // accounts should be closed via portfolio
     void close() {
         requireActive();
 
@@ -141,6 +130,16 @@ public class Account implements ClassValidation {
 
         this.isActive = false;
         this.closeDate = Instant.now();
+        touch();
+    }
+
+    void reopen() {
+        if (isActive) {
+            throw new IllegalStateException("Account is already active");
+        }
+
+        this.isActive = true;
+        this.closeDate = null;
         touch();
     }
 
@@ -191,6 +190,12 @@ public class Account implements ClassValidation {
     private void requireActive() {
         if (!isActive) {
             throw new IllegalStateException("Account is closed");
+        }
+    }
+
+    private void validateCurrency(Money amount) {
+        if (!amount.currency().equals(accountCurrency)) {
+            throw new CurrencyMismatchException("Expected " + accountCurrency + " but got " + amount.currency());
         }
     }
 

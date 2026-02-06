@@ -16,6 +16,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
+// THIS IS AN IMMUTABLE STATE
 public record Transaction(
         TransactionId transactionId,
         AccountId accountId,
