@@ -1,12 +1,16 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,8 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.TransactionMetadata;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
@@ -184,4 +190,95 @@ public class TransactionTest {
 
     }
 
+    @Nested
+    class TradeExecutionTest {
+
+        @Test
+        @DisplayName("Should calculate gross value correctly for both Buy and Sell")
+        void testGrossValue() {
+            Money price = Money.of(150.00, "USD");
+
+            // Test Buy (Positive Quantity)
+            var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"), new Quantity(new BigDecimal("10")),
+                    price);
+            assertEquals(Money.of(1500.00, "USD"), buy.grossValue());
+
+            // Test Sell (Negative Quantity) - Gross value should stay positive/absolute
+            var sell = new Transaction.TradeExecution(new AssetSymbol("AAPL"), new Quantity(new BigDecimal("-10")),
+                    price);
+            assertEquals(Money.of(1500.00, "USD"), sell.grossValue());
+        }
+
+        @Test
+        @DisplayName("Should throw exception for invalid inputs")
+        void testInvariants() {
+            AssetSymbol symbol = new AssetSymbol("MSFT");
+            Quantity qty = new Quantity(new BigDecimal("10"));
+            Money price = Money.of(100.00, "USD");
+
+            assertThrows(DomainArgumentException.class, () -> new Transaction.TradeExecution(null, qty, price));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Transaction.TradeExecution(symbol, qty, Money.of(-1.00, "USD")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")), price));
+        }
+    }
+
+    @Nested
+    class TransactionMetadataTest {
+        @Test
+        void testNullSafetyAndDefaults() {
+            // Test that null map becomes empty map and null source becomes UNKNOWN
+            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, null, null);
+
+            assertEquals("UNKNOWN", meta.source());
+            assertNotNull(meta.additionalData());
+            assertTrue(meta.isEmpty());
+        }
+
+        @Test
+        void testImmutabilityOfAdditionalData() {
+            Map<String, String> originalData = new HashMap<>();
+            originalData.put("key", "value");
+
+            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", originalData);
+
+            // Try to modify original map
+            originalData.put("key", "changed");
+
+            // Record should remain unchanged because of Map.copyOf()
+            assertEquals("value", meta.get("key"));
+            assertEquals("value", meta.getOrDefault("key", "NOTHING"));
+            assertEquals("NOTHING", meta.getOrDefault("key2", "NOTHING"));
+            assertTrue(meta.containsKey("key"));
+            assertFalse(meta.containsKey("keys"));
+
+        }
+
+        @Test
+        void testWithMethods() {
+            var base = Transaction.TransactionMetadata.manual(AssetType.CRYPTO);
+
+            // 'with' should return a NEW instance, leaving the old one untouched
+            var updated = base.with("broker_id", "123");
+
+            assertNotSame(base, updated);
+            assertTrue(base.isEmpty());
+            assertEquals("123", updated.get("broker_id"));
+            assertEquals("MANUAL", updated.source());
+
+            Map<String, String> additionalData = new HashMap<>();
+            additionalData.put("key", "value");
+            TransactionMetadata newData = base.withAll(additionalData);
+            assertTrue(newData.containsKey("key"));
+        }
+
+        @Test
+        void testStaticFactories() {
+            var csv = Transaction.TransactionMetadata.csvImport(AssetType.STOCK, "trades.csv");
+
+            assertEquals("CSV_IMPORT", csv.source());
+            assertEquals("trades.csv", csv.get("filename"));
+        }
+    }
 }

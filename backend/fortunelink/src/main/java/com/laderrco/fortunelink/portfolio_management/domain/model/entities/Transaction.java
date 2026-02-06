@@ -54,8 +54,6 @@ public record Transaction(
             throw new IllegalArgumentException(transactionType + " cannot have execution details");
         }
 
-        IO.println(execution == null);
-
         validateTradeConsistency(execution, cashDelta);
     }
 
