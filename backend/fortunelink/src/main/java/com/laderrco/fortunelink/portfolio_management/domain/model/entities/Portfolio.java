@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
@@ -38,9 +39,12 @@ public class Portfolio implements ClassValidation {
     public Portfolio(PortfolioId portfolioId, UserId userId) {
         this.portfolioId = portfolioId;
         this.userId = userId;
+        this.name = "Default Portfolio";
+        this.description = ""; 
+        this.accounts = new HashMap<>();
+        this.deleted = false;
         this.createdAt = Instant.now();
         this.lastUpdatedOn = Instant.now();
-        this.deleted = false;
     }
 
     public Account createAccount(String name, AccountType type, Currency currency) {

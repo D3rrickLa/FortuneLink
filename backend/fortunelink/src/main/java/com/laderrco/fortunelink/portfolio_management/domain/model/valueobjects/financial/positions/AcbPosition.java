@@ -15,7 +15,8 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
         return new AcbPosition(symbol, type, currency, Quantity.ZERO, Money.ZERO(currency));
     }
 
-    public ApplyResult apply(Transaction tx) {
+    @Override
+    public PositionResult apply(Transaction tx) {
 
         // No execution = no position impact (dividends, deposits, etc.)
         if (tx.execution() == null || tx.execution().quantity().isZero()) {
@@ -84,9 +85,14 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
         return calculateCurrentValue(currentPrice).subtract(totalAcb);
     }
 
-    public sealed interface ApplyResult {
+    public sealed interface ApplyResult extends PositionResult {
 
         AcbPosition newPosition();
+
+        @Override
+        default Position getUpdatedPosition() {
+            return newPosition();
+        }
 
         record Purchase(AcbPosition newPosition) implements ApplyResult {
         }

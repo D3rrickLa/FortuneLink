@@ -77,6 +77,7 @@ public final record FifoPosition(AssetSymbol assetSymbol, AssetType type, Curren
                 realizedGainLoss);
     }
 
+    @Override
     public ApplyResult apply(Transaction tx) {
 
         if (tx.execution() == null || tx.execution().quantity().isZero()) {
@@ -136,9 +137,14 @@ public final record FifoPosition(AssetSymbol assetSymbol, AssetType type, Curren
         }
     }
 
-    public sealed interface ApplyResult {
+    public sealed interface ApplyResult extends PositionResult {
 
         FifoPosition newPosition();
+
+        @Override
+        default Position getUpdatedPosition() {
+            return newPosition();
+        }
 
         record Purchase(FifoPosition newPosition) implements ApplyResult {
         }

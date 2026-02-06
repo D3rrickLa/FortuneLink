@@ -30,7 +30,7 @@ public class AcbPositionProjector implements Projector<AcbPosition, Transaction>
                 .toList();
 
         for (Transaction tx : sorted) {
-            ApplyResult result = current.apply(tx);
+            ApplyResult result = (ApplyResult) current.apply(tx);
             current = result.newPosition();
         }
 

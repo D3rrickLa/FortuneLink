@@ -10,7 +10,9 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyM
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.Position;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.PositionResult;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
@@ -52,45 +54,79 @@ public class Account implements ClassValidation {
         this.lastUpdatedOn = Instant.now();
     }
 
-    void addCash(Money amount) {
+    public void applyCashFlow(Money amount, String reason) {
         requireActive();
-        if (!amount.isPositive()) {
-            throw new IllegalArgumentException("Cash amount must be positive");
+        ClassValidation.validateParameter(amount, "amount");
+
+        if (amount.isPositive()) {
+            cashBalance = cashBalance.add(amount);
+        } else if (amount.isNegative()) {
+            Money absAmount = amount.negate();
+            if (cashBalance.isLessThan(absAmount)) {
+                throw new IllegalStateException("Insufficient cash balance for " + reason);
+            }
+            cashBalance = cashBalance.subtract(absAmount);
         }
-        cashBalance = cashBalance.add(amount);
+
         touch();
     }
 
-    void subtractCash(Money amount) {
+    public void applyFee(Money feeAmount) {
         requireActive();
+        ClassValidation.validateParameter(feeAmount, "feeAmount");
 
-        if (!amount.isPositive()) {
-            throw new IllegalArgumentException("Cash amount must be positive");
+        if (!feeAmount.isPositive()) {
+            throw new IllegalArgumentException("Fee must be positive");
         }
 
-        if (cashBalance.isLessThan(amount)) {
-            throw new IllegalStateException("Insufficient cash balance");
+        if (cashBalance.isLessThan(feeAmount)) {
+            throw new IllegalStateException("Insufficient cash balance to cover fee");
         }
 
-        cashBalance = cashBalance.subtract(amount);
+        cashBalance = cashBalance.subtract(feeAmount);
         touch();
     }
 
-    void applyPosition(Position updatedPosition) {
+    public PositionResult recordTrade(Transaction tx) {
         requireActive();
-        ClassValidation.validateParameter(updatedPosition);
+        ClassValidation.validateParameter(tx, "transaction");
 
-        if (!updatedPosition.accountCurrency().equals(accountCurrency)) {
-            throw new CurrencyMismatchException("Currency mismatch when applying position");
+        AssetSymbol symbol = tx.execution().asset();
+        Position current = positions.getOrDefault(
+                symbol,
+                AcbPosition.empty(symbol, tx.metadata().assetType(), accountCurrency) // polymorphic empty position
+        );
+
+        PositionResult result = current.apply(tx);
+
+        if (!result.isNoChange()) {
+            Position updated = result.getUpdatedPosition();
+            if (updated.getTotalQuantity().isZero()) {
+                positions.remove(symbol);
+            } else {
+                positions.put(symbol, updated);
+            }
         }
 
-        if (updatedPosition.getTotalQuantity().isPositive()) {
-            positions.put(updatedPosition.symbol(), updatedPosition);
-        } else {
-            positions.remove(updatedPosition.symbol());
+        // Update cash balance if transaction has a cash delta
+        if (tx.cashDelta() != null && !tx.cashDelta().isZero()) {
+            Money newCash = cashBalance.add(tx.cashDelta());
+            if (newCash.isNegative()) {
+                throw new IllegalStateException("Insufficient cash balance after applying transaction");
+            }
+            cashBalance = newCash;
         }
 
         touch();
+        return result;
+    }
+
+    /**
+     * Transfers (in or out) are treated the same as trades, unless
+     * domain rules require different handling.
+     */
+    public PositionResult recordTransfer(Transaction tx) {
+        return recordTrade(tx);
     }
 
     void close() {
@@ -108,20 +144,46 @@ public class Account implements ClassValidation {
         touch();
     }
 
-    public AccountId getAccountId() { return accountId; }
-    public String getName() { return name; }
-    public AccountType getAccountType() { return accountType; }
-    public Currency getAccountCurrency() { return accountCurrency; }
-    public Money getCashBalance() { return cashBalance; }
-    public Instant getCreationDate() { return creationDate; }
-    public boolean isActive() { return isActive; }
-    public Instant getCloseDate() { return closeDate; }
-    public Instant getLastUpdatedOn() { return lastUpdatedOn; }
-    
+    public AccountId getAccountId() {
+        return accountId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public AccountType getAccountType() {
+        return accountType;
+    }
+
+    public Currency getAccountCurrency() {
+        return accountCurrency;
+    }
+
+    public Money getCashBalance() {
+        return cashBalance;
+    }
+
+    public Instant getCreationDate() {
+        return creationDate;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public Instant getCloseDate() {
+        return closeDate;
+    }
+
+    public Instant getLastUpdatedOn() {
+        return lastUpdatedOn;
+    }
+
     public Map<AssetSymbol, Position> getPositions() {
         return Collections.unmodifiableMap(positions);
     }
-    
+
     public Optional<Position> getPosition(AssetSymbol symbol) {
         return Optional.ofNullable(positions.get(symbol));
     }
