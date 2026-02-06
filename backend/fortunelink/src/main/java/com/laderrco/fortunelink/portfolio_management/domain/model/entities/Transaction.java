@@ -54,7 +54,9 @@ public record Transaction(
             throw new IllegalArgumentException(transactionType + " cannot have execution details");
         }
 
-        validateTradeConsistency();
+        IO.println(execution == null);
+
+        validateTradeConsistency(execution, cashDelta);
     }
 
     public Money totalFeesInAccountCurrency() {
@@ -63,7 +65,7 @@ public record Transaction(
                 .reduce(Money.ZERO(currency), Money::add);
     }
 
-    private void validateTradeConsistency() {
+    private void validateTradeConsistency(TradeExecution execution, Money cashDelta) {
         if (execution == null) {
             return;
         }
@@ -72,12 +74,11 @@ public record Transaction(
         boolean isBuy = execution.quantity().isPositive();
 
         if (cashOut != isBuy) {
-            throw new IllegalArgumentException(
-                    "Cash delta sign does not match trade direction: " + this);
+            throw new IllegalArgumentException("Cash delta sign does not match trade direction: " + this);
         }
     }
 
-    // old code bfore, in 90f8c03428f84c687a02cc8d6835a35743a11899
+    // old code before, in 90f8c03428f84c687a02cc8d6835a35743a11899
     // did computation in th sense that
     // it knows how cash should be computed
     // this is bad, we are now only enforcing invarients
