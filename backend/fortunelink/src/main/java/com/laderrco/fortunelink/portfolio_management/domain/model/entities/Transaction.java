@@ -54,7 +54,7 @@ public record Transaction(
             throw new IllegalArgumentException(transactionType + " cannot have execution details");
         }
 
-        validateTradeConsistency(execution, cashDelta);
+        validateTradeConsistency(execution, cashDelta, transactionType, fees);
     }
 
     public Money totalFeesInAccountCurrency() {
@@ -63,16 +63,26 @@ public record Transaction(
                 .reduce(Money.ZERO(currency), Money::add);
     }
 
-    private void validateTradeConsistency(TradeExecution execution, Money cashDelta) {
+    private void validateTradeConsistency(TradeExecution execution, Money cashDelta, TransactionType type,
+            List<Fee> fees) {
         if (execution == null) {
             return;
         }
 
-        boolean cashOut = cashDelta.isNegative();
-        boolean isBuy = execution.quantity().isPositive();
+        Money grossValue = execution.grossValue();
+        Money totalFees = fees.stream()
+                .map(Fee::accountAmount)
+                .reduce(Money.ZERO(cashDelta.currency()), Money::add);
 
-        if (cashOut != isBuy) {
-            throw new IllegalArgumentException("Cash delta sign does not match trade direction: " + this);
+        Money expectedCashDelta = switch (type) {
+            case BUY -> grossValue.add(totalFees).negate();
+            case SELL -> grossValue.subtract(totalFees);
+            default -> throw new IllegalStateException("Unexpected type: " + transactionType); // dead code, not possible
+        };
+
+        if (!cashDelta.equals(expectedCashDelta)) {
+            throw new IllegalArgumentException(
+                    "Cash delta mismatch. Expected: " + expectedCashDelta + ", got: " + cashDelta);
         }
     }
 

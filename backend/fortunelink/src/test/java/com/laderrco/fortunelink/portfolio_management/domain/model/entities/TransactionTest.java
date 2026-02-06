@@ -13,12 +13,17 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.TradeExecution;
@@ -44,8 +49,8 @@ public class TransactionTest {
     public class ConstructorTests {
 
         @ParameterizedTest
-        @EnumSource(value = TransactionType.class, names = { "BUY", "SELL" })
-        void testConstructor_Success(TransactionType type) {
+        @MethodSource("validTransactionProvider")
+        void testConstructor_Success(TransactionType type, int delta) {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();
             TransactionType transactionType = type;
@@ -53,7 +58,7 @@ public class TransactionTest {
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
                     Money.of(135, "USD"));
-            Money cashDelta = Money.of(-1350, "USD");
+            Money cashDelta = Money.of(delta, "USD");
             List<Fee> fees = List.of();
             String notes = "Some notes";
             TransactionDate occurredAt = TransactionDate.now();
@@ -128,11 +133,18 @@ public class TransactionTest {
             assertTrue(ex.getMessage().contains("cannot have execution details"));
         }
 
+        static Stream<Arguments> validTransactionProvider() {
+            return Stream.of(
+                    Arguments.of(TransactionType.BUY, -1350), // Buying: Cash goes OUT (negative)
+                    Arguments.of(TransactionType.SELL, 1350) // Selling: Cash comes IN (positive)
+            );
+        }
+
         @Nested
         @DisplayName("validateTradeConsistencyTests")
         public class ValidateTradeConsistencyTests {
             @Test
-            void testValidateTradeConsistency_Failure_WhenCashOutNotEqualToIsBuy() {
+            void testValidateTradeConsistency_Failure_WhenGrossValueNotBuy() {
                 TransactionId transactionId = TransactionId.newId();
                 AccountId accountId = AccountId.newId();
                 TransactionType transactionType = TransactionType.BUY;
@@ -149,7 +161,29 @@ public class TransactionTest {
                         () -> new Transaction(transactionId, accountId, transactionType, execution, cashDelta, fees,
                                 notes, occurredAt, relatedTransactionId, metadata));
 
-                assertTrue(ex.getMessage().contains("Cash delta sign does not match trade direction"));
+                assertTrue(ex.getMessage().contains("Cash delta mismatch"));
+            }
+
+            @Test
+            @Disabled
+            void testValidateTradeConsistency_Failure_WhenExpectedCashDeltaDefaultPath() {
+                TransactionId transactionId = TransactionId.newId();
+                AccountId accountId = AccountId.newId();
+                TransactionType transactionType = TransactionType.SPLIT;
+                TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
+                        Money.of(135, "USD"));
+                Money cashDelta = Money.of(1350, "USD");
+                List<Fee> fees = List.of();
+                String notes = "Some notes";
+                TransactionDate occurredAt = TransactionDate.now();
+                TransactionId relatedTransactionId = null;
+                TransactionMetadata metadata = null;
+
+                IllegalStateException ex = assertThrows(IllegalStateException.class,
+                        () -> new Transaction(transactionId, accountId, transactionType, execution, cashDelta, fees,
+                                notes, occurredAt, relatedTransactionId, metadata));
+
+                assertTrue(ex.getMessage().contains("Unexpected"));
             }
         }
     }
@@ -166,7 +200,7 @@ public class TransactionTest {
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
                     Money.of(135, "USD"));
-            Money cashDelta = Money.of(-1350, "USD");
+            Money cashDelta = Money.of(-1358.25, "USD");
             List<Fee> fees = List.of(
                     new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
                             ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
