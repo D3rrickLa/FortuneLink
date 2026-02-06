@@ -8,15 +8,15 @@ import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.Position;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.PositionResult;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
+// presents and maintains current state
 public class Account implements ClassValidation {
     private final AccountId accountId;
     private AccountType accountType;
@@ -57,7 +57,7 @@ public class Account implements ClassValidation {
     public void applyCashFlow(Money amount, String reason) {
         requireActive();
         ClassValidation.validateParameter(amount, "amount");
-        
+
         // zeros allowed because think of rebates of 0. stupid but valid
         // we don't need to validate addition base on currency
         // because Money.java does the validation
@@ -185,6 +185,18 @@ public class Account implements ClassValidation {
 
     public Optional<Position> getPosition(AssetSymbol symbol) {
         return Optional.ofNullable(positions.get(symbol));
+    }
+
+    public Position getOrCreateEmptyPosition(AssetSymbol symbol, AssetType assetType) {
+        return positions.computeIfAbsent(
+                symbol,
+                s -> createEmptyPosition(s, assetType));
+    }
+
+    private Position createEmptyPosition(AssetSymbol symbol, AssetType assetType) {
+        // This is where you'd use your position strategy if you had FIFO/LIFO
+        // For now, assuming ACB
+        return Position.emptyAcb(symbol, assetType, accountCurrency);
     }
 
     private void requireActive() {

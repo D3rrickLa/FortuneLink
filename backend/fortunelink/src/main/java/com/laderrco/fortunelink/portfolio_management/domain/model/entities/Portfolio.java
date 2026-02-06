@@ -13,7 +13,8 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
-// no need for portoflio pref because think about it... a portoflio is just container
+// no need for portoflio pref because think about it... a portfolio is just container
+// so that means no calculation and recording of transaction, just manage a collectiosn of accounts
 public class Portfolio implements ClassValidation {
     private final PortfolioId portfolioId;
     private final UserId userId;
@@ -60,6 +61,13 @@ public class Portfolio implements ClassValidation {
         touch();
 
         return account;
+    }
+
+    public void addAccount(Account account) {
+        ClassValidation.validateParameter(account, "account");
+        if (accounts.containsKey(account.getAccountId())) {
+            throw new IllegalStateException("Account already exists in portfolio");
+        }
     }
 
     public void closeAccount(AccountId accountId) {

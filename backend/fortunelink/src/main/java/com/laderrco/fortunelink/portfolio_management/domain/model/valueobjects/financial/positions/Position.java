@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 
 // meant for 'assets' where we can AVG cost, ACB, etc.
 // cash events will need their own 'positon.java'
+// TODO POSITION NEEDS TOT BE UPDATED TO NOT HAVE TRANSACTION INFOMATION IN IT
 public sealed interface Position permits AcbPosition, FifoPosition {
     PositionResult apply(Transaction tx);
     AssetSymbol symbol();
