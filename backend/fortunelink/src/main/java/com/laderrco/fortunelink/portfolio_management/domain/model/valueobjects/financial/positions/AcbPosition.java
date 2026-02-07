@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions;
 
+import java.time.Instant;
+
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
@@ -16,91 +18,72 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
     }
 
     @Override
-    public PositionResult apply(Transaction tx) {
-
-        // No execution = no position impact (dividends, deposits, etc.)
-        if (tx.execution() == null || tx.execution().quantity().isZero()) {
-            return new ApplyResult.NoChange(this);
+    public Position buy(Quantity quantity, Money totalCost, Instant at) {
+        if(quantity.isZero() || quantity.isNegative()) {
+            throw new IllegalArgumentException("Buy quantity must be positive");
         }
 
-        Quantity delta = tx.execution().quantity();
-
-        // BUY
-        if (delta.isPositive()) {
-            Money purchaseCost = tx.cashDelta().abs(); // fees included
-
-            AcbPosition updated = new AcbPosition(
-                    symbol,
-                    type,
-                    accountCurrency,
-                    quantity.add(delta),
-                    totalAcb.add(purchaseCost));
-
-            return new ApplyResult.Purchase(updated);
-        }
-
-        // SELL
-        Quantity sellQty = delta.abs();
-
-        if (sellQty.compareTo(quantity) > 0) {
-            throw new IllegalStateException(
-                    "Cannot sell more than held quantity for " + symbol);
-        }
-
-        Money acbPerUnit = totalAcb.divide(quantity.amount());
-        Money costOfSharesSold = acbPerUnit.multiply(sellQty.amount());
-
-        Money proceeds = tx.cashDelta(); // already net, positive
-        Money realizedGainLoss = proceeds.subtract(costOfSharesSold);
-
-        AcbPosition updated = new AcbPosition(
-                symbol,
-                type,
-                accountCurrency,
-                quantity.subtract(sellQty),
-                totalAcb.subtract(costOfSharesSold));
-
-        return new ApplyResult.Sale(
-                updated,
-                costOfSharesSold,
-                realizedGainLoss);
+        return new AcbPosition(
+            symbol,
+            type,
+            accountCurrency,
+            totalQuantity().add(quantity),
+            totalCostBasis().add(totalCost);
+        );
     }
 
     @Override
-    public Quantity getTotalQuantity() {
+    public Position sell(Quantity quantity, Instant at) {
+        return null;
+    }
+
+    @Override
+    public Position split(double ratio) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'split'");
+    }
+
+    @Override
+    public Quantity totalQuantity() {
         return quantity;
     }
 
     @Override
-    public Money getTotalCostBasis() {
+    public Money totalCostBasis() {
         return totalAcb.divide(quantity.amount());
     }
 
     @Override
-    public Money calculateCurrentValue(Money currentPrice) {
+    public Money costPerUnit() {
+        return null;
+    }
+
+    @Override
+    public Money currentValue(Money currentPrice) {
         return currentPrice.multiply(quantity.amount());
     }
 
     public Money calculateUnrealizedGain(Money currentPrice) {
-        return calculateCurrentValue(currentPrice).subtract(totalAcb);
+        return currentValue(currentPrice).subtract(totalAcb);
     }
 
-    public sealed interface ApplyResult extends PositionResult {
+    public sealed interface ApplyResult<P extends Position> extends PositionResult
+            permits ApplyResult.Purchase, ApplyResult.Sale, ApplyResult.NoChange {
 
-        AcbPosition newPosition();
+        P newPosition();
 
         @Override
         default Position getUpdatedPosition() {
             return newPosition();
         }
 
-        record Purchase(AcbPosition newPosition) implements ApplyResult {
+        record Purchase<P extends Position>(P newPosition) implements ApplyResult<P> {
         }
 
-        record Sale(AcbPosition newPosition, Money costBasisSold, Money realizedGainLoss) implements ApplyResult {
+        record Sale<P extends Position>(P newPosition, Money costBasisSold, Money realizedGainLoss) implements ApplyResult<P> {
         }
 
-        record NoChange(AcbPosition newPosition) implements ApplyResult {
+        record NoChange<P extends Position>(P newPosition) implements ApplyResult<P> {
         }
     }
 }
