@@ -43,7 +43,7 @@ public class Portfolio implements ClassValidation {
         this.name = "Default Portfolio";
         this.description = ""; 
         this.accounts = new HashMap<>();
-        this.deleted = false;
+        this.deleted = false; // todo in the getter methods for deletedOn and deleteBy, we should have an if check
         this.createdAt = Instant.now();
         this.lastUpdatedOn = Instant.now();
     }

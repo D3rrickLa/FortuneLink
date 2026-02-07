@@ -17,6 +17,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
 // THIS IS AN IMMUTABLE STATE
+// accoutn and portfolio reconstruct state from these
 public record Transaction(
         TransactionId transactionId,
         AccountId accountId,
@@ -42,10 +43,7 @@ public record Transaction(
         fees = List.copyOf(fees);
         notes = notes.trim();
 
-        boolean requiresExecution = switch (transactionType) {
-            case BUY, SELL -> true;
-            default -> false;
-        };
+        boolean requiresExecution = transactionType.requiresExecution();
 
         if (requiresExecution && execution == null) {
             throw new IllegalArgumentException(transactionType + " requires execution details");
@@ -55,7 +53,9 @@ public record Transaction(
             throw new IllegalArgumentException(transactionType + " cannot have execution details");
         }
 
-        validateTradeConsistency(execution, cashDelta, transactionType, fees);
+        if (requiresExecution) {
+            validateTradeConsistency(execution, transactionType, cashDelta, fees);
+        }
     }
 
     public Money totalFeesInAccountCurrency() {
@@ -64,7 +64,7 @@ public record Transaction(
                 .reduce(Money.ZERO(currency), Money::add);
     }
 
-    private void validateTradeConsistency(TradeExecution execution, Money cashDelta, TransactionType type,
+    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta,
             List<Fee> fees) {
         if (execution == null) {
             return;
@@ -75,15 +75,15 @@ public record Transaction(
                 .map(Fee::accountAmount)
                 .reduce(Money.ZERO(cashDelta.currency()), Money::add);
 
-        Money expectedCashDelta = switch (type) {
-            case BUY -> grossValue.add(totalFees).negate();
-            case SELL -> grossValue.subtract(totalFees);
-            default -> throw new IllegalStateException("Unexpected type: " + transactionType); // dead code, not possible
+        Money expectedCashDelta = switch (type.cashImpact()) {
+            case IN -> grossValue.subtract(totalFees);
+            case OUT -> grossValue.add(totalFees).negate();
+            case NONE -> Money.ZERO(cashDelta.currency());
         };
 
         if (!cashDelta.equals(expectedCashDelta)) {
             throw new IllegalArgumentException(
-                    "Cash delta mismatch. Expected: " + expectedCashDelta + ", got: " + cashDelta);
+                    "Cash delta mismatch for " + type + ". Expected: " + expectedCashDelta + ", got: " + cashDelta);
         }
     }
 

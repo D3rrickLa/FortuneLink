@@ -54,6 +54,7 @@ public class Account implements ClassValidation {
         this.lastUpdatedOn = Instant.now();
     }
 
+    // DEPOSIT, WITHDRAWL, DIVIDEND, INTEREST
     public void applyCashFlow(Money amount, String reason) {
         requireActive();
         ClassValidation.validateParameter(amount, "amount");
@@ -90,6 +91,7 @@ public class Account implements ClassValidation {
         touch();
     }
 
+    // dividend reinvestment + buy + sell
     public void updatePosition(AssetSymbol symbol, Position newPosition) {
         requireActive();
         ClassValidation.validateParameter(symbol, "symbol");
