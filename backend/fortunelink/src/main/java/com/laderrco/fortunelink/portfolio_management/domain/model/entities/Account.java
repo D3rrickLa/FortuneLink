@@ -1,12 +1,14 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 
 import java.time.Instant;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
@@ -43,6 +45,10 @@ public class Account implements ClassValidation {
         ClassValidation.validateParameter(accountType, "accountType");
         ClassValidation.validateParameter(accountCurrency, "accountCurrency");
 
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Account name cannot be empty");
+        }
+
         this.accountId = accountId;
         this.name = name.trim();
         this.accountType = accountType;
@@ -56,36 +62,49 @@ public class Account implements ClassValidation {
     }
 
     // DEPOSIT, WITHDRAWL, DIVIDEND, INTEREST
-    public void applyCashFlow(Money amount, String reason) {
+    public void deposit(Money amount, String reason) {
         requireActive();
-        ClassValidation.validateParameter(amount, "amount");
+        validateCurrency(amount);
+        validateReason(reason);
 
-        // zeros allowed because think of rebates of 0. stupid but valid
-        // we don't need to validate addition base on currency
-        // because Money.java does the validation
-        if (amount.isPositive()) {
-            cashBalance = cashBalance.add(amount);
-        } else if (amount.isNegative()) {
-            Money absAmount = amount.negate();
-            if (cashBalance.isLessThan(absAmount)) {
-                throw new IllegalStateException("Insufficient cash balance for " + reason);
-            }
-            cashBalance = cashBalance.subtract(absAmount);
+        if (!amount.isPositive()) {
+            throw new IllegalArgumentException("Deposit amount must be positive");
         }
 
+        cashBalance = cashBalance.add(amount);
         touch();
     }
 
-    public void applyFee(Money feeAmount) {
+    public void withdraw(Money amount, String reason) {
         requireActive();
-        ClassValidation.validateParameter(feeAmount, "feeAmount");
+        validateCurrency(amount);
+        validateReason(reason);
+
+        if (!amount.isPositive()) {
+            throw new IllegalArgumentException("Withdrawal amount must be positive");
+        }
+
+        if (cashBalance.isLessThan(amount)) {
+            throw new InsufficientFundsException(
+                    "Insufficient funds: required " + amount + ", available " + cashBalance);
+        }
+
+        cashBalance = cashBalance.subtract(amount);
+        touch();
+    }
+
+    public void applyFee(Money feeAmount, String description) {
+        requireActive();
+        validateCurrency(feeAmount);
+        validateReason(description);
 
         if (!feeAmount.isPositive()) {
             throw new IllegalArgumentException("Fee must be positive");
         }
 
         if (cashBalance.isLessThan(feeAmount)) {
-            throw new IllegalStateException("Insufficient cash balance to cover fee");
+            throw new InsufficientFundsException(
+                    "Insufficient cash to cover fee: required " + feeAmount + ", available " + cashBalance);
         }
 
         cashBalance = cashBalance.subtract(feeAmount);
@@ -115,11 +134,6 @@ public class Account implements ClassValidation {
         touch();
     }
 
-    public boolean hasSufficientCash(Money requiredAmount) {
-        validateCurrency(requiredAmount);
-        return cashBalance.amount().compareTo(requiredAmount.amount()) >= 0;
-    }
-
     // accounts should be closed via portfolio
     void close() {
         requireActive();
@@ -144,6 +158,15 @@ public class Account implements ClassValidation {
         this.isActive = true;
         this.closeDate = null;
         touch();
+    }
+
+    Position ensurePosition(AssetSymbol symbol, AssetType assetType) {
+        return positions.computeIfAbsent(symbol, s -> createEmptyPosition(s, assetType));
+    }
+
+    public boolean hasSufficientCash(Money requiredAmount) {
+        validateCurrency(requiredAmount);
+        return cashBalance.amount().compareTo(requiredAmount.amount()) >= 0;
     }
 
     public AccountId getAccountId() {
@@ -182,12 +205,18 @@ public class Account implements ClassValidation {
         return lastUpdatedOn;
     }
 
-    public Map<AssetSymbol, Position> getPositions() {
-        return Collections.unmodifiableMap(positions);
+    public Collection<Position> getAllPositions() {
+        return positions.values().stream()
+                .map(Position::copy)
+                .collect(Collectors.toUnmodifiableList());
     }
 
-    public Optional<Position> getPosition(AssetSymbol symbol) {
-        return Optional.ofNullable(positions.get(symbol));
+    public int getPositionCount() {
+        return positions.size();
+    }
+
+    public boolean hasPosition(AssetSymbol symbol) {
+        return positions.containsKey(symbol);
     }
 
     public Position getOrCreateEmptyPosition(AssetSymbol symbol, AssetType assetType) {
@@ -202,15 +231,52 @@ public class Account implements ClassValidation {
         return AcbPosition.empty(symbol, assetType, accountCurrency);
     }
 
+    public void validate() {
+        if (accountId == null) {
+            throw new IllegalStateException("Account ID cannot be null");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalStateException("Account name cannot be empty");
+        }
+        if (accountType == null) {
+            throw new IllegalStateException("Account type cannot be null");
+        }
+        if (accountCurrency == null) {
+            throw new IllegalStateException("Account currency cannot be null");
+        }
+        if (cashBalance == null) {
+            throw new IllegalStateException("Cash balance cannot be null");
+        }
+        if (cashBalance.isNegative()) {
+            throw new IllegalStateException("Cash balance cannot be negative: " + cashBalance);
+        }
+        if (positions == null) {
+            throw new IllegalStateException("Positions cannot be null");
+        }
+        if (!isActive && closeDate == null) {
+            throw new IllegalStateException("Inactive account must have close date");
+        }
+        if (isActive && closeDate != null) {
+            throw new IllegalStateException("Active account cannot have close date");
+        }
+    }
+
     private void requireActive() {
         if (!isActive) {
-            throw new IllegalStateException("Account is closed");
+            throw new AccountClosedException("Account " + accountId + " is closed");
         }
     }
 
     private void validateCurrency(Money amount) {
         if (!amount.currency().equals(accountCurrency)) {
-            throw new CurrencyMismatchException("Expected " + accountCurrency + " but got " + amount.currency());
+            throw new CurrencyMismatchException(
+                    "Expected " + accountCurrency + " but got " + amount.currency());
+        }
+    }
+
+    private void validateReason(String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Reason/description cannot be empty");
         }
     }
 

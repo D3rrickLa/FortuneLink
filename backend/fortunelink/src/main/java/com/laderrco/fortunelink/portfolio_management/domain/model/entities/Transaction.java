@@ -45,34 +45,22 @@ public record Transaction(
         fees = List.copyOf(fees);
         notes = notes.trim();
 
-        boolean requiresExecution = transactionType.requiresExecution();
-        boolean requiresSplit = transactionType.requiresSplitDetails();
+        validateConsistency("execution details",
+                transactionType.requiresExecution(), execution != null);
 
-        if (requiresExecution && execution == null) {
-            throw new IllegalArgumentException(transactionType + " requires execution details");
-        }
-
-        if (!requiresExecution && execution != null) {
-            throw new IllegalArgumentException(transactionType + " cannot have execution details");
-        }
-
-        if (requiresSplit && split == null) {
-            throw new IllegalArgumentException(transactionType + " requires split details");
-        }
-
-        if (!requiresSplit && split != null) {
-            throw new IllegalArgumentException(transactionType + " cannot have split details");
-        }
+        validateConsistency("split details",
+                transactionType.requiresSplitDetails(), split != null);
 
         if (transactionType.cashImpact() == CashImpact.NONE && !cashDelta.isZero()) {
             throw new IllegalArgumentException(transactionType + " cannot affect cash");
         }
 
-        if (!requiresExecution && !fees.isEmpty()) {
-            throw new IllegalArgumentException(transactionType + " cannot have fees");
-        }
-
-        if (requiresExecution) {
+        if (!transactionType.requiresExecution()) {
+            if (!fees.isEmpty()) {
+                throw new IllegalArgumentException(transactionType + " cannot have fees");
+            }
+        } else {
+            // Only run trade consistency if execution is required
             validateTradeConsistency(execution, transactionType, cashDelta, fees);
         }
     }
@@ -81,6 +69,15 @@ public record Transaction(
         Currency currency = cashDelta.currency();
         return fees.stream().map(Fee::accountAmount)
                 .reduce(Money.ZERO(currency), Money::add);
+    }
+
+    private void validateConsistency(String label, boolean isRequired, boolean isPresent) {
+        if (isRequired && !isPresent) {
+            throw new IllegalArgumentException(transactionType + " requires " + label);
+        }
+        if (!isRequired && isPresent) {
+            throw new IllegalArgumentException(transactionType + " cannot have " + label);
+        }
     }
 
     private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta, List<Fee> fees) {

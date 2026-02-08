@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions;
 
 import java.time.Instant;
+import java.util.List;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
@@ -32,6 +33,13 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     Money currentValue(Money currentPrice);
 
+    default Position copy() {
+        return switch (this) {
+            case AcbPosition acb -> new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(), acb.totalQuantity(), acb.totalCostBasis());
+            case FifoPosition fifo -> new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(), List.copyOf(fifo.lots()));
+        };
+    }
+
     default boolean isEmpty() {
         return totalQuantity().isZero();
     }
@@ -39,4 +47,5 @@ public sealed interface Position permits AcbPosition, FifoPosition {
     default boolean hasSufficientQuantity(Quantity required) {
         return totalQuantity().compareTo(required) >= 0;
     }
+
 }

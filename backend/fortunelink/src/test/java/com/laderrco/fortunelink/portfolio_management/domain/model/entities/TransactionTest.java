@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
@@ -21,10 +22,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.SplitDetails;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.TradeExecution;
@@ -71,6 +69,50 @@ public class TransactionTest {
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(transactionId, transaction.transactionId()));
+        }
+
+        @Test
+        void testConstructor_Success_ExpectedCashDeltaFiresNONECase() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.DIVIDEND_REINVEST;
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    Money.of(135, "USD"));
+            SplitDetails spilt = null;
+            Money cashDelta = Money.of(0, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = null;
+
+            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
+            assertAll(
+                    () -> assertEquals(transactionId, transaction.transactionId()));
+        }
+
+                @Test
+        void testConstructor_Success_WhenDividend_PassesWithEmptyFee() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.DIVIDEND;
+            TradeExecution execution = null;
+            SplitDetails spilt = null;
+            Money cashDelta = Money.of(1350, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = null;
+
+            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
+            assertAll(
+                    () -> assertEquals(transactionId, transaction.transactionId()),
+                    () -> assertEquals(true, transaction.fees().isEmpty()));
         }
 
         @Test
