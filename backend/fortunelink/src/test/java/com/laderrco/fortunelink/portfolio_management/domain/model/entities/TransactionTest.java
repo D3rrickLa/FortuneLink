@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
@@ -94,7 +93,7 @@ public class TransactionTest {
                     () -> assertEquals(transactionId, transaction.transactionId()));
         }
 
-                @Test
+        @Test
         void testConstructor_Success_WhenDividend_PassesWithEmptyFee() {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();

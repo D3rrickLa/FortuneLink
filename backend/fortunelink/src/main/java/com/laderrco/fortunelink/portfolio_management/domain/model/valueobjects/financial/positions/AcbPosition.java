@@ -18,7 +18,7 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
     }
 
     @Override
-    public ApplyResult<AcbPosition> buy(Quantity quantity, Money totalCost, Instant at) {
+    public ApplyResult<? extends Position> buy(Quantity quantity, Money totalCost, Instant at) {
         AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, quantity, totalCost);
         return new ApplyResult.Purchase<AcbPosition>(updated);
     }

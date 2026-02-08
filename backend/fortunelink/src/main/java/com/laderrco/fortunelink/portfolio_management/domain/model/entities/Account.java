@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountClosedException;
@@ -11,9 +12,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyM
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -23,8 +26,9 @@ import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 public class Account implements ClassValidation {
     private final AccountId accountId;
     private AccountType accountType;
+    private final Currency accountCurrency;
     private String name;
-    private Currency accountCurrency;
+    private final PositionStrategy positionStrategy; // ← Explicit
 
     private Money cashBalance;
     private Map<AssetSymbol, Position> positions;
@@ -36,16 +40,20 @@ public class Account implements ClassValidation {
 
     protected Account() {
         this.accountId = null;
+        this.positionStrategy = null;
         this.creationDate = null;
+        this.accountCurrency = null;
     }
 
-    public Account(AccountId accountId, String name, AccountType accountType, Currency accountCurrency) {
+    public Account(AccountId accountId, String name, AccountType accountType, Currency accountCurrency,
+            PositionStrategy positionStrategy) {
         ClassValidation.validateParameter(accountId, "accountId");
         ClassValidation.validateParameter(name, "name");
         ClassValidation.validateParameter(accountType, "accountType");
         ClassValidation.validateParameter(accountCurrency, "accountCurrency");
+        ClassValidation.validateParameter(positionStrategy, "positionStrategy");
 
-        if (name == null || name.trim().isEmpty()) {
+        if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Account name cannot be empty");
         }
 
@@ -53,6 +61,7 @@ public class Account implements ClassValidation {
         this.name = name.trim();
         this.accountType = accountType;
         this.accountCurrency = accountCurrency;
+        this.positionStrategy = positionStrategy;
         this.cashBalance = Money.ZERO(accountCurrency);
         this.positions = new HashMap<>();
         this.creationDate = Instant.now();
@@ -160,13 +169,9 @@ public class Account implements ClassValidation {
         touch();
     }
 
+    // replaces the getOrCreateEmptyPosition method
     Position ensurePosition(AssetSymbol symbol, AssetType assetType) {
         return positions.computeIfAbsent(symbol, s -> createEmptyPosition(s, assetType));
-    }
-
-    public boolean hasSufficientCash(Money requiredAmount) {
-        validateCurrency(requiredAmount);
-        return cashBalance.amount().compareTo(requiredAmount.amount()) >= 0;
     }
 
     public AccountId getAccountId() {
@@ -215,50 +220,27 @@ public class Account implements ClassValidation {
         return positions.size();
     }
 
+    public Optional<Position> getPosition(AssetSymbol symbol) {
+        Position position = positions.get(symbol);
+        return Optional.ofNullable(position != null ? position.copy() : null);
+    }
+
     public boolean hasPosition(AssetSymbol symbol) {
         return positions.containsKey(symbol);
     }
 
-    public Position getOrCreateEmptyPosition(AssetSymbol symbol, AssetType assetType) {
-        return positions.computeIfAbsent(
-                symbol,
-                s -> createEmptyPosition(s, assetType));
+    public boolean hasSufficientCash(Money requiredAmount) {
+        validateCurrency(requiredAmount);
+        return cashBalance.amount().compareTo(requiredAmount.amount()) >= 0;
     }
 
     private Position createEmptyPosition(AssetSymbol symbol, AssetType assetType) {
-        // This is where you'd use your position strategy if you had FIFO/LIFO
-        // For now, assuming ACB
-        return AcbPosition.empty(symbol, assetType, accountCurrency);
-    }
-
-    public void validate() {
-        if (accountId == null) {
-            throw new IllegalStateException("Account ID cannot be null");
-        }
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalStateException("Account name cannot be empty");
-        }
-        if (accountType == null) {
-            throw new IllegalStateException("Account type cannot be null");
-        }
-        if (accountCurrency == null) {
-            throw new IllegalStateException("Account currency cannot be null");
-        }
-        if (cashBalance == null) {
-            throw new IllegalStateException("Cash balance cannot be null");
-        }
-        if (cashBalance.isNegative()) {
-            throw new IllegalStateException("Cash balance cannot be negative: " + cashBalance);
-        }
-        if (positions == null) {
-            throw new IllegalStateException("Positions cannot be null");
-        }
-        if (!isActive && closeDate == null) {
-            throw new IllegalStateException("Inactive account must have close date");
-        }
-        if (isActive && closeDate != null) {
-            throw new IllegalStateException("Active account cannot have close date");
-        }
+        return switch (positionStrategy) {
+            case ACB -> AcbPosition.empty(symbol, assetType, accountCurrency);
+            case FIFO -> FifoPosition.empty(symbol, assetType, accountCurrency);
+            case LIFO -> throw new IllegalArgumentException("LIFO NOT SUPPORTED YET");
+            case SPECIFIC_ID -> throw new IllegalArgumentException("SPECIFIC_ID NOT SUPPORTED YET");
+        };
     }
 
     private void requireActive() {
