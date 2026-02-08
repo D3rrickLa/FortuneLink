@@ -121,7 +121,7 @@ public class TransactionTest {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();
             TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution =  new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
+            TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
                     Money.of(135, "USD"));
             SplitDetails spilt = new SplitDetails(12);
             Money cashDelta = Money.of(1350, "USD");
@@ -158,6 +158,49 @@ public class TransactionTest {
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("requires split details"));
+        }
+
+        @Test
+        void testConstructor_Failure_WhenNonExecutionAffectsCash() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.REINVESTED_CAPITAL_GAIN;
+            TradeExecution execution = null;
+            SplitDetails split = null;
+            Money cashDelta = Money.of(1, "USD"); // Invalid: Non-execution types cannot affect cash
+            List<Fee> fees = List.of();
+            String notes = "Testing cash validation";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = null;
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta, fees,
+                            notes, occurredAt, relatedTransactionId, metadata));
+
+            assertTrue(ex.getMessage().contains("cannot affect cash"));
+        }
+
+        @Test
+        void testConstructor_Failure_WhenNonExecutionHasFees() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.REINVESTED_CAPITAL_GAIN;
+            TradeExecution execution = null;
+            SplitDetails split = null;
+            Money cashDelta = Money.ZERO("USD");
+            List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
+                    ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(), new FeeMetadata(Map.of())));
+            String notes = "Testing fee validation";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = null;
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta, fees,
+                            notes, occurredAt, relatedTransactionId, metadata));
+
+            assertTrue(ex.getMessage().contains("cannot have fees"));
         }
 
         static Stream<Arguments> validTransactionProvider() {

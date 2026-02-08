@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.CashImpact;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee;
@@ -63,7 +64,7 @@ public record Transaction(
             throw new IllegalArgumentException(transactionType + " cannot have split details");
         }
 
-        if (!requiresExecution && !cashDelta.isZero()) {
+        if (transactionType.cashImpact() == CashImpact.NONE && !cashDelta.isZero()) {
             throw new IllegalArgumentException(transactionType + " cannot affect cash");
         }
 
@@ -82,12 +83,7 @@ public record Transaction(
                 .reduce(Money.ZERO(currency), Money::add);
     }
 
-    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta,
-            List<Fee> fees) {
-        if (execution == null) {
-            return;
-        }
-
+    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta, List<Fee> fees) {
         Money grossValue = execution.grossValue();
         Money totalFees = fees.stream()
                 .map(Fee::accountAmount)
