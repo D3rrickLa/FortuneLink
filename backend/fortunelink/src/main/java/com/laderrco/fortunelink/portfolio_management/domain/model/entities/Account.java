@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountT
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -103,7 +104,7 @@ public class Account implements ClassValidation {
                     "Position symbol mismatch: expected " + symbol + ", got " + newPosition.symbol());
         }
 
-        if (newPosition.getTotalQuantity().isZero()) {
+        if (newPosition.totalQuantity().isZero()) {
             // Position closed - remove it
             positions.remove(symbol);
         } else {
@@ -198,7 +199,7 @@ public class Account implements ClassValidation {
     private Position createEmptyPosition(AssetSymbol symbol, AssetType assetType) {
         // This is where you'd use your position strategy if you had FIFO/LIFO
         // For now, assuming ACB
-        return Position.emptyAcb(symbol, assetType, accountCurrency);
+        return AcbPosition.empty(symbol, assetType, accountCurrency);
     }
 
     private void requireActive() {

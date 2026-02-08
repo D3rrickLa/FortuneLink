@@ -7,10 +7,11 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Trans
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.FifoPosition;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.FifoPosition.ApplyResult;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 
-public class FifoPositionProjector implements Projector<FifoPosition, Transaction> {
+public final class FifoPositionProjector
+        implements Projector<FifoPosition, Transaction> {
+
     private final AssetSymbol symbol;
     private final AssetType type;
     private final Currency accountCurrency;
@@ -26,6 +27,7 @@ public class FifoPositionProjector implements Projector<FifoPosition, Transactio
 
     @Override
     public FifoPosition project(List<Transaction> transactions) {
+
         FifoPosition current = FifoPosition.empty(symbol, type, accountCurrency);
 
         List<Transaction> sorted = transactions.stream()
@@ -33,9 +35,7 @@ public class FifoPositionProjector implements Projector<FifoPosition, Transactio
                 .toList();
 
         for (Transaction tx : sorted) {
-            // apply returns to an ApplyResult, so we extract the position from it
-            ApplyResult result = current.apply(tx);
-            current = result.newPosition();
+            current = PositionTransactionApplier.apply(current, tx);
         }
 
         return current;

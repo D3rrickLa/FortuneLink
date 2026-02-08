@@ -23,6 +23,7 @@ public record Transaction(
         AccountId accountId,
         TransactionType transactionType,
         TradeExecution execution,
+        SplitDetails split,
         Money cashDelta,
         List<Fee> fees,
         String notes,
@@ -44,6 +45,7 @@ public record Transaction(
         notes = notes.trim();
 
         boolean requiresExecution = transactionType.requiresExecution();
+        boolean requiresSplit = transactionType.requiresSplitDetails();
 
         if (requiresExecution && execution == null) {
             throw new IllegalArgumentException(transactionType + " requires execution details");
@@ -51,6 +53,22 @@ public record Transaction(
 
         if (!requiresExecution && execution != null) {
             throw new IllegalArgumentException(transactionType + " cannot have execution details");
+        }
+
+        if (requiresSplit && split == null) {
+            throw new IllegalArgumentException(transactionType + " requires split details");
+        }
+
+        if (!requiresSplit && split != null) {
+            throw new IllegalArgumentException(transactionType + " cannot have split details");
+        }
+
+        if (!requiresExecution && !cashDelta.isZero()) {
+            throw new IllegalArgumentException(transactionType + " cannot affect cash");
+        }
+
+        if (!requiresExecution && !fees.isEmpty()) {
+            throw new IllegalArgumentException(transactionType + " cannot have fees");
         }
 
         if (requiresExecution) {
@@ -114,6 +132,9 @@ public record Transaction(
         public Money grossValue() {
             return pricePerUnit.multiply(quantity.amount().abs());
         }
+    }
+
+    public record SplitDetails(double ratio) {
     }
 
     public record TransactionMetadata(AssetType assetType, String source, Map<String, String> additionalData) {

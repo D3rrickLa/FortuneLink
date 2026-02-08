@@ -26,6 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.DomainArgumentException;
+import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.SplitDetails;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
@@ -58,6 +59,7 @@ public class TransactionTest {
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
                     Money.of(135, "USD"));
+            SplitDetails spilt = null;
             Money cashDelta = Money.of(delta, "USD");
             List<Fee> fees = List.of();
             String notes = "Some notes";
@@ -65,29 +67,8 @@ public class TransactionTest {
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, cashDelta,
-                    fees,
-                    notes, occurredAt, relatedTransactionId, metadata);
-            assertAll(
-                    () -> assertEquals(transactionId, transaction.transactionId()));
-        }
-
-        @Test
-        void testConstructor_SuccessNotExecution() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.INTEREST;
-            TradeExecution execution = null;
-            Money cashDelta = Money.of(1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
-
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, cashDelta,
-                    fees,
-                    notes, occurredAt, relatedTransactionId, metadata);
+            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(transactionId, transaction.transactionId()));
         }
@@ -98,6 +79,7 @@ public class TransactionTest {
             AccountId accountId = AccountId.newId();
             TransactionType transactionType = TransactionType.BUY;
             TradeExecution execution = null;
+            SplitDetails spilt = null;
             Money cashDelta = Money.of(1350, "USD");
             List<Fee> fees = List.of();
             String notes = "Some notes";
@@ -106,7 +88,7 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("requires execution details"));
@@ -119,6 +101,7 @@ public class TransactionTest {
             TransactionType transactionType = TransactionType.DEPOSIT;
             TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
                     Money.of(135, "USD"));
+            SplitDetails spilt = null;
             Money cashDelta = Money.of(1350, "USD");
             List<Fee> fees = List.of();
             String notes = "Some notes";
@@ -127,10 +110,54 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("cannot have execution details"));
+        }
+
+        @Test
+        void testConstructor_Failure_WhenExecutionSpiltIsNonNullAndIsNotSpilt() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.BUY;
+            TradeExecution execution =  new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
+                    Money.of(135, "USD"));
+            SplitDetails spilt = new SplitDetails(12);
+            Money cashDelta = Money.of(1350, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = null;
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
+                            notes, occurredAt, relatedTransactionId, metadata));
+
+            assertTrue(ex.getMessage().contains("cannot have split details"));
+        }
+
+        @Test
+        void testConstructor_Failure_RequiresSplitButSpiltIsNull() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.SPLIT;
+            TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
+                    Money.of(135, "USD"));
+            SplitDetails spilt = null;
+            Money cashDelta = Money.of(1350, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = null;
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
+                            notes, occurredAt, relatedTransactionId, metadata));
+
+            assertTrue(ex.getMessage().contains("requires split details"));
         }
 
         static Stream<Arguments> validTransactionProvider() {
@@ -150,6 +177,7 @@ public class TransactionTest {
                 TransactionType transactionType = TransactionType.BUY;
                 TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
                         Money.of(135, "USD"));
+                SplitDetails spilt = null;
                 Money cashDelta = Money.of(1350, "USD");
                 List<Fee> fees = List.of();
                 String notes = "Some notes";
@@ -158,7 +186,8 @@ public class TransactionTest {
                 TransactionMetadata metadata = null;
 
                 IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                        () -> new Transaction(transactionId, accountId, transactionType, execution, cashDelta, fees,
+                        () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta,
+                                fees,
                                 notes, occurredAt, relatedTransactionId, metadata));
 
                 assertTrue(ex.getMessage().contains("Cash delta mismatch"));
@@ -172,6 +201,7 @@ public class TransactionTest {
                 TransactionType transactionType = TransactionType.SPLIT;
                 TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
                         Money.of(135, "USD"));
+                SplitDetails spilt = null;
                 Money cashDelta = Money.of(1350, "USD");
                 List<Fee> fees = List.of();
                 String notes = "Some notes";
@@ -180,7 +210,8 @@ public class TransactionTest {
                 TransactionMetadata metadata = null;
 
                 IllegalStateException ex = assertThrows(IllegalStateException.class,
-                        () -> new Transaction(transactionId, accountId, transactionType, execution, cashDelta, fees,
+                        () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta,
+                                fees,
                                 notes, occurredAt, relatedTransactionId, metadata));
 
                 assertTrue(ex.getMessage().contains("Unexpected"));
@@ -200,6 +231,7 @@ public class TransactionTest {
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
                     Money.of(135, "USD"));
+            SplitDetails spilt = null;
             Money cashDelta = Money.of(-1358.25, "USD");
             List<Fee> fees = List.of(
                     new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
@@ -215,9 +247,8 @@ public class TransactionTest {
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, cashDelta,
-                    fees,
-                    notes, occurredAt, relatedTransactionId, metadata);
+            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()));
         }

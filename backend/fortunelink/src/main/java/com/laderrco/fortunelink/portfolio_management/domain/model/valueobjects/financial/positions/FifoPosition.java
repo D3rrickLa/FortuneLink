@@ -19,6 +19,10 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
         lots = lots == null ? List.of() : List.copyOf(lots);
     }
 
+    public static FifoPosition empty(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
+        return new FifoPosition(symbol, type, accountCurrency, List.of());
+    }
+
     @Override
     public ApplyResult<FifoPosition> buy(
             Quantity quantity,

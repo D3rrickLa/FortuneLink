@@ -7,15 +7,19 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Trans
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 
-public class AcbPositionProjector implements Projector<AcbPosition, Transaction> {
+public final class AcbPositionProjector
+        implements Projector<AcbPosition, Transaction> {
+
     private final AssetSymbol symbol;
     private final AssetType type;
     private final Currency accountCurrency;
 
-    public AcbPositionProjector(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
+    public AcbPositionProjector(
+            AssetSymbol symbol,
+            AssetType type,
+            Currency accountCurrency) {
         this.symbol = symbol;
         this.type = type;
         this.accountCurrency = accountCurrency;
@@ -23,6 +27,7 @@ public class AcbPositionProjector implements Projector<AcbPosition, Transaction>
 
     @Override
     public AcbPosition project(List<Transaction> transactions) {
+
         AcbPosition current = AcbPosition.empty(symbol, type, accountCurrency);
 
         List<Transaction> sorted = transactions.stream()
@@ -30,12 +35,9 @@ public class AcbPositionProjector implements Projector<AcbPosition, Transaction>
                 .toList();
 
         for (Transaction tx : sorted) {
-            ApplyResult result = (ApplyResult) current.apply(tx);
-            current = result.newPosition();
+            current = PositionTransactionApplier.apply(current, tx);
         }
 
         return current;
-
     }
-
 }

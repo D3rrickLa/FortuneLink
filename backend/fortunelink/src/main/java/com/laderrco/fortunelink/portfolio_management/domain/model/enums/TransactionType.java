@@ -43,4 +43,8 @@ public enum TransactionType {
     public boolean requiresExecution() {
         return requiresExecution;
     }
+
+    public boolean requiresSplitDetails() {
+        return this.equals(SPLIT);
+    }
 }
