@@ -12,16 +12,24 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 // cash events will need their own 'positon.java'
 // TODO POSITION NEEDS TOT BE UPDATED TO NOT HAVE TRANSACTION INFOMATION IN IT
 public sealed interface Position permits AcbPosition, FifoPosition {
-    Position buy(Quantity quantity, Money totalCost, Instant at);
-    Position sell(Quantity quantity, Instant at);
-    Position split(double ratio);
+    ApplyResult<? extends Position> buy(Quantity quantity, Money totalCost, Instant at);
+
+    ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at);
+
+    ApplyResult<? extends Position> split(double ratio);
 
     AssetSymbol symbol();
+
     AssetType type();
+
     Currency accountCurrency();
+
     Quantity totalQuantity();
+
     Money totalCostBasis();
+
     Money costPerUnit();
+
     Money currentValue(Money currentPrice);
 
     default boolean isEmpty() {

@@ -54,12 +54,21 @@ public record Money(BigDecimal amount, Currency currency) implements ClassValida
         return new Money(applyScale(amount.multiply(multiplier)), currency);
     }
 
+    public Money multiply(Quantity multiplier) {
+        ClassValidation.validateParameter(multiplier, "multiply");
+        return multiply(multiplier.amount());
+    }
+
     public Money divide(BigDecimal divisor) {
         ClassValidation.validateParameter(divisor, "divide");
         if (BigDecimal.ZERO.compareTo(divisor) == 0) {
             throw new ArithmeticException("Cannot divide by zero");
         }
         return new Money(this.amount.divide(divisor, MONEY_PRECISION, M_ROUNDING_MODE), this.currency);
+    }
+
+    public Money divide(Quantity divisor) {
+        return divide(divisor.amount());
     }
 
     public boolean isPositive() {

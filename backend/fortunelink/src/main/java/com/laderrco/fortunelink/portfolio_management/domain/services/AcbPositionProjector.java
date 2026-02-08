@@ -7,7 +7,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Trans
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition.ApplyResult;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public class AcbPositionProjector implements Projector<AcbPosition, Transaction> {

@@ -69,10 +69,10 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) i
      * We are returning the aftermath of the 'selling'
      * If we had 10 shares for $1000 and we sell 4 shares, we return :
      * TaxLot(
-     *  qty = 6,
-     *  costBasis = $600,
-     *  acquiredDate = Jan 1
-     * ) 
+     * qty = 6,
+     * costBasis = $600,
+     * acquiredDate = Jan 1
+     * )
      */
     public TaxLot remainingAfter(Quantity soldQuantity) {
         if (soldQuantity.compareTo(quantity) > 0) {
@@ -93,6 +93,13 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) i
         Quantity newQty = quantity.subtract(soldQuantity);
 
         return new TaxLot(newQty, newCost, acquiredDate);
+    }
+
+    public TaxLot split(double ratio) {
+        return new TaxLot(
+                quantity.multiply(BigDecimal.valueOf(ratio)),
+                costBasis,
+                acquiredDate);
     }
 
     /**

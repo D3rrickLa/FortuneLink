@@ -1,8 +1,8 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
-import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
@@ -11,79 +11,67 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
 public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-        Quantity quantity, Money totalAcb) implements Position, ClassValidation {
+        Quantity totalQuantity, Money totalCostBasis) implements Position, ClassValidation {
 
     public static AcbPosition empty(AssetSymbol symbol, AssetType type, Currency currency) {
         return new AcbPosition(symbol, type, currency, Quantity.ZERO, Money.ZERO(currency));
     }
 
     @Override
-    public Position buy(Quantity quantity, Money totalCost, Instant at) {
-        if(quantity.isZero() || quantity.isNegative()) {
-            throw new IllegalArgumentException("Buy quantity must be positive");
+    public ApplyResult<AcbPosition> buy(Quantity quantity, Money totalCost, Instant at) {
+        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, quantity, totalCost);
+        return new ApplyResult.Purchase<AcbPosition>(updated);
+    }
+
+    @Override
+    public ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at) {
+        if (!hasSufficientQuantity(quantity)) {
+            throw new IllegalStateException("Insufficient quantity");
+        }
+        Money acbPerUnit = totalCostBasis.divide(totalQuantity.amount());
+        Money costBasisSold = acbPerUnit.multiply(quantity.amount());
+        Money realizedGain = proceeds.subtract(costBasisSold);
+
+        AcbPosition updated = new AcbPosition(
+                symbol,
+                type,
+                accountCurrency,
+                totalQuantity.subtract(quantity),
+                totalCostBasis.subtract(costBasisSold));
+
+        return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
+
+    }
+
+    @Override
+    public ApplyResult<? extends Position> split(double ratio) {
+        if (ratio <= 0) {
+            throw new IllegalArgumentException("Split ratio must be positive");
         }
 
-        return new AcbPosition(
-            symbol,
-            type,
-            accountCurrency,
-            totalQuantity().add(quantity),
-            totalCostBasis().add(totalCost);
+        AcbPosition updated = new AcbPosition(
+                symbol,
+                type,
+                accountCurrency,
+                totalQuantity.multiply(BigDecimal.valueOf(ratio)),
+                totalCostBasis // unchanged
         );
-    }
 
-    @Override
-    public Position sell(Quantity quantity, Instant at) {
-        return null;
-    }
-
-    @Override
-    public Position split(double ratio) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'split'");
-    }
-
-    @Override
-    public Quantity totalQuantity() {
-        return quantity;
-    }
-
-    @Override
-    public Money totalCostBasis() {
-        return totalAcb.divide(quantity.amount());
+        return new ApplyResult.NoChange<>(updated);
     }
 
     @Override
     public Money costPerUnit() {
-        return null;
+        return isEmpty() ? Money.ZERO(accountCurrency) : totalCostBasis.divide(totalQuantity.amount());
     }
 
     @Override
     public Money currentValue(Money currentPrice) {
-        return currentPrice.multiply(quantity.amount());
+        return currentPrice.multiply(totalQuantity.amount());
+
     }
 
     public Money calculateUnrealizedGain(Money currentPrice) {
-        return currentValue(currentPrice).subtract(totalAcb);
-    }
-
-    public sealed interface ApplyResult<P extends Position> extends PositionResult
-            permits ApplyResult.Purchase, ApplyResult.Sale, ApplyResult.NoChange {
-
-        P newPosition();
-
-        @Override
-        default Position getUpdatedPosition() {
-            return newPosition();
-        }
-
-        record Purchase<P extends Position>(P newPosition) implements ApplyResult<P> {
-        }
-
-        record Sale<P extends Position>(P newPosition, Money costBasisSold, Money realizedGainLoss) implements ApplyResult<P> {
-        }
-
-        record NoChange<P extends Position>(P newPosition) implements ApplyResult<P> {
-        }
+        return currentValue(currentPrice).subtract(totalCostBasis);
     }
 }
