@@ -22,10 +22,12 @@ public class Currency {
         return new Currency(locale);
     }
 
+    // i.e. USD
     public String getCode() {
         return this.currency.getCurrencyCode();
     }
 
+    // i.e. $US
     public String getSymbol() {
         return this.currency.getSymbol();
     }

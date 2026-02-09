@@ -7,6 +7,7 @@ import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 import com.laderrco.fortunelink.portfolio_management.shared.enums.Precision;
 import com.laderrco.fortunelink.portfolio_management.shared.enums.Rounding;
 
+// always from o -> 100
 public record PercentageRate(BigDecimal rate) implements ClassValidation, Comparable<PercentageRate> {
     private static final RoundingMode P_ROUNDING_MODE = Rounding.PERCENTAGE.getMode();
     private static int RATE_PRECISION = Precision.PERCENTAGE.getDecimalPlaces();
@@ -18,7 +19,7 @@ public record PercentageRate(BigDecimal rate) implements ClassValidation, Compar
             throw new IllegalArgumentException("PercentageRate rate cannot be negative");
         }
 
-        rate = rate.setScale(RATE_PRECISION);
+        rate = rate.setScale(RATE_PRECISION, P_ROUNDING_MODE);
     }
 
     // 0.05 => 5%

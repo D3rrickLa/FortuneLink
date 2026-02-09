@@ -41,12 +41,12 @@ public record Money(BigDecimal amount, Currency currency) implements ClassValida
 
     public Money add(Money other) {
         validateMoney(other, "add");
-        return new Money(this.amount.add(other.amount()), this.currency);
+        return new Money(applyScale(this.amount.add(other.amount())), this.currency);
     }
 
     public Money subtract(Money other) {
         validateMoney(other, "subtract");
-        return new Money(this.amount.subtract(other.amount()), this.currency);
+        return new Money(applyScale(this.amount.subtract(other.amount())), this.currency);
     }
 
     public Money multiply(BigDecimal multiplier) {
@@ -64,7 +64,7 @@ public record Money(BigDecimal amount, Currency currency) implements ClassValida
         if (BigDecimal.ZERO.compareTo(divisor) == 0) {
             throw new ArithmeticException("Cannot divide by zero");
         }
-        return new Money(this.amount.divide(divisor, MONEY_PRECISION, M_ROUNDING_MODE), this.currency);
+        return new Money(applyScale(this.amount.divide(divisor, MONEY_PRECISION, M_ROUNDING_MODE)), this.currency);
     }
 
     public Money divide(Quantity divisor) {

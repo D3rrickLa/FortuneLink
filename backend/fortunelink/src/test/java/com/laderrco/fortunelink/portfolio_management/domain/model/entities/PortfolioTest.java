@@ -300,12 +300,10 @@ class PortfolioTest {
     class LifecycleTests {
 
         private Portfolio portfolio;
-        private Instant initialTime;
 
         @BeforeEach
         void init() {
             portfolio = new Portfolio(portfolioId, userId, portfolioName);
-            initialTime = portfolio.getLastUpdatedOn();
         }
 
         @Test

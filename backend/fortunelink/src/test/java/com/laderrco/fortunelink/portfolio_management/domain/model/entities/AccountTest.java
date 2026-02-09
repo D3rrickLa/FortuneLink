@@ -11,7 +11,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.InsufficientFundsException;
@@ -248,7 +252,7 @@ class AccountTest {
             }
 
             @ParameterizedTest
-            @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
+            @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
             void testCreateEmptyPosition_Fails_OnUnsupportedStrategy(PositionStrategy strategy) {
                 // GIVEN: An account with a strategy not covered by the switch (e.g.,
                 // SPECIFIC_ID)
@@ -330,6 +334,15 @@ class AccountTest {
             account.close();
             assertThrows(AccountClosedException.class,
                     () -> account.deposit(Money.of(10, "USD"), "Reason"));
+        }
+
+        @ParameterizedTest
+        @NullSource
+        @EmptySource
+        @ValueSource(strings = { "  ", "\t", "\n" }) // Testing null, empty, and blank
+        void testUpdateName_Failure_ThrowsWhenNewNameIsNullOrEmpty(String invalidName) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> account.updateName(invalidName));
         }
     }
 

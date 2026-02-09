@@ -14,10 +14,10 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
     private static final RoundingMode ROUNDING = Rounding.FOREX.getMode();
 
     public ExchangeRate {
-        from = ClassValidation.validateParameter(from);
-        to = ClassValidation.validateParameter(to);
-        rate = ClassValidation.validateParameter(rate);
-        quotedAt = ClassValidation.validateParameter(quotedAt);
+        from = ClassValidation.validateParameter(from, "fromCurrency");
+        to = ClassValidation.validateParameter(to, "toCurrency");
+        rate = ClassValidation.validateParameter(rate, "rate");
+        quotedAt = ClassValidation.validateParameter(quotedAt, "quoteAt");
 
         if (rate.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Exchange rate must be positive");
@@ -31,15 +31,18 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
     }
 
     public Money convert(Money money) {
-        ClassValidation.validateParameter(money);
+        ClassValidation.validateParameter(money, "money to convert");
 
         if (!money.currency().equals(from)) {
             throw new CurrencyMismatchException(money.currency(), from);
         }
 
-        return new Money(
-                money.amount().multiply(rate),
-                to);
+        // Scale it down to match Money's precision before passing to the constructor
+        BigDecimal rawAmount = money.amount().multiply(rate);
+        BigDecimal scaledAmount = rawAmount.setScale(Precision.getMoneyPrecision(),
+                Rounding.MONEY.getMode());
+
+        return new Money(scaledAmount, to);
     }
 
     public ExchangeRate inverse() {
