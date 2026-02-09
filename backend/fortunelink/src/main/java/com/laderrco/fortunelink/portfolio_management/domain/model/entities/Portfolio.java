@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,18 +22,33 @@ import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 public class Portfolio implements ClassValidation {
     private final PortfolioId portfolioId;
     private final UserId userId;
-    private final Instant createdAt;
-    
     private String name;
     private String description;
     private Map<AccountId, Account> accounts;
-    
+
     private boolean deleted;
     private Instant deletedOn;
     private UserId deletedBy;
+
+    private final Instant createdAt;
     private Instant lastUpdatedOn;
 
-    // JPA constructor
+    // private full args constructor
+    private Portfolio(PortfolioId portfolioId, UserId userId, String name, String description,
+            Map<AccountId, Account> accounts, boolean deleted, Instant deletedOn,
+            UserId deletedBy, Instant createdAt, Instant lastUpdatedOn) {
+        this.portfolioId = portfolioId;
+        this.userId = userId;
+        this.name = name;
+        this.description = description;
+        this.accounts = new HashMap<>(accounts);
+        this.deleted = deleted;
+        this.deletedOn = deletedOn;
+        this.deletedBy = deletedBy;
+        this.createdAt = createdAt;
+        this.lastUpdatedOn = lastUpdatedOn;
+    }
+
     protected Portfolio() {
         this.portfolioId = null;
         this.userId = null;
@@ -42,11 +58,11 @@ public class Portfolio implements ClassValidation {
     public Portfolio(PortfolioId portfolioId, UserId userId, String name) {
         ClassValidation.validateParameter(portfolioId, "portfolioId");
         ClassValidation.validateParameter(userId, "userId");
-        
+
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Portfolio name cannot be empty");
         }
-        
+
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.name = name.trim();
@@ -59,17 +75,24 @@ public class Portfolio implements ClassValidation {
         this.lastUpdatedOn = Instant.now();
     }
 
-    
+    // Static factory for reconstitution
+    public static Portfolio reconstitute(PortfolioId portfolioId, UserId userId, String name, String description,
+            Map<AccountId, Account> accounts, boolean deleted, Instant deletedOn, UserId deletedBy, Instant createdAt,
+            Instant lastUpdatedOn) {
+        return new Portfolio(portfolioId, userId, name, description, accounts, deleted, deletedOn, deletedBy, createdAt,
+                lastUpdatedOn);
+    }
+
     public Account createAccount(String name, AccountType type, Currency currency, PositionStrategy strategy) {
         ClassValidation.validateParameter(name, "name");
         ClassValidation.validateParameter(type, "type");
         ClassValidation.validateParameter(currency, "currency");
         ClassValidation.validateParameter(strategy, "strategy");
-        
+
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Account name cannot be empty");
         }
-        
+
         if (accountNameExists(name)) {
             throw new IllegalArgumentException("Account name already exists: " + name);
         }
@@ -83,135 +106,191 @@ public class Portfolio implements ClassValidation {
         return account;
     }
 
-    public void closeAccount(AccountId accountId) {
+    public void renameAccount(AccountId accountId, String newName) {
         ClassValidation.validateParameter(accountId, "accountId");
-        
+
+        if (newName == null || newName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Account name cannot be empty");
+        }
+
         Account account = getAccount(accountId);
-        account.close(); // Account validates it can be closed
+
+        // Check if new name conflicts with another account
+        // 1. If the name is exactly the same, just exit early (Success)
+        if (account.getName().equalsIgnoreCase(newName)) {
+            return;
+        }
+
+        // 2. Now check if someone ELSE is already using the name
+        if (accountNameExists(newName)) {
+            throw new IllegalArgumentException("Account name already exists: " + newName);
+        }
+
+        account.updateName(newName);
         touch();
     }
-    
+
+    public void closeAccount(AccountId accountId) {
+        ClassValidation.validateParameter(accountId, "accountId");
+
+        Account account = getAccount(accountId);
+        account.close(); // Account validates internally
+        touch();
+    }
+
+    public void reopenAccount(AccountId accountId) {
+        ClassValidation.validateParameter(accountId, "accountId");
+
+        Account account = getAccount(accountId);
+        account.reopen();
+        touch();
+    }
+
     public void removeAccount(AccountId accountId) {
         ClassValidation.validateParameter(accountId, "accountId");
-        
+
         Account account = getAccount(accountId);
-        
+
         if (account.isActive()) {
             throw new IllegalStateException(
-                "Cannot remove active account. Close it first: " + account.getName()
-            );
+                    "Cannot remove active account. Close it first: " + account.getName());
         }
-        
-        if (account.getCashBalance().isPositive()) {
-            throw new IllegalStateException(
-                "Cannot remove account with cash balance: " + account.getName()
-            );
-        }
-        
-        if (account.getPositionCount() > 0) {
-            throw new IllegalStateException(
-                "Cannot remove account with positions: " + account.getName()
-            );
-        }
-        
+
         accounts.remove(accountId);
         touch();
     }
-    
+
     public void updateDetails(String newName, String newDescription) {
         if (newName == null || newName.trim().isEmpty()) {
             throw new IllegalArgumentException("Portfolio name cannot be empty");
         }
-        
+
         this.name = newName.trim();
         this.description = newDescription != null ? newDescription.trim() : "";
         touch();
     }
-    
+
     public void markAsDeleted(UserId deletingUser) {
         ClassValidation.validateParameter(deletingUser, "deletingUser");
-        
+
         if (deleted) {
             throw new IllegalStateException("Portfolio is already deleted");
         }
-        
+
         if (!accounts.isEmpty()) {
             throw new IllegalStateException(
-                "Cannot delete portfolio with " + accounts.size() + " account(s). " +
-                "Close and remove all accounts first."
-            );
+                    "Cannot delete portfolio with " + accounts.size() + " account(s). " +
+                            "Close and remove all accounts first.");
         }
-        
+
         this.deleted = true;
         this.deletedOn = Instant.now();
         this.deletedBy = deletingUser;
         touch();
     }
-    
+
     public void restore() {
         if (!deleted) {
             throw new IllegalStateException("Portfolio is not deleted");
         }
-        
+
         this.deleted = false;
         this.deletedOn = null;
         this.deletedBy = null;
         touch();
     }
 
-    
     public Account getAccount(AccountId accountId) {
         ClassValidation.validateParameter(accountId, "accountId");
-        
+
         Account account = accounts.get(accountId);
         if (account == null) {
-            throw new AccountNotFoundException("Account not found: " + accountId);
+            throw new AccountNotFoundException(String.format("%s not found in %s", accountId, this.portfolioId));
         }
         return account;
     }
-    
+
     public Optional<Account> findAccount(AccountId accountId) {
         return Optional.ofNullable(accounts.get(accountId));
     }
-    
+
+    public Optional<Account> findAccountByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        return accounts.values().stream()
+                .filter(a -> a.getName().equalsIgnoreCase(name.trim()))
+                .findFirst();
+    }
+
+    public List<Account> findAccountsByType(AccountType type) {
+        ClassValidation.validateParameter(type, "type");
+
+        return accounts.values().stream()
+                .filter(a -> a.getAccountType().equals(type))
+                .toList();
+
+    }
+
     public Collection<Account> getAccounts() {
         return Collections.unmodifiableCollection(accounts.values());
     }
-    
+
     public boolean hasAccounts() {
         return !accounts.isEmpty();
     }
-    
+
     public int getAccountCount() {
         return accounts.size();
     }
-    
+
     public boolean belongsToUser(UserId userId) {
         return this.userId.equals(userId);
     }
-    
-    public PortfolioId getPortfolioId() { return portfolioId; }
-    public UserId getUserId() { return userId; }
-    public String getName() { return name; }
-    public String getDescription() { return description; }
-    public boolean isDeleted() { return deleted; }
-    public Instant getDeletedOn() { return deletedOn; }
-    public UserId getDeletedBy() { return deletedBy; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getLastUpdatedOn() { return lastUpdatedOn; }
 
-    
+    public PortfolioId getPortfolioId() {
+        return portfolioId;
+    }
+
+    public UserId getUserId() {
+        return userId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public Instant getDeletedOn() {
+        return deletedOn;
+    }
+
+    public UserId getDeletedBy() {
+        return deletedBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getLastUpdatedOn() {
+        return lastUpdatedOn;
+    }
+
     private boolean accountNameExists(String name) {
         return accounts.values().stream()
                 .anyMatch(a -> a.getName().equalsIgnoreCase(name));
     }
-    
+
     private void touch() {
         this.lastUpdatedOn = Instant.now();
-    }
-    
-    // Package-private for repository reconstitution
-    void addAccountForReconstitution(Account account) {
-        accounts.put(account.getAccountId(), account);
     }
 }

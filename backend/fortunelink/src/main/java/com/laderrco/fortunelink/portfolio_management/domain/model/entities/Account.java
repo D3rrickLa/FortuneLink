@@ -234,6 +234,14 @@ public class Account implements ClassValidation {
         return cashBalance.amount().compareTo(requiredAmount.amount()) >= 0;
     }
 
+    public void updateName(String newName) {
+        if (newName == null || newName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Account name cannot be empty");
+        }
+        this.name = newName.trim();
+        touch();
+    }
+
     private Position createEmptyPosition(AssetSymbol symbol, AssetType assetType) {
         return switch (positionStrategy) {
             case ACB -> AcbPosition.empty(symbol, assetType, accountCurrency);
