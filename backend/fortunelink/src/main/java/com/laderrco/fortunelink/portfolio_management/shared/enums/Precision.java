@@ -28,9 +28,4 @@ public enum Precision {
         return MONEY.getDecimalPlaces();
     }
 
-    public static Precision fromAssetType(Object object) {
-        // we would do a swtich case or hashset
-        throw new UnsupportedOperationException("'fromAssetType' not yet implemented");
-    }
-
 }

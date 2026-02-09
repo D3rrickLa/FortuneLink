@@ -37,8 +37,7 @@ public record AssetSymbol(String symbol) implements ClassValidation {
         }
 
         if (trimmed.length() > 20) {
-            throw new IllegalArgumentException(
-                    "Symbol too long (max 20 characters): " + raw);
+            throw new IllegalArgumentException("Symbol too long (max 20 characters): " + raw);
         }
 
         return trimmed;

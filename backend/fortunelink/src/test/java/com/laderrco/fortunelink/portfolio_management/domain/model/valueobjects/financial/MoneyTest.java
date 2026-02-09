@@ -14,7 +14,6 @@ import static org.junit.Assert.assertEquals;
 class MoneyTest {
 
     private final Currency USD = Currency.of("USD");
-    private final Currency EUR = Currency.of("EUR");
 
     @Nested
     @DisplayName("Creation and Validation")
@@ -143,6 +142,7 @@ class MoneyTest {
             Money small = Money.of(10, "USD");
             Money large = Money.of(20, "USD");
             assertThat(large.exceeds(small)).isTrue();
+            assertThat(small.exceeds(large)).isFalse();
         }
 
         @Test
