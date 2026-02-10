@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.services;
+package com.laderrco.fortunelink.portfolio_management.domain.services.projectors;
 
 import java.util.Comparator;
 import java.util.List;
@@ -6,17 +6,17 @@ import java.util.List;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.FifoPosition;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 
-public final class FifoPositionProjector
-        implements Projector<FifoPosition, Transaction> {
+public final class AcbPositionProjector
+        implements Projector<AcbPosition, Transaction> {
 
     private final AssetSymbol symbol;
     private final AssetType type;
     private final Currency accountCurrency;
 
-    public FifoPositionProjector(
+    public AcbPositionProjector(
             AssetSymbol symbol,
             AssetType type,
             Currency accountCurrency) {
@@ -26,9 +26,9 @@ public final class FifoPositionProjector
     }
 
     @Override
-    public FifoPosition project(List<Transaction> transactions) {
+    public AcbPosition project(List<Transaction> transactions) {
 
-        FifoPosition current = FifoPosition.empty(symbol, type, accountCurrency);
+        AcbPosition current = AcbPosition.empty(symbol, type, accountCurrency);
 
         List<Transaction> sorted = transactions.stream()
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))

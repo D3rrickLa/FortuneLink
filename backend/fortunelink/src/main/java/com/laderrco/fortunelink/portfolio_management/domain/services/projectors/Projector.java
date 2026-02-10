@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.services;
+package com.laderrco.fortunelink.portfolio_management.domain.services.projectors;
 
 import java.util.List;
 

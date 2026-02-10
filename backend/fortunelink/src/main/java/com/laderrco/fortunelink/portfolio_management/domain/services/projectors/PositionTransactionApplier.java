@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.domain.services;
+package com.laderrco.fortunelink.portfolio_management.domain.services.projectors;
 
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.ApplyResult;
