@@ -33,8 +33,7 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
         List<TaxLot> updatedLots = new ArrayList<>(lots);
         updatedLots.add(newLot);
 
-        return new ApplyResult.Purchase<>(
-                new FifoPosition(symbol, type, accountCurrency, updatedLots));
+        return new ApplyResult.Purchase<>(new FifoPosition(symbol, type, accountCurrency, updatedLots));
     }
 
     @Override
@@ -62,19 +61,15 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
                 remainingToSell = remainingToSell.subtract(lot.quantity());
             } else {
                 // Partial lot consumption
-                Money perUnitCost = lot.costBasis().divide(lot.quantity());
-                Money consumedCost = perUnitCost.multiply(remainingToSell);
+                Money perUnitCost = lot.costBasis().divide(lot.quantity().amount());
+                Money consumedCost = perUnitCost.multiply(remainingToSell.amount());
 
                 costBasisSold = costBasisSold.add(consumedCost);
 
-                Quantity remainingQty = lot.quantity().add(remainingToSell);
-                Money remainingCost = lot.costBasis().add(consumedCost);
+                Quantity remainingQty = lot.quantity().subtract(remainingToSell);
+                Money remainingCost = lot.costBasis().subtract(consumedCost);
 
-                remainingLots.add(
-                        new TaxLot(
-                                remainingQty,
-                                remainingCost,
-                                lot.acquiredDate()));
+                remainingLots.add(new TaxLot(remainingQty, remainingCost, lot.acquiredDate()));
 
                 remainingToSell = Quantity.ZERO;
             }
@@ -118,8 +113,7 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
 
     @Override
     public Money costPerUnit() {
-        return isEmpty()
-                ? Money.ZERO(accountCurrency)
+        return isEmpty() ? Money.ZERO(accountCurrency)
                 : totalCostBasis().divide(totalQuantity());
     }
 

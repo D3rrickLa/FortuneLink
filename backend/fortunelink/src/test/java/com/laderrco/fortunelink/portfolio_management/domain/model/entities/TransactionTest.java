@@ -334,7 +334,10 @@ public class TransactionTest {
             Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
-                    () -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()));
+                    () -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()),
+                    () -> assertEquals(Currency.USD.getCode(), transaction.totalFeesInAccountCurrency().currency().getCode()),
+                    () -> assertEquals(2, transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits())
+                );
         }
 
     }

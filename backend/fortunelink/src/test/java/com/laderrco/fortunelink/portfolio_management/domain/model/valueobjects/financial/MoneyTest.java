@@ -153,6 +153,7 @@ class MoneyTest {
             Money larger = Money.of(21, "USD");
             assertThat(large.isAtLeast(small)).isTrue();
             assertThat(larger.isAtLeast(large)).isTrue();
+            assertThat(small.isAtLeast(larger)).isFalse();
         }
 
         @Test
