@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio_management.application.services;
 
 import org.springframework.stereotype.Service;
 
+import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 
 import jakarta.transaction.Transactional;
@@ -21,8 +22,8 @@ public class PortfolioService {
     
     public void deletePortfolio() {}
     
-    public void createAccount() {}
-    
+    public void createAccount(AddAccountCommand command) {}
+
     public void updateAccount() {}
 
     public void deleteAccount() {}
