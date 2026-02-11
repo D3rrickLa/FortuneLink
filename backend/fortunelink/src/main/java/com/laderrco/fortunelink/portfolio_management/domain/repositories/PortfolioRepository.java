@@ -21,5 +21,7 @@ public interface PortfolioRepository {
 
     Long countByUserId(UserId userId);
 
+    boolean exists(PortfolioId portfolioId);
+
     void delete(PortfolioId id);
 }
