@@ -4,9 +4,11 @@ import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 
 import jakarta.transaction.Transactional;
@@ -31,6 +33,9 @@ public class PortfolioService {
         if (currentCount >= maxProfileAllowed) {
             // throws
         }
+
+        Portfolio portfolio = Portfolio
+
 
     }
 
