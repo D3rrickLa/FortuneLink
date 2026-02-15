@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.queries.views;
+package com.laderrco.fortunelink.portfolio_management.application.views;
 
 import java.time.Instant;
 import java.util.Currency;

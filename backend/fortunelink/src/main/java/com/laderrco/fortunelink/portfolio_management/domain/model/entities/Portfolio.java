@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,6 +74,23 @@ public class Portfolio implements ClassValidation {
         this.deletedBy = null;
         this.createdAt = Instant.now();
         this.lastUpdatedOn = Instant.now();
+    }
+
+    public static Portfolio createNew(UserId userId, String name, String description) {
+        Instant now = Instant.now();
+        String cleanDesc = description == null ? "" : description;
+        return new Portfolio(
+                PortfolioId.newId(), // ← Generated ID
+                userId,
+                name,
+                cleanDesc,
+                new HashMap<>(), // ← Empty accounts
+                false, // ← Not deleted
+                null, // ← No deletion date
+                null, // ← No deleter
+                now, // ← Creation timestamp
+                now // ← Last updated
+        );
     }
 
     // Static factory for reconstitution

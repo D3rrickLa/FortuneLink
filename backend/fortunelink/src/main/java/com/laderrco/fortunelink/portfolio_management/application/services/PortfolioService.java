@@ -1,14 +1,20 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
+import java.util.Locale;
+
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio_management.application.queries.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.PositionStrategy;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 
 import jakarta.transaction.Transactional;
@@ -34,8 +40,19 @@ public class PortfolioService {
             // throws
         }
 
-        Portfolio portfolio = Portfolio
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description());
 
+        if (command.createDefaultAccount()) {
+
+            portfolio.createAccount(
+                    "Default Name",
+                    AccountType.NON_REGISTERED_INVESTMENT,
+                    Currency.of(Locale.getDefault().toString()), // we should pull from the 'web' as it could work only on my machine
+                    PositionStrategy.LIFO);
+        }
+
+        Portfolio savedPortfolio = portfolioRepository.save(portfolio);
+        return 
 
     }
 
