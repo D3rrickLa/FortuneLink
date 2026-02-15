@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Account;
@@ -66,8 +67,7 @@ public class PortfolioViewMapper {
                 accountViews,
                 totalValue,
                 portfolio.getCreatedAt(),
-                portfolio.getLastUpdatedOn()
-        );
+                portfolio.getLastUpdatedOn());
     }
 
     public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Locale locale) {
@@ -84,12 +84,12 @@ public class PortfolioViewMapper {
                 portfolio.getPortfolioId(),
                 portfolio.getName(),
                 totalValue,
-                portfolio.getLastUpdatedAt());
+                portfolio.getLastUpdatedOn());
     }
 
     private AccountView toAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         // Map positions to view DTOs
-        List<PositionView> positionViews = account.getPositions().entrySet().stream()
+        List<PositionView> positionViews = account.getPositionEntries().stream()
                 .map(entry -> toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
                 .toList();
 
@@ -102,51 +102,53 @@ public class PortfolioViewMapper {
                 account.getName(),
                 account.getAccountType(),
                 positionViews,
-                account.getBaseCurrency(),
+                account.getAccountCurrency(),
                 cashBalance,
                 totalValue,
-                account.getCreatedAt());
+                account.getCreationDate());
     }
 
     private PositionView toPositionView(Position position, MarketAssetQuote quote) {
-        Currency currency = position.getCurrency();
-        AssetSymbol symbol = position.getAssetSymbol();
+        AssetSymbol symbol = position.symbol();
+        Currency currency = position.accountCurrency();
 
         // Handle missing or stale quote data
-        if (quote == null || quote.getPrice() == null || quote.getPrice().isZero()) {
+        if (quote == null || quote.currentPrice() == null || quote.getPrice().isZero()) {
             return new PositionView(
                     symbol.getPrimaryId(),
-                    symbol.getAssetType(),
-                    position.getQuantity(),
-                    position.getTotalCostBasis(),
-                    position.getAverageCostPerUnit(),
+                    position.type(),
+                    position.totalQuantity(),
+                    position.totalCostBasis(),
+                    position.costPerUnit(),
                     Money.ZERO(currency), // current price
                     Money.ZERO(currency), // market value
                     Money.ZERO(currency), // unrealized P&L
                     Percentage.ZERO, // gain/loss %
-                    position.getFirstAcquiredDate(),
-                    position.getLastModifiedDate());
+                    determineMethodology(position), // ACB or FIFO
+                    extractFirstAcquiredDate(position),
+                    extractLastModifiedDate(position));
         }
 
         Money currentPrice = quote.getPrice();
 
-        // Calculate derived values using domain methods
-        Money marketValue = position.calculateMarketValue(currentPrice);
-        Money unrealizedPnL = position.calculateUnrealizedPnL(currentPrice);
-        Percentage returnPct = calculateReturnPercentage(unrealizedPnL, position.getTotalCostBasis());
+        // Calculate derived values using Position interface methods
+        Money marketValue = position.currentValue(currentPrice);
+        Money unrealizedPnL = marketValue.subtract(position.totalCostBasis());
+        Percentage returnPct = calculateReturnPercentage(unrealizedPnL, position.totalCostBasis());
 
         return new PositionView(
                 symbol.getPrimaryId(),
-                symbol.getAssetType(),
-                position.getQuantity(),
-                position.getTotalCostBasis(),
-                position.getAverageCostPerUnit(),
+                position.type(),
+                position.totalQuantity(),
+                position.totalCostBasis(),
+                position.costPerUnit(),
                 currentPrice,
                 marketValue,
                 unrealizedPnL,
                 returnPct,
-                position.getFirstAcquiredDate(),
-                position.getLastModifiedDate());
+                determineMethodology(position),
+                extractFirstAcquiredDate(position),
+                extractLastModifiedDate(position));
     }
 
     public TransactionView toTransactionView(Transaction transaction) {

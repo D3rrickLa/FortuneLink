@@ -26,8 +26,8 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class PortfolioService {
-    private final PortfolioRepository portfolioRepository;
     private final CommandValidator validator;
+    private final PortfolioRepository portfolioRepository;
     private final PortfolioViewMapper portfolioViewMapper;
 
     public PortfolioView createPortfolio(CreatePortfolioCommand command) {

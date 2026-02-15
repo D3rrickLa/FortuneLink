@@ -216,6 +216,12 @@ public class Account implements ClassValidation {
                 .collect(Collectors.toUnmodifiableList());
     }
 
+    public Collection<Map.Entry<AssetSymbol, Position>> getPositionEntries() {
+        return positions.entrySet().stream()
+                .map(entry -> Map.entry(entry.getKey(), entry.getValue().copy()))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
     public int getPositionCount() {
         return positions.size();
     }
