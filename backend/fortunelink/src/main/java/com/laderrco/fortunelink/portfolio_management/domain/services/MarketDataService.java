@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import com.laderrco.fortunelink.portfolio_management.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
@@ -48,7 +49,7 @@ public interface MarketDataService {
      * @param symbols List of symbols to fetch
      * @return Map of symbol → quote (missing symbols not included in map)
      */
-    Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(List<AssetSymbol> symbols);
+    Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols);
 
     /**
      * Get historical quote for an asset at a specific point in time.
@@ -83,10 +84,10 @@ public interface MarketDataService {
      * 
      * Use when building portfolio summary view.
      * 
-     * @param symbols List of symbols
+     * @param symbols set of symbols
      * @return Map of symbol → info (missing symbols not included)
      */
-    Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(List<AssetSymbol> symbols);
+    Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(Set<AssetSymbol> symbols);
 
     /**
      * Get the currency in which this asset trades.

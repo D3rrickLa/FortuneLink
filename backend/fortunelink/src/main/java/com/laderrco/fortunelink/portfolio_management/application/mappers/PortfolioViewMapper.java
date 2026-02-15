@@ -11,14 +11,15 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio_management.application.views.AccountView;
-import com.laderrco.fortunelink.portfolio_management.application.views.AssetView;
 import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio_management.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
@@ -38,196 +39,219 @@ public class PortfolioViewMapper {
      * Orchestrates market data fetching and enrichment.
      * 
      * @param portfolio the portfolio aggregate
-     * @param locale user's locale for currency display preference
+     * @param locale    user's locale for currency display preference
      */
     public PortfolioView toPortfolioView(Portfolio portfolio, Locale locale) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(locale, "Locale cannot be null");
-        
-        // Step 1: Batch fetch all market prices upfront
-        Set<AssetSymbol> allAssetIds = extractAllAssetSymbols(portfolio);
-        Map<AssetSymbol, MarketAssetQuote> priceCache = marketDataService.getBatchQuotes(allAssetIds);
-        
-        // Step 2: Map accounts with cached prices
+
+        // Step 1: Batch fetch all market quotes upfront
+        Set<AssetSymbol> allSymbols = extractAllAssetSymbols(portfolio);
+        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
+
+        // Step 2: Map accounts with cached quotes
         List<AccountView> accountViews = portfolio.getAccounts().stream()
-            .map(account -> toAccountView(account, priceCache))
-            .toList();
-        
+                .map(account -> toAccountView(account, quoteCache))
+                .toList();
+
         // Step 3: Calculate portfolio-level totals in user's display currency
-        Currency displayCurrency = Currency.of(locale.toString());
-        Money totalValue = calculatePortfolioTotalValue(portfolio, priceCache, displayCurrency);
+        Currency displayCurrency = Currency.fromLocale(locale);
+        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, displayCurrency);
 
         return new PortfolioView(
-            portfolio.getPortfolioId(),
-            portfolio.getUserId(),
-            portfolio.getName(),
-            portfolio.getDescription(),
-            accountViews,
-            totalValue,
-            portfolio.getTransactionCount(),
-            portfolio.getSystemCreationDate(),
-            portfolio.getLastUpdatedAt()
+                portfolio.getPortfolioId(),
+                portfolio.getUserId(),
+                portfolio.getName(),
+                portfolio.getDescription(),
+                accountViews,
+                totalValue,
+                portfolio.getCreatedAt(),
+                portfolio.getLastUpdatedOn()
         );
     }
 
     public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Locale locale) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(locale, "Locale cannot be null");
-        
-        Set<AssetSymbol> allAssetIds = extractAllAssetSymbols(portfolio);
-        Map<AssetSymbol, Money> priceCache = marketDataService.getCurrentPrices(allAssetIds);
-        
+
+        Set<AssetSymbol> allSymbols = extractAllAssetSymbols(portfolio);
+        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
+
         Currency displayCurrency = Currency.fromLocale(locale);
-        Money totalValue = calculatePortfolioTotalValue(portfolio, priceCache, displayCurrency);
-        
+        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, displayCurrency);
+
         return new PortfolioSummaryView(
-            portfolio.getPortfolioId(),
-            portfolio.getName(),
-            totalValue,
-            portfolio.getLastUpdatedAt()
-        );
+                portfolio.getPortfolioId(),
+                portfolio.getName(),
+                totalValue,
+                portfolio.getLastUpdatedAt());
     }
 
-    private AccountView toAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> priceCache) {
-        List<AssetView> assetViews = account.().stream()
-            .map(asset -> toAssetView(asset, priceCache.get(asset.getAssetSymbol())))
-            .toList();
+    private AccountView toAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+        // Map positions to view DTOs
+        List<PositionView> positionViews = account.getPositions().entrySet().stream()
+                .map(entry -> toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
+                .toList();
 
-        Money totalValue = calculateAccountTotalValue(account, priceCache);
+        // Calculate account totals in account's base currency
+        Money totalValue = calculateAccountTotalValue(account, quoteCache);
         Money cashBalance = calculateCashBalance(account);
 
         return new AccountView(
-            account.getAccountId(),
-            account.getName(),
-            account.getAccountType(),
-            assetViews,
-            account.getBaseCurrency(),
-            cashBalance,
-            totalValue,
-            account.getSystemCreationDate()
-        );
+                account.getAccountId(),
+                account.getName(),
+                account.getAccountType(),
+                positionViews,
+                account.getBaseCurrency(),
+                cashBalance,
+                totalValue,
+                account.getCreatedAt());
     }
 
-    private AssetView toAssetView(Asset asset, Money currentPrice) {
-        Currency currency = asset.getCurrency();
-        
-        // Handle missing or zero price data
-        if (currentPrice == null || currentPrice.isZero()) {
-            return new AssetView(
-                asset.getAssetId(),
-                asset.getAssetSymbol().getPrimaryId(),
-                asset.getAssetSymbol().getAssetType(),
-                asset.getQuantity(),
-                asset.getCostBasis(),
-                asset.getCostPerUnit(),
-                Money.ZERO(currency),
-                Money.ZERO(currency),
-                Money.ZERO(currency),
-                Percentage.ZERO,
-                asset.getAcquiredOn(),
-                asset.getLastSystemInteraction()
-            );
+    private PositionView toPositionView(Position position, MarketAssetQuote quote) {
+        Currency currency = position.getCurrency();
+        AssetSymbol symbol = position.getAssetSymbol();
+
+        // Handle missing or stale quote data
+        if (quote == null || quote.getPrice() == null || quote.getPrice().isZero()) {
+            return new PositionView(
+                    symbol.getPrimaryId(),
+                    symbol.getAssetType(),
+                    position.getQuantity(),
+                    position.getTotalCostBasis(),
+                    position.getAverageCostPerUnit(),
+                    Money.ZERO(currency), // current price
+                    Money.ZERO(currency), // market value
+                    Money.ZERO(currency), // unrealized P&L
+                    Percentage.ZERO, // gain/loss %
+                    position.getFirstAcquiredDate(),
+                    position.getLastModifiedDate());
         }
 
-        // Calculate derived values using domain methods
-        Money currentValue = asset.calculateCurrentValue(currentPrice);
-        Money unrealizedGain = asset.calculateUnrealizedGainLoss(currentPrice);
-        Percentage gainPercentage = calculateGainPercentage(unrealizedGain, asset.getCostBasis());
+        Money currentPrice = quote.getPrice();
 
-        return new AssetView(
-            asset.getAssetId(),
-            asset.getAssetSymbol().getPrimaryId(),
-            asset.getAssetSymbol().getAssetType(),
-            asset.getQuantity(),
-            asset.getCostBasis(),
-            asset.getCostPerUnit(),
-            currentPrice,
-            currentValue,
-            unrealizedGain,
-            gainPercentage,
-            asset.getAcquiredOn(),
-            asset.getLastSystemInteraction()
-        );
+        // Calculate derived values using domain methods
+        Money marketValue = position.calculateMarketValue(currentPrice);
+        Money unrealizedPnL = position.calculateUnrealizedPnL(currentPrice);
+        Percentage returnPct = calculateReturnPercentage(unrealizedPnL, position.getTotalCostBasis());
+
+        return new PositionView(
+                symbol.getPrimaryId(),
+                symbol.getAssetType(),
+                position.getQuantity(),
+                position.getTotalCostBasis(),
+                position.getAverageCostPerUnit(),
+                currentPrice,
+                marketValue,
+                unrealizedPnL,
+                returnPct,
+                position.getFirstAcquiredDate(),
+                position.getLastModifiedDate());
     }
 
     public TransactionView toTransactionView(Transaction transaction) {
         Objects.requireNonNull(transaction, "Transaction cannot be null");
-        
+
         return new TransactionView(
-            transaction.getTransactionId(),
-            transaction.getTransactionType(),
-            transaction.getAssetSymbol().getPrimaryId(),
-            transaction.getQuantity(),
-            transaction.getPricePerUnit(),
-            transaction.getFees(),
-            transaction.calculateTotalCost(),
-            transaction.getTransactionDate(),
-            transaction.getNotes()
-        );
+                transaction.getTransactionId(),
+                transaction.getTransactionType(),
+                transaction.getAssetSymbol().getPrimaryId(),
+                transaction.getQuantity(),
+                transaction.getPricePerUnit(),
+                transaction.getFees(),
+                transaction.calculateTotalCost(),
+                transaction.getTransactionDate(),
+                transaction.getNotes());
     }
 
     // ===== Helper Methods =====
 
     private Set<AssetSymbol> extractAllAssetSymbols(Portfolio portfolio) {
         return portfolio.getAccounts().stream()
-            .flatMap(account -> account.getAssets().stream())
-            .map(Asset::getAssetSymbol)
-            .collect(Collectors.toSet());
+                .flatMap(account -> account.getPositions().keySet().stream())
+                .collect(Collectors.toSet());
     }
 
     /**
      * Calculates total portfolio value by summing all account values,
-     * converting each to the display currency based on user locale.
+     * converting each to the display currency.
+     * 
+     * More efficient than converting every position individually.
      */
     private Money calculatePortfolioTotalValue(
-            Portfolio portfolio, 
-            Map<AssetSymbol, Money> priceCache,
+            Portfolio portfolio,
+            Map<AssetSymbol, MarketAssetQuote> quoteCache,
             Currency displayCurrency) {
-        
+
         return portfolio.getAccounts().stream()
-            .map(account -> calculateAccountTotalValue(account, priceCache))
-            .map(accountValue -> exchangeRateService.convert(accountValue, displayCurrency))
-            .reduce(Money::add)
-            .orElse(Money.ZERO(displayCurrency));
+                .map(account -> calculateAccountTotalValue(account, quoteCache))
+                .map(accountValue -> exchangeRateService.convert(accountValue, displayCurrency))
+                .reduce(Money::add)
+                .orElse(Money.ZERO(displayCurrency));
     }
 
     /**
      * Calculates total value of an account in the account's base currency.
+     * Sums position market values, falling back to cost basis when prices
+     * unavailable.
      */
-    private Money calculateAccountTotalValue(Account account, Map<AssetSymbol, MarketAssetQuote> priceCache) {
+    private Money calculateAccountTotalValue(
+            Account account,
+            Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+
         Currency accountCurrency = account.getBaseCurrency();
-        
-        return account.getAssets().stream()
-            .map(asset -> {
-                Money price = priceCache.get(asset.getAssetSymbol());
-                if (price == null || price.isZero()) {
-                    // Fallback to cost basis if no market price available
-                    return asset.getCostBasis();
-                }
-                Money currentValue = asset.calculateCurrentValue(price);
-                // Convert to account's base currency if asset is in different currency
-                return exchangeRateService.convert(currentValue, accountCurrency);
-            })
-            .reduce(Money::add)
-            .orElse(Money.ZERO(accountCurrency));
+
+        Money positionsValue = account.getPositions().entrySet().stream()
+                .map(entry -> {
+                    Position position = entry.getValue();
+                    MarketAssetQuote quote = quoteCache.get(entry.getKey());
+
+                    Money valueInPositionCurrency;
+                    if (quote == null || quote.getPrice() == null || quote.getPrice().isZero()) {
+                        // No market data - use cost basis
+                        valueInPositionCurrency = position.getTotalCostBasis();
+                    } else {
+                        // Calculate market value
+                        valueInPositionCurrency = position.calculateMarketValue(quote.getPrice());
+                    }
+
+                    // Convert to account's base currency if needed
+                    return exchangeRateService.convert(valueInPositionCurrency, accountCurrency);
+                })
+                .reduce(Money::add)
+                .orElse(Money.ZERO(accountCurrency));
+
+        // Add cash balance (already in account currency)
+        Money cash = calculateCashBalance(account);
+        return positionsValue.add(cash);
     }
 
+    /**
+     * Extracts total cash positions within an account.
+     * Cash positions are stored as regular positions with AssetType.CASH.
+     */
     private Money calculateCashBalance(Account account) {
-        return account.getAssets().stream()
-            .filter(asset -> asset.getAssetSymbol().getAssetType() == AssetType.CASH)
-            .map(Asset::getCostBasis)
-            .reduce(Money::add)
-            .orElse(Money.ZERO(account.getBaseCurrency()));
+        return account.getPositions().entrySet().stream()
+                .filter(entry -> entry.getKey().getAssetType() == AssetType.CASH)
+                .map(entry -> entry.getValue().getTotalCostBasis())
+                .reduce(Money::add)
+                .orElse(Money.ZERO(account.getBaseCurrency()));
     }
 
-    private static Percentage calculateGainPercentage(Money gain, Money costBasis) {
+    /**
+     * Calculates return percentage: (gain / cost basis) * 100
+     * Returns ZERO if cost basis is zero/null to avoid division by zero.
+     */
+    private static Percentage calculateReturnPercentage(Money gain, Money costBasis) {
         if (costBasis == null || costBasis.isZero()) {
             return Percentage.ZERO;
         }
 
         BigDecimal percentageValue = gain.amount()
-            .divide(costBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(), Rounding.PERCENTAGE.getMode())
-            .multiply(BigDecimal.valueOf(100));
+                .divide(costBasis.amount(),
+                        Precision.PERCENTAGE.getDecimalPlaces(),
+                        Rounding.PERCENTAGE.getMode())
+                .multiply(BigDecimal.valueOf(100));
 
         return new Percentage(percentageValue);
     }

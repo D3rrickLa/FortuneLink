@@ -1,6 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.application.exceptions;
 
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 
 public class AccountNotEmptyException extends RuntimeException {
     
@@ -13,6 +13,6 @@ public class AccountNotEmptyException extends RuntimeException {
     }
 
     public AccountNotEmptyException(AccountId accountId, int size) {
-        this(accountId.accountId().toString(), size);
+        this(accountId.id().toString(), size);
     }
 }

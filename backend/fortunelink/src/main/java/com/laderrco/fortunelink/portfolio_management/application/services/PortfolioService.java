@@ -7,14 +7,14 @@ import org.springframework.stereotype.Service;
 import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio_management.application.validators.CommandValidator;
 import com.laderrco.fortunelink.portfolio_management.application.validators.ValidationResult;
-import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio_management.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 
 import jakarta.transaction.Transactional;
@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class PortfolioService {
     private final PortfolioRepository portfolioRepository;
     private final CommandValidator validator;
+    private final PortfolioViewMapper portfolioViewMapper;
 
     public PortfolioView createPortfolio(CreatePortfolioCommand command) {
         ValidationResult result = validator.validate(command);
@@ -47,12 +48,12 @@ public class PortfolioService {
             portfolio.createAccount(
                     "Default Name",
                     AccountType.NON_REGISTERED_INVESTMENT,
-                    Currency.of(Locale.getDefault().toString()), // we should pull from the 'web' as it could work only on my machine
+                    Currency.of(command.locale()), // we should pull from the 'web' as it could work only on my machine
                     PositionStrategy.LIFO);
         }
 
         Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-        return 
+        return portfolioViewMapper.toPortfolioView(savedPortfolio, Locale.of(command.locale()));
 
     }
 
@@ -70,4 +71,6 @@ public class PortfolioService {
 
     public void deleteAccount() {
     }
+
+    // QUERY METHODS //
 }

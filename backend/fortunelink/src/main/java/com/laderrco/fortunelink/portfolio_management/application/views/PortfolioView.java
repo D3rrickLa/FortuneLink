@@ -18,7 +18,6 @@ public record PortfolioView(
     String description,
     List<AccountView> accounts, 
     Money totalValue, 
-    long transactionCount, 
     Instant createDate, 
     Instant lastUpdated) {
     public PortfolioView {
@@ -28,7 +27,6 @@ public record PortfolioView(
         Objects.requireNonNull(description);
         Objects.requireNonNull(accounts);
         Objects.requireNonNull(totalValue);
-        Objects.requireNonNull(transactionCount);
         Objects.requireNonNull(createDate);
         Objects.requireNonNull(lastUpdated);
     }
