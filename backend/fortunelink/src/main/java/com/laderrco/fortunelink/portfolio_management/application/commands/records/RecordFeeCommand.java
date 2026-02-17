@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio_management.application.commands;
+package com.laderrco.fortunelink.portfolio_management.application.commands.records;
 
 import java.time.Instant;
 import java.util.List;

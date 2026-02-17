@@ -8,5 +8,5 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.i
  * UserId -> who is requesting it (for auth)
  */
 public record DeletePortfolioCommand(PortfolioId portfolioId, UserId userId, boolean confirmed, boolean softDelete) {
- public DeletePortfolioCommand {}   
+
 }

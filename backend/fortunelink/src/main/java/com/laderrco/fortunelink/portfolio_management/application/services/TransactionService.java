@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio_management.application.validators.TransactionCommandValidator;
+import com.laderrco.fortunelink.portfolio_management.application.views.TransactionView;
+import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio_management.domain.services.MarketDataService;
@@ -18,12 +20,14 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class TransactionService {
+    private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
-    private final TransactionViewMapper TransactionViewMapper; 
+    private final TransactionViewMapper transactionViewMapper; 
     private final TransactionCommandValidator validator;
 
     private final MarketDataService marketDataService;
     private final ExchangeRateService exchangeRateService;
     private final TransactionRecordingService transactionRecordingService;
 
+    public TransactionView recordPurchase()
 }
