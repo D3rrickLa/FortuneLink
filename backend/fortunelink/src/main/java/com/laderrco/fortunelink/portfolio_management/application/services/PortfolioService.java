@@ -13,6 +13,7 @@ import com.laderrco.fortunelink.portfolio_management.application.commands.Update
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio_management.application.validators.PortfolioLifecycleCommandValidator;
@@ -38,6 +39,8 @@ public class PortfolioService {
     private final PortfolioLifecycleCommandValidator validator;
     private final PortfolioRepository portfolioRepository;
     private final PortfolioViewMapper portfolioViewMapper;
+    private static final int MAX_PORTFOLIOS_PER_USER = 1; // MVP constraint
+    private static final String DEFAULT_NAME = "Default Account";
 
     public PortfolioView createPortfolio(CreatePortfolioCommand command) {
         ValidationResult result = validator.validate(command);
@@ -45,9 +48,9 @@ public class PortfolioService {
             throw new InvalidCommandException("Invalid create portfolio command", result.errors());
         }
         long currentCount = portfolioRepository.countByUserId(command.userId());
-        int maxProfileAllowed = 1;
-        if (currentCount >= maxProfileAllowed) {
-            // throws
+
+        if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
+            throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
         }
 
         Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description());
@@ -55,9 +58,9 @@ public class PortfolioService {
         if (command.createDefaultAccount()) {
 
             portfolio.createAccount(
-                    "Default Name",
+                    DEFAULT_NAME,
                     AccountType.NON_REGISTERED_INVESTMENT,
-                    Currency.of(command.locale()), // we should pull from the 'web' as it could work only on my machine
+                    Currency.of(command.locale()),
                     PositionStrategy.LIFO);
         }
 
@@ -77,10 +80,9 @@ public class PortfolioService {
                 () -> new PortfolioNotFoundException("Cannot find portfolio with id: " + command.id()));
 
         updatePortfolio.updateDetails(command.name(), command.description());
-        updatePortfolio = portfolioRepository.save(updatePortfolio);
+        portfolioRepository.save(updatePortfolio);
 
     }
-    
 
     public void deletePortfolio(DeletePortfolioCommand command) {
         ValidationResult validationResult = validator.validate(command);
@@ -95,13 +97,10 @@ public class PortfolioService {
         Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId().toString()));
 
-
-        portfolio.markAsDeleted(command.userId());
-
         if (command.softDelete()) {
             portfolio.markAsDeleted(command.userId());
-        }
-        else {
+            portfolioRepository.save(portfolio);
+        } else {
             portfolioRepository.delete(command.portfolioId());
         }
 
@@ -155,6 +154,4 @@ public class PortfolioService {
 
         portfolio.closeAccount(command.accountId());
     }
-
-    // QUERY METHODS //
 }
