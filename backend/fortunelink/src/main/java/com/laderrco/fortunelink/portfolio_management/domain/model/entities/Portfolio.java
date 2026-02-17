@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio_management.domain.model.entities;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,12 +31,12 @@ public class Portfolio implements ClassValidation {
     private UserId deletedBy;
 
     private final Instant createdAt;
-    private Instant lastUpdatedOn;
+    private Instant lastUpdatedAt;
 
     // private full args constructor
     private Portfolio(PortfolioId portfolioId, UserId userId, String name, String description,
             Map<AccountId, Account> accounts, boolean deleted, Instant deletedOn,
-            UserId deletedBy, Instant createdAt, Instant lastUpdatedOn) {
+            UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.name = name;
@@ -47,7 +46,7 @@ public class Portfolio implements ClassValidation {
         this.deletedOn = deletedOn;
         this.deletedBy = deletedBy;
         this.createdAt = createdAt;
-        this.lastUpdatedOn = lastUpdatedOn;
+        this.lastUpdatedAt = lastUpdatedAt;
     }
 
     protected Portfolio() {
@@ -73,7 +72,7 @@ public class Portfolio implements ClassValidation {
         this.deletedOn = null;
         this.deletedBy = null;
         this.createdAt = Instant.now();
-        this.lastUpdatedOn = Instant.now();
+        this.lastUpdatedAt = Instant.now();
     }
 
     public static Portfolio createNew(UserId userId, String name, String description) {
@@ -299,8 +298,8 @@ public class Portfolio implements ClassValidation {
         return createdAt;
     }
 
-    public Instant getLastUpdatedOn() {
-        return lastUpdatedOn;
+    public Instant getLastUpdatedAt() {
+        return lastUpdatedAt;
     }
 
     private boolean accountNameExists(String name) {
@@ -309,6 +308,6 @@ public class Portfolio implements ClassValidation {
     }
 
     private void touch() {
-        this.lastUpdatedOn = Instant.now();
+        this.lastUpdatedAt = Instant.now();
     }
 }

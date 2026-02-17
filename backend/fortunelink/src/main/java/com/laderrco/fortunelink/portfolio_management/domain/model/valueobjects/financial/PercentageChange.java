@@ -6,11 +6,17 @@ import java.math.RoundingMode;
 import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 import com.laderrco.fortunelink.portfolio_management.shared.enums.Precision;
 import com.laderrco.fortunelink.portfolio_management.shared.enums.Rounding;
-
-// our return rate, can be like -20% YTD or +50% MOM
+/**
+ * Represents a percentage change - can be positive or negative.
+ * Used for returns, gains, losses, growth rates.
+ * 
+ * Examples: -25.5%, +150%, -99.9%, -20% YTD or +50% MOM
+ */
 public record PercentageChange(BigDecimal change) implements ClassValidation, Comparable<PercentageChange> {
     private static final int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
     private static final RoundingMode MODE = Rounding.PERCENTAGE.getMode();
+
+    public static PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
 
     public PercentageChange {
         ClassValidation.validateParameter(change, "change");

@@ -4,6 +4,10 @@ import com.laderrco.fortunelink.portfolio_management.shared.ClassValidation;
 
 public record Price(Money pricePerUnit) implements ClassValidation {
 
+    public static Price ZERO(Currency currency) {
+        return new Price(Money.ZERO(currency));
+    }
+
     public Price {
         ClassValidation.validateParameter(pricePerUnit, "pricePerUnit cannot be null");
         if (pricePerUnit.isNegative()) {

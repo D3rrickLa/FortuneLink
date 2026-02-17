@@ -1,12 +1,9 @@
 package com.laderrco.fortunelink.portfolio_management.application.commands;
 
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.UserId;
 
-/**
- * PortfolioId -> what to del
- * UserId -> who is requesting it (for auth)
- */
-public record DeletePortfolioCommand(PortfolioId portfolioId, UserId userId, boolean confirmed, boolean softDelete) {
- public DeletePortfolioCommand {}   
+public record UpdateAccountCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, String accountName) {
+    
 }

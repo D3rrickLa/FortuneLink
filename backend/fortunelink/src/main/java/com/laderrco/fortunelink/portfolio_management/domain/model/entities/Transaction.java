@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.enums.Transact
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.TransactionDate;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
@@ -102,7 +103,7 @@ public record Transaction(
     // did computation in th sense that
     // it knows how cash should be computed
     // this is bad, we are now only enforcing invarients
-    public record TradeExecution(AssetSymbol asset, Quantity quantity, Money pricePerUnit) {
+    public record TradeExecution(AssetSymbol asset, Quantity quantity, Price pricePerUnit) {
         public TradeExecution {
             ClassValidation.validateParameter(asset, "Asset symbol cannot be null");
             ClassValidation.validateParameter(quantity, "Quantity cannot be null");
@@ -112,7 +113,7 @@ public record Transaction(
                 throw new IllegalArgumentException("Trade quantity cannot be zero");
             }
 
-            if (pricePerUnit.isNegative()) {
+            if (pricePerUnit.pricePerUnit().isNegative()) {
                 throw new IllegalArgumentException(
                         "Price per unit cannot be negative (got: " + pricePerUnit + ")");
             }
@@ -123,7 +124,7 @@ public record Transaction(
          * representing the market value.
          */
         public Money grossValue() {
-            return pricePerUnit.multiply(quantity.amount().abs());
+            return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
         }
     }
 
