@@ -4,15 +4,17 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CreateAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio_management.application.validators.PortfolioLifecycleCommandValidator;
@@ -22,21 +24,20 @@ import com.laderrco.fortunelink.portfolio_management.application.views.Portfolio
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
-import com.laderrco.fortunelink.portfolio_management.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
-// combo of the old app service and query service
 // ONLY PORTFOLIO + ACCOUNT LIFECYCLE STUFF, NOT TRANSACTION
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class PortfolioLifecycleService {
-    private final PortfolioLifecycleCommandValidator validator;
     private final PortfolioRepository portfolioRepository;
     private final PortfolioViewMapper portfolioViewMapper;
+    private final PortfolioLifecycleCommandValidator validator;
+
     private static final int MAX_PORTFOLIOS_PER_USER = 1; // MVP constraint
     private static final String DEFAULT_NAME = "Default Account";
 
@@ -59,7 +60,7 @@ public class PortfolioLifecycleService {
                     DEFAULT_NAME,
                     AccountType.NON_REGISTERED_INVESTMENT,
                     command.currency(),
-                    PositionStrategy.LIFO);
+                    command.defaultStrategy());
         }
 
         Portfolio savedPortfolio = portfolioRepository.save(portfolio);
@@ -67,7 +68,7 @@ public class PortfolioLifecycleService {
 
     }
 
-    public void updatePortfolio(UpdatePortfolioCommand command) {
+    public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
         ValidationResult result = validator.validate(command);
         if (!result.isValid()) {
             throw new InvalidCommandException("Invalid update portfolio command", result.errors());
@@ -79,6 +80,8 @@ public class PortfolioLifecycleService {
 
         updatePortfolio.updateDetails(command.name(), command.description());
         portfolioRepository.save(updatePortfolio);
+
+        return portfolioViewMapper.toPortfolioView(updatePortfolio, command.currency());
 
     }
 
@@ -96,15 +99,25 @@ public class PortfolioLifecycleService {
                 .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId().toString()));
 
         if (command.softDelete()) {
-            portfolio.markAsDeleted(command.userId());
-            portfolioRepository.save(portfolio);
+            try {
+                portfolio.markAsDeleted(command.userId());
+                portfolioRepository.save(portfolio);
+
+            } catch (IllegalStateException e) {
+                if (e.getMessage().contains("Portfolio is already deleted")) {
+                    throw new PortfolioDeletionException("Portfolio already deleted");
+                } else {
+                    throw new PortfolioNotEmptyException("Portfolio is not empty and can't be deleted");
+                }
+            }
         } else {
             portfolioRepository.delete(command.portfolioId());
+            portfolioRepository.save(portfolio);
         }
 
     }
 
-    public AccountView createAccount(AddAccountCommand command) {
+    public AccountView createAccount(CreateAccountCommand command) {
         ValidationResult validationResult = validator.validate(command);
         if (!validationResult.isValid()) {
             throw new InvalidCommandException("Invalid create account command", validationResult.errors());

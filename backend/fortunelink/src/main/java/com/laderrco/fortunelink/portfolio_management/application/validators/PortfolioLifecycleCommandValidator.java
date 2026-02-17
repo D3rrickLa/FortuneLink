@@ -6,7 +6,7 @@ import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio_management.application.commands.AddAccountCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.CreateAccountCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio_management.application.commands.DeleteAccountCommand;
@@ -17,7 +17,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.f
 
 @Component
 public class PortfolioLifecycleCommandValidator {
-    public ValidationResult validate(AddAccountCommand command) {
+    public ValidationResult validate(CreateAccountCommand command) {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
@@ -107,6 +107,10 @@ public class PortfolioLifecycleCommandValidator {
 
         if (command.currency() == null) {
             errors.add("Currency is required");
+        }
+
+        if (command.createDefaultAccount() && command.defaultStrategy() == null) {
+            errors.add("Position strategy is required when createDefaultAccount is true");
         }
 
         return errors.isEmpty()

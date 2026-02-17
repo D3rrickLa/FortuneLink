@@ -6,5 +6,5 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.f
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.UserId;
 
-public record AddAccountCommand(PortfolioId portfolioId, UserId userId, String accountName, AccountType accountType, PositionStrategy strategy, Currency baseCurrency) {
+public record CreateAccountCommand(PortfolioId portfolioId, UserId userId, String accountName, AccountType accountType, PositionStrategy strategy, Currency baseCurrency) {
 }

@@ -172,6 +172,8 @@ public class PortfolioViewMapper {
                 extractLastModifiedDate(position));
     }
 
+    // NOTE: ISSUE, this is wrong technically, are we sure that every transaction
+    // is a trade
     public TransactionView toTransactionView(Transaction transaction) {
         Objects.requireNonNull(transaction, "Transaction cannot be null");
 
