@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio_management.application.services;
 
-import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -24,7 +23,6 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Accou
 import com.laderrco.fortunelink.portfolio_management.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio_management.domain.model.enums.PositionStrategy;
-import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 
 import jakarta.transaction.Transactional;
@@ -35,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class PortfolioService {
+public class PortfolioLifecycleService {
     private final PortfolioLifecycleCommandValidator validator;
     private final PortfolioRepository portfolioRepository;
     private final PortfolioViewMapper portfolioViewMapper;
@@ -60,12 +58,12 @@ public class PortfolioService {
             portfolio.createAccount(
                     DEFAULT_NAME,
                     AccountType.NON_REGISTERED_INVESTMENT,
-                    Currency.of(command.locale()),
+                    command.currency(),
                     PositionStrategy.LIFO);
         }
 
         Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-        return portfolioViewMapper.toPortfolioView(savedPortfolio, Locale.of(command.locale()));
+        return portfolioViewMapper.toPortfolioView(savedPortfolio, command.currency());
 
     }
 

@@ -105,8 +105,8 @@ public class PortfolioLifecycleCommandValidator {
             errors.add("Portfolio name is required");
         }
 
-        if (command.locale() == null) {
-            errors.add("Locale is required");
+        if (command.currency() == null) {
+            errors.add("Currency is required");
         }
 
         return errors.isEmpty()

@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -48,11 +47,11 @@ public class PortfolioViewMapper {
      * Orchestrates market data fetching and enrichment.
      * 
      * @param portfolio the portfolio aggregate
-     * @param locale    user's locale for currency display preference
+     * @param currency    user's currency display preference
      */
-    public PortfolioView toPortfolioView(Portfolio portfolio, Locale locale) {
+    public PortfolioView toPortfolioView(Portfolio portfolio, Currency currency) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
-        Objects.requireNonNull(locale, "Locale cannot be null");
+        Objects.requireNonNull(currency, "Currency cannot be null");
 
         // Step 1: Batch fetch all market quotes upfront
         Set<AssetSymbol> allSymbols = extractAllAssetSymbols(portfolio);
@@ -64,8 +63,7 @@ public class PortfolioViewMapper {
                 .toList();
 
         // Step 3: Calculate portfolio-level totals in user's display currency
-        Currency displayCurrency = Currency.fromLocale(locale);
-        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, displayCurrency);
+        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, currency);
 
         return new PortfolioView(
                 portfolio.getPortfolioId(),
@@ -78,15 +76,14 @@ public class PortfolioViewMapper {
                 portfolio.getLastUpdatedAt());
     }
 
-    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Locale locale) {
+    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Currency currency) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
-        Objects.requireNonNull(locale, "Locale cannot be null");
+        Objects.requireNonNull(currency, "Currency cannot be null");
 
         Set<AssetSymbol> allSymbols = extractAllAssetSymbols(portfolio);
         Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
-        Currency displayCurrency = Currency.fromLocale(locale);
-        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, displayCurrency);
+        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, currency);
 
         return new PortfolioSummaryView(
                 portfolio.getPortfolioId(),
