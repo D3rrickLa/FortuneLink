@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.f
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public interface TransactionRecordingService {
+    // TODO make these return the actual Transaction rather than void
     void recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price, Money fee, Instant date);
     
     void recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, Money fee, Instant date);

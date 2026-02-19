@@ -19,4 +19,8 @@ public record Price(Money pricePerUnit) implements ClassValidation {
         ClassValidation.validateParameter(quantity, "quantity cannot be null");
         return pricePerUnit.multiply(quantity.amount());
     }
+
+    public Currency currency() {
+        return pricePerUnit.currency();
+    }
 }

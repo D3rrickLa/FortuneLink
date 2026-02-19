@@ -1,29 +1,29 @@
 package com.laderrco.fortunelink.portfolio_management.application.commands.records;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AssetId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
-import com.laderrco.fortunelink.shared.valueobjects.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.UserId;
 
 public record RecordIncomeCommand(
         PortfolioId portfolioId,
         UserId userId,
         AccountId accountId,
-        AssetId assetId,
+        AssetSymbol assetSymbol,
         Money amount,
         TransactionType type,
         boolean isDrip,
-        BigDecimal sharesReceived,
+        Quantity sharesReceived,
         Instant transactionDate,
         String notes
 ) {
     public RecordIncomeCommand {
-        if (isDrip && (sharesReceived == null || sharesReceived.compareTo(BigDecimal.ZERO) <= 0)) {
+        if (isDrip && (sharesReceived == null || sharesReceived.compareTo(Quantity.ZERO) <= 0)) {
             throw new IllegalArgumentException(
                     "Shares received must be provided and greater than zero for DRIP transaction"
             );
