@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Tr
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 // THIS IS AN IMMUTABLE STATE
 // account and portfolio reconstruct state from these transaction(s)
@@ -65,6 +67,48 @@ public record Transaction(
             // Only run trade consistency if execution is required
             validateTradeConsistency(execution, transactionType, cashDelta, fees);
         }
+    }
+
+    public Transaction markAsExcluded(UserId userId, String reason) {
+        if (metadata == null) {
+            throw new IllegalStateException("Cannot exclude transaction without metadata");
+        }
+        TransactionMetadata updatedMetadata = metadata.markAsExcluded(userId, reason);
+        return new Transaction(
+                transactionId,
+                accountId,
+                transactionType,
+                execution,
+                split,
+                cashDelta,
+                fees,
+                notes,
+                occurredAt,
+                relatedTransactionId,
+                updatedMetadata);
+    }
+
+    public Transaction restore() {
+        if (metadata == null) {
+            throw new IllegalStateException("Cannot restore transaction without metadata");
+        }
+        TransactionMetadata updatedMetadata = metadata.restore();
+        return new Transaction(
+                transactionId,
+                accountId,
+                transactionType,
+                execution,
+                split,
+                cashDelta,
+                fees,
+                notes,
+                occurredAt,
+                relatedTransactionId,
+                updatedMetadata);
+    }
+
+    public boolean isExcluded() {
+        return metadata != null && metadata.excluded();
     }
 
     public Money totalFeesInAccountCurrency() {
@@ -133,19 +177,66 @@ public record Transaction(
     public record SplitDetails(double ratio) {
     }
 
-    public record TransactionMetadata(AssetType assetType, String source, Map<String, String> additionalData) {
+    public record TransactionMetadata(
+            AssetType assetType,
+            String source,
+            boolean excluded, // ← NEW
+            Instant excludedAt, // ← NEW
+            UserId excludedBy, // ← NEW
+            String excludedReason, // ← NEW
+            Map<String, String> additionalData) {
+
         public TransactionMetadata {
             notNull(assetType, "AssetType");
             source = source == null ? "UNKNOWN" : source.trim();
             additionalData = additionalData == null ? Map.of() : Map.copyOf(additionalData);
+
+            // Validate exclusion consistency
+            if (excluded && (excludedAt == null || excludedBy == null)) {
+                throw new IllegalArgumentException("excludedAt and excludedBy required when excluded=true");
+            }
+            if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
+                throw new IllegalArgumentException("Cannot have exclusion metadata when excluded=false");
+            }
         }
 
         public static TransactionMetadata manual(AssetType assetType) {
-            return new TransactionMetadata(assetType, "MANUAL", Map.of());
+            return new TransactionMetadata(assetType, "MANUAL", false, null, null, null, Map.of());
         }
 
         public static TransactionMetadata csvImport(AssetType assetType, String filename) {
-            return new TransactionMetadata(assetType, "CSV_IMPORT", Map.of("filename", filename));
+            return new TransactionMetadata(assetType, "CSV_IMPORT", false, null, null, null,
+                    Map.of("filename", filename));
+        }
+
+        // New method to mark as excluded
+        public TransactionMetadata markAsExcluded(UserId userId, String reason) {
+            if (excluded) {
+                throw new IllegalStateException("Transaction already excluded");
+            }
+            return new TransactionMetadata(
+                    assetType,
+                    source,
+                    true,
+                    Instant.now(),
+                    userId,
+                    reason,
+                    additionalData);
+        }
+
+        // New method to restore
+        public TransactionMetadata restore() {
+            if (!excluded) {
+                throw new IllegalStateException("Transaction is not excluded");
+            }
+            return new TransactionMetadata(
+                    assetType,
+                    source,
+                    false,
+                    null,
+                    null,
+                    null,
+                    additionalData);
         }
 
         public String get(String key) {
@@ -159,13 +250,13 @@ public record Transaction(
         public TransactionMetadata with(String key, String value) {
             Map<String, String> copy = new HashMap<>(additionalData);
             copy.put(key, value);
-            return new TransactionMetadata(assetType, source, copy);
+            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy, excludedReason, copy);
         }
 
         public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
             Map<String, String> copy = new HashMap<>(additionalData);
             copy.putAll(additionalMetadata);
-            return new TransactionMetadata(assetType, source, copy);
+            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy, excludedReason, copy);
         }
 
         public boolean containsKey(String key) {
