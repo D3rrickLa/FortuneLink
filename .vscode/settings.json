@@ -1,5 +1,17 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "interactive",
-    "java.debug.settings.onBuildFailureProceed": true
+    "java.debug.settings.onBuildFailureProceed": true,
+    "java.test.config": [
+        {
+            "name": "test_setup",
+            "vmArgs": [
+                "-XX:+EnableDynamicAgentLoading",
+                "--add-opens",
+                "java.base/java.lang=ALL-UNNAMED",
+                "--add-opens",
+                "java.base/java.util=ALL-UNNAMED"
+            ]
+        }
+    ]
 }

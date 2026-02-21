@@ -144,6 +144,10 @@ public class Account {
         touch();
     }
 
+    public void clearPosition(AssetSymbol symbol) {
+        positions.get(symbol)
+    }
+
     // accounts should be closed via portfolio
     void close() {
         requireActive();

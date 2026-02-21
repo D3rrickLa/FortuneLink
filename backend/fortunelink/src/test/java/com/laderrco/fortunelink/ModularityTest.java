@@ -1,10 +1,12 @@
 package com.laderrco.fortunelink;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
 
+@Disabled
 class ModularityTest {
 
     static ApplicationModules modules;

@@ -5,6 +5,8 @@ import java.util.function.Function;
 
 import org.springframework.stereotype.Service;
 
+import com.laderrco.fortunelink.portfolio.application.commands.DeleteTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
@@ -17,6 +19,7 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundEx
 import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.validators.TransactionCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
@@ -73,8 +76,7 @@ public class TransactionService {
                 consolidateFees(command.fees(), ctx.account().getAccountCurrency()),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
     }
@@ -99,8 +101,7 @@ public class TransactionService {
                 consolidateFees(command.fees(), ctx.account().getAccountCurrency()),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
@@ -115,8 +116,7 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
@@ -131,8 +131,7 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
     }
@@ -141,14 +140,12 @@ public class TransactionService {
         validate(command, validator::validate, "recordFee");
         PortfolioContext ctx = getPortfolioContext(command);
 
-        // we need another service method for 'fees'
         Transaction recordedTransaction = transactionRecordingService.recordFee(
                 ctx.account(),
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
     }
@@ -166,15 +163,14 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
     }
 
     public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
-        validate(command, validator::validate, "recordDividend");
+        validate(command, validator::validate, "recordDividendReinvestment");
         PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
@@ -186,10 +182,60 @@ public class TransactionService {
                 command.execution().pricePerShare(),
                 command.transactionDate());
 
-        portfolioRepository.save(ctx.portfolio());
-        transactionRepository.save(recordedTransaction);
+        saveToRepository(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
+
+    }
+
+    public TransactionView updateTransaction(UpdateTransactionCommand command) {
+        validate(command, validator::validate, "updateTransaction");
+        PortfolioContext ctx = getPortfolioContext(command);
+
+        Transaction existingTransaction = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+                command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+                .orElseThrow(() -> new InvalidTransactionException(command.transactionId()));
+
+        // For simplicity, let's assume we only allow updating the amount and fees for
+        // deposits/withdrawals/fees
+        // and price/quantity for buys/sells. In a real implementation, you'd likely
+        // have more complex logic here.
+        // code smell, we should only be passing the correct information to the
+        // 'updateTransaction and not the command'
+        // as that will pollute the domain serviec
+        Transaction updatedTransaction = transactionRecordingService.updateTransaction(
+                ctx.account(),
+                existingTransaction,
+                command.quantity(),
+                command.price(),
+                consolidateFees(command.fees(), ctx.account().getAccountCurrency()));
+
+        saveToRepository(ctx, updatedTransaction);
+
+        return transactionViewMapper.toView(updatedTransaction);
+    }
+
+    public void deleteTransaction(DeleteTransactionCommand command) {
+        validate(command, validator::validate, "deleteTransaction");
+        PortfolioContext ctx = getPortfolioContext(command);
+
+        Transaction toDelete = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+                command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+                .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
+
+        transactionRepository.delete(toDelete.transactionId());
+
+        // Rebuilding the affected position by replaying remaining transaction
+        AssetSymbol affectedSymbol = toDelete.execution().asset();
+        List<Transaction> remaining = transactionRepository.findByAccountIdAndSymbol(
+                ctx.account().getAccountId(), affectedSymbol);
+
+        ctx.account().clearPosition(affectedSymbol);
+        for (Transaction tx : remaining) {
+            transactionRecordingService.replayTransaction(ctx.account(), tx);
+        }
+
+        portfolioRepository.save(ctx.portfolio());
 
     }
 
@@ -202,23 +248,17 @@ public class TransactionService {
         return new PortfolioContext(portfolio, account);
     }
 
+    private void saveToRepository(PortfolioContext ctx, Transaction recordedTransaction) {
+        portfolioRepository.save(ctx.portfolio());
+        transactionRepository.save(recordedTransaction);
+    }
+
     private Price resolvePrice(Price commandPrice, Currency accountCurrency) {
         if (commandPrice.currency().equals(accountCurrency)) {
             return commandPrice;
         }
-    
-        return exchangeRateService.convertToPrice(commandPrice.pricePerUnit(), accountCurrency);
-    }
 
-    private Money consolidateFees(List<Fee> fees, Currency currency) {
-        // sum all fees into single Money — implementation depends on your Fee type
-        if (fees == null || fees.isEmpty()) {
-            return Money.ZERO(currency);
-        }
-        return fees.stream()
-                .map(Fee::accountAmount)
-                .reduce(Money::add)
-                .orElse(Money.ZERO(currency));
+        return exchangeRateService.convertToPrice(commandPrice.pricePerUnit(), accountCurrency);
     }
 
     private <T> void validate(T command, Function<T, ValidationResult> validationLogic, String methodName) {

@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.services;
 
 import java.time.Instant;
-
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
@@ -25,4 +24,8 @@ public interface TransactionRecordingService {
     Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, Instant date);
     
     Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price, Instant date);
+
+    Transaction updateTransaction(Account account, Transaction existingTransaction, Quantity newQuantity, Price newPrice, Money fee);
+
+    void replayTransaction(Account account, Transaction tx);
 }
