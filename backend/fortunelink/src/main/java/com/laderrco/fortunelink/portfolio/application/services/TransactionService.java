@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInc
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
@@ -54,29 +55,24 @@ public class TransactionService {
 
     public TransactionView recordPurchase(RecordPurchaseCommand command) {
         validate(command, validator::validate, "recordPurchase");
-
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId().toString()));
-
-        // account handles own try-catch
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.symbol());
         MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbol)
                 .orElseThrow(() -> new AssetNotFoundException("Unknown symbol: " + command.symbol()));
 
-        Price price = resolvePrice(command.price(), account.getAccountCurrency());
+        Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
         Transaction recordedTransaction = transactionRecordingService.recordBuy(
-                account,
+                ctx.account(),
                 symbol,
                 assetInfo.type(),
                 command.quantity(),
                 price,
-                consolidateFees(command.fees()),
+                consolidateFees(command.fees(), ctx.account().getAccountCurrency()),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
@@ -84,29 +80,25 @@ public class TransactionService {
 
     public TransactionView recordSale(RecordSaleCommand command) {
         validate(command, validator::validate, "recordSale");
-
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.symbol());
 
-        if (!account.hasPosition(symbol)) {
-            throw new InsufficientQuantityException("No posotion found for: " + command.symbol());
+        if (!ctx.account().hasPosition(symbol)) {
+            throw new InsufficientQuantityException("No position found for: " + command.symbol());
         }
 
-        Price price = resolvePrice(command.price(), account.getAccountCurrency());
+        Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
         Transaction recordedTransaction = transactionRecordingService.recordSell(
-                account,
+                ctx.account(),
                 symbol,
                 command.quantity(),
                 price,
-                consolidateFees(command.fees()),
+                consolidateFees(command.fees(), ctx.account().getAccountCurrency()),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
@@ -115,39 +107,30 @@ public class TransactionService {
 
     public TransactionView recordDeposit(RecordDepositCommand command) {
         validate(command, validator::validate, "recordDeposit");
-
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         Transaction recordedTransaction = transactionRecordingService.recordDeposit(
-                account,
+                ctx.account(),
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
     }
 
-    public TransactionView recordWidthdrawal(RecordWithdrawalCommand command) {
+    public TransactionView recordWithdrawal(RecordWithdrawalCommand command) {
         validate(command, validator::validate, "recordWidthdrawal");
-        // NOTE: we can simplify the 'gathering of portfolio and account through a DRY
-        // method'
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         Transaction recordedTransaction = transactionRecordingService.recordWithdrawal(
-                account,
+                ctx.account(),
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
@@ -155,19 +138,15 @@ public class TransactionService {
 
     public TransactionView recordFee(RecordFeeCommand command) {
         validate(command, validator::validate, "recordFee");
-
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         // we need another service method for 'fees'
         Transaction recordedTransaction = transactionRecordingService.recordFee(
-                account,
-                command.totalAmount(),
+                ctx.account(),
+                command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
@@ -176,25 +155,17 @@ public class TransactionService {
     // this method deposits into the account
     public TransactionView recordDividend(RecordIncomeCommand command) {
         validate(command, validator::validate, "recordDividend");
-
-        if (command.isDrip()) {
-            throw new IllegalStateException("Drip is turned on, please use the recordDividendReinvestment method.");
-        }
-
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
         Transaction recordedTransaction = transactionRecordingService.recordDividend(
-                account,
+                ctx.account(),
                 symbol,
                 command.amount(),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
@@ -203,43 +174,50 @@ public class TransactionService {
 
     public TransactionView recordDividendReinvestment(RecordIncomeCommand command) {
         validate(command, validator::validate, "recordDividend");
-
-        if (!command.isDrip()) {
-            throw new IllegalStateException("Drip is turned off, please use the recordDividend method.");
-        }
-
-        Portfolio portfolio = portfolioRepository.findById(command.portfolioId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
-
-        Account account = portfolio.getAccount(command.accountId());
+        PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
         Transaction recordedTransaction = transactionRecordingService.recordDividendReinvestment(
-                account,
+                ctx.account(),
                 symbol,
                 command.sharesReceived(),
                 new Price(command.amount()),
                 command.transactionDate());
 
-        portfolioRepository.save(portfolio);
+        portfolioRepository.save(ctx.portfolio());
         transactionRepository.save(recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
     }
 
+    private PortfolioContext getPortfolioContext(TransactionCommand command) {
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId().toString()));
+
+        Account account = portfolio.getAccount(command.accountId());
+
+        return new PortfolioContext(portfolio, account);
+    }
+
     private Price resolvePrice(Price commandPrice, Currency accountCurrency) {
         if (commandPrice.currency().equals(accountCurrency)) {
             return commandPrice;
         }
-        // code smell, this is dumb
-        return new Price(exchangeRateService.convert(commandPrice.pricePerUnit(), accountCurrency));
+    
+        return exchangeRateService.convertToPrice(commandPrice.pricePerUnit(), accountCurrency);
     }
 
-    private Money consolidateFees(List<Fee> fees) {
+    private Money consolidateFees(List<Fee> fees, Currency currency) {
         // sum all fees into single Money — implementation depends on your Fee type
-        return null;
+        if (fees == null || fees.isEmpty()) {
+            return Money.ZERO(currency);
+        }
+        return fees.stream()
+                .map(Fee::accountAmount)
+                .reduce(Money::add)
+                .orElse(Money.ZERO(currency));
     }
 
     private <T> void validate(T command, Function<T, ValidationResult> validationLogic, String methodName) {
@@ -248,5 +226,8 @@ public class TransactionService {
             String msg = String.format("Invalid %s command", methodName);
             throw new InvalidTransactionException(msg, result.errors());
         }
+    }
+
+    private record PortfolioContext(Portfolio portfolio, Account account) {
     }
 }

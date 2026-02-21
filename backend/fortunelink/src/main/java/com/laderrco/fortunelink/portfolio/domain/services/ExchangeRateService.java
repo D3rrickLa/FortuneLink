@@ -12,5 +12,5 @@ public interface ExchangeRateService {
     public Optional<ExchangeRate> getRate(Currency from, Currency to); 
     public Money convert(Money amount, Currency targetCurrency, Instant asOfDate); 
     public Money convert(Money amount, Currency targetCurrency);
-    public Money convert(Price price, Currency targetCurrency);
+    public Price convertToPrice(Money price, Currency targetCurrency);
 }

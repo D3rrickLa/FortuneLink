@@ -10,5 +10,5 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 
-public record RecordWithdrawalCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount, List<Fee> fees, Instant transactionDate, String notes) {
+public record RecordWithdrawalCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount, List<Fee> fees, Instant transactionDate, String notes) implements TransactionCommand {
 }

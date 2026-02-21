@@ -20,7 +20,7 @@ public record RecordIncomeCommand(
         Quantity sharesReceived,
         Instant transactionDate,
         String notes
-) {
+) implements TransactionCommand {
     public RecordIncomeCommand {
         if (isDrip && (sharesReceived == null || sharesReceived.compareTo(Quantity.ZERO) <= 0)) {
             throw new IllegalArgumentException(
