@@ -2,32 +2,28 @@ package com.laderrco.fortunelink.portfolio.application.commands.records;
 
 import java.time.Instant;
 
-import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-public record RecordIncomeCommand(
+public record RecordDividendReinvestmentCommand(
         PortfolioId portfolioId,
         UserId userId,
         AccountId accountId,
         String assetSymbol,
-        Money amount,
-        TransactionType type,
-        boolean isDrip,
-        Quantity sharesReceived,
+        DripExecution execution, // encapsulates the trade details
         Instant transactionDate,
-        String notes
-) implements TransactionCommand {
-    public RecordIncomeCommand {
-        if (isDrip && (sharesReceived == null || sharesReceived.compareTo(Quantity.ZERO) <= 0)) {
-            throw new IllegalArgumentException(
-                    "Shares received must be provided and greater than zero for DRIP transaction"
-            );
+        String notes) implements TransactionCommand {
+
+    public record DripExecution(
+            Quantity sharesPurchased,
+            Price pricePerShare // explicit, not derived
+    ) {
+        public Money totalCost() {
+            return pricePerShare.pricePerUnit().multiply(sharesPurchased.amount());
         }
     }
-
-    // NOTE: we might want to do some inner record like 'execution' in Transaction
 }

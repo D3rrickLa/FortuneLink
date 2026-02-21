@@ -7,7 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordIncomeCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
@@ -153,7 +154,7 @@ public class TransactionService {
     }
 
     // this method deposits into the account
-    public TransactionView recordDividend(RecordIncomeCommand command) {
+    public TransactionView recordDividend(RecordDividendCommand command) {
         validate(command, validator::validate, "recordDividend");
         PortfolioContext ctx = getPortfolioContext(command);
 
@@ -172,7 +173,7 @@ public class TransactionService {
 
     }
 
-    public TransactionView recordDividendReinvestment(RecordIncomeCommand command) {
+    public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
         validate(command, validator::validate, "recordDividend");
         PortfolioContext ctx = getPortfolioContext(command);
 
@@ -181,8 +182,8 @@ public class TransactionService {
         Transaction recordedTransaction = transactionRecordingService.recordDividendReinvestment(
                 ctx.account(),
                 symbol,
-                command.sharesReceived(),
-                new Price(command.amount()),
+                command.execution().sharesPurchased(),
+                command.execution().pricePerShare(),
                 command.transactionDate());
 
         portfolioRepository.save(ctx.portfolio());

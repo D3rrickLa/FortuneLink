@@ -13,11 +13,11 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeleteTransaction
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordIncomeCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -178,7 +178,7 @@ public class TransactionCommandValidator {
                 : ValidationResult.failure(errors);
     }
 
-    public ValidationResult validate(RecordIncomeCommand command) {
+    public ValidationResult validate(RecordDividendCommand command) {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
@@ -203,11 +203,46 @@ public class TransactionCommandValidator {
             errors.addAll(amountValidation.errors());
         }
 
-        if (command.type() == null ||
-                (!command.type().equals(TransactionType.DIVIDEND)
-                        && !command.type().equals(TransactionType.INTEREST))) {
-            errors.add("Income type must be either DIVIDEND or INTEREST");
+        ValidationResult dateValidation = validateDate(command.transactionDate());
+        if (!dateValidation.isValid()) {
+            errors.addAll(dateValidation.errors());
         }
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(RecordDividendReinvestmentCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        if (command.portfolioId() == null) {
+            errors.add("PortfolioId is required");
+        }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
+        if (command.accountId() == null) {
+            errors.add("AccountId is required");
+        }
+
+        if (command.assetSymbol() == null) {
+            errors.add("Symbol is required");
+        }
+
+        ValidationResult amountValidation = validateAmount(command.execution().pricePerShare().amount());
+        if (!amountValidation.isValid()) {
+            errors.addAll(amountValidation.errors());
+        }
+
+        // if (command.type() == null ||
+        //         (!command.type().equals(TransactionType.DIVIDEND)
+        //                 && !command.type().equals(TransactionType.INTEREST))) {
+        //     errors.add("Income type must be either DIVIDEND or INTEREST");
+        // }
 
         ValidationResult dateValidation = validateDate(command.transactionDate());
         if (!dateValidation.isValid()) {
@@ -231,12 +266,12 @@ public class TransactionCommandValidator {
             errors.add("AccountId is required");
         }
 
-        ValidationResult amountValidation = validateAmount(command.totalAmount().amount());
+        ValidationResult amountValidation = validateAmount(command.amount().amount());
         if (!amountValidation.isValid()) {
             errors.addAll(amountValidation.errors());
         }
 
-        if (command.currency() == null) {
+        if (command.amount().currency() == null) {
             errors.add("Currency is required");
         }
 
