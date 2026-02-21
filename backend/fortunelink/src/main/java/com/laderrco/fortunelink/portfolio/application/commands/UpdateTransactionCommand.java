@@ -5,7 +5,9 @@ import java.util.List;
 
 import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -13,17 +15,20 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-
 public record UpdateTransactionCommand(
-        PortfolioId portfolioId,
-        UserId userId,
-        AccountId accountId,
-        TransactionId transactionId,
-        TransactionType type,
-        String symbol,
-        Quantity quantity,
-        Price price,
-        List<Fee> fees,
-        Instant date,
-        String notes) implements TransactionCommand {
+                PortfolioId portfolioId,
+                UserId userId,
+                AccountId accountId,
+                TransactionId transactionId,
+                TransactionType type,
+                String symbol,
+                Quantity quantity,
+                Price price,
+                List<Fee> fees,
+                Instant date,
+                String notes) implements TransactionCommand {
+                        
+        public Money totalFees(Currency currency) {
+                return fees.stream().map(Fee::accountAmount).reduce(Money::add).orElse(Money.ZERO(currency));
+        }
 }

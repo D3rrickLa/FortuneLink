@@ -28,9 +28,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
@@ -48,13 +46,17 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class TransactionService {
+    private record PortfolioContext(Portfolio portfolio, Account account) {
+    }
+
     private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionViewMapper transactionViewMapper;
-    private final TransactionCommandValidator validator;
 
+    private final TransactionCommandValidator validator;
     private final MarketDataService marketDataService;
     private final ExchangeRateService exchangeRateService;
+
     private final TransactionRecordingService transactionRecordingService;
 
     public TransactionView recordPurchase(RecordPurchaseCommand command) {
@@ -73,10 +75,10 @@ public class TransactionService {
                 assetInfo.type(),
                 command.quantity(),
                 price,
-                consolidateFees(command.fees(), ctx.account().getAccountCurrency()),
+                command.totalFees(ctx.account().getAccountCurrency()),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
     }
@@ -98,10 +100,10 @@ public class TransactionService {
                 symbol,
                 command.quantity(),
                 price,
-                consolidateFees(command.fees(), ctx.account().getAccountCurrency()),
+                command.totalFees(ctx.account().getAccountCurrency()),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
@@ -116,7 +118,7 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
@@ -131,7 +133,7 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
     }
@@ -145,7 +147,7 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
     }
@@ -163,7 +165,7 @@ public class TransactionService {
                 command.amount(),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
@@ -182,7 +184,7 @@ public class TransactionService {
                 command.execution().pricePerShare(),
                 command.transactionDate());
 
-        saveToRepository(ctx, recordedTransaction);
+        persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toView(recordedTransaction);
 
@@ -208,9 +210,9 @@ public class TransactionService {
                 existingTransaction,
                 command.quantity(),
                 command.price(),
-                consolidateFees(command.fees(), ctx.account().getAccountCurrency()));
+                command.totalFees(ctx.account().getAccountCurrency()));
 
-        saveToRepository(ctx, updatedTransaction);
+        persistChanges(ctx, updatedTransaction);
 
         return transactionViewMapper.toView(updatedTransaction);
     }
@@ -230,7 +232,7 @@ public class TransactionService {
         List<Transaction> remaining = transactionRepository.findByAccountIdAndSymbol(
                 ctx.account().getAccountId(), affectedSymbol);
 
-        ctx.account().clearPosition(affectedSymbol);
+        ctx.account().clearPosition(affectedSymbol); // this a problem, not yet impelemnted as it's a map structure
         for (Transaction tx : remaining) {
             transactionRecordingService.replayTransaction(ctx.account(), tx);
         }
@@ -248,8 +250,10 @@ public class TransactionService {
         return new PortfolioContext(portfolio, account);
     }
 
-    private void saveToRepository(PortfolioContext ctx, Transaction recordedTransaction) {
+    private void persistChanges(PortfolioContext ctx, Transaction recordedTransaction) {
+        // CRITICAL: Portfolio save must happen first to persist position updates
         portfolioRepository.save(ctx.portfolio());
+        // Then persist the transaction record
         transactionRepository.save(recordedTransaction);
     }
 
@@ -267,8 +271,5 @@ public class TransactionService {
             String msg = String.format("Invalid %s command", methodName);
             throw new InvalidTransactionException(msg, result.errors());
         }
-    }
-
-    private record PortfolioContext(Portfolio portfolio, Account account) {
     }
 }

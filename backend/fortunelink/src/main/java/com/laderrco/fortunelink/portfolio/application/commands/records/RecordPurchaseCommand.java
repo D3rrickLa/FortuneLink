@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.commands.records;
 import java.time.Instant;
 import java.util.List;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
@@ -17,14 +18,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 // asset symbol - name
 // asset entity - your identifier calss, the acutal holding
 public record RecordPurchaseCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, String symbol, Quantity quantity, Price price, List<Fee> fees, Instant transactionDate, String notes) implements TransactionCommand {
-    public Money totalFees() {
-        if (fees == null || fees.isEmpty()) {
-            return Money.ZERO(currency);
-        }
-        return fees.stream()
-                .map(Fee::accountAmount)
-                .reduce(Money::add)
-                .orElse(Money.ZERO(currency));
-    
+    public Money totalFees(Currency currency) { // memoize this
+        return fees.stream().map(Fee::accountAmount).reduce(Money::add).orElse(Money.ZERO(currency));
     }
 }

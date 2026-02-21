@@ -320,8 +320,8 @@ public class TransactionCommandValidator {
             errors.add("Price must be positive");
         }
 
-        if (command.fee() == null) {
-            errors.add("Fee is required");
+        if (command.fees() == null) {
+            errors.add("Fees is required");
         }
 
         if (command.date() == null) {
