@@ -6,7 +6,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
@@ -14,7 +13,7 @@ public record RecordIncomeCommand(
         PortfolioId portfolioId,
         UserId userId,
         AccountId accountId,
-        AssetSymbol assetSymbol,
+        String assetSymbol,
         Money amount,
         TransactionType type,
         boolean isDrip,
@@ -29,4 +28,6 @@ public record RecordIncomeCommand(
             );
         }
     }
+
+    // NOTE: we might want to do some inner record like 'execution' in Transaction
 }

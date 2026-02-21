@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 
+// NOTE: THIS
 // this might need working as the 'Fee' class has more info in it
 // This makes no sense, how can a 'fee' have a 'fee' list
 // or money amount can be total amount

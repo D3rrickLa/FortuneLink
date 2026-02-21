@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
+import java.math.BigDecimal;
+
 public record Price(Money pricePerUnit) {
 
     public static Price ZERO(Currency currency) {
@@ -22,5 +24,9 @@ public record Price(Money pricePerUnit) {
 
     public Currency currency() {
         return pricePerUnit.currency();
+    }
+
+    public BigDecimal amount() {
+        return pricePerUnit.amount();
     }
 }

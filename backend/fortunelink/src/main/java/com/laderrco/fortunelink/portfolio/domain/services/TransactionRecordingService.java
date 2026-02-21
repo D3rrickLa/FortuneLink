@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public interface TransactionRecordingService {
+    // these will mutate the account 'state' as in update position or what not
     Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price, Money fee, Instant date);
     
     Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, Money fee, Instant date);
@@ -18,6 +19,8 @@ public interface TransactionRecordingService {
     Transaction recordDeposit(Account account, Money amount, Instant date);
     
     Transaction recordWithdrawal(Account account, Money amount, Instant date);
+
+    Transaction recordFee(Account account, Money amount, Instant date);
     
     Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, Instant date);
     
