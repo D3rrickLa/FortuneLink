@@ -1,10 +1,18 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collection;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,14 +38,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.Collection;
-
+                    
 class AccountTest {
 
     private AccountId accountId;
@@ -234,6 +235,9 @@ class AccountTest {
                 Position position = cadAccount.ensurePosition(symbol, AssetType.STOCK);
 
                 // THEN: It should be an AcbPosition
+                // System.out.println("Account strategy: " + cadAccount.getPositionStrategy());
+                // Position position2 = cadAccount.ensurePosition(symbol, AssetType.STOCK);
+                // System.out.println("Created position class: " + position2.getClass().getName());
                 assertTrue(position instanceof AcbPosition, "Account with ACB strategy must produce AcbPosition");
             }
 

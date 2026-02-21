@@ -69,6 +69,7 @@ public class TransactionService {
                 command.transactionDate());
 
         portfolioRepository.save(portfolio);
+        transactionRepository.save(recordedTransaction);
 
 
         return transactionViewMapper.toView(recordedTransaction);

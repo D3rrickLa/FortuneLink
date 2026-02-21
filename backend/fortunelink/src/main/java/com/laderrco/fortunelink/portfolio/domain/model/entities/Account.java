@@ -191,6 +191,10 @@ public class Account {
         return accountCurrency;
     }
 
+    public PositionStrategy getPositionStrategy() {
+        return positionStrategy;
+    }
+
     public Money getCashBalance() {
         return cashBalance;
     }

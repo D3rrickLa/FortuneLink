@@ -320,7 +320,7 @@ public class PortfolioViewMapper {
      */
     private static Instant extractLastModifiedDate(Position position) {
         return switch (position) {
-            case AcbPosition acb -> null; // Would need to be added to AcbPosition
+            case AcbPosition _ -> null; // Would need to be added to AcbPosition
             case FifoPosition fifo -> {
                 var lots = fifo.lots();
                 yield lots.isEmpty() ? null
