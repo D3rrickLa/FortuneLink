@@ -1,32 +1,28 @@
 package com.laderrco.fortunelink;
 
-import java.io.IOException;
-
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
+import org.springframework.modulith.docs.Documenter;
 
 class ModularityTest {
 
-    ApplicationModules modules = ApplicationModules.of(FortunelinkApplication.class).verify();
+    static ApplicationModules modules;
+
+    @BeforeAll
+    static void setup() {
+        // Deferred — runs after JUnit initializes the class,
+        // giving the classloader time to be fully wired
+        modules = ApplicationModules.of(FortunelinkApplication.class);
+    }
 
     @Test
-    void verifiesModularStructure() {
+    void verifiesModuleStructure() {
         modules.verify();
     }
 
     @Test
-    void printModules() {
-        modules.forEach(System.out::println);
-    }
-
-    @Test
-    void verifyScanning() throws IOException {
-        var basePackage = FortunelinkApplication.class.getPackageName();
-        System.out.println("Base package: " + basePackage);
-
-        var urls = Thread.currentThread().getContextClassLoader().getResources(basePackage.replace('.', '/'));
-        while (urls.hasMoreElements()) {
-            System.out.println(urls.nextElement());
-        }
+    void documentModules() {
+        new Documenter(modules).writeDocumentation();
     }
 }

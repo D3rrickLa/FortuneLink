@@ -1,2 +1,5 @@
-@org.springframework.modulith.ApplicationModule(displayName = "Shared Module", allowedDependencies = "enums")
+@ApplicationModule(displayName = "Shared Modules", type = Type.OPEN)
 package com.laderrco.fortunelink.shared;
+
+import org.springframework.modulith.ApplicationModule;
+import org.springframework.modulith.ApplicationModule.Type;
