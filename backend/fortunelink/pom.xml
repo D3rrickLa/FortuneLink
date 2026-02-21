@@ -32,15 +32,34 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <bucket4j.version>8.7.0</bucket4j.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <!-- Modulith BOM - lets Spring Boot 4.x resolve the correct Modulith version -->
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>1.3.5</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
 
         <!-- ======================= -->
-        <!-- Spring Boot Starters -->
+        <!-- Spring Boot Starters    -->
         <!-- ======================= -->
 
+        <!--
+            CHANGED: spring-boot-starter-web -> spring-boot-starter-webmvc
+            Boot 4 split the old 'web' starter into focused starters.
+            spring-boot-starter-webmvc is the explicit Spring MVC (Tomcat) starter.
+            The old 'web' artifact still exists as a thin alias but the official
+            migration guide says to use the named starter going forward.
+        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
         <dependency>
@@ -73,6 +92,38 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- ======================= -->
+        <!-- Spring Modulith         -->
+        <!-- ======================= -->
+
+        <!--
+            Core Modulith dependency.
+            Provides:
+              - Module boundary enforcement (fails fast if internals are accessed across modules)
+              - @ApplicationModuleListener for transactional cross-module event handling
+              - ApplicationEventPublisher integration for domain events
+              - Module documentation/observability hooks
+        -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-core</artifactId>
+        </dependency>
+
+        <!--
+            JPA event publication registry.
+            Stores domain events in the DB within the same transaction they were raised,
+            then publishes them after commit. Prevents lost events on failure - critical
+            for cross-module eventual consistency without a message broker.
+        -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-jpa</artifactId>
+        </dependency>
 
         <!-- ======================= -->
         <!-- Caching, Redis & Rate Limiting -->
@@ -108,7 +159,7 @@
         </dependency>
 
         <!-- ======================= -->
-        <!-- Database & Migration -->
+        <!-- Database & Migration    -->
         <!-- ======================= -->
 
         <dependency>
@@ -117,15 +168,27 @@
             <scope>runtime</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!--
+            REMOVED: h2 (runtime)
+            H2 is not compatible with PostgreSQL-dialect Flyway migrations.
+            It was likely here as a fast in-memory DB for tests, but you are already
+            using Testcontainers with a real PostgreSQL container, which is the correct
+            approach. Keeping H2 creates a false safety net where tests pass in-memory
+            but fail against real Postgres. Testcontainers covers this correctly.
+            If you ever need H2 for a specific lightweight test, re-add it scoped
+            to test only with a separate Flyway migration location.
+        -->
 
+        <!--
+            CHANGED: flyway-database-postgresql -> spring-boot-starter-flyway
+            Boot 4 added a proper Flyway starter. This pulls in flyway-core AND
+            flyway-database-postgresql as a managed, versioned set. Using the raw
+            flyway-database-postgresql artifact directly bypasses Boot's version
+            management and auto-configuration wiring. Use the starter.
+        -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
 
         <!-- JSONB / Hibernate Utilities -->
@@ -166,30 +229,93 @@
 
 
         <!-- ======================= -->
-        <!-- Testing -->
+        <!-- Testing                 -->
         <!-- ======================= -->
 
+        <!--
+            Boot 4 modularized the entire test infrastructure. Each technology now has a
+            dedicated test starter. spring-boot-starter-test remains as the base layer
+            (JUnit 6, Mockito, AssertJ) but all test slices now require their own starter.
+        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!--
+            NEW (Boot 4 required): spring-boot-starter-security-test
+            In Boot 4, @WithMockUser and @WithUserDetails from spring-security-test
+            now REQUIRE this starter to function. The raw spring-security-test artifact
+            on its own no longer wires the test infrastructure correctly.
+            This replaces the direct spring-security-test declaration.
+        -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!--
+            REMOVED: org.springframework.security:spring-security-test (direct)
+            Replaced by spring-boot-starter-security-test above. The raw module is
+            pulled in transitively. Declaring both creates version ambiguity.
+        -->
+
+        <!--
+            CHANGED: spring-security-oauth2-authorization-server (test scoped)
+            Was declared as a raw Spring Security module scoped to test.
+            Boot 4 now has a proper test starter for this. Use it.
+        -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-oauth2-authorization-server</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-authorization-server-test</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!--
+            NEW (Boot 4 required): spring-boot-starter-webmvc-test
+            Required for @WebMvcTest slice tests under Boot 4's modular structure.
+        -->
         <dependency>
-            <groupId>org.springframework.graphql</groupId>
-            <artifactId>spring-graphql-test</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            NEW (Boot 4 required): spring-boot-starter-data-jpa-test
+            Required for @DataJpaTest slice tests under Boot 4's modular structure.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            NEW (Boot 4 required): spring-boot-starter-graphql-test
+            Replaces the direct org.springframework.graphql:spring-graphql-test artifact.
+            This is the Boot 4 way - use the starter, not the raw module.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-graphql-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            REMOVED: org.springframework.graphql:spring-graphql-test (direct)
+            Replaced by spring-boot-starter-graphql-test above.
+        -->
+
+        <!--
+            NEW (Boot 4): spring-boot-starter-flyway-test
+            Required for Flyway-aware test slices under Boot 4's modular structure.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway-test</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -199,7 +325,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- This is here to fix a test container issue -->
         <!-- Testcontainers core -->
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -232,6 +357,18 @@
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock</artifactId>
             <version>3.13.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            Modulith test support.
+            Provides @ApplicationModuleTest to boot only a single module in isolation,
+            and ApplicationModules.of(App.class).verify() to assert no boundary violations.
+            Run this once in a dedicated test - it's your architecture fitness function.
+        -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -285,7 +422,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>
-                        -javaagent:"${org.mockito:mockito-core:jar}"
+                        @{argLine}
+                        -javaagent:${org.mockito:mockito-core:jar}
                         -XX:+EnableDynamicAgentLoading
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.util=ALL-UNNAMED
