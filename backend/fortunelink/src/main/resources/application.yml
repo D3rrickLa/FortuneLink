@@ -2,6 +2,8 @@ spring:
   application:
     name: fortunelink
 
+  profiles:
+    active: local
 
   config:
     import: "optional:file:.env[.properties]"
