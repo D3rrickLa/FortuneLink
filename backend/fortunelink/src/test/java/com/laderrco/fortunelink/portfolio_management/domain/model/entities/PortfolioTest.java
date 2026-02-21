@@ -119,14 +119,14 @@ class PortfolioTest {
         @Test
         @DisplayName("createAccount_Success_AddsToMapAndTouchesTimestamp")
         void createAccount_Success_AddsAccount() {
-            Instant beforeUpdate = portfolio.getLastUpdatedOn();
+            Instant beforeUpdate = portfolio.getLastUpdatedAt();
 
             Account account = portfolio.createAccount("Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD,
                     PositionStrategy.FIFO);
 
             assertThat(portfolio.getAccountCount()).isEqualTo(1);
             assertThat(portfolio.getAccounts()).contains(account);
-            assertThat(portfolio.getLastUpdatedOn()).isAfterOrEqualTo(beforeUpdate);
+            assertThat(portfolio.getLastUpdatedAt()).isAfterOrEqualTo(beforeUpdate);
             assertThat(portfolio.hasAccounts()).isTrue();
         }
 
@@ -201,14 +201,14 @@ class PortfolioTest {
         @Test
         @DisplayName("findAccountByName")
         void findAccountByName_Success_FindsAccount() {
-            Instant beforeUpdate = portfolio.getLastUpdatedOn();
+            Instant beforeUpdate = portfolio.getLastUpdatedAt();
 
             Account account = portfolio.createAccount("Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD,
                     PositionStrategy.FIFO);
 
             assertThat(portfolio.getAccountCount()).isEqualTo(1);
             assertThat(portfolio.getAccounts()).contains(account);
-            assertThat(portfolio.getLastUpdatedOn()).isAfterOrEqualTo(beforeUpdate);
+            assertThat(portfolio.getLastUpdatedAt()).isAfterOrEqualTo(beforeUpdate);
             assertThat(portfolio.hasAccounts()).isTrue();
 
             Account foundAccount = portfolio.findAccountByName("Trading").get();
@@ -370,7 +370,7 @@ class PortfolioTest {
             assertThat(portfolio.getDescription()).isEqualTo(newDesc);
 
             // Use isAfterOrEqualTo to handle ultra-fast execution
-            assertThat(portfolio.getLastUpdatedOn())
+            assertThat(portfolio.getLastUpdatedAt())
                     .as("The lastUpdatedOn timestamp should be refreshed")
                     .isAfterOrEqualTo(beforeUpdate);
         }

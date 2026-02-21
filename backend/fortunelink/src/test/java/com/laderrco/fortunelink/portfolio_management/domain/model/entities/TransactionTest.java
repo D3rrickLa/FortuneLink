@@ -34,6 +34,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.f
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Fee.FeeMetadata;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.TransactionDate;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AccountId;
@@ -55,7 +56,8 @@ public class TransactionTest {
             TradeExecution execution = new TradeExecution(
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
-                    Money.of(135, "USD"));
+                    new Price(Money.of(135, "USD")));
+
             SplitDetails spilt = null;
             Money cashDelta = Money.of(delta, "USD");
             List<Fee> fees = List.of();
@@ -78,7 +80,8 @@ public class TransactionTest {
             TradeExecution execution = new TradeExecution(
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
-                    Money.of(135, "USD"));
+                    new Price(Money.of(135, "USD")));
+
             SplitDetails spilt = null;
             Money cashDelta = Money.of(0, "USD");
             List<Fee> fees = List.of();
@@ -140,8 +143,11 @@ public class TransactionTest {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();
             TransactionType transactionType = TransactionType.DEPOSIT;
-            TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
-                    Money.of(135, "USD"));
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    new Price(Money.of(135, "USD")));
+
             SplitDetails spilt = null;
             Money cashDelta = Money.of(1350, "USD");
             List<Fee> fees = List.of();
@@ -162,8 +168,11 @@ public class TransactionTest {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();
             TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
-                    Money.of(135, "USD"));
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    new Price(Money.of(135, "USD")));
+
             SplitDetails spilt = new SplitDetails(12);
             Money cashDelta = Money.of(1350, "USD");
             List<Fee> fees = List.of();
@@ -184,8 +193,11 @@ public class TransactionTest {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();
             TransactionType transactionType = TransactionType.SPLIT;
-            TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
-                    Money.of(135, "USD"));
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    new Price(Money.of(135, "USD")));
+
             SplitDetails spilt = null;
             Money cashDelta = Money.of(1350, "USD");
             List<Fee> fees = List.of();
@@ -259,8 +271,11 @@ public class TransactionTest {
                 TransactionId transactionId = TransactionId.newId();
                 AccountId accountId = AccountId.newId();
                 TransactionType transactionType = TransactionType.BUY;
-                TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
-                        Money.of(135, "USD"));
+                TradeExecution execution = new TradeExecution(
+                        new AssetSymbol("AAPL"),
+                        new Quantity(BigDecimal.TEN),
+                        new Price(Money.of(135, "USD")));
+
                 SplitDetails spilt = null;
                 Money cashDelta = Money.of(1350, "USD");
                 List<Fee> fees = List.of();
@@ -283,8 +298,11 @@ public class TransactionTest {
                 TransactionId transactionId = TransactionId.newId();
                 AccountId accountId = AccountId.newId();
                 TransactionType transactionType = TransactionType.SPLIT;
-                TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), new Quantity(BigDecimal.TEN),
-                        Money.of(135, "USD"));
+                TradeExecution execution = new TradeExecution(
+                        new AssetSymbol("AAPL"),
+                        new Quantity(BigDecimal.TEN),
+                        new Price(Money.of(135, "USD")));
+
                 SplitDetails spilt = null;
                 Money cashDelta = Money.of(1350, "USD");
                 List<Fee> fees = List.of();
@@ -314,7 +332,8 @@ public class TransactionTest {
             TradeExecution execution = new TradeExecution(
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
-                    Money.of(135, "USD"));
+                    new Price(Money.of(135, "USD")));
+                    
             SplitDetails spilt = null;
             Money cashDelta = Money.of(-1358.25, "USD");
             List<Fee> fees = List.of(
@@ -335,9 +354,10 @@ public class TransactionTest {
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()),
-                    () -> assertEquals(Currency.USD.getCode(), transaction.totalFeesInAccountCurrency().currency().getCode()),
-                    () -> assertEquals(2, transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits())
-                );
+                    () -> assertEquals(Currency.USD.getCode(),
+                            transaction.totalFeesInAccountCurrency().currency().getCode()),
+                    () -> assertEquals(2,
+                            transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits()));
         }
 
     }
@@ -348,7 +368,7 @@ public class TransactionTest {
         @Test
         @DisplayName("Should calculate gross value correctly for both Buy and Sell")
         void testGrossValue() {
-            Money price = Money.of(150.00, "USD");
+            Price price = new Price(Money.of(150.00, "USD"));
 
             // Test Buy (Positive Quantity)
             var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"), new Quantity(new BigDecimal("10")),
@@ -366,11 +386,11 @@ public class TransactionTest {
         void testInvariants() {
             AssetSymbol symbol = new AssetSymbol("MSFT");
             Quantity qty = new Quantity(new BigDecimal("10"));
-            Money price = Money.of(100.00, "USD");
+            Price price = new Price(Money.of(100.00, "USD"));
 
             assertThrows(DomainArgumentException.class, () -> new Transaction.TradeExecution(null, qty, price));
             assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction.TradeExecution(symbol, qty, Money.of(-1.00, "USD")));
+                    () -> new Transaction.TradeExecution(symbol, qty, new Price(Money.of(-1.00, "USD"))));
             assertThrows(IllegalArgumentException.class,
                     () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")), price));
         }

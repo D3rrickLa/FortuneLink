@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
+        <version>4.0.2</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.laderrco</groupId>
@@ -30,6 +30,7 @@
     <properties>
         <java.version>25</java.version>
         <testcontainers.version>1.21.4</testcontainers.version>
+        <bucket4j.version>8.7.0</bucket4j.version>
     </properties>
     <dependencies>
 
@@ -54,7 +55,7 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
         </dependency>
 
         <dependency>
@@ -96,14 +97,14 @@
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j-core</artifactId>
-            <version>8.7.0</version>
+            <version>${bucket4j.version}</version>
         </dependency>
 
         <!-- Bucket4j Redis integration -->
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j-redis</artifactId>
-            <version>8.7.0</version>
+            <version>${bucket4j.version}</version>
         </dependency>
 
         <!-- ======================= -->
@@ -203,7 +204,6 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -211,7 +211,6 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -219,7 +218,6 @@
         <dependency>
             <groupId>com.redis</groupId>
             <artifactId>testcontainers-redis</artifactId>
-            <version>2.2.4</version>
             <scope>test</scope>
         </dependency>
 
@@ -227,7 +225,6 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
-            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -286,7 +283,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.3</version>
                 <configuration>
                     <argLine>
                         -javaagent:"${org.mockito:mockito-core:jar}"

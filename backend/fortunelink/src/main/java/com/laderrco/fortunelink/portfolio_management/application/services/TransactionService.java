@@ -7,7 +7,9 @@ import javax.security.auth.login.AccountNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio_management.application.commands.records.RecordPurchaseCommand;
+import com.laderrco.fortunelink.portfolio_management.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfolio_management.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio_management.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio_management.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio_management.application.validators.TransactionCommandValidator;
@@ -20,6 +22,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.f
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio_management.domain.repositories.TransactionRepository;
@@ -77,6 +80,39 @@ public class TransactionService {
                 .orElseThrow();
 
         // return transactionviewmapper.totransactionview(recorded);
+        return null;
+    }
+
+    public TransactionView recordSale(RecordSaleCommand command) {
+        // validation here
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+
+        Account account = portfolio.getAccount(command.accountId());
+        AssetSymbol symbol = new AssetSymbol(command.symbol());
+
+        if (!account.hasPosition(symbol)) {
+            throw new InsufficientQuantityException("No posotion found for: " + command.symbol());
+        }
+
+        Price price = resolvePrice(command.price(), account.getAccountCurrency());
+
+        // this needs to return the acutal transaction
+        transactionRecordingService.recordSell(
+                account,
+                symbol,
+                command.quantity(),
+                price,
+                consolidateFees(command.fees()),
+                command.transactionDate());
+
+        portfolioRepository.save(portfolio);
+
+        Transaction recorded = transactionRepository
+                .findByAccountId(account.getAccountId())
+                .stream()
+                .reduce((first, second) -> second)
+                .orElseThrow();
         return null;
     }
 

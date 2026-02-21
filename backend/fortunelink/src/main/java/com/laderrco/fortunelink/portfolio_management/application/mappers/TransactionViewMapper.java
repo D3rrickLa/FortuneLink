@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio_management.domain.model.valueobjects.f
 
 @Component
 public class TransactionViewMapper {
+    // DO we need this? is there some way to prevent this
     private TransactionViewMapper() {
     }
 
@@ -26,18 +27,22 @@ public class TransactionViewMapper {
     public static TransactionView toResponse(Transaction transaction, MarketAssetInfo assetInfo) {
 
         // Using clear local variables or passing directly to constructor
-        return new TransactionView(
-                transaction.transactionId(),
-                transaction.transactionType(),
-                transaction.getAssetIdentifier().getPrimaryId(),
-                transaction.getQuantity(),
-                transaction.getPricePerUnit(),
-                transaction.getFees() != null ? transaction.getFees() : List.of(),
-                transaction.calculateTotalCost(),
-                transaction.getTransactionDate(),
-                transaction.getNotes()
-        // In the future, you'd add assetInfo fields here as constructor arguments
-        );
+        // NOTE: THIS MAPPER IS WRONG AS IN THE TRANSACTION NOW DOESN'T HAVE THESE
+        // WE NEED A WAY TO DISTINGUSH WHAT TYPE OF TRANSACTION IS WHAT
+        // return new TransactionView(
+        //         transaction.transactionId(),
+        //         transaction.transactionType(),
+        //         transaction.getAssetIdentifier().getPrimaryId(),
+        //         transaction.getQuantity(),
+        //         transaction.getPricePerUnit(),
+        //         transaction.getFees() != null ? transaction.getFees() : List.of(),
+        //         transaction.calculateTotalCost(),
+        //         transaction.getTransactionDate(),
+        //         transaction.getNotes()
+        // // In the future, you'd add assetInfo fields here as constructor arguments
+        // );
+
+        return TransactionView.create(transaction);
     }
 
     public static List<TransactionView> toResponseList(List<Transaction> transactions) {
