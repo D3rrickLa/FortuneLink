@@ -360,6 +360,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!--
             Modulith test support.
             Provides @ApplicationModuleTest to boot only a single module in isolation,
@@ -388,21 +394,6 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <!-- 
-				need (this and the surefire because in the debug console while testing, says self-attaching 
-			 	will no longer work in future releases, do this instead. the log below
-                    Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in
-                    future releases of the JDK. Please add Mockito as an agent to your build as described in
-                    Mockito's documentation:
-                 
-                    WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide
-                                this warning
-                    WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for
-                                more information
-                    WARNING: Dynamic loading of agents will be disallowed by default in a future release
-                    OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because
-                                bootstrap classpath has been appended
-			-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -422,8 +413,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>
-                        @{argLine}
-                        -javaagent:${org.mockito:mockito-core:jar}
+                        <!-- -javaagent:${org.mockito:mockito-core:jar} -->
                         -XX:+EnableDynamicAgentLoading
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.util=ALL-UNNAMED
