@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -10,12 +12,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
+import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioSummaryQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
+import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
@@ -45,7 +52,6 @@ public class PortfolioQueryService {
     private final PortfolioRepository portfolioRepository;
 
     private final MarketDataService marketDataService;
-    private final ExchangeRateService exchangeRateService;
     private final PortfolioValuationService portfolioValuationService;
 
     private final PortfolioViewMapper portfolioViewMapper;
@@ -68,13 +74,64 @@ public class PortfolioQueryService {
         return portfolioViewMapper.toPortfolioView(portfolio, displayCurrency, quoteCache);
     }
 
+    public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
+        Objects.requireNonNull(query, "GetPortfoliosByUserIdQuery cannot be null");
+
+        List<Portfolio> portfolios = portfolioRepository.findAllByUserId(query.userId());
+        if (portfolios.isEmpty()) {
+            return List.of();
+        }
+
+        // One batch call across ALL portfolios - critical for multi-portfolio future
+        Set<AssetSymbol> allSymbols = portfolios.stream()
+                .flatMap(p -> extractSymbols(p).stream())
+                .collect(Collectors.toSet());
+
+        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
+
+        return portfolios.stream()
+                .map(p -> portfolioViewMapper.toPortfolioSummaryView(p, p.getDisplayCurrency(), quoteCache))
+                .toList();
+    }
+
+    /**
+     * Calculates net worth for a user's portfolio.
+     *
+     * Net Worth = Total Assets - Total Liabilities
+     * Liabilities are currently zero (future: ACL into Loan/Debt context).
+     */
+    public NetWorthView getNetWorth(GetNetWorthQuery query) {
+        Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
+
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+        Instant asOf = query.asOfDate() != null ? query.asOfDate() : Instant.now();
+        Currency displayCurrency = portfolio.getDisplayCurrency();
+
+        // One batch call - passed into valuation service, not re-fetched inside it
+        Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
+
+        Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);
+
+        // TODO: integrate liabilities via ACL (Loan / Debt context)
+        Money totalLiabilities = Money.ZERO(displayCurrency);
+
+        Money netWorth = totalAssets.subtract(totalLiabilities);
+
+        return new NetWorthView(
+                totalAssets,
+                totalLiabilities,
+                netWorth,
+                displayCurrency,
+                asOf);
+    }
+
     /**
      * Loads the portfolio owned by the given user.
      *
      * Centralizes the current "one portfolio per user" policy and
      * provides a single seam for future multi-portfolio evolution.
      */
-    private Portfolio loadUserPortfolio(PortfolioId portfolioId,UserId userId) {
+    private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
 
         return portfolioRepository.findByIdAndUserId(portfolioId, userId)
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
