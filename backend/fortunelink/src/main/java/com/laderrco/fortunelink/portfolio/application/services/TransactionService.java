@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import java.util.function.Function;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPur
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
@@ -53,6 +55,7 @@ public class TransactionService {
     private final TransactionViewMapper transactionViewMapper;
 
     private final TransactionCommandValidator validator;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final MarketDataService marketDataService;
     private final ExchangeRateService exchangeRateService;
@@ -196,38 +199,8 @@ public class TransactionService {
 
     }
 
-    /*
-     * NOTE: whenever we load transaction for position calculation, we add the
-     * following filter:
-     * 
-     * List<Transaction> activeTransactions = transactionRepository
-     * .findByAccountIdAndSymbol(accountId, symbol)
-     * .stream()
-     * .filter(tx -> !tx.isExcluded()) // ← skip excluded
-     * .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
-     * .toList();
-     * 
-     * 
-     * // Future implementation sketch, will need to be async
-     * public void scheduleRecalculation(AccountId accountId, AssetSymbol symbol) {
-     * List<Transaction> active = transactionRepository
-     * .findByAccountIdAndSymbol(accountId, symbol)
-     * .stream()
-     * .filter(tx -> !tx.isExcluded())
-     * .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
-     * .toList();
-     * 
-     * Account account = // load account
-     * account.clearPosition(symbol); // reset to zero
-     * active.forEach(tx -> transactionRecordingService.replayTransaction(account,
-     * tx));
-     * portfolioRepository.save(account.getPortfolio()); // persist corrected state
-     * }
-     * 
-     */
     public TransactionView excludeTransaction(ExcludeTransactionCommand command) {
         validate(command, validator::validate, "excludeTransaction");
-        PortfolioContext ctx = getPortfolioContext(command);
 
         Transaction existing = transactionRepository
                 .findByIdAndPortfolioIdAndUserIdAndAccountId(
@@ -245,14 +218,18 @@ public class TransactionService {
         transactionRepository.save(excluded);
 
         // Trigger async position recalculation
-        // positionRecalculationService.scheduleRecalculation(ctx.account().getAccountId());
+        // Publish after save - fires AFTER_COMMIT, not during
+        eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
+                command.portfolioId(),
+                command.userId(),
+                command.accountId(),
+                new AssetSymbol(existing.execution().asset().symbol())));
 
         return transactionViewMapper.toTransactionView(excluded);
     }
 
     public TransactionView restoreTransaction(RestoreTransactionCommand command) {
         validate(command, validator::validate, "restoreTransaction");
-        PortfolioContext ctx = getPortfolioContext(command);
 
         Transaction existing = transactionRepository
                 .findByIdAndPortfolioIdAndUserIdAndAccountId(
@@ -270,7 +247,12 @@ public class TransactionService {
         transactionRepository.save(restored);
 
         // Trigger async position recalculation
-        // positionRecalculationService.scheduleRecalculation(ctx.account().getAccountId());
+        // Publish after save - fires AFTER_COMMIT, not during
+        eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
+                command.portfolioId(),
+                command.userId(),
+                command.accountId(),
+                new AssetSymbol(existing.execution().asset().symbol())));
 
         return transactionViewMapper.toTransactionView(restored);
     }
