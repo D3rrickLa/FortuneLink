@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -15,7 +16,6 @@ import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -25,7 +25,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
@@ -60,6 +59,7 @@ public class PortfolioViewMapper {
                 .toList();
 
         // Calculate portfolio-level totals in user's display currency
+        // this technically can be called one level up to PortfolioValuatoinService
         Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, currency, quoteCache);
 
         return new PortfolioView(
@@ -107,9 +107,11 @@ public class PortfolioViewMapper {
 
         // Calculate account totals in account's base currency
         Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
-        // Money totalValue = calculateAccountTotalValue(account, quoteCache);
-        Money cashBalance = calculateCashBalance(account);
-        
+        // Single source of truth: the field on the entity, not a position scan
+        // NOTE: might be a unesscesary check
+        Money cashBalance = Optional.ofNullable(account.getCashBalance())
+                .orElse(Money.ZERO(account.getAccountCurrency()));
+
         return new AccountView(
                 account.getAccountId(),
                 account.getName(),
@@ -166,19 +168,6 @@ public class PortfolioViewMapper {
                 determineMethodology(position),
                 extractFirstAcquiredDate(position),
                 extractLastModifiedDate(position));
-    }
-
-
-    /**
-     * Extracts total cash positions within an account.
-     * Cash positions are stored as regular positions with AssetType.CASH.
-     */
-    private Money calculateCashBalance(Account account) {
-        return account.getPositionEntries().stream()
-                .filter(entry -> entry.getValue().type() == AssetType.CASH) // this returns Position, no cashBalance
-                .map(entry -> entry.getValue().totalCostBasis())
-                .reduce(Money::add)
-                .orElse(Money.ZERO(account.getAccountCurrency()));
     }
 
     /**
