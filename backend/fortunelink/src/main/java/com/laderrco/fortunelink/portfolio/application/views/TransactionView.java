@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -25,30 +24,4 @@ public record TransactionView(
         Map<String, String> metadata,
         Instant date,
         String notes) {
-    public static TransactionView create(Transaction transaction) {
-        if (transaction.execution() == null) {
-            return new TransactionView(
-                    transaction.transactionId(),
-                    transaction.transactionType(),
-                    null, // no need for symbols for 'i.e. deposit'
-                    null,
-                    null, // no price for these types of transaction
-                    transaction.fees(),
-                    transaction.cashDelta(),
-                    transaction.metadata().asFlatMap(),
-                    transaction.occurredAt().timestamp(),
-                    transaction.notes());
-        }
-        return new TransactionView(
-                transaction.transactionId(),
-                transaction.transactionType(),
-                transaction.execution().asset().symbol(),
-                transaction.execution().quantity(),
-                transaction.execution().pricePerUnit(),
-                transaction.fees(),
-                transaction.cashDelta(),
-                transaction.metadata().asFlatMap(),
-                transaction.occurredAt().timestamp(),
-                transaction.notes());
-    }
 }

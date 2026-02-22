@@ -13,10 +13,8 @@ import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
-import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
@@ -29,7 +27,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
@@ -38,7 +35,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class PortfolioViewMapper {
-    private final ExchangeRateService exchangeRateService;
     private final PortfolioValuationService portfolioValuationService;
 
     public PortfolioView toNewPortfolioView(Portfolio portfolio) {
@@ -172,66 +168,6 @@ public class PortfolioViewMapper {
                 extractLastModifiedDate(position));
     }
 
-    public TransactionView toTransactionView(Transaction transaction) {
-        Objects.requireNonNull(transaction, "Transaction cannot be null");
-
-        return TransactionView.create(transaction);
-    }
-
-    /**
-     * Calculates total portfolio value by summing all account values,
-     * converting each to the display currency.
-     * 
-     * More efficient than converting every position individually.
-     */
-    @Deprecated
-    private Money calculatePortfolioTotalValue(
-            Portfolio portfolio,
-            Map<AssetSymbol, MarketAssetQuote> quoteCache,
-            Currency displayCurrency) {
-
-        return portfolio.getAccounts().stream()
-                .map(account -> calculateAccountTotalValue(account, quoteCache))
-                .map(accountValue -> exchangeRateService.convert(accountValue, displayCurrency))
-                .reduce(Money::add)
-                .orElse(Money.ZERO(displayCurrency));
-    }
-
-    /**
-     * Calculates total value of an account in the account's base currency.
-     * Sums position market values, falling back to cost basis when prices
-     * unavailable.
-     */
-    @Deprecated
-    private Money calculateAccountTotalValue(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-
-        Currency accountCurrency = account.getAccountCurrency();
-
-        Money positionsValue = account.getPositionEntries().stream()
-                .map(entry -> {
-                    Position position = entry.getValue();
-                    MarketAssetQuote quote = quoteCache.get(entry.getKey());
-
-                    Money valueInPositionCurrency;
-                    if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
-                        // No market data - use cost basis
-                        valueInPositionCurrency = position.totalCostBasis();
-                    } else {
-                        // Calculate market value using Position's own method
-                        valueInPositionCurrency = position.currentValue(quote.currentPrice().pricePerUnit());
-                    }
-
-                    // Convert to account's base currency if needed
-                    // Position is already in account currency per the interface
-                    return valueInPositionCurrency;
-                })
-                .reduce(Money::add)
-                .orElse(Money.ZERO(accountCurrency));
-
-        // Add cash balance (already in account currency)
-        Money cash = calculateCashBalance(account);
-        return positionsValue.add(cash);
-    }
 
     /**
      * Extracts total cash positions within an account.

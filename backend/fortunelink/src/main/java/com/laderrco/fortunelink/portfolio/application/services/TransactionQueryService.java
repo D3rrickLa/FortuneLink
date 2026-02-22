@@ -52,7 +52,7 @@ public class TransactionQueryService {
                         query.accountId())
                 .orElseThrow(() -> new TransactionNotFoundException(query.transactionId()));
 
-        return transactionViewMapper.toView(transaction);
+        return transactionViewMapper.toTransactionView(transaction);
     }
 
     /**
@@ -83,7 +83,7 @@ public class TransactionQueryService {
             page = transactionQueryRepository.findByAccountId(query.accountId(), pageable);
         }
 
-        return page.map(transactionViewMapper::toView);
+        return page.map(transactionViewMapper::toTransactionView);
     }
 
     /**

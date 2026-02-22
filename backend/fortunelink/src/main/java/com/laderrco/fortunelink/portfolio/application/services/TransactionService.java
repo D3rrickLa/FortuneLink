@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import java.util.function.Function;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
@@ -36,7 +37,6 @@ import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 // COMBO of a new Transaction service -> those from old portfolioappservice
@@ -80,7 +80,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
     }
 
     public TransactionView recordSale(RecordSaleCommand command) {
@@ -106,7 +106,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
 
     }
 
@@ -122,7 +122,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
 
     }
 
@@ -138,7 +138,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
     }
 
     public TransactionView recordFee(RecordFeeCommand command) {
@@ -153,7 +153,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
     }
 
     // this method deposits into the account
@@ -172,7 +172,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
 
     }
 
@@ -192,7 +192,7 @@ public class TransactionService {
 
         persistChanges(ctx, recordedTransaction);
 
-        return transactionViewMapper.toView(recordedTransaction);
+        return transactionViewMapper.toTransactionView(recordedTransaction);
 
     }
 
@@ -247,7 +247,7 @@ public class TransactionService {
         // Trigger async position recalculation
         // positionRecalculationService.scheduleRecalculation(ctx.account().getAccountId());
 
-        return transactionViewMapper.toView(excluded);
+        return transactionViewMapper.toTransactionView(excluded);
     }
 
     public TransactionView restoreTransaction(RestoreTransactionCommand command) {
@@ -272,7 +272,7 @@ public class TransactionService {
         // Trigger async position recalculation
         // positionRecalculationService.scheduleRecalculation(ctx.account().getAccountId());
 
-        return transactionViewMapper.toView(restored);
+        return transactionViewMapper.toTransactionView(restored);
     }
 
     private PortfolioContext getPortfolioContext(TransactionCommand command) {

@@ -141,9 +141,7 @@ public class PortfolioLifecycleService {
     public void updateAccount(UpdateAccountCommand command) {
         validate(command, validator::validate, "updateAccount");
 
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(
-                        "Portfolio not found or access denied for ID: " + command.portfolioId()));
+        Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
 
         portfolio.renameAccount(command.accountId(), command.accountName());
 

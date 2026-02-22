@@ -10,8 +10,31 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 @Component
 public class TransactionViewMapper {
 
-    public TransactionView toView(Transaction transaction) {
-        return TransactionView.create(transaction);
+    public TransactionView toTransactionView(Transaction transaction) {
+        if (transaction.execution() == null) {
+            return new TransactionView(
+                    transaction.transactionId(),
+                    transaction.transactionType(),
+                    null, // no need for symbols for 'i.e. deposit'
+                    null,
+                    null, // no price for these types of transaction
+                    transaction.fees(),
+                    transaction.cashDelta(),
+                    transaction.metadata().asFlatMap(),
+                    transaction.occurredAt().timestamp(),
+                    transaction.notes());
+        }
+        return new TransactionView(
+                transaction.transactionId(),
+                transaction.transactionType(),
+                transaction.execution().asset().symbol(),
+                transaction.execution().quantity(),
+                transaction.execution().pricePerUnit(),
+                transaction.fees(),
+                transaction.cashDelta(),
+                transaction.metadata().asFlatMap(),
+                transaction.occurredAt().timestamp(),
+                transaction.notes());
     }
 
     public List<TransactionView> toViewList(List<Transaction> transactions) {
@@ -20,7 +43,7 @@ public class TransactionViewMapper {
         }
 
         return transactions.stream()
-                .map(this::toView)
+                .map(this::toTransactionView)
                 .toList();
     }
 }

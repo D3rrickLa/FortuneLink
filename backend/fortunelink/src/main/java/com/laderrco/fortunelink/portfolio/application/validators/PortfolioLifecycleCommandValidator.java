@@ -124,7 +124,7 @@ public class PortfolioLifecycleCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.id() == null) {
+        if (command.userId() == null) {
             errors.add("UserId is required");
         }
 
