@@ -4,11 +4,13 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 
-public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount, ExchangeRate exchangeRate, Instant occurredAt, FeeMetadata metadata) {
+public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount, ExchangeRate exchangeRate,
+        Instant occurredAt, FeeMetadata metadata) {
     public Fee {
         notNull(feeType, "Fee type cannot be null");
         notNull(nativeAmount, "Native amount cannot be null");
@@ -36,6 +38,29 @@ public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount, Exch
 
     public static Fee ZERO(Currency currency) {
         return new Fee(FeeType.NONE, Money.ZERO(currency), null, null, Instant.now(), new FeeMetadata(Map.of()));
+    }
+
+    /**
+     * Sum fees in account currency. Prefers accountAmount, 
+     * falls back to nativeAmount
+     * 
+     * only if no conversion was applied (same currency). Null-safe on the list.
+     */
+    public static Money totalInAccountCurrency(List<Fee> fees, Currency accountCurrency) {
+        if (fees == null || fees.isEmpty()) {
+            return Money.ZERO(accountCurrency);
+        }
+        Money total = Money.ZERO(accountCurrency);
+        for (Fee fee : fees) {
+            Money amount = fee.accountAmount() != null ? fee.accountAmount() : fee.nativeAmount();
+            if (!amount.currency().equals(accountCurrency)) {
+                throw new IllegalArgumentException(
+                        "Fee currency mismatch: expected " + accountCurrency + ", got " + amount.currency()
+                                + " — ensure accountAmount is set for cross-currency fees");
+            }
+            total = total.add(amount);
+        }
+        return total;
     }
 
     public record FeeMetadata(Map<String, String> values) {

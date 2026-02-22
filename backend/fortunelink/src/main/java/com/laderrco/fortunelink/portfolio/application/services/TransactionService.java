@@ -74,7 +74,8 @@ public class TransactionService {
                 assetInfo.type(),
                 command.quantity(),
                 price,
-                command.totalFees(ctx.account().getAccountCurrency()),
+                command.fees(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -99,7 +100,8 @@ public class TransactionService {
                 symbol,
                 command.quantity(),
                 price,
-                command.totalFees(ctx.account().getAccountCurrency()),
+                command.fees(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -115,6 +117,7 @@ public class TransactionService {
         Transaction recordedTransaction = transactionRecordingService.recordDeposit(
                 ctx.account(),
                 command.amount(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -130,6 +133,7 @@ public class TransactionService {
         Transaction recordedTransaction = transactionRecordingService.recordWithdrawal(
                 ctx.account(),
                 command.amount(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -144,6 +148,7 @@ public class TransactionService {
         Transaction recordedTransaction = transactionRecordingService.recordFee(
                 ctx.account(),
                 command.amount(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -162,6 +167,7 @@ public class TransactionService {
                 ctx.account(),
                 symbol,
                 command.amount(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -181,6 +187,7 @@ public class TransactionService {
                 symbol,
                 command.execution().sharesPurchased(),
                 command.execution().pricePerShare(),
+                command.notes(),
                 command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
@@ -190,7 +197,7 @@ public class TransactionService {
     }
 
     /*
-     * NOTE: whenever we load transaction for position calculation, we add thw
+     * NOTE: whenever we load transaction for position calculation, we add the
      * following filter:
      * 
      * List<Transaction> activeTransactions = transactionRepository
@@ -282,4 +289,5 @@ public class TransactionService {
             throw new InvalidTransactionException(msg, result.errors());
         }
     }
+
 }

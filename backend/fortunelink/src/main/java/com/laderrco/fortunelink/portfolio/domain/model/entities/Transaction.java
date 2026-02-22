@@ -112,9 +112,10 @@ public record Transaction(
     }
 
     public Money totalFeesInAccountCurrency() {
-        Currency currency = cashDelta.currency();
-        return fees.stream().map(Fee::accountAmount)
-                .reduce(Money.ZERO(currency), Money::add);
+        return Fee.totalInAccountCurrency(fees, cashDelta.currency());
+        // Currency currency = cashDelta.currency();
+        // return fees.stream().map(Fee::accountAmount)
+                // .reduce(Money.ZERO(currency), Money::add);
     }
 
     private void validateConsistency(String label, boolean isRequired, boolean isPresent) {
@@ -129,9 +130,7 @@ public record Transaction(
     private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta,
             List<Fee> fees) {
         Money grossValue = execution.grossValue();
-        Money totalFees = fees.stream()
-                .map(Fee::accountAmount)
-                .reduce(Money.ZERO(cashDelta.currency()), Money::add);
+        Money totalFees = totalFeesInAccountCurrency();
 
         Money expectedCashDelta = switch (type.cashImpact()) {
             case IN -> grossValue.subtract(totalFees);

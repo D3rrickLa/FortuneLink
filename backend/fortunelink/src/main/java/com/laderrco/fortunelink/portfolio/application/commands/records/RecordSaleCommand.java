@@ -15,6 +15,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public record RecordSaleCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, String symbol, Quantity quantity, Price price, List<Fee> fees, Instant transactionDate, String notes) implements TransactionCommand {
     public Money totalFees(Currency currency) {
-        return fees.stream().map(Fee::accountAmount).reduce(Money::add).orElse(Money.ZERO(currency));
+        return Fee.totalInAccountCurrency(fees, currency);
     }
 }

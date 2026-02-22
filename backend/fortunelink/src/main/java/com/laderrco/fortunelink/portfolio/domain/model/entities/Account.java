@@ -149,6 +149,11 @@ public class Account {
         touch();
     }
 
+    // replaces the getOrCreateEmptyPosition method
+    public Position ensurePosition(AssetSymbol symbol, AssetType assetType) {
+        return positions.computeIfAbsent(symbol, s -> createEmptyPosition(s, assetType));
+    }
+
     // accounts should be closed via portfolio
     void close() {
         requireActive();
@@ -173,11 +178,6 @@ public class Account {
         this.isActive = true;
         this.closeDate = null;
         touch();
-    }
-
-    // replaces the getOrCreateEmptyPosition method
-    Position ensurePosition(AssetSymbol symbol, AssetType assetType) {
-        return positions.computeIfAbsent(symbol, s -> createEmptyPosition(s, assetType));
     }
 
     public AccountId getAccountId() {

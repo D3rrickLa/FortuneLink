@@ -10,6 +10,10 @@ public record TransactionDate(Instant timestamp) {
         notNull(timestamp, "timestamp");
     }
 
+    public static TransactionDate of(Instant timestamp) {
+        return new TransactionDate(timestamp);
+    }
+
     public static TransactionDate now() {
         return new TransactionDate(Instant.now());
     }
