@@ -28,6 +28,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
+import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
@@ -37,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PortfolioViewMapper {
     private final ExchangeRateService exchangeRateService;
+    private final PortfolioValuationService portfolioValuationService;
 
     public PortfolioView toNewPortfolioView(Portfolio portfolio) {
         return new PortfolioView(
@@ -61,7 +64,7 @@ public class PortfolioViewMapper {
                 .toList();
 
         // Calculate portfolio-level totals in user's display currency
-        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, currency);
+        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, currency, quoteCache);
 
         return new PortfolioView(
                 portfolio.getPortfolioId(),
@@ -79,7 +82,7 @@ public class PortfolioViewMapper {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(currency, "Currency cannot be null");
 
-        Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, currency);
+        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, currency, quoteCache);
 
         return new PortfolioSummaryView(
                 portfolio.getPortfolioId(),
@@ -107,9 +110,10 @@ public class PortfolioViewMapper {
                 .toList();
 
         // Calculate account totals in account's base currency
-        Money totalValue = calculateAccountTotalValue(account, quoteCache);
+        Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
+        // Money totalValue = calculateAccountTotalValue(account, quoteCache);
         Money cashBalance = calculateCashBalance(account);
-
+        
         return new AccountView(
                 account.getAccountId(),
                 account.getName(),
@@ -180,6 +184,7 @@ public class PortfolioViewMapper {
      * 
      * More efficient than converting every position individually.
      */
+    @Deprecated
     private Money calculatePortfolioTotalValue(
             Portfolio portfolio,
             Map<AssetSymbol, MarketAssetQuote> quoteCache,
@@ -197,6 +202,7 @@ public class PortfolioViewMapper {
      * Sums position market values, falling back to cost basis when prices
      * unavailable.
      */
+    @Deprecated
     private Money calculateAccountTotalValue(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
 
         Currency accountCurrency = account.getAccountCurrency();
@@ -233,7 +239,7 @@ public class PortfolioViewMapper {
      */
     private Money calculateCashBalance(Account account) {
         return account.getPositionEntries().stream()
-                .filter(entry -> entry.getValue().type() == AssetType.CASH)
+                .filter(entry -> entry.getValue().type() == AssetType.CASH) // this returns Position, no cashBalance
                 .map(entry -> entry.getValue().totalCostBasis())
                 .reduce(Money::add)
                 .orElse(Money.ZERO(account.getAccountCurrency()));
