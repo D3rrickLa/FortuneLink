@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +14,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;

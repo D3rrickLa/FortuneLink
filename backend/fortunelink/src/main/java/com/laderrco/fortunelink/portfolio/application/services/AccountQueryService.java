@@ -4,17 +4,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAllAccountsQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAssetQuery;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioServiceUtils;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
@@ -62,9 +63,8 @@ public class AccountQueryService {
 		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
 
 		// Batch fetch across all accounts in one shot
-		Set<AssetSymbol> allSymbols = portfolio.getAccounts().stream()
-				.flatMap(account -> account.getPositionEntries().stream().map(Map.Entry::getKey))
-				.collect(Collectors.toSet());
+		Set<AssetSymbol> allSymbols = PortfolioServiceUtils.extractSymbols(portfolio);
+
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
 		return portfolio.getAccounts().stream()
@@ -83,13 +83,10 @@ public class AccountQueryService {
 
 		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
 		Account account = portfolio.findAccount(query.accountId())
-				.orElseThrow(() -> new AccountNotFoundException(query.accountId(),
-						query.portfolioId()));
+				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
 		// Scoped batch call: only this account's symbols
-		Set<AssetSymbol> symbols = account.getPositionEntries().stream()
-				.map(Map.Entry::getKey)
-				.collect(Collectors.toSet());
+		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		return accountViewBuilder.build(account, quoteCache);
@@ -108,9 +105,7 @@ public class AccountQueryService {
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
-		Set<AssetSymbol> symbols = account.getPositionEntries().stream()
-				.map(Map.Entry::getKey)
-				.collect(Collectors.toSet());
+		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		return account.getPositionEntries().stream()
@@ -130,13 +125,12 @@ public class AccountQueryService {
 
 		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
 		Account account = portfolio.findAccount(query.accountId())
-				.orElseThrow(() -> new AccountNotFoundException(query.accountId(),
-						query.portfolioId()));
+				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
 		// findPosition or similar — adjust to your actual Account API
 		var position = account.getPosition(query.symbol())
-				.orElseThrow(() -> new com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException(
-						"No position found for symbol: " + query.symbol().value()));
+				.orElseThrow(
+						() -> new AssetNotFoundException("No position found for symbol: " + query.symbol().value()));
 
 		// Single quote, not a batch — correct API hygiene for single-item lookups
 		MarketAssetQuote quote = marketDataService.getCurrentQuote(query.symbol()).orElse(null);

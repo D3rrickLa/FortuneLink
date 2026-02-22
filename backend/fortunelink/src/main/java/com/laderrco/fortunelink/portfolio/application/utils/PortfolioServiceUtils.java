@@ -13,4 +13,5 @@ public class PortfolioServiceUtils {
                 .flatMap(account -> account.getPositionEntries().stream().map(Map.Entry::getKey))
                 .collect(Collectors.toSet());
     }
+
 }
