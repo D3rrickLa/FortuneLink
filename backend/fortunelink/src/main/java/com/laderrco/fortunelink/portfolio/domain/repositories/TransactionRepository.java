@@ -14,6 +14,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 public interface TransactionRepository {
     Transaction save(Transaction transaction);
 
+    void delete(TransactionId transactionId);
+
     Optional<Transaction> findById(TransactionId transactionId);
 
     Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id, PortfolioId portfolioId, UserId userId, AccountId accountId);
@@ -24,5 +26,4 @@ public interface TransactionRepository {
 
     List<Transaction> findByDateRange(AccountId accountId, Instant start, Instant end);
 
-    void delete(TransactionId transactionId);
 }
