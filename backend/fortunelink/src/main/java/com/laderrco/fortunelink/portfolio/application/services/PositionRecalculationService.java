@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +32,7 @@ public class PositionRecalculationService {
     private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionRecordingService transactionRecordingService;
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
 
     /**
      * it's phase = AFTER_COMMMIT because this ensures

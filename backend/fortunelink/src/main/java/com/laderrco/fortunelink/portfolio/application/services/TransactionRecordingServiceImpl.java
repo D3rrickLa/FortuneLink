@@ -293,9 +293,16 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             case BUY -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
+                Money grossCost = tx.execution().grossValue(); // qty × price, no fees
                 ApplyResult<? extends Position> result = current.buy(
                         tx.execution().quantity(),
-                        tx.cashDelta().abs(),
+                        // recordBuy passes frossCost to current.buy() only
+                        // and not gross + fees
+                        // when we didd it like this before,
+                        // the backed fees will overstates ACB/costbasis
+                        // ACB for tax purposes is gross cost only? fees are a separate deduction
+                        // tx.cashDelta().abs(),
+                        grossCost,
                         tx.occurredAt().timestamp());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }

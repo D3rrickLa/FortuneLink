@@ -223,7 +223,7 @@ public class TransactionService {
                 command.portfolioId(),
                 command.userId(),
                 command.accountId(),
-                new AssetSymbol(existing.execution().asset().symbol())));
+                new AssetSymbol(existing.execution().asset().symbol()))); // NPE issue
 
         return transactionViewMapper.toTransactionView(excluded);
     }
