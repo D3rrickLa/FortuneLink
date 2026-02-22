@@ -7,6 +7,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 
 // asOfDate Optional
-public record ViewNetWorthQuery(PortfolioId portfolioId, UserId userId, Instant asOfDate) {
+public record GetNetWorthQuery(PortfolioId portfolioId, UserId userId, Instant asOfDate) {
 
 }

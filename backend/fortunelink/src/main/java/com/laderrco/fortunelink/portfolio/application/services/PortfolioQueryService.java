@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -10,11 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
@@ -55,11 +59,9 @@ public class PortfolioQueryService {
     public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
         Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
 
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(query.portfolioId(), query.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(query.portfolioId()));
-
+        Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
         Currency displayCurrency = portfolio.getDisplayCurrency(); // owned by the aggregate
-        
+
         // Single batch call for the entire request
         Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
 
@@ -72,9 +74,7 @@ public class PortfolioQueryService {
      * Centralizes the current "one portfolio per user" policy and
      * provides a single seam for future multi-portfolio evolution.
      */
-    private Portfolio loadUserPortfolio(
-            com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId portfolioId,
-            com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId userId) {
+    private Portfolio loadUserPortfolio(PortfolioId portfolioId,UserId userId) {
 
         return portfolioRepository.findByIdAndUserId(portfolioId, userId)
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
