@@ -4,6 +4,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-public record UpdatePortfolioCommand(PortfolioId id, UserId userId, String name, String description, Currency currency) {
+public record UpdatePortfolioCommand(PortfolioId portfolioId, UserId userId, String name, String description, Currency currency) implements PortfolioLifecycleCommand {
     
 }

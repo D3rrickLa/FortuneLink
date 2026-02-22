@@ -17,6 +17,8 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSal
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 
+// TODO: DRY the portfolioId, accountId, and UserId
+
 @Component
 public class TransactionCommandValidator {
     public ValidationResult validate(RecordPurchaseCommand command) {

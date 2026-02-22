@@ -4,5 +4,5 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-public record DeleteAccountCommand(PortfolioId portfolioId, UserId userId, AccountId accountId) {
+public record DeleteAccountCommand(PortfolioId portfolioId, UserId userId, AccountId accountId) implements PortfolioLifecycleCommand {
 }
