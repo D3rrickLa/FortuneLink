@@ -30,8 +30,8 @@ public record TransactionView(
             return new TransactionView(
                     transaction.transactionId(),
                     transaction.transactionType(),
-                    transaction.cashDelta().currency().getSymbol(),
-                    Quantity.ZERO,
+                    null, // no need for symbols for 'i.e. deposit'
+                    null,
                     null, // no price for these types of transaction
                     transaction.fees(),
                     transaction.cashDelta(),
@@ -47,7 +47,7 @@ public record TransactionView(
                 transaction.execution().pricePerUnit(),
                 transaction.fees(),
                 transaction.cashDelta(),
-                transaction.metadata().additionalData(),
+                transaction.metadata().asFlatMap(),
                 transaction.occurredAt().timestamp(),
                 transaction.notes());
     }

@@ -266,19 +266,12 @@ public class TransactionCommandValidator {
             errors.add("AccountId is required");
         }
 
-        ValidationResult amountValidation = validateAmount(command.amount().amount());
-        if (!amountValidation.isValid()) {
-            errors.addAll(amountValidation.errors());
-        }
-
         if (command.amount().currency() == null) {
             errors.add("Currency is required");
         }
 
-        ValidationResult dateValidation = validateDate(command.transactionDate());
-        if (!dateValidation.isValid()) {
-            errors.addAll(dateValidation.errors());
-        }
+        ValidationUtils.validateAmount(command.amount().amount(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), errors);
 
         return errors.isEmpty()
                 ? ValidationResult.success()
@@ -335,67 +328,4 @@ public class TransactionCommandValidator {
                 : ValidationResult.failure(errors);
     }
 
-    private boolean isValidCurrency(String currency) {
-        try {
-            Currency.of(currency);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    private boolean isValidSymbol(String symbol) {
-        // Basic validation: 1-10 uppercase letters/numbers,
-        // possibly with dots or dashes
-        return symbol != null && symbol.matches("^[A-Z0-9.\\-]{1,10}$");
-    }
-
-    private ValidationResult validateAmount(BigDecimal amount) {
-        if (amount == null) {
-            return ValidationResult.failure("Amount is required");
-        }
-
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return ValidationResult.failure("Amount cannot be negative");
-        }
-
-        if (amount.scale() > Precision.getMoneyPrecision()) {
-            return ValidationResult.failure("Amount can have at most 34 decimal places. Scale is " + amount.scale());
-        }
-
-        return ValidationResult.success();
-    }
-
-    private ValidationResult validateQuantity(Quantity quantity) {
-        if (quantity == null) {
-            return ValidationResult.failure("Quantity is required");
-        }
-
-        if (quantity.compareTo(Quantity.ZERO) <= 0) {
-            return ValidationResult.failure("Quantity must be greater than zero");
-        }
-
-        if (quantity.amount().scale() > Precision.QUANTITY.getDecimalPlaces()) {
-            return ValidationResult.failure("Quantity can have at most 8 decimal places");
-        }
-
-        return ValidationResult.success();
-    }
-
-    private ValidationResult validateDate(Instant date) {
-        if (date == null) {
-            return ValidationResult.failure("Transaction date is required");
-        }
-
-        if (date.isAfter(Instant.now())) {
-            return ValidationResult.failure("Transaction date cannot be in the future");
-        }
-
-        // Prevent transactions too far in the past (e.g., 50 years)
-        if (date.isBefore(Instant.now().minus(Period.ofYears(50)))) {
-            return ValidationResult.failure("Transaction date is too far in the past");
-        }
-
-        return ValidationResult.success();
-    }
 }
