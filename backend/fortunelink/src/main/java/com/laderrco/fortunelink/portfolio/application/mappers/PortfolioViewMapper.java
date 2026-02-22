@@ -6,8 +6,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -30,7 +28,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
-import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
@@ -39,19 +36,22 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class PortfolioViewMapper {
-    // TODO CHANGE IT SO THAT MAPPER DOESN'T NEED THIS, WE ARE GOING TO GIVE THE 
-    // PATCHED INFO, REMOVE THIS
-     
     private final ExchangeRateService exchangeRateService;
 
-    /**
-     * Maps Portfolio aggregate to PortfolioView DTO.
-     * Orchestrates market data fetching and enrichment.
-     * 
-     * @param portfolio the portfolio aggregate
-     * @param currency    user's currency display preference
-     */
-    public PortfolioView toPortfolioView(Portfolio portfolio, Currency currency, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+    public PortfolioView toNewPortfolioView(Portfolio portfolio) {
+        return new PortfolioView(
+                portfolio.getPortfolioId(),
+                portfolio.getUserId(),
+                portfolio.getName(),
+                portfolio.getDescription(),
+                List.of(), // no accounts with positions yet
+                Money.ZERO(portfolio.getDisplayCurrency()),
+                portfolio.getCreatedAt(),
+                portfolio.getLastUpdatedAt());
+    }
+
+    public PortfolioView toPortfolioView(Portfolio portfolio, Currency currency,
+            Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(currency, "Currency cannot be null");
 
@@ -74,7 +74,8 @@ public class PortfolioViewMapper {
                 portfolio.getLastUpdatedAt());
     }
 
-    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Currency currency, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Currency currency,
+            Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(currency, "Currency cannot be null");
 
@@ -99,7 +100,7 @@ public class PortfolioViewMapper {
                 account.getCreationDate());
     }
 
-    private AccountView toAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+    public AccountView toAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         // Map positions to view DTOs
         List<PositionView> positionViews = account.getPositionEntries().stream()
                 .map(entry -> toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
@@ -124,7 +125,7 @@ public class PortfolioViewMapper {
      * Maps a Position to its view representation.
      * Handles both ACB and FIFO positions polymorphically via the sealed interface.
      */
-    private PositionView toPositionView(Position position, MarketAssetQuote quote) {
+    public PositionView toPositionView(Position position, MarketAssetQuote quote) {
         AssetSymbol symbol = position.symbol();
         Currency currency = position.accountCurrency();
 
@@ -184,8 +185,6 @@ public class PortfolioViewMapper {
                 transaction.occurredAt().timestamp(),
                 transaction.notes());
     }
-
-    // ===== Helper Methods =====
 
     /**
      * Calculates total portfolio value by summing all account values,

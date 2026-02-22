@@ -1,6 +1,9 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -24,18 +27,25 @@ import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 // ONLY PORTFOLIO + ACCOUNT LIFECYCLE STUFF, NOT TRANSACTION
+// TODO: DRY the valiation logic
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class PortfolioLifecycleService {
     private final PortfolioRepository portfolioRepository;
     private final PortfolioViewMapper portfolioViewMapper;
+
+    private final MarketDataService marketDataService;
+
     private final PortfolioLifecycleCommandValidator validator;
 
     private static final int MAX_PORTFOLIOS_PER_USER = 1; // MVP constraint
@@ -52,7 +62,8 @@ public class PortfolioLifecycleService {
             throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
         }
 
-        Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description(), command.currency());
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description(),
+                command.currency());
 
         if (command.createDefaultAccount()) {
 
@@ -64,7 +75,7 @@ public class PortfolioLifecycleService {
         }
 
         Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-        return portfolioViewMapper.toPortfolioView(savedPortfolio, command.currency());
+        return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
 
     }
 
@@ -80,10 +91,13 @@ public class PortfolioLifecycleService {
 
         updatePortfolio.updateDetails(command.name(), command.description());
         updatePortfolio.updateDisplayCurrency(command.currency());
-        
-        portfolioRepository.save(updatePortfolio);
 
-        return portfolioViewMapper.toPortfolioView(updatePortfolio, command.currency());
+        Portfolio saved = portfolioRepository.save(updatePortfolio);
+
+        // Portfolio has existing positions - need real quotes
+        Set<AssetSymbol> symbols = extractSymbols(saved);
+        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
+        return portfolioViewMapper.toPortfolioView(saved, saved.getDisplayCurrency(), quoteCache);
 
     }
 
@@ -166,5 +180,11 @@ public class PortfolioLifecycleService {
                         "Portfolio not found or access denied for ID: " + command.portfolioId()));
 
         portfolio.closeAccount(command.accountId());
+    }
+
+    private Set<AssetSymbol> extractSymbols(Portfolio portfolio) {
+        return portfolio.getAccounts().stream()
+                .flatMap(account -> account.getPositionEntries().stream().map(Map.Entry::getKey))
+                .collect(Collectors.toSet());
     }
 }

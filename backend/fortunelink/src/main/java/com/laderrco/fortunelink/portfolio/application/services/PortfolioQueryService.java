@@ -14,7 +14,6 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFou
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
-import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
@@ -27,7 +26,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
@@ -56,12 +54,7 @@ public class PortfolioQueryService {
 
     private final PortfolioViewMapper portfolioViewMapper;
 
-    /**
-     * Retrieves a portfolio by its unique identifier.
-     *
-     * Intended for explicit portfolio access (admin, deep links, future
-     * multi-portfolio support).
-     */
+
     public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
         Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
 
@@ -125,14 +118,7 @@ public class PortfolioQueryService {
                 asOf);
     }
 
-    /**
-     * Loads the portfolio owned by the given user.
-     *
-     * Centralizes the current "one portfolio per user" policy and
-     * provides a single seam for future multi-portfolio evolution.
-     */
     private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-
         return portfolioRepository.findByIdAndUserId(portfolioId, userId)
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
