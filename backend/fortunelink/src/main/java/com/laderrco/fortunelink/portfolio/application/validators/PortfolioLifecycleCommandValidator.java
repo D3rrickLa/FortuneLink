@@ -13,10 +13,11 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 
 @Component
 public class PortfolioLifecycleCommandValidator {
+    private static final int ACCOUNT_NAME_LENGTH = 100;
+
     public ValidationResult validate(CreateAccountCommand command) {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
@@ -39,7 +40,7 @@ public class PortfolioLifecycleCommandValidator {
 
         if (command.baseCurrency() == null) {
             errors.add("Base currency is required");
-        } else if (!isValidCurrency(command.baseCurrency().getCode())) {
+        } else if (!ValidationUtils.isValidCurrency(command.baseCurrency().getCode())) {
             errors.add("Invalid currency code");
         }
 
@@ -52,6 +53,7 @@ public class PortfolioLifecycleCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
+        // todo, can probably group this stuff
         if (command.portfolioId() == null) {
             errors.add("PortfolioId is required");
         }
@@ -66,7 +68,7 @@ public class PortfolioLifecycleCommandValidator {
 
         if (command.accountName() == null || command.accountName().trim().isEmpty()) {
             errors.add("Account name is required");
-        } else if (command.accountName().length() > 100) {
+        } else if (command.accountName().length() > ACCOUNT_NAME_LENGTH) {
             errors.add("Account name must be 100 characters or less");
         }
 
@@ -154,16 +156,6 @@ public class PortfolioLifecycleCommandValidator {
         return errors.isEmpty()
                 ? ValidationResult.success()
                 : ValidationResult.failure(errors);
-    }
-
-    // Helper validation methods
-    private boolean isValidCurrency(String currency) {
-        try {
-            Currency.of(currency);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
     }
 
     private boolean isValidAccountType(String accountType) {

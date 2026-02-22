@@ -32,20 +32,20 @@ public class ValidationUtils {
         }
     }
 
-    public static ValidationResult validateQuantity(Quantity quantity) {
+    public static void validateQuantity(Quantity quantity, List<String> errors) {
         if (quantity == null) {
-            return ValidationResult.failure("Quantity is required");
+            errors.add("Quantity is required");
+            return;
         }
 
         if (quantity.compareTo(Quantity.ZERO) <= 0) {
-            return ValidationResult.failure("Quantity must be greater than zero");
+            errors.add("Quantity must be greater than zero");
         }
 
         if (quantity.amount().scale() > Precision.QUANTITY.getDecimalPlaces()) {
-            return ValidationResult.failure("Quantity can have at most 8 decimal places");
+            errors.add("Quantity can have at most 8 decimal places");
         }
 
-        return ValidationResult.success();
     }
 
     public static void validateSymbol(String symbol, List<String> errors) {
