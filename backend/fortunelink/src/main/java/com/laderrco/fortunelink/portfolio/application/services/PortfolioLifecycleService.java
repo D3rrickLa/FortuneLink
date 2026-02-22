@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -20,6 +21,7 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitR
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
+import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilderUtil;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -28,11 +30,13 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +50,7 @@ public class PortfolioLifecycleService {
     private final PortfolioViewMapper portfolioViewMapper;
 
     private final MarketDataService marketDataService;
+    private final PortfolioValuationService portfolioValuationService;
 
     private final PortfolioLifecycleCommandValidator validator;
 
@@ -91,7 +96,15 @@ public class PortfolioLifecycleService {
         // Portfolio has existing positions - need real quotes
         Set<AssetSymbol> symbols = extractSymbols(saved);
         Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
-        return portfolioViewMapper.toPortfolioView(saved, saved.getDisplayCurrency(), quoteCache);
+        Money totalValue = portfolioValuationService.calculateTotalValue(existingPortfolio,
+                existingPortfolio.getDisplayCurrency(), quoteCache);
+
+        List<AccountView> accountViews = existingPortfolio.getAccounts().stream()
+                .map(account -> AccountViewBuilderUtil
+                        .buildAccountView(account, quoteCache, portfolioValuationService, portfolioViewMapper))
+                .toList();
+
+        return portfolioViewMapper.toPortfolioView(existingPortfolio, accountViews, totalValue);
 
     }
 

@@ -12,6 +12,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountComm
 import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 
 @Component

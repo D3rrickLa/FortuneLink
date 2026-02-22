@@ -15,6 +15,8 @@ import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMappe
 import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilderUtil;
+import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
@@ -54,7 +56,6 @@ public class PortfolioQueryService {
 
     private final PortfolioViewMapper portfolioViewMapper;
 
-
     public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
         Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
 
@@ -64,7 +65,15 @@ public class PortfolioQueryService {
         // Single batch call for the entire request
         Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
 
-        return portfolioViewMapper.toPortfolioView(portfolio, displayCurrency, quoteCache);
+        // Orchestration lives here now — not buried in mapper
+        List<AccountView> accountViews = portfolio.getAccounts().stream()
+                .map(account -> AccountViewBuilderUtil
+                        .buildAccountView(account, quoteCache, portfolioValuationService, portfolioViewMapper))
+                .toList();
+
+        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);
+
+        return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue);
     }
 
     public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
@@ -83,7 +92,11 @@ public class PortfolioQueryService {
         Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
         return portfolios.stream()
-                .map(p -> portfolioViewMapper.toPortfolioSummaryView(p, p.getDisplayCurrency(), quoteCache))
+                .map(p -> {
+                    Money totalValue = portfolioValuationService
+                            .calculateTotalValue(p, p.getDisplayCurrency(), quoteCache);
+                    return portfolioViewMapper.toPortfolioSummaryView(p, totalValue);
+                })
                 .toList();
     }
 

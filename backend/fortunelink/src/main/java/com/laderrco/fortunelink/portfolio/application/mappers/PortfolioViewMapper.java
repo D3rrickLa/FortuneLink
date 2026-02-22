@@ -4,10 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -25,7 +22,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
@@ -34,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class PortfolioViewMapper {
-    private final PortfolioValuationService portfolioValuationService;
 
     public PortfolioView toNewPortfolioView(Portfolio portfolio) {
         return new PortfolioView(
@@ -48,19 +43,8 @@ public class PortfolioViewMapper {
                 portfolio.getLastUpdatedAt());
     }
 
-    public PortfolioView toPortfolioView(Portfolio portfolio, Currency currency,
-            Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+    public PortfolioView toPortfolioView(Portfolio portfolio, List<AccountView> accountViews, Money totalValue) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
-        Objects.requireNonNull(currency, "Currency cannot be null");
-
-        // Map accounts with cached quotes
-        List<AccountView> accountViews = portfolio.getAccounts().stream()
-                .map(account -> toAccountView(account, quoteCache))
-                .toList();
-
-        // Calculate portfolio-level totals in user's display currency
-        // this technically can be called one level up to PortfolioValuatoinService
-        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, currency, quoteCache);
 
         return new PortfolioView(
                 portfolio.getPortfolioId(),
@@ -73,13 +57,11 @@ public class PortfolioViewMapper {
                 portfolio.getLastUpdatedAt());
     }
 
-    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Currency currency,
-            Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Money totalValue) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
-        Objects.requireNonNull(currency, "Currency cannot be null");
+        Objects.requireNonNull(totalValue, "Total value cannot be null");
 
-        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, currency, quoteCache);
-
+        
         return new PortfolioSummaryView(
                 portfolio.getPortfolioId(),
                 portfolio.getName(),
@@ -99,19 +81,7 @@ public class PortfolioViewMapper {
                 account.getCreationDate());
     }
 
-    public AccountView toAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-        // Map positions to view DTOs
-        List<PositionView> positionViews = account.getPositionEntries().stream()
-                .map(entry -> toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
-                .toList();
-
-        // Calculate account totals in account's base currency
-        Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
-        // Single source of truth: the field on the entity, not a position scan
-        // NOTE: might be a unesscesary check
-        Money cashBalance = Optional.ofNullable(account.getCashBalance())
-                .orElse(Money.ZERO(account.getAccountCurrency()));
-
+    public AccountView toAccountView(Account account, List<PositionView> positionViews, Money totalValue, Money cashBalance) {
         return new AccountView(
                 account.getAccountId(),
                 account.getName(),

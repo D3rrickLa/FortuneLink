@@ -15,9 +15,9 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDiv
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
-
-// TODO: DRY the portfolioId, accountId, and UserId
 
 @Component
 public class TransactionCommandValidator {
@@ -25,13 +25,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         if (command.symbol() == null || command.symbol().trim().isEmpty()) {
             errors.add("Asset symbol is required");
@@ -61,17 +55,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         if (command.symbol() == null) {
             errors.add("Symbol is required");
@@ -90,16 +74,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
@@ -113,13 +88,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
@@ -133,17 +102,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         if (command.assetSymbol() == null) {
             errors.add("Symbol is required");
@@ -161,17 +120,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         if (command.assetSymbol() == null) {
             errors.add("Symbol is required");
@@ -193,13 +142,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
@@ -213,17 +156,7 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
+        validateCommonIds(command, errors);
 
         if (command.transactionId() == null) {
             errors.add("TransactionId is required");
@@ -238,6 +171,18 @@ public class TransactionCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
+        validateCommonIds(command, errors);
+
+        if (command.transactionId() == null) {
+            errors.add("TransactionId is required");
+        }
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
+    private void validateCommonIds(TransactionCommand command, List<String> errors) {
         if (command.portfolioId() == null) {
             errors.add("PortfolioId is required");
         }
@@ -249,14 +194,6 @@ public class TransactionCommandValidator {
         if (command.accountId() == null) {
             errors.add("AccountId is required");
         }
-
-        if (command.transactionId() == null) {
-            errors.add("TransactionId is required");
-        }
-
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
     }
 
 }

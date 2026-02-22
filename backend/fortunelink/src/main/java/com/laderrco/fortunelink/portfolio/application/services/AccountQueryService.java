@@ -14,6 +14,7 @@ import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMappe
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAllAccountsQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAssetQuery;
+import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilderUtil;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
@@ -25,6 +26,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -47,6 +49,7 @@ public class AccountQueryService {
 
     private final PortfolioRepository portfolioRepository;
     private final MarketDataService marketDataService;
+    private final PortfolioValuationService portfolioValuationService;
     private final PortfolioViewMapper portfolioViewMapper;
 
     /**
@@ -66,7 +69,8 @@ public class AccountQueryService {
         Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
         return portfolio.getAccounts().stream()
-                .map(account -> portfolioViewMapper.toAccountView(account, quoteCache))
+                .map(account -> AccountViewBuilderUtil
+                        .buildAccountView(account, quoteCache, portfolioValuationService, portfolioViewMapper))
                 .toList();
     }
 
@@ -89,7 +93,8 @@ public class AccountQueryService {
                 .collect(Collectors.toSet());
         Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
-        return portfolioViewMapper.toAccountView(account, quoteCache);
+        return AccountViewBuilderUtil
+                .buildAccountView(account, quoteCache, portfolioValuationService, portfolioViewMapper);
     }
 
     /**

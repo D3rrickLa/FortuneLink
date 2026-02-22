@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.application.validators;
+package com.laderrco.fortunelink.portfolio.application.utils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
