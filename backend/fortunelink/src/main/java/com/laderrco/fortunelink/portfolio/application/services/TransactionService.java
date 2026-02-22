@@ -53,7 +53,7 @@ public class TransactionService {
     private final TransactionViewMapper transactionViewMapper;
 
     private final TransactionCommandValidator validator;
-    
+
     private final MarketDataService marketDataService;
     private final ExchangeRateService exchangeRateService;
     private final TransactionRecordingService transactionRecordingService;
@@ -206,6 +206,23 @@ public class TransactionService {
      * .filter(tx -> !tx.isExcluded()) // ← skip excluded
      * .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
      * .toList();
+     * 
+     * 
+     * // Future implementation sketch, will need to be async
+     * public void scheduleRecalculation(AccountId accountId, AssetSymbol symbol) {
+     * List<Transaction> active = transactionRepository
+     * .findByAccountIdAndSymbol(accountId, symbol)
+     * .stream()
+     * .filter(tx -> !tx.isExcluded())
+     * .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
+     * .toList();
+     * 
+     * Account account = // load account
+     * account.clearPosition(symbol); // reset to zero
+     * active.forEach(tx -> transactionRecordingService.replayTransaction(account,
+     * tx));
+     * portfolioRepository.save(account.getPortfolio()); // persist corrected state
+     * }
      * 
      */
     public TransactionView excludeTransaction(ExcludeTransactionCommand command) {
