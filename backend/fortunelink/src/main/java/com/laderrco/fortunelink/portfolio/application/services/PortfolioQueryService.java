@@ -63,7 +63,7 @@ public class PortfolioQueryService {
         // Single batch call for the entire request
         Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
 
-        return portfolioViewMapper.toPortfolioView(portfolio, quoteCache);
+        return portfolioViewMapper.toPortfolioView(portfolio, displayCurrency, quoteCache);
     }
 
     /**

@@ -41,7 +41,6 @@ import lombok.RequiredArgsConstructor;
 public class PortfolioViewMapper {
     // TODO CHANGE IT SO THAT MAPPER DOESN'T NEED THIS, WE ARE GOING TO GIVE THE 
     // PATCHED INFO, REMOVE THIS
-    private final MarketDataService marketDataService; 
      
     private final ExchangeRateService exchangeRateService;
 
@@ -52,20 +51,16 @@ public class PortfolioViewMapper {
      * @param portfolio the portfolio aggregate
      * @param currency    user's currency display preference
      */
-    public PortfolioView toPortfolioView(Portfolio portfolio, Currency currency) {
+    public PortfolioView toPortfolioView(Portfolio portfolio, Currency currency, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(currency, "Currency cannot be null");
 
-        // Step 1: Batch fetch all market quotes upfront
-        Set<AssetSymbol> allSymbols = extractAllAssetSymbols(portfolio);
-        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
-
-        // Step 2: Map accounts with cached quotes
+        // Map accounts with cached quotes
         List<AccountView> accountViews = portfolio.getAccounts().stream()
                 .map(account -> toAccountView(account, quoteCache))
                 .toList();
 
-        // Step 3: Calculate portfolio-level totals in user's display currency
+        // Calculate portfolio-level totals in user's display currency
         Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, currency);
 
         return new PortfolioView(
@@ -79,12 +74,9 @@ public class PortfolioViewMapper {
                 portfolio.getLastUpdatedAt());
     }
 
-    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Currency currency) {
+    public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Currency currency, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(currency, "Currency cannot be null");
-
-        Set<AssetSymbol> allSymbols = extractAllAssetSymbols(portfolio);
-        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
         Money totalValue = calculatePortfolioTotalValue(portfolio, quoteCache, currency);
 
@@ -194,12 +186,6 @@ public class PortfolioViewMapper {
     }
 
     // ===== Helper Methods =====
-
-    private Set<AssetSymbol> extractAllAssetSymbols(Portfolio portfolio) {
-        return portfolio.getAccounts().stream()
-                .flatMap(account -> account.getPositionEntries().stream().map(a -> a.getKey()))
-                .collect(Collectors.toSet());
-    }
 
     /**
      * Calculates total portfolio value by summing all account values,
