@@ -1,12 +1,11 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.List;
 import java.util.function.Function;
 
 import org.springframework.stereotype.Service;
 
-import com.laderrco.fortunelink.portfolio.application.commands.DeleteTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
@@ -54,9 +53,9 @@ public class TransactionService {
     private final TransactionViewMapper transactionViewMapper;
 
     private final TransactionCommandValidator validator;
+    
     private final MarketDataService marketDataService;
     private final ExchangeRateService exchangeRateService;
-
     private final TransactionRecordingService transactionRecordingService;
 
     public TransactionView recordPurchase(RecordPurchaseCommand command) {
@@ -190,55 +189,66 @@ public class TransactionService {
 
     }
 
-    public TransactionView updateTransaction(UpdateTransactionCommand command) {
-        validate(command, validator::validate, "updateTransaction");
+    /*
+     * NOTE: whenever we load transaction for position calculation, we add thw
+     * following filter:
+     * 
+     * List<Transaction> activeTransactions = transactionRepository
+     * .findByAccountIdAndSymbol(accountId, symbol)
+     * .stream()
+     * .filter(tx -> !tx.isExcluded()) // ← skip excluded
+     * .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
+     * .toList();
+     * 
+     */
+    public TransactionView excludeTransaction(ExcludeTransactionCommand command) {
+        validate(command, validator::validate, "excludeTransaction");
         PortfolioContext ctx = getPortfolioContext(command);
 
-        Transaction existingTransaction = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-                command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
-                .orElseThrow(() -> new InvalidTransactionException(command.transactionId()));
-
-        // For simplicity, let's assume we only allow updating the amount and fees for
-        // deposits/withdrawals/fees
-        // and price/quantity for buys/sells. In a real implementation, you'd likely
-        // have more complex logic here.
-        // code smell, we should only be passing the correct information to the
-        // 'updateTransaction and not the command'
-        // as that will pollute the domain serviec
-        Transaction updatedTransaction = transactionRecordingService.updateTransaction(
-                ctx.account(),
-                existingTransaction,
-                command.quantity(),
-                command.price(),
-                command.totalFees(ctx.account().getAccountCurrency()));
-
-        persistChanges(ctx, updatedTransaction);
-
-        return transactionViewMapper.toView(updatedTransaction);
-    }
-
-    public void deleteTransaction(DeleteTransactionCommand command) {
-        validate(command, validator::validate, "deleteTransaction");
-        PortfolioContext ctx = getPortfolioContext(command);
-
-        Transaction toDelete = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-                command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+        Transaction existing = transactionRepository
+                .findByIdAndPortfolioIdAndUserIdAndAccountId(
+                        command.transactionId(),
+                        command.portfolioId(),
+                        command.userId(),
+                        command.accountId())
                 .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
 
-        transactionRepository.delete(toDelete.transactionId());
-
-        // Rebuilding the affected position by replaying remaining transaction
-        AssetSymbol affectedSymbol = toDelete.execution().asset();
-        List<Transaction> remaining = transactionRepository.findByAccountIdAndSymbol(
-                ctx.account().getAccountId(), affectedSymbol);
-
-        ctx.account().clearPosition(affectedSymbol); // this a problem, not yet impelemnted as it's a map structure
-        for (Transaction tx : remaining) {
-            transactionRecordingService.replayTransaction(ctx.account(), tx);
+        if (existing.isExcluded()) {
+            throw new InvalidTransactionException("Transaction already excluded");
         }
 
-        portfolioRepository.save(ctx.portfolio());
+        Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
+        transactionRepository.save(excluded);
 
+        // Trigger async position recalculation
+        // positionRecalculationService.scheduleRecalculation(ctx.account().getAccountId());
+
+        return transactionViewMapper.toView(excluded);
+    }
+
+    public TransactionView restoreTransaction(RestoreTransactionCommand command) {
+        validate(command, validator::validate, "restoreTransaction");
+        PortfolioContext ctx = getPortfolioContext(command);
+
+        Transaction existing = transactionRepository
+                .findByIdAndPortfolioIdAndUserIdAndAccountId(
+                        command.transactionId(),
+                        command.portfolioId(),
+                        command.userId(),
+                        command.accountId())
+                .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
+
+        if (!existing.isExcluded()) {
+            throw new InvalidTransactionException("Transaction is not excluded");
+        }
+
+        Transaction restored = existing.restore();
+        transactionRepository.save(restored);
+
+        // Trigger async position recalculation
+        // positionRecalculationService.scheduleRecalculation(ctx.account().getAccountId());
+
+        return transactionViewMapper.toView(restored);
     }
 
     private PortfolioContext getPortfolioContext(TransactionCommand command) {

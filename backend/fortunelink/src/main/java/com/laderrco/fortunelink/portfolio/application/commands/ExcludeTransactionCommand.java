@@ -6,6 +6,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-public record DeleteTransactionCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, TransactionId transactionId, String reason) implements TransactionCommand {
-    
+public record ExcludeTransactionCommand(
+        TransactionId transactionId,
+        PortfolioId portfolioId,
+        UserId userId,
+        AccountId accountId,
+        String reason) implements TransactionCommand {
 }

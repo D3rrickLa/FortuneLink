@@ -9,8 +9,8 @@ import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 
-import com.laderrco.fortunelink.portfolio.application.commands.DeleteTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.UpdateTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
@@ -239,9 +239,9 @@ public class TransactionCommandValidator {
         }
 
         // if (command.type() == null ||
-        //         (!command.type().equals(TransactionType.DIVIDEND)
-        //                 && !command.type().equals(TransactionType.INTEREST))) {
-        //     errors.add("Income type must be either DIVIDEND or INTEREST");
+        // (!command.type().equals(TransactionType.DIVIDEND)
+        // && !command.type().equals(TransactionType.INTEREST))) {
+        // errors.add("Income type must be either DIVIDEND or INTEREST");
         // }
 
         ValidationResult dateValidation = validateDate(command.transactionDate());
@@ -285,9 +285,10 @@ public class TransactionCommandValidator {
                 : ValidationResult.failure(errors);
     }
 
-    public ValidationResult validate(UpdateTransactionCommand command) {
+    public ValidationResult validate(RestoreTransactionCommand command) {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
+
         if (command.portfolioId() == null) {
             errors.add("PortfolioId is required");
         }
@@ -296,54 +297,10 @@ public class TransactionCommandValidator {
             errors.add("UserId is required");
         }
 
-        if (command.date() == null) {
-            errors.add("UpdateDate is required");
-        }
-
         if (command.accountId() == null) {
             errors.add("AccountId is required");
         }
 
-        if (command.type() == null) {
-            errors.add("TransactionType is required");
-        }
-
-        if (command.quantity() == null) {
-            errors.add("Quantity is required");
-        } else if (command.quantity().compareTo(Quantity.ZERO) <= 0) {
-            errors.add("Quantity must be positive");
-        }
-
-        if (command.price() == null) {
-            errors.add("Price is required");
-        } else if (command.price().amount().compareTo(BigDecimal.ZERO) <= 0) {
-            errors.add("Price must be positive");
-        }
-
-        if (command.fees() == null) {
-            errors.add("Fees is required");
-        }
-
-        if (command.date() == null) {
-            errors.add("Date is required");
-        } else if (command.date().isAfter(Instant.now())) {
-            errors.add("Date cannot be in the future");
-        }
-
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
-    }
-
-    public ValidationResult validate(DeleteTransactionCommand command) {
-        Objects.requireNonNull(command);
-        List<String> errors = new ArrayList<>();
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-        if (command.accountId() == null) {
-            errors.add("AccountId is required");
-        }
         if (command.transactionId() == null) {
             errors.add("TransactionId is required");
         }
@@ -351,6 +308,46 @@ public class TransactionCommandValidator {
         return errors.isEmpty()
                 ? ValidationResult.success()
                 : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(ExcludeTransactionCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        if (command.portfolioId() == null) {
+            errors.add("PortfolioId is required");
+        }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
+        if (command.accountId() == null) {
+            errors.add("AccountId is required");
+        }
+
+        if (command.transactionId() == null) {
+            errors.add("TransactionId is required");
+        }
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
+    private boolean isValidCurrency(String currency) {
+        try {
+            Currency.of(currency);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private boolean isValidSymbol(String symbol) {
+        // Basic validation: 1-10 uppercase letters/numbers,
+        // possibly with dots or dashes
+        return symbol != null && symbol.matches("^[A-Z0-9.\\-]{1,10}$");
     }
 
     private ValidationResult validateAmount(BigDecimal amount) {
@@ -369,15 +366,6 @@ public class TransactionCommandValidator {
         return ValidationResult.success();
     }
 
-    private boolean isValidCurrency(String currency) {
-        try {
-            Currency.of(currency);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
     private ValidationResult validateQuantity(Quantity quantity) {
         if (quantity == null) {
             return ValidationResult.failure("Quantity is required");
@@ -392,12 +380,6 @@ public class TransactionCommandValidator {
         }
 
         return ValidationResult.success();
-    }
-
-    private boolean isValidSymbol(String symbol) {
-        // Basic validation: 1-10 uppercase letters/numbers,
-        // possibly with dots or dashes
-        return symbol != null && symbol.matches("^[A-Z0-9.\\-]{1,10}$");
     }
 
     private ValidationResult validateDate(Instant date) {
