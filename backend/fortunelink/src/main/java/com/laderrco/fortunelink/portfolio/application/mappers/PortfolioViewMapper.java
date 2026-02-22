@@ -25,10 +25,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
-import lombok.RequiredArgsConstructor;
-
 @Component
-@RequiredArgsConstructor
 public class PortfolioViewMapper {
 
     public PortfolioView toNewPortfolioView(Portfolio portfolio) {
@@ -61,7 +58,6 @@ public class PortfolioViewMapper {
         Objects.requireNonNull(portfolio, "Portfolio cannot be null");
         Objects.requireNonNull(totalValue, "Total value cannot be null");
 
-        
         return new PortfolioSummaryView(
                 portfolio.getPortfolioId(),
                 portfolio.getName(),
@@ -81,7 +77,8 @@ public class PortfolioViewMapper {
                 account.getCreationDate());
     }
 
-    public AccountView toAccountView(Account account, List<PositionView> positionViews, Money totalValue, Money cashBalance) {
+    public AccountView toAccountView(Account account, List<PositionView> positionViews, Money totalValue,
+            Money cashBalance) {
         return new AccountView(
                 account.getAccountId(),
                 account.getName(),

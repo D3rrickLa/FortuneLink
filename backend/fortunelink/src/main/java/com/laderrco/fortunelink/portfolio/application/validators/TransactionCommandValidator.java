@@ -38,7 +38,6 @@ public class TransactionCommandValidator {
         ValidationUtils.validateSymbol(command.symbol(), errors);
         ValidationUtils.validateQuantity(command.quantity(), errors);
         ValidationUtils.validateAmount(command.price().amount(), errors);
-        ValidationUtils.isValidCurrency(command.price().currency().getCode());
 
         for (Fee fee : command.fees()) {
             ValidationUtils.validateAmount(fee.nativeAmount().amount(), errors);

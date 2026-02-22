@@ -13,7 +13,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 
 @Component
 public class PortfolioLifecycleCommandValidator {
@@ -35,8 +34,6 @@ public class PortfolioLifecycleCommandValidator {
 
         if (command.accountType() == null) {
             errors.add("Account type is required");
-        } else if (!isValidAccountType(command.accountType().name())) {
-            errors.add("Invalid account type");
         }
 
         if (command.baseCurrency() == null) {
@@ -88,6 +85,10 @@ public class PortfolioLifecycleCommandValidator {
 
         if (command.accountId() == null) {
             errors.add("AccountId is required");
+        }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
         }
 
         return errors.isEmpty()
@@ -150,22 +151,13 @@ public class PortfolioLifecycleCommandValidator {
             errors.add("UserId is required");
         }
 
-        if (command.confirmed() == false && command.softDelete()) {
-            errors.add("Cannot soft delete without confirming");
+        if (command.confirmed() == false) {
+            errors.add("Confirm delete cannot be false");
         }
 
         return errors.isEmpty()
                 ? ValidationResult.success()
                 : ValidationResult.failure(errors);
-    }
-
-    private boolean isValidAccountType(String accountType) {
-        try {
-            AccountType.valueOf(accountType);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
     }
 
 }

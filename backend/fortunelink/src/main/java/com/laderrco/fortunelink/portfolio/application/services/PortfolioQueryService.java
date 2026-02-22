@@ -15,7 +15,7 @@ import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMappe
 import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
-import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilderUtil;
+import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
@@ -55,6 +55,7 @@ public class PortfolioQueryService {
     private final PortfolioValuationService portfolioValuationService;
 
     private final PortfolioViewMapper portfolioViewMapper;
+    private final AccountViewBuilder accountViewBuilder;
 
     public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
         Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
@@ -67,8 +68,7 @@ public class PortfolioQueryService {
 
         // Orchestration lives here now — not buried in mapper
         List<AccountView> accountViews = portfolio.getAccounts().stream()
-                .map(account -> AccountViewBuilderUtil
-                        .buildAccountView(account, quoteCache, portfolioValuationService, portfolioViewMapper))
+                .map(account -> accountViewBuilder.build(account, quoteCache))
                 .toList();
 
         Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);

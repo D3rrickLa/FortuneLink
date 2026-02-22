@@ -2,6 +2,8 @@
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "interactive",
     "java.debug.settings.onBuildFailureProceed": true,
+    "editor.formatOnSave": true,
+    "editor.wordWrapColumn": 100,
     "java.test.config": [
         {
             "name": "test_setup",

@@ -2,7 +2,8 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+
+import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -13,17 +14,21 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
-public class AccountViewBuilderUtil {
-    public static AccountView buildAccountView(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache,
-        PortfolioValuationService portfolioValuationService, PortfolioViewMapper portfolioViewMapper
-    ) {
+import lombok.RequiredArgsConstructor;
+
+@Component
+@RequiredArgsConstructor
+public class AccountViewBuilder {
+    private final PortfolioValuationService portfolioValuationService;
+    private final PortfolioViewMapper portfolioViewMapper;
+
+    public AccountView build(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         List<PositionView> positionViews = account.getPositionEntries().stream()
                 .map(entry -> portfolioViewMapper.toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
                 .toList();
 
         Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
-        Money cashBalance = Optional.ofNullable(account.getCashBalance())
-                .orElse(Money.ZERO(account.getAccountCurrency()));
+        Money cashBalance = account.getCashBalance();
 
         return portfolioViewMapper.toAccountView(account, positionViews, totalValue, cashBalance);
     }
