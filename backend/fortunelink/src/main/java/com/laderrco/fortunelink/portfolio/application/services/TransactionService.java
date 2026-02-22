@@ -127,7 +127,7 @@ public class TransactionService {
     }
 
     public TransactionView recordWithdrawal(RecordWithdrawalCommand command) {
-        validate(command, validator::validate, "recordWidthdrawal");
+        validate(command, validator::validate, "recordWithdrawal");
         PortfolioContext ctx = getPortfolioContext(command);
 
         Transaction recordedTransaction = transactionRecordingService.recordWithdrawal(

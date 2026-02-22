@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
@@ -37,7 +37,7 @@ public class PositionRecalculationService {
                 .toList();
 
         Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new AccountNotFoundException(accountId, portfolioId));
+                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
 
         Account account = portfolio.getAccount(accountId);
         account.clearPosition(symbol); // reset to zero

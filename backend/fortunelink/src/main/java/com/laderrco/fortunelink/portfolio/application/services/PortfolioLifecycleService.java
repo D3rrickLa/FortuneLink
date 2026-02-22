@@ -15,6 +15,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountComm
 import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionRequiresConfirmationException;
@@ -23,6 +24,7 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotEmp
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioServiceUtils;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -94,7 +96,7 @@ public class PortfolioLifecycleService {
 
         Portfolio saved = portfolioRepository.save(existingPortfolio);
 
-        Set<AssetSymbol> symbols = extractSymbols(saved);
+        Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(saved);
         Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
         Money totalValue = portfolioValuationService.calculateTotalValue(saved, saved.getDisplayCurrency(), quoteCache);
 
@@ -128,6 +130,10 @@ public class PortfolioLifecycleService {
                 }
             }
         } else {
+            // intentionally bypasses the markAsDleted checks
+            // if a user wants to 'start over' they don't want to close
+            // all the accounts
+            // or another issue -> testing
             portfolioRepository.delete(command.portfolioId());
         }
 
@@ -175,17 +181,11 @@ public class PortfolioLifecycleService {
         return portfolio;
     }
 
-    private Set<AssetSymbol> extractSymbols(Portfolio portfolio) {
-        return portfolio.getAccounts().stream()
-                .flatMap(account -> account.getPositionEntries().stream().map(Map.Entry::getKey))
-                .collect(Collectors.toSet());
-    }
-
     private <T> void validate(T command, Function<T, ValidationResult> validationLogic, String methodName) {
         ValidationResult result = validationLogic.apply(command);
         if (!result.isValid()) {
             String msg = String.format("Invalid %s command", methodName);
-            throw new InvalidTransactionException(msg, result.errors());
+            throw new InvalidCommandException(msg, result.errors());
         }
     }
 }

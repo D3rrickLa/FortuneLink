@@ -18,6 +18,73 @@ import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 public class PortfolioLifecycleCommandValidator {
     private static final int ACCOUNT_NAME_LENGTH = 100;
 
+    public ValidationResult validate(CreatePortfolioCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
+        if (command.name() == null) {
+            errors.add("Portfolio name is required");
+        }
+
+        if (command.currency() == null) {
+            errors.add("Currency is required");
+        }
+
+        if (command.createDefaultAccount() && command.defaultStrategy() == null) {
+            errors.add("Position strategy is required when createDefaultAccount is true");
+        }
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(UpdatePortfolioCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        if (command.portfolioId() == null) {
+            errors.add("PortfolioId is required");
+        }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
+        if (command.name() == null) {
+            errors.add("Portfolio name is required");
+        }
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(DeletePortfolioCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        if (command.portfolioId() == null) {
+            errors.add("PortfolioId is required");
+        }
+
+        if (command.userId() == null) {
+            errors.add("UserId is required");
+        }
+
+        if (command.confirmed() == false) {
+            errors.add("Confirm delete cannot be false");
+        }
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
     public ValidationResult validate(CreateAccountCommand command) {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
@@ -95,69 +162,6 @@ public class PortfolioLifecycleCommandValidator {
                 ? ValidationResult.success()
                 : ValidationResult.failure(errors);
 
-    }
-
-    public ValidationResult validate(CreatePortfolioCommand command) {
-        Objects.requireNonNull(command);
-        List<String> errors = new ArrayList<>();
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.name() == null) {
-            errors.add("Portfolio name is required");
-        }
-
-        if (command.currency() == null) {
-            errors.add("Currency is required");
-        }
-
-        if (command.createDefaultAccount() && command.defaultStrategy() == null) {
-            errors.add("Position strategy is required when createDefaultAccount is true");
-        }
-
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
-    }
-
-    public ValidationResult validate(UpdatePortfolioCommand command) {
-        Objects.requireNonNull(command);
-        List<String> errors = new ArrayList<>();
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.name() == null) {
-            errors.add("Portfolio name is required");
-        }
-
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
-    }
-
-    public ValidationResult validate(DeletePortfolioCommand command) {
-        Objects.requireNonNull(command);
-        List<String> errors = new ArrayList<>();
-
-        if (command.portfolioId() == null) {
-            errors.add("PortfolioId is required");
-        }
-
-        if (command.userId() == null) {
-            errors.add("UserId is required");
-        }
-
-        if (command.confirmed() == false) {
-            errors.add("Confirm delete cannot be false");
-        }
-
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
     }
 
 }
