@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,6 @@ import java.util.Map;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.CashImpact;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
@@ -115,7 +115,7 @@ public record Transaction(
         return Fee.totalInAccountCurrency(fees, cashDelta.currency());
         // Currency currency = cashDelta.currency();
         // return fees.stream().map(Fee::accountAmount)
-                // .reduce(Money.ZERO(currency), Money::add);
+        // .reduce(Money.ZERO(currency), Money::add);
     }
 
     private void validateConsistency(String label, boolean isRequired, boolean isPresent) {
@@ -236,6 +236,26 @@ public record Transaction(
                     null,
                     null,
                     additionalData);
+        }
+
+        public Map<String, String> asFlatMap() {
+            Map<String, String> flat = new HashMap<>(additionalData);
+
+            // Core fields
+            flat.put("assetType", assetType.name());
+            flat.put("source", source);
+            flat.put("excluded", String.valueOf(excluded));
+
+            // Conditional fields (only add if present to keep the view clean)
+            if (excluded) {
+                flat.put("excludedAt", excludedAt.toString());
+                flat.put("excludedBy", excludedBy.id().toString());
+                if (excludedReason != null) {
+                    flat.put("excludedReason", excludedReason);
+                }
+            }
+
+            return Collections.unmodifiableMap(flat);
         }
 
         public String get(String key) {

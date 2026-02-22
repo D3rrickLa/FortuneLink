@@ -27,8 +27,28 @@ public record TransactionView(
         String notes) {
     public static TransactionView create(Transaction transaction) {
         if (transaction.execution() == null) {
-            // this is confirmed a cash event
+            return new TransactionView(
+                    transaction.transactionId(),
+                    transaction.transactionType(),
+                    transaction.cashDelta().currency().getSymbol(),
+                    Quantity.ZERO,
+                    null, // no price for these types of transaction
+                    transaction.fees(),
+                    transaction.cashDelta(),
+                    transaction.metadata().asFlatMap(),
+                    transaction.occurredAt().timestamp(),
+                    transaction.notes());
         }
-        return null;
+        return new TransactionView(
+                transaction.transactionId(),
+                transaction.transactionType(),
+                transaction.execution().asset().symbol(),
+                transaction.execution().quantity(),
+                transaction.execution().pricePerUnit(),
+                transaction.fees(),
+                transaction.cashDelta(),
+                transaction.metadata().additionalData(),
+                transaction.occurredAt().timestamp(),
+                transaction.notes());
     }
 }

@@ -128,7 +128,6 @@ public class PortfolioLifecycleService {
             }
         } else {
             portfolioRepository.delete(command.portfolioId());
-            portfolioRepository.save(portfolio);
         }
 
     }
@@ -180,6 +179,7 @@ public class PortfolioLifecycleService {
                         "Portfolio not found or access denied for ID: " + command.portfolioId()));
 
         portfolio.closeAccount(command.accountId());
+        portfolioRepository.save(portfolio);
     }
 
     private Set<AssetSymbol> extractSymbols(Portfolio portfolio) {
