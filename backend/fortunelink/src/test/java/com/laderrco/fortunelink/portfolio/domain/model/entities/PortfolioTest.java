@@ -62,6 +62,7 @@ class PortfolioTest {
             assertThat(portfolio.getUserId()).isEqualTo(userId);
             assertThat(portfolio.getName()).isEqualTo(portfolioName);
             assertThat(portfolio.getAccounts()).isEmpty();
+            assertThat(portfolio.getDisplayCurrency()).isEqualTo(Currency.CAD);
             assertThat(portfolio.isDeleted()).isFalse();
             assertThat(portfolio.getCreatedAt()).isBeforeOrEqualTo(Instant.now());
             assertThat(portfolio.getDescription()).isEmpty();
@@ -93,7 +94,7 @@ class PortfolioTest {
             Map<AccountId, Account> accounts = new HashMap<>();
 
             Portfolio portfolio = Portfolio.reconstitute(
-                    portfolioId, userId, "Old Name", "Desc", accounts,
+                    portfolioId, userId, "Old Name", "Desc", accounts, Currency.CAD,
                     true, fixedTime, userId, fixedTime, fixedTime);
 
             assertThat(portfolio.isDeleted()).isTrue();

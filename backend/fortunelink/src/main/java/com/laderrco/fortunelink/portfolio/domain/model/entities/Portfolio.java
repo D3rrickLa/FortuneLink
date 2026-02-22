@@ -18,14 +18,17 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-// no need for portoflio pref because think about it... a portfolio is just container
-// so that means no calculation and recording of transaction, just manage a collectiosn of accounts
+// so we are going to actually add back a 'currency preference'
+// it is only meant to be used to display your aggreagate data
+// in one currency
 public class Portfolio {
     private final PortfolioId portfolioId;
     private final UserId userId;
     private String name;
     private String description;
     private Map<AccountId, Account> accounts;
+
+    private Currency displayCurrency;
 
     private boolean deleted;
     private Instant deletedOn;
@@ -36,13 +39,14 @@ public class Portfolio {
 
     // private full args constructor
     private Portfolio(PortfolioId portfolioId, UserId userId, String name, String description,
-            Map<AccountId, Account> accounts, boolean deleted, Instant deletedOn,
+            Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
             UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.name = name;
         this.description = description;
         this.accounts = new HashMap<>(accounts);
+        this.displayCurrency = displayCurrency;
         this.deleted = deleted;
         this.deletedOn = deletedOn;
         this.deletedBy = deletedBy;
@@ -69,6 +73,7 @@ public class Portfolio {
         this.name = name.trim();
         this.description = "";
         this.accounts = new HashMap<>();
+        this.displayCurrency = Currency.CAD;
         this.deleted = false;
         this.deletedOn = null;
         this.deletedBy = null;
@@ -76,7 +81,7 @@ public class Portfolio {
         this.lastUpdatedAt = Instant.now();
     }
 
-    public static Portfolio createNew(UserId userId, String name, String description) {
+    public static Portfolio createNew(UserId userId, String name, String description, Currency displayCurrency) {
         Instant now = Instant.now();
         String cleanDesc = description == null ? "" : description;
         return new Portfolio(
@@ -85,6 +90,7 @@ public class Portfolio {
                 name,
                 cleanDesc,
                 new HashMap<>(), // ← Empty accounts
+                displayCurrency,
                 false, // ← Not deleted
                 null, // ← No deletion date
                 null, // ← No deleter
@@ -95,10 +101,11 @@ public class Portfolio {
 
     // Static factory for reconstitution
     public static Portfolio reconstitute(PortfolioId portfolioId, UserId userId, String name, String description,
-            Map<AccountId, Account> accounts, boolean deleted, Instant deletedOn, UserId deletedBy, Instant createdAt,
+            Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
+            UserId deletedBy, Instant createdAt,
             Instant lastUpdatedOn) {
-        return new Portfolio(portfolioId, userId, name, description, accounts, deleted, deletedOn, deletedBy, createdAt,
-                lastUpdatedOn);
+        return new Portfolio(portfolioId, userId, name, description, accounts, displayCurrency, deleted, deletedOn,
+                deletedBy, createdAt, lastUpdatedOn);
     }
 
     public Account createAccount(String name, AccountType type, Currency currency, PositionStrategy strategy) {
@@ -218,6 +225,11 @@ public class Portfolio {
         touch();
     }
 
+    public void updateDisplayCurrency(Currency newCurrency) {
+        this.displayCurrency = notNull(newCurrency, "displayCurrency");
+        this.lastUpdatedAt = Instant.now();
+    }
+
     public Account getAccount(AccountId accountId) {
         notNull(accountId, "accountId");
 
@@ -281,6 +293,10 @@ public class Portfolio {
 
     public String getDescription() {
         return description;
+    }
+
+    public Currency getDisplayCurrency() {
+        return displayCurrency;
     }
 
     public boolean isDeleted() {

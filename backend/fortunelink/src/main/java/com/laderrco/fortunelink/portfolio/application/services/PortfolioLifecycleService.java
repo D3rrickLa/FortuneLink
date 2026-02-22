@@ -52,7 +52,7 @@ public class PortfolioLifecycleService {
             throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
         }
 
-        Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description());
+        Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description(), command.currency());
 
         if (command.createDefaultAccount()) {
 
@@ -79,6 +79,8 @@ public class PortfolioLifecycleService {
                 () -> new PortfolioNotFoundException("Cannot find portfolio with id: " + command.id()));
 
         updatePortfolio.updateDetails(command.name(), command.description());
+        updatePortfolio.updateDisplayCurrency(command.currency());
+        
         portfolioRepository.save(updatePortfolio);
 
         return portfolioViewMapper.toPortfolioView(updatePortfolio, command.currency());

@@ -1,21 +1,20 @@
-package com.laderrco.fortunelink.portfolio_management.application.queries;
+package com.laderrco.fortunelink.portfolio.application.queries;
 
 import java.time.Instant;
 
 import org.springframework.data.domain.PageRequest;
 
-import com.laderrco.fortunelink.portfolio_management.domain.models.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.AccountId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.PortfolioId;
-import com.laderrco.fortunelink.portfolio_management.domain.models.valueobjects.ids.UserId;
-import com.laderrco.fortunelink.shared.valueobjects.ClassValidation;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+
 
 /* 
     Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are optional
 */
-public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId, AccountId accountId, Instant startDate, Instant endDate, TransactionType transactionType, int pageNumber, int pageSize) implements ClassValidation {
+public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId, AccountId accountId, Instant startDate, Instant endDate, TransactionType transactionType, int pageNumber, int pageSize) {
     public GetTransactionHistoryQuery {
-        ClassValidation.validateParameter(portfolioId);
         // accountId can be null (means all accounts)
         // startDate can be null (means from beginning)
         // endDate can be null (means until now)

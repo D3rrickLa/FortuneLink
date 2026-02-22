@@ -39,7 +39,10 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class PortfolioViewMapper {
-    private final MarketDataService marketDataService;
+    // TODO CHANGE IT SO THAT MAPPER DOESN'T NEED THIS, WE ARE GOING TO GIVE THE 
+    // PATCHED INFO, REMOVE THIS
+    private final MarketDataService marketDataService; 
+     
     private final ExchangeRateService exchangeRateService;
 
     /**

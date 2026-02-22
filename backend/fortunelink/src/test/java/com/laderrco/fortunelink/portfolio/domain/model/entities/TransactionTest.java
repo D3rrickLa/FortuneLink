@@ -402,7 +402,14 @@ public class TransactionTest {
         @Test
         void testNullSafetyAndDefaults() {
             // Test that null map becomes empty map and null source becomes UNKNOWN
-            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, null, null);
+            var meta = new Transaction.TransactionMetadata(
+                AssetType.STOCK,
+                null, 
+                false, 
+                null, 
+                null, 
+                null, 
+                null);
 
             assertEquals("UNKNOWN", meta.source());
             assertNotNull(meta.additionalData());
@@ -414,7 +421,7 @@ public class TransactionTest {
             Map<String, String> originalData = new HashMap<>();
             originalData.put("key", "value");
 
-            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", originalData);
+            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null, null, originalData);
 
             // Try to modify original map
             originalData.put("key", "changed");
