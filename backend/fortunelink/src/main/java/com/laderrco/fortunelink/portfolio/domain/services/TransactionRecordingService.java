@@ -25,7 +25,5 @@ public interface TransactionRecordingService {
     
     Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price, Instant date);
 
-    Transaction updateTransaction(Account account, Transaction existingTransaction, Quantity newQuantity, Price newPrice, Money fee);
-
     void replayTransaction(Account account, Transaction tx);
 }
