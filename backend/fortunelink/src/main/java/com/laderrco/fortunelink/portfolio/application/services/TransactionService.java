@@ -47,6 +47,7 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class TransactionService {
+
     private record PortfolioContext(Portfolio portfolio, Account account) {
     }
 
@@ -217,13 +218,18 @@ public class TransactionService {
         Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
         transactionRepository.save(excluded);
 
-        // Trigger async position recalculation
-        // Publish after save - fires AFTER_COMMIT, not during
-        eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
-                command.portfolioId(),
-                command.userId(),
-                command.accountId(),
-                new AssetSymbol(existing.execution().asset().symbol()))); // NPE issue
+        // Fix #2: only publish recalculation for position-affecting transactions.
+        // Non-trade transactions (DEPOSIT, FEE, DIVIDEND, etc.) have null execution.
+        // Calling existing.execution().asset() on those would throw NPE.
+        // Recalculation is also meaningless for cash-only transactions since
+        // PositionRecalculationService only rebuilds position state, not cash.
+        if (existing.transactionType().affectsHoldings() && existing.execution() != null) {
+            eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
+                    command.portfolioId(),
+                    command.userId(),
+                    command.accountId(),
+                    existing.execution().asset()));
+        }
 
         return transactionViewMapper.toTransactionView(excluded);
     }
@@ -246,13 +252,15 @@ public class TransactionService {
         Transaction restored = existing.restore();
         transactionRepository.save(restored);
 
-        // Trigger async position recalculation
-        // Publish after save - fires AFTER_COMMIT, not during
-        eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
-                command.portfolioId(),
-                command.userId(),
-                command.accountId(),
-                new AssetSymbol(existing.execution().asset().symbol())));
+        // Fix #2: same guard as excludeTransaction — only recalculate for
+        // position-affecting transactions with valid execution.
+        if (existing.transactionType().affectsHoldings() && existing.execution() != null) {
+            eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
+                    command.portfolioId(),
+                    command.userId(),
+                    command.accountId(),
+                    existing.execution().asset()));
+        }
 
         return transactionViewMapper.toTransactionView(restored);
     }

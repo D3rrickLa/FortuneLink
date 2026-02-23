@@ -39,6 +39,9 @@ public class Account {
     private Instant closeDate;
     private Instant lastUpdatedOn;
 
+    // for JPA hydration, some issues
+    // as if a JPA proxy method is called before the entity is fully hydrated
+    // it will NPE
     protected Account() {
         this.accountId = null;
         this.positionStrategy = null;

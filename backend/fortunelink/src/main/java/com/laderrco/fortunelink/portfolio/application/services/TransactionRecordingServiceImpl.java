@@ -34,6 +34,8 @@ import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingSe
  *
  * No repositories, no market data. Pure domain logic.
  */
+
+// NOTE: teh record buy and stuff might be wrong for CAB ACB
 @Service
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
@@ -51,6 +53,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         Money feeTotal = Fee.totalInAccountCurrency(fees, currency);
         List<Fee> finalFees = feeTotal.isZero() ? List.of() : (fees != null ? fees : List.of());
 
+        // grossCost = qty × price, fees excluded intentionally.
+        // Position cost basis tracks
+        // gross cost only (correct for ACB/FIFO tax// purposes).
+        // Cash outflow includes fees (totalOutflow) — these are separate concerns.
         Money grossCost = price.pricePerUnit().multiply(quantity.amount());
         Money totalOutflow = grossCost.add(feeTotal);
 
@@ -99,10 +105,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         account.updatePosition(symbol, result.newPosition());
         account.deposit(netProceeds, "SELL " + symbol.value());
 
-        // cashDelta is positive — cash comes IN from the sale
         Money cashDelta = netProceeds;
-
-        // Get asset type from the existing position
         AssetType type = current.type();
 
         return new Transaction(
@@ -119,9 +122,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 TransactionMetadata.manual(type));
     }
 
-    /**
-     * Records a cash deposit — no position changes, just adds to cash balance.
-     */
     @Override
     public Transaction recordDeposit(Account account, Money amount, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
@@ -145,9 +145,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 TransactionMetadata.manual(AssetType.CASH));
     }
 
-    /**
-     * Records a cash withdrawal — no position changes, just reduces cash balance.
-     */
     @Override
     public Transaction recordWithdrawal(Account account, Money amount, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
@@ -171,9 +168,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 TransactionMetadata.manual(AssetType.CASH));
     }
 
-    /**
-     * Records a platform/brokerage fee — deducts from cash, no position change.
-     */
     @Override
     public Transaction recordFee(Account account, Money amount, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
@@ -274,11 +268,19 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     /**
-     * Replays a single transaction against an account.
-     * Used for position recalculation when transactions are excluded/restored.
+     * Replays a single transaction against an account for position recalculation.
      *
-     * Only BUY, SELL, and SPLIT affect positions. Everything else is a cash event
-     * handled at the Account level, not position level.
+     * POSITION-ONLY CONTRACT: This method intentionally replays ONLY position-
+     * affecting transaction types (BUY, SELL, SPLIT, DIVIDEND_REINVEST).
+     *
+     * Cash events (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, etc.) are deliberately
+     * excluded. PositionRecalculationService calls account.clearPosition() then
+     * replays transactions for a specific symbol — cash balance is already correct
+     * in the DB and must NOT be touched here. Replaying cash events would
+     * double-count every cash movement.
+     *
+     * If you ever need full account reconstruction from scratch (e.g., migration),
+     * you will need a separate replay path that resets cash to zero first.
      */
     @Override
     public void replayTransaction(Account account, Transaction tx) {
@@ -286,28 +288,29 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         Objects.requireNonNull(tx, "Transaction cannot be null");
 
         if (tx.isExcluded()) {
-            return; // excluded transactions don't contribute to state
+            return;
         }
 
         switch (tx.transactionType()) {
             case BUY -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
-                Money grossCost = tx.execution().grossValue(); // qty × price, no fees
+
+                // Fix #1: use execution.grossValue() (qty × price), NOT cashDelta.abs().
+                // cashDelta on BUY includes fees: -(grossCost + fees).
+                // Position cost basis must be gross-only for correct ACB/FIFO tax calculation.
+                // Using cashDelta.abs() would overstate cost basis by the fee amount.
+                Money grossCost = tx.execution().grossValue();
+
                 ApplyResult<? extends Position> result = current.buy(
                         tx.execution().quantity(),
-                        // recordBuy passes frossCost to current.buy() only
-                        // and not gross + fees
-                        // when we didd it like this before,
-                        // the backed fees will overstates ACB/costbasis
-                        // ACB for tax purposes is gross cost only? fees are a separate deduction
-                        // tx.cashDelta().abs(),
                         grossCost,
                         tx.occurredAt().timestamp());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             case SELL -> {
                 account.getPosition(tx.execution().asset()).ifPresent(position -> {
+                    // SELL cashDelta is net proceeds (positive) — correct for position P&L
                     ApplyResult<? extends Position> result = position.sell(
                             tx.execution().quantity(),
                             tx.cashDelta(),
@@ -321,23 +324,19 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                     account.updatePosition(tx.execution().asset(), result.newPosition());
                 });
             }
-            case DEPOSIT, TRANSFER_IN -> account.deposit(tx.cashDelta(), tx.transactionType().name());
-            case WITHDRAWAL, TRANSFER_OUT -> account.withdraw(tx.cashDelta().abs(), tx.transactionType().name());
-            case FEE -> account.applyFee(tx.cashDelta().abs(), "FEE replay");
-            case DIVIDEND, INTEREST -> account.deposit(tx.cashDelta(), tx.transactionType().name());
             case DIVIDEND_REINVEST -> {
-                // Re-apply position increase, no cash movement
+                // No cash movement — just increase position at cost of grossValue
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
-                Money totalCost = tx.execution().pricePerUnit().pricePerUnit()
-                        .multiply(tx.execution().quantity().amount());
+                Money totalCost = tx.execution().grossValue();
                 ApplyResult<? extends Position> result = current.buy(
                         tx.execution().quantity(), totalCost, tx.occurredAt().timestamp());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             default -> {
-                // RETURN_OF_CAPITAL, REINVESTED_CAPITAL_GAIN, OTHER — no position or cash
-                // effect
+                // All cash-only types (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, INTEREST,
+                // TRANSFER_IN, TRANSFER_OUT, RETURN_OF_CAPITAL, etc.) are intentionally
+                // skipped. See method Javadoc for the rationale.
             }
         }
     }
