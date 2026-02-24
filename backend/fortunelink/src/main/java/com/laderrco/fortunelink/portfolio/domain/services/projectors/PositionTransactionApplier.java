@@ -1,10 +1,14 @@
 package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 
 final class PositionTransactionApplier {
+
+    private PositionTransactionApplier() {
+    }
 
     static <P extends Position> P apply(P position, Transaction tx) {
 
@@ -13,20 +17,30 @@ final class PositionTransactionApplier {
             case BUY -> applyBuy(position, tx);
             case SELL -> applySell(position, tx);
             case SPLIT -> applySplit(position, tx);
+            case DIVIDEND_REINVEST -> applyDividendReinvest(position, tx);
 
             default -> position; // dividends, interest, fees, etc.
         };
     }
 
     private static <P extends Position> P applyBuy(P position, Transaction tx) {
+        // Issue 7 fix: was txcashDelta().abs() which includes fees, overstating cost
+        // basis.
+        // grossValue() = qty x price, fees excluded - correct for AVB/FIFO tax purposes
+        // Mirrors the same fix applied to
+        // TransactionRecordingSErviceImpl.replayTransaction()
+
+        Money grossCost = tx.execution().grossValue();
+
         ApplyResult<? extends Position> r = position.buy(
                 tx.execution().quantity(),
-                tx.cashDelta().abs(), // cost
+                grossCost, // cost
                 tx.occurredAt().timestamp());
         return cast(r);
     }
 
     private static <P extends Position> P applySell(P position, Transaction tx) {
+        // cashDelta on SELL is net proceeds (positive) — correct for realized gain calc
         ApplyResult<? extends Position> r = position.sell(
                 tx.execution().quantity(),
                 tx.cashDelta(), // proceeds (positive)
@@ -39,12 +53,20 @@ final class PositionTransactionApplier {
         return cast(r);
     }
 
+    private static <P extends Position> P applyDividendReinvest(P position, Transaction tx) {
+        // No cash movement — position increases at grossValue cost
+        Money totalCost = tx.execution().grossValue();
+        ApplyResult<? extends Position> r = position.buy(
+                tx.execution().quantity(),
+                totalCost,
+                tx.occurredAt().timestamp());
+        return cast(r);
+    }
+
     @SuppressWarnings("unchecked")
     private static <P extends Position> P cast(
             ApplyResult<? extends Position> r) {
         return (P) r.newPosition();
     }
 
-    private PositionTransactionApplier() {
-    }
 }

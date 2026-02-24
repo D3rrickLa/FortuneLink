@@ -39,14 +39,30 @@ public class Account {
     private Instant closeDate;
     private Instant lastUpdatedOn;
 
-    // for JPA hydration, some issues
-    // as if a JPA proxy method is called before the entity is fully hydrated
-    // it will NPE
+    /**
+     * JPA-only constructor. Object is in a partially invalid state until
+     * Hibernate fully hydrates it — do NOT call business methods on a proxy
+     * before that happens.
+     *
+     * positions and cashBalance are initialized to safe empty defaults so that
+     * defensive calls like getPositionEntries() and getCashBalance() on a
+     * partially-hydrated proxy don't NPE. All other fields remain null and are
+     * set by Hibernate via field injection.
+     *
+     * accountCurrency is null here, which means any method that calls
+     * validateCurrency() will NPE until hydration completes. This is
+     * intentional — it surfaces the problem loudly rather than silently
+     * operating on wrong currency. Never pass a JPA proxy into business logic
+     * before the owning transaction has loaded the full entity.
+     */
     protected Account() {
         this.accountId = null;
         this.positionStrategy = null;
         this.creationDate = null;
         this.accountCurrency = null;
+        this.positions = new HashMap<>(); // safe: getPositionEntries() won't NPE
+        this.cashBalance = null; // intentionally null: any arithmetic will
+                                 // fail loudly rather than silently wrong
     }
 
     public Account(AccountId accountId, String name, AccountType accountType, Currency accountCurrency,

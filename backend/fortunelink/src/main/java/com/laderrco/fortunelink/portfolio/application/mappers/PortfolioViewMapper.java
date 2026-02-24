@@ -91,14 +91,41 @@ public class PortfolioViewMapper {
     }
 
     /**
-     * Maps a Position to its view representation.
-     * Handles both ACB and FIFO positions polymorphically via the sealed interface.
+     * Maps a position to its view with no fee data.
+     * Used for summary screens where tax data is not needed.
+     * totalFeesIncurred will be Price.ZERO.
      */
     public PositionView toPositionView(Position position, MarketAssetQuote quote) {
+        return toPositionView(position, quote, Money.ZERO(position.accountCurrency()));
+    }
+
+    /**
+     * Maps a position to its view with pre-computed cumulative fees.
+     *
+     * Fee display contract: fees are NOT in cost basis (Option A).
+     * The mapper receives a pre-computed feesForSymbol from AccountViewBuilder,
+     * which sums Fee.totalInAccountCurrency() across all BUY transactions for
+     * this symbol. The mapper just wraps it — no fee logic lives here.
+     *
+     * UI contract:
+     * Holdings screen → use totalCostBasis and unrealizedPnL (gross)
+     * Tax / ACB screen → effectiveAcb = totalCostBasis + totalFeesIncurred
+     *
+     * @param position      the position value object
+     * @param quote         current market quote (nullable — falls back to cost
+     *                      basis)
+     * @param feesForSymbol cumulative BUY fees for this symbol in account currency
+     */
+    public PositionView toPositionView(Position position, MarketAssetQuote quote, Money feesForSymbol) {
         AssetSymbol symbol = position.symbol();
         Currency currency = position.accountCurrency();
 
-        // Handle missing or stale quote data
+        // Ensure fee currency matches — defensive check since this comes from external
+        // computation
+        Money fees = (feesForSymbol != null && feesForSymbol.currency().equals(currency))
+                ? feesForSymbol
+                : Money.ZERO(currency);
+
         if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
             return new PositionView(
                     symbol.symbol(),
@@ -106,18 +133,17 @@ public class PortfolioViewMapper {
                     position.totalQuantity(),
                     new Price(position.totalCostBasis()),
                     new Price(position.costPerUnit()),
-                    Price.ZERO(currency), // current price
-                    Price.ZERO(currency), // market value
-                    Price.ZERO(currency), // unrealized P&L
-                    PercentageChange.ZERO, // gain/loss %
-                    determineMethodology(position), // ACB or FIFO
+                    new Price(fees), // fees even when quote unavailable
+                    Price.ZERO(currency), // current price unknown
+                    Price.ZERO(currency), // market value unknown
+                    Price.ZERO(currency), // unrealized P&L unknown
+                    PercentageChange.ZERO,
+                    determineMethodology(position),
                     extractFirstAcquiredDate(position),
                     extractLastModifiedDate(position));
         }
 
         Price currentPrice = quote.currentPrice();
-
-        // Calculate derived values using Position interface methods
         Money marketValue = position.currentValue(currentPrice.pricePerUnit());
         Money unrealizedPnL = marketValue.subtract(position.totalCostBasis());
         PercentageChange returnPct = calculateReturnPercentage(unrealizedPnL, position.totalCostBasis());
@@ -128,6 +154,7 @@ public class PortfolioViewMapper {
                 position.totalQuantity(),
                 new Price(position.totalCostBasis()),
                 new Price(position.costPerUnit()),
+                new Price(fees),
                 currentPrice,
                 new Price(marketValue),
                 new Price(unrealizedPnL),

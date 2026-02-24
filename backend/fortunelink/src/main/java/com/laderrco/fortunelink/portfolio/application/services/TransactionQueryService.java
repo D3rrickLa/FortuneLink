@@ -76,6 +76,7 @@ public class TransactionQueryService {
      */
     public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
         Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
+
         validateOwnership(query.portfolioId(), query.userId());
         validatePagination(query.page(), query.size());
         validateDateRange(query.startDate(), query.endDate());
@@ -98,11 +99,11 @@ public class TransactionQueryService {
         Page<Transaction> page;
 
         if (hasDateRange) {
-            page = transactionQueryRepository.findByAccountIdAndDateRange(
-                    query.accountId(), query.startDate(), query.endDate(), pageable);
+            page = transactionQueryRepository
+                    .findByAccountIdAndDateRange(query.accountId(), query.startDate(), query.endDate(), pageable);
         } else if (hasSymbol) {
-            page = transactionQueryRepository.findByAccountIdAndSymbol(
-                    query.accountId(), query.symbol(), pageable);
+            page = transactionQueryRepository
+                    .findByAccountIdAndSymbol(query.accountId(), query.symbol(), pageable);
         } else {
             page = transactionQueryRepository.findByAccountId(query.accountId(), pageable);
         }
@@ -118,14 +119,21 @@ public class TransactionQueryService {
         Objects.requireNonNull(accountId, "AccountId cannot be null");
         Objects.requireNonNull(start, "Start date cannot be null for calculation queries");
         Objects.requireNonNull(end, "End date cannot be null for calculation queries");
+
         validateDateRange(start, end);
 
         return transactionRepository.findByDateRange(accountId, start, end);
     }
 
+    /**
+     * Lightweight ownership check — does not load the Portfolio aggregate.
+     * Use existsByIdAndUserId wherever you only need to verify access without
+     * needing to mutate or read the portfolio itself.
+     */
     private void validateOwnership(PortfolioId portfolioId, UserId userId) {
-        portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+        if (!portfolioRepository.existsByIdAndUserId(portfolioId, userId)) {
+            throw new PortfolioNotFoundException(portfolioId);
+        }
     }
 
     private void validateDateRange(Instant start, Instant end) {
