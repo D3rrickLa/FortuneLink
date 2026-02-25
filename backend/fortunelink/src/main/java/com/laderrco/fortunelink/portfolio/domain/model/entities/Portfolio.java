@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -199,11 +201,11 @@ public class Portfolio {
         notNull(deletingUser, "deletingUser");
 
         if (deleted) {
-            throw new IllegalStateException("Portfolio is already deleted");
+            throw new PortfolioAlreadyDeletedException("Portfolio is already deleted");
         }
 
         if (!accounts.isEmpty()) {
-            throw new IllegalStateException(
+            throw new PortfolioNotEmptyException(
                     "Cannot delete portfolio with " + accounts.size() + " account(s). " +
                             "Close and remove all accounts first.");
         }

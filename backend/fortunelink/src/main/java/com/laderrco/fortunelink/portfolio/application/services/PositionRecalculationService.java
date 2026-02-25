@@ -52,6 +52,8 @@ public class PositionRecalculationService {
      *
      * Failure is logged but silent — no retry, no dead letter queue for MVP.
      * Replace log.error with proper alerting before going to production.
+     * 
+     * 
      */
     @Async("recalculationExecutor")
     @Transactional // its own transaction — reads committed state
@@ -71,6 +73,7 @@ public class PositionRecalculationService {
     }
 
     /*
+     * TODO: Fix this later on
      * IMPORTANT: this only works for posistions the affect transaction, but the
      * replayTransaction also replays cash events - i.e. DEPOSITIS< WITHDRAWAL, etc.
      * 
@@ -79,7 +82,10 @@ public class PositionRecalculationService {
      * but the replay also calls the deposit and withdraw for cash events - those
      * cash changes get APPLIED AGAIN
      * 
-     * we are douvle-counting cash on recalculation
+     * we are double-counting cash on recalculation
+     * if this were ever wired to a non-trade event path, you'd double-count cash.
+     * The
+     * MVP guard (only fires on trade exclude/restore) is holding the line for now.
      * 
      * replay was designed like that but schedule recalculation isn't clearing cash
      * state first - only position state
