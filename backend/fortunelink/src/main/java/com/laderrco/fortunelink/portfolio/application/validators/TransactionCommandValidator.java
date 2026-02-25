@@ -115,9 +115,10 @@ public class TransactionCommandValidator {
 
         if (command.execution() == null) {
             errors.add("Drip execution is required");
+        } else {
+            ValidationUtils.validateAmount(command.execution().pricePerShare().amount(), errors);
         }
 
-        ValidationUtils.validateAmount(command.execution().pricePerShare().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
         return errors.isEmpty()

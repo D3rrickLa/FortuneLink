@@ -22,15 +22,6 @@ public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId,
         // endDate can be null (means until now)
         // transactionType can be null (means all types)
 
-        // Validate pagination
-        // Use Spring's built-in validation by attempting to create a PageRequest
-        // This automatically handles negative page numbers and non-positive page sizes
-        try {
-            PageRequest.of(page, size);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid pagination parameters: " + e.getMessage());
-        }
-
         validatePagination(page, size);
     }
 
