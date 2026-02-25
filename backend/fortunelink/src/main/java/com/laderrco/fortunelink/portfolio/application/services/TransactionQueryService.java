@@ -77,8 +77,8 @@ public class TransactionQueryService {
     public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
         Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
+        // pagnation check here is done in query record
         validateOwnership(query.portfolioId(), query.userId());
-        validatePagination(query.page(), query.size());
         validateDateRange(query.startDate(), query.endDate());
 
         boolean hasDateRange = query.startDate() != null && query.endDate() != null;
@@ -98,6 +98,8 @@ public class TransactionQueryService {
 
         Page<Transaction> page;
 
+        // when we add back transactionType to GetTransactionHistoryQuery
+        // we will do the check here for the 'page'
         if (hasDateRange) {
             page = transactionQueryRepository
                     .findByAccountIdAndDateRange(query.accountId(), query.startDate(), query.endDate(), pageable);
@@ -140,20 +142,6 @@ public class TransactionQueryService {
         if (start != null && end != null && start.isAfter(end)) {
             throw new InvalidDateRangeException(
                     String.format("Start date cannot be after end date: start=%s, end=%s", start, end));
-        }
-    }
-
-    private void validatePagination(int page, int size) {
-        if (page < 0) {
-            throw new IllegalArgumentException("Page cannot be negative: " + page);
-        }
-
-        if (size <= 0) {
-            throw new IllegalArgumentException("Page size must be positive: " + size);
-        }
-
-        if (size > 100) {
-            throw new IllegalArgumentException("Page size cannot exceed 100: " + size);
         }
     }
 
