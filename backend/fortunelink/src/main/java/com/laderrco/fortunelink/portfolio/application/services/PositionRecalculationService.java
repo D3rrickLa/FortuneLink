@@ -101,6 +101,12 @@ public class PositionRecalculationService {
                 .findByAccountIdAndSymbol(accountId, symbol)
                 .stream()
                 .filter(tx -> !tx.isExcluded())
+                // EXPLICIT: only replay transactions that affect holdings.
+                // Cash events (DEPOSIT, WITHDRAWAL, DIVIDEND, FEE, etc.) are
+                // intentionally excluded — cash state is already correct in DB.
+                // If you ever need full-account reconstruction, use a dedicated
+                // replayFullAccount() path that resets cash to zero first.
+                .filter(tx -> tx.transactionType().affectsHoldings())
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
                 .toList();
 
@@ -111,5 +117,45 @@ public class PositionRecalculationService {
         account.clearPosition(symbol); // reset to zero
         active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
         portfolioRepository.save(portfolio); // persist corrected state
+    }
+
+    /**
+     * Full account reconstruction from transaction history.
+     * position AND cash
+     * 
+     * Unlike scheduleRecalculation (which only rebuilds a single symbol's
+     * position),
+     * this resets BOTH position state AND cash to zero, then replays all
+     * non-excluded
+     * transactions in chronological order.
+     * 
+     * USE CASES: data migration, account corruption recovery, audit reconciliation.
+     * NOT for routine exclude/restore — use scheduleRecalculation for that.
+     * 
+     * WARNING: This is destructive. Call only when you own the full transaction
+     * history and are certain it is complete and ordered correctly.
+     */
+    @Transactional
+    public void replayFullAccount(PortfolioId portfolioId, UserId userId, AccountId accountId) {
+        List<Transaction> allActive = transactionRepository
+                .findByAccountId(accountId)
+                .stream()
+                .filter(tx -> !tx.isExcluded())
+                .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
+                .toList();
+
+        Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
+                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+
+        Account account = portfolio.getAccount(accountId);
+
+        // Reset BOTH position and cash state before replay.
+        // Order matters: clear all positions first, then reset cash.
+        account.clearAllPositions();
+        account.resetCashToZero();
+
+        // Replay using a full-replay path, not replayTransaction (position-only).
+        allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
+        portfolioRepository.save(portfolio);
     }
 }

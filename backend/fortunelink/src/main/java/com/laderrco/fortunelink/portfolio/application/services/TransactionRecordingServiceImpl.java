@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
-
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
@@ -24,6 +23,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * Records transactions against an account by:
  * 1. Mutating account state (positions, cash balance)
@@ -37,6 +38,7 @@ import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingSe
 
 // NOTE: teh record buy and stuff might be wrong for CAB ACB
 @Service
+@RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
     @Override
@@ -291,6 +293,20 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             return;
         }
 
+        // HARD GUARD: replayTransaction is a POSITION-ONLY contract.
+        // If a cash-affecting transaction reaches this method, it is a caller
+        // error — not a silent no-op. Failing loudly here surfaces misuse
+        // during development and prevents silent cash double-counting in prod.
+        // Full-account reconstruction requires a separate path that resets cash.
+        if (!tx.transactionType().affectsHoldings()) {
+            throw new IllegalArgumentException(
+                    "replayTransaction is position-only. Transaction type "
+                            + tx.transactionType()
+                            + " affects cash and must not be replayed through this path. "
+                            + "If full-account reconstruction is needed, use replayFullAccount() "
+                            + "which resets cash state before replay.");
+        }
+
         switch (tx.transactionType()) {
             case BUY -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
@@ -338,6 +354,63 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 // TRANSFER_IN, TRANSFER_OUT, RETURN_OF_CAPITAL, etc.) are intentionally
                 // skipped. See method Javadoc for the rationale.
             }
+        }
+    }
+
+    @Override
+    public void replayFullTransaction(Account account, Transaction tx) {
+        Objects.requireNonNull(account, "Account cannot be null");
+        Objects.requireNonNull(tx, "Transaction cannot be null");
+
+        if (tx.isExcluded()) {
+            return;
+        }
+
+        switch (tx.transactionType()) {
+            // Position-affecting — same as replayTransaction
+            case BUY -> {
+                AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
+                Position current = account.ensurePosition(tx.execution().asset(), type);
+                Money grossCost = tx.execution().grossValue();
+                ApplyResult<? extends Position> result = current.buy(
+                        tx.execution().quantity(), grossCost, tx.occurredAt().timestamp());
+                account.updatePosition(tx.execution().asset(), result.newPosition());
+            }
+            case SELL -> {
+                Position current = account.getPosition(tx.execution().asset())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No position for " + tx.execution().asset().value() + " during full replay"));
+                ApplyResult<? extends Position> result = current.sell(
+                        tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
+                account.updatePosition(tx.execution().asset(), result.newPosition());
+                account.deposit(tx.cashDelta(), "REPLAY SELL " + tx.execution().asset().value());
+            }
+            case SPLIT -> {
+                Position current = account.getPosition(tx.execution().asset())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No position for " + tx.execution().asset().value() + " during full replay"));
+                ApplyResult<? extends Position> result = current.split(tx.split().ratio());
+                account.updatePosition(tx.execution().asset(), result.newPosition());
+            }
+            case DIVIDEND_REINVEST -> {
+                AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
+                Position current = account.ensurePosition(tx.execution().asset(), type);
+                ApplyResult<? extends Position> result = current.buy(
+                        tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
+                account.updatePosition(tx.execution().asset(), result.newPosition());
+            }
+            // Cash-only — these are the ones replayTransaction skips
+            case DEPOSIT -> account.deposit(tx.cashDelta(), "REPLAY DEPOSIT");
+            case WITHDRAWAL -> account.withdraw(tx.cashDelta().abs(), "REPLAY WITHDRAWAL");
+            case DIVIDEND -> account.deposit(tx.cashDelta(), "REPLAY DIVIDEND");
+            case FEE -> account.withdraw(tx.cashDelta().abs(), "REPLAY FEE");
+            case INTEREST -> account.deposit(tx.cashDelta(), "REPLAY INTEREST");
+            case TRANSFER_IN -> account.deposit(tx.cashDelta(), "REPLAY TRANSFER_IN");
+            case TRANSFER_OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY TRANSFER_OUT");
+
+            default -> throw new IllegalStateException(
+                    "Unhandled transaction type in replayFullTransaction: " + tx.transactionType()
+                            + ". Update this switch when adding new TransactionTypes.");
         }
     }
 

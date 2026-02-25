@@ -277,6 +277,16 @@ public class Account {
         touch();
     }
 
+    public void clearAllPositions() {
+        this.positions = null;
+        touch();
+    }
+
+    public void resetCashToZero() {
+        this.cashBalance = Money.ZERO(this.accountCurrency);
+        touch();
+    }
+
     private Position createEmptyPosition(AssetSymbol symbol, AssetType assetType) {
         return switch (positionStrategy) {
             case ACB -> AcbPosition.empty(symbol, assetType, accountCurrency);
