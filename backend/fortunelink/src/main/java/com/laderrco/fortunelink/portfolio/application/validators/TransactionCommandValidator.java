@@ -117,6 +117,8 @@ public class TransactionCommandValidator {
             errors.add("Drip execution is required");
         } else {
             ValidationUtils.validateAmount(command.execution().pricePerShare().amount(), errors);
+            ValidationUtils.validateQuantity(command.execution().sharesPurchased(), errors);
+
         }
 
         ValidationUtils.validateDate(command.transactionDate(), errors);
