@@ -27,10 +27,6 @@ public class TransactionCommandValidator {
 
         validateCommonIds(command, errors);
 
-        if (command.symbol() == null || command.symbol().trim().isEmpty()) {
-            errors.add("Asset symbol is required");
-        }
-
         if (!ValidationUtils.isValidCurrency(command.price().currency().getCode())) {
             errors.add("Invalid currency code");
         }
@@ -56,10 +52,7 @@ public class TransactionCommandValidator {
 
         validateCommonIds(command, errors);
 
-        if (command.symbol() == null) {
-            errors.add("Symbol is required");
-        }
-
+        ValidationUtils.validateSymbol(command.symbol(), errors);
         ValidationUtils.validateQuantity(command.quantity(), errors);
         ValidationUtils.validateAmount(command.price().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
@@ -103,10 +96,7 @@ public class TransactionCommandValidator {
 
         validateCommonIds(command, errors);
 
-        if (command.assetSymbol() == null) {
-            errors.add("Symbol is required");
-        }
-
+        ValidationUtils.validateSymbol(command.assetSymbol(), errors);
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
@@ -121,9 +111,7 @@ public class TransactionCommandValidator {
 
         validateCommonIds(command, errors);
 
-        if (command.assetSymbol() == null) {
-            errors.add("Symbol is required");
-        }
+        ValidationUtils.validateSymbol(command.assetSymbol(), errors);
 
         if (command.execution() == null) {
             errors.add("Drip execution is required");
