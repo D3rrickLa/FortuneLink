@@ -85,8 +85,8 @@ public class AccountQueryService {
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
-		// Scoped batch call: only this account's symbols
-		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
+		// Scoped to THIS account only — don't pay for symbols we won't use
+		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbolsByAccount(account);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		return accountViewBuilder.build(account, quoteCache);
@@ -105,7 +105,7 @@ public class AccountQueryService {
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
-		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
+		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbolsByAccount(account);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		return account.getPositionEntries().stream()
@@ -129,8 +129,7 @@ public class AccountQueryService {
 
 		// findPosition or similar — adjust to your actual Account API
 		var position = account.getPosition(query.symbol())
-				.orElseThrow(
-						() -> new AssetNotFoundException("No position found for symbol: " + query.symbol().value()));
+				.orElseThrow(() -> new AssetNotFoundException(query.symbol()));
 
 		// Single quote, not a batch — correct API hygiene for single-item lookups
 		MarketAssetQuote quote = marketDataService.getCurrentQuote(query.symbol()).orElse(null);
