@@ -26,6 +26,7 @@ import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecy
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
@@ -118,13 +119,13 @@ public class PortfolioLifecycleService {
             try {
                 portfolio.markAsDeleted(command.userId());
                 portfolioRepository.save(portfolio);
-
+            } catch (PortfolioAlreadyDeletedException e) {
+                throw new PortfolioDeletionException("Portfolio already deleted");
+            } catch (PortfolioNotEmptyException e) {
+                throw e; // re-throw as-is if domain already throws the right type
             } catch (IllegalStateException e) {
-                if (e.getMessage().contains("Portfolio is already deleted")) {
-                    throw new PortfolioDeletionException("Portfolio already deleted");
-                } else {
-                    throw new PortfolioNotEmptyException("Portfolio is not empty and can't be deleted");
-                }
+                // Catch-all — something unexpected from markAsDeleted
+                throw new PortfolioDeletionException("Cannot delete portfolio: " + e.getMessage());
             }
         } else {
             // intentionally bypasses the markAsDleted checks
