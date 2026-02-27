@@ -13,7 +13,7 @@
     <artifactId>fortunelink</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>fortunelink</name>
-    <description>Manage your portfolio and furture investments all in one location</description>
+    <description>Manage your portfolio and future investments all in one location</description>
     <url />
     <licenses>
         <license />
@@ -180,9 +180,9 @@
 
         <!--
             REMOVED: h2 (runtime)
-            H2 is not compatible with PostgreSQL-dialect Flyway migrations.
+            H2 is not compatible with PostgresSQL-dialect Flyway migrations.
             It was likely here as a fast in-memory DB for tests, but you are already
-            using Testcontainers with a real PostgreSQL container, which is the correct
+            using Testcontainers with a real PostgresSQL container, which is the correct
             approach. Keeping H2 creates a false safety net where tests pass in-memory
             but fail against real Postgres. Testcontainers covers this correctly.
             If you ever need H2 for a specific lightweight test, re-add it scoped
@@ -194,7 +194,7 @@
             Boot 4 added a proper Flyway starter. This pulls in flyway-core AND
             flyway-database-postgresql as a managed, versioned set. Using the raw
             flyway-database-postgresql artifact directly bypasses Boot's version
-            management and auto-configuration wiring. Use the starter.
+            management and autoconfiguration wiring. Use the starter.
         -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -361,7 +361,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- PostgreSQL container -->
+        <!-- PostgresSQL container -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
@@ -425,6 +425,16 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <argLine>
+                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/5.20.0/mockito-core-5.20.0.jar
+                    </argLine>
                 </configuration>
             </plugin>
         </plugins>

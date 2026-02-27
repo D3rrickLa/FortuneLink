@@ -242,13 +242,13 @@ public class Account {
     public Collection<Position> getAllPositions() {
         return positions.values().stream()
                 .map(Position::copy)
-                .collect(Collectors.toUnmodifiableList());
+                .toList();
     }
 
     public Collection<Map.Entry<AssetSymbol, Position>> getPositionEntries() {
         return positions.entrySet().stream()
                 .map(entry -> Map.entry(entry.getKey(), entry.getValue().copy()))
-                .collect(Collectors.toUnmodifiableList());
+                .toList();
     }
 
     public int getPositionCount() {
@@ -278,7 +278,7 @@ public class Account {
     }
 
     public void clearAllPositions() {
-        this.positions = null;
+        this.positions = new HashMap<>();
         touch();
     }
 

@@ -15,11 +15,16 @@ public record Quantity(BigDecimal amount) implements Comparable<Quantity> {
     public Quantity {
         notNull(amount, "amount cannot be null");
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            // todo: add something here? maybe don't know
         }
         amount = amount.setScale(QUANTITY_PRECISION, RoundingMode.HALF_EVEN);
     }
 
     public static final Quantity ZERO = new Quantity(BigDecimal.ZERO);
+
+    public static Quantity of(double i) {
+        return new Quantity(BigDecimal.valueOf(i));
+    }
 
     public Quantity add(Quantity other) {
         notNull(other, "other quantity");

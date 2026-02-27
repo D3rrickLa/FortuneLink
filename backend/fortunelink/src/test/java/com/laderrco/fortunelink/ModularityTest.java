@@ -6,15 +6,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
 
-@Disabled
 class ModularityTest {
 
     static ApplicationModules modules;
 
     @BeforeAll
     static void setup() {
-        // Deferred — runs after JUnit initializes the class,
-        // giving the classloader time to be fully wired
         modules = ApplicationModules.of(FortunelinkApplication.class);
     }
 

@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EmptySource;
@@ -26,6 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class PortfolioTest {
 
@@ -51,6 +54,30 @@ class PortfolioTest {
                     () -> assertNull(portfolio.getPortfolioId()),
                     () -> assertNull(portfolio.getUserId()),
                     () -> assertNull(portfolio.getCreatedAt()));
+        }
+        
+        @Test
+        @DisplayName("Create New static constructor")
+        void constructor_Success_createNew_Factorymethod() {
+        	Portfolio portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.CAD);
+        	assertAll(
+        			() -> assertEquals(userId, portfolio.getUserId()),
+        			() -> assertEquals(portfolioName, portfolio.getName()),
+        			() -> assertEquals("description", portfolio.getDescription()),
+        			() -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency())
+        			);
+        }
+        
+        @Test
+        @DisplayName("Create New static constructor blank description")
+        void constructor_Success_createNew_NoDescriptionShouldBeBlank() {
+        	Portfolio portfolio = Portfolio.createNew(userId, portfolioName, null, Currency.CAD);
+        	assertAll(
+        			() -> assertEquals(userId, portfolio.getUserId()),
+        			() -> assertEquals(portfolioName, portfolio.getName()),
+        			() -> assertTrue(portfolio.getDescription().isEmpty()),
+        			() -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency())
+        			);
         }
 
         @Test
@@ -320,7 +347,7 @@ class PortfolioTest {
             portfolio.createAccount("Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD, PositionStrategy.FIFO);
 
             assertThatThrownBy(() -> portfolio.markAsDeleted(userId))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(PortfolioNotEmptyException.class)
                     .hasMessageContaining("Close and remove all accounts first");
         }
 
@@ -329,7 +356,7 @@ class PortfolioTest {
         void markAsDeleted_Failure_ThrowsWhenAlreadyDeleted() {
             portfolio.markAsDeleted(userId);
             assertThatThrownBy(() -> portfolio.markAsDeleted(userId))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(PortfolioAlreadyDeletedException.class)
                     .hasMessageContaining("Portfolio is already deleted");
         }
 
@@ -407,6 +434,16 @@ class PortfolioTest {
             // Test Blank/Whitespace
             assertThatThrownBy(() -> portfolio.updateDetails("   ", "Valid Desc"))
                     .isInstanceOf(IllegalArgumentException.class);
+        }
+        
+        @Test
+        @DisplayName("updateDisplayCurrency_Success_Changes_Currency")
+        void updateDisplayCurrency_Success_NoErrors() {
+        	Currency oldCurrency = portfolio.getDisplayCurrency();
+        	portfolio.updateDisplayCurrency(Currency.EUR);
+        	
+        	assertEquals(Currency.EUR, portfolio.getDisplayCurrency());
+        	assertNotEquals(oldCurrency, portfolio.getDisplayCurrency());
         }
     }
 

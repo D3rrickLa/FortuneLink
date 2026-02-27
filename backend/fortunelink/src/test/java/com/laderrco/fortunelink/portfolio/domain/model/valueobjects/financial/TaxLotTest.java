@@ -109,6 +109,15 @@ class TaxLotTest {
         }
 
         @Test
+        void remainingAfter_success_quantityIs0() {
+            TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
+            Quantity fourShares = new Quantity(new BigDecimal("0.00"));
+
+            TaxLot lot1 = lot.remainingAfter(fourShares);
+            assertThat(lot1).isEqualTo(lot);
+        }
+
+        @Test
         void remainingAfter_fail_quantityLessThan0() {
             TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
             Quantity fourShares = new Quantity(new BigDecimal("-1.00"));
@@ -117,7 +126,7 @@ class TaxLotTest {
         }
 
         @Test
-        void remainingAfter_fail_SoldQuantityCreaterThanQuantity() {
+        void remainingAfter_fail_SoldQuantityGreaterThanQuantity() {
             TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
             Quantity fourShares = new Quantity(new BigDecimal("1000000.00"));
 

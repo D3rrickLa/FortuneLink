@@ -26,11 +26,6 @@ public class Currency {
         return new Currency(locale);
     }
 
-    public static Currency fromLocale(Locale locale) {
-        java.util.Currency currency = java.util.Currency.getInstance(locale);
-        return new Currency(currency);
-    }
-
     // i.e. USD
     public String getCode() {
         return this.currency.getCurrencyCode();

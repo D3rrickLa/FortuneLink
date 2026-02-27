@@ -11,8 +11,14 @@ import org.junit.jupiter.api.Test;
 public class TransactionDateTest {
 
     @Test
-    void testTransactionDateConstructor_success() {
+    void testTransactionDateConstructor_Success() {
         TransactionDate date = new TransactionDate(Instant.now());
+        assertNotNull(date);
+    }
+
+    @Test
+    void testStaticConstructor_Success() {
+        TransactionDate date = TransactionDate.of(Instant.now());
         assertNotNull(date);
     }
     

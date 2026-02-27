@@ -113,9 +113,6 @@ public record Transaction(
 
     public Money totalFeesInAccountCurrency() {
         return Fee.totalInAccountCurrency(fees, cashDelta.currency());
-        // Currency currency = cashDelta.currency();
-        // return fees.stream().map(Fee::accountAmount)
-        // .reduce(Money.ZERO(currency), Money::add);
     }
 
     private void validateConsistency(String label, boolean isRequired, boolean isPresent) {
@@ -127,10 +124,9 @@ public record Transaction(
         }
     }
 
-    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta,
-            List<Fee> fees) {
+    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta, List<Fee> fees) {
         Money grossValue = execution.grossValue();
-        Money totalFees = totalFeesInAccountCurrency();
+        Money totalFees = Fee.totalInAccountCurrency(fees, cashDelta.currency());
 
         Money expectedCashDelta = switch (type.cashImpact()) {
             case IN -> grossValue.subtract(totalFees);
@@ -147,7 +143,7 @@ public record Transaction(
     // old code before, in 90f8c03428f84c687a02cc8d6835a35743a11899
     // did computation in th sense that
     // it knows how cash should be computed
-    // this is bad, we are now only enforcing invarients
+    // this is bad, we are now only enforcing invariants
     public record TradeExecution(AssetSymbol asset, Quantity quantity, Price pricePerUnit) {
         public TradeExecution {
             notNull(asset, "Asset symbol cannot be null");
@@ -158,10 +154,11 @@ public record Transaction(
                 throw new IllegalArgumentException("Trade quantity cannot be zero");
             }
 
-            if (pricePerUnit.pricePerUnit().isNegative()) {
-                throw new IllegalArgumentException(
-                        "Price per unit cannot be negative (got: " + pricePerUnit + ")");
-            }
+            // not needed as Price.java already does this
+//            if (pricePerUnit.pricePerUnit().isNegative()) {
+//                throw new IllegalArgumentException(
+//                        "Price per unit cannot be negative (got: " + pricePerUnit + ")");
+//            }
         }
 
         /**
@@ -194,6 +191,7 @@ public record Transaction(
             if (excluded && (excludedAt == null || excludedBy == null)) {
                 throw new IllegalArgumentException("excludedAt and excludedBy required when excluded=true");
             }
+
             if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
                 throw new IllegalArgumentException("Cannot have exclusion metadata when excluded=false");
             }

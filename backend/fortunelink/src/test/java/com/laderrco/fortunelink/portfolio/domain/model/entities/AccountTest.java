@@ -4,6 +4,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,7 +39,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-                    
+
 class AccountTest {
 
     private AccountId accountId;
@@ -68,6 +69,7 @@ class AccountTest {
             assertEquals(AccountType.CHEQUING, account.getAccountType());
             assertNotNull(account.getLastUpdatedOn());
             assertEquals(0, account.getPositionCount());
+            assertEquals(strategy, account.getPositionStrategy());
         }
 
         @Test
@@ -196,6 +198,7 @@ class AccountTest {
 
             assertTrue(account.hasPosition(apple));
             assertEquals(1, account.getPositionCount());
+            assertEquals(1, account.getPositionEntries().size());
             assertNotNull(account.getPosition(apple));
         }
 
@@ -220,6 +223,18 @@ class AccountTest {
             assertThrows(IllegalArgumentException.class, () -> account.updatePosition(google, emptyPosition));
         }
 
+        @Test
+        void testesPositionEntries_Success() {
+            assertNotNull(account.getPositionEntries());
+            assertEquals(0, account.getPositionEntries().size());
+        }
+
+        @Test
+        void testClearPosition_Success_ClearsWhenSymbolFound() {
+            account.clearPosition(apple);
+            assertTrue(account.getPosition(apple).isEmpty());
+        }
+
         @Nested
         class PositionStrategyTest {
 
@@ -237,7 +252,8 @@ class AccountTest {
                 // THEN: It should be an AcbPosition
                 // System.out.println("Account strategy: " + cadAccount.getPositionStrategy());
                 // Position position2 = cadAccount.ensurePosition(symbol, AssetType.STOCK);
-                // System.out.println("Created position class: " + position2.getClass().getName());
+                // System.out.println("Created position class: " +
+                // position2.getClass().getName());
                 assertTrue(position instanceof AcbPosition, "Account with ACB strategy must produce AcbPosition");
             }
 
@@ -341,6 +357,14 @@ class AccountTest {
                     () -> account.deposit(Money.of(10, "USD"), "Reason"));
         }
 
+        @Test
+        void testUpdateName_Success() {
+            String oldName = account.getName();
+            account.updateName("new Name");
+            assertNotEquals(oldName, account.getName());
+            assertEquals("new Name", account.getName());
+        }
+
         @ParameterizedTest
         @NullSource
         @EmptySource
@@ -348,6 +372,18 @@ class AccountTest {
         void testUpdateName_Failure_ThrowsWhenNewNameIsNullOrEmpty(String invalidName) {
             assertThrows(IllegalArgumentException.class,
                     () -> account.updateName(invalidName));
+        }
+
+        @Test
+        void testClearAllPosition_Success_EmptyHashMap() {
+            account.clearAllPositions();
+            assertTrue(account.getPositionCount() == 0);
+        }
+
+        @Test
+        void testResetCashToZero_Success() {
+            account.resetCashToZero();
+            assertEquals(Money.ZERO("USD"), account.getCashBalance());
         }
     }
 

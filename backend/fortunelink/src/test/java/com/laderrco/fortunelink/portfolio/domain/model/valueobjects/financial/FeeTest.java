@@ -4,10 +4,14 @@ import org.junit.jupiter.api.*;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
+
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.math.BigDecimal;
+
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertEquals;
 
 @DisplayName("Fee Value Object Unit Tests")
 class FeeTest {
@@ -27,6 +31,7 @@ class FeeTest {
             Fee fee = new Fee(VALID_TYPE, VALID_MONEY, null, null, NOW, EMPTY_METADATA);
             assertThat(fee.feeType()).isEqualTo(VALID_TYPE);
             assertThat(fee.nativeAmount()).isEqualTo(VALID_MONEY);
+            assertThat(fee.nativeAmount().currency().getSymbol()).isEqualTo("US$");
         }
 
         @Test
@@ -109,6 +114,39 @@ class FeeTest {
             assertThat(zeroFee.feeType()).isEqualTo(FeeType.NONE);
             assertThat(zeroFee.nativeAmount().isZero()).isTrue();
             assertThat(zeroFee.nativeAmount().currency()).isEqualTo(usd);
+        }
+
+        @Test
+        void testTotalInAccountCurrency_Success_Default() {
+            Fee fee_1 = Fee.of(VALID_TYPE, VALID_MONEY, NOW);
+            Fee fee_2 = Fee.of(VALID_TYPE, VALID_MONEY, NOW);
+            Fee fee_3 = Fee.of(VALID_TYPE, VALID_MONEY, NOW);
+
+            List<Fee> fees = List.of(fee_1, fee_2, fee_3);
+            Money actualTotal = Fee.totalInAccountCurrency(fees, Currency.USD);
+            assertEquals(Money.of(30, "USD"), actualTotal);
+        }
+
+        @Test
+        void testTotalInAccountCurrency_Success_ZeroFee() {
+
+            List<Fee> fees = List.of();
+            Money actualTotal = Fee.totalInAccountCurrency(fees, Currency.USD);
+            Money actualTotal2 = Fee.totalInAccountCurrency(null, Currency.USD);
+            assertEquals(Money.of(0, "USD"), actualTotal);
+            assertEquals(Money.of(0, "USD"), actualTotal2);
+        }
+
+        @Test
+        void testTotalInAccountCurrency_Failure_AmountCurrencyNotEqualToAccountCurrency() {
+            Fee fee_1 = Fee.of(VALID_TYPE, VALID_MONEY, NOW);
+            Fee fee_2 = Fee.of(VALID_TYPE, VALID_MONEY, NOW);
+            Fee fee_3 = Fee.of(VALID_TYPE, VALID_MONEY, NOW);
+
+            List<Fee> fees = List.of(fee_1, fee_2, fee_3);
+            assertThatThrownBy(() -> Fee.totalInAccountCurrency(fees, Currency.JPY))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Fee currency mismatch");
         }
     }
 

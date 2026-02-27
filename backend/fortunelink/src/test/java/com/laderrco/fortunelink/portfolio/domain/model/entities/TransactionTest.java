@@ -1,10 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -15,10 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -53,7 +47,6 @@ public class TransactionTest {
         void testConstructor_Success(TransactionType type, int delta) {
             TransactionId transactionId = TransactionId.newId();
             AccountId accountId = AccountId.newId();
-            TransactionType transactionType = type;
             TradeExecution execution = new TradeExecution(
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
@@ -67,7 +60,7 @@ public class TransactionTest {
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+            Transaction transaction = new Transaction(transactionId, accountId, type, execution, spilt,
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(transactionId, transaction.transactionId()));
@@ -91,8 +84,19 @@ public class TransactionTest {
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
-                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
+            Transaction transaction = new Transaction(
+                    transactionId,
+                    accountId,
+                    transactionType,
+                    execution,
+                    spilt,
+                    cashDelta,
+                    fees,
+                    notes,
+                    occurredAt,
+                    relatedTransactionId,
+                    metadata);
+
             assertAll(
                     () -> assertEquals(transactionId, transaction.transactionId()));
         }
@@ -115,7 +119,7 @@ public class TransactionTest {
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(transactionId, transaction.transactionId()),
-                    () -> assertEquals(true, transaction.fees().isEmpty()));
+                    () -> assertTrue(transaction.fees().isEmpty()));
         }
 
         @Test
@@ -294,7 +298,6 @@ public class TransactionTest {
             }
 
             @Test
-            @Disabled
             void testValidateTradeConsistency_Failure_WhenExpectedCashDeltaDefaultPath() {
                 TransactionId transactionId = TransactionId.newId();
                 AccountId accountId = AccountId.newId();
@@ -312,12 +315,12 @@ public class TransactionTest {
                 TransactionId relatedTransactionId = null;
                 TransactionMetadata metadata = null;
 
-                IllegalStateException ex = assertThrows(IllegalStateException.class,
+                IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                         () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta,
                                 fees,
                                 notes, occurredAt, relatedTransactionId, metadata));
 
-                assertTrue(ex.getMessage().contains("Unexpected"));
+                assertTrue(ex.getMessage().contains("requires"));
             }
         }
     }
@@ -334,7 +337,7 @@ public class TransactionTest {
                     new AssetSymbol("AAPL"),
                     new Quantity(BigDecimal.TEN),
                     new Price(Money.of(135, "USD")));
-                    
+
             SplitDetails spilt = null;
             Money cashDelta = Money.of(-1358.25, "USD");
             List<Fee> fees = List.of(
@@ -361,6 +364,143 @@ public class TransactionTest {
                             transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits()));
         }
 
+    }
+
+    @Nested
+    @DisplayName("Restore and Exclude methods")
+    public class TransactionDeletionTests {
+
+        private Transaction transaction;
+
+        @BeforeEach
+        void setUp() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.BUY;
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    new Price(Money.of(135, "USD")));
+
+            SplitDetails spilt = null;
+            Money cashDelta = Money.of(-1350, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+            TransactionId relatedTransactionId = null;
+            TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
+
+            transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+                    cashDelta, fees, notes, occurredAt, null, metadata);
+        }
+
+        @Test
+        void testMarkAssetExcluded_Success_MarksTransactionAsExcluded() {
+            UserId userId = UserId.random();
+
+            assertFalse(transaction.isExcluded());
+
+            Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+
+            assertTrue(excludedTransaction.metadata().excluded());
+            assertEquals(userId, excludedTransaction.metadata().excludedBy());
+            assertTrue(excludedTransaction.isExcluded());
+        }
+
+        @Test
+        void testRestore_Success_MarksTransactionAsRestored() {
+            UserId userId = UserId.random();
+            Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+            assertTrue(excludedTransaction.metadata().excluded());
+            assertEquals(userId, excludedTransaction.metadata().excludedBy());
+
+            Transaction restored = excludedTransaction.restore();
+            assertFalse(restored.metadata().excluded());
+            assertNull(restored.metadata().excludedBy());
+            assertTrue(excludedTransaction.isExcluded());
+        }
+
+        @Test
+        void testMarketAssetExcluded_Failure_MetadataIsNull() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.BUY;
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    new Price(Money.of(135, "USD")));
+
+            Money cashDelta = Money.of(-1350, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+
+            transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
+                    cashDelta, fees, notes, occurredAt, null, null);
+
+            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
+                    transaction.markAsExcluded(UserId.random(), "reason")
+            );
+
+            assertTrue(stateException.getMessage().contains("exclude transaction"));
+            assertFalse(transaction.isExcluded());
+
+        }
+
+        @Test
+        void testRestore_Failure_MetadataIsNull() {
+            TransactionId transactionId = TransactionId.newId();
+            AccountId accountId = AccountId.newId();
+            TransactionType transactionType = TransactionType.BUY;
+            TradeExecution execution = new TradeExecution(
+                    new AssetSymbol("AAPL"),
+                    new Quantity(BigDecimal.TEN),
+                    new Price(Money.of(135, "USD")));
+
+            Money cashDelta = Money.of(-1350, "USD");
+            List<Fee> fees = List.of();
+            String notes = "Some notes";
+            TransactionDate occurredAt = TransactionDate.now();
+
+            transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
+                    cashDelta, fees, notes, occurredAt, null, null);
+
+            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
+                    transaction.restore()
+            );
+
+            assertTrue(stateException.getMessage().contains("restore transaction"));
+            assertFalse(transaction.isExcluded());
+        }
+
+        @Test
+        void testMarketAssetExcluded_Failure_AlreadyExcluded() {
+            UserId userId = UserId.random();
+
+            assertFalse(transaction.isExcluded());
+
+            Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+
+            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
+                    excludedTransaction.markAsExcluded(UserId.random(), "reason 2")
+            );
+
+            assertTrue(stateException.getMessage().contains("already exclude"));
+            assertFalse(transaction.isExcluded());
+
+        }
+
+        @Test
+        void testRestore_Failure_TransactionNotYetExcluded() {
+
+            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
+                    transaction.restore()
+            );
+
+            assertTrue(stateException.getMessage().contains("Transaction is not excluded"));
+            assertFalse(transaction.isExcluded());
+
+        }
     }
 
     @Nested
@@ -395,6 +535,7 @@ public class TransactionTest {
             assertThrows(IllegalArgumentException.class,
                     () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")), price));
         }
+
     }
 
     @Nested
@@ -403,13 +544,13 @@ public class TransactionTest {
         void testNullSafetyAndDefaults() {
             // Test that null map becomes empty map and null source becomes UNKNOWN
             var meta = new Transaction.TransactionMetadata(
-                AssetType.STOCK,
-                null, 
-                false, 
-                null, 
-                null, 
-                null, 
-                null);
+                    AssetType.STOCK,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null,
+                    null);
 
             assertEquals("UNKNOWN", meta.source());
             assertNotNull(meta.additionalData());
@@ -417,11 +558,97 @@ public class TransactionTest {
         }
 
         @Test
+        void testNullSafetyAndDefaultsExcluded() {
+            // Test that null map becomes empty map and null source becomes UNKNOWN
+            var meta = new Transaction.TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    true,
+                    Instant.now(),
+                    UserId.random(),
+                    "Some reason",
+                    null);
+
+            assertEquals("UNKNOWN", meta.source());
+            assertNotNull(meta.additionalData());
+            assertTrue(meta.isEmpty());
+        }
+
+        @Test
+        void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAtAndExcludedBy() {
+            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    true,
+                    null,
+                    null,
+                    null,
+                    null)
+            );
+        }
+
+        @Test
+        void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAt() {
+            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    true,
+                    null,
+                    UserId.random(),
+                    null,
+                    null)
+            );
+        }
+        @Test
+        void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedBy() {
+            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    true,
+                    Instant.now(),
+                    null,
+                    null,
+                    null)
+            );
+        }       
+        @Test
+        void testConstructorExceptionHandlingForExclusion_IsNotExcluded_ExclusionAreActive() {
+            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    false,
+                    Instant.now(),
+                    null,
+                    null,
+                    null)
+            );
+            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    false,
+                    null,
+                    UserId.random(),
+                    null,
+                    null)
+            );
+            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    false,
+                    null,
+                    null,
+                    "reasons",
+                    null)
+            );
+        }
+
+        @Test
         void testImmutabilityOfAdditionalData() {
             Map<String, String> originalData = new HashMap<>();
             originalData.put("key", "value");
 
-            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null, null, originalData);
+            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null, null,
+                    originalData);
 
             // Try to modify original map
             originalData.put("key", "changed");
@@ -451,6 +678,64 @@ public class TransactionTest {
             additionalData.put("key", "value");
             TransactionMetadata newData = base.withAll(additionalData);
             assertTrue(newData.containsKey("key"));
+        }
+
+        @Test
+        void testAsFlatMap() {
+            var meta = new Transaction.TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null,
+                    null);
+
+            Map<String, String> map = meta.asFlatMap();
+            assertEquals("STOCK", map.get("assetType"));
+            assertEquals("UNKNOWN", map.get("source"));
+            assertEquals("false", map.get("excluded"));
+        }
+        @Test
+        void testAsFlatMapExclusionTrue() {
+            Instant now = Instant.now();
+            UserId userId = UserId.random();
+            var meta = new Transaction.TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    true,
+                    now,
+                    userId,
+                    null,
+                    null);
+
+            Map<String, String> map = meta.asFlatMap();
+            assertEquals("STOCK", map.get("assetType"));
+            assertEquals("UNKNOWN", map.get("source"));
+            assertEquals("true", map.get("excluded"));
+            assertEquals(now.toString(), map.get("excludedAt"));
+            assertEquals(userId.id().toString(), map.get("excludedBy"));
+        }
+        @Test
+        void testAsFlatMapExclusionTrue_WithComments() {
+            Instant now = Instant.now();
+            UserId userId = UserId.random();
+            var meta = new Transaction.TransactionMetadata(
+                    AssetType.STOCK,
+                    null,
+                    true,
+                    now,
+                    userId,
+                    "for testing",
+                    null);
+
+            Map<String, String> map = meta.asFlatMap();
+            assertEquals("STOCK", map.get("assetType"));
+            assertEquals("UNKNOWN", map.get("source"));
+            assertEquals("true", map.get("excluded"));
+            assertEquals(now.toString(), map.get("excludedAt"));
+            assertEquals(userId.id().toString(), map.get("excludedBy"));
+            assertEquals("for testing", map.get("excludedReason"));
         }
 
         @Test
