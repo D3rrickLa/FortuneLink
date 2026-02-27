@@ -18,4 +18,6 @@ public record PortfolioView(
     List<AccountView> accounts, 
     Money totalValue, 
     Instant createDate, 
-    Instant lastUpdated) {}
+    Instant lastUpdated) {
+
+}

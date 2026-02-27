@@ -1,8 +1,8 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
 import java.math.BigDecimal;
+
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 public record Price(Money pricePerUnit) {
 
@@ -15,6 +15,10 @@ public record Price(Money pricePerUnit) {
         if (pricePerUnit.isNegative()) {
             throw new IllegalArgumentException("Price cannot be negative");
         }
+    }
+
+    public static Price of(BigDecimal amount, Currency currency) {
+        return new Price(new Money(amount, currency));
     }
 
     public Money calculateValue(Quantity quantity) {

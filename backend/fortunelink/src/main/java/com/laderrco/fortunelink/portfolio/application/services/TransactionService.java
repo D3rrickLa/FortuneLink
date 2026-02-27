@@ -1,27 +1,10 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.function.Function;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.*;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.validators.TransactionCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
@@ -38,10 +21,14 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-// COMBO of a new Transaction service -> those from old portfolioappservice
+import java.util.function.Function;
+
+// COMBO of a new Transaction service -> those from old PortfolioAppService
 
 @Service
 @Transactional
@@ -296,5 +283,4 @@ public class TransactionService {
             throw new InvalidTransactionException(msg, result.errors());
         }
     }
-
 }

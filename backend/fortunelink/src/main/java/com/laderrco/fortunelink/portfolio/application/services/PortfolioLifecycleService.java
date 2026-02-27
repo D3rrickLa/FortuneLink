@@ -17,7 +17,7 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandE
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionRequiresConfirmationException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotEmptyException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioFoundNotEmptyException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
@@ -121,14 +121,14 @@ public class PortfolioLifecycleService {
                 portfolioRepository.save(portfolio);
             } catch (PortfolioAlreadyDeletedException e) {
                 throw new PortfolioDeletionException("Portfolio already deleted");
-            } catch (PortfolioNotEmptyException e) {
-                throw e; // re-throw as-is if domain already throws the right type
+            } catch (PortfolioFoundNotEmptyException e) {
+                throw new PortfolioFoundNotEmptyException(e.getMessage());
             } catch (IllegalStateException e) {
                 // Catch-all — something unexpected from markAsDeleted
                 throw new PortfolioDeletionException("Cannot delete portfolio: " + e.getMessage());
             }
         } else {
-            // intentionally bypasses the markAsDleted checks
+            // intentionally bypasses the markAsDeleted checks
             // if a user wants to 'start over' they don't want to close
             // all the accounts
             // or another issue -> testing
@@ -173,10 +173,9 @@ public class PortfolioLifecycleService {
     }
 
     private Portfolio getPortfolio(PortfolioId portfolioId, UserId userId) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new PortfolioNotFoundException(
-                        "Portfolio not found or access denied for ID: " + portfolioId));
-        return portfolio;
+        return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+                .orElseThrow(() ->
+                        new PortfolioNotFoundException("Portfolio not found or access denied for ID: " + portfolioId));
     }
 
     private <T> void validate(T command, Function<T, ValidationResult> validationLogic, String methodName) {
