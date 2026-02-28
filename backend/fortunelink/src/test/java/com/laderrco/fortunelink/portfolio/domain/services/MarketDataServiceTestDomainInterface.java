@@ -4,7 +4,6 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,8 +34,7 @@ class MarketDataServiceTestDomainInterface {
                         null,
                         null,
                         null,
-                        null
-                );
+                        null);
 
                 return Optional.of(quote);
 
@@ -61,14 +59,13 @@ class MarketDataServiceTestDomainInterface {
 
             if (aapl.equals(symbol)) {
                 MarketAssetInfo marketAssetInfo = new MarketAssetInfo(
-                  aapl,
-                  "APPLE",
-                  AssetType.STOCK,
-                  "NASDAQ",
-                  Currency.USD,
-                  "Technology",
-                  "Apple is an apple company"
-                );
+                        aapl,
+                        "APPLE",
+                        AssetType.STOCK,
+                        "NASDAQ",
+                        Currency.USD,
+                        "Technology",
+                        "Apple is an apple company");
 
                 return Optional.of(marketAssetInfo);
 
@@ -97,7 +94,6 @@ class MarketDataServiceTestDomainInterface {
     void setUp() {
     }
 
-
     @Test
     void getCurrentPrice() {
         Price currentPrice = marketDataService.getCurrentPrice(new AssetSymbol("AAPL"));
@@ -106,8 +102,8 @@ class MarketDataServiceTestDomainInterface {
 
     @Test
     void getCurrentPrice_Failure_ThrowsMarketDataException() {
-        MarketDataException exception = assertThrows(MarketDataException.class, () ->
-                marketDataService.getCurrentPrice(new AssetSymbol("MSFT")));
+        MarketDataException exception = assertThrows(MarketDataException.class,
+                () -> marketDataService.getCurrentPrice(new AssetSymbol("MSFT")));
 
         assertTrue(exception.getMessage().contains("Price unavailable for: MSFT"));
     }

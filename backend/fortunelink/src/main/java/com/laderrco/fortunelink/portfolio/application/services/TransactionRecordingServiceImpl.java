@@ -1,29 +1,22 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-
-import org.springframework.stereotype.Service;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionDate;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import org.springframework.stereotype.Service;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Records transactions against an account by:
@@ -36,9 +29,8 @@ import lombok.RequiredArgsConstructor;
  * No repositories, no market data. Pure domain logic.
  */
 
-// NOTE: teh record buy and stuff might be wrong for CAB ACB
+// NOTE: the record buy and stuff might be wrong for CAB ACB
 @Service
-@RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
     @Override
@@ -272,8 +264,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     /**
      * Replays a single transaction against an account for position recalculation.
      *
-     * POSITION-ONLY CONTRACT: This method intentionally replays ONLY position-
-     * affecting transaction types (BUY, SELL, SPLIT, DIVIDEND_REINVEST).
+     * POSITION-ONLY CONTRACT: This method intentionally replays ONLY position-affecting transaction types (BUY, SELL, SPLIT, DIVIDEND_REINVEST).
      *
      * Cash events (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, etc.) are deliberately
      * excluded. PositionRecalculationService calls account.clearPosition() then
@@ -413,5 +404,4 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                             + ". Update this switch when adding new TransactionTypes.");
         }
     }
-
 }

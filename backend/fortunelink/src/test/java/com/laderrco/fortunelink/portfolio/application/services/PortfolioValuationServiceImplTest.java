@@ -26,14 +26,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import static com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency.USD;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PortfolioValuationServiceImplTest {
-
 
     @Mock
     private ExchangeRateService exchangeRateService;
@@ -81,8 +79,7 @@ class PortfolioValuationServiceImplTest {
                     null,
                     null,
                     Instant.now(),
-                    Instant.now()
-            );
+                    Instant.now());
 
             // Mock FX: $200 USD -> $200 USD, $100 CAD -> $75 USD
             when(exchangeRateService.convert(any(Money.class), eq(USD)))
@@ -138,15 +135,14 @@ class PortfolioValuationServiceImplTest {
 
             AssetSymbol aapl = new AssetSymbol("AAPL");
             Position fifoPos = new FifoPosition(aapl, AssetType.STOCK, USD, List.of(
-                    new TaxLot(Quantity.of(5), Money.of(700, "USD"), Instant.now())
-            ));
+                    new TaxLot(Quantity.of(5), Money.of(700, "USD"), Instant.now())));
 
             account.updatePosition(msft, acbPos);
             account.updatePosition(aapl, fifoPos);
 
             Map<AssetSymbol, MarketAssetQuote> cache = Map.of(
                     msft, createQuote(msft, 150.0), // $1500 value
-                    aapl, createQuote(aapl, 200.0)  // $1000 value
+                    aapl, createQuote(aapl, 200.0) // $1000 value
             );
 
             // Act
@@ -161,17 +157,19 @@ class PortfolioValuationServiceImplTest {
             AssetSymbol stockSym = new AssetSymbol("STK");
             AssetSymbol cashSym = new AssetSymbol("CASH");
 
-            Account account = new Account(AccountId.newId(), "FilterTest", AccountType.REGISTERED_INVESTMENT, USD, PositionStrategy.ACB);
+            Account account = new Account(AccountId.newId(), "FilterTest", AccountType.REGISTERED_INVESTMENT, USD,
+                    PositionStrategy.ACB);
 
             // Stock position
-            account.updatePosition(stockSym, new AcbPosition(stockSym, AssetType.STOCK, USD, Quantity.of(1), Money.of(100, "USD")));
+            account.updatePosition(stockSym,
+                    new AcbPosition(stockSym, AssetType.STOCK, USD, Quantity.of(1), Money.of(100, "USD")));
             // Cash position (e.g., a Money Market Fund tagged as CASH type)
-            account.updatePosition(cashSym, new AcbPosition(cashSym, AssetType.CASH, USD, Quantity.of(100), Money.of(100, "USD")));
+            account.updatePosition(cashSym,
+                    new AcbPosition(cashSym, AssetType.CASH, USD, Quantity.of(100), Money.of(100, "USD")));
 
             Map<AssetSymbol, MarketAssetQuote> cache = Map.of(
                     stockSym, createQuote(stockSym, 120.0),
-                    cashSym, createQuote(cashSym, 1.0)
-            );
+                    cashSym, createQuote(cashSym, 1.0));
 
             Money result = valuationService.calculatePositionsValue(account, cache);
 
@@ -182,10 +180,12 @@ class PortfolioValuationServiceImplTest {
         @Test
         void calculatePositionsValue_Fallback_UsesCostBasisWhenQuoteIsMissing() {
             AssetSymbol msft = new AssetSymbol("MSFT");
-            Account account = new Account(AccountId.newId(), "Fallback", AccountType.NON_REGISTERED_INVESTMENT, USD, PositionStrategy.ACB);
+            Account account = new Account(AccountId.newId(), "Fallback", AccountType.NON_REGISTERED_INVESTMENT, USD,
+                    PositionStrategy.ACB);
 
             // Cost basis is $1000
-            account.updatePosition(msft, new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD")));
+            account.updatePosition(msft,
+                    new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD")));
 
             // Act: Empty cache
             Money result = valuationService.calculatePositionsValue(account, Map.of());
@@ -197,8 +197,10 @@ class PortfolioValuationServiceImplTest {
         @Test
         void calculatePositionsValue_Fallback_UsesCostBasisWhenPriceIsZero() {
             AssetSymbol msft = new AssetSymbol("MSFT");
-            Account account = new Account(AccountId.newId(), "ZeroPrice", AccountType.NON_REGISTERED_INVESTMENT, USD, PositionStrategy.ACB);
-            account.updatePosition(msft, new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD")));
+            Account account = new Account(AccountId.newId(), "ZeroPrice", AccountType.NON_REGISTERED_INVESTMENT, USD,
+                    PositionStrategy.ACB);
+            account.updatePosition(msft,
+                    new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD")));
 
             // Quote exists but price is zero
             Map<AssetSymbol, MarketAssetQuote> cache = Map.of(msft, createQuote(msft, 0.0));
@@ -224,8 +226,7 @@ class PortfolioValuationServiceImplTest {
                 null,
                 null,
                 "TEST",
-                Instant.now()
-        );
+                Instant.now());
 
     }
 
@@ -237,8 +238,7 @@ class PortfolioValuationServiceImplTest {
                 AssetType.STOCK,
                 USD,
                 Quantity.of(qty),
-                Money.of(totalCost, "USD")
-        );
+                Money.of(totalCost, "USD"));
     }
 
     private Account createAccount(Currency currency, double cash, List<Position> positions) {
@@ -266,5 +266,3 @@ class PortfolioValuationServiceImplTest {
         return account;
     }
 }
-
-

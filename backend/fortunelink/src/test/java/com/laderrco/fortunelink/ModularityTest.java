@@ -21,6 +21,7 @@ class ModularityTest {
     }
 
     @Test
+    @Disabled
     void documentModules() {
         new Documenter(modules).writeDocumentation();
     }

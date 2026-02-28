@@ -7,6 +7,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 // meant for 'assets' where we can AVG cost, ACB, etc.
@@ -16,6 +17,14 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at);
 
+    // New, safe method
+    default ApplyResult<? extends Position> split(Ratio ratio) {
+        // Default behavior: convert to double so old implementations still work
+        return split((double) ratio.numerator() / ratio.denominator());
+    }
+
+    // Deprecate "dangerous" due to rounding
+    @Deprecated
     ApplyResult<? extends Position> split(double ratio);
 
     AssetSymbol symbol();
@@ -34,8 +43,10 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     default Position copy() {
         return switch (this) {
-            case AcbPosition acb -> new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(), acb.totalQuantity(), acb.totalCostBasis());
-            case FifoPosition fifo -> new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(), List.copyOf(fifo.lots()));
+            case AcbPosition acb -> new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(),
+                    acb.totalQuantity(), acb.totalCostBasis());
+            case FifoPosition fifo ->
+                new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(), List.copyOf(fifo.lots()));
         };
     }
 

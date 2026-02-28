@@ -14,6 +14,7 @@ import com.laderrco.fortunelink.portfolio.application.validators.ValidationResul
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
@@ -32,11 +33,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.TransactionExecution;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -90,9 +89,17 @@ class TransactionServiceTest {
         @DisplayName("recordPurchase_Success_SameCurrency")
         void recordPurchase_Success_NoCurrencyConversionNeeded() {
             var command = new RecordPurchaseCommand(
-                    portfolioId, userId, accountId,
-                    "AAPL", Quantity.of(10.0), Price.of(new BigDecimal("150.0"), USD),
-                    List.of(), Instant.now(), "Buy Apple");
+                    portfolioId,
+                    userId,
+                    accountId,
+                    "AAPL",
+                    Quantity.of(10.0),
+                    Price.of(new BigDecimal("150.0"), USD),
+                    List.of(),
+                    Instant.now(),
+                    "Buy Apple"
+            );
+
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
             Transaction transaction = mock(Transaction.class);
@@ -100,8 +107,16 @@ class TransactionServiceTest {
             when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
             when(portfolio.getAccount(accountId)).thenReturn(account);
             when(account.getAccountCurrency()).thenReturn(USD);
-            when(marketDataService.getAssetInfo(any())).thenReturn(Optional.of(new MarketAssetInfo("Apple Inc", "EQUITY")));
-            when(transactionRecordingService.recordBuy(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(transaction);
+            when(marketDataService.getAssetInfo(any())).thenReturn(Optional.of(new MarketAssetInfo(
+                    new AssetSymbol("AAPL"),
+                    "Apple",
+                    AssetType.STOCK,
+                    "NASDAQ",
+                    USD,
+                    "Tech",
+                    "some description here"
+            )));
+            when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(transaction);
 
             transactionService.recordPurchase(command);
 
@@ -122,7 +137,9 @@ class TransactionServiceTest {
                     new Price(new Money(BigDecimal.ONE, USD)),
                     null,
                     Instant.now(),
-                    "notes");
+                    "notes"
+            );
+
             Portfolio portfolio = mock(Portfolio.class);
             when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
             when(marketDataService.getAssetInfo(any())).thenReturn(Optional.empty());
@@ -139,7 +156,18 @@ class TransactionServiceTest {
         @Test
         @DisplayName("recordSale_Failure_InsufficientQuantity")
         void recordSale_Failure_WhenNoPositionExists() {
-            var command = new RecordSaleCommand(portfolioId, userId, accountId, "TSLA", 5.0, new Price(BigDecimal.TEN, USD), BigDecimal.ZERO, null, LocalDateTime.now());
+            var command = new RecordSaleCommand(
+                    portfolioId,
+                    userId,
+                    accountId,
+                    "TSLA",
+                    Quantity.of(5.0),
+                    new Price(new Money(BigDecimal.TEN, USD)),
+                    List.of(),
+                    Instant.now(),
+                    "notes"
+            );
+
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
 
@@ -154,7 +182,18 @@ class TransactionServiceTest {
         @Test
         @DisplayName("recordSale_Success_WithCurrencyConversion")
         void recordSale_Success_WhenCurrencyDiffers() {
-            var command = new RecordSaleCommand(portfolioId, userId, accountId, "TSLA", 1.0, new Price(new BigDecimal("100.0"), CAD), BigDecimal.ZERO, null, LocalDateTime.now());
+            var command = new RecordSaleCommand(
+                    portfolioId,
+                    userId,
+                    accountId,
+                    "TSLA",
+                    Quantity.of(1.0),
+                    Price.of(new BigDecimal("100.0"), CAD),
+                    null,
+                    Instant.now(),
+                    null
+            );
+
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
 
@@ -162,12 +201,12 @@ class TransactionServiceTest {
             when(portfolio.getAccount(accountId)).thenReturn(account);
             when(account.getAccountCurrency()).thenReturn(USD);
             when(account.hasPosition(any())).thenReturn(true);
-            when(exchangeRateService.convertToPrice(any(), eq(USD))).thenReturn(new Price(new BigDecimal("75.0"), USD));
+            when(exchangeRateService.convertToPrice(any(), eq(USD))).thenReturn(Price.of(new BigDecimal("75.0"), USD));
 
             transactionService.recordSale(command);
 
             verify(exchangeRateService).convertToPrice(any(), eq(USD));
-            verify(transactionRecordingService).recordSell(eq(account), any(), anyDouble(), argThat(p -> p.currency().equals(USD)), any(), any(), any());
+            verify(transactionRecordingService).recordSell(eq(account), any(), any(Quantity.class), argThat(p -> p.currency().equals(USD)), any(), any(), any());
         }
     }
 
@@ -178,11 +217,12 @@ class TransactionServiceTest {
         @Test
         @DisplayName("excludeTransaction_Success_PositionAffecting")
         void excludeTransaction_Success_TriggersRecalculationForTrades() {
-            var command = new ExcludeTransactionCommand(new TransactionId("t1"), portfolioId, userId, accountId, "Error");
+            var command = new ExcludeTransactionCommand(TransactionId.newId(), portfolioId, userId, accountId, "Error");
             Transaction transaction = mock(Transaction.class);
-            TransactionExecution execution = mock(TransactionExecution.class);
+            Transaction.TradeExecution execution = mock(Transaction.TradeExecution.class);
             AssetSymbol asset = new AssetSymbol("AAPL");
 
+            when(validator.validate(command)).thenReturn(ValidationResult.success());
             when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any())).thenReturn(Optional.of(transaction));
             when(transaction.isExcluded()).thenReturn(false);
             when(transaction.markAsExcluded(any(), any())).thenReturn(transaction);
@@ -197,11 +237,30 @@ class TransactionServiceTest {
         }
 
         @Test
-        @DisplayName("excludeTransaction_Success_NonPositionAffecting")
-        void excludeTransaction_Success_DoesNotTriggerRecalculationForCash() {
-            var command = new ExcludeTransactionCommand(new TransactionId("t1"), portfolioId, userId, accountId, "Error");
+        @DisplayName("excludeTransaction_Success_CashEvent")
+        void excludeTransaction_Success_DoesntTriggerRecalculation() {
+            var command = new ExcludeTransactionCommand(TransactionId.newId(), portfolioId, userId, accountId, "Error");
             Transaction transaction = mock(Transaction.class);
 
+            when(validator.validate(command)).thenReturn(ValidationResult.success());
+            when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any())).thenReturn(Optional.of(transaction));
+            when(transaction.isExcluded()).thenReturn(false);
+            when(transaction.markAsExcluded(any(), any())).thenReturn(transaction);
+            when(transaction.transactionType()).thenReturn(TransactionType.BUY); // affectsHoldings = true
+            when(transaction.execution()).thenReturn(null);
+
+            transactionService.excludeTransaction(command);
+
+            verify(transactionRepository).save(transaction);
+        }
+
+        @Test
+        @DisplayName("excludeTransaction_Success_NonPositionAffecting")
+        void excludeTransaction_Success_DoesNotTriggerRecalculationForCash() {
+            var command = new ExcludeTransactionCommand(TransactionId.newId(), portfolioId, userId, accountId, "Error");
+            Transaction transaction = mock(Transaction.class);
+
+            when(validator.validate(command)).thenReturn(ValidationResult.success());
             when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any())).thenReturn(Optional.of(transaction));
             when(transaction.transactionType()).thenReturn(TransactionType.DEPOSIT); // affectsHoldings = false
 
@@ -213,8 +272,10 @@ class TransactionServiceTest {
         @Test
         @DisplayName("excludeTransaction_Failure_AlreadyExcluded")
         void excludeTransaction_Failure_WhenTransactionIsAlreadyExcluded() {
-            var command = new ExcludeTransactionCommand(new TransactionId("t1"), portfolioId, userId, accountId, "Error");
+            var command = new ExcludeTransactionCommand(TransactionId.newId(), portfolioId, userId, accountId, "Error");
             Transaction transaction = mock(Transaction.class);
+
+            when(validator.validate(command)).thenReturn(ValidationResult.success());
             when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any())).thenReturn(Optional.of(transaction));
             when(transaction.isExcluded()).thenReturn(true);
 
@@ -231,7 +292,16 @@ class TransactionServiceTest {
         @Test
         @DisplayName("recordDeposit_Success_PersistsCashIncrease")
         void recordDeposit_Success_CallsRecordingService() {
-            var command = new RecordDepositCommand(portfolioId, userId, accountId, new BigDecimal("1000.0"), "Initial fund", LocalDateTime.now());
+            var command = new RecordDepositCommand(
+                    portfolioId,
+                    userId,
+                    accountId,
+                    Money.of(1000.0, "USD"),
+                    null,
+                    Instant.now(),
+                    "Initial fund"
+            );
+
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
             Transaction transaction = mock(Transaction.class);
@@ -249,7 +319,16 @@ class TransactionServiceTest {
         @Test
         @DisplayName("recordDividend_Success_AddsCashToAccount")
         void recordDividend_Success_ValidAssetAndAmount() {
-            var command = new RecordDividendCommand(portfolioId, userId, accountId, "AAPL", new BigDecimal("50.0"), "Quarterly", LocalDateTime.now());
+            var command = new RecordDividendCommand(
+                    portfolioId,
+                    userId,
+                    accountId,
+                    "AAPL",
+                    Money.of(50.0, "USD"),
+                    Instant.now(),
+                    "Quarterly"
+            );
+
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
             Transaction transaction = mock(Transaction.class);
@@ -260,7 +339,8 @@ class TransactionServiceTest {
 
             transactionService.recordDividend(command);
 
-            verify(transactionRecordingService).recordDividend(eq(account), argThat(s -> s.getSymbol().equals("AAPL")), eq(command.amount()), any(), any());
+            verify(transactionRecordingService).recordDividend(eq(account), argThat(s ->
+                    s.symbol().equals("AAPL")), eq(command.amount()), any(), any());
         }
     }
 
@@ -271,8 +351,8 @@ class TransactionServiceTest {
         @Test
         @DisplayName("recordDividendReinvestment_Success_ExecutesComplexCommand")
         void recordDividendReinvestment_Success_WithNestedExecution() {
-            var execution = new RecordDividendReinvestmentCommand.Execution(5.0, new Price(new BigDecimal("100.0"), USD));
-            var command = new RecordDividendReinvestmentCommand(portfolioId, userId, accountId, "AAPL", execution, "DRIP", LocalDateTime.now());
+            var execution = new RecordDividendReinvestmentCommand.DripExecution(Quantity.of(5.0), Price.of(new BigDecimal("100.0"), USD));
+            var command = new RecordDividendReinvestmentCommand(portfolioId, userId, accountId, "AAPL", execution, Instant.now(), "DRIP");
 
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
@@ -280,14 +360,14 @@ class TransactionServiceTest {
 
             when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
             when(portfolio.getAccount(accountId)).thenReturn(account);
-            when(transactionRecordingService.recordDividendReinvestment(any(), any(), anyDouble(), any(), any(), any())).thenReturn(transaction);
+            when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(), any())).thenReturn(transaction);
 
             transactionService.recordDividendReinvestment(command);
 
             verify(transactionRecordingService).recordDividendReinvestment(
                     eq(account),
-                    argThat(s -> s.getSymbol().equals("AAPL")),
-                    eq(5.0),
+                    argThat(s -> s.symbol().equals("AAPL")),
+                    eq(Quantity.of(5.0)),
                     eq(execution.pricePerShare()),
                     any(),
                     any()
@@ -302,11 +382,12 @@ class TransactionServiceTest {
         @Test
         @DisplayName("restoreTransaction_Success_PositionAffecting")
         void restoreTransaction_Success_WhenTransactionIsExcluded() {
-            var command = new RestoreTransactionCommand(new TransactionId("t1"), portfolioId, userId, accountId);
+            var command = new RestoreTransactionCommand(TransactionId.newId(), portfolioId, userId, accountId);
             Transaction existing = mock(Transaction.class);
             Transaction restored = mock(Transaction.class);
-            TransactionExecution execution = mock(TransactionExecution.class);
+            Transaction.TradeExecution execution = mock(Transaction.TradeExecution.class);
 
+            when(validator.validate(command)).thenReturn(ValidationResult.success());
             when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any()))
                     .thenReturn(Optional.of(existing));
             when(existing.isExcluded()).thenReturn(true);
@@ -324,8 +405,10 @@ class TransactionServiceTest {
         @Test
         @DisplayName("restoreTransaction_Failure_NotExcluded")
         void restoreTransaction_Failure_WhenTransactionIsAlreadyActive() {
-            var command = new RestoreTransactionCommand(new TransactionId("t1"), portfolioId, userId, accountId);
+            var command = new RestoreTransactionCommand(TransactionId.newId(), portfolioId, userId, accountId);
             Transaction existing = mock(Transaction.class);
+
+            when(validator.validate(command)).thenReturn(ValidationResult.success());
 
             when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any()))
                     .thenReturn(Optional.of(existing));
@@ -344,7 +427,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("recordWithdrawal_Success_ReducesCash")
         void recordWithdrawal_Success_CallsRecordingService() {
-            var command = new RecordWithdrawalCommand(portfolioId, userId, accountId, BigDecimal.TEN, "ATM", LocalDateTime.now());
+            var command = new RecordWithdrawalCommand(portfolioId, userId, accountId, Money.of(10, "USD"), List.of(), Instant.now(), null);
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
             Transaction transaction = mock(Transaction.class);
@@ -355,13 +438,13 @@ class TransactionServiceTest {
 
             transactionService.recordWithdrawal(command);
 
-            verify(transactionRecordingService).recordWithdrawal(eq(account), eq(BigDecimal.TEN), any(), any());
+            verify(transactionRecordingService).recordWithdrawal(eq(account), eq(Money.of(10, "USD")), any(), any());
         }
 
         @Test
         @DisplayName("recordFee_Success_ReducesCash")
         void recordFee_Success_CallsRecordingService() {
-            var command = new RecordFeeCommand(portfolioId, userId, accountId, BigDecimal.ONE, "Monthly fee", LocalDateTime.now());
+            var command = new RecordFeeCommand(portfolioId, userId, accountId, new Money(BigDecimal.ONE, USD), Instant.now(), "Monthly fee");
             Portfolio portfolio = mock(Portfolio.class);
             Account account = mock(Account.class);
             Transaction transaction = mock(Transaction.class);
@@ -372,7 +455,7 @@ class TransactionServiceTest {
 
             transactionService.recordFee(command);
 
-            verify(transactionRecordingService).recordFee(eq(account), eq(BigDecimal.ONE), any(), any());
+            verify(transactionRecordingService).recordFee(eq(account), eq(new Money(BigDecimal.ONE, USD)), any(), any());
         }
     }
 
@@ -383,7 +466,15 @@ class TransactionServiceTest {
         @Test
         @DisplayName("validate_Failure_ThrowsInvalidTransactionException")
         void validate_Failure_WhenValidatorReturnsErrors() {
-            var command = new RecordDepositCommand(portfolioId, userId, accountId, BigDecimal.TEN, null, LocalDateTime.now());
+            var command = new RecordDepositCommand(
+                    portfolioId,
+                    userId,
+                    accountId,
+                    Money.of(10, "USD"),
+                    null,
+                    Instant.now(),
+                    null
+            );
             when(validator.validate(command)).thenReturn(ValidationResult.failure(List.of("Amount must be positive")));
 
             assertThatThrownBy(() -> transactionService.recordDeposit(command))
@@ -399,7 +490,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("getPortfolioContext_Failure_PortfolioNotFound")
         void getPortfolioContext_Failure_WhenRepositoryReturnsEmpty() {
-            var command = new RecordFeeCommand(portfolioId, userId, accountId, BigDecimal.ONE, null, LocalDateTime.now());
+            var command = new RecordFeeCommand(portfolioId, userId, accountId, Money.of(1, "USD"), Instant.now(), null);
             when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> transactionService.recordFee(command))

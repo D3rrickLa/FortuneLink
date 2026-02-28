@@ -30,6 +30,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fe
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionDate;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee.FeeMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -115,7 +116,8 @@ public class TransactionTest {
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
+                    spilt,
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
                     () -> assertEquals(transactionId, transaction.transactionId()),
@@ -137,7 +139,8 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution,
+                            spilt, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("requires execution details"));
@@ -162,7 +165,8 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution,
+                            spilt, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("cannot have execution details"));
@@ -178,7 +182,7 @@ public class TransactionTest {
                     new Quantity(BigDecimal.TEN),
                     new Price(Money.of(135, "USD")));
 
-            SplitDetails spilt = new SplitDetails(12);
+            SplitDetails spilt = new SplitDetails(new Ratio(12, 1));
             Money cashDelta = Money.of(1350, "USD");
             List<Fee> fees = List.of();
             String notes = "Some notes";
@@ -187,7 +191,8 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution,
+                            spilt, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("cannot have split details"));
@@ -212,7 +217,8 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution,
+                            spilt, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("requires split details"));
@@ -233,7 +239,8 @@ public class TransactionTest {
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution,
+                            split, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("cannot affect cash"));
@@ -248,14 +255,16 @@ public class TransactionTest {
             SplitDetails split = null;
             Money cashDelta = Money.ZERO("USD");
             List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
-                    ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(), new FeeMetadata(Map.of())));
+                    ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
+                    new FeeMetadata(Map.of())));
             String notes = "Testing fee validation";
             TransactionDate occurredAt = TransactionDate.now();
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta, fees,
+                    () -> new Transaction(transactionId, accountId, transactionType, execution,
+                            split, cashDelta, fees,
                             notes, occurredAt, relatedTransactionId, metadata));
 
             assertTrue(ex.getMessage().contains("cannot have fees"));
@@ -290,7 +299,8 @@ public class TransactionTest {
                 TransactionMetadata metadata = null;
 
                 IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                        () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta,
+                        () -> new Transaction(transactionId, accountId, transactionType,
+                                execution, spilt, cashDelta,
                                 fees,
                                 notes, occurredAt, relatedTransactionId, metadata));
 
@@ -316,7 +326,8 @@ public class TransactionTest {
                 TransactionMetadata metadata = null;
 
                 IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                        () -> new Transaction(transactionId, accountId, transactionType, execution, spilt, cashDelta,
+                        () -> new Transaction(transactionId, accountId, transactionType,
+                                execution, spilt, cashDelta,
                                 fees,
                                 notes, occurredAt, relatedTransactionId, metadata));
 
@@ -342,10 +353,12 @@ public class TransactionTest {
             Money cashDelta = Money.of(-1358.25, "USD");
             List<Fee> fees = List.of(
                     new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
-                            ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
+                            ExchangeRate.identity(Currency.USD, Instant.now()),
+                            Instant.now(),
                             new FeeMetadata(Map.of())),
                     new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
-                            new ExchangeRate(Currency.CAD, Currency.USD, BigDecimal.valueOf(1.35), Instant.now()),
+                            new ExchangeRate(Currency.CAD, Currency.USD,
+                                    BigDecimal.valueOf(1.35), Instant.now()),
                             Instant.now(), new FeeMetadata(Map.of()))
 
             );
@@ -354,14 +367,17 @@ public class TransactionTest {
             TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
+                    spilt,
                     cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
             assertAll(
-                    () -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()),
+                    () -> assertEquals(Money.of(8.25, "USD"),
+                            transaction.totalFeesInAccountCurrency()),
                     () -> assertEquals(Currency.USD.getCode(),
                             transaction.totalFeesInAccountCurrency().currency().getCode()),
                     () -> assertEquals(2,
-                            transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits()));
+                            transaction.totalFeesInAccountCurrency().currency()
+                                    .getDefaultFractionDigits()));
         }
 
     }
@@ -387,7 +403,6 @@ public class TransactionTest {
             List<Fee> fees = List.of();
             String notes = "Some notes";
             TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
             TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
 
             transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
@@ -438,9 +453,8 @@ public class TransactionTest {
             transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
                     cashDelta, fees, notes, occurredAt, null, null);
 
-            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
-                    transaction.markAsExcluded(UserId.random(), "reason")
-            );
+            IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                    () -> transaction.markAsExcluded(UserId.random(), "reason"));
 
             assertTrue(stateException.getMessage().contains("exclude transaction"));
             assertFalse(transaction.isExcluded());
@@ -465,9 +479,8 @@ public class TransactionTest {
             transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
                     cashDelta, fees, notes, occurredAt, null, null);
 
-            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
-                    transaction.restore()
-            );
+            IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                    () -> transaction.restore());
 
             assertTrue(stateException.getMessage().contains("restore transaction"));
             assertFalse(transaction.isExcluded());
@@ -481,9 +494,8 @@ public class TransactionTest {
 
             Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
 
-            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
-                    excludedTransaction.markAsExcluded(UserId.random(), "reason 2")
-            );
+            IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                    () -> excludedTransaction.markAsExcluded(UserId.random(), "reason 2"));
 
             assertTrue(stateException.getMessage().contains("already exclude"));
             assertFalse(transaction.isExcluded());
@@ -493,9 +505,8 @@ public class TransactionTest {
         @Test
         void testRestore_Failure_TransactionNotYetExcluded() {
 
-            IllegalStateException stateException = assertThrows(IllegalStateException.class, () ->
-                    transaction.restore()
-            );
+            IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                    () -> transaction.restore());
 
             assertTrue(stateException.getMessage().contains("Transaction is not excluded"));
             assertFalse(transaction.isExcluded());
@@ -512,12 +523,14 @@ public class TransactionTest {
             Price price = new Price(Money.of(150.00, "USD"));
 
             // Test Buy (Positive Quantity)
-            var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"), new Quantity(new BigDecimal("10")),
+            var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
+                    new Quantity(new BigDecimal("10")),
                     price);
             assertEquals(Money.of(1500.00, "USD"), buy.grossValue());
 
             // Test Sell (Negative Quantity) - Gross value should stay positive/absolute
-            var sell = new Transaction.TradeExecution(new AssetSymbol("AAPL"), new Quantity(new BigDecimal("-10")),
+            var sell = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
+                    new Quantity(new BigDecimal("-10")),
                     price);
             assertEquals(Money.of(1500.00, "USD"), sell.grossValue());
         }
@@ -529,11 +542,14 @@ public class TransactionTest {
             Quantity qty = new Quantity(new BigDecimal("10"));
             Price price = new Price(Money.of(100.00, "USD"));
 
-            assertThrows(DomainArgumentException.class, () -> new Transaction.TradeExecution(null, qty, price));
+            assertThrows(DomainArgumentException.class,
+                    () -> new Transaction.TradeExecution(null, qty, price));
             assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction.TradeExecution(symbol, qty, new Price(Money.of(-1.00, "USD"))));
+                    () -> new Transaction.TradeExecution(symbol, qty,
+                            new Price(Money.of(-1.00, "USD"))));
             assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")), price));
+                    () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")),
+                            price));
         }
 
     }
@@ -583,8 +599,7 @@ public class TransactionTest {
                     null,
                     null,
                     null,
-                    null)
-            );
+                    null));
         }
 
         @Test
@@ -596,9 +611,9 @@ public class TransactionTest {
                     null,
                     UserId.random(),
                     null,
-                    null)
-            );
+                    null));
         }
+
         @Test
         void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedBy() {
             assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
@@ -608,9 +623,9 @@ public class TransactionTest {
                     Instant.now(),
                     null,
                     null,
-                    null)
-            );
-        }       
+                    null));
+        }
+
         @Test
         void testConstructorExceptionHandlingForExclusion_IsNotExcluded_ExclusionAreActive() {
             assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
@@ -620,8 +635,7 @@ public class TransactionTest {
                     Instant.now(),
                     null,
                     null,
-                    null)
-            );
+                    null));
             assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
                     AssetType.STOCK,
                     null,
@@ -629,8 +643,7 @@ public class TransactionTest {
                     null,
                     UserId.random(),
                     null,
-                    null)
-            );
+                    null));
             assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
                     AssetType.STOCK,
                     null,
@@ -638,8 +651,7 @@ public class TransactionTest {
                     null,
                     null,
                     "reasons",
-                    null)
-            );
+                    null));
         }
 
         @Test
@@ -647,7 +659,8 @@ public class TransactionTest {
             Map<String, String> originalData = new HashMap<>();
             originalData.put("key", "value");
 
-            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null, null,
+            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null,
+                    null,
                     originalData);
 
             // Try to modify original map
@@ -696,6 +709,7 @@ public class TransactionTest {
             assertEquals("UNKNOWN", map.get("source"));
             assertEquals("false", map.get("excluded"));
         }
+
         @Test
         void testAsFlatMapExclusionTrue() {
             Instant now = Instant.now();
@@ -716,6 +730,7 @@ public class TransactionTest {
             assertEquals(now.toString(), map.get("excludedAt"));
             assertEquals(userId.id().toString(), map.get("excludedBy"));
         }
+
         @Test
         void testAsFlatMapExclusionTrue_WithComments() {
             Instant now = Instant.now();

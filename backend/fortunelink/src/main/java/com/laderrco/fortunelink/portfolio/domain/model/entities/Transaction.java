@@ -1,25 +1,20 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.CashImpact;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.CashImpact;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionDate;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 // THIS IS AN IMMUTABLE STATE
 // account and portfolio reconstruct state from these transaction(s)
@@ -124,7 +119,8 @@ public record Transaction(
         }
     }
 
-    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta, List<Fee> fees) {
+    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta,
+            List<Fee> fees) {
         Money grossValue = execution.grossValue();
         Money totalFees = Fee.totalInAccountCurrency(fees, cashDelta.currency());
 
@@ -155,10 +151,10 @@ public record Transaction(
             }
 
             // not needed as Price.java already does this
-//            if (pricePerUnit.pricePerUnit().isNegative()) {
-//                throw new IllegalArgumentException(
-//                        "Price per unit cannot be negative (got: " + pricePerUnit + ")");
-//            }
+            // if (pricePerUnit.pricePerUnit().isNegative()) {
+            // throw new IllegalArgumentException(
+            // "Price per unit cannot be negative (got: " + pricePerUnit + ")");
+            // }
         }
 
         /**
@@ -170,7 +166,7 @@ public record Transaction(
         }
     }
 
-    public record SplitDetails(double ratio) {
+    public record SplitDetails(Ratio ratio) {
     }
 
     public record TransactionMetadata(
