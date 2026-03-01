@@ -1197,3 +1197,32 @@ asset allocation service
 performance cal service 
 
 not apart of mvp right now
+
+
+
+FUTURE OF THE PROJECT
+Example 3: Personal Finance Ops (your project, evolved)
+
+Legacy workflow
+
+User imports data
+
+User checks accuracy
+
+User reasons about tax
+
+AI-native system
+
+AI reconciles brokers
+
+Maintains tax lots
+
+Detects compliance issues
+
+Simulates actions
+
+Human-only decision
+
+Whether to trigger taxable events
+
+This is exactly aligned with fintech expectations.

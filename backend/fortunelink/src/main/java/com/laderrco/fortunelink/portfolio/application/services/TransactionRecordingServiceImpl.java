@@ -22,10 +22,10 @@ import java.util.Objects;
  * Records transactions against an account by:
  * 1. Mutating account state (positions, cash balance)
  * 2. Constructing and returning an immutable Transaction record
- *
+ * <p>
  * The caller (TransactionService) is responsible for persisting both
  * the mutated portfolio and the returned Transaction.
- *
+ * <p>
  * No repositories, no market data. Pure domain logic.
  */
 
@@ -35,7 +35,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
-            Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
+                                 Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
@@ -77,7 +77,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public Transaction recordSell(Account account, AssetSymbol symbol,
-            Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
+                                  Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
@@ -225,7 +225,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
      */
     @Override
     public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol,
-            Quantity quantity, Price price, String notes, Instant date) {
+                                                  Quantity quantity, Price price, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
@@ -263,17 +263,23 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     /**
      * Replays a single transaction against an account for position recalculation.
-     *
+     * <p>
      * POSITION-ONLY CONTRACT: This method intentionally replays ONLY position-affecting transaction types (BUY, SELL, SPLIT, DIVIDEND_REINVEST).
-     *
+     * <p>
      * Cash events (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, etc.) are deliberately
      * excluded. PositionRecalculationService calls account.clearPosition() then
      * replays transactions for a specific symbol — cash balance is already correct
      * in the DB and must NOT be touched here. Replaying cash events would
      * double-count every cash movement.
-     *
+     * <p>
      * If you ever need full account reconstruction from scratch (e.g., migration),
      * you will need a separate replay path that resets cash to zero first.
+     * <p>
+     * make sure position.sell() downstream is actually using the proceeds value
+     * for realized gain calculation and not discarding it.
+     * If that method only uses quantity to reduce the lot and ignores the
+     * proceeds amount, the bug is dormant but still wrong.
+     * it'll surface the moment you wire up tax lot reporting
      */
     @Override
     public void replayTransaction(Account account, Transaction tx) {
@@ -320,7 +326,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                     // SELL cashDelta is net proceeds (positive) — correct for position P&L
                     ApplyResult<? extends Position> result = position.sell(
                             tx.execution().quantity(),
-                            tx.cashDelta(),
+                            tx.execution().grossValue(),
                             tx.occurredAt().timestamp());
                     account.updatePosition(tx.execution().asset(), result.newPosition());
                 });
