@@ -1,15 +1,16 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.time.Instant;
+
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
         Quantity totalQuantity, Money totalCostBasis) implements Position {
@@ -40,11 +41,16 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
 
     @Override
     public ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at) {
-        if (!hasSufficientQuantity(quantity)) {
+        if (hasSufficientQuantity(quantity)) {
             throw new IllegalStateException("Insufficient quantity");
         }
-        Money acbPerUnit = totalCostBasis.divide(totalQuantity.amount());
-        Money costBasisSold = acbPerUnit.multiply(quantity.amount());
+//        Money acbPerUnit = totalCostBasis.divide(totalQuantity.amount());
+//        Money costBasisSold = acbPerUnit.multiply(quantity.amount());
+//        Money realizedGain = proceeds.subtract(costBasisSold);
+
+        // calculate the portion of hte cost basis being removed
+        BigDecimal ratio = quantity.amount().divide(totalQuantity.amount(), MathContext.DECIMAL128);
+        Money costBasisSold = totalCostBasis.multiply(ratio);
         Money realizedGain = proceeds.subtract(costBasisSold);
 
         AcbPosition updated = new AcbPosition(

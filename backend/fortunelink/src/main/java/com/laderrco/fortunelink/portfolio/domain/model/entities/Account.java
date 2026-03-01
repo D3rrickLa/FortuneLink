@@ -1,13 +1,5 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
-import java.time.Instant;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
@@ -16,11 +8,17 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
+import java.time.Instant;
+import java.util.*;
+
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 // presents and maintains current state
 public class Account {
@@ -32,6 +30,7 @@ public class Account {
 
     private Money cashBalance;
     private Map<AssetSymbol, Position> positions;
+    private List<RealizedGainRecord> realizedGains;
 
     private final Instant creationDate;
     private boolean isActive;
@@ -60,6 +59,7 @@ public class Account {
         this.creationDate = null;
         this.accountCurrency = null;
         this.positions = new HashMap<>(); // safe: getPositionEntries() won't NPE
+        this.realizedGains = new ArrayList<>();
         this.cashBalance = null; // intentionally null: any arithmetic will
                                  // fail loudly rather than silently wrong
     }
@@ -83,6 +83,7 @@ public class Account {
         this.positionStrategy = positionStrategy;
         this.cashBalance = Money.ZERO(accountCurrency);
         this.positions = new HashMap<>();
+        this.realizedGains = new ArrayList<>();
         this.creationDate = Instant.now();
         this.isActive = true;
         this.closeDate = null;
@@ -136,6 +137,27 @@ public class Account {
         }
 
         cashBalance = cashBalance.subtract(feeAmount);
+        touch();
+    }
+
+    /**
+     * Records the realized gain/loss from a sell event.
+     *
+     * Called by the replay service immediately after position.sell() so that
+     * capital gains history is preserved on the account without requiring a
+     * full transaction log replay to reconstruct it.
+     *
+     * This is the only place RealizedGainRecord entries are created.
+     * Do NOT call this for unrealized gains — only on actual sell events.
+     */
+    public void recordRealizedGain(AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold, Instant occurredAt) {
+        requireActive();
+        notNull(symbol, "symbol");
+        notNull(realizedGainLoss, "realizedGainLoss");
+        notNull(costBasisSold, "costBasisSold");
+        notNull(occurredAt, "occurredAt");
+
+        realizedGains.add(new RealizedGainRecord(symbol, realizedGainLoss, costBasisSold, occurredAt));
         touch();
     }
 
@@ -218,6 +240,10 @@ public class Account {
         return positionStrategy;
     }
 
+    public List<RealizedGainRecord> getRealizedGains() {
+        return Collections.unmodifiableList(realizedGains);
+    }
+
     public Money getCashBalance() {
         return cashBalance;
     }
@@ -236,6 +262,19 @@ public class Account {
 
     public Instant getLastUpdatedOn() {
         return lastUpdatedOn;
+    }
+
+    public Money getTotalRealizedGainLoss() {
+        return realizedGains.stream()
+                .map(RealizedGainRecord::realizedGainLoss)
+                .reduce(Money.ZERO(accountCurrency), Money::add);
+    }
+
+    public List<RealizedGainRecord> getRealizedGainsFor(AssetSymbol symbol) {
+        notNull(symbol, "symbol");
+        return realizedGains.stream()
+                .filter(r -> r.symbol().equals(symbol))
+                .toList();
     }
 
     public Collection<Position> getAllPositions() {
@@ -278,6 +317,7 @@ public class Account {
 
     public void clearAllPositions() {
         this.positions = new HashMap<>();
+        this.realizedGains = new ArrayList<>();
         touch();
     }
 

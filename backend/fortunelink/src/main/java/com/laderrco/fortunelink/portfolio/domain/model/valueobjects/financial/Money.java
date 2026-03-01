@@ -1,13 +1,13 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 public record Money(BigDecimal amount, Currency currency) implements Comparable<Money> {
     private static final int MONEY_PRECISION = Precision.getMoneyPrecision();
@@ -30,6 +30,10 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
 
     public static Money of(double value, String currency) {
         return new Money(new BigDecimal(String.valueOf(value)), Currency.of(currency));
+    }
+
+    public static Money of(String value, Currency currency) {
+        return new Money(new BigDecimal(value), currency);
     }
 
     public static Money ZERO(Currency currency) {

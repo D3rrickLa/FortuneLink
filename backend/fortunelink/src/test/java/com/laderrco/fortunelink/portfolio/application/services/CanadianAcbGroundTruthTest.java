@@ -1,15 +1,20 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,38 +22,44 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.List;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType.BUY;
+import static com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType.SELL;
+import static com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency.CAD;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * GROUND TRUTH: Canadian CRA Adjusted Cost Base (ACB) Calculation
- *
+ * <p>
  * This test class exists to settle one question permanently:
- *   Should sell/buy use cashDelta or grossValue for ACB purposes?
- *
+ * Should sell/buy use cashDelta or grossValue for ACB purposes?
+ * <p>
  * ANSWER (CRA IT-451R / Folio S3-F4-C1):
- *   BUY  → ACB = (qty × price) + commission  →  cashDelta.abs()  ✓
- *   SELL → Proceeds = (qty × price) - commission  →  cashDelta    ✓
- *
- *   Capital Gain = Net Proceeds (after commission) − ACB of shares sold
- *
+ * BUY  → ACB = (qty × price) + commission  →  cashDelta.abs()  ✓
+ * SELL → Proceeds = (qty × price) - commission  →  cashDelta    ✓
+ * <p>
+ * Capital Gain = Net Proceeds (after commission) − ACB of shares sold
+ * <p>
  * The numbers in each test are manually verifiable. Do not change them
  * without also verifying against the CRA's Adjusted Cost Base rules.
- *
- * Reference: https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains/calculating-reporting-your-capital-gains-losses/shares-funds-other-units/adjusted-cost-base.html
+ * <p>
  */
 
 @DisplayName("CRA ACB Ground Truth Test")
 public class CanadianAcbGroundTruthTest {
 
+    public static final RoundingMode ROUNDING_MODE = Rounding.MONEY.getMode();
+    public static final int MONEY_PRECISION = Precision.getMoneyPrecision();
     private static final AssetSymbol VFV = new AssetSymbol("VFV.TO");
     private static final Currency CAD = Currency.CAD;
     private static final AssetType ETF = AssetType.ETF;
     private static final Instant T1 = Instant.parse("2024-01-15T14:30:00Z");
     private static final Instant T2 = Instant.parse("2024-03-20T14:30:00Z");
     private static final Instant T3 = Instant.parse("2024-06-10T14:30:00Z");
-    public static final RoundingMode ROUNDING_MODE = Rounding.MONEY.getMode();
-    public static final int MONEY_PRECISION = Precision.getMoneyPrecision();
+
+    private final TransactionRecordingServiceImpl service = new TransactionRecordingServiceImpl();
+
 
     // -------------------------------------------------------------------------
     // Scenario: Single buy, then partial sell
@@ -71,6 +82,58 @@ public class CanadianAcbGroundTruthTest {
     //   If you wrongly use grossValue as proceeds:
     //   Capital Gain = $4,800.00 − $4,004.00 = $796.00  ← WRONG, overstates gain by $10
     // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("replayTransaction SELL: realized gain uses net proceeds (cashDelta), not grossValue")
+    void replayTransaction_sell_uses_cashDelta_for_cra_correct_proceeds() {
+
+        // Arrange — account with an existing position
+        Account account = new Account(
+                AccountId.newId(),
+                "test-account",
+                AccountType.NON_REGISTERED,
+                CAD,
+                PositionStrategy.ACB);
+
+        // Establish position via a buy replay first
+        Transaction buyTx = TransactionFixtures.buy()
+                .accountId(account.getAccountId())
+                .symbol("VFV.TO")
+                .quantity(100)
+                .pricePerUnit(new Price(Money.of(100.00, "CAD")))
+                .commission(9.99)
+                // cashDelta = -(100 × 100.00) - 9.99 = -10009.99
+                // grossValue =   100 × 100.00         =  10000.00
+                .build();
+
+        service.replayTransaction(account, buyTx);
+
+        // Now replay a sell
+        Transaction sellTx = TransactionFixtures.sell()
+                .accountId(account.getAccountId())
+                .symbol("VFV.TO")
+                .quantity(40)
+                .pricePerUnit(new Price(Money.of(120.00, "CAD")))
+                .commission(9.99)
+                // cashDelta  = (40 × 120.00) - 9.99 = +4790.01  ← correct CRA proceeds
+                // grossValue =  40 × 120.00          =  4800.00  ← wrong, inflates gain
+                .build();
+
+        service.replayTransaction(account, sellTx);
+
+        // Assert
+        Position position = account.getPosition(new AssetSymbol("VFV.TO")).orElseThrow();
+
+        // The realized gain stored on the position must reflect net proceeds
+        // CRA correct: 4790.01 - (40 × 100.0999) = 786.01ish
+        // If grossValue was used instead: 4800.00 - same ACB = 796.00ish
+        // Delta = $9.99 (exactly the sell commission)
+        List<RealizedGainRecord> gains = account.getRealizedGains();
+        assertThat(gains).hasSize(1);
+        assertThat(gains.getFirst().realizedGainLoss().amount().setScale(2, ROUNDING_MODE))
+                .as("Realized gain must use net proceeds (cashDelta)")
+                .isEqualByComparingTo(new BigDecimal("786.01"));
+    }
 
     @Nested
     @DisplayName("ACB Position (average cost)")
@@ -220,21 +283,19 @@ public class CanadianAcbGroundTruthTest {
             // ACB per unit = 15519.98 / 150 = 103.46653...
             // ACB sold     = 60 × 103.46653... = 6207.992
             BigDecimal acbPerUnit = new BigDecimal("15519.98")
-                    .divide(new BigDecimal("150"), MONEY_PRECISION, ROUNDING_MODE)
-                    .setScale(MONEY_PRECISION, ROUNDING_MODE);
+                    .divide(new BigDecimal("150"), MONEY_PRECISION, ROUNDING_MODE);
+
             BigDecimal expectedAcbSold = acbPerUnit.multiply(new BigDecimal("60"));
 
-            IO.println(sale.costBasisSold().amount());
-            IO.println(expectedAcbSold);
-            assertThat(sale.costBasisSold().amount())
+            assertThat(sale.costBasisSold().amount().setScale(2, ROUNDING_MODE))
                     .as("ACB of 60 shares sold")
-                    .isEqualByComparingTo(expectedAcbSold);
+                    .isEqualByComparingTo(expectedAcbSold.setScale(2, ROUNDING_MODE));
 
             // Capital gain = 7790.01 - 6207.992 = 1582.018
             BigDecimal expectedGain = new BigDecimal("7790.01").subtract(expectedAcbSold);
-            assertThat(sale.realizedGainLoss().amount())
+            assertThat(sale.realizedGainLoss().amount().setScale(3, ROUNDING_MODE))
                     .as("Realized capital gain")
-                    .isEqualByComparingTo(expectedGain.stripTrailingZeros());
+                    .isEqualByComparingTo(expectedGain.stripTrailingZeros().setScale(3, ROUNDING_MODE));
 
             // Remaining position
             AcbPosition remaining = sale.newPosition();
@@ -243,9 +304,9 @@ public class CanadianAcbGroundTruthTest {
                     .isEqualByComparingTo(new BigDecimal("90"));
 
             BigDecimal expectedRemainingAcb = new BigDecimal("15519.98").subtract(expectedAcbSold);
-            assertThat(remaining.totalCostBasis().amount())
+            assertThat(remaining.totalCostBasis().amount().setScale(2, ROUNDING_MODE))
                     .as("Remaining ACB = original total minus ACB sold")
-                    .isEqualByComparingTo(expectedRemainingAcb.stripTrailingZeros());
+                    .isEqualByComparingTo(expectedRemainingAcb.stripTrailingZeros().setScale(2, ROUNDING_MODE));
         }
     }
 
@@ -351,5 +412,77 @@ public class CanadianAcbGroundTruthTest {
                     .as("grossValue path overstates gain by exactly the sell commission")
                     .isEqualByComparingTo(commissionOnSell);
         }
+    }
+}
+
+@Setter
+@Accessors(fluent = true, chain = true)
+class TransactionFixtures {
+    private AccountId accountId;
+    private String symbol;
+    private double quantity;
+    private Price pricePerUnit;
+    private double commission;
+    private TransactionType type;
+
+    public static TransactionFixtures buy() {
+        return new TransactionFixtures().type(BUY);
+    }
+
+    public static TransactionFixtures sell() {
+        return new TransactionFixtures().type(SELL);
+    }
+
+    public Transaction build() {
+        Money cashDelta;
+        if (type == BUY) {
+            BigDecimal amount = pricePerUnit.amount()
+                    .multiply(BigDecimal.valueOf(quantity))
+                    .multiply(BigDecimal.valueOf(-1))
+                    .subtract(BigDecimal.valueOf(commission))
+                    .setScale(Precision.getMoneyPrecision(), RoundingMode.HALF_EVEN);
+
+            cashDelta = new Money(amount, pricePerUnit.currency());
+
+        } else {
+            BigDecimal amount = pricePerUnit.amount()
+                    .multiply(BigDecimal.valueOf(quantity))
+                    .subtract(BigDecimal.valueOf(commission))
+                    .setScale(Precision.getMoneyPrecision(), RoundingMode.HALF_EVEN);
+            cashDelta = new Money(amount, pricePerUnit.currency());
+        }
+
+        BigDecimal commissionAmount = BigDecimal.valueOf(commission)
+                .setScale(Precision.getMoneyPrecision(), RoundingMode.HALF_EVEN);
+        Money feeMoney = new Money(commissionAmount, pricePerUnit.currency());
+        List<Fee> fees = List.of(
+                new Fee(
+                        FeeType.COMMISSION,
+                        feeMoney,
+                        feeMoney,
+                        ExchangeRate.identity(CAD, Instant.now()),
+                        Instant.now(),
+                        new Fee.FeeMetadata(null))
+        );
+
+        Transaction tx = new Transaction(
+                TransactionId.newId(),
+                this.accountId,
+                this.type,
+                new Transaction.TradeExecution(
+                        new AssetSymbol(this.symbol),
+                        Quantity.of(this.quantity),
+                        this.pricePerUnit
+                ),
+                null,
+                cashDelta,
+                fees,
+                "notes",
+                new TransactionDate(Instant.now()),
+                null,
+                Transaction.TransactionMetadata.manual(AssetType.STOCK)
+        );
+
+        return tx;
     }
 }

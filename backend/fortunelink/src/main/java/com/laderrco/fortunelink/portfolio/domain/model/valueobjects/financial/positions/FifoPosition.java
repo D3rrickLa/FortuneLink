@@ -1,17 +1,17 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TaxLot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency, List<TaxLot> lots) implements Position {
 
@@ -22,6 +22,7 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
         lots = lots == null ? List.of() : List.copyOf(lots);
     }
 
+    // todo make this a 'common method'
     public static FifoPosition empty(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
         return new FifoPosition(symbol, type, accountCurrency, List.of());
     }
@@ -44,7 +45,7 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
             Quantity quantity,
             Money proceeds,
             Instant at) {
-        if (!hasSufficientQuantity(quantity)) {
+        if (hasSufficientQuantity(quantity)) {
             throw new IllegalStateException("Insufficient quantity");
         }
 

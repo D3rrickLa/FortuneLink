@@ -22,14 +22,11 @@ import java.util.Objects;
  * Records transactions against an account by:
  * 1. Mutating account state (positions, cash balance)
  * 2. Constructing and returning an immutable Transaction record
- * <p>
+ *
  * The caller (TransactionService) is responsible for persisting both
  * the mutated portfolio and the returned Transaction.
- * <p>
- * No repositories, no market data. Pure domain logic.
  */
 
-// NOTE: the record buy and stuff might be wrong for CAB ACB
 @Service
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
@@ -261,26 +258,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 TransactionMetadata.manual(type));
     }
 
-    /**
-     * Replays a single transaction against an account for position recalculation.
-     * <p>
-     * POSITION-ONLY CONTRACT: This method intentionally replays ONLY position-affecting transaction types (BUY, SELL, SPLIT, DIVIDEND_REINVEST).
-     * <p>
-     * Cash events (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, etc.) are deliberately
-     * excluded. PositionRecalculationService calls account.clearPosition() then
-     * replays transactions for a specific symbol — cash balance is already correct
-     * in the DB and must NOT be touched here. Replaying cash events would
-     * double-count every cash movement.
-     * <p>
-     * If you ever need full account reconstruction from scratch (e.g., migration),
-     * you will need a separate replay path that resets cash to zero first.
-     * <p>
-     * make sure position.sell() downstream is actually using the proceeds value
-     * for realized gain calculation and not discarding it.
-     * If that method only uses quantity to reduce the lot and ignores the
-     * proceeds amount, the bug is dormant but still wrong.
-     * it'll surface the moment you wire up tax lot reporting
-     */
     @Override
     public void replayTransaction(Account account, Transaction tx) {
         Objects.requireNonNull(account, "Account cannot be null");
@@ -290,11 +267,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             return;
         }
 
-        // HARD GUARD: replayTransaction is a POSITION-ONLY contract.
-        // If a cash-affecting transaction reaches this method, it is a caller
-        // error — not a silent no-op. Failing loudly here surfaces misuse
-        // during development and prevents silent cash double-counting in prod.
-        // Full-account reconstruction requires a separate path that resets cash.
         if (!tx.transactionType().affectsHoldings()) {
             throw new IllegalArgumentException(
                     "replayTransaction is position-only. Transaction type "
@@ -309,26 +281,39 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
 
-                // Fix #1: use execution.grossValue() (qty × price), NOT cashDelta.abs().
-                // cashDelta on BUY includes fees: -(grossCost + fees).
-                // Position cost basis must be gross-only for correct ACB/FIFO tax calculation.
-                // Using cashDelta.abs() would overstate cost basis by the fee amount.
-                Money grossCost = tx.execution().grossValue();
+                // FIX: For ACB, the cost basis MUST include the commission.
+                // cashDelta for a BUY is -(Gross + Fees).
+                // Therefore, abs(cashDelta) is the correct total cost for tax purposes.
+                Money totalCostIncludingFees = tx.cashDelta().abs();
 
                 ApplyResult<? extends Position> result = current.buy(
                         tx.execution().quantity(),
-                        grossCost,
+                        totalCostIncludingFees,
                         tx.occurredAt().timestamp());
+
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             case SELL -> {
                 account.getPosition(tx.execution().asset()).ifPresent(position -> {
-                    // SELL cashDelta is net proceeds (positive) — correct for position P&L
+                    // CRA (Canada): proceeds = net of commission = cashDelta
+                    // on a SELL is positive net proceeds after fees.
+                    // grossValue would overstate proceeds and therefore overstate the capital gain.
                     ApplyResult<? extends Position> result = position.sell(
                             tx.execution().quantity(),
-                            tx.execution().grossValue(),
+                            tx.cashDelta(),
                             tx.occurredAt().timestamp());
+
                     account.updatePosition(tx.execution().asset(), result.newPosition());
+
+                    // Capture realized gain - prev discarded, but now preserved
+                    if (result instanceof ApplyResult.Sale<?> sale) {
+                        account.recordRealizedGain(
+                                tx.execution().asset(),
+                                sale.realizedGainLoss(),
+                                sale.costBasisSold(),
+                                tx.occurredAt().timestamp()
+                        );
+                    }
                 });
             }
             case SPLIT -> {
@@ -338,7 +323,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 });
             }
             case DIVIDEND_REINVEST -> {
-                // No cash movement — just increase position at cost of grossValue
+                // No cash movement, just increase position at cost of grossValue
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
                 Money totalCost = tx.execution().grossValue();
@@ -349,11 +334,13 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             default -> {
                 // All cash-only types (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, INTEREST,
                 // TRANSFER_IN, TRANSFER_OUT, RETURN_OF_CAPITAL, etc.) are intentionally
-                // skipped. See method Javadoc for the rationale.
+                // skipped.
             }
         }
     }
 
+    // this is for the scenario of bulk import - account imports from scratch
+    // NOTE: this is assuming we are do ACB for everything
     @Override
     public void replayFullTransaction(Account account, Transaction tx) {
         Objects.requireNonNull(account, "Account cannot be null");
@@ -368,19 +355,44 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             case BUY -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
-                Money grossCost = tx.execution().grossValue();
+
+                // FIX: For ACB, the cost basis MUST include the commission.
+                // cashDelta for a BUY is -(Gross + Fees).
+                // Therefore, abs(cashDelta) is the correct total cost for tax purposes.
+                Money totalCostIncludingFees = tx.cashDelta().abs();
+
                 ApplyResult<? extends Position> result = current.buy(
-                        tx.execution().quantity(), grossCost, tx.occurredAt().timestamp());
+                        tx.execution().quantity(),
+                        totalCostIncludingFees,
+                        tx.occurredAt().timestamp());
+
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             case SELL -> {
                 Position current = account.getPosition(tx.execution().asset())
-                        .orElseThrow(() -> new IllegalStateException(
-                                "No position for " + tx.execution().asset().value() + " during full replay"));
+                        .orElseThrow(() ->
+                                new IllegalStateException(String.format("No position for %s during full replay",
+                                        tx.execution().asset().value())));
+
+                // CRA: same as replayTransaction — net proceeds (cashDelta), not grossValue.
+                // grossValue was the bug: it overstated proceeds by the sell commission amount.
+                // The separate FEE transaction in the log handles fee cash movement.
                 ApplyResult<? extends Position> result = current.sell(
-                        tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
+                        tx.execution().quantity(),
+                        tx.cashDelta(),                // ← was tx.execution().grossValue() — bug fixed
+                        tx.occurredAt().timestamp());
+
                 account.updatePosition(tx.execution().asset(), result.newPosition());
                 account.deposit(tx.cashDelta(), "REPLAY SELL " + tx.execution().asset().value());
+
+                if (result instanceof ApplyResult.Sale<?> sale) {
+                    account.recordRealizedGain(
+                            tx.execution().asset(),
+                            sale.realizedGainLoss(),
+                            sale.costBasisSold(),
+                            tx.occurredAt().timestamp()
+                    );
+                }
             }
             case SPLIT -> {
                 Position current = account.getPosition(tx.execution().asset())

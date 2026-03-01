@@ -8,6 +8,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import lombok.Builder;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,6 +20,7 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 // THIS IS AN IMMUTABLE STATE
 // account and portfolio reconstruct state from these transaction(s)
+@Builder
 public record Transaction(
         TransactionId transactionId,
         AccountId accountId,

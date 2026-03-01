@@ -17,4 +17,5 @@ public enum AccountType {
     MARGIN,
     REGISTERED_INVESTMENT,
     NON_REGISTERED_INVESTMENT,
+    NON_REGISTERED
 }

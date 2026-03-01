@@ -1,14 +1,14 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions;
 
-import java.time.Instant;
-import java.util.List;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
+import java.time.Instant;
+import java.util.List;
 
 // meant for 'assets' where we can AVG cost, ACB, etc.
 // cash events will need their own 'positon.java'
@@ -55,7 +55,7 @@ public sealed interface Position permits AcbPosition, FifoPosition {
     }
 
     default boolean hasSufficientQuantity(Quantity required) {
-        return totalQuantity().compareTo(required) >= 0;
+        return totalQuantity().compareTo(required) < 0;
     }
 
 }
