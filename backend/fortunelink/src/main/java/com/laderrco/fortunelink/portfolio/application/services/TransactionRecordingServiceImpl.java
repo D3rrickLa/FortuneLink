@@ -44,7 +44,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         List<Fee> finalFees = feeTotal.isZero() ? List.of() : (fees != null ? fees : List.of());
 
         Money grossCost = price.pricePerUnit().multiply(quantity.amount());
-        Money totalOutflow = grossCost.add(feeTotal);
+        Money totalOutflow = grossCost.add(feeTotal); // cash delta
 
         Position current = account.ensurePosition(symbol, type);
         ApplyResult<? extends Position> result = current.buy(quantity, totalOutflow, date);

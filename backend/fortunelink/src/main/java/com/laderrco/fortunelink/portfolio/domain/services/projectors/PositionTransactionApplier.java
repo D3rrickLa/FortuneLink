@@ -13,7 +13,6 @@ final class PositionTransactionApplier {
     static <P extends Position> P apply(P position, Transaction tx) {
 
         return switch (tx.transactionType()) {
-
             case BUY -> applyBuy(position, tx);
             case SELL -> applySell(position, tx);
             case SPLIT -> applySplit(position, tx);
@@ -28,13 +27,13 @@ final class PositionTransactionApplier {
 
         ApplyResult<? extends Position> r = position.buy(
                 tx.execution().quantity(),
-                totalCost, // cost
+                totalCost,
                 tx.occurredAt().timestamp());
         return cast(r);
     }
 
     private static <P extends Position> P applySell(P position, Transaction tx) {
-        // cashDelta on SELL is net proceeds (positive) — correct for realized gain calc
+        // cashDelta on SELL is net proceeds (positive); correct for realized gain calc
         ApplyResult<? extends Position> r = position.sell(
                 tx.execution().quantity(),
                 tx.cashDelta(), // proceeds (positive)
@@ -48,7 +47,7 @@ final class PositionTransactionApplier {
     }
 
     private static <P extends Position> P applyDividendReinvest(P position, Transaction tx) {
-        // No cash movement — position increases at grossValue cost
+        // No cash movement; position increases at grossValue cost
         Money totalCost = tx.execution().grossValue();
         ApplyResult<? extends Position> r = position.buy(
                 tx.execution().quantity(),
