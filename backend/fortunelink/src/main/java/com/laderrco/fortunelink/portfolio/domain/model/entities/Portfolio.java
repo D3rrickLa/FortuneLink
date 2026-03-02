@@ -1,15 +1,5 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
-import java.time.Instant;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
@@ -20,29 +10,31 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
+import java.time.Instant;
+import java.util.*;
+
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
+
 // so we are going to actually add back a 'currency preference'
 // it is only meant to be used to display your aggreagate data
 // in one currency
 public class Portfolio {
     private final PortfolioId portfolioId;
     private final UserId userId;
+    private final Instant createdAt;
     private String name;
     private String description;
     private Map<AccountId, Account> accounts;
-
     private Currency displayCurrency;
-
     private boolean deleted;
     private Instant deletedOn;
     private UserId deletedBy;
-
-    private final Instant createdAt;
     private Instant lastUpdatedAt;
 
     // private full args constructor
     private Portfolio(PortfolioId portfolioId, UserId userId, String name, String description,
-            Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
-            UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
+                      Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
+                      UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.name = name;
@@ -103,9 +95,9 @@ public class Portfolio {
 
     // Static factory for reconstitution
     public static Portfolio reconstitute(PortfolioId portfolioId, UserId userId, String name, String description,
-            Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
-            UserId deletedBy, Instant createdAt,
-            Instant lastUpdatedOn) {
+                                         Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
+                                         UserId deletedBy, Instant createdAt,
+                                         Instant lastUpdatedOn) {
         return new Portfolio(portfolioId, userId, name, description, accounts, displayCurrency, deleted, deletedOn,
                 deletedBy, createdAt, lastUpdatedOn);
     }
@@ -115,6 +107,13 @@ public class Portfolio {
         notNull(type, "type");
         notNull(currency, "currency");
         notNull(strategy, "strategy");
+
+//        if (strategy == PositionStrategy.FIFO ||
+//                strategy == PositionStrategy.LIFO ||
+//                strategy == PositionStrategy.SPECIFIC_ID) {
+//            throw new IllegalArgumentException(
+//                    "Only ACB strategy is supported. " + strategy + " is not available.");
+//        }
 
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Account name cannot be empty");

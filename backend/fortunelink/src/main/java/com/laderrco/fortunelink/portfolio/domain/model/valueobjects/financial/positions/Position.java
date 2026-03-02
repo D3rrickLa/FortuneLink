@@ -54,7 +54,7 @@ public sealed interface Position permits AcbPosition, FifoPosition {
         return totalQuantity().isZero();
     }
 
-    default boolean hasSufficientQuantity(Quantity required) {
+    default boolean hasInSufficientQuantity(Quantity required) {
         return totalQuantity().compareTo(required) < 0;
     }
 

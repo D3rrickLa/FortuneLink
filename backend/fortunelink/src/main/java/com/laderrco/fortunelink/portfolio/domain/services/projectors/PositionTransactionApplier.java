@@ -24,17 +24,11 @@ final class PositionTransactionApplier {
     }
 
     private static <P extends Position> P applyBuy(P position, Transaction tx) {
-        // Issue 7 fix: was txcashDelta().abs() which includes fees, overstating cost
-        // basis.
-        // grossValue() = qty x price, fees excluded - correct for AVB/FIFO tax purposes
-        // Mirrors the same fix applied to
-        // TransactionRecordingSErviceImpl.replayTransaction()
-
-        Money grossCost = tx.execution().grossValue();
+        Money totalCost = tx.cashDelta().abs();
 
         ApplyResult<? extends Position> r = position.buy(
                 tx.execution().quantity(),
-                grossCost, // cost
+                totalCost, // cost
                 tx.occurredAt().timestamp());
         return cast(r);
     }

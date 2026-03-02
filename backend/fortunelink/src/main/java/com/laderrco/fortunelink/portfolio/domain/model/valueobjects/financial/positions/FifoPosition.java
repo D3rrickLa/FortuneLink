@@ -13,6 +13,11 @@ import java.util.List;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
+/**
+ * FIFO position for future USD/US-tax-reporting support.
+ * NOT wired into any active account creation path as of v8.
+ * Do not instantiate except in unit tests.
+ */
 public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency, List<TaxLot> lots) implements Position {
 
     public FifoPosition {
@@ -45,7 +50,7 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
             Quantity quantity,
             Money proceeds,
             Instant at) {
-        if (hasSufficientQuantity(quantity)) {
+        if (hasInSufficientQuantity(quantity)) {
             throw new IllegalStateException("Insufficient quantity");
         }
 

@@ -2,10 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -24,7 +21,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType.ETF;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -47,14 +47,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Adjust the builder calls below to match your actual Transaction construction.
  */
 public class TransactionRecordingServiceImplReplayTest {
+    public static final RoundingMode ROUNDING_MODE = Rounding.MONEY.getMode();
+    public static final int MONEY_PRECISION = Precision.getMoneyPrecision();
     private static final Currency CAD = Currency.CAD;
     private static final AssetSymbol VFV = new AssetSymbol("VFV.TO");
     private static final Instant BUY_DATE = Instant.parse("2024-01-15T14:30:00Z");
     private static final Instant SELL_DATE = Instant.parse("2024-03-20T14:30:00Z");
     private static final Instant SELL2_DATE = Instant.parse("2024-06-10T14:30:00Z");
-    public static final RoundingMode ROUNDING_MODE = Rounding.MONEY.getMode();
-    public static final int MONEY_PRECISION = Precision.getMoneyPrecision();
-
     private TransactionRecordingServiceImpl service;
     private Account account;
 
@@ -260,6 +259,45 @@ public class TransactionRecordingServiceImplReplayTest {
             assertThat(gain.costBasisSold().amount())
                     .as("Cost basis sold must reflect ACB of the 40 shares disposed")
                     .isEqualByComparingTo(new BigDecimal("4003.996").setScale(MONEY_PRECISION, ROUNDING_MODE));
+        }
+
+        @Test
+        @DisplayName("IDEMPOTENCY: replay must produce same cost basis as original recording")
+        void buyReplay_producesIdenticalCostBasis() {
+            // Record directly
+            account.deposit(Money.of(100000, "CAD"), "for test");
+            service.recordBuy(account, VFV, ETF, Quantity.of(100),
+                    new Price(Money.of(100.00, "CAD")),
+                    List.of(
+                            Fee.of(FeeType.COMMISSION, Money.of(9.99, "CAD"), BUY_DATE)
+                    ),
+                    "initial", BUY_DATE);
+
+            Money costAfterRecord = account.getPosition(VFV).orElseThrow().totalCostBasis();
+
+            // Simulate exclude/restore cycle
+            account.clearPosition(VFV);
+            Transaction tx = mock(Transaction.class);
+
+            double unitPrice = 100.00;
+            long quantity = 100;
+            double commission = 9.99; // Note: Ensure your service actually processes this list!
+            double totalImpact = (unitPrice * quantity) + commission;
+
+            when(tx.isExcluded()).thenReturn(false);
+            when(tx.transactionType()).thenReturn(TransactionType.BUY);
+            when(tx.execution()).thenReturn(
+                    new Transaction.TradeExecution(VFV, Quantity.of(quantity), new Price(Money.of(unitPrice, "CAD"))));
+            when(tx.occurredAt()).thenReturn(TransactionDate.of(BUY_DATE));
+            when(tx.cashDelta()).thenReturn(Money.of(-totalImpact, "CAD"));
+
+            service.replayTransaction(account, tx);
+
+            Money costAfterReplay = account.getPosition(VFV).orElseThrow().totalCostBasis();
+
+            // This is the invariant. If this fails, everything downstream is wrong.
+            assertThat(costAfterReplay.amount())
+                    .isEqualByComparingTo(costAfterRecord.amount());
         }
     }
 }

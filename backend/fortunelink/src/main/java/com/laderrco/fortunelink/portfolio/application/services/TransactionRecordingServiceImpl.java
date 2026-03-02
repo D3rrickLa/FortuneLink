@@ -22,11 +22,10 @@ import java.util.Objects;
  * Records transactions against an account by:
  * 1. Mutating account state (positions, cash balance)
  * 2. Constructing and returning an immutable Transaction record
- *
+ * <p>
  * The caller (TransactionService) is responsible for persisting both
  * the mutated portfolio and the returned Transaction.
  */
-
 @Service
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
@@ -44,15 +43,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         Money feeTotal = Fee.totalInAccountCurrency(fees, currency);
         List<Fee> finalFees = feeTotal.isZero() ? List.of() : (fees != null ? fees : List.of());
 
-        // grossCost = qty × price, fees excluded intentionally.
-        // Position cost basis tracks
-        // gross cost only (correct for ACB/FIFO tax// purposes).
-        // Cash outflow includes fees (totalOutflow) — these are separate concerns.
         Money grossCost = price.pricePerUnit().multiply(quantity.amount());
         Money totalOutflow = grossCost.add(feeTotal);
 
         Position current = account.ensurePosition(symbol, type);
-        ApplyResult<? extends Position> result = current.buy(quantity, grossCost, date);
+        ApplyResult<? extends Position> result = current.buy(quantity, totalOutflow, date);
         account.updatePosition(symbol, result.newPosition());
         account.withdraw(totalOutflow, "BUY " + symbol.value());
 
@@ -241,7 +236,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         ApplyResult<? extends Position> result = current.buy(quantity, totalCost, date);
         account.updatePosition(symbol, result.newPosition());
 
-        // DIVIDEND_REINVEST has CashImpact.NONE — cashDelta must be zero
+        // DIVIDEND_REINVEST has CashImpact.NONE; cashDelta must be zero
         Money zeroCashDelta = Money.ZERO(account.getAccountCurrency());
 
         return new Transaction(
@@ -351,14 +346,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         }
 
         switch (tx.transactionType()) {
-            // Position-affecting — same as replayTransaction
             case BUY -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
 
-                // FIX: For ACB, the cost basis MUST include the commission.
-                // cashDelta for a BUY is -(Gross + Fees).
-                // Therefore, abs(cashDelta) is the correct total cost for tax purposes.
                 Money totalCostIncludingFees = tx.cashDelta().abs();
 
                 ApplyResult<? extends Position> result = current.buy(
@@ -379,7 +370,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 // The separate FEE transaction in the log handles fee cash movement.
                 ApplyResult<? extends Position> result = current.sell(
                         tx.execution().quantity(),
-                        tx.cashDelta(),                // ← was tx.execution().grossValue() — bug fixed
+                        tx.cashDelta(),
                         tx.occurredAt().timestamp());
 
                 account.updatePosition(tx.execution().asset(), result.newPosition());

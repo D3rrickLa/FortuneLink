@@ -41,7 +41,7 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
 
     @Override
     public ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at) {
-        if (hasSufficientQuantity(quantity)) {
+        if (hasInSufficientQuantity(quantity)) {
             throw new IllegalStateException("Insufficient quantity");
         }
 //        Money acbPerUnit = totalCostBasis.divide(totalQuantity.amount());
