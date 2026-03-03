@@ -5,6 +5,7 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchExce
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.HealthStatus;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -27,6 +28,7 @@ public class Account {
     private final Currency accountCurrency;
     private String name;
     private final PositionStrategy positionStrategy; // ← Explicit
+    private HealthStatus healthStatus;
 
     private Money cashBalance;
     private Map<AssetSymbol, Position> positions;
@@ -62,6 +64,7 @@ public class Account {
         this.realizedGains = new ArrayList<>();
         this.cashBalance = null; // intentionally null: any arithmetic will
                                  // fail loudly rather than silently wrong
+        this.healthStatus = null;
     }
 
     public Account(AccountId accountId, String name, AccountType accountType, Currency accountCurrency,
@@ -81,6 +84,7 @@ public class Account {
         this.accountType = accountType;
         this.accountCurrency = accountCurrency;
         this.positionStrategy = positionStrategy;
+        this.healthStatus = HealthStatus.HEALTHY;
         this.cashBalance = Money.ZERO(accountCurrency);
         this.positions = new HashMap<>();
         this.realizedGains = new ArrayList<>();
@@ -90,7 +94,7 @@ public class Account {
         this.lastUpdatedOn = Instant.now();
     }
 
-    // DEPOSIT, WITHDRAWL, DIVIDEND, INTEREST
+    // DEPOSIT, WITHDRAWAL, DIVIDEND, INTEREST
     public void deposit(Money amount, String reason) {
         requireActive();
         validateCurrency(amount);
@@ -105,6 +109,10 @@ public class Account {
     }
 
     public void withdraw(Money amount, String reason) {
+        withdraw(amount, reason, false); // Default behavior: stay positive
+    }
+
+    public void withdraw(Money amount, String reason, boolean allowNegative) {
         requireActive();
         validateCurrency(amount);
         validateReason(reason);
@@ -113,7 +121,8 @@ public class Account {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
         }
 
-        if (cashBalance.isLessThan(amount)) {
+        // Only check funds if we aren't allowing a temp negative balance
+        if (!allowNegative && cashBalance.isLessThan(amount)) {
             throw new InsufficientFundsException(
                     "Insufficient funds: required " + amount + ", available " + cashBalance);
         }
@@ -186,6 +195,7 @@ public class Account {
 
     public void clearPosition(AssetSymbol symbol) {
         positions.remove(symbol);
+        realizedGains.removeIf(record -> record.symbol().equals(symbol));
         touch();
     }
 
@@ -218,6 +228,14 @@ public class Account {
         this.isActive = true;
         this.closeDate = null;
         touch();
+    }
+
+    public void markStale() {
+        this.healthStatus = HealthStatus.STALE;
+    }
+
+    public void restoreHealth() {
+        this.healthStatus = HealthStatus.HEALTHY;
     }
 
     public AccountId getAccountId() {
@@ -262,6 +280,10 @@ public class Account {
 
     public Instant getLastUpdatedOn() {
         return lastUpdatedOn;
+    }
+
+    public boolean isStale() {
+        return this.healthStatus == HealthStatus.STALE;
     }
 
     public Money getTotalRealizedGainLoss() {

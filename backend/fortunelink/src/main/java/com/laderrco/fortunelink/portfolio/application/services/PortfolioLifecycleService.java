@@ -1,24 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionRequiresConfirmationException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioFoundNotEmptyException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.commands.*;
+import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioServiceUtils;
@@ -38,8 +21,14 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 // ONLY PORTFOLIO + ACCOUNT LIFECYCLE STUFF, NOT TRANSACTION
 @Service
@@ -131,7 +120,6 @@ public class PortfolioLifecycleService {
             // intentionally bypasses the markAsDeleted checks
             // if a user wants to 'start over' they don't want to close
             // all the accounts
-            // or another issue -> testing
             portfolioRepository.delete(command.portfolioId());
         }
 

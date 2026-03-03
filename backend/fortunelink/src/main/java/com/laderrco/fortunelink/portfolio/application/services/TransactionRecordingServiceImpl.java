@@ -12,6 +12,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import com.laderrco.fortunelink.portfolio.domain.utils.TaxMethodResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -27,11 +29,13 @@ import java.util.Objects;
  * the mutated portfolio and the returned Transaction.
  */
 @Service
+@RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
+    private final TaxMethodResolver taxResolver;
+
     @Override
-    public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
-                                 Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
+    public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
@@ -40,11 +44,19 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         Objects.requireNonNull(date, "Date cannot be null");
 
         Currency currency = account.getAccountCurrency();
+
         Money feeTotal = Fee.totalInAccountCurrency(fees, currency);
-        List<Fee> finalFees = feeTotal.isZero() ? List.of() : (fees != null ? fees : List.of());
+        List<Fee> finalFees = feeTotal.isZero() ? List.of() : (fees != null ? fees : List.of()); // this me be a code smell...
 
         Money grossCost = price.pricePerUnit().multiply(quantity.amount());
         Money totalOutflow = grossCost.add(feeTotal); // cash delta
+
+//        Money costForPosition = taxResolver.buyerCost(tx);
+//        Position current = account.ensurePosition(symbol, type);
+//        ApplyResult<? extends Position> result = current.buy(quantity, costForPosition, date);
+//        // 4. Update Account State
+//        account.updatePosition(symbol, result.newPosition());
+//        account.withdraw(totalOutflow, "BUY " + symbol.value());
 
         Position current = account.ensurePosition(symbol, type);
         ApplyResult<? extends Position> result = current.buy(quantity, totalOutflow, date);
@@ -68,8 +80,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     @Override
-    public Transaction recordSell(Account account, AssetSymbol symbol,
-                                  Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
+    public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
@@ -78,6 +89,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         Objects.requireNonNull(date, "Date cannot be null");
 
         Currency currency = account.getAccountCurrency();
+
         Money feeTotal = Fee.totalInAccountCurrency(fees, currency);
         List<Fee> finalFees = feeTotal.isZero() ? List.of() : (fees != null ? fees : List.of());
 
@@ -90,6 +102,19 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         ApplyResult<? extends Position> result = current.sell(quantity, grossProceeds, date);
         account.updatePosition(symbol, result.newPosition());
         account.deposit(netProceeds, "SELL " + symbol.value());
+
+        /*
+        // Inside recordSell
+Money grossProceeds = price.pricePerUnit().multiply(quantity.amount());
+Money netProceeds = grossProceeds.subtract(feeTotal);
+
+// Create TX with netProceeds as positive cashDelta
+Transaction tx = ... // cashDelta = netProceeds
+
+// Position gets net proceeds because CRA says commissions reduce your gain
+Money proceedsForTax = taxResolver.sellerProceeds(tx);
+ApplyResult<? extends Position> result = current.sell(quantity, proceedsForTax, date);
+         */
 
         Money cashDelta = netProceeds;
         AssetType type = current.type();
@@ -216,8 +241,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
      * - Increases position using the dividend proceeds
      */
     @Override
-    public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol,
-                                                  Quantity quantity, Price price, String notes, Instant date) {
+    public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes, Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
@@ -276,10 +300,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
 
-                // FIX: For ACB, the cost basis MUST include the commission.
-                // cashDelta for a BUY is -(Gross + Fees).
-                // Therefore, abs(cashDelta) is the correct total cost for tax purposes.
-                Money totalCostIncludingFees = tx.cashDelta().abs();
+                // made this agnostic - doesn't matter if cra or irs, should be right no matter what
+                Money totalCostIncludingFees = taxResolver.buyerCost(tx);
 
                 ApplyResult<? extends Position> result = current.buy(
                         tx.execution().quantity(),
@@ -290,12 +312,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             }
             case SELL -> {
                 account.getPosition(tx.execution().asset()).ifPresent(position -> {
-                    // CRA (Canada): proceeds = net of commission = cashDelta
-                    // on a SELL is positive net proceeds after fees.
-                    // grossValue would overstate proceeds and therefore overstate the capital gain.
+                    Money proceeds = taxResolver.sellerProceeds(tx);
                     ApplyResult<? extends Position> result = position.sell(
                             tx.execution().quantity(),
-                            tx.cashDelta(),
+                            proceeds,
                             tx.occurredAt().timestamp());
 
                     account.updatePosition(tx.execution().asset(), result.newPosition());
@@ -358,6 +378,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                         tx.occurredAt().timestamp());
 
                 account.updatePosition(tx.execution().asset(), result.newPosition());
+                account.withdraw(tx.cashDelta().abs(), "REPLAY BUY", true);
             }
             case SELL -> {
                 Position current = account.getPosition(tx.execution().asset())
@@ -387,8 +408,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             }
             case SPLIT -> {
                 Position current = account.getPosition(tx.execution().asset())
-                        .orElseThrow(() -> new IllegalStateException(
-                                "No position for " + tx.execution().asset().value() + " during full replay"));
+                        .orElseThrow(() ->
+                                new IllegalStateException("No position for " + tx.execution().asset().value() + " during full replay"));
                 ApplyResult<? extends Position> result = current.split(tx.split().ratio());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
@@ -399,14 +420,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                         tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
-            // Cash-only — these are the ones replayTransaction skips
-            case DEPOSIT -> account.deposit(tx.cashDelta(), "REPLAY DEPOSIT");
-            case WITHDRAWAL -> account.withdraw(tx.cashDelta().abs(), "REPLAY WITHDRAWAL");
-            case DIVIDEND -> account.deposit(tx.cashDelta(), "REPLAY DIVIDEND");
-            case FEE -> account.withdraw(tx.cashDelta().abs(), "REPLAY FEE");
-            case INTEREST -> account.deposit(tx.cashDelta(), "REPLAY INTEREST");
-            case TRANSFER_IN -> account.deposit(tx.cashDelta(), "REPLAY TRANSFER_IN");
-            case TRANSFER_OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY TRANSFER_OUT");
+            // Cash-only types (DEPOSIT, FEE, etc.) correctly move cash already
+            case DEPOSIT, INTEREST, TRANSFER_IN ->
+                    account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
+            case WITHDRAWAL, FEE, TRANSFER_OUT ->
+                    account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
 
             default -> throw new IllegalStateException(
                     "Unhandled transaction type in replayFullTransaction: " + tx.transactionType()

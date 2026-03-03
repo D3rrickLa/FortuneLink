@@ -1,10 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.Map;
-import java.util.Objects;
-
-import org.springframework.stereotype.Service;
-
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
@@ -15,16 +10,18 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.Objects;
 
 
 /**
  * Pure math implementation of PortfolioValuationService.
  *
- * CONTRACT: Never calls MarketDataService. All quotes are pre-fetched
+ * Never calls MarketDataService. All quotes are pre-fetched
  * by the calling application service and passed in via quoteCache.
- * This service only does arithmetic.
  */
 @Service
 @RequiredArgsConstructor

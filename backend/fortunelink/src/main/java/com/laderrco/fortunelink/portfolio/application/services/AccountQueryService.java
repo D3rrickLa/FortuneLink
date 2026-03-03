@@ -1,13 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
@@ -27,8 +19,14 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Handles account and position-level read operations.
@@ -52,11 +50,7 @@ public class AccountQueryService {
 	private final PortfolioViewMapper portfolioViewMapper;
 	private final AccountViewBuilder accountViewBuilder;
 
-	/**
-	 * Returns summary views for all accounts in a user's portfolio.
-	 *
-	 * Fetches quotes for all positions across all accounts in one batch call.
-	 */
+
 	public List<AccountView> getAllAccounts(GetAllAccountsQuery query) {
 		Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
 
@@ -72,12 +66,7 @@ public class AccountQueryService {
 				.toList();
 	}
 
-	/**
-	 * Returns a summary view for a single account.
-	 *
-	 * Fetches quotes only for positions in this account — not the whole portfolio.
-	 * This is intentional: no wasted API calls for data we won't use.
-	 */
+
 	public AccountView getAccountSummary(GetAccountSummaryQuery query) {
 		Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
@@ -85,19 +74,14 @@ public class AccountQueryService {
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
-		// Scoped to THIS account only — don't pay for symbols we won't use
+		// Scoped to THIS account only - don't "pay" for symbols we won't use
 		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbolsByAccount(account);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		return accountViewBuilder.build(account, quoteCache);
 	}
 
-	/**
-	 * Returns all positions (enriched with current prices) for a single account.
-	 *
-	 * If you only need positions and not the full account metadata, prefer this
-	 * over getAccountSummary() — same API cost, cleaner contract for the caller.
-	 */
+
 	public List<PositionView> getAccountPositions(GetAccountSummaryQuery query) {
 		Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
@@ -114,12 +98,7 @@ public class AccountQueryService {
 				.toList();
 	}
 
-	/**
-	 * Returns the current view for a single asset/position.
-	 *
-	 * Uses a single getCurrentQuote() rather than batch — only one symbol needed.
-	 * Do NOT call getBatchQuotes() for a single asset lookup.
-	 */
+
 	public PositionView getAssetSummary(GetAssetQuery query) {
 		Objects.requireNonNull(query, "GetAssetQuery cannot be null");
 
@@ -127,11 +106,10 @@ public class AccountQueryService {
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
-		// findPosition or similar — adjust to your actual Account API
 		var position = account.getPosition(query.symbol())
 				.orElseThrow(() -> new AssetNotFoundException(query.symbol()));
 
-		// Single quote, not a batch — correct API hygiene for single-item lookups
+		// Single quote, not a batch
 		MarketAssetQuote quote = marketDataService.getCurrentQuote(query.symbol()).orElse(null);
 
 		return portfolioViewMapper.toPositionView(position, quote);

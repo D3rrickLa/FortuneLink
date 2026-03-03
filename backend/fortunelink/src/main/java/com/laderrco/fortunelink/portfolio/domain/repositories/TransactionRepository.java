@@ -10,8 +10,18 @@ import java.util.Optional;
 public interface TransactionRepository {
     Transaction save(Transaction transaction);
 
-    // this method, be careful, only call this when the 'excluded' has been sitting for a while or user says for real delete
-    void delete(TransactionId transactionId);
+    /*
+    @Modifying
+    @Query("DELETE FROM Transaction t " +
+           "WHERE t.account.id = :accountId " +
+           "AND t.excluded = true " +
+           "AND t.metadata.excludedAt < :cutoff")
+    int deleteExpiredTransactions(
+        @Param("accountId") Long accountId,
+        @Param("cutoff") Instant cutoff
+    );
+     */
+    int deleteExpiredTransactions(AccountId accountId, Instant cutoff);
 
     Optional<Transaction> findById(TransactionId transactionId);
 

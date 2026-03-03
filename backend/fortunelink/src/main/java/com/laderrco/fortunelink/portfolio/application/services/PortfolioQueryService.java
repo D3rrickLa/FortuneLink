@@ -1,15 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
@@ -31,8 +21,16 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Handles portfolio-level read operations only.
@@ -67,7 +65,6 @@ public class PortfolioQueryService {
         // Single batch call for the entire request
         Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
 
-        // Orchestration lives here now — not buried in mapper
         List<AccountView> accountViews = portfolio.getAccounts().stream()
                 .map(account -> accountViewBuilder.build(account, quoteCache))
                 .toList();
@@ -104,8 +101,7 @@ public class PortfolioQueryService {
     /**
      * Calculates net worth for a user's portfolio.
      *
-     * Net Worth = Total Assets - Total Liabilities
-     * Liabilities are currently zero (future: ACL into Loan/Debt context).
+     * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL into Loan/Debt context).
      */
     public NetWorthView getNetWorth(GetNetWorthQuery query) {
         Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");

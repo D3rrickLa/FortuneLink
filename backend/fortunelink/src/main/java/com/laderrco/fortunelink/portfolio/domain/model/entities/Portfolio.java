@@ -226,6 +226,23 @@ public class Portfolio {
         touch();
     }
 
+    public void reportRecalculationFailure(AccountId accountId) {
+        Account account = findAccount(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId, portfolioId));
+        account.markStale();
+        touch();
+    }
+
+    public void reportRecalculationSuccess(AccountId accountId) {
+        Account account = findAccount(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId, portfolioId));
+
+        if (account.isStale()) {
+            account.restoreHealth();
+            touch();
+        }
+    }
+
     public void updateDisplayCurrency(Currency newCurrency) {
         this.displayCurrency = notNull(newCurrency, "displayCurrency");
         this.lastUpdatedAt = Instant.now();
@@ -236,7 +253,7 @@ public class Portfolio {
 
         Account account = accounts.get(accountId);
         if (account == null) {
-            throw new AccountNotFoundException(String.format("%s not found in %s", accountId, this.portfolioId));
+            throw new AccountNotFoundException(accountId, this.portfolioId);
         }
         return account;
     }
@@ -328,4 +345,5 @@ public class Portfolio {
     private void touch() {
         this.lastUpdatedAt = Instant.now();
     }
+
 }
