@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.NoPositionException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
@@ -16,6 +17,8 @@ import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingSe
 import com.laderrco.fortunelink.portfolio.domain.utils.TaxMethodResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import static com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType.BUY;
 
 import java.time.Instant;
 import java.util.List;
@@ -301,24 +304,28 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             case SELL -> {
-                account.getPosition(tx.execution().asset()).ifPresent(position -> {
-                    Money proceeds = taxResolver.sellerProceeds(tx);
-                    ApplyResult<? extends Position> result = position.sell(
-                            tx.execution().quantity(),
-                            proceeds,
+                Position position = account.getPosition(tx.execution().asset())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No position for " + tx.execution().asset().value() + " during position replay. " +
+                                        "BUY must precede SELL in replay order."));
+
+                Money proceeds = taxResolver.sellerProceeds(tx);
+                ApplyResult<? extends Position> result = position.sell(
+                        tx.execution().quantity(),
+                        proceeds,
+                        tx.occurredAt().timestamp());
+
+                account.updatePosition(tx.execution().asset(), result.newPosition());
+
+                // Capture realized gain - prev discarded, but now preserved
+                if (result instanceof ApplyResult.Sale<?> sale) {
+                    account.recordRealizedGain(
+                            tx.execution().asset(),
+                            sale.realizedGainLoss(),
+                            sale.costBasisSold(),
                             tx.occurredAt().timestamp());
+                }
 
-                    account.updatePosition(tx.execution().asset(), result.newPosition());
-
-                    // Capture realized gain - prev discarded, but now preserved
-                    if (result instanceof ApplyResult.Sale<?> sale) {
-                        account.recordRealizedGain(
-                                tx.execution().asset(),
-                                sale.realizedGainLoss(),
-                                sale.costBasisSold(),
-                                tx.occurredAt().timestamp());
-                    }
-                });
             }
             case SPLIT -> {
                 account.getPosition(tx.execution().asset()).ifPresent(position -> {
@@ -359,7 +366,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
 
-                Money totalCostIncludingFees = tx.cashDelta().abs();
+                Money totalCostIncludingFees = taxResolver.buyerCost(tx);
 
                 ApplyResult<? extends Position> result = current.buy(
                         tx.execution().quantity(),
@@ -439,7 +446,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     private void validateIsActive(Account account) {
         if (!account.isActive()) {
-            throw new IllegalStateException("Cannot record transaction on a closed account: " + account.getAccountId());
+            throw new AccountClosedException(
+                    "Cannot record transaction on a closed account: " + account.getAccountId());
         }
     }
 

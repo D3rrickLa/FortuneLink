@@ -369,8 +369,10 @@ public class CanadianAcbGroundTruthTest {
 		 * NOT grossValue (qty × price before commission)
 		 *
 		 * replayTransaction currently passes cashDelta — that IS correct for Canada.
-		 * replayFullTransaction currently passes grossValue — that IS the bug.
+		 * replayFullTransaction was fixed to use cashDelta (net proceeds) — same as
+		 * replayTransaction.
 		 *
+		 * 
 		 * replayFullTransaction SELL should be:
 		 * position.sell(qty, tx.cashDelta(), at) ← proceeds to position
 		 * account.deposit(tx.cashDelta(), "REPLAY SELL...") ← cash (same value, net)

@@ -159,7 +159,8 @@ public class Account {
      * This is the only place RealizedGainRecord entries are created.
      * Do NOT call this for unrealized gains — only on actual sell events.
      */
-    public void recordRealizedGain(AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold, Instant occurredAt) {
+    public void recordRealizedGain(AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold,
+            Instant occurredAt) {
         requireActive();
         notNull(symbol, "symbol");
         notNull(realizedGainLoss, "realizedGainLoss");
@@ -173,6 +174,7 @@ public class Account {
     public void clearRealizedGains(AssetSymbol symbol) {
         notNull(symbol, "symbol");
         this.realizedGains.removeIf(gain -> gain.symbol().equals(symbol));
+        touch();
     }
 
     public void clearAllRealizedGains() {
@@ -349,7 +351,6 @@ public class Account {
 
     public void clearAllPositions() {
         this.positions = new HashMap<>();
-        this.realizedGains = new ArrayList<>();
         touch();
     }
 
