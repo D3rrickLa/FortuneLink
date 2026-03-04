@@ -16,7 +16,7 @@ import java.time.temporal.ChronoUnit;
 @RequiredArgsConstructor
 public class TransactionPurgeService {
     private final TransactionRepository transactionRepository;
-    private final Logger logger = LoggerFactory.getLogger(TransactionPurgeService.class);
+    private final Logger log = LoggerFactory.getLogger(TransactionPurgeService.class);
 
     // TODO we also need to add '@EnableScheduling' in the main app
     @Scheduled(cron = "0 0 0 * * *") // midnight every night
@@ -28,6 +28,6 @@ public class TransactionPurgeService {
                 accountId,
                 cutoff
         );
-        logger.info("Purged {} expired transactions for account {}", deletedCount, accountId);
+        log.info("Purged {} expired transactions for account {}", deletedCount, accountId);
     }
 }

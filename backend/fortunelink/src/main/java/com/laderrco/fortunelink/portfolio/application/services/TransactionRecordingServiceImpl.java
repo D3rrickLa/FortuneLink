@@ -16,6 +16,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.domain.utils.TaxMethodResolver;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -35,6 +37,7 @@ import java.util.Objects;
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
 
     private final TaxMethodResolver taxResolver;
+    private final Logger log = LoggerFactory.getLogger(TransactionRecordingServiceImpl.class);
 
     @Override
     public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price,
@@ -120,13 +123,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         account.updatePosition(symbol, result.newPosition());
         account.deposit(netProceeds, "SELL " + symbol.value());
 
-        // 3. Record the Gain/Loss for the account history
         if (result instanceof ApplyResult.Sale<?> sale) {
             account.recordRealizedGain(symbol, sale.realizedGainLoss(), sale.costBasisSold(), date);
         }
 
         return tx;
-
     }
 
     @Override
@@ -290,8 +291,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
 
-                // made this agnostic - doesn't matter if cra or irs, should be right no matter
-                // what
                 Money totalCostIncludingFees = taxResolver.buyerCost(tx);
 
                 ApplyResult<? extends Position> result = current.buy(
@@ -324,25 +323,15 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                             sale.costBasisSold(),
                             tx.occurredAt().timestamp());
                 }
-
             }
             case SPLIT -> {
-                // todo might consider using orElseGet return Position.empty()
-                // as if a user sells the entire pos and then a split is processed, returns
-                // account.getPosition(tx.execution().asset()).ifPresent(position -> {
-                // ApplyResult<? extends Position> result = position.split(tx.split().ratio());
-                // account.updatePosition(tx.execution().asset(), result.newPosition());
-                // });
-                // issue with the split, without prior BUY in replay, data integrity error
-                // the FIX:, NOTE i don't know if this is right, fullReplay does the same thing
-                // but,are we sure that we are in a clear? what if we do a 'back to back split'?
-                // or a buy, split, buy, split?
-                Position position = account.getPosition(tx.execution().asset())
-                        .orElseThrow(() -> new IllegalStateException(
-                                "No position for " + tx.execution().asset().value()
-                                        + " during position replay. BUY must precede SPLIT in replay order."));
-                ApplyResult<? extends Position> result = position.split(tx.split().ratio());
-                account.updatePosition(tx.execution().asset(), result.newPosition());
+                // A split on a closed position is a no-op, not an error.
+                // user may have sold all share before the split date, only apply the split if a position
+                // actually exists
+                account.getPosition(tx.execution().asset()).ifPresent(position -> {
+                    ApplyResult<? extends Position> result = position.split(tx.split().ratio());
+                    account.updatePosition(tx.execution().asset(), result.newPosition());
+                });
             }
             case DIVIDEND_REINVEST -> {
                 // No cash movement, just increase position at cost of grossValue
@@ -362,7 +351,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     // this is for the scenario of bulk import - account imports from scratch
-    // NOTE: this is assuming we are do ACB for everything
     @Override
     public void replayFullTransaction(Account account, Transaction tx) {
         Objects.requireNonNull(account, "Account cannot be null");
@@ -385,7 +373,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                         tx.occurredAt().timestamp());
 
                 account.updatePosition(tx.execution().asset(), result.newPosition());
-                account.withdraw(tx.cashDelta().abs(), "REPLAY BUY", true);
+                account.withdraw(totalCostIncludingFees, "REPLAY BUY", true);
             }
             case SELL -> {
                 Position current = account.getPosition(tx.execution().asset())
@@ -400,7 +388,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                         tx.occurredAt().timestamp());
 
                 account.updatePosition(tx.execution().asset(), result.newPosition());
-                account.deposit(tx.cashDelta(), "REPLAY SELL " + tx.execution().asset().value());
+                account.deposit(proceeds, "REPLAY SELL " + tx.execution().asset().value());
 
                 if (result instanceof ApplyResult.Sale<?> sale) {
                     account.recordRealizedGain(
@@ -411,11 +399,14 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 }
             }
             case SPLIT -> {
-                Position current = account.getPosition(tx.execution().asset())
-                        .orElseThrow(() -> new IllegalStateException(
-                                "No position for " + tx.execution().asset().value() + " during full replay"));
-                ApplyResult<? extends Position> result = current.split(tx.split().ratio());
-                account.updatePosition(tx.execution().asset(), result.newPosition());
+                account.getPosition(tx.execution().asset()).ifPresentOrElse(
+                        position -> {
+                            ApplyResult<? extends Position> result = position.split(tx.split().ratio());
+                            account.updatePosition(tx.execution().asset(), result.newPosition());
+                        },
+                        () -> log.warn("Full Replay: Received SPLIT for {} but no active position found. Skipping.",
+                                tx.execution().asset().value())
+                );
             }
             case DIVIDEND_REINVEST -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
