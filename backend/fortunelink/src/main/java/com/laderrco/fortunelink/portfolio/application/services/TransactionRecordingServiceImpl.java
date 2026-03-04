@@ -18,8 +18,6 @@ import com.laderrco.fortunelink.portfolio.domain.utils.TaxMethodResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import static com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType.BUY;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -40,7 +38,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price,
-            List<Fee> fees, String notes, Instant date) {
+                                 List<Fee> fees, String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -77,7 +75,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, List<Fee> fees,
-            String notes, Instant date) {
+                                  String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -236,7 +234,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
      */
     @Override
     public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price,
-            String notes, Instant date) {
+                                                  String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -305,6 +303,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             }
             case SELL -> {
                 Position position = account.getPosition(tx.execution().asset())
+
                         .orElseThrow(() -> new IllegalStateException(
                                 "No position for " + tx.execution().asset().value() + " during position replay. " +
                                         "BUY must precede SELL in replay order."));
@@ -328,10 +327,22 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
             }
             case SPLIT -> {
-                account.getPosition(tx.execution().asset()).ifPresent(position -> {
-                    ApplyResult<? extends Position> result = position.split(tx.split().ratio());
-                    account.updatePosition(tx.execution().asset(), result.newPosition());
-                });
+                // todo might consider using orElseGet return Position.empty()
+                // as if a user sells the entire pos and then a split is processed, returns
+                // account.getPosition(tx.execution().asset()).ifPresent(position -> {
+                // ApplyResult<? extends Position> result = position.split(tx.split().ratio());
+                // account.updatePosition(tx.execution().asset(), result.newPosition());
+                // });
+                // issue with the split, without prior BUY in replay, data integrity error
+                // the FIX:, NOTE i don't know if this is right, fullReplay does the same thing
+                // but,are we sure that we are in a clear? what if we do a 'back to back split'?
+                // or a buy, split, buy, split?
+                Position position = account.getPosition(tx.execution().asset())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No position for " + tx.execution().asset().value()
+                                        + " during position replay. BUY must precede SPLIT in replay order."));
+                ApplyResult<? extends Position> result = position.split(tx.split().ratio());
+                account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             case DIVIDEND_REINVEST -> {
                 // No cash movement, just increase position at cost of grossValue
@@ -382,12 +393,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                                 () -> new IllegalStateException(String.format("No position for %s during full replay",
                                         tx.execution().asset().value())));
 
-                // CRA: same as replayTransaction — net proceeds (cashDelta), not grossValue.
-                // grossValue was the bug: it overstated proceeds by the sell commission amount.
-                // The separate FEE transaction in the log handles fee cash movement.
+                Money proceeds = taxResolver.sellerProceeds(tx);
                 ApplyResult<? extends Position> result = current.sell(
                         tx.execution().quantity(),
-                        tx.cashDelta(),
+                        proceeds,
                         tx.occurredAt().timestamp());
 
                 account.updatePosition(tx.execution().asset(), result.newPosition());
@@ -416,10 +425,14 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
             // Cash-only types (DEPOSIT, FEE, etc.) correctly move cash already
-            case DEPOSIT, INTEREST, TRANSFER_IN ->
-                account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
+            case DEPOSIT, INTEREST, TRANSFER_IN, DIVIDEND ->
+                    account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
             case WITHDRAWAL, FEE, TRANSFER_OUT ->
-                account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
+                    account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
+            case RETURN_OF_CAPITAL, OTHER, REINVESTED_CAPITAL_GAIN -> {
+                // CashImpact.NONE and affectsHolding=false -> no-op during full replay, intentional
+                // These are info/tax records only; no pos or cash state to reconstruct
+            }
 
             default -> throw new IllegalStateException(
                     "Unhandled transaction type in replayFullTransaction: " + tx.transactionType()
@@ -428,7 +441,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     private void validateInputs(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes,
-            Instant date) {
+                                Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");
