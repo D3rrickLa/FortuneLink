@@ -205,7 +205,7 @@ public class TransactionService {
         Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
         transactionRepository.save(excluded);
 
-        // Fix #2: only publish recalculation for position-affecting transactions.
+        // Only publish recalculation for position-affecting transactions.
         // Non-trade transactions (DEPOSIT, FEE, DIVIDEND, etc.) have null execution.
         // Calling existing.execution().asset() on those would throw NPE.
         // Recalculation is also meaningless for cash-only transactions since
@@ -239,8 +239,6 @@ public class TransactionService {
         Transaction restored = existing.restore();
         transactionRepository.save(restored);
 
-        // Fix #2: same guard as excludeTransaction — only recalculate for
-        // position-affecting transactions with valid execution.
         if (existing.transactionType().affectsHoldings() && existing.execution() != null) {
             eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
                     command.portfolioId(),

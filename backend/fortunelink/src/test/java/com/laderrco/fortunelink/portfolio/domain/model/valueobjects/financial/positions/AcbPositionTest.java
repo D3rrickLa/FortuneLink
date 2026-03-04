@@ -14,6 +14,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.shared.enums.Precision;
 
@@ -111,7 +112,8 @@ class AcbPositionTest {
                     new Money(new BigDecimal("100.00"), USD),
                     Instant.now());
 
-            var result = position.split(2.0);
+            Ratio ratio = new Ratio(2, 1);
+            var result = position.split(ratio);
             AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
 
             assertEquals(new BigDecimal("20.00000000"), updated.totalQuantity().amount());
@@ -125,8 +127,8 @@ class AcbPositionTest {
         @DisplayName("split_failure_negativeOrZeroRatioThrowsException")
         void split_failure_invalidRatio() {
             AcbPosition position = AcbPosition.empty(SYMBOL, TYPE, USD);
-            assertThrows(IllegalArgumentException.class, () -> position.split(0));
-            assertThrows(IllegalArgumentException.class, () -> position.split(-1.5));
+            assertThrows(IllegalArgumentException.class, () -> position.split(new Ratio(-1, 1)));
+            assertThrows(IllegalArgumentException.class, () -> position.split(new Ratio(2, -1)));
         }
     }
 

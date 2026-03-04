@@ -15,5 +15,8 @@
                 "java.base/java.util=ALL-UNNAMED"
             ]
         }
-    ]
+    ],
+    "[java]": {
+        "editor.tabSize": 4
+    }
 }

@@ -34,31 +34,34 @@ public record AcbPosition(
     }
 
     @Override
-    public ApplyResult<? extends Position> buy(Quantity quantity, Money totalCost, Instant at) {
+    public ApplyResult.Purchase<AcbPosition> buy(Quantity quantity, Money totalCost, Instant at) {
         Instant newAcquiredDate = (this.totalQuantity.isZero()) ? at : this.firstAcquiredAt;
         AcbPosition updated = new AcbPosition(
                 symbol,
                 type,
                 accountCurrency,
                 totalQuantity.add(quantity), // accumulate quantity
-                totalCostBasis.add(totalCost),
-                newAcquiredDate); // accumulate cost basis
+                totalCostBasis.add(totalCost), // net price + commission
+                newAcquiredDate);
 
         return new ApplyResult.Purchase<>(updated);
     }
 
     @Override
-    public ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at) {
+    public ApplyResult.Sale<AcbPosition> sell(Quantity quantity, Money proceeds, Instant at) {
         if (hasInSufficientQuantity(quantity)) {
             throw new IllegalStateException("Insufficient quantity");
         }
-//        Money acbPerUnit = totalCostBasis.divide(totalQuantity.amount());
-//        Money costBasisSold = acbPerUnit.multiply(quantity.amount());
-//        Money realizedGain = proceeds.subtract(costBasisSold);
 
-        // calculate the portion of hte cost basis being removed
         BigDecimal ratio = quantity.amount().divide(totalQuantity.amount(), MathContext.DECIMAL128);
-        Money costBasisSold = totalCostBasis.multiply(ratio);
+
+        // handles ghoest rounding
+        boolean isFullLiquidation = quantity.equals(totalQuantity);
+        Money costBasisSold = isFullLiquidation
+                ? totalCostBasis
+                : totalCostBasis.multiply(ratio);
+
+        Money newCostBasis = isFullLiquidation ? Money.ZERO(accountCurrency) : totalCostBasis.subtract(costBasisSold);
         Money realizedGain = proceeds.subtract(costBasisSold);
 
         AcbPosition updated = new AcbPosition(
@@ -66,14 +69,14 @@ public record AcbPosition(
                 type,
                 accountCurrency,
                 totalQuantity.subtract(quantity),
-                totalCostBasis.subtract(costBasisSold),
+                newCostBasis,
                 firstAcquiredAt);
 
         return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
 
     }
 
-    public ApplyResult<? extends Position> split(Ratio ratio) {
+    public ApplyResult.Adjustment<AcbPosition> split(Ratio ratio) {
         // Use the Ratio to calculate the new quantity precisely
         Quantity newQuantity = this.totalQuantity
                 .multiply(BigDecimal.valueOf(ratio.numerator()))
@@ -85,8 +88,7 @@ public record AcbPosition(
                 accountCurrency,
                 newQuantity,
                 totalCostBasis, // Cost basis doesn't change in a split
-                firstAcquiredAt
-        );
+                firstAcquiredAt);
         return new ApplyResult.Adjustment<>(updated);
     }
 

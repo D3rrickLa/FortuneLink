@@ -155,7 +155,8 @@ class FifoPositionTest {
                     .buy(new Quantity(BigDecimal.valueOf(10)), Money.of(100, "USD"), EARLIER).newPosition()
                     .buy(new Quantity(BigDecimal.valueOf(20)), Money.of(400, "USD"), LATER).newPosition();
 
-            var result = pos.split(2.0);
+            Ratio ratio = new Ratio(2, 1);
+            var result = pos.split(ratio);
 
             assertEquals(new BigDecimal("60.00000000"), result.newPosition().totalQuantity().amount());
             assertEquals(new BigDecimal("500.0000000000000000000000000000000000"),
@@ -166,7 +167,7 @@ class FifoPositionTest {
         @DisplayName("split_failure_invalidRatio")
         void split_failure_zero() {
             FifoPosition pos = FifoPosition.empty(SYMBOL, TYPE, USD);
-            assertThrows(IllegalArgumentException.class, () -> pos.split(0));
+            assertThrows(IllegalArgumentException.class, () -> pos.split(new Ratio(-1, 0)));
         }
     }
 
@@ -201,9 +202,9 @@ class FifoPositionTest {
         @DisplayName("costPerUnit_success_returnsZeroWhenEmpty")
         void costPerUnit_branch_empty() {
             FifoPosition emptyPos = FifoPosition.empty(SYMBOL, TYPE, USD);
-            
+
             Money result = emptyPos.costPerUnit();
-            
+
             assertTrue(result.isZero());
             assertEquals(USD, result.currency());
         }

@@ -36,7 +36,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     private final TaxMethodResolver taxResolver;
 
     @Override
-    public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
+    public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price,
+            List<Fee> fees, String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -72,7 +73,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     @Override
-    public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
+    public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, List<Fee> fees,
+            String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -230,7 +232,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
      * - Increases position using the dividend proceeds
      */
     @Override
-    public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes, Instant date) {
+    public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price,
+            String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -286,7 +289,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
 
-                // made this agnostic - doesn't matter if cra or irs, should be right no matter what
+                // made this agnostic - doesn't matter if cra or irs, should be right no matter
+                // what
                 Money totalCostIncludingFees = taxResolver.buyerCost(tx);
 
                 ApplyResult<? extends Position> result = current.buy(
@@ -312,8 +316,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                                 tx.execution().asset(),
                                 sale.realizedGainLoss(),
                                 sale.costBasisSold(),
-                                tx.occurredAt().timestamp()
-                        );
+                                tx.occurredAt().timestamp());
                     }
                 });
             }
@@ -368,8 +371,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             }
             case SELL -> {
                 Position current = account.getPosition(tx.execution().asset())
-                        .orElseThrow(() ->
-                                new IllegalStateException(String.format("No position for %s during full replay",
+                        .orElseThrow(
+                                () -> new IllegalStateException(String.format("No position for %s during full replay",
                                         tx.execution().asset().value())));
 
                 // CRA: same as replayTransaction — net proceeds (cashDelta), not grossValue.
@@ -388,14 +391,13 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                             tx.execution().asset(),
                             sale.realizedGainLoss(),
                             sale.costBasisSold(),
-                            tx.occurredAt().timestamp()
-                    );
+                            tx.occurredAt().timestamp());
                 }
             }
             case SPLIT -> {
                 Position current = account.getPosition(tx.execution().asset())
-                        .orElseThrow(() ->
-                                new IllegalStateException("No position for " + tx.execution().asset().value() + " during full replay"));
+                        .orElseThrow(() -> new IllegalStateException(
+                                "No position for " + tx.execution().asset().value() + " during full replay"));
                 ApplyResult<? extends Position> result = current.split(tx.split().ratio());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
             }
@@ -408,9 +410,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             }
             // Cash-only types (DEPOSIT, FEE, etc.) correctly move cash already
             case DEPOSIT, INTEREST, TRANSFER_IN ->
-                    account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
+                account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
             case WITHDRAWAL, FEE, TRANSFER_OUT ->
-                    account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
+                account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
 
             default -> throw new IllegalStateException(
                     "Unhandled transaction type in replayFullTransaction: " + tx.transactionType()
@@ -418,7 +420,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         }
     }
 
-    private void validateInputs(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes, Instant date) {
+    private void validateInputs(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes,
+            Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");

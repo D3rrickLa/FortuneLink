@@ -138,7 +138,8 @@ class TaxLotTest {
         void split_success_AdjustsQuantityOnly() {
             TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
             // 2-for-1 split (ratio 2.0)
-            TaxLot splitLot = lot.split(2.0);
+            Ratio ratio = new Ratio(2, 1);
+            TaxLot splitLot = lot.split(ratio);
 
             assertThat(splitLot.quantity().amount()).isEqualByComparingTo("20.00");
             assertThat(splitLot.costBasis()).isEqualTo(THOUSAND_USD); // Cost basis stays same in a split

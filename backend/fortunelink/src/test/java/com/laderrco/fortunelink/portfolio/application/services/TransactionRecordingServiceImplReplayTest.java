@@ -8,6 +8,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+import com.laderrco.fortunelink.portfolio.domain.services.CraMethodResolver;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-
 /**
  * Tests the replay service layer - not Position in isolation.
  * <p>
@@ -39,8 +39,8 @@ import static org.mockito.Mockito.when;
  * - transactionType
  * - execution.asset (AssetSymbol)
  * - execution.quantity
- * - execution.grossValue  (qty × price, no commission)
- * - cashDelta             (net cash movement including commission)
+ * - execution.grossValue (qty × price, no commission)
+ * - cashDelta (net cash movement including commission)
  * - occurredAt.timestamp
  * - metadata.assetType
  * <p>
@@ -54,12 +54,12 @@ public class TransactionRecordingServiceImplReplayTest {
     private static final Instant BUY_DATE = Instant.parse("2024-01-15T14:30:00Z");
     private static final Instant SELL_DATE = Instant.parse("2024-03-20T14:30:00Z");
     private static final Instant SELL2_DATE = Instant.parse("2024-06-10T14:30:00Z");
-    private TransactionRecordingServiceImpl service;
+    private final TransactionRecordingServiceImpl service = new TransactionRecordingServiceImpl(
+            new CraMethodResolver());
     private Account account;
 
     @BeforeEach
     void setUp() {
-        service = new TransactionRecordingServiceImpl();
         account = new Account(
                 new AccountId(UUID.randomUUID()),
                 "Test TFSA",
@@ -91,15 +91,15 @@ public class TransactionRecordingServiceImplReplayTest {
     // Helpers
     //
     // cashDelta is DERIVED here using the same formula as validateTradeConsistency:
-    //   BUY  -> -(grossValue + fee)
-    //   SELL ->   grossValue - fee
+    // BUY -> -(grossValue + fee)
+    // SELL -> grossValue - fee
     //
     // Do NOT pass cashDelta as a raw string independently — Transaction will
     // reject it with a mismatch error if it doesn't match what it derives.
     //
     // Parameters:
-    //   pricePerUnit : price per single share (NOT grossValue)
-    //   commission   : positive fee amount in CAD
+    // pricePerUnit : price per single share (NOT grossValue)
+    // commission : positive fee amount in CAD
     // -------------------------------------------------------------------------
 
     private Transaction buildSellTx(String quantity, String pricePerUnit, String commission, Instant at) {
@@ -129,8 +129,8 @@ public class TransactionRecordingServiceImplReplayTest {
         return new Fee(
                 FeeType.COMMISSION,
                 Money.of(amount, CAD),
-                null,   // accountAmount — null: same currency, no conversion
-                null,   // exchangeRate  — null: same currency
+                null, // accountAmount — null: same currency, no conversion
+                null, // exchangeRate — null: same currency
                 at,
                 new Fee.FeeMetadata(null));
     }
@@ -143,15 +143,15 @@ public class TransactionRecordingServiceImplReplayTest {
         @DisplayName("SELL: realized gain is captured on account after replay")
         void sell_realized_gain_is_captured_on_account() {
             // BUY 100 @ $100.00 + $9.99 commission
-            //   cashDelta = -(100 x 100.00 + 9.99) = -10009.99
-            //   CRA ACB   = $10,009.99 (commission included)
+            // cashDelta = -(100 x 100.00 + 9.99) = -10009.99
+            // CRA ACB = $10,009.99 (commission included)
             service.replayTransaction(account, buildBuyTx("100", "100.00", "9.99", BUY_DATE));
 
             // SELL 40 @ $120.00 - $9.99 commission
-            //   cashDelta = (40 x 120.00) - 9.99 = +4790.01  net proceeds
-            //   ACB/unit  = 10009.99 / 100 = 100.0999
-            //   ACB sold  = 40 x 100.0999  = 4003.996
-            //   Gain      = 4790.01 - 4003.996 = 786.014
+            // cashDelta = (40 x 120.00) - 9.99 = +4790.01 net proceeds
+            // ACB/unit = 10009.99 / 100 = 100.0999
+            // ACB sold = 40 x 100.0999 = 4003.996
+            // Gain = 4790.01 - 4003.996 = 786.014
             service.replayTransaction(account, buildSellTx("40", "120.00", "9.99", SELL_DATE));
 
             List<RealizedGainRecord> gains = account.getRealizedGains();
@@ -159,7 +159,8 @@ public class TransactionRecordingServiceImplReplayTest {
             assertThat(gains.get(0).symbol()).isEqualTo(VFV);
             assertThat(gains.get(0).realizedGainLoss().amount())
                     .as("CRA-correct gain: net proceeds (4790.01) minus ACB sold (4003.996)")
-                    .isEqualByComparingTo(new BigDecimal("786.014").setScale(MONEY_PRECISION, ROUNDING_MODE));
+                    .isEqualByComparingTo(new BigDecimal("786.014").setScale(MONEY_PRECISION,
+                            ROUNDING_MODE));
         }
 
         @Test
@@ -178,7 +179,8 @@ public class TransactionRecordingServiceImplReplayTest {
 
             assertThat(grossValueBasedGain.subtract(actualGain))
                     .as("Overstatement equals exactly the sell commission")
-                    .isEqualByComparingTo(new BigDecimal("9.99").setScale(MONEY_PRECISION, ROUNDING_MODE));
+                    .isEqualByComparingTo(new BigDecimal("9.99").setScale(MONEY_PRECISION,
+                            ROUNDING_MODE));
         }
 
         @Test
@@ -188,19 +190,20 @@ public class TransactionRecordingServiceImplReplayTest {
             service.replayTransaction(account, buildBuyTx("100", "100.00", "9.99", BUY_DATE));
 
             // SELL 40 @ $120.00 - $9.99 -> cashDelta = $4,790.01
-            //   Gain = 4790.01 - (40 x 100.0999) = 4790.01 - 4003.996 = 786.014
+            // Gain = 4790.01 - (40 x 100.0999) = 4790.01 - 4003.996 = 786.014
             service.replayTransaction(account, buildSellTx("40", "120.00", "9.99", SELL_DATE));
 
             // SELL 30 @ $130.00 - $9.99 -> cashDelta = $3,890.01
-            //   ACB/unit still $100.0999 (never changes on a sell in ACB method)
-            //   Gain = 3890.01 - (30 x 100.0999) = 3890.01 - 3002.997 = 887.013
+            // ACB/unit still $100.0999 (never changes on a sell in ACB method)
+            // Gain = 3890.01 - (30 x 100.0999) = 3890.01 - 3002.997 = 887.013
             service.replayTransaction(account, buildSellTx("30", "130.00", "9.99", SELL2_DATE));
 
             assertThat(account.getRealizedGains()).hasSize(2);
 
             // 786.014 + 887.013 = 1673.027
             assertThat(account.getTotalRealizedGainLoss().amount())
-                    .isEqualByComparingTo(new BigDecimal("1673.027").setScale(MONEY_PRECISION, ROUNDING_MODE));
+                    .isEqualByComparingTo(new BigDecimal("1673.027").setScale(MONEY_PRECISION,
+                            ROUNDING_MODE));
         }
 
         @Test
@@ -244,7 +247,8 @@ public class TransactionRecordingServiceImplReplayTest {
             // Remaining ACB = 10009.99 - (40 x 100.0999) = 10009.99 - 4003.996 = 6005.994
             assertThat(remaining.totalCostBasis().amount())
                     .as("Remaining ACB = original minus ACB of sold shares")
-                    .isEqualByComparingTo(new BigDecimal("6005.994").setScale(MONEY_PRECISION, ROUNDING_MODE));
+                    .isEqualByComparingTo(new BigDecimal("6005.994").setScale(MONEY_PRECISION,
+                            ROUNDING_MODE));
         }
 
         @Test
@@ -258,7 +262,8 @@ public class TransactionRecordingServiceImplReplayTest {
             // ACB of 40 = 40 x (10009.99 / 100) = 4003.996
             assertThat(gain.costBasisSold().amount())
                     .as("Cost basis sold must reflect ACB of the 40 shares disposed")
-                    .isEqualByComparingTo(new BigDecimal("4003.996").setScale(MONEY_PRECISION, ROUNDING_MODE));
+                    .isEqualByComparingTo(new BigDecimal("4003.996").setScale(MONEY_PRECISION,
+                            ROUNDING_MODE));
         }
 
         @Test
@@ -269,8 +274,7 @@ public class TransactionRecordingServiceImplReplayTest {
             service.recordBuy(account, VFV, ETF, Quantity.of(100),
                     new Price(Money.of(100.00, "CAD")),
                     List.of(
-                            Fee.of(FeeType.COMMISSION, Money.of(9.99, "CAD"), BUY_DATE)
-                    ),
+                            Fee.of(FeeType.COMMISSION, Money.of(9.99, "CAD"), BUY_DATE)),
                     "initial", BUY_DATE);
 
             Money costAfterRecord = account.getPosition(VFV).orElseThrow().totalCostBasis();
@@ -287,7 +291,8 @@ public class TransactionRecordingServiceImplReplayTest {
             when(tx.isExcluded()).thenReturn(false);
             when(tx.transactionType()).thenReturn(TransactionType.BUY);
             when(tx.execution()).thenReturn(
-                    new Transaction.TradeExecution(VFV, Quantity.of(quantity), new Price(Money.of(unitPrice, "CAD"))));
+                    new Transaction.TradeExecution(VFV, Quantity.of(quantity),
+                            new Price(Money.of(unitPrice, "CAD"))));
             when(tx.occurredAt()).thenReturn(TransactionDate.of(BUY_DATE));
             when(tx.cashDelta()).thenReturn(Money.of(-totalImpact, "CAD"));
 

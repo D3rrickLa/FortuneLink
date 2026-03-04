@@ -11,7 +11,6 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
         return newPosition();
     }
 
-
     record Purchase<P extends Position>(P newPosition) implements ApplyResult<P> {
     }
 
