@@ -1,9 +1,9 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import java.math.BigDecimal;
-
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
+
+import java.math.BigDecimal;
 
 public record Ratio(int numerator, int denominator) {
     // Example: 3-for-1 is (3, 1)
@@ -11,7 +11,8 @@ public record Ratio(int numerator, int denominator) {
 
     public BigDecimal multiplier() {
         return BigDecimal.valueOf(numerator)
-                .divide(BigDecimal.valueOf(denominator), Precision.DIVISION.getDecimalPlaces(),
+                .divide(BigDecimal.valueOf(denominator),
+                        Precision.DIVISION.getDecimalPlaces(),
                         Rounding.DIVISION.getMode());
     }
 }

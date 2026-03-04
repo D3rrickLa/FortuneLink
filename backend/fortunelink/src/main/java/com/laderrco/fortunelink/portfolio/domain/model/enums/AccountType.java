@@ -16,6 +16,10 @@ public enum AccountType {
     SAVINGS,
     MARGIN,
     REGISTERED_INVESTMENT,
-    NON_REGISTERED_INVESTMENT,
-    NON_REGISTERED
+    NON_REGISTERED_INVESTMENT;
+
+    public boolean requriesCaptialGainsTracking() {
+        // some account don't need to be tracked
+        return this == NON_REGISTERED_INVESTMENT;
+    }
 }

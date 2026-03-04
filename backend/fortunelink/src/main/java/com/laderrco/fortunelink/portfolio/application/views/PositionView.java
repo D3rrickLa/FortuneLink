@@ -11,9 +11,9 @@ public record PositionView(
 		String symbol,
 		AssetType assetType,
 		Quantity quantity,
-		Price totalCostBasis, // gross cost, no fees? idk yet
+		Price totalCostBasis, // gross cost, no fees?
 		Price averageCostPerUnit, // totalCostBasis / quantity
-		Price totalFeesIncurred, // cumulative BUY fees — for tax/effective ACB display
+		Price totalFeesForDisplay , // or display only, fees already included in totalCostBasis
 		Price currentPrice,
 		Price marketValue,
 		Price unrealizedPnL, // marketValue - totalCostBasis (gross)

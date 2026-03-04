@@ -11,9 +11,6 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
         return newPosition();
     }
 
-    // ─────────────────────────────
-    // Nested permitted subtypes
-    // ─────────────────────────────
 
     record Purchase<P extends Position>(P newPosition) implements ApplyResult<P> {
     }
@@ -22,6 +19,10 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
             implements ApplyResult<P> {
     }
 
+    record Adjustment<P extends Position>(P newPosition) implements ApplyResult<P> {
+    }
+
     record NoChange<P extends Position>(P newPosition) implements ApplyResult<P> {
     }
+
 }

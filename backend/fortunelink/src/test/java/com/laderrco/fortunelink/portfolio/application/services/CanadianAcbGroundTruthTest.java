@@ -91,7 +91,7 @@ public class CanadianAcbGroundTruthTest {
         Account account = new Account(
                 AccountId.newId(),
                 "test-account",
-                AccountType.NON_REGISTERED,
+                AccountType.NON_REGISTERED_INVESTMENT,
                 CAD,
                 PositionStrategy.ACB);
 

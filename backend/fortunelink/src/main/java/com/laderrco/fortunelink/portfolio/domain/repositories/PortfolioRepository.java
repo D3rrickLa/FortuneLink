@@ -13,6 +13,11 @@ public interface PortfolioRepository {
 
     Optional<Portfolio> findById(PortfolioId id);
 
+    /**
+     * Returns the single portfolio for a given user.
+     * DESIGN CONSTRAINT: FortuneLink currently supports exactly one portfolio per user.
+     * If multi-portfolio support is added, this method signature must change to List<Portfolio>.
+     */
     Optional<Portfolio> findByUserId(UserId userId);
 
     /**

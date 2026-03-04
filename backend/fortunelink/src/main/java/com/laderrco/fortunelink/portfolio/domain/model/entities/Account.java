@@ -170,6 +170,16 @@ public class Account {
         touch();
     }
 
+    public void clearRealizedGains(AssetSymbol symbol) {
+        notNull(symbol, "symbol");
+        this.realizedGains.removeIf(gain -> gain.symbol().equals(symbol));
+    }
+
+    public void clearAllRealizedGains() {
+        this.realizedGains = new ArrayList<>();
+        touch();
+    }
+
     // dividend reinvestment + buy + sell
     public void updatePosition(AssetSymbol symbol, Position newPosition) {
         requireActive();

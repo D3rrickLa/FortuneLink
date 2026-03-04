@@ -4,6 +4,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 import java.math.BigDecimal;
@@ -12,8 +13,13 @@ import java.time.Instant;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
-public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-        Quantity totalQuantity, Money totalCostBasis) implements Position {
+public record AcbPosition(
+        AssetSymbol symbol,
+        AssetType type,
+        Currency accountCurrency,
+        Quantity totalQuantity,
+        Money totalCostBasis,
+        Instant firstAcquiredAt) implements Position {
 
     public AcbPosition {
         notNull(symbol, "AssetSymbol");
@@ -24,17 +30,19 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
     }
 
     public static AcbPosition empty(AssetSymbol symbol, AssetType type, Currency currency) {
-        return new AcbPosition(symbol, type, currency, Quantity.ZERO, Money.ZERO(currency));
+        return new AcbPosition(symbol, type, currency, Quantity.ZERO, Money.ZERO(currency), null);
     }
 
     @Override
     public ApplyResult<? extends Position> buy(Quantity quantity, Money totalCost, Instant at) {
+        Instant newAcquiredDate = (this.totalQuantity.isZero()) ? at : this.firstAcquiredAt;
         AcbPosition updated = new AcbPosition(
                 symbol,
                 type,
                 accountCurrency,
                 totalQuantity.add(quantity), // accumulate quantity
-                totalCostBasis.add(totalCost)); // accumulate cost basis
+                totalCostBasis.add(totalCost),
+                newAcquiredDate); // accumulate cost basis
 
         return new ApplyResult.Purchase<>(updated);
     }
@@ -58,27 +66,28 @@ public final record AcbPosition(AssetSymbol symbol, AssetType type, Currency acc
                 type,
                 accountCurrency,
                 totalQuantity.subtract(quantity),
-                totalCostBasis.subtract(costBasisSold));
+                totalCostBasis.subtract(costBasisSold),
+                firstAcquiredAt);
 
         return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
 
     }
 
-    @Override
-    public ApplyResult<? extends Position> split(double ratio) {
-        if (ratio <= 0) {
-            throw new IllegalArgumentException("Split ratio must be positive");
-        }
+    public ApplyResult<? extends Position> split(Ratio ratio) {
+        // Use the Ratio to calculate the new quantity precisely
+        Quantity newQuantity = this.totalQuantity
+                .multiply(BigDecimal.valueOf(ratio.numerator()))
+                .divide(BigDecimal.valueOf(ratio.denominator()));
 
         AcbPosition updated = new AcbPosition(
                 symbol,
                 type,
                 accountCurrency,
-                totalQuantity.multiply(BigDecimal.valueOf(ratio)),
-                totalCostBasis // unchanged
+                newQuantity,
+                totalCostBasis, // Cost basis doesn't change in a split
+                firstAcquiredAt
         );
-
-        return new ApplyResult.NoChange<>(updated);
+        return new ApplyResult.Adjustment<>(updated);
     }
 
     @Override

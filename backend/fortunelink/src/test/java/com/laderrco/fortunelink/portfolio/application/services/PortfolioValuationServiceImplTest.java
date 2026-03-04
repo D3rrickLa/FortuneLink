@@ -131,7 +131,8 @@ class PortfolioValuationServiceImplTest {
             Account account = new Account(AccountId.newId(), "Mixed", AccountType.TFSA, USD, PositionStrategy.ACB);
 
             AssetSymbol msft = new AssetSymbol("MSFT");
-            Position acbPos = new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD"));
+            Position acbPos = new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10),
+                    Money.of(1000, "USD"), Instant.now());
 
             AssetSymbol aapl = new AssetSymbol("AAPL");
             Position fifoPos = new FifoPosition(aapl, AssetType.STOCK, USD, List.of(
@@ -162,10 +163,12 @@ class PortfolioValuationServiceImplTest {
 
             // Stock position
             account.updatePosition(stockSym,
-                    new AcbPosition(stockSym, AssetType.STOCK, USD, Quantity.of(1), Money.of(100, "USD")));
+                    new AcbPosition(stockSym, AssetType.STOCK, USD, Quantity.of(1),
+                            Money.of(100, "USD"), Instant.now()));
             // Cash position (e.g., a Money Market Fund tagged as CASH type)
             account.updatePosition(cashSym,
-                    new AcbPosition(cashSym, AssetType.CASH, USD, Quantity.of(100), Money.of(100, "USD")));
+                    new AcbPosition(cashSym, AssetType.CASH, USD, Quantity.of(100),
+                            Money.of(100, "USD"), Instant.now()));
 
             Map<AssetSymbol, MarketAssetQuote> cache = Map.of(
                     stockSym, createQuote(stockSym, 120.0),
@@ -185,7 +188,8 @@ class PortfolioValuationServiceImplTest {
 
             // Cost basis is $1000
             account.updatePosition(msft,
-                    new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD")));
+                    new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10),
+                            Money.of(1000, "USD"), Instant.now()));
 
             // Act: Empty cache
             Money result = valuationService.calculatePositionsValue(account, Map.of());
@@ -200,7 +204,8 @@ class PortfolioValuationServiceImplTest {
             Account account = new Account(AccountId.newId(), "ZeroPrice", AccountType.NON_REGISTERED_INVESTMENT, USD,
                     PositionStrategy.ACB);
             account.updatePosition(msft,
-                    new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD")));
+                    new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10),
+                            Money.of(1000, "USD"), Instant.now()));
 
             // Quote exists but price is zero
             Map<AssetSymbol, MarketAssetQuote> cache = Map.of(msft, createQuote(msft, 0.0));
@@ -238,7 +243,8 @@ class PortfolioValuationServiceImplTest {
                 AssetType.STOCK,
                 USD,
                 Quantity.of(qty),
-                Money.of(totalCost, "USD"));
+                Money.of(totalCost, "USD"),
+                Instant.now());
     }
 
     private Account createAccount(Currency currency, double cash, List<Position> positions) {

@@ -76,6 +76,7 @@ public class PositionRecalculationService {
                 .toList();
 
         account.clearPosition(symbol); // reset to zero
+        account.clearRealizedGains(symbol);
 
         active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
 
@@ -102,6 +103,7 @@ public class PositionRecalculationService {
         // Order matters: clear all positions first, then reset cash.
         account.clearAllPositions();
         account.resetCashToZero();
+        account.clearAllRealizedGains();
 
         // Replay using a full-replay path, not replayTransaction (position-only).
         allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));

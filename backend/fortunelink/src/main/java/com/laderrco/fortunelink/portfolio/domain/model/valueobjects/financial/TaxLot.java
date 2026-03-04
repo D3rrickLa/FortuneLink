@@ -1,24 +1,25 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 
-import com.laderrco.fortunelink.shared.enums.Precision;
-import com.laderrco.fortunelink.shared.enums.Rounding;
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 /**
  * Preserves history, i.e.:
  * Lot 1: 10 shares @ $100 (Jan 1)
  * Lot 2: 5 shares @ $120 (Feb 2)
- * 
+ * <p>
  * NOTE ON COSTBASIS: it is the 'pps * units' FOR EACH TRANSACTION
  * so the example above would be $1000 + $600 = $1600 is our cost basis
  * the avg pps is $106.67 or cost basis / # of shares
  */
 public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
+
     private static final int MONEY_PRECISION = Precision.getMoneyPrecision();
     private static final RoundingMode M_ROUNDING_MODE = Rounding.MONEY.getMode();
 
@@ -38,12 +39,12 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
 
     /**
      * Proportion of cost for a partial sale
-     * 
+     * <p>
      * If we had 10 shares for $1000
-     * 
+     * <p>
      * and we sell 4 shares, how much of the OG $1000
      * cost basis should be 'used up/ sold'?
-     * 
+     * <p>
      * ANSWER: 4/10 = 40% and 40% of $1000 = $400. That is what we are doing here
      */
     public Money proportionalCost(Quantity soldQuantity) {
@@ -66,7 +67,7 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
 
     /**
      * Reduce this lot by sold quantity, returns new TaxLot
-     * 
+     * <p>
      * We are returning the aftermath of the 'selling'
      * If we had 10 shares for $1000 and we sell 4 shares, we return :
      * TaxLot(
@@ -96,10 +97,14 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
         return new TaxLot(newQty, newCost, acquiredDate);
     }
 
-    public TaxLot split(double ratio) {
+    public TaxLot split(Ratio ratio) {
+        Quantity newQuantity = this.quantity
+                .multiply(BigDecimal.valueOf(ratio.numerator()))
+                .divide(BigDecimal.valueOf(ratio.denominator()));
+
         return new TaxLot(
-                quantity.multiply(BigDecimal.valueOf(ratio)),
-                costBasis,
+                newQuantity,
+                costBasis, // Total cost basis for the lot remains the same
                 acquiredDate);
     }
 

@@ -1,10 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions;
 
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TaxLot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 import java.time.Instant;
@@ -18,7 +15,11 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
  * NOT wired into any active account creation path as of v8.
  * Do not instantiate except in unit tests.
  */
-public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency, List<TaxLot> lots) implements Position {
+public record FifoPosition(
+        AssetSymbol symbol,
+        AssetType type,
+        Currency accountCurrency,
+        List<TaxLot> lots) implements Position {
 
     public FifoPosition {
         notNull(symbol, "AssetSymbol");
@@ -93,17 +94,12 @@ public final record FifoPosition(AssetSymbol symbol, AssetType type, Currency ac
     }
 
     @Override
-    public ApplyResult<FifoPosition> split(double ratio) {
-        if (ratio <= 0) {
-            throw new IllegalArgumentException("Split ratio must be positive");
-        }
-
+    public ApplyResult<FifoPosition> split(Ratio ratio) {
         List<TaxLot> splitLots = lots.stream()
                 .map(lot -> lot.split(ratio))
                 .toList();
 
-        return new ApplyResult.NoChange<>(
-                new FifoPosition(symbol, type, accountCurrency, splitLots));
+        return new ApplyResult.Adjustment<>(new FifoPosition(symbol, type, accountCurrency, splitLots));
     }
 
     @Override

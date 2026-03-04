@@ -57,7 +57,8 @@ class AcbPositionTest {
             // Setup: 10 units at $100 total cost ($10/unit)
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
-                    new Money(new BigDecimal("100.00"), USD));
+                    new Money(new BigDecimal("100.00"), USD),
+                    Instant.now());
 
             Quantity sellQty = new Quantity(new BigDecimal("5"));
             Money proceeds = new Money(new BigDecimal("80.00"), USD); // Sold for $16/unit
@@ -88,7 +89,8 @@ class AcbPositionTest {
         void sell_failure_insufficientQuantity() {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
-                    new Money(new BigDecimal("100.00000000"), USD));
+                    new Money(new BigDecimal("100.00000000"), USD),
+                    Instant.now());
 
             Quantity sellQty = new Quantity(new BigDecimal("11"));
             Money proceeds = new Money(new BigDecimal("150.00"), USD);
@@ -106,7 +108,8 @@ class AcbPositionTest {
         void split_success_2For1Split() {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
-                    new Money(new BigDecimal("100.00"), USD));
+                    new Money(new BigDecimal("100.00"), USD),
+                    Instant.now());
 
             var result = position.split(2.0);
             AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
@@ -139,7 +142,8 @@ class AcbPositionTest {
 
             AcbPosition populated = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("4")),
-                    new Money(new BigDecimal("100.00"), USD));
+                    new Money(new BigDecimal("100.00"), USD),
+                    Instant.now());
             assertEquals(new BigDecimal("25.0000000000000000000000000000000000"), populated.costPerUnit().amount());
         }
 
@@ -148,7 +152,8 @@ class AcbPositionTest {
         void calculateUnrealizedGain_success() {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
-                    new Money(new BigDecimal("100.00"), USD));
+                    new Money(new BigDecimal("100.00"), USD),
+                    Instant.now());
 
             Money currentPrice = new Money(new BigDecimal("15.00"), USD); // Total value 150
 

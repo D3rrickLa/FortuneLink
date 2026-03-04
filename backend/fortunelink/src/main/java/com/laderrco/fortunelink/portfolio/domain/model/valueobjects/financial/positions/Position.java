@@ -17,15 +17,7 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at);
 
-    // New, safe method
-    default ApplyResult<? extends Position> split(Ratio ratio) {
-        // Default behavior: convert to double so old implementations still work
-        return split((double) ratio.numerator() / ratio.denominator());
-    }
-
-    // Deprecate "dangerous" due to rounding
-    @Deprecated
-    ApplyResult<? extends Position> split(double ratio);
+    ApplyResult<? extends Position> split(Ratio ratio);
 
     AssetSymbol symbol();
 
@@ -44,9 +36,9 @@ public sealed interface Position permits AcbPosition, FifoPosition {
     default Position copy() {
         return switch (this) {
             case AcbPosition acb -> new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(),
-                    acb.totalQuantity(), acb.totalCostBasis());
+                    acb.totalQuantity(), acb.totalCostBasis(), acb.firstAcquiredAt());
             case FifoPosition fifo ->
-                new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(), List.copyOf(fifo.lots()));
+                    new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(), List.copyOf(fifo.lots()));
         };
     }
 
@@ -57,5 +49,4 @@ public sealed interface Position permits AcbPosition, FifoPosition {
     default boolean hasInSufficientQuantity(Quantity required) {
         return totalQuantity().compareTo(required) < 0;
     }
-
 }
