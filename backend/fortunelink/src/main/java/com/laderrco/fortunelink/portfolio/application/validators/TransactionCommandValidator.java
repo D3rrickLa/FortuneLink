@@ -14,6 +14,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInt
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
@@ -42,9 +43,7 @@ public class TransactionCommandValidator {
 
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordSaleCommand command) {
@@ -58,9 +57,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.price().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordDepositCommand command) {
@@ -72,9 +69,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordWithdrawalCommand command) {
@@ -86,9 +81,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordInterestCommand command) {
@@ -102,9 +95,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordDividendCommand command) {
@@ -117,9 +108,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordDividendReinvestmentCommand command) {
@@ -140,9 +129,21 @@ public class TransactionCommandValidator {
 
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(RecordReturnOfCaptialCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        validateCommonIds(command, errors);
+
+        ValidationUtils.validateSymbol(command.assetSymbol(), errors);
+        ValidationUtils.validateAmount(command.distributionPerUnit().amount(), errors);
+        ValidationUtils.validateQuantity(command.heldQuantity(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), errors);
+
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RecordFeeCommand command) {
@@ -154,9 +155,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(RestoreTransactionCommand command) {
@@ -169,9 +168,7 @@ public class TransactionCommandValidator {
             errors.add("TransactionId is required");
         }
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     public ValidationResult validate(ExcludeTransactionCommand command) {
@@ -184,9 +181,7 @@ public class TransactionCommandValidator {
             errors.add("TransactionId is required");
         }
 
-        return errors.isEmpty()
-                ? ValidationResult.success()
-                : ValidationResult.failure(errors);
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
 
     private void validateCommonIds(TransactionCommand command, List<String> errors) {

@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.p
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -18,6 +19,9 @@ public sealed interface Position permits AcbPosition, FifoPosition {
     ApplyResult<? extends Position> sell(Quantity quantity, Money proceeds, Instant at);
 
     ApplyResult<? extends Position> split(Ratio ratio);
+
+    ApplyResult<? extends Position> applyReturnOfCaptial(Price distributionPerUnit,
+            Quantity heldQuantity);
 
     AssetSymbol symbol();
 
@@ -37,8 +41,8 @@ public sealed interface Position permits AcbPosition, FifoPosition {
         return switch (this) {
             case AcbPosition acb -> new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(),
                     acb.totalQuantity(), acb.totalCostBasis(), acb.firstAcquiredAt());
-            case FifoPosition fifo ->
-                    new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(), List.copyOf(fifo.lots()));
+            case FifoPosition fifo -> new FifoPosition(fifo.symbol(), fifo.type(),
+                    fifo.accountCurrency(), List.copyOf(fifo.lots()));
         };
     }
 

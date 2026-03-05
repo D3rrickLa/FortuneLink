@@ -36,143 +36,141 @@ import java.util.function.Function;
 @Transactional
 @RequiredArgsConstructor
 public class PortfolioLifecycleService {
-    private final PortfolioRepository portfolioRepository;
-    private final PortfolioViewMapper portfolioViewMapper;
+  private static final int MAX_PORTFOLIOS_PER_USER = 1;
+  private static final String DEFAULT_NAME = "Default Account";
 
-    private final MarketDataService marketDataService;
-    private final PortfolioValuationService portfolioValuationService;
+  private final PortfolioRepository portfolioRepository;
+  private final PortfolioViewMapper portfolioViewMapper;
 
-    private final PortfolioLifecycleCommandValidator validator;
-    private final AccountViewBuilder accountViewBuilder;
+  private final MarketDataService marketDataService;
+  private final PortfolioValuationService portfolioValuationService;
 
-    private static final int MAX_PORTFOLIOS_PER_USER = 1; // MVP constraint
-    private static final String DEFAULT_NAME = "Default Account";
+  private final PortfolioLifecycleCommandValidator validator;
+  private final AccountViewBuilder accountViewBuilder;
 
-    public PortfolioView createPortfolio(CreatePortfolioCommand command) {
-        validate(command, validator::validate, "createPortfolio");
+  public PortfolioView createPortfolio(CreatePortfolioCommand command) {
+    validate(command, validator::validate, "createPortfolio");
 
-        long currentCount = portfolioRepository.countByUserId(command.userId());
+    long currentCount = portfolioRepository.countByUserId(command.userId());
 
-        if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
-            throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
-        }
-
-        Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
-                command.description(), command.currency());
-
-        if (command.createDefaultAccount()) {
-
-            portfolio.createAccount(
-                    DEFAULT_NAME,
-                    AccountType.NON_REGISTERED_INVESTMENT,
-                    command.currency(),
-                    command.defaultStrategy());
-        }
-
-        Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-        return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
-
+    if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
+      throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
     }
 
-    public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
-        validate(command, validator::validate, "updatePortfolio");
+    Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
+        command.description(), command.currency());
 
-        Portfolio existingPortfolio = getPortfolio(command.portfolioId(), command.userId());
+    if (command.createDefaultAccount()) {
 
-        existingPortfolio.updateDetails(command.name(), command.description());
-        existingPortfolio.updateDisplayCurrency(command.currency());
-
-        Portfolio saved = portfolioRepository.save(existingPortfolio);
-
-        Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(saved);
-        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
-        Money totalValue = portfolioValuationService.calculateTotalValue(saved, saved.getDisplayCurrency(), quoteCache);
-
-        List<AccountView> accountViews = saved.getAccounts().stream()
-                .map(account -> accountViewBuilder.build(account, quoteCache))
-                .toList();
-
-        return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue);
-
+      portfolio.createAccount(DEFAULT_NAME, AccountType.NON_REGISTERED_INVESTMENT,
+          command.currency(), command.defaultStrategy());
     }
 
-    public void deletePortfolio(DeletePortfolioCommand command) {
-        validate(command, validator::validate, "deletePortfolio");
+    Portfolio savedPortfolio = portfolioRepository.save(portfolio);
+    return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
 
-        if (!command.confirmed()) {
-            throw new PortfolioDeletionRequiresConfirmationException();
-        }
+  }
 
-        Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+  public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
+    validate(command, validator::validate, "updatePortfolio");
 
-        if (command.softDelete()) {
-            try {
-                portfolio.markAsDeleted(command.userId());
-                portfolioRepository.save(portfolio);
-            } catch (PortfolioAlreadyDeletedException e) {
-                throw new PortfolioDeletionException("Portfolio already deleted");
-            } catch (PortfolioNotEmptyException e) {
-                throw new PortfolioDeletionException(e.getMessage());
-            }
-            catch (IllegalStateException e) {
-                // Catch-all — something unexpected from markAsDeleted
-                throw new PortfolioDeletionException("Cannot delete portfolio: " + e.getMessage());
-            }
-        } else {
-            // intentionally bypasses the markAsDeleted checks
-            // if a user wants to 'start over' they don't want to close
-            // all the accounts
-            portfolioRepository.delete(command.portfolioId());
-        }
+    Portfolio existingPortfolio = getPortfolio(command.portfolioId(), command.userId());
 
+    existingPortfolio.updateDetails(command.name(), command.description());
+    existingPortfolio.updateDisplayCurrency(command.currency());
+
+    Portfolio saved = portfolioRepository.save(existingPortfolio);
+
+    Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(saved);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
+    Money totalValue = portfolioValuationService.calculateTotalValue(saved,
+        saved.getDisplayCurrency(), quoteCache);
+
+    List<AccountView> accountViews = saved.getAccounts().stream()
+        .map(account -> accountViewBuilder.build(account, quoteCache)).toList();
+
+    return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue);
+
+  }
+
+  public void deletePortfolio(DeletePortfolioCommand command) {
+    validate(command, validator::validate, "deletePortfolio");
+
+    if (!command.confirmed()) {
+      throw new PortfolioDeletionRequiresConfirmationException();
     }
 
-    public AccountView createAccount(CreateAccountCommand command) {
-        validate(command, validator::validate, "createAccount");
+    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
 
-        Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
-
-        Account account = portfolio.createAccount(
-                command.accountName(),
-                command.accountType(),
-                command.baseCurrency(),
-                command.strategy());
-
+    if (command.softDelete()) {
+      try {
+        portfolio.markAsDeleted(command.userId());
         portfolioRepository.save(portfolio);
-
-        return portfolioViewMapper.toNewAccountView(account);
+      } catch (PortfolioAlreadyDeletedException e) {
+        throw new PortfolioDeletionException("Portfolio already deleted");
+      } catch (PortfolioNotEmptyException e) {
+        throw new PortfolioDeletionException(e.getMessage());
+      } catch (IllegalStateException e) {
+        // Catch-all — something unexpected from markAsDeleted
+        throw new PortfolioDeletionException("Cannot delete portfolio: " + e.getMessage());
+      }
+    } else {
+      // intentionally bypasses the markAsDeleted checks
+      // if a user wants to 'start over' they don't want to close
+      // all the accounts
+      portfolioRepository.delete(command.portfolioId());
     }
 
-    public void updateAccount(UpdateAccountCommand command) {
-        validate(command, validator::validate, "updateAccount");
+  }
 
-        Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+  public AccountView createAccount(CreateAccountCommand command) {
+    validate(command, validator::validate, "createAccount");
 
-        portfolio.renameAccount(command.accountId(), command.accountName());
+    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
 
-        portfolioRepository.save(portfolio);
+    Account account = portfolio.createAccount(command.accountName(), command.accountType(),
+        command.baseCurrency(), command.strategy());
+
+    portfolioRepository.save(portfolio);
+
+    return portfolioViewMapper.toNewAccountView(account);
+  }
+
+  public void updateAccount(UpdateAccountCommand command) {
+    validate(command, validator::validate, "updateAccount");
+
+    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+
+    portfolio.renameAccount(command.accountId(), command.accountName());
+
+    portfolioRepository.save(portfolio);
+  }
+
+  // always soft deletes
+  public void deleteAccount(DeleteAccountCommand command) {
+    validate(command, validator::validate, "deleteAccount");
+    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+    try {
+      portfolio.closeAccount(command.accountId());
+
+    } catch (IllegalStateException e) {
+      throw new AccountCannotBeClosedException("Cannot close account: " + e.getMessage());
     }
+    portfolioRepository.save(portfolio);
+  }
 
-    public void deleteAccount(DeleteAccountCommand command) {
-        validate(command, validator::validate, "deleteAccount");
-        // always soft deletes
-        Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+  private Portfolio getPortfolio(PortfolioId portfolioId, UserId userId) {
+    return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+        .orElseThrow(() -> new PortfolioNotFoundException(
+            "Portfolio not found or access denied for ID: " + portfolioId));
+  }
 
-        portfolio.closeAccount(command.accountId());
-        portfolioRepository.save(portfolio);
+  private <T> void validate(T command, Function<T, ValidationResult> validationLogic,
+      String methodName) {
+    ValidationResult result = validationLogic.apply(command);
+    if (!result.isValid()) {
+      String msg = String.format("Invalid %s command", methodName);
+      throw new InvalidCommandException(msg, result.errors());
     }
-
-    private Portfolio getPortfolio(PortfolioId portfolioId, UserId userId) {
-        return portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() ->
-                        new PortfolioNotFoundException("Portfolio not found or access denied for ID: " + portfolioId));
-    }
-
-    private <T> void validate(T command, Function<T, ValidationResult> validationLogic, String methodName) {
-        ValidationResult result = validationLogic.apply(command);
-        if (!result.isValid()) {
-            String msg = String.format("Invalid %s command", methodName);
-            throw new InvalidCommandException(msg, result.errors());
-        }
-    }
+  }
 }

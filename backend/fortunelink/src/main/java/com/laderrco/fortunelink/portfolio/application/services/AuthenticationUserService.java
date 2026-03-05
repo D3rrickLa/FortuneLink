@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Service
 public class AuthenticationUserService {
-    UUID getCurrentUser() {
+    public UUID getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
             // Supabase stores the User UUID in the "sub" claim
@@ -21,7 +21,7 @@ public class AuthenticationUserService {
         throw new AuthenticationException("No authenticated user");
     }
 
-    String getCurrentUserEmail() {
+    public String getCurrentUserEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
             return jwt.getClaim("email");
@@ -29,15 +29,14 @@ public class AuthenticationUserService {
         throw new AuthenticationException("No authenticated user found");
     }
 
-    void verifyUserOwnsPortfolio(UserId userId, Portfolio portfolio) {
+    public void verifyUserOwnsPortfolio(UserId userId, Portfolio portfolio) {
         if (!userId.equals(portfolio.getUserId())) {
             throw new AuthenticationException("No authenticated user found");
         }
     }
 
-    boolean isAuthenticated() {
-        Authentication authentication = SecurityContextHolder.getContext()
-                .getAuthentication();
+    public boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.isAuthenticated();
     }
 }

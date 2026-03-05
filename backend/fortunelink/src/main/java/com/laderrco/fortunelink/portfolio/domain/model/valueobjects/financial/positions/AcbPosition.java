@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.p
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -13,13 +14,8 @@ import java.time.Instant;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
-public record AcbPosition(
-        AssetSymbol symbol,
-        AssetType type,
-        Currency accountCurrency,
-        Quantity totalQuantity,
-        Money totalCostBasis,
-        Instant firstAcquiredAt) implements Position {
+public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
+        Quantity totalQuantity, Money totalCostBasis, Instant firstAcquiredAt) implements Position {
 
     public AcbPosition {
         notNull(symbol, "AssetSymbol");
@@ -36,13 +32,11 @@ public record AcbPosition(
     @Override
     public ApplyResult.Purchase<AcbPosition> buy(Quantity quantity, Money totalCost, Instant at) {
         Instant newAcquiredDate = (this.totalQuantity.isZero()) ? at : this.firstAcquiredAt;
-        AcbPosition updated = new AcbPosition(
-                symbol,
-                type,
-                accountCurrency,
-                totalQuantity.add(quantity), // accumulate quantity
-                totalCostBasis.add(totalCost), // net price + commission
-                newAcquiredDate);
+
+        // totalQuantity.add() -> accumulate quantity
+        // totalCostBasis.add() -> net price + commission
+        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+                totalQuantity.add(quantity), totalCostBasis.add(totalCost), newAcquiredDate);
 
         return new ApplyResult.Purchase<>(updated);
     }
@@ -57,47 +51,48 @@ public record AcbPosition(
 
         // handles ghoest rounding
         boolean isFullLiquidation = quantity.equals(totalQuantity);
-        Money costBasisSold = isFullLiquidation
-                ? totalCostBasis
-                : totalCostBasis.multiply(ratio);
+        Money costBasisSold = isFullLiquidation ? totalCostBasis : totalCostBasis.multiply(ratio);
 
-        Money newCostBasis = isFullLiquidation
-                ? Money.ZERO(accountCurrency)
+        Money newCostBasis = isFullLiquidation ? Money.ZERO(accountCurrency)
                 : totalCostBasis.subtract(costBasisSold);
 
         Money realizedGain = proceeds.subtract(costBasisSold);
 
-        AcbPosition updated = new AcbPosition(
-                symbol,
-                type,
-                accountCurrency,
-                totalQuantity.subtract(quantity),
-                newCostBasis,
-                firstAcquiredAt);
+        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+                totalQuantity.subtract(quantity), newCostBasis, firstAcquiredAt);
 
         return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
 
     }
 
+    @Override
     public ApplyResult.Adjustment<AcbPosition> split(Ratio ratio) {
         // Use the Ratio to calculate the new quantity precisely
-        Quantity newQuantity = this.totalQuantity
-                .multiply(BigDecimal.valueOf(ratio.numerator()))
+        Quantity newQuantity = this.totalQuantity.multiply(BigDecimal.valueOf(ratio.numerator()))
                 .divide(BigDecimal.valueOf(ratio.denominator()));
 
-        AcbPosition updated = new AcbPosition(
-                symbol,
-                type,
-                accountCurrency,
-                newQuantity,
-                totalCostBasis, // Cost basis doesn't change in a split
-                firstAcquiredAt);
+        // Cost basis doesn't change in a split
+        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, newQuantity,
+                totalCostBasis, firstAcquiredAt);
         return new ApplyResult.Adjustment<>(updated);
     }
 
     @Override
+    public ApplyResult.Adjustment<AcbPosition> applyReturnOfCaptial(Price distributionPerUnit,
+            Quantity heldQuantity) {
+        Money totalReduction = distributionPerUnit.calculateValue(heldQuantity);
+
+        // new ACB = Current ACB - ROC amount
+        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, totalQuantity,
+                totalCostBasis.subtract(totalReduction), firstAcquiredAt);
+        return new ApplyResult.Adjustment<>(updated);
+    }
+
+
+    @Override
     public Money costPerUnit() {
-        return isEmpty() ? Money.ZERO(accountCurrency) : totalCostBasis.divide(totalQuantity.amount());
+        return isEmpty() ? Money.ZERO(accountCurrency)
+                : totalCostBasis.divide(totalQuantity.amount());
     }
 
     @Override
@@ -109,4 +104,6 @@ public record AcbPosition(
     public Money calculateUnrealizedGain(Money currentPrice) {
         return currentValue(currentPrice).subtract(totalCostBasis);
     }
+
+
 }

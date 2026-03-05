@@ -29,15 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.function.Function;
 
 // COMBO of a new Transaction service -> those from old PortfolioAppService
-
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class TransactionService {
-
-    private record PortfolioContext(Portfolio portfolio, Account account) {
-    }
-
     private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionViewMapper transactionViewMapper;
@@ -54,20 +49,14 @@ public class TransactionService {
         PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.symbol());
-        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbol)
-                .orElseThrow(() -> new AssetNotFoundException("Unknown symbol: " + command.symbol()));
+        MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbol).orElseThrow(
+                () -> new AssetNotFoundException("Unknown symbol: " + command.symbol()));
 
         Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
-        Transaction recordedTransaction = transactionRecordingService.recordBuy(
-                ctx.account(),
-                symbol,
-                assetInfo.type(),
-                command.quantity(),
-                price,
-                command.fees(),
-                command.notes(),
-                command.transactionDate());
+        Transaction recordedTransaction = transactionRecordingService.recordBuy(ctx.account(),
+                symbol, assetInfo.type(), command.quantity(), price, command.fees(),
+                command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -86,14 +75,9 @@ public class TransactionService {
 
         Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
-        Transaction recordedTransaction = transactionRecordingService.recordSell(
-                ctx.account(),
-                symbol,
-                command.quantity(),
-                price,
-                command.fees(),
-                command.notes(),
-                command.transactionDate());
+        Transaction recordedTransaction =
+                transactionRecordingService.recordSell(ctx.account(), symbol, command.quantity(),
+                        price, command.fees(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -105,11 +89,8 @@ public class TransactionService {
         validate(command, validator::validate, "recordDeposit");
         PortfolioContext ctx = getPortfolioContext(command);
 
-        Transaction recordedTransaction = transactionRecordingService.recordDeposit(
-                ctx.account(),
-                command.amount(),
-                command.notes(),
-                command.transactionDate());
+        Transaction recordedTransaction = transactionRecordingService.recordDeposit(ctx.account(),
+                command.amount(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -122,10 +103,7 @@ public class TransactionService {
         PortfolioContext ctx = getPortfolioContext(command);
 
         Transaction recordedTransaction = transactionRecordingService.recordWithdrawal(
-                ctx.account(),
-                command.amount(),
-                command.notes(),
-                command.transactionDate());
+                ctx.account(), command.amount(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -136,11 +114,8 @@ public class TransactionService {
         validate(command, validator::validate, "recordFee");
         PortfolioContext ctx = getPortfolioContext(command);
 
-        Transaction recordedTransaction = transactionRecordingService.recordFee(
-                ctx.account(),
-                command.amount(),
-                command.notes(),
-                command.transactionDate());
+        Transaction recordedTransaction = transactionRecordingService.recordFee(ctx.account(),
+                command.amount(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -153,12 +128,8 @@ public class TransactionService {
 
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
-        Transaction recordedTransaction = transactionRecordingService.recordInterest(
-                ctx.account(),
-                symbol,
-                command.amount(),
-                command.notes(),
-                command.transactionDate());
+        Transaction recordedTransaction = transactionRecordingService.recordInterest(ctx.account(),
+                symbol, command.amount(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -172,12 +143,8 @@ public class TransactionService {
 
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
-        Transaction recordedTransaction = transactionRecordingService.recordDividend(
-                ctx.account(),
-                symbol,
-                command.amount(),
-                command.notes(),
-                command.transactionDate());
+        Transaction recordedTransaction = transactionRecordingService.recordDividend(ctx.account(),
+                symbol, command.amount(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -192,12 +159,25 @@ public class TransactionService {
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
         Transaction recordedTransaction = transactionRecordingService.recordDividendReinvestment(
-                ctx.account(),
-                symbol,
-                command.execution().sharesPurchased(),
-                command.execution().pricePerShare(),
-                command.notes(),
-                command.transactionDate());
+                ctx.account(), symbol, command.execution().sharesPurchased(),
+                command.execution().pricePerShare(), command.notes(), command.transactionDate());
+
+        // TODO we might need a dedicated portoflioRepo.savePosition(...)
+        persistChanges(ctx, recordedTransaction);
+
+        return transactionViewMapper.toTransactionView(recordedTransaction);
+
+    }
+
+    public TransactionView recordReturnOfCaptial(RecordReturnOfCaptialCommand command) {
+        validate(command, validator::validate, "returnOfCaptial");
+        PortfolioContext ctx = getPortfolioContext(command);
+
+        AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
+
+        Transaction recordedTransaction = transactionRecordingService.recordReturnOfCaptial(
+                ctx.account(), symbol, command.heldQuantity(), command.distributionPerUnit(),
+                command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 
@@ -209,11 +189,8 @@ public class TransactionService {
         validate(command, validator::validate, "excludeTransaction");
 
         Transaction existing = transactionRepository
-                .findByIdAndPortfolioIdAndUserIdAndAccountId(
-                        command.transactionId(),
-                        command.portfolioId(),
-                        command.userId(),
-                        command.accountId())
+                .findByIdAndPortfolioIdAndUserIdAndAccountId(command.transactionId(),
+                        command.portfolioId(), command.userId(), command.accountId())
                 .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
 
         if (existing.isExcluded()) {
@@ -229,11 +206,9 @@ public class TransactionService {
         // Recalculation is also meaningless for cash-only transactions since
         // PositionRecalculationService only rebuilds position state, not cash.
         if (existing.transactionType().affectsHoldings() && existing.execution() != null) {
-            eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
-                    command.portfolioId(),
-                    command.userId(),
-                    command.accountId(),
-                    existing.execution().asset()));
+            eventPublisher
+                    .publishEvent(new PositionRecalculationRequestedEvent(command.portfolioId(),
+                            command.userId(), command.accountId(), existing.execution().asset()));
         }
 
         return transactionViewMapper.toTransactionView(excluded);
@@ -243,11 +218,8 @@ public class TransactionService {
         validate(command, validator::validate, "restoreTransaction");
 
         Transaction existing = transactionRepository
-                .findByIdAndPortfolioIdAndUserIdAndAccountId(
-                        command.transactionId(),
-                        command.portfolioId(),
-                        command.userId(),
-                        command.accountId())
+                .findByIdAndPortfolioIdAndUserIdAndAccountId(command.transactionId(),
+                        command.portfolioId(), command.userId(), command.accountId())
                 .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
 
         if (!existing.isExcluded()) {
@@ -258,19 +230,18 @@ public class TransactionService {
         transactionRepository.save(restored);
 
         if (existing.transactionType().affectsHoldings() && existing.execution() != null) {
-            eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
-                    command.portfolioId(),
-                    command.userId(),
-                    command.accountId(),
-                    existing.execution().asset()));
+            eventPublisher
+                    .publishEvent(new PositionRecalculationRequestedEvent(command.portfolioId(),
+                            command.userId(), command.accountId(), existing.execution().asset()));
         }
 
         return transactionViewMapper.toTransactionView(restored);
     }
 
     private PortfolioContext getPortfolioContext(TransactionCommand command) {
-        Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId().toString()));
+        Portfolio portfolio = portfolioRepository
+                .findByIdAndUserId(command.portfolioId(), command.userId()).orElseThrow(
+                        () -> new PortfolioNotFoundException(command.portfolioId().toString()));
 
         Account account = portfolio.getAccount(command.accountId());
 
@@ -292,11 +263,15 @@ public class TransactionService {
         return exchangeRateService.convertToPrice(commandPrice.pricePerUnit(), accountCurrency);
     }
 
-    private <T> void validate(T command, Function<T, ValidationResult> validationLogic, String methodName) {
+    private <T> void validate(T command, Function<T, ValidationResult> validationLogic,
+            String methodName) {
         ValidationResult result = validationLogic.apply(command);
         if (!result.isValid()) {
             String msg = String.format("Invalid %s command", methodName);
             throw new InvalidTransactionException(msg, result.errors());
         }
+    }
+
+    private record PortfolioContext(Portfolio portfolio, Account account) {
     }
 }

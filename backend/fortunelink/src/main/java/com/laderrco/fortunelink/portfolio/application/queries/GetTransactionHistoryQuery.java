@@ -10,17 +10,21 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-/* 
-    Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are optional
-    NOTE: removed transactionType as it was dead code for now, will add back later
-*/
-public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId, AccountId accountId,
-        AssetSymbol symbol, Instant startDate, Instant endDate, int page, int size) {
+/*
+ * Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are
+ * optional NOTE: removed transactionType as it was dead code for now, will add back later
+ */
+public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId,
+        AccountId accountId, AssetSymbol symbol, Instant startDate, Instant endDate, int page,
+        int size) {
     public GetTransactionHistoryQuery {
-        // accountId can be null (means all accounts)
         // startDate can be null (means from beginning)
         // endDate can be null (means until now)
         // transactionType can be null (means all types)
+        if (accountId == null) {
+            throw new IllegalArgumentException(
+                    "AccountId is required for transaction history queries");
+        }
 
         validatePagination(page, size);
     }
