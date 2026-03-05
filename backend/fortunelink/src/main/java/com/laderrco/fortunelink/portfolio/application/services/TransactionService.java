@@ -147,6 +147,24 @@ public class TransactionService {
         return transactionViewMapper.toTransactionView(recordedTransaction);
     }
 
+    public TransactionView recordInterest(RecordInterestCommand command) {
+        validate(command, validator::validate, "recordInterest");
+        PortfolioContext ctx = getPortfolioContext(command);
+
+        AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
+
+        Transaction recordedTransaction = transactionRecordingService.recordInterest(
+                ctx.account(),
+                symbol,
+                command.amount(),
+                command.notes(),
+                command.transactionDate());
+
+        persistChanges(ctx, recordedTransaction);
+
+        return transactionViewMapper.toTransactionView(recordedTransaction);
+    }
+
     // this method deposits into the account
     public TransactionView recordDividend(RecordDividendCommand command) {
         validate(command, validator::validate, "recordDividend");

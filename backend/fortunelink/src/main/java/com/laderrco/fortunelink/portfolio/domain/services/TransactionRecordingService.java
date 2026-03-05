@@ -26,6 +26,8 @@ public interface TransactionRecordingService {
 
         Transaction recordFee(Account account, Money amount, String notes, Instant date);
 
+        Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes, Instant date);
+
         Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, String notes, Instant date);
 
         Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price,

@@ -41,7 +41,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity, Price price,
-                                 List<Fee> fees, String notes, Instant date) {
+            List<Fee> fees, String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -78,7 +78,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price, List<Fee> fees,
-                                  String notes, Instant date) {
+            String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         if (date.isBefore(account.getCreationDate())) {
@@ -189,6 +189,35 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 TransactionMetadata.manual(AssetType.CASH));
     }
 
+    @Override
+    public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes, Instant date) {
+        Objects.requireNonNull(symbol, "Symbol cannot be null");
+        validateInputs(account, amount, notes, date);
+        validateDate(date);
+        validateIsActive(account);
+
+        account.deposit(amount, "INTEREST from " + symbol.value());
+
+        // Resolve asset type from existing position if available, default to STOCK
+        AssetType type = account.getPosition(symbol)
+                .map(Position::type)
+                .orElse(AssetType.STOCK);
+
+        return new Transaction(
+                TransactionId.newId(),
+                account.getAccountId(),
+                TransactionType.INTEREST,
+                null,
+                null,
+                amount, // cash comes in
+                List.of(),
+                notes.trim(),
+                TransactionDate.of(date),
+                null,
+                TransactionMetadata.manual(type));
+
+    }
+
     /**
      * Records a dividend payment — credits cash, no position change.
      * The symbol is tracked for tax reporting purposes (taxable income).
@@ -228,7 +257,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
      */
     @Override
     public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol, Quantity quantity, Price price,
-                                                  String notes, Instant date) {
+            String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
         validateIsActive(account);
@@ -263,7 +292,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public void replayTransaction(Account account, Transaction tx) {
-        if (!validateReplay(account, tx)) return;
+        if (shouldSkip(account, tx))
+            return;
 
         if (!tx.transactionType().affectsHoldings()) {
             throw new IllegalArgumentException(
@@ -314,7 +344,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             }
             case SPLIT -> {
                 // A split on a closed position is a no-op, not an error.
-                // user may have sold all share before the split date, only apply the split if a position
+                // user may have sold all share before the split date, only apply the split if a
+                // position
                 // actually exists
                 account.getPosition(tx.execution().asset()).ifPresent(position -> {
                     ApplyResult<? extends Position> result = position.split(tx.split().ratio());
@@ -341,7 +372,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     // this is for the scenario of bulk import - account imports from scratch
     @Override
     public void replayFullTransaction(Account account, Transaction tx) {
-        if (!validateReplay(account, tx)) return;
+        if (shouldSkip(account, tx))
+            return;
 
         switch (tx.transactionType()) {
             case BUY -> {
@@ -388,8 +420,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                             account.updatePosition(tx.execution().asset(), result.newPosition());
                         },
                         () -> log.warn("Full Replay: Received SPLIT for {} but no active position found. Skipping.",
-                                tx.execution().asset().value())
-                );
+                                tx.execution().asset().value()));
             }
             case DIVIDEND_REINVEST -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
@@ -400,16 +431,18 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 account.updatePosition(tx.execution().asset(), result.newPosition());
                 // Consume cash - mirrors the dividend proceeds that funded this reinvestment.
                 // If a paired DIVIDEND transaction deposited the cash, this balances it out.
-                // If no paired DIVIDEND exists (broker-native DRIP), allowNegative=true prevents crash.
+                // If no paired DIVIDEND exists (broker-native DRIP), allowNegative=true
+                // prevents crash.
                 account.withdraw(cost, "REPLAY DIVIDEND_REINVEST", true);
             }
             // Cash-only types (DEPOSIT, FEE, etc.) correctly move cash already
             case DEPOSIT, INTEREST, TRANSFER_IN, DIVIDEND ->
-                    account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
+                account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
             case WITHDRAWAL, FEE, TRANSFER_OUT ->
-                    account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
+                account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType());
             case RETURN_OF_CAPITAL, OTHER, REINVESTED_CAPITAL_GAIN -> {
-                // CashImpact.NONE and affectsHolding=false -> no-op during full replay, intentional
+                // CashImpact.NONE and affectsHolding=false -> no-op during full replay,
+                // intentional
                 // These are info/tax records only; no pos or cash state to reconstruct
             }
 
@@ -419,7 +452,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         }
     }
 
-    private boolean validateReplay(Account account, Transaction tx) {
+    private boolean shouldSkip(Account account, Transaction tx) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(tx, "Transaction cannot be null");
 
@@ -427,7 +460,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     private void validateInputs(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes,
-                                Instant date) {
+            Instant date) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(symbol, "Symbol cannot be null");
         Objects.requireNonNull(quantity, "Quantity cannot be null");

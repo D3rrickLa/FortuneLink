@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactio
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
@@ -82,6 +83,22 @@ public class TransactionCommandValidator {
 
         validateCommonIds(command, errors);
 
+        ValidationUtils.validateAmount(command.amount().amount(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), errors);
+
+        return errors.isEmpty()
+                ? ValidationResult.success()
+                : ValidationResult.failure(errors);
+    }
+
+    public ValidationResult validate(RecordInterestCommand command) {
+        Objects.requireNonNull(command);
+        List<String> errors = new ArrayList<>();
+
+        validateCommonIds(command, errors);
+
+        // todo: confirm if interest needs the assetSymbol()
+        ValidationUtils.validateSymbol(command.assetSymbol(), errors);
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
 

@@ -61,7 +61,10 @@ public record AcbPosition(
                 ? totalCostBasis
                 : totalCostBasis.multiply(ratio);
 
-        Money newCostBasis = isFullLiquidation ? Money.ZERO(accountCurrency) : totalCostBasis.subtract(costBasisSold);
+        Money newCostBasis = isFullLiquidation
+                ? Money.ZERO(accountCurrency)
+                : totalCostBasis.subtract(costBasisSold);
+
         Money realizedGain = proceeds.subtract(costBasisSold);
 
         AcbPosition updated = new AcbPosition(

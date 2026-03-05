@@ -11,10 +11,10 @@ public enum TransactionType {
     FEE(false, false, false, CashImpact.OUT),
     SPLIT(true, false, true, CashImpact.NONE),
     RETURN_OF_CAPITAL(false, false, false, CashImpact.NONE),
+    REINVESTED_CAPITAL_GAIN(false, true, false, CashImpact.NONE),
     TRANSFER_IN(false, false, false, CashImpact.IN),
     TRANSFER_OUT(false, false, false, CashImpact.OUT),
-    OTHER(false, false, false, CashImpact.NONE),
-    REINVESTED_CAPITAL_GAIN(false, true, false, CashImpact.NONE);
+    OTHER(false, false, false, CashImpact.NONE);
 
     private final boolean affectsHoldings;
     private final boolean taxable;
