@@ -92,15 +92,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         Money totalFee = Fee.totalInAccountCurrency(feeList, currency);
 
         Position current = account.getPosition(symbol)
-                .map(pos -> {
-                    // Guard for sale date
-                    // For FIFO: check against first lot's acquiredDate
-                    // For ACB: would need to query transaction repo for earliest buy
-                    // Minimum viable: validate date is not before account creation
-
-                    // If valid, return the position to be assigned to 'current'
-                    return pos;
-                })
                 .orElseThrow(() -> new NoPositionException(symbol, account.getAccountId()));
 
         Money grossProceeds = price.pricePerUnit().multiply(quantity.amount());
@@ -272,12 +263,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public void replayTransaction(Account account, Transaction tx) {
-        Objects.requireNonNull(account, "Account cannot be null");
-        Objects.requireNonNull(tx, "Transaction cannot be null");
-
-        if (tx.isExcluded()) {
-            return;
-        }
+        if (validateReplay(account, tx)) return;
 
         if (!tx.transactionType().affectsHoldings()) {
             throw new IllegalArgumentException(
@@ -355,12 +341,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     // this is for the scenario of bulk import - account imports from scratch
     @Override
     public void replayFullTransaction(Account account, Transaction tx) {
-        Objects.requireNonNull(account, "Account cannot be null");
-        Objects.requireNonNull(tx, "Transaction cannot be null");
-
-        if (tx.isExcluded()) {
-            return;
-        }
+        if (validateReplay(account, tx)) return;
 
         switch (tx.transactionType()) {
             case BUY -> {
@@ -436,6 +417,16 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                     "Unhandled transaction type in replayFullTransaction: " + tx.transactionType()
                             + ". Update this switch when adding new TransactionTypes.");
         }
+    }
+
+    private static boolean validateReplay(Account account, Transaction tx) {
+        Objects.requireNonNull(account, "Account cannot be null");
+        Objects.requireNonNull(tx, "Transaction cannot be null");
+
+        if (tx.isExcluded()) {
+            return true;
+        }
+        return false;
     }
 
     private void validateInputs(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes,

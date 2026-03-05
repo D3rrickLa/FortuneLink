@@ -7,6 +7,7 @@ import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -242,11 +243,11 @@ class PortfolioLifecycleServiceTest {
 
             when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(portfolio));
 
-            doThrow(new PortfolioFoundNotEmptyException("Cannot delete non-empty portfolio"))
+            doThrow(new PortfolioNotEmptyException("Cannot delete non-empty portfolio"))
                     .when(portfolio).markAsDeleted(userId);
 
             assertThatThrownBy(() -> service.deletePortfolio(command))
-                    .isInstanceOf(PortfolioFoundNotEmptyException.class)
+                    .isInstanceOf(PortfolioNotEmptyException.class)
                     .hasMessageContaining("Cannot delete non-empty portfolio");
         }
 

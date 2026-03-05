@@ -33,6 +33,7 @@ public class PositionRecalculationService {
     private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionRecordingService transactionRecordingService;
+    private final AccountHealthService accountHealthService;
 
     /**
      * Async listener that triggers after a transaction commit.
@@ -48,13 +49,12 @@ public class PositionRecalculationService {
             log.error("Position recalculation failed for account={} symbol={}: {}",
                     event.accountId(), event.symbol(), e.getMessage(), e);
 
-            markAccountStale(event.portfolioId(), event.userId(), event.accountId());
-
+            accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
         }
     }
 
     /**
-     * Surgical recalculation for a single symbol.
+     * Surgical recalculation for a single symbol.`
      * Corrects ACB/Position but leaves Cash Balance as-is.
      */
     @Transactional
@@ -82,7 +82,7 @@ public class PositionRecalculationService {
             portfolio.reportRecalculationSuccess(accountId);
         } catch (Exception e) {
             log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
-            markAccountStale(portfolioId, userId, accountId); // mark it dirty
+            accountHealthService.markStale(portfolioId, userId, accountId); // mark it dirty
             throw e; // let @Transactional roll back — don't persist partial state
         }
 
@@ -112,7 +112,7 @@ public class PositionRecalculationService {
             portfolio.reportRecalculationSuccess(accountId);
         } catch (Exception e) {
             log.error("Full account replay failed for account {}", accountId, e);
-            markAccountStale(portfolioId, userId, accountId);
+            accountHealthService.markStale(portfolioId, userId, accountId);
             throw e; // rollback the transaction, don't commit partial state
         }
 
@@ -124,13 +124,5 @@ public class PositionRecalculationService {
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 
-    private void markAccountStale(PortfolioId portfolioId, UserId userId, AccountId accountId) {
-        try {
-            Portfolio portfolio = loadPortfolio(portfolioId, userId);
-            portfolio.reportRecalculationFailure(accountId);
-            portfolioRepository.save(portfolio);
-        } catch (Exception e) {
-            log.error("Failed to mark account as stale. Manual intervention required.", e);
-        }
-    }
+
 }
