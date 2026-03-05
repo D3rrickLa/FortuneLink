@@ -81,6 +81,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                                   String notes, Instant date) {
         validateInputs(account, symbol, quantity, price, notes, date);
         validateDate(date);
+        if (date.isBefore(account.getCreationDate())) {
+            throw new IllegalArgumentException("Transaction date predates account creation");
+        }
         validateIsActive(account);
 
         Currency currency = account.getAccountCurrency();
@@ -94,9 +97,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                     // For FIFO: check against first lot's acquiredDate
                     // For ACB: would need to query transaction repo for earliest buy
                     // Minimum viable: validate date is not before account creation
-                    if (date.isBefore(account.getCreationDate())) {
-                        throw new IllegalArgumentException("Transaction date predates account creation");
-                    }
+
                     // If valid, return the position to be assigned to 'current'
                     return pos;
                 })
@@ -118,10 +119,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 null,
                 TransactionMetadata.manual(current.type()));
 
-        ApplyResult<? extends Position> result = current.sell(quantity, taxResolver.sellerProceeds(tx), date);
+        Money proceeds = taxResolver.sellerProceeds(tx);
+        ApplyResult<? extends Position> result = current.sell(quantity, proceeds, date);
 
         account.updatePosition(symbol, result.newPosition());
-        account.deposit(netProceeds, "SELL " + symbol.value());
+        account.deposit(proceeds, "SELL " + symbol.value());
 
         if (result instanceof ApplyResult.Sale<?> sale) {
             account.recordRealizedGain(symbol, sale.realizedGainLoss(), sale.costBasisSold(), date);

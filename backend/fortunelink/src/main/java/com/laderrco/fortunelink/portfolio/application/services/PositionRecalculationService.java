@@ -104,16 +104,18 @@ public class PositionRecalculationService {
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
                 .toList();
 
-        // Reset BOTH position and cash state before replay.
-        // Order matters: clear all positions first, then reset cash.
-        account.clearAllPositions();
-        account.resetCashToZero();
-        account.clearAllRealizedGains();
+        try {
+            account.clearAllPositions();
+            account.resetCashToZero();
+            account.clearAllRealizedGains();
+            allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
+            portfolio.reportRecalculationSuccess(accountId);
+        } catch (Exception e) {
+            log.error("Full account replay failed for account {}", accountId, e);
+            markAccountStale(portfolioId, userId, accountId);
+            throw e; // rollback the transaction, don't commit partial state
+        }
 
-        // Replay using a full-replay path, not replayTransaction (position-only).
-        allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
-
-        portfolio.reportRecalculationSuccess(accountId);
         portfolioRepository.save(portfolio);
     }
 
@@ -131,6 +133,4 @@ public class PositionRecalculationService {
             log.error("Failed to mark account as stale. Manual intervention required.", e);
         }
     }
-
-
 }
