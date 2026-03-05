@@ -263,7 +263,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     @Override
     public void replayTransaction(Account account, Transaction tx) {
-        if (validateReplay(account, tx)) return;
+        if (!validateReplay(account, tx)) return;
 
         if (!tx.transactionType().affectsHoldings()) {
             throw new IllegalArgumentException(
@@ -341,7 +341,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     // this is for the scenario of bulk import - account imports from scratch
     @Override
     public void replayFullTransaction(Account account, Transaction tx) {
-        if (validateReplay(account, tx)) return;
+        if (!validateReplay(account, tx)) return;
 
         switch (tx.transactionType()) {
             case BUY -> {
@@ -419,14 +419,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         }
     }
 
-    private static boolean validateReplay(Account account, Transaction tx) {
+    private boolean validateReplay(Account account, Transaction tx) {
         Objects.requireNonNull(account, "Account cannot be null");
         Objects.requireNonNull(tx, "Transaction cannot be null");
 
-        if (tx.isExcluded()) {
-            return true;
-        }
-        return false;
+        return tx.isExcluded();
     }
 
     private void validateInputs(Account account, AssetSymbol symbol, Quantity quantity, Price price, String notes,

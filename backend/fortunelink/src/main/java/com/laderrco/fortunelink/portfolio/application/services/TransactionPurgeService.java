@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -18,16 +17,11 @@ public class TransactionPurgeService {
     private final TransactionRepository transactionRepository;
     private final Logger log = LoggerFactory.getLogger(TransactionPurgeService.class);
 
-    // TODO we also need to add '@EnableScheduling' in the main app
     @Scheduled(cron = "0 0 0 * * *") // midnight every night
     @Transactional
-    public void purgeExpiredTransactions(AccountId accountId) {
+    public void purgeExpiredTransactions() {
         Instant cutoff = Instant.now().minus(30, ChronoUnit.DAYS);
-
-        int deletedCount = transactionRepository.deleteExpiredTransactions(
-                accountId,
-                cutoff
-        );
-        log.info("Purged {} expired transactions for account {}", deletedCount, accountId);
+        int deleted = transactionRepository.deleteAllExpiredTransactions(cutoff); // global cutoff
+        log.info("Purged {} expired excluded transactions older than {}", deleted, cutoff);
     }
 }

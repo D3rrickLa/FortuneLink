@@ -28,7 +28,8 @@ public class AccountHealthService {
             portfolio.reportRecalculationFailure(accountId);
             portfolioRepository.save(portfolio);
         } catch (Exception e) {
-            log.error("Failed to mark account as stale - manual intervention required.");
+            log.error("Failed to mark account as stale - manual intervention required. portfolioId={} accountId={}",
+                    portfolioId, accountId, e);
         }
     }
 }

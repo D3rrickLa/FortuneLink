@@ -33,4 +33,5 @@ public interface TransactionRepository {
 
     List<Transaction> findByDateRange(AccountId accountId, Instant start, Instant end);
 
+    int deleteAllExpiredTransactions(Instant cutoff);
 }
