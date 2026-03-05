@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
-import java.time.Instant;
-
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -9,6 +7,14 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
+import java.time.Instant;
+
+/**
+ * Records a DRIP reinvestment.
+ * IMPORTANT: Do NOT also call recordDividend() for the same event.
+ * DIVIDEND_REINVEST is self-contained - no cash lands in the account.
+ * Recording both will cause replayFullAccount() to overstate cash.
+ */
 public record RecordDividendReinvestmentCommand(
         PortfolioId portfolioId,
         UserId userId,

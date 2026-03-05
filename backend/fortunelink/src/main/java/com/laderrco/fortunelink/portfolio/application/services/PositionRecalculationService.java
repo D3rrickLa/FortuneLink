@@ -75,12 +75,17 @@ public class PositionRecalculationService {
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
                 .toList();
 
-        account.clearPosition(symbol); // reset to zero
-        account.clearRealizedGains(symbol);
+        try {
+            account.clearPosition(symbol);
+            account.clearRealizedGains(symbol);
+            active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
+            portfolio.reportRecalculationSuccess(accountId);
+        } catch (Exception e) {
+            log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
+            markAccountStale(portfolioId, userId, accountId); // mark it dirty
+            throw e; // let @Transactional roll back — don't persist partial state
+        }
 
-        active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
-
-        portfolio.reportRecalculationSuccess(accountId);
         portfolioRepository.save(portfolio);
     }
 

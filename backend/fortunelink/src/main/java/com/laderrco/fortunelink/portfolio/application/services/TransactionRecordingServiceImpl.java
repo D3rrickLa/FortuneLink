@@ -411,9 +411,14 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             case DIVIDEND_REINVEST -> {
                 AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
                 Position current = account.ensurePosition(tx.execution().asset(), type);
+                Money cost = tx.execution().grossValue();
                 ApplyResult<? extends Position> result = current.buy(
-                        tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
+                        tx.execution().quantity(), cost, tx.occurredAt().timestamp());
                 account.updatePosition(tx.execution().asset(), result.newPosition());
+                // Consume cash - mirrors the dividend proceeds that funded this reinvestment.
+                // If a paired DIVIDEND transaction deposited the cash, this balances it out.
+                // If no paired DIVIDEND exists (broker-native DRIP), allowNegative=true prevents crash.
+                account.withdraw(cost, "REPLAY DIVIDEND_REINVEST", true);
             }
             // Cash-only types (DEPOSIT, FEE, etc.) correctly move cash already
             case DEPOSIT, INTEREST, TRANSFER_IN, DIVIDEND ->
