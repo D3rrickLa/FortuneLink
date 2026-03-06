@@ -34,7 +34,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
-
   private final Logger log = LoggerFactory.getLogger(TransactionRecordingServiceImpl.class);
   private final TaxMethodResolver taxResolver;
 
@@ -42,7 +41,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
       Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
     validateInputs(account, symbol, quantity, price, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     Currency currency = account.getAccountCurrency();
@@ -72,10 +71,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price,
       List<Fee> fees, String notes, Instant date) {
     validateInputs(account, symbol, quantity, price, notes, date);
-    validateDate(date);
-    if (date.isBefore(account.getCreationDate())) {
-      throw new IllegalArgumentException("Transaction date predates account creation");
-    }
+    validateDate(date, account);
     validateIsActive(account);
 
     Currency currency = account.getAccountCurrency();
@@ -110,7 +106,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   @Override
   public Transaction recordDeposit(Account account, Money amount, String notes, Instant date) {
     validateInputs(account, amount, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     account.deposit(amount, "DEPOSIT");
@@ -125,7 +121,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   @Override
   public Transaction recordWithdrawal(Account account, Money amount, String notes, Instant date) {
     validateInputs(account, amount, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     account.withdraw(amount, "WITHDRAWAL");
@@ -140,7 +136,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   @Override
   public Transaction recordFee(Account account, Money amount, String notes, Instant date) {
     validateInputs(account, amount, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     account.applyFee(amount, "FEE");
@@ -156,7 +152,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       Instant date) {
     Objects.requireNonNull(symbol, "Symbol cannot be null");
     validateInputs(account, amount, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     account.deposit(amount, "INTEREST from " + symbol.value());
@@ -179,7 +175,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       Instant date) {
     Objects.requireNonNull(symbol, "Symbol cannot be null");
     validateInputs(account, amount, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     account.deposit(amount, "DIVIDEND from " + symbol.value());
@@ -202,7 +198,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol,
       Quantity quantity, Price price, String notes, Instant date) {
     validateInputs(account, symbol, quantity, price, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     Money totalCost = price.pricePerUnit().multiply(quantity.amount());
@@ -227,7 +223,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordReturnOfCapital(Account account, AssetSymbol symbol, Quantity quantity,
       Price distPerUnitPrice, String notes, Instant date) {
     validateInputs(account, symbol, quantity, distPerUnitPrice, notes, date);
-    validateDate(date);
+    validateDate(date, account);
     validateIsActive(account);
 
     Money totalDistribution = distPerUnitPrice.calculateValue(quantity);
@@ -421,9 +417,12 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
   }
 
-  private void validateDate(Instant date) {
+  private void validateDate(Instant date, Account account) {
     if (date.isAfter(Instant.now())) {
       throw new IllegalArgumentException("Transaction date cannot be in the future: " + date);
+    }
+    if (date.isBefore(account.getCreationDate())) {
+      throw new IllegalArgumentException("Transaction date predates account creation: " + date);
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AuthorizationException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import org.springframework.security.core.Authentication;
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 @Service
 public class AuthenticationUserService {
+
     public UUID getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
@@ -31,7 +33,7 @@ public class AuthenticationUserService {
 
     public void verifyUserOwnsPortfolio(UserId userId, Portfolio portfolio) {
         if (!userId.equals(portfolio.getUserId())) {
-            throw new AuthenticationException("No authenticated user found");
+            throw new AuthorizationException("Access denied: user does not own this portfolio");
         }
     }
 

@@ -21,6 +21,9 @@ public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId,
         // startDate can be null (means from beginning)
         // endDate can be null (means until now)
         // transactionType can be null (means all types)
+
+        // NOTE: originally we did not have this, as if 'null' it means all accounts.
+        // that is kind of hard to do so for now, MVP, requires an accountId
         if (accountId == null) {
             throw new IllegalArgumentException(
                     "AccountId is required for transaction history queries");
