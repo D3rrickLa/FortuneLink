@@ -17,8 +17,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 // String symbol is fine, we are just recording the name, not the entity
 // asset symbol - name
 // asset entity - your identifier calss, the acutal holding
-public record RecordPurchaseCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, String symbol, Quantity quantity, Price price, List<Fee> fees, Instant transactionDate, String notes) implements TransactionCommand {
-    public Money totalFees(Currency currency) {
-        return Fee.totalInAccountCurrency(fees, currency);
-    }
+public record RecordPurchaseCommand(PortfolioId portfolioId, UserId userId, AccountId accountId,
+    String symbol, Quantity quantity, Price price, List<Fee> fees, Instant transactionDate,
+    String notes) implements TransactionCommand {
+  public Money totalFees(Currency currency) {
+    return Fee.totalInAccountCurrency(fees, currency);
+  }
 }

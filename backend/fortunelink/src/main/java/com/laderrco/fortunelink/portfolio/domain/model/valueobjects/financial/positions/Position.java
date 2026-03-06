@@ -20,7 +20,7 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     ApplyResult<? extends Position> split(Ratio ratio);
 
-    ApplyResult<? extends Position> applyReturnOfCaptial(Price distributionPerUnit,
+    ApplyResult<? extends Position> applyReturnOfCapital(Price distributionPerUnit,
             Quantity heldQuantity);
 
     AssetSymbol symbol();

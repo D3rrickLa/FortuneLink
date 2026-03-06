@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-// ONLY PORTFOLIO + ACCOUNT LIFECYCLE STUFF, NOT TRANSACTION
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -51,8 +50,9 @@ public class PortfolioLifecycleService {
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     validate(command, validator::validate, "createPortfolio");
 
+    // Bug 13: countByUserId MUST exclude soft-deleted portfolios.
+    // See PortfolioRepository.countByUserId() contract comment.
     long currentCount = portfolioRepository.countByUserId(command.userId());
-
     if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
       throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
     }
@@ -74,6 +74,8 @@ public class PortfolioLifecycleService {
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     validate(command, validator::validate, "updatePortfolio");
 
+    // Bug 15 fix: getPortfolio() now throws PortfolioNotFoundException for
+    // soft-deleted portfolios, so this call is safe.
     Portfolio existingPortfolio = getPortfolio(command.portfolioId(), command.userId());
 
     existingPortfolio.updateDetails(command.name(), command.description());
@@ -100,7 +102,14 @@ public class PortfolioLifecycleService {
       throw new PortfolioDeletionRequiresConfirmationException();
     }
 
-    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+    // TODO: confirm is this is true/needed
+    // NOTE: deletePortfolio intentionally calls the raw repository lookup,
+    // not getPortfolio(), because we need to allow the user to hard-delete
+    // a portfolio that is already soft-deleted (cleanup path).
+    Portfolio portfolio =
+        portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
+            .orElseThrow(() -> new PortfolioNotFoundException(
+                "Portfolio not found or access denied for ID: " + command.portfolioId()));
 
     if (command.softDelete()) {
       try {
@@ -111,13 +120,11 @@ public class PortfolioLifecycleService {
       } catch (PortfolioNotEmptyException e) {
         throw new PortfolioDeletionException(e.getMessage());
       } catch (IllegalStateException e) {
-        // Catch-all — something unexpected from markAsDeleted
         throw new PortfolioDeletionException("Cannot delete portfolio: " + e.getMessage());
       }
     } else {
-      // intentionally bypasses the markAsDeleted checks
-      // if a user wants to 'start over' they don't want to close
-      // all the accounts
+      // Hard delete intentionally bypasses the markAsDeleted checks.
+      // The user wants to start over and doesn't want to close all accounts first.
       portfolioRepository.delete(command.portfolioId());
     }
 
@@ -126,8 +133,8 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
+    // Bug 15 fix: blocked by getPortfolio() - cannot add account to deleted portfolio.
     Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
-
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
 
@@ -139,8 +146,8 @@ public class PortfolioLifecycleService {
   public void updateAccount(UpdateAccountCommand command) {
     validate(command, validator::validate, "updateAccount");
 
+    // Bug 15 fix: blocked by getPortfolio() - cannot rename account on deleted portfolio.
     Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
-
     portfolio.renameAccount(command.accountId(), command.accountName());
 
     portfolioRepository.save(portfolio);
@@ -149,20 +156,37 @@ public class PortfolioLifecycleService {
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
+    // Bug 15 fix: blocked by getPortfolio() - cannot close account on deleted portfolio.
     Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
     try {
       portfolio.closeAccount(command.accountId());
 
     } catch (IllegalStateException e) {
+      // Bug 4 fix: IllegalStateException from account.close() becomes a typed
+      // application exception, not a raw 500.
       throw new AccountCannotBeClosedException("Cannot close account: " + e.getMessage());
     }
     portfolioRepository.save(portfolio);
   }
 
+  /**
+   * Loads a portfolio for mutation.
+   *
+   * Bug 15 fix: treats soft-deleted portfolios as non-existent, matching user expectations. A
+   * deleted resource should not be mutatable. The same PortfolioNotFoundException message is used
+   * intentionally — we do not want to confirm to a client that a deleted portfolio exists.
+   */
   private Portfolio getPortfolio(PortfolioId portfolioId, UserId userId) {
-    return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
         .orElseThrow(() -> new PortfolioNotFoundException(
             "Portfolio not found or access denied for ID: " + portfolioId));
+
+    if (portfolio.isDeleted()) {
+      throw new PortfolioNotFoundException(
+          "Portfolio not found or access denied for ID: " + portfolioId);
+    }
+
+    return portfolio;
   }
 
   private <T> void validate(T command, Function<T, ValidationResult> validationLogic,

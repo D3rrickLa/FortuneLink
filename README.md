@@ -9,3 +9,27 @@ combination of
 - Blossom
 - Reddit
 - Portoflio Visualizer
+
+
+# FUTURE OF THE PROJECT
+- Legacy workflow
+
+- User imports data
+
+- User checks accuracy
+
+- User reasons about tax
+
+- AI-native system
+
+- AI reconciles brokers
+
+- Maintains tax lots
+
+- Detects compliance issues
+
+- Simulates actions
+
+- Human-only decision
+
+- Whether to trigger taxable events

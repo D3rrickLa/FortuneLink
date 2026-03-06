@@ -36,7 +36,13 @@ public interface TransactionRecordingService {
 			Price price, String notes, Instant date);
 
 	Transaction recordReturnOfCapital(Account account, AssetSymbol symbol, Quantity quantity,
-			Price distPerUnitPrice, String notes, Instant date);
+			Price price, String notes, Instant date);
+
+	Transaction recordTransferIn(Account account, Money amount, String notes, Instant date);
+
+	Transaction recordTransferOut(Account account, Money amount, String notes, Instant date);
+
+
 
 	/**
 	 * Position-only replay. Cash state is NOT touched. Use for exclude/restore recalculation on a

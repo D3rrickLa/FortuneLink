@@ -24,13 +24,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Records transactions against an account by: 1. Mutating account state (positions, cash balance)
- * 2. Constructing and returning an immutable Transaction record
- * <p>
- * The caller (TransactionService) is responsible for persisting both the mutated portfolio and the
- * returned Transaction.
- */
 @Service
 @RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
@@ -45,10 +38,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
 
     Currency currency = account.getAccountCurrency();
-
     List<Fee> feeList = (fees != null) ? fees : List.of();
     Money totalFee = Fee.totalInAccountCurrency(feeList, currency);
-
     Money grossCost = price.pricePerUnit().multiply(quantity);
     Money totalOutflow = grossCost.add(totalFee);
 
@@ -59,7 +50,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
             notes, TransactionDate.of(date), null, TransactionMetadata.manual(type));
 
     Position current = account.ensurePosition(symbol, type);
-    ApplyResult<? extends Position> result = current.buy(quantity, taxResolver.buyerCost(tx), date);
+    ApplyResult<?> result = current.buy(quantity, taxResolver.buyerCost(tx), date);
 
     account.updatePosition(symbol, result.newPosition());
     account.withdraw(totalOutflow, "BUY " + symbol.value());
@@ -75,7 +66,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
 
     Currency currency = account.getAccountCurrency();
-
     List<Fee> feeList = (fees != null) ? fees : List.of();
     Money totalFee = Fee.totalInAccountCurrency(feeList, currency);
 
@@ -91,7 +81,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         feeList, notes, TransactionDate.of(date), null, TransactionMetadata.manual(current.type()));
 
     Money proceeds = taxResolver.sellerProceeds(tx);
-    ApplyResult<? extends Position> result = current.sell(quantity, proceeds, date);
+    ApplyResult<?> result = current.sell(quantity, proceeds, date);
 
     account.updatePosition(symbol, result.newPosition());
     account.deposit(proceeds, "SELL " + symbol.value());
@@ -110,12 +100,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
 
     account.deposit(amount, "DEPOSIT");
-
+    // cashDelta is positive
+    // deposits have no fees
     return new Transaction(TransactionId.newId(), account.getAccountId(), TransactionType.DEPOSIT,
-        null, // no execution
-        null, amount, // cashDelta is positive
-        List.of(), // deposits have no fees
-        notes.trim(), TransactionDate.of(date), null, TransactionMetadata.manual(AssetType.CASH));
+        null, null, amount, List.of(), notes.trim(), TransactionDate.of(date), null,
+        TransactionMetadata.manual(AssetType.CASH));
   }
 
   @Override
@@ -126,11 +115,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     account.withdraw(amount, "WITHDRAWAL");
 
+    // cashDelta is negative — cash leaves
     return new Transaction(TransactionId.newId(), account.getAccountId(),
-        TransactionType.WITHDRAWAL, null, null, amount.negate(), // cashDelta is negative — cash
-                                                                 // leaves
-        List.of(), notes.trim(), TransactionDate.of(date), null,
-        TransactionMetadata.manual(AssetType.CASH));
+        TransactionType.WITHDRAWAL, null, null, amount.negate(), List.of(), notes.trim(),
+        TransactionDate.of(date), null, TransactionMetadata.manual(AssetType.CASH));
   }
 
   @Override
@@ -141,9 +129,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     account.applyFee(amount, "FEE");
 
+    // cash leaves
     return new Transaction(TransactionId.newId(), account.getAccountId(), TransactionType.FEE, null,
-        null, amount.negate(), // cash leaves
-        List.of(), notes.trim(), TransactionDate.of(date), null,
+        null, amount.negate(), List.of(), notes.trim(), TransactionDate.of(date), null,
         TransactionMetadata.manual(AssetType.CASH));
   }
 
@@ -161,8 +149,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     AssetType type = account.getPosition(symbol).map(Position::type).orElse(AssetType.STOCK);
 
     return new Transaction(TransactionId.newId(), account.getAccountId(), TransactionType.INTEREST,
-        null, null, amount, // cash comes in
-        List.of(), notes.trim(), TransactionDate.of(date), null, TransactionMetadata.manual(type));
+        null, null, amount, List.of(), notes.trim(), TransactionDate.of(date), null,
+        TransactionMetadata.manual(type));
 
   }
 
@@ -202,21 +190,17 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
 
     Money totalCost = price.pricePerUnit().multiply(quantity.amount());
-
-    // Resolve or create the position
     AssetType type = account.getPosition(symbol).map(Position::type).orElse(AssetType.STOCK);
 
     Position current = account.ensurePosition(symbol, type);
-    ApplyResult<? extends Position> result = current.buy(quantity, totalCost, date);
+    ApplyResult<?> result = current.buy(quantity, totalCost, date);
     account.updatePosition(symbol, result.newPosition());
 
     // DIVIDEND_REINVEST has CashImpact.NONE; cashDelta must be zero
-    Money zeroCashDelta = Money.ZERO(account.getAccountCurrency());
-
     return new Transaction(TransactionId.newId(), account.getAccountId(),
         TransactionType.DIVIDEND_REINVEST, new TradeExecution(symbol, quantity, price), null,
-        zeroCashDelta, List.of(), notes.trim(), TransactionDate.of(date), null,
-        TransactionMetadata.manual(type));
+        Money.ZERO(account.getAccountCurrency()), List.of(), notes.trim(), TransactionDate.of(date),
+        null, TransactionMetadata.manual(type));
   }
 
   @Override
@@ -227,19 +211,32 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
 
     Money totalDistribution = distPerUnitPrice.calculateValue(quantity);
-
     AssetType type = account.getPosition(symbol).map(Position::type).orElse(AssetType.STOCK);
 
     Position current = account.ensurePosition(symbol, type);
-    ApplyResult<? extends Position> result =
-        current.applyReturnOfCaptial(distPerUnitPrice, quantity);
+    ApplyResult<?> result = current.applyReturnOfCapital(distPerUnitPrice, quantity);
+    account.updatePosition(symbol, result.newPosition());
+    account.deposit(totalDistribution, "ROC from " + symbol.value());
 
-    account.deposit(totalDistribution, notes);
-
+    // Bug 5 fix: cashDelta = totalDistribution (CashImpact.IN).
+    // Previously was Money.ZERO which caused Transaction constructor to throw
+    // a cash delta mismatch because the enum was NONE but impl deposited cash.
     return new Transaction(TransactionId.newId(), account.getAccountId(),
         TransactionType.RETURN_OF_CAPITAL, new TradeExecution(symbol, quantity, distPerUnitPrice),
         null, totalDistribution, List.of(), notes, TransactionDate.of(date), null,
         TransactionMetadata.manual(type));
+  }
+
+  @Override
+  public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
   @Override
@@ -258,23 +255,24 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       case BUY -> {
         AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
         Position current = account.ensurePosition(tx.execution().asset(), type);
-
         Money totalCostIncludingFees = taxResolver.buyerCost(tx);
 
-        ApplyResult<? extends Position> result = current.buy(tx.execution().quantity(),
-            totalCostIncludingFees, tx.occurredAt().timestamp());
+        ApplyResult<?> result = current.buy(tx.execution().quantity(), totalCostIncludingFees,
+            tx.occurredAt().timestamp());
 
         account.updatePosition(tx.execution().asset(), result.newPosition());
       }
       case SELL -> {
-        Position position = account.getPosition(tx.execution().asset())
+        Position position = account.getPosition(tx.execution().asset()).orElseThrow(() -> {
+          String s = String.format(
+              "No position for %s during position replay. BUY must precede SELL in replay order.",
+              tx.execution().asset().value());
 
-            .orElseThrow(
-                () -> new IllegalStateException("No position for " + tx.execution().asset().value()
-                    + " during position replay. " + "BUY must precede SELL in replay order."));
+          return new IllegalStateException(s);
+        });
 
         Money proceeds = taxResolver.sellerProceeds(tx);
-        ApplyResult<? extends Position> result =
+        ApplyResult<?> result =
             position.sell(tx.execution().quantity(), proceeds, tx.occurredAt().timestamp());
 
         account.updatePosition(tx.execution().asset(), result.newPosition());
@@ -286,28 +284,36 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         }
       }
       case SPLIT -> {
-        // A split on a closed position is a no-op, not an error.
-        // user may have sold all share before the split date, only apply the split if a
-        // position
-        // actually exists
+        // A split on a closed position is a no-op.
         account.getPosition(tx.execution().asset()).ifPresent(position -> {
-          ApplyResult<? extends Position> result = position.split(tx.split().ratio());
+          ApplyResult<?> result = position.split(tx.split().ratio());
           account.updatePosition(tx.execution().asset(), result.newPosition());
         });
       }
       case DIVIDEND_REINVEST -> {
-        // No cash movement, just increase position at cost of grossValue
+        // No cash movement - increase position at cost of grossValue.
         AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
         Position current = account.ensurePosition(tx.execution().asset(), type);
         Money totalCost = tx.execution().grossValue();
-        ApplyResult<? extends Position> result =
+        ApplyResult<?> result =
             current.buy(tx.execution().quantity(), totalCost, tx.occurredAt().timestamp());
         account.updatePosition(tx.execution().asset(), result.newPosition());
       }
+      case RETURN_OF_CAPITAL -> {
+        // Bug 5 fix: RETURN_OF_CAPITAL now affectsHoldings=true so it reaches
+        // this switch. Reduce ACB via applyReturnOfCapital.
+        // Cash is NOT touched here — surgical replay only corrects positions.
+        account.getPosition(tx.execution().asset()).ifPresent(position -> {
+          ApplyResult<?> result = position.applyReturnOfCapital(tx.execution().pricePerUnit(),
+              tx.execution().quantity());
+          account.updatePosition(tx.execution().asset(), result.newPosition());
+        });
+      }
       default -> {
-        // All cash-only types (DEPOSIT, WITHDRAWAL, FEE, DIVIDEND, INTEREST,
-        // TRANSFER_IN, TRANSFER_OUT, RETURN_OF_CAPITAL, etc.) are intentionally
-        // skipped.
+        // Should never be reached: the affectsHoldings guard above blocks
+        // any type that doesn't belong here. This is a safety net.
+        throw new IllegalStateException("Unhandled holding-affecting type in replayTransaction: "
+            + tx.transactionType() + ". Update this switch when adding new TransactionTypes.");
       }
     }
   }
@@ -315,18 +321,18 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   // this is for the scenario of bulk import - account imports from scratch
   @Override
   public void replayFullTransaction(Account account, Transaction tx) {
-    if (shouldSkip(account, tx))
+    if (shouldSkip(account, tx)) {
       return;
+    }
 
     switch (tx.transactionType()) {
       case BUY -> {
         AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
         Position current = account.ensurePosition(tx.execution().asset(), type);
-
         Money totalCostIncludingFees = taxResolver.buyerCost(tx);
 
-        ApplyResult<? extends Position> result = current.buy(tx.execution().quantity(),
-            totalCostIncludingFees, tx.occurredAt().timestamp());
+        ApplyResult<?> result = current.buy(tx.execution().quantity(), totalCostIncludingFees,
+            tx.occurredAt().timestamp());
 
         account.updatePosition(tx.execution().asset(), result.newPosition());
         account.withdraw(totalCostIncludingFees, "REPLAY BUY", true);
@@ -337,7 +343,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 .format("No position for %s during full replay", tx.execution().asset().value())));
 
         Money proceeds = taxResolver.sellerProceeds(tx);
-        ApplyResult<? extends Position> result =
+        ApplyResult<?> result =
             current.sell(tx.execution().quantity(), proceeds, tx.occurredAt().timestamp());
 
         account.updatePosition(tx.execution().asset(), result.newPosition());
@@ -352,8 +358,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         account.getPosition(tx.execution().asset()).ifPresentOrElse(position -> {
           ApplyResult<? extends Position> result = position.split(tx.split().ratio());
           account.updatePosition(tx.execution().asset(), result.newPosition());
-        }, () -> log.warn(
-            "Full Replay: Received SPLIT for {} but no active position found. Skipping.",
+        }, () -> log.warn("Full Replay: SPLIT for {} but no active position found. Skipping.",
             tx.execution().asset().value()));
       }
       case DIVIDEND_REINVEST -> {
@@ -363,21 +368,29 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         ApplyResult<? extends Position> result =
             current.buy(tx.execution().quantity(), cost, tx.occurredAt().timestamp());
         account.updatePosition(tx.execution().asset(), result.newPosition());
-        // Consume cash - mirrors the dividend proceeds that funded this reinvestment.
-        // If a paired DIVIDEND transaction deposited the cash, this balances it out.
-        // If no paired DIVIDEND exists (broker-native DRIP), allowNegative=true
-        // prevents crash.
+        // Consume cash — mirrors the dividend proceeds that funded this reinvestment.
+        // allowNegative=true handles broker-native DRIP with no paired DIVIDEND tx.
         account.withdraw(cost, "REPLAY DIVIDEND_REINVEST", true);
       }
-      // Cash-only types (DEPOSIT, FEE, etc.) correctly move cash already
+      case RETURN_OF_CAPITAL -> {
+        // Bug 5 fix: was previously a no-op in the NONE/OTHER/REINVESTED_CAPITAL_GAIN
+        // block. ROC must (a) reduce ACB on the position and (b) deposit the
+        // distribution into cash.
+        account.getPosition(tx.execution().asset()).ifPresent(position -> {
+          ApplyResult<? extends Position> result = position
+              .applyReturnOfCapital(tx.execution().pricePerUnit(), tx.execution().quantity());
+          account.updatePosition(tx.execution().asset(), result.newPosition());
+        });
+        account.deposit(tx.cashDelta(),
+            "REPLAY RETURN_OF_CAPITAL " + tx.execution().asset().value());
+      }
       case DEPOSIT, INTEREST, TRANSFER_IN, DIVIDEND -> account.deposit(tx.cashDelta(),
           "REPLAY " + tx.transactionType());
       case WITHDRAWAL, FEE, TRANSFER_OUT -> account.withdraw(tx.cashDelta().abs(),
           "REPLAY " + tx.transactionType());
-      case RETURN_OF_CAPITAL, OTHER, REINVESTED_CAPITAL_GAIN -> {
-        // CashImpact.NONE and affectsHolding=false -> no-op during full replay,
-        // intentional
-        // These are info/tax records only; no pos or cash state to reconstruct
+      case OTHER, REINVESTED_CAPITAL_GAIN -> {
+        // Intentional no-ops: no position or cash state to reconstruct.
+        // REINVESTED_CAPITAL_GAIN is an unimplemented stub (Bug 8 / tech debt).
       }
 
       default -> throw new IllegalStateException(

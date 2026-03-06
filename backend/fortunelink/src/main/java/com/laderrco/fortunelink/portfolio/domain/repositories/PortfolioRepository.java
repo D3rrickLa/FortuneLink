@@ -14,9 +14,9 @@ public interface PortfolioRepository {
     Optional<Portfolio> findById(PortfolioId id);
 
     /**
-     * Returns the single portfolio for a given user.
-     * DESIGN CONSTRAINT: FortuneLink currently supports exactly one portfolio per user.
-     * If multi-portfolio support is added, this method signature must change to List<Portfolio>.
+     * Returns the single portfolio for a given user. DESIGN CONSTRAINT: FortuneLink currently
+     * supports exactly one portfolio per user. If multi-portfolio support is added, this method
+     * signature must change to List<Portfolio>.
      */
     Optional<Portfolio> findByUserId(UserId userId);
 
@@ -28,19 +28,33 @@ public interface PortfolioRepository {
     List<Portfolio> findAllByUserId(UserId userId);
 
     /*
-    @Modifying
-    @Transactional
-    @Query("UPDATE Account a SET a.recalculationFailed = true WHERE a.accountId = :id")
+     * @Modifying
+     * 
+     * @Transactional
+     * 
+     * @Query("UPDATE Account a SET a.recalculationFailed = true WHERE a.accountId = :id")
      */
     void markAccountAsStale(AccountId accountId);
 
     /*
-    @Modifying
-    @Transactional
-    @Query("UPDATE Account a SET a.recalculationFailed = false WHERE a.accountId = :id")
+     * @Modifying
+     * 
+     * @Transactional
+     * 
+     * @Query("UPDATE Account a SET a.recalculationFailed = false WHERE a.accountId = :id")
      */
     void clearStaleFlag(AccountId accountId);
 
+    /**
+     * Counts ACTIVE (non-deleted) portfolios for a user.
+     *
+     * Bug 13 fix: Implementations MUST exclude soft-deleted portfolios from this count (WHERE
+     * deleted = false). If soft-deleted portfolios are counted, a user who deletes their portfolio
+     * to start fresh will be permanently locked out of creating a new one.
+     *
+     * JPA implementation example: @Query("SELECT COUNT(p) FROM Portfolio p WHERE p.userId = :userId
+     * AND p.deleted = false") Long countActiveByUserId(@Param("userId") UserId userId);
+     */
     Long countByUserId(UserId userId);
 
     boolean exists(PortfolioId portfolioId);
@@ -48,9 +62,9 @@ public interface PortfolioRepository {
     /**
      * Lightweight ownership check - no aggregate load.
      * <p>
-     * Use this wherever you only need to verify ownership without needing the
-     * aggregate itself (e.g., read-only query services validating access).
-     * Use findByIdAndUserId() when you actually need the Portfolio for mutation.
+     * Use this wherever you only need to verify ownership without needing the aggregate itself
+     * (e.g., read-only query services validating access). Use findByIdAndUserId() when you actually
+     * need the Portfolio for mutation.
      */
     boolean existsByIdAndUserId(PortfolioId id, UserId userId);
 

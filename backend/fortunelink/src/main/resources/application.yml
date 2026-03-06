@@ -119,6 +119,12 @@ fortunelink:
       daily-limit: 250
       warning-threshold: 200
       reserve-buffer: 25
+    
+    # Bug 14 fix: retention window for excluded transactions.
+    # 365 days gives users a full year to notice and restore a mistake.
+    # Set lower only if storage is a real constraint - financial data deletion
+    # is irreversible. 
+    exluded-transaction-retention-days: 365
 
 # ============================================
 # FMP API

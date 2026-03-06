@@ -14,12 +14,16 @@ public enum TransactionType {
   DIVIDEND_REINVEST(true, true, true, CashImpact.NONE), 
   SPLIT(true, false, true, CashImpact.NONE), 
 
-  RETURN_OF_CAPITAL(true, false, false,CashImpact.NONE), 
-  // similar to DIVIDEND_REINVEST
-  REINVESTED_CAPITAL_GAIN(false, true, false,CashImpact.NONE), 
+  RETURN_OF_CAPITAL(true, false, true, CashImpact.IN),
+  // Intentionally unimplemented stub - not used in MVP (Bug 8 / tech debt).
+  // CashImpact.NONE is deliberately wrong; this whole entry needs a design
+  // decision before it is exposed to users.
+  REINVESTED_CAPITAL_GAIN(false, true, false, CashImpact.NONE),
   
+  // Bug 6 - transger in/out are orphaned, exists in Enum only
   TRANSFER_IN(false, false, false, CashImpact.IN), 
-  TRANSFER_OUT(false, false, false, CashImpact.OUT), 
+  TRANSFER_OUT(false, false, false, CashImpact.OUT),
+  
   OTHER(false, false, false, CashImpact.NONE);
 
   private final boolean affectsHoldings;

@@ -149,7 +149,6 @@ public class TransactionService {
         persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toTransactionView(recordedTransaction);
-
     }
 
     public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
@@ -166,16 +165,15 @@ public class TransactionService {
         persistChanges(ctx, recordedTransaction);
 
         return transactionViewMapper.toTransactionView(recordedTransaction);
-
     }
 
-    public TransactionView recordReturnOfCaptial(RecordReturnOfCaptialCommand command) {
+    public TransactionView recordReturnOfCapital(RecordReturnOfCaptialCommand command) {
         validate(command, validator::validate, "returnOfCaptial");
         PortfolioContext ctx = getPortfolioContext(command);
 
         AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
-        Transaction recordedTransaction = transactionRecordingService.recordReturnOfCaptial(
+        Transaction recordedTransaction = transactionRecordingService.recordReturnOfCapital(
                 ctx.account(), symbol, command.heldQuantity(), command.distributionPerUnit(),
                 command.notes(), command.transactionDate());
 
@@ -183,6 +181,18 @@ public class TransactionService {
 
         return transactionViewMapper.toTransactionView(recordedTransaction);
 
+    }
+
+
+
+    // bug 6 - orphaned
+    public TransactionView recordTransferIn() {
+        throw new UnsupportedOperationException("TransferIn not yet implemented");
+    }
+
+    // bug 6
+    public TransactionView recordTransferOut() {
+        throw new UnsupportedOperationException("TransferOut not yet impelmented");
     }
 
     public TransactionView excludeTransaction(ExcludeTransactionCommand command) {

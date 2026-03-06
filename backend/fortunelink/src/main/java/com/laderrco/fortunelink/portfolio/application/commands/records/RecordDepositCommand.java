@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 
 
-public record RecordDepositCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount,
-                                   List<Fee> fees, Instant transactionDate,
-                                   String notes) implements TransactionCommand {
+public record RecordDepositCommand(PortfolioId portfolioId, UserId userId, AccountId accountId,
+    Money amount, List<Fee> fees, Instant transactionDate, String notes)
+    implements TransactionCommand {
 }
