@@ -28,7 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.function.Function;
 
-// COMBO of a new Transaction service -> those from old PortfolioAppService
+/*
+TransactionService-> TransactionRecordingService (create transaction) -> PositionTransactionApplier
+-> Account/Position
+*/
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -75,9 +78,9 @@ public class TransactionService {
 
         Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
-        Transaction recordedTransaction =
-                transactionRecordingService.recordSell(ctx.account(), symbol, command.quantity(),
-                        price, command.fees(), command.notes(), command.transactionDate());
+        Transaction recordedTransaction = transactionRecordingService.recordSell(ctx.account(), symbol,
+                command.quantity(),
+                price, command.fees(), command.notes(), command.transactionDate());
 
         persistChanges(ctx, recordedTransaction);
 

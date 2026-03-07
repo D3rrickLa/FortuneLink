@@ -15,17 +15,17 @@
     }
   ],
   // Point to the official Google Style XML for Eclipse (used by VS Code Java)
-  // "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
-  // "java.format.settings.profile": "GoogleStyle",
+  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  "java.format.settings.profile": "GoogleStyle",
   "[java]": {
     "editor.defaultFormatter": "redhat.java",
-    "editor.formatOnSave": true, // Automatically applies the Google style
+    "editor.formatOnSave": true,
     "editor.detectIndentation": true,
     "editor.insertSpaces": true, // Google style strictly forbids tabs
     "editor.wordWrapColumn": 100,
+    "editor.tabSize": 2,
     "editor.rulers": [
       100
     ]
   },
-  "editor.tabSize": 4
 }

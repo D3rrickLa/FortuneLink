@@ -30,7 +30,7 @@ public final class FifoPositionProjector implements Projector<FifoPosition, Tran
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
 
         for (Transaction tx : sorted) {
-            ApplyResult<? extends Position> result = PositionTransactionApplier.apply(current, tx);
+            ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
             current = (FifoPosition) result.newPosition();
         }
 

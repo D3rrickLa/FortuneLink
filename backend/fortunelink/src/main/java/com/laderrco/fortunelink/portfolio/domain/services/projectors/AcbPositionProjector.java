@@ -31,7 +31,7 @@ public final class AcbPositionProjector implements Projector<AcbPosition, Transa
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
 
         for (Transaction tx : sorted) {
-            ApplyResult<? extends Position> result = PositionTransactionApplier.apply(current, tx);
+            ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
             current = (AcbPosition) result.newPosition(); // same as before
         }
 
