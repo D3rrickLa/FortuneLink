@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+import com.laderrco.fortunelink.portfolio.domain.services.TransactionFactory;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.domain.services.projectors.TransactionApplier;
 import lombok.RequiredArgsConstructor;
@@ -28,94 +29,191 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   @Override
   public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
       Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
-    List<Fee> feeList = fees != null ? fees : List.of();
-    Money gross = price.pricePerUnit().multiply(quantity);
-    Money totalFees = Fee.totalInAccountCurrency(fees, account.getAccountCurrency());
-    Money cashDelta = gross.add(totalFees).negate();
-    Transaction tx = new Transaction(TransactionId.newId(), account.getAccountId(),
-        TransactionType.BUY, new TradeExecution(symbol, quantity, price), null, cashDelta, feeList,
-        notes, TransactionDate.of(date), null, TransactionMetadata.manual(type));
+
+    validateInputs(account, symbol, quantity, price, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx =
+        TransactionFactory.buy(account, symbol, type, quantity, price, fees, notes, date);
 
     applier.apply(account, tx);
+
     return tx;
-  }
-
-  @Override
-  public Transaction recordDeposit(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, String notes,
-      Instant date) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol,
-      Quantity quantity, Price price, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Transaction recordFee(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes,
-      Instant date) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Transaction recordReturnOfCapital(Account account, AssetSymbol symbol, Quantity quantity,
-      Price price, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   @Override
   public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price,
       List<Fee> fees, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
+
+    validateInputs(account, symbol, quantity, price, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.sell(symbol, quantity, price, fees, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
   }
 
   @Override
-  public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
-  }
+  public Transaction recordDeposit(Account account, Money amount, String notes, Instant date) {
 
-  @Override
-  public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.deposit(amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
   }
 
   @Override
   public Transaction recordWithdrawal(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
+
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.withdrawal(amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
   }
 
   @Override
-  public void replayFullTransaction(Account account, Transaction tx) {
-    // TODO Auto-generated method stub
+  public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
 
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.transferIn(amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
+  }
+
+  @Override
+  public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
+
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.transferOut(amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
+  }
+
+  @Override
+  public Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, String notes,
+      Instant date) {
+
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.dividend(symbol, amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
+  }
+
+  @Override
+  public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes,
+      Instant date) {
+
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.interest(symbol, amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
+  }
+
+  @Override
+  public Transaction recordFee(Account account, Money amount, String notes, Instant date) {
+
+    validateInputs(account, amount, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.fee(amount, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
+  }
+
+  @Override
+  public Transaction recordDividendReinvestment(Account account, AssetSymbol symbol,
+      Quantity quantity, Price price, String notes, Instant date) {
+
+    validateInputs(account, symbol, quantity, price, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.dividendReinvest(symbol, quantity, price, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
+  }
+
+  @Override
+  public Transaction recordReturnOfCapital(Account account, AssetSymbol symbol, Quantity quantity,
+      Price price, String notes, Instant date) {
+
+    validateInputs(account, symbol, quantity, price, notes, date);
+    validateIsActive(account);
+    validateDate(date, account);
+
+    Transaction tx = Transaction.returnOfCapital(symbol, quantity, price, notes, date);
+
+    applier.apply(account, tx);
+
+    return tx;
   }
 
   @Override
   public void replayTransaction(Account account, Transaction tx) {
-    // TODO Auto-generated method stub
 
+    if (shouldSkip(account, tx)) {
+      return;
+    }
+
+    if (!tx.transactionType().affectsHoldings()) {
+      return;
+    }
+
+    applier.apply(account, tx);
   }
+
+  @Override
+  public void replayFullTransaction(Account account, Transaction tx) {
+
+    Objects.requireNonNull(account);
+    Objects.requireNonNull(tx);
+
+    if (shouldSkip(account, tx)) {
+      return;
+    }
+
+    applier.apply(account, tx);
+  }
+
 
   private boolean shouldSkip(Account account, Transaction tx) {
     Objects.requireNonNull(account, "Account cannot be null");
