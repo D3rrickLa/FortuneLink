@@ -42,8 +42,6 @@ public interface TransactionRecordingService {
 
 	Transaction recordTransferOut(Account account, Money amount, String notes, Instant date);
 
-
-
 	/**
 	 * Position-only replay. Cash state is NOT touched. Use for exclude/restore recalculation on a
 	 * single symbol. Caller must call account.clearPosition(symbol) before invoking.
