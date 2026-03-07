@@ -183,8 +183,6 @@ public class TransactionService {
 
     }
 
-
-
     // bug 6 - orphaned
     public TransactionView recordTransferIn() {
         throw new UnsupportedOperationException("TransferIn not yet implemented");
@@ -253,6 +251,9 @@ public class TransactionService {
                 .findByIdAndUserId(command.portfolioId(), command.userId()).orElseThrow(
                         () -> new PortfolioNotFoundException(command.portfolioId().toString()));
 
+        if (portfolio.isDeleted()) {
+            throw new PortfolioNotFoundException(command.portfolioId().toString());
+        }
         Account account = portfolio.getAccount(command.accountId());
 
         return new PortfolioContext(portfolio, account);

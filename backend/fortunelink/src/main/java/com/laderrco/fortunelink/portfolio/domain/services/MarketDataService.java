@@ -16,8 +16,8 @@ public interface MarketDataService {
     /**
      * Get current market quote for a single asset.
      * 
-     * Returns full quote object with price, volume, timestamp, etc.
-     * Use this when you need more than just price (e.g., for charts).
+     * Returns full quote object with price, volume, timestamp, etc. Use this when you need more
+     * than just price (e.g., for charts).
      * 
      * @param symbol The asset symbol (e.g., "AAPL", "BTC-USD")
      * @return Quote if found, empty if symbol doesn't exist
@@ -34,16 +34,15 @@ public interface MarketDataService {
      * @throws MarketDataException if price unavailable (fail-fast for calculations).
      */
     default Price getCurrentPrice(AssetSymbol symbol) {
-        return getCurrentQuote(symbol)
-                .map(MarketAssetQuote::currentPrice)
-                .orElseThrow(() -> new MarketDataException("Price unavailable for: " + symbol.value()));
+        return getCurrentQuote(symbol).map(MarketAssetQuote::currentPrice).orElseThrow(
+                () -> new MarketDataException("Price unavailable for: " + symbol.value()));
     }
 
     /**
      * Batch fetch current quotes for multiple assets.
      * 
-     * More efficient than calling getCurrentQuote() in a loop.
-     * Use this when updating entire portfolio valuations.
+     * More efficient than calling getCurrentQuote() in a loop. Use this when updating entire
+     * portfolio valuations.
      * 
      * @param symbols List of symbols to fetch
      * @return Map of symbol → quote (missing symbols not included in map)
@@ -53,13 +52,11 @@ public interface MarketDataService {
     /**
      * Get historical quote for an asset at a specific point in time.
      * 
-     * Use for:
-     * - Performance calculations (ROI since purchase)
-     * - Historical portfolio valuations
-     * - Tax reporting (cost basis at specific date)
+     * Use for: - Performance calculations (ROI since purchase) - Historical portfolio valuations -
+     * Tax reporting (cost basis at specific date)
      * 
      * @param symbol The asset symbol
-     * @param date   The historical date/time
+     * @param date The historical date/time
      * @return Quote if available, empty if data doesn't exist
      */
     Optional<MarketAssetQuote> getHistoricalQuote(AssetSymbol symbol, Instant date);
@@ -67,11 +64,9 @@ public interface MarketDataService {
     /**
      * Get descriptive information about an asset.
      * 
-     * Use for:
-     * - Validating symbol exists before allowing purchase
-     * - Displaying asset name instead of just ticker
-     * - Auto-detecting asset type (stock vs ETF vs crypto)
-     * - Enriching transaction history display
+     * Use for: - Validating symbol exists before allowing purchase - Displaying asset name instead
+     * of just ticker - Auto-detecting asset type (stock vs ETF vs crypto) - Enriching transaction
+     * history display
      * 
      * @param symbol The asset symbol
      * @return Asset info if found, empty if symbol doesn't exist
@@ -91,10 +86,8 @@ public interface MarketDataService {
     /**
      * Get the currency in which this asset trades.
      * 
-     * Examples:
-     * - "AAPL" → USD (trades on NASDAQ in USD)
-     * - "SHOP.TO" → CAD (trades on TSX in CAD)
-     * - "BTC-USD" → USD
+     * Examples: - "AAPL" → USD (trades on NASDAQ in USD) - "SHOP.TO" → CAD (trades on TSX in CAD) -
+     * "BTC-USD" → USD
      * 
      * Use for currency conversion in transactions.
      * 

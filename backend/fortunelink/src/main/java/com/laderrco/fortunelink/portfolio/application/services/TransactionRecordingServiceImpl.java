@@ -229,14 +229,12 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
+    throw new UnsupportedOperationException("recordTransferIn not yet implemented — Bug 6");
   }
 
   @Override
   public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
-    // TODO Auto-generated method stub
-    return null;
+    throw new UnsupportedOperationException("recordTransferOut not yet implemented — Bug 6");
   }
 
   @Override

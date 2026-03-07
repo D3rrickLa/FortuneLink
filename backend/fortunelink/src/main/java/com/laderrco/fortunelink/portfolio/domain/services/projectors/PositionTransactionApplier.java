@@ -7,8 +7,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 
 final class PositionTransactionApplier {
 
-    private PositionTransactionApplier() {
-    }
+    private PositionTransactionApplier() {}
 
     static <P extends Position> P apply(P position, Transaction tx) {
 
@@ -17,6 +16,7 @@ final class PositionTransactionApplier {
             case SELL -> applySell(position, tx);
             case SPLIT -> applySplit(position, tx);
             case DIVIDEND_REINVEST -> applyDividendReinvest(position, tx);
+            case RETURN_OF_CAPITAL -> applyReturnOfCapital(position, tx); // ADD THIS
 
             default -> position; // dividends, interest, fees, etc.
         };
@@ -25,18 +25,14 @@ final class PositionTransactionApplier {
     private static <P extends Position> P applyBuy(P position, Transaction tx) {
         Money totalCost = tx.cashDelta().abs();
 
-        ApplyResult<? extends Position> r = position.buy(
-                tx.execution().quantity(),
-                totalCost,
-                tx.occurredAt().timestamp());
+        ApplyResult<? extends Position> r =
+                position.buy(tx.execution().quantity(), totalCost, tx.occurredAt().timestamp());
         return cast(r);
     }
 
     private static <P extends Position> P applySell(P position, Transaction tx) {
         // cashDelta on SELL is net proceeds (positive); correct for realized gain calc
-        ApplyResult<? extends Position> r = position.sell(
-                tx.execution().quantity(),
-                tx.cashDelta(), // proceeds (positive)
+        ApplyResult<? extends Position> r = position.sell(tx.execution().quantity(), tx.cashDelta(),
                 tx.occurredAt().timestamp());
         return cast(r);
     }
@@ -49,16 +45,19 @@ final class PositionTransactionApplier {
     private static <P extends Position> P applyDividendReinvest(P position, Transaction tx) {
         // No cash movement; position increases at grossValue cost
         Money totalCost = tx.execution().grossValue();
-        ApplyResult<? extends Position> r = position.buy(
-                tx.execution().quantity(),
-                totalCost,
-                tx.occurredAt().timestamp());
+        ApplyResult<? extends Position> r =
+                position.buy(tx.execution().quantity(), totalCost, tx.occurredAt().timestamp());
+        return cast(r);
+    }
+
+    private static <P extends Position> P applyReturnOfCapital(P position, Transaction tx) {
+        ApplyResult<? extends Position> r = position
+                .applyReturnOfCapital(tx.execution().pricePerUnit(), tx.execution().quantity());
         return cast(r);
     }
 
     @SuppressWarnings("unchecked")
-    private static <P extends Position> P cast(
-            ApplyResult<? extends Position> r) {
+    private static <P extends Position> P cast(ApplyResult<? extends Position> r) {
         return (P) r.newPosition();
     }
 

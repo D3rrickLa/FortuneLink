@@ -9,17 +9,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
-public final class AcbPositionProjector
-        implements Projector<AcbPosition, Transaction> {
-
+public final class AcbPositionProjector implements Projector<AcbPosition, Transaction> {
     private final AssetSymbol symbol;
     private final AssetType type;
     private final Currency accountCurrency;
 
-    public AcbPositionProjector(
-            AssetSymbol symbol,
-            AssetType type,
-            Currency accountCurrency) {
+    public AcbPositionProjector(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
         this.symbol = symbol;
         this.type = type;
         this.accountCurrency = accountCurrency;
@@ -31,8 +26,7 @@ public final class AcbPositionProjector
         AcbPosition current = AcbPosition.empty(symbol, type, accountCurrency);
 
         List<Transaction> sorted = transactions.stream()
-                .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
-                .toList();
+                .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
 
         for (Transaction tx : sorted) {
             current = PositionTransactionApplier.apply(current, tx);

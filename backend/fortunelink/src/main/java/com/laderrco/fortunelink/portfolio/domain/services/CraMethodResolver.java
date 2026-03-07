@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class CraMethodResolver implements TaxMethodResolver {
+
     @Override
     public Money buyerCost(Transaction tx) {
         // For a BUY, cashDelta is negative. We want the positive total cost.

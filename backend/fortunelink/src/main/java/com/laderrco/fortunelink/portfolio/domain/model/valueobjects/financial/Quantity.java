@@ -45,7 +45,8 @@ public record Quantity(BigDecimal amount) implements Comparable<Quantity> {
         if (factor.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Factor cannot be negative");
         }
-        return new Quantity(this.amount.multiply(factor).setScale(QUANTITY_PRECISION, RoundingMode.HALF_EVEN));
+        return new Quantity(
+                this.amount.multiply(factor).setScale(QUANTITY_PRECISION, RoundingMode.HALF_EVEN));
     }
 
     public Quantity divide(BigDecimal divisor) {
