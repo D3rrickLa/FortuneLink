@@ -3,7 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.utils;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 
-public interface TaxMethodResolver {
+public interface TradeValueResolver {
     /**
      * CRA: Cost = Gross Price + Commissions/Fees.
      * Calculated as the absolute value of the cash outflow.

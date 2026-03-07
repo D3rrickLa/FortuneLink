@@ -7,6 +7,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public final class AcbPositionProjector implements Projector<AcbPosition, Transaction> {
@@ -29,7 +31,8 @@ public final class AcbPositionProjector implements Projector<AcbPosition, Transa
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
 
         for (Transaction tx : sorted) {
-            current = PositionTransactionApplier.apply(current, tx);
+            ApplyResult<? extends Position> result = PositionTransactionApplier.apply(current, tx);
+            current = (AcbPosition) result.newPosition(); // same as before
         }
 
         return current;

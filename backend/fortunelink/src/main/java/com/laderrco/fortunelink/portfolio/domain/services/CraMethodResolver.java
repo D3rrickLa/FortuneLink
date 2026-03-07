@@ -2,11 +2,12 @@ package com.laderrco.fortunelink.portfolio.domain.services;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.utils.TaxMethodResolver;
+import com.laderrco.fortunelink.portfolio.domain.utils.TradeValueResolver;
+
 import org.springframework.stereotype.Component;
 
 @Component
-public class CraMethodResolver implements TaxMethodResolver {
+public class CraMethodResolver implements TradeValueResolver {
 
     @Override
     public Money buyerCost(Transaction tx) {

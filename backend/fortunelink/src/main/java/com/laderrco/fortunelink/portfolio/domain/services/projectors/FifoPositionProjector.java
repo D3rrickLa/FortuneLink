@@ -6,7 +6,9 @@ import java.util.List;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public final class FifoPositionProjector implements Projector<FifoPosition, Transaction> {
@@ -28,7 +30,8 @@ public final class FifoPositionProjector implements Projector<FifoPosition, Tran
                 .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
 
         for (Transaction tx : sorted) {
-            current = PositionTransactionApplier.apply(current, tx);
+            ApplyResult<? extends Position> result = PositionTransactionApplier.apply(current, tx);
+            current = (FifoPosition) result.newPosition();
         }
 
         return current;

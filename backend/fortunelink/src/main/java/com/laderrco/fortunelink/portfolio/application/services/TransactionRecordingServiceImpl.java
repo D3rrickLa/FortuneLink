@@ -14,7 +14,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
-import com.laderrco.fortunelink.portfolio.domain.utils.TaxMethodResolver;
+import com.laderrco.fortunelink.portfolio.domain.services.projectors.PositionTransactionApplier;
+import com.laderrco.fortunelink.portfolio.domain.utils.TradeValueResolver;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +26,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
+// handle llike this Position + Transaction -> Apply Result (PositioNTransactionApplier)
 @Service
 @RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
   private final Logger log = LoggerFactory.getLogger(TransactionRecordingServiceImpl.class);
-  private final TaxMethodResolver taxResolver;
+  private final TradeValueResolver taxResolver;
 
   @Override
   public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
@@ -44,10 +47,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Money totalOutflow = grossCost.add(totalFee);
 
     // Cash leaves account
-    Transaction tx =
-        new Transaction(TransactionId.newId(), account.getAccountId(), TransactionType.BUY,
-            new TradeExecution(symbol, quantity, price), null, totalOutflow.negate(), feeList,
-            notes, TransactionDate.of(date), null, TransactionMetadata.manual(type));
+    Transaction tx = new Transaction(TransactionId.newId(), account.getAccountId(), TransactionType.BUY,
+        new TradeExecution(symbol, quantity, price), null, totalOutflow.negate(), feeList,
+        notes, TransactionDate.of(date), null, TransactionMetadata.manual(type));
 
     Position current = account.ensurePosition(symbol, type);
     ApplyResult<?> result = current.buy(quantity, taxResolver.buyerCost(tx), date);
@@ -148,14 +150,24 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     // Resolve asset type from existing position if available, default to STOCK
     AssetType type = account.getPosition(symbol).map(Position::type).orElse(AssetType.STOCK);
 
-    return new Transaction(TransactionId.newId(), account.getAccountId(), TransactionType.INTEREST,
-        null, null, amount, List.of(), notes.trim(), TransactionDate.of(date), null,
+    return new Transaction(
+        TransactionId.newId(),
+        account.getAccountId(),
+        TransactionType.INTEREST,
+        null,
+        null,
+        amount,
+        List.of(),
+        notes.trim(),
+        TransactionDate.of(date),
+        null,
         TransactionMetadata.manual(type));
 
   }
 
   /**
-   * Records a dividend payment — credits cash, no position change. The symbol is tracked for tax
+   * Records a dividend payment — credits cash, no position change. The symbol is
+   * tracked for tax
    * reporting purposes (taxable income).
    */
   @Override
@@ -179,7 +191,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   /**
-   * Records a dividend reinvestment (DRIP): - No cash movement (NONE impact per TransactionType
+   * Records a dividend reinvestment (DRIP): - No cash movement (NONE impact per
+   * TransactionType
    * enum) - Increases position using the dividend proceeds
    */
   @Override
@@ -239,80 +252,27 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public void replayTransaction(Account account, Transaction tx) {
-    if (shouldSkip(account, tx))
+    if (shouldSkip(account, tx)) {
       return;
-
-    if (!tx.transactionType().affectsHoldings()) {
-      throw new IllegalArgumentException("replayTransaction is position-only. Transaction type "
-          + tx.transactionType() + " affects cash and must not be replayed through this path. "
-          + "If full-account reconstruction is needed, use replayFullAccount() "
-          + "which resets cash state before replay.");
     }
 
-    switch (tx.transactionType()) {
-      case BUY -> {
-        AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
-        Position current = account.ensurePosition(tx.execution().asset(), type);
-        Money totalCostIncludingFees = taxResolver.buyerCost(tx);
+    if (!tx.transactionType().affectsHoldings()) {
+      throw new IllegalArgumentException("replayTransaction is position-only.");
+    }
 
-        ApplyResult<?> result = current.buy(tx.execution().quantity(), totalCostIncludingFees,
-            tx.occurredAt().timestamp());
+    AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
+    Position current = account.ensurePosition(tx.execution().asset(), type);
 
-        account.updatePosition(tx.execution().asset(), result.newPosition());
-      }
-      case SELL -> {
-        Position position = account.getPosition(tx.execution().asset()).orElseThrow(() -> {
-          String s = String.format(
-              "No position for %s during position replay. BUY must precede SELL in replay order.",
-              tx.execution().asset().value());
+    ApplyResult<? extends Position> result = PositionTransactionApplier.apply(current, tx);
 
-          return new IllegalStateException(s);
-        });
+    account.updatePosition(tx.execution().asset(), result.newPosition());
 
-        Money proceeds = taxResolver.sellerProceeds(tx);
-        ApplyResult<?> result =
-            position.sell(tx.execution().quantity(), proceeds, tx.occurredAt().timestamp());
-
-        account.updatePosition(tx.execution().asset(), result.newPosition());
-
-        // Capture realized gain - prev discarded, but now preserved
-        if (result instanceof ApplyResult.Sale<?> sale) {
-          account.recordRealizedGain(tx.execution().asset(), sale.realizedGainLoss(),
-              sale.costBasisSold(), tx.occurredAt().timestamp());
-        }
-      }
-      case SPLIT -> {
-        // A split on a closed position is a no-op.
-        account.getPosition(tx.execution().asset()).ifPresent(position -> {
-          ApplyResult<?> result = position.split(tx.split().ratio());
-          account.updatePosition(tx.execution().asset(), result.newPosition());
-        });
-      }
-      case DIVIDEND_REINVEST -> {
-        // No cash movement - increase position at cost of grossValue.
-        AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
-        Position current = account.ensurePosition(tx.execution().asset(), type);
-        Money totalCost = tx.execution().grossValue();
-        ApplyResult<?> result =
-            current.buy(tx.execution().quantity(), totalCost, tx.occurredAt().timestamp());
-        account.updatePosition(tx.execution().asset(), result.newPosition());
-      }
-      case RETURN_OF_CAPITAL -> {
-        // Bug 5 fix: RETURN_OF_CAPITAL now affectsHoldings=true so it reaches
-        // this switch. Reduce ACB via applyReturnOfCapital.
-        // Cash is NOT touched here — surgical replay only corrects positions.
-        account.getPosition(tx.execution().asset()).ifPresent(position -> {
-          ApplyResult<?> result = position.applyReturnOfCapital(tx.execution().pricePerUnit(),
-              tx.execution().quantity());
-          account.updatePosition(tx.execution().asset(), result.newPosition());
-        });
-      }
-      default -> {
-        // Should never be reached: the affectsHoldings guard above blocks
-        // any type that doesn't belong here. This is a safety net.
-        throw new IllegalStateException("Unhandled holding-affecting type in replayTransaction: "
-            + tx.transactionType() + ". Update this switch when adding new TransactionTypes.");
-      }
+    if (result instanceof ApplyResult.Sale<?> sale) {
+      account.recordRealizedGain(
+          tx.execution().asset(),
+          sale.realizedGainLoss(),
+          sale.costBasisSold(),
+          tx.occurredAt().timestamp());
     }
   }
 
@@ -325,15 +285,20 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     switch (tx.transactionType()) {
       case BUY -> {
+        // AssetType type = tx.metadata() != null ? tx.metadata().assetType() :
+        // AssetType.STOCK;
+        // Position current = account.ensurePosition(tx.execution().asset(), type);
+        // Money totalCostIncludingFees = taxResolver.buyerCost(tx);
+
+        // ApplyResult<?> result = current.buy(tx.execution().quantity(),
+        // totalCostIncludingFees,
+        // tx.occurredAt().timestamp());
+
+        // account.updatePosition(tx.execution().asset(), result.newPosition());
+        // account.withdraw(totalCostIncludingFees, "REPLAY BUY", true);
         AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
         Position current = account.ensurePosition(tx.execution().asset(), type);
-        Money totalCostIncludingFees = taxResolver.buyerCost(tx);
-
-        ApplyResult<?> result = current.buy(tx.execution().quantity(), totalCostIncludingFees,
-            tx.occurredAt().timestamp());
-
-        account.updatePosition(tx.execution().asset(), result.newPosition());
-        account.withdraw(totalCostIncludingFees, "REPLAY BUY", true);
+        ApplyResult<?> result = PositionTransactionApplier.apply(current, tx);
       }
       case SELL -> {
         Position current = account.getPosition(tx.execution().asset())
@@ -341,8 +306,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
                 .format("No position for %s during full replay", tx.execution().asset().value())));
 
         Money proceeds = taxResolver.sellerProceeds(tx);
-        ApplyResult<?> result =
-            current.sell(tx.execution().quantity(), proceeds, tx.occurredAt().timestamp());
+        ApplyResult<?> result = current.sell(tx.execution().quantity(), proceeds, tx.occurredAt().timestamp());
 
         account.updatePosition(tx.execution().asset(), result.newPosition());
         account.deposit(proceeds, "REPLAY SELL " + tx.execution().asset().value());
@@ -363,8 +327,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
         Position current = account.ensurePosition(tx.execution().asset(), type);
         Money cost = tx.execution().grossValue();
-        ApplyResult<? extends Position> result =
-            current.buy(tx.execution().quantity(), cost, tx.occurredAt().timestamp());
+        ApplyResult<? extends Position> result = current.buy(tx.execution().quantity(), cost,
+            tx.occurredAt().timestamp());
         account.updatePosition(tx.execution().asset(), result.newPosition());
         // Consume cash — mirrors the dividend proceeds that funded this reinvestment.
         // allowNegative=true handles broker-native DRIP with no paired DIVIDEND tx.
