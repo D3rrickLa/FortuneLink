@@ -89,8 +89,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	@Override
-	public ApplyResult<? extends Position> applyReturnOfCaptial(Price distributionPerUnit,
-			Quantity heldQuantity) {
+	public ApplyResult<? extends Position> applyReturnOfCapital(Price price, Quantity heldQuantity) {
 
 		// NOTE: we technically don't need heldQuantity as we iterate through the entire
 		// lot to perform the math, we are using it for validation instead
@@ -101,7 +100,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 							this.totalQuantity(), heldQuantity));
 		}
 		List<TaxLot> updatedLots = lots.stream().map(lot -> {
-			Money lotReduction = distributionPerUnit.calculateValue(lot.quantity());
+			Money lotReduction = price.calculateValue(lot.quantity());
 			return new TaxLot(lot.quantity(), lot.costBasis().subtract(lotReduction), lot.acquiredDate());
 		}).toList();
 

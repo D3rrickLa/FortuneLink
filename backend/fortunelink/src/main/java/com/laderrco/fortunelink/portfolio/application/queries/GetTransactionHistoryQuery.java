@@ -32,11 +32,6 @@ public record GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId,
         validatePagination(page, size);
     }
 
-    // Convenience constructor with defaults
-    public GetTransactionHistoryQuery(PortfolioId portfolioId, UserId userId, AssetSymbol symbol) {
-        this(portfolioId, userId, null, symbol, null, null, 0, 20);
-    }
-
     // update this if you want sorting later
     public Pageable toPageable() {
         return PageRequest.of(page, size);

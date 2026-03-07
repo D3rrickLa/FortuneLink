@@ -78,7 +78,7 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
     }
 
     @Override
-    public ApplyResult.Adjustment<AcbPosition> applyReturnOfCaptial(Price distributionPerUnit,
+    public ApplyResult.Adjustment<AcbPosition> applyReturnOfCapital(Price distributionPerUnit,
             Quantity heldQuantity) {
         Money totalReduction = distributionPerUnit.calculateValue(heldQuantity);
 
