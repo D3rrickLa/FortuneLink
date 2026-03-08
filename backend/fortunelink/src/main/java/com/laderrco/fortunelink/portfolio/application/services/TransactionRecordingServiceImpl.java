@@ -169,9 +169,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount,
-      String notes, Instant date) {
-
+  public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes, Instant date) {
+    Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
     validateDate(date, account);
@@ -194,9 +193,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordDividend(Account account, AssetSymbol symbol, Money amount,
-      String notes, Instant date) {
-
+  public Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, String notes, Instant date) {
+    Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
     validateDate(date, account);
@@ -289,13 +287,13 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
-    // Awaiting design decision on inter-account transfers — Bug 6.
-    throw new UnsupportedOperationException("recordTransferIn not yet implemented - Bug 6");
+    // Awaiting design decision on inter-account transfers - Bug 6.
+    throw new UnsupportedOperationException("recordTransferIn not yet implemented");
   }
 
   @Override
   public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
-    throw new UnsupportedOperationException("recordTransferOut not yet implemented - Bug 6");
+    throw new UnsupportedOperationException("recordTransferOut not yet implemented");
   }
 
   /**
@@ -320,7 +318,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   /**
-   * Full replay — position AND cash. Caller MUST reset both to zero first.
+   * Full replay - position AND cash. Caller MUST reset both to zero first.
    */
   @Override
   public void replayFullTransaction(Account account, Transaction tx) {
@@ -348,7 +346,17 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     AssetSymbol symbol = tx.execution().asset();
     AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
-    Position current = account.ensurePosition(symbol, type);
+
+    Position current;
+
+    switch (tx.transactionType()) {
+      case BUY -> current = account.ensurePosition(symbol, type);
+
+      case SELL, RETURN_OF_CAPITAL, SPLIT -> current = requirePosition(account, symbol, tx.transactionType());
+      default -> {
+        return; // no position effect
+      }
+    }
 
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
     account.updatePosition(symbol, result.newPosition());
@@ -396,5 +404,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
           "Transaction date " + date + " predates account creation "
               + account.getCreationDate());
     }
+  }
+
+  private Position requirePosition(Account account, AssetSymbol symbol, TransactionType kind) {
+    return account.getPosition(symbol)
+        .orElseThrow(() -> new IllegalStateException(
+            "Replay error: " + kind + " requires existing position for " + symbol));
   }
 }

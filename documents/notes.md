@@ -16,3 +16,6 @@
 | 14 | **Medium** | `TransactionPurgeService` silently destroy a user's ability to restore an excluded transaction | ✅ Fixed |
 | 15 | **Medium** | `updatePortfolio` allows mutation of soft0deleted portfolio | ✅ Fixed |
 | 16 | **Medium** | `RecordWithdrawalCommand.fees` slient drops fees | ✅ Fixed |
+| 17 | **High** |  `TransactionService.getPortfolioContext()` missing isDelete() | ✅ Fixed |  
+| 18 | **High** | `TransactionApplier.apply()` Return_Of_Captial fall through | ✅ Fixed |  
+| 19 | **Medium** | `TransactionRecordingServiceImpl` TransferIn/OUt should throw | ✅ Fixed |

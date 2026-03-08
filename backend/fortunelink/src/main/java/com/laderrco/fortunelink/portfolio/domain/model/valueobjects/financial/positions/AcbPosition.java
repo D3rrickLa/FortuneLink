@@ -78,16 +78,18 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
     }
 
     @Override
-    public ApplyResult.Adjustment<AcbPosition> applyReturnOfCapital(Price distributionPerUnit,
-            Quantity heldQuantity) {
-        Money totalReduction = distributionPerUnit.calculateValue(heldQuantity);
+    public ApplyResult.Adjustment<AcbPosition> applyReturnOfCapital(Price price, Quantity heldQuantity) {
+        if (!heldQuantity.equals(this.totalQuantity)) {
+            throw new IllegalArgumentException(
+                    "ROC heldQuantity " + heldQuantity + " does not match position quantity " + totalQuantity);
+        }
+        Money totalReduction = price.calculateValue(heldQuantity);
 
         // new ACB = Current ACB - ROC amount
         AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, totalQuantity,
                 totalCostBasis.subtract(totalReduction), firstAcquiredAt);
         return new ApplyResult.Adjustment<>(updated);
     }
-
 
     @Override
     public Money costPerUnit() {
@@ -104,6 +106,5 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
     public Money calculateUnrealizedGain(Money currentPrice) {
         return currentValue(currentPrice).subtract(totalCostBasis);
     }
-
 
 }

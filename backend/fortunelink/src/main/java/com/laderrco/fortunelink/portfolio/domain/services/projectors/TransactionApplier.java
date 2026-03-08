@@ -8,6 +8,8 @@ public final class TransactionApplier {
 	private TransactionApplier() {
 	}
 
+	// single source of truth. Every path that needs to compute a new position state
+	// goes through TransactionApplier.apply()
 	public static ApplyResult<? extends Position> apply(Position position, Transaction tx) {
 		// cost paid (stored on tx at record time)
 		return switch (tx.transactionType()) {

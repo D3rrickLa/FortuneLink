@@ -56,6 +56,8 @@ public class PositionRecalculationService {
     /**
      * Surgical recalculation for a single symbol.`
      * Corrects ACB/Position but leaves Cash Balance as-is.
+     * 
+     * This filters to affectsHolding() before calling replayTransaction()
      */
     @Transactional
     public void scheduleRecalculation(PortfolioId portfolioId, UserId userId, AccountId accountId, AssetSymbol symbol) {
@@ -123,6 +125,5 @@ public class PositionRecalculationService {
         return portfolioRepository.findByIdAndUserId(portfolioId, userId)
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
-
 
 }

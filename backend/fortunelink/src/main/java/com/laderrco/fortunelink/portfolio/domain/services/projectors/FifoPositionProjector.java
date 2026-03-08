@@ -31,7 +31,13 @@ public final class FifoPositionProjector implements Projector<FifoPosition, Tran
 
         for (Transaction tx : sorted) {
             ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
-            current = (FifoPosition) result.newPosition();
+            Position next = result.newPosition();
+            if (!(next instanceof FifoPosition fifo)) {
+                throw new IllegalStateException(
+                        "FifoPositionProjector received non-FifoPosition result for tx type: "
+                                + tx.transactionType());
+            }
+            current = fifo;
         }
 
         return current;
