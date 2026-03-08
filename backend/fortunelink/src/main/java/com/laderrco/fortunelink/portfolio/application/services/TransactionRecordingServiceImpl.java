@@ -259,9 +259,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     validateDate(date, account);
 
-    AssetType type = account.getPosition(symbol)
-        .map(Position::type)
-        .orElse(AssetType.STOCK);
+    Position existingPosition = account.getPosition(symbol)
+        .orElseThrow(() -> new IllegalStateException(
+            "Cannot apply ROC: no open position for " + symbol.symbol()));
 
     // ROC cashImpact = IN → gross distribution paid to the investor.
     // No fees on ROC distributions.
@@ -276,7 +276,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .fees(List.of())
         .notes(notes)
         .occurredAt(TransactionDate.of(date))
-        .metadata(TransactionMetadata.manual(type))
+        .metadata(TransactionMetadata.manual(existingPosition.type()))
         .build();
 
     // Position first: applyReturnOfCapital() reduces ACB on the position.

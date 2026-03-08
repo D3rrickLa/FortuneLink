@@ -32,7 +32,17 @@ public final class AcbPositionProjector implements Projector<AcbPosition, Transa
 
         for (Transaction tx : sorted) {
             ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
-            current = (AcbPosition) result.newPosition(); // same as before
+            Position next = result.newPosition();
+
+            // Fail loudly if somehow a non-ACB position comes back -
+            // this projector is ACB-only and wrong results here silently corrupt ACB
+            // history
+            if (!(next instanceof AcbPosition acb)) {
+                throw new IllegalStateException(
+                        "AcbPositionProjector received non-AcbPosition result for tx type: "
+                                + tx.transactionType());
+            }
+            current = acb;
         }
 
         return current;

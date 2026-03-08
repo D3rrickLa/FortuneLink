@@ -1,14 +1,12 @@
 package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
-import org.springframework.stereotype.Component;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
-import lombok.RequiredArgsConstructor;
 
-@Component
-@RequiredArgsConstructor
 public final class TransactionApplier {
+	private TransactionApplier() {
+	}
 
 	public static ApplyResult<? extends Position> apply(Position position, Transaction tx) {
 		// cost paid (stored on tx at record time)
