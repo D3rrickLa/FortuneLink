@@ -19,3 +19,14 @@
 | 17 | **High** |  `TransactionService.getPortfolioContext()` missing isDelete() | ✅ Fixed |  
 | 18 | **High** | `TransactionApplier.apply()` Return_Of_Captial fall through | ✅ Fixed |  
 | 19 | **Medium** | `TransactionRecordingServiceImpl` TransferIn/OUt should throw | ✅ Fixed |
+| 20 | **High** | `FifoPositionProjector` unchecked cast | ✅ Fixed | 
+| 21 | **Medium** | `AcbPosition.applyReturnOfCapital()` no quantity guard | ✅ Fixed| 
+| 22 | **Low** | `recordInterest/recordDividend` null symbol |✅ Fixed |
+| 23| **Low** | `applyPositionEffect` ensurePosition on SELL |✅ Fixed | 
+| 24| **Critica** | `lDIVIDEND_REINVEST` silently no-ops in `applyPositionEffect` switch |🔴 Open |
+| 25 |**Medium** | getPortfolioSummaries may return soft-deleted portfolios| 🟡 Open |
+| 26| **Low** | Sort field `"transactionDate"` magic string| 🟡 Open |
+|6, 7, 8 |— |Transfer, Split recording, REINVESTED_CAPITAL_GAIN |⚪ Deferred|
+
+—Design GapPerformanceCalculationService not implemented⚪ Post-MVP—Design 
+GapAssetAllocationService not implemented⚪ Post-MVP—Design GapLiability/Loan context not started⚪ Post-MVP—LowAcbPosition.firstAcquiredAt not surfaced in mapper⚪ Open

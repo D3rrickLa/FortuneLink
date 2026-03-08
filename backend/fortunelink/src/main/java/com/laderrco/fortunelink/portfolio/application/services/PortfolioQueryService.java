@@ -77,7 +77,11 @@ public class PortfolioQueryService {
     public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
         Objects.requireNonNull(query, "GetPortfoliosByUserIdQuery cannot be null");
 
-        List<Portfolio> portfolios = portfolioRepository.findAllByUserId(query.userId());
+        List<Portfolio> portfolios = portfolioRepository.findAllByUserId(query.userId())
+                .stream()
+                .filter(p -> !p.isDeleted())
+                .toList();
+
         if (portfolios.isEmpty()) {
             return List.of();
         }
@@ -101,7 +105,8 @@ public class PortfolioQueryService {
     /**
      * Calculates net worth for a user's portfolio.
      *
-     * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL into Loan/Debt context).
+     * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL
+     * into Loan/Debt context).
      */
     public NetWorthView getNetWorth(GetNetWorthQuery query) {
         Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");

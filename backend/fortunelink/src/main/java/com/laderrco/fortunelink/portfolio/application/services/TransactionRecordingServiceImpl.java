@@ -350,8 +350,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Position current;
 
     switch (tx.transactionType()) {
-      case BUY -> current = account.ensurePosition(symbol, type);
-
+      case BUY, DIVIDEND_REINVEST -> current = account.ensurePosition(symbol, type);
       case SELL, RETURN_OF_CAPITAL, SPLIT -> current = requirePosition(account, symbol, tx.transactionType());
       default -> {
         return; // no position effect

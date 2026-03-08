@@ -94,7 +94,7 @@ public class TransactionQueryService {
         Pageable pageable = PageRequest.of(
                 query.page(),
                 query.size(),
-                Sort.by("transactionDate").descending());
+                Sort.by("occurredAt").descending());
 
         Page<Transaction> page;
 

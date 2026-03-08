@@ -203,7 +203,7 @@ public class PortfolioViewMapper {
      */
     private static Instant extractFirstAcquiredDate(Position position) {
         return switch (position) {
-            case AcbPosition _ -> null; // ACB doesn't track individual lot dates
+            case AcbPosition acb -> acb.firstAcquiredAt();
             case FifoPosition fifo -> {
                 var lots = fifo.lots();
                 yield lots.isEmpty() ? null : lots.get(0).acquiredDate();
