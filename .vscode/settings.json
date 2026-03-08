@@ -15,7 +15,7 @@
     }
   ],
   // Point to the official Google Style XML for Eclipse (used by VS Code Java)
-  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  // "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
   "java.format.settings.profile": "GoogleStyle",
   "[java]": {
     "editor.defaultFormatter": "redhat.java",

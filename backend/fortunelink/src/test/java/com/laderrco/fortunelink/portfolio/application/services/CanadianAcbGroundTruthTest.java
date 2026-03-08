@@ -10,7 +10,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
-import com.laderrco.fortunelink.portfolio.domain.services.CraMethodResolver;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import lombok.Setter;
@@ -58,8 +57,7 @@ public class CanadianAcbGroundTruthTest {
 	private static final Instant T2 = Instant.parse("2024-03-20T14:30:00Z");
 	private static final Instant T3 = Instant.parse("2024-06-10T14:30:00Z");
 
-	private final TransactionRecordingServiceImpl service = new TransactionRecordingServiceImpl(
-			new CraMethodResolver());
+	private final TransactionRecordingServiceImpl service = new TransactionRecordingServiceImpl();
 
 	// -------------------------------------------------------------------------
 	// Scenario: Single buy, then partial sell

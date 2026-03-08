@@ -21,18 +21,10 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 // THIS IS AN IMMUTABLE STATE
 // account and portfolio reconstruct state from these transaction(s)
 @Builder
-public record Transaction(
-        TransactionId transactionId,
-        AccountId accountId,
-        TransactionType transactionType,
-        TradeExecution execution,
-        SplitDetails split,
-        Money cashDelta,
-        List<Fee> fees,
-        String notes,
-        TransactionDate occurredAt,
-        TransactionId relatedTransactionId,
-        TransactionMetadata metadata
+public record Transaction(TransactionId transactionId, AccountId accountId,
+        TransactionType transactionType, TradeExecution execution, SplitDetails split,
+        Money cashDelta, List<Fee> fees, String notes, TransactionDate occurredAt,
+        TransactionId relatedTransactionId, TransactionMetadata metadata
 
 ) {
     public Transaction {
@@ -47,11 +39,10 @@ public record Transaction(
         fees = List.copyOf(fees);
         notes = notes.trim();
 
-        validateConsistency("execution details",
-                transactionType.requiresExecution(), execution != null);
+        validateConsistency("execution details", transactionType.requiresExecution(),
+                execution != null);
 
-        validateConsistency("split details",
-                transactionType.requiresSplitDetails(), split != null);
+        validateConsistency("split details", transactionType.requiresSplitDetails(), split != null);
 
         if (transactionType.cashImpact() == CashImpact.NONE && !cashDelta.isZero()) {
             throw new IllegalArgumentException(transactionType + " cannot affect cash");
@@ -72,18 +63,8 @@ public record Transaction(
             throw new IllegalStateException("Cannot exclude transaction without metadata");
         }
         TransactionMetadata updatedMetadata = metadata.markAsExcluded(userId, reason);
-        return new Transaction(
-                transactionId,
-                accountId,
-                transactionType,
-                execution,
-                split,
-                cashDelta,
-                fees,
-                notes,
-                occurredAt,
-                relatedTransactionId,
-                updatedMetadata);
+        return new Transaction(transactionId, accountId, transactionType, execution, split,
+                cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
     }
 
     public Transaction restore() {
@@ -91,18 +72,8 @@ public record Transaction(
             throw new IllegalStateException("Cannot restore transaction without metadata");
         }
         TransactionMetadata updatedMetadata = metadata.restore();
-        return new Transaction(
-                transactionId,
-                accountId,
-                transactionType,
-                execution,
-                split,
-                cashDelta,
-                fees,
-                notes,
-                occurredAt,
-                relatedTransactionId,
-                updatedMetadata);
+        return new Transaction(transactionId, accountId, transactionType, execution, split,
+                cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
     }
 
     public boolean isExcluded() {
@@ -122,8 +93,8 @@ public record Transaction(
         }
     }
 
-    private void validateTradeConsistency(TradeExecution execution, TransactionType type, Money cashDelta,
-            List<Fee> fees) {
+    private void validateTradeConsistency(TradeExecution execution, TransactionType type,
+            Money cashDelta, List<Fee> fees) {
         Money grossValue = execution.grossValue();
         Money totalFees = Fee.totalInAccountCurrency(fees, cashDelta.currency());
 
@@ -134,8 +105,8 @@ public record Transaction(
         };
 
         if (!cashDelta.equals(expectedCashDelta)) {
-            throw new IllegalArgumentException(
-                    "Cash delta mismatch for " + type + ". Expected: " + expectedCashDelta + ", got: " + cashDelta);
+            throw new IllegalArgumentException("Cash delta mismatch for " + type + ". Expected: "
+                    + expectedCashDelta + ", got: " + cashDelta);
         }
     }
 
@@ -161,8 +132,7 @@ public record Transaction(
         }
 
         /**
-         * Gross value of the trade before fees. This is qty × price,
-         * representing the market value.
+         * Gross value of the trade before fees. This is qty × price, representing the market value.
          */
         public Money grossValue() {
             return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
@@ -172,10 +142,7 @@ public record Transaction(
     public record SplitDetails(Ratio ratio) {
     }
 
-    public record TransactionMetadata(
-            AssetType assetType,
-            String source,
-            boolean excluded, // ← NEW
+    public record TransactionMetadata(AssetType assetType, String source, boolean excluded, // ← NEW
             Instant excludedAt, // ← NEW
             UserId excludedBy, // ← NEW
             String excludedReason, // ← NEW
@@ -188,11 +155,13 @@ public record Transaction(
 
             // Validate exclusion consistency
             if (excluded && (excludedAt == null || excludedBy == null)) {
-                throw new IllegalArgumentException("excludedAt and excludedBy required when excluded=true");
+                throw new IllegalArgumentException(
+                        "excludedAt and excludedBy required when excluded=true");
             }
 
             if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
-                throw new IllegalArgumentException("Cannot have exclusion metadata when excluded=false");
+                throw new IllegalArgumentException(
+                        "Cannot have exclusion metadata when excluded=false");
             }
         }
 
@@ -210,13 +179,7 @@ public record Transaction(
             if (excluded) {
                 throw new IllegalStateException("Transaction already excluded");
             }
-            return new TransactionMetadata(
-                    assetType,
-                    source,
-                    true,
-                    Instant.now(),
-                    userId,
-                    reason,
+            return new TransactionMetadata(assetType, source, true, Instant.now(), userId, reason,
                     additionalData);
         }
 
@@ -225,13 +188,7 @@ public record Transaction(
             if (!excluded) {
                 throw new IllegalStateException("Transaction is not excluded");
             }
-            return new TransactionMetadata(
-                    assetType,
-                    source,
-                    false,
-                    null,
-                    null,
-                    null,
+            return new TransactionMetadata(assetType, source, false, null, null, null,
                     additionalData);
         }
 
@@ -266,13 +223,15 @@ public record Transaction(
         public TransactionMetadata with(String key, String value) {
             Map<String, String> copy = new HashMap<>(additionalData);
             copy.put(key, value);
-            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy, excludedReason, copy);
+            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
+                    excludedReason, copy);
         }
 
         public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
             Map<String, String> copy = new HashMap<>(additionalData);
             copy.putAll(additionalMetadata);
-            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy, excludedReason, copy);
+            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
+                    excludedReason, copy);
         }
 
         public boolean containsKey(String key) {
