@@ -131,10 +131,10 @@ public class PortfolioViewMapper {
                     position.totalQuantity(),
                     new Price(position.totalCostBasis()),
                     new Price(position.costPerUnit()),
-                    new Price(fees), // fees even when quote unavailable
+                    fees, // fees even when quote unavailable
                     Price.ZERO(currency), // current price unknown
-                    Price.ZERO(currency), // market value unknown
-                    Price.ZERO(currency), // unrealized P&L unknown
+                    Money.ZERO(currency), // market value unknown
+                    Money.ZERO(currency), // unrealized P&L unknown
                     PercentageChange.ZERO,
                     determineMethodology(position),
                     extractFirstAcquiredDate(position),
@@ -152,10 +152,10 @@ public class PortfolioViewMapper {
                 position.totalQuantity(),
                 new Price(position.totalCostBasis()),
                 new Price(position.costPerUnit()),
-                new Price(fees),
+                fees,
                 currentPrice,
-                new Price(marketValue),
-                new Price(unrealizedPnL),
+                marketValue,
+                unrealizedPnL,
                 returnPct,
                 determineMethodology(position),
                 extractFirstAcquiredDate(position),
@@ -171,13 +171,14 @@ public class PortfolioViewMapper {
             return new PercentageChange(BigDecimal.ZERO);
         }
 
-        BigDecimal percentageValue = gain.amount()
+        // PercentageChange stores decimal form: 0.10 = 10%
+        // Do NOT multiply by 100 here - toPercent() does that
+        BigDecimal decimalValue = gain.amount()
                 .divide(costBasis.amount(),
                         Precision.PERCENTAGE.getDecimalPlaces(),
-                        Rounding.PERCENTAGE.getMode())
-                .multiply(BigDecimal.valueOf(100));
+                        Rounding.PERCENTAGE.getMode());
 
-        return new PercentageChange(percentageValue);
+        return new PercentageChange(decimalValue);
     }
 
     /**

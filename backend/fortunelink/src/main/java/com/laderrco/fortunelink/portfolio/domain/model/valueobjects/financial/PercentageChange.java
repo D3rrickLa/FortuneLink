@@ -17,8 +17,7 @@ import com.laderrco.fortunelink.shared.enums.Rounding;
 public record PercentageChange(BigDecimal change) implements Comparable<PercentageChange> {
     private static final int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
     private static final RoundingMode MODE = Rounding.PERCENTAGE.getMode();
-
-    public static PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
+    public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
 
     public PercentageChange {
         notNull(change, "change");

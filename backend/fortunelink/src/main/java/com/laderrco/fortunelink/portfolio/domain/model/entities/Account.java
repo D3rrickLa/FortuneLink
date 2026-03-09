@@ -207,8 +207,7 @@ public class Account {
     }
 
     public void clearPosition(AssetSymbol symbol) {
-        positions.remove(symbol);
-        realizedGains.removeIf(record -> record.symbol().equals(symbol));
+        positions.remove(symbol); // ONLY removes position state
         touch();
     }
 

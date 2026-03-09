@@ -6,15 +6,15 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 public record Price(Money pricePerUnit) {
 
-    public static Price ZERO(Currency currency) {
-        return new Price(Money.ZERO(currency));
-    }
-
     public Price {
         notNull(pricePerUnit, "pricePerUnit cannot be null");
         if (pricePerUnit.isNegative()) {
             throw new IllegalArgumentException("Price cannot be negative");
         }
+    }
+
+    public static Price ZERO(Currency currency) {
+        return new Price(Money.ZERO(currency));
     }
 
     public static Price of(BigDecimal amount, Currency currency) {
