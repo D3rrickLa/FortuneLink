@@ -28,37 +28,22 @@ public class AccountViewBuilder {
     private final TransactionRepository transactionRepository;
     private final PortfolioViewMapper portfolioViewMapper;
 
-    /**
-     * Builds an AccountView with position-level fee data populated.
-     *
-     * Fee display (Option A):
-     * Fees are NOT stored in the position cost basis. To display
-     * totalFeesIncurred per symbol, we fetch all transactions for this
-     * account, filter to non-excluded BUY transactions, then sum their
-     * fees per symbol. This is the only place in the read path that
-     * combines position state with transaction fee history.
-     *
-     * The resulting fee totals are passed into toPositionView() so the
-     * UI can render:
-     * - Holdings screen: totalCostBasis (gross), unrealizedPnL
-     * - Tax/ACB screen: effectiveAcb = totalCostBasis + totalFeesIncurred
-     *
-     * This incurs one extra repository call per account view. For MVP with
-     * a single portfolio and a handful of accounts this is fine. If profiling
-     * shows it's a hotspot, add a sumFeesByAccountId() query to the repo.
-     */
     public AccountView build(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-        // Compute per-symbol fee totals from transaction history
-        Map<AssetSymbol, Money> feesBySymbol = computeFeesBySymbol(account);
+        // We extract fees from transaction history for DISPLAY PURPOSES ONLY.
+        // Note: These fees are already embedded in
+        // entry.getValue().getTotalCostBasis().
+        Map<AssetSymbol, Money> feeBreakdownBySymbol = computeFeesBySymbol(account);
 
         List<PositionView> positionViews = account.getPositionEntries().stream()
                 .map(entry -> {
                     AssetSymbol symbol = entry.getKey();
-                    Money feesForSymbol = feesBySymbol.getOrDefault(symbol, Money.ZERO(account.getAccountCurrency()));
+                    // This is now a "breakdown" value, not an "additive" value
+                    Money feesIncurred = feeBreakdownBySymbol
+                            .getOrDefault(symbol, Money.ZERO(account.getAccountCurrency()));
                     return portfolioViewMapper.toPositionView(
                             entry.getValue(),
                             quoteCache.get(symbol),
-                            feesForSymbol);
+                            feesIncurred);
                 })
                 .toList();
 
@@ -69,13 +54,14 @@ public class AccountViewBuilder {
     }
 
     /**
-     * Builds an AccountView without fee data — for summary screens where tax
+     * Builds an AccountView without fee data - for summary screens where tax
      * breakdown is not needed. Avoids the extra transaction fetch.
      * totalFeesIncurred will be Price.ZERO on all PositionViews.
      */
     public AccountView buildSummary(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
         List<PositionView> positionViews = account.getPositionEntries().stream()
-                .map(entry -> portfolioViewMapper.toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
+                .map(entry -> portfolioViewMapper
+                        .toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
                 .toList();
 
         Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);

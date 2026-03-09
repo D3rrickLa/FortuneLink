@@ -100,16 +100,14 @@ public class PortfolioViewMapper {
     }
 
     /**
-     * Maps a position to its view with pre-computed cumulative fees.
-     *
-     * Fee display contract: fees are NOT in cost basis (Option A).
-     * The mapper receives a pre-computed feesForSymbol from AccountViewBuilder,
-     * which sums Fee.totalInAccountCurrency() across all BUY transactions for
-     * this symbol. The mapper just wraps it — no fee logic lives here.
+     * Maps a position to its view.
+     * * Fee Display Note: Following Canadian Tax Law (CRA), fees ARE included
+     * in the position's totalCostBasis. The feesForSymbol parameter is used
+     * strictly for breakdown/display purposes (transparency).
      *
      * UI contract:
-     * Holdings screen → use totalCostBasis and unrealizedPnL (gross)
-     * Tax / ACB screen → effectiveAcb = totalCostBasis + totalFeesIncurred
+     * Holdings screen → totalCostBasis (already includes fees)
+     * Tax / ACB screen → totalCostBasis (this IS the effective ACB)
      *
      * @param position      the position value object
      * @param quote         current market quote (nullable — falls back to cost
@@ -126,6 +124,10 @@ public class PortfolioViewMapper {
                 ? feesForSymbol
                 : Money.ZERO(currency);
 
+        Money totalAcb = position.totalCostBasis(); // $1,010
+        Money feeComponent = fees; // $10
+        Money grossCost = totalAcb.subtract(feeComponent); // $1,000
+
         if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
             return new PositionView(
                     symbol.symbol(),
@@ -134,9 +136,9 @@ public class PortfolioViewMapper {
                     new Price(position.totalCostBasis()),
                     new Price(position.costPerUnit()),
                     new Price(fees), // fees even when quote unavailable
-                    Price.ZERO(currency), // current price unknown
-                    Price.ZERO(currency), // market value unknown
-                    Price.ZERO(currency), // unrealized P&L unknown
+                    new Price(totalAcb), // The real ACB for taxes
+                    new Price(grossCost), // The "sticker price" of the shares
+                    new Price(feeComponent), // The "service charge"
                     PercentageChange.ZERO,
                     determineMethodology(position),
                     extractFirstAcquiredDate(position),

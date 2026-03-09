@@ -7,19 +7,37 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 
 import java.time.Instant;
 
+/**
+ * View representation of a position.
+ * * DESIGN REALITY:
+ * totalCostBasis = (Quantity * Price) + Purchase Fees.
+ * This aligns with CRA Section 53 (Adjusted Cost Base).
+ */
 public record PositionView(
 		String symbol,
 		AssetType assetType,
 		Quantity quantity,
-		Price totalCostBasis, // gross cost, no fees?
-		Price averageCostPerUnit, // totalCostBasis / quantity
-		Price totalFeesForDisplay , // or display only, fees already included in totalCostBasis
+
+		// The true ACB (includes purchase commissions)
+		Price totalCostBasis,
+
+		// totalCostBasis / quantity (includes the "fee per unit")
+		Price averageCostPerUnit,
+
+		// FOR DISPLAY ONLY: Represents the portion of totalCostBasis attributed to
+		// fees.
+		// Logic: Do NOT add this to totalCostBasis; it is already inside.
+		Price totalFeesIncurred,
+
 		Price currentPrice,
 		Price marketValue,
-		Price unrealizedPnL, // marketValue - totalCostBasis (gross)
+
+		// marketValue - totalCostBasis.
+		// This is the "Net" P&L after accounting for the cost of buying.
+		Price unrealizedPnL,
+
 		PercentageChange returnPercentage,
-		String costBasisMethod, // "ACB" or "FIFO"
-		Instant firstAcquired, // nullable — null for ACB positions
-		Instant lastModified // nullable
-) {
+		String costBasisMethod,
+		Instant firstAcquired,
+		Instant lastModified) {
 }
