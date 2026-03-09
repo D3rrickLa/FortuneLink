@@ -78,16 +78,37 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
     }
 
     @Override
-    public ApplyResult.Adjustment<AcbPosition> applyReturnOfCapital(Price price, Quantity heldQuantity) {
+    public ApplyResult<AcbPosition> applyReturnOfCapital(Price price, Quantity heldQuantity) {
         if (!heldQuantity.equals(this.totalQuantity)) {
             throw new IllegalArgumentException(
                     "ROC heldQuantity " + heldQuantity + " does not match position quantity " + totalQuantity);
         }
+
         Money totalReduction = price.calculateValue(heldQuantity);
 
-        // new ACB = Current ACB - ROC amount
-        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, totalQuantity,
-                totalCostBasis.subtract(totalReduction), firstAcquiredAt);
+        Money newCostBasis;
+        Money excessCapitalGain;
+
+        if (totalReduction.isAtLeast(totalCostBasis)) {
+            excessCapitalGain = totalReduction.subtract(totalCostBasis);
+            newCostBasis = Money.ZERO(accountCurrency);
+        } else {
+            excessCapitalGain = Money.ZERO(accountCurrency);
+            newCostBasis = totalCostBasis.subtract(totalReduction);
+        }
+
+        AcbPosition updated = new AcbPosition(
+                symbol,
+                type,
+                accountCurrency,
+                totalQuantity,
+                newCostBasis,
+                firstAcquiredAt);
+
+        if (excessCapitalGain.isPositive()) {
+            return new ApplyResult.RocAdjustment<>(updated, excessCapitalGain);
+        }
+
         return new ApplyResult.Adjustment<>(updated);
     }
 

@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.shared.enums;
 
-import java.math.MathContext;
-
 public enum Precision {
     BOND(6),
     CASH(6),
@@ -9,7 +7,7 @@ public enum Precision {
     CRYPTO(8),
     DIVISION(10),
     FOREX(6),
-    MONEY(MathContext.DECIMAL128.getPrecision()),
+    MONEY(10),
     PERCENTAGE(8),
     QUANTITY(8),
     STOCK(6);
@@ -27,5 +25,4 @@ public enum Precision {
     public static final int getMoneyPrecision() {
         return MONEY.getDecimalPlaces();
     }
-
 }

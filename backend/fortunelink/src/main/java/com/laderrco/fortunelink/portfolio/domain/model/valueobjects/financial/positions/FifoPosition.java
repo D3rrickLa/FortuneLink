@@ -4,6 +4,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,23 +83,54 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	@Override
-	public ApplyResult<? extends Position> applyReturnOfCapital(Price price, Quantity heldQuantity) {
-
-		// NOTE: we technically don't need heldQuantity as we iterate through the entire
-		// lot to perform the math, we are using it for validation instead
-		// Rule: You cannot apply ROC to a different number of shares than you actually
-		// hold.
-		if (!this.totalQuantity().equals(heldQuantity)) {
+	public ApplyResult<FifoPosition> applyReturnOfCapital(Price price, Quantity heldQuantity) {
+		if (!heldQuantity.equals(totalQuantity())) {
 			throw new IllegalArgumentException(
-					String.format("ROC quantity mismatch: Position has %s, but transaction reported %s",
-							this.totalQuantity(), heldQuantity));
+					"ROC heldQuantity " + heldQuantity + " does not match position quantity " + totalQuantity());
 		}
-		List<TaxLot> updatedLots = lots.stream().map(lot -> {
-			Money lotReduction = price.calculateValue(lot.quantity());
-			return new TaxLot(lot.quantity(), lot.costBasis().subtract(lotReduction), lot.acquiredDate());
-		}).toList();
 
-		FifoPosition updated = new FifoPosition(symbol, type, accountCurrency, updatedLots);
+		Money totalReduction = price.calculateValue(heldQuantity);
+		Money totalCostBasis = totalCostBasis();
+
+		Money excessGain = Money.ZERO(accountCurrency);
+
+		if (totalReduction.isAtLeast(totalCostBasis)) {
+			excessGain = totalReduction.subtract(totalCostBasis);
+			totalReduction = totalCostBasis;
+		}
+
+		List<TaxLot> newLots = new ArrayList<>();
+
+		for (TaxLot lot : lots) {
+
+			BigDecimal ratio = lot.costBasis()
+					.amount()
+					.divide(totalCostBasis.amount(), MathContext.DECIMAL128);
+
+			Money lotReduction = totalReduction.multiply(ratio);
+
+			Money newCostBasis = lot.costBasis().subtract(lotReduction);
+
+			if (newCostBasis.isNegative()) {
+				newCostBasis = Money.ZERO(accountCurrency);
+			}
+
+			newLots.add(new TaxLot(
+					lot.quantity(),
+					newCostBasis,
+					lot.acquiredDate()));
+		}
+
+		FifoPosition updated = new FifoPosition(
+				symbol,
+				type,
+				accountCurrency,
+				newLots);
+
+		if (excessGain.isPositive()) {
+			return new ApplyResult.RocAdjustment<>(updated, excessGain);
+		}
+
 		return new ApplyResult.Adjustment<>(updated);
 	}
 
