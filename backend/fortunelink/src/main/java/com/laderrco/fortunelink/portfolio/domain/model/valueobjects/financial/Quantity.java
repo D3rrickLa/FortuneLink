@@ -15,7 +15,7 @@ public record Quantity(BigDecimal amount) implements Comparable<Quantity> {
     public Quantity {
         notNull(amount, "amount cannot be null");
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            // todo: add something here? maybe don't know
+            throw new IllegalArgumentException("Quantity cannot be negative: " + amount);
         }
         amount = amount.setScale(QUANTITY_PRECISION, RoundingMode.HALF_EVEN);
     }

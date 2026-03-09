@@ -124,10 +124,6 @@ public class PortfolioViewMapper {
                 ? feesForSymbol
                 : Money.ZERO(currency);
 
-        Money totalAcb = position.totalCostBasis(); // $1,010
-        Money feeComponent = fees; // $10
-        Money grossCost = totalAcb.subtract(feeComponent); // $1,000
-
         if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
             return new PositionView(
                     symbol.symbol(),
@@ -136,9 +132,9 @@ public class PortfolioViewMapper {
                     new Price(position.totalCostBasis()),
                     new Price(position.costPerUnit()),
                     new Price(fees), // fees even when quote unavailable
-                    new Price(totalAcb), // The real ACB for taxes
-                    new Price(grossCost), // The "sticker price" of the shares
-                    new Price(feeComponent), // The "service charge"
+                    Price.ZERO(currency), // current price unknown
+                    Price.ZERO(currency), // market value unknown
+                    Price.ZERO(currency), // unrealized P&L unknown
                     PercentageChange.ZERO,
                     determineMethodology(position),
                     extractFirstAcquiredDate(position),

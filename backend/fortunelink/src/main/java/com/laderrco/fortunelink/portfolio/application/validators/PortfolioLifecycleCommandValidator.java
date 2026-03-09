@@ -118,7 +118,7 @@ public class PortfolioLifecycleCommandValidator {
         Objects.requireNonNull(command);
         List<String> errors = new ArrayList<>();
 
-        // todo, can probably group this stuff
+        // TODO, can probably group this stuff
         if (command.portfolioId() == null) {
             errors.add("PortfolioId is required");
         }

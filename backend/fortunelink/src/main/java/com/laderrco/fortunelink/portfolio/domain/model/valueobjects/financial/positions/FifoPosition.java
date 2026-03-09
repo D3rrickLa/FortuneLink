@@ -11,7 +11,8 @@ import java.util.List;
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 /**
- * FIFO position for future USD/US-tax-reporting support. NOT wired into any active account creation
+ * FIFO position for future USD/US-tax-reporting support. NOT wired into any
+ * active account creation
  * path as of v8. Do not instantiate except in unit tests.
  */
 public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
@@ -24,7 +25,6 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 		lots = lots == null ? List.of() : List.copyOf(lots);
 	}
 
-	// todo make this a 'common method'
 	public static FifoPosition empty(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
 		return new FifoPosition(symbol, type, accountCurrency, List.of());
 	}
@@ -60,17 +60,9 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 				costBasisSold = costBasisSold.add(lot.costBasis());
 				remainingToSell = remainingToSell.subtract(lot.quantity());
 			} else {
-				// Partial lot consumption
-				Money perUnitCost = lot.costBasis().divide(lot.quantity().amount());
-				Money consumedCost = perUnitCost.multiply(remainingToSell.amount());
-
+				Money consumedCost = lot.proportionalCost(remainingToSell);
 				costBasisSold = costBasisSold.add(consumedCost);
-
-				Quantity remainingQty = lot.quantity().subtract(remainingToSell);
-				Money remainingCost = lot.costBasis().subtract(consumedCost);
-
-				remainingLots.add(new TaxLot(remainingQty, remainingCost, lot.acquiredDate()));
-
+				remainingLots.add(lot.remainingAfter(remainingToSell));
 				remainingToSell = Quantity.ZERO;
 			}
 		}
@@ -93,7 +85,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 		// NOTE: we technically don't need heldQuantity as we iterate through the entire
 		// lot to perform the math, we are using it for validation instead
-		// Rule: You cannot apply ROC to a different number of shares than you actually hold.
+		// Rule: You cannot apply ROC to a different number of shares than you actually
+		// hold.
 		if (!this.totalQuantity().equals(heldQuantity)) {
 			throw new IllegalArgumentException(
 					String.format("ROC quantity mismatch: Position has %s, but transaction reported %s",

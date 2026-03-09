@@ -90,7 +90,7 @@ public class TransactionCommandValidator {
 
         validateCommonIds(command, errors);
 
-        // todo: confirm if interest needs the assetSymbol()
+        // TODO: confirm if interest needs the assetSymbol()
         ValidationUtils.validateSymbol(command.assetSymbol(), errors);
         ValidationUtils.validateAmount(command.amount().amount(), errors);
         ValidationUtils.validateDate(command.transactionDate(), errors);
