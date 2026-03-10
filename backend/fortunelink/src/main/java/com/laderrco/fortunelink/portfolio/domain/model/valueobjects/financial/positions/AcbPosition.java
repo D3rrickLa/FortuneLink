@@ -7,125 +7,130 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Pr
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.time.Instant;
+
+import javax.management.InstanceNotFoundException;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-        Quantity totalQuantity, Money totalCostBasis, Instant firstAcquiredAt) implements Position {
+    Quantity totalQuantity, Money totalCostBasis, Instant firstAcquiredAt, Instant lastModifiedAt) implements Position {
 
-    public AcbPosition {
-        notNull(symbol, "AssetSymbol");
-        notNull(type, "type");
-        notNull(accountCurrency, "accountCurrency");
-        notNull(totalQuantity, "totalQuantity");
-        notNull(totalCostBasis, "totalCostBasis");
+  public AcbPosition {
+    notNull(symbol, "AssetSymbol");
+    notNull(type, "type");
+    notNull(accountCurrency, "accountCurrency");
+    notNull(totalQuantity, "totalQuantity");
+    notNull(totalCostBasis, "totalCostBasis");
+  }
+
+  public static AcbPosition empty(AssetSymbol symbol, AssetType type, Currency currency) {
+    return new AcbPosition(symbol, type, currency, Quantity.ZERO, Money.ZERO(currency), null, null);
+  }
+
+  @Override
+  public ApplyResult.Purchase<AcbPosition> buy(Quantity quantity, Money totalCost, Instant at) {
+    Instant newAcquiredDate = (this.totalQuantity.isZero()) ? at : this.firstAcquiredAt;
+
+    // totalQuantity.add() -> accumulate quantity
+    // totalCostBasis.add() -> net price + commission
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+        totalQuantity.add(quantity), totalCostBasis.add(totalCost), newAcquiredDate, at);
+
+    return new ApplyResult.Purchase<>(updated);
+  }
+
+  @Override
+  public ApplyResult.Sale<AcbPosition> sell(Quantity quantity, Money proceeds, Instant at) {
+    if (hasInSufficientQuantity(quantity)) {
+      throw new IllegalStateException("Insufficient quantity");
     }
 
-    public static AcbPosition empty(AssetSymbol symbol, AssetType type, Currency currency) {
-        return new AcbPosition(symbol, type, currency, Quantity.ZERO, Money.ZERO(currency), null);
+    BigDecimal ratio = quantity.amount()
+        .divide(totalQuantity.amount(), Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode());
+
+    // handles ghoest rounding
+    boolean isFullLiquidation = quantity.equals(totalQuantity);
+    Money costBasisSold = isFullLiquidation ? totalCostBasis : totalCostBasis.multiply(ratio);
+
+    Money newCostBasis = isFullLiquidation ? Money.ZERO(accountCurrency)
+        : totalCostBasis.subtract(costBasisSold);
+
+    Money realizedGain = proceeds.subtract(costBasisSold);
+
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+        totalQuantity.subtract(quantity), newCostBasis, firstAcquiredAt, at);
+
+    return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
+
+  }
+
+  @Override
+  public ApplyResult.Adjustment<AcbPosition> split(Ratio ratio) {
+    // Use the Ratio to calculate the new quantity precisely
+    Quantity newQuantity = this.totalQuantity.multiply(BigDecimal.valueOf(ratio.numerator()))
+        .divide(BigDecimal.valueOf(ratio.denominator()));
+
+    // Cost basis doesn't change in a split
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, newQuantity,
+        totalCostBasis, firstAcquiredAt, Instant.now());
+    return new ApplyResult.Adjustment<>(updated);
+  }
+
+  @Override
+  public ApplyResult<AcbPosition> applyReturnOfCapital(Price price, Quantity heldQuantity) {
+    if (!heldQuantity.equals(this.totalQuantity)) {
+      throw new IllegalArgumentException(
+          "ROC heldQuantity " + heldQuantity + " does not match position quantity " + totalQuantity);
     }
 
-    @Override
-    public ApplyResult.Purchase<AcbPosition> buy(Quantity quantity, Money totalCost, Instant at) {
-        Instant newAcquiredDate = (this.totalQuantity.isZero()) ? at : this.firstAcquiredAt;
+    Money totalReduction = price.calculateValue(heldQuantity);
 
-        // totalQuantity.add() -> accumulate quantity
-        // totalCostBasis.add() -> net price + commission
-        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
-                totalQuantity.add(quantity), totalCostBasis.add(totalCost), newAcquiredDate);
+    Money newCostBasis;
+    Money excessCapitalGain;
 
-        return new ApplyResult.Purchase<>(updated);
+    if (totalReduction.isAtLeast(totalCostBasis)) {
+      excessCapitalGain = totalReduction.subtract(totalCostBasis);
+      newCostBasis = Money.ZERO(accountCurrency);
+    } else {
+      excessCapitalGain = Money.ZERO(accountCurrency);
+      newCostBasis = totalCostBasis.subtract(totalReduction);
     }
 
-    @Override
-    public ApplyResult.Sale<AcbPosition> sell(Quantity quantity, Money proceeds, Instant at) {
-        if (hasInSufficientQuantity(quantity)) {
-            throw new IllegalStateException("Insufficient quantity");
-        }
+    AcbPosition updated = new AcbPosition(
+        symbol,
+        type,
+        accountCurrency,
+        totalQuantity,
+        newCostBasis,
+        firstAcquiredAt,
+        Instant.now());
 
-        BigDecimal ratio = quantity.amount().divide(totalQuantity.amount(), MathContext.DECIMAL128);
-
-        // handles ghoest rounding
-        boolean isFullLiquidation = quantity.equals(totalQuantity);
-        Money costBasisSold = isFullLiquidation ? totalCostBasis : totalCostBasis.multiply(ratio);
-
-        Money newCostBasis = isFullLiquidation ? Money.ZERO(accountCurrency)
-                : totalCostBasis.subtract(costBasisSold);
-
-        Money realizedGain = proceeds.subtract(costBasisSold);
-
-        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
-                totalQuantity.subtract(quantity), newCostBasis, firstAcquiredAt);
-
-        return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
-
+    if (excessCapitalGain.isPositive()) {
+      return new ApplyResult.RocAdjustment<>(updated, excessCapitalGain);
     }
 
-    @Override
-    public ApplyResult.Adjustment<AcbPosition> split(Ratio ratio) {
-        // Use the Ratio to calculate the new quantity precisely
-        Quantity newQuantity = this.totalQuantity.multiply(BigDecimal.valueOf(ratio.numerator()))
-                .divide(BigDecimal.valueOf(ratio.denominator()));
+    return new ApplyResult.Adjustment<>(updated);
+  }
 
-        // Cost basis doesn't change in a split
-        AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, newQuantity,
-                totalCostBasis, firstAcquiredAt);
-        return new ApplyResult.Adjustment<>(updated);
-    }
+  @Override
+  public Money costPerUnit() {
+    return isEmpty() ? Money.ZERO(accountCurrency)
+        : totalCostBasis.divide(totalQuantity.amount());
+  }
 
-    @Override
-    public ApplyResult<AcbPosition> applyReturnOfCapital(Price price, Quantity heldQuantity) {
-        if (!heldQuantity.equals(this.totalQuantity)) {
-            throw new IllegalArgumentException(
-                    "ROC heldQuantity " + heldQuantity + " does not match position quantity " + totalQuantity);
-        }
+  @Override
+  public Money currentValue(Money currentPrice) {
+    return currentPrice.multiply(totalQuantity.amount());
 
-        Money totalReduction = price.calculateValue(heldQuantity);
+  }
 
-        Money newCostBasis;
-        Money excessCapitalGain;
-
-        if (totalReduction.isAtLeast(totalCostBasis)) {
-            excessCapitalGain = totalReduction.subtract(totalCostBasis);
-            newCostBasis = Money.ZERO(accountCurrency);
-        } else {
-            excessCapitalGain = Money.ZERO(accountCurrency);
-            newCostBasis = totalCostBasis.subtract(totalReduction);
-        }
-
-        AcbPosition updated = new AcbPosition(
-                symbol,
-                type,
-                accountCurrency,
-                totalQuantity,
-                newCostBasis,
-                firstAcquiredAt);
-
-        if (excessCapitalGain.isPositive()) {
-            return new ApplyResult.RocAdjustment<>(updated, excessCapitalGain);
-        }
-
-        return new ApplyResult.Adjustment<>(updated);
-    }
-
-    @Override
-    public Money costPerUnit() {
-        return isEmpty() ? Money.ZERO(accountCurrency)
-                : totalCostBasis.divide(totalQuantity.amount());
-    }
-
-    @Override
-    public Money currentValue(Money currentPrice) {
-        return currentPrice.multiply(totalQuantity.amount());
-
-    }
-
-    public Money calculateUnrealizedGain(Money currentPrice) {
-        return currentValue(currentPrice).subtract(totalCostBasis);
-    }
+  public Money calculateUnrealizedGain(Money currentPrice) {
+    return currentValue(currentPrice).subtract(totalCostBasis);
+  }
 
 }

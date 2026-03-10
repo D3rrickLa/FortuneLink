@@ -76,7 +76,7 @@ public class PortfolioLifecycleCommandValidator {
             errors.add("UserId is required");
         }
 
-        if (command.confirmed() == false) {
+        if (!command.confirmed()) {
             errors.add("Confirm delete cannot be false");
         }
 

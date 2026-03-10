@@ -219,16 +219,6 @@ public class PortfolioViewMapper {
      * level.
      */
     private static Instant extractLastModifiedDate(Position position) {
-        return switch (position) {
-            case AcbPosition _ -> null; // Would need to be added to AcbPosition
-            case FifoPosition fifo -> {
-                var lots = fifo.lots();
-                yield lots.isEmpty() ? null
-                        : lots.stream()
-                                .map(lot -> lot.acquiredDate())
-                                .max(Instant::compareTo)
-                                .orElse(null);
-            }
-        };
+        return position.lastModifiedAt();
     }
 }

@@ -10,7 +10,7 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchExce
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 
-public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant quotedAt)  {
+public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant quotedAt) {
     private static final int SCALE = Precision.FOREX.getDecimalPlaces();
     private static final RoundingMode ROUNDING = Rounding.FOREX.getMode();
 
@@ -40,8 +40,7 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
 
         // Scale it down to match Money's precision before passing to the constructor
         BigDecimal rawAmount = money.amount().multiply(rate);
-        BigDecimal scaledAmount = rawAmount.setScale(Precision.getMoneyPrecision(),
-                Rounding.MONEY.getMode());
+        BigDecimal scaledAmount = rawAmount.setScale(Precision.getMoneyPrecision(), Rounding.MONEY.getMode());
 
         return new Money(scaledAmount, to);
     }

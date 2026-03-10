@@ -18,7 +18,7 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
  * path as of v8. Do not instantiate except in unit tests.
  */
 public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-		List<TaxLot> lots) implements Position {
+		List<TaxLot> lots, Instant lastModifiedAt) implements Position {
 
 	public FifoPosition {
 		notNull(symbol, "AssetSymbol");
@@ -28,7 +28,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	public static FifoPosition empty(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
-		return new FifoPosition(symbol, type, accountCurrency, List.of());
+		return new FifoPosition(symbol, type, accountCurrency, List.of(), null);
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 		List<TaxLot> updatedLots = new ArrayList<>(lots);
 		updatedLots.add(newLot);
 
-		return new ApplyResult.Purchase<>(new FifoPosition(symbol, type, accountCurrency, updatedLots));
+		return new ApplyResult.Purchase<>(new FifoPosition(symbol, type, accountCurrency, updatedLots, at));
 	}
 
 	@Override
@@ -71,7 +71,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 		Money realizedGainLoss = proceeds.subtract(costBasisSold);
 
-		return new ApplyResult.Sale<>(new FifoPosition(symbol, type, accountCurrency, remainingLots),
+		return new ApplyResult.Sale<>(new FifoPosition(symbol, type, accountCurrency, remainingLots, at),
 				costBasisSold, realizedGainLoss);
 	}
 
@@ -79,7 +79,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	public ApplyResult<FifoPosition> split(Ratio ratio) {
 		List<TaxLot> splitLots = lots.stream().map(lot -> lot.split(ratio)).toList();
 
-		return new ApplyResult.Adjustment<>(new FifoPosition(symbol, type, accountCurrency, splitLots));
+		return new ApplyResult.Adjustment<>(new FifoPosition(symbol, type, accountCurrency, splitLots, Instant.now()));
 	}
 
 	@Override
@@ -139,7 +139,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 				symbol,
 				type,
 				accountCurrency,
-				newLots);
+				newLots,
+				Instant.now());
 
 		if (excessGain.isPositive()) {
 			return new ApplyResult.RocAdjustment<>(updated, excessGain);

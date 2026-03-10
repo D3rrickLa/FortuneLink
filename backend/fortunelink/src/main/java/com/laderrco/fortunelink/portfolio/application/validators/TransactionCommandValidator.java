@@ -41,7 +41,7 @@ public class TransactionCommandValidator {
             ValidationUtils.validateAmount(fee.nativeAmount().amount(), errors);
         }
 
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -55,7 +55,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateSymbol(command.symbol(), errors);
         ValidationUtils.validateQuantity(command.quantity(), errors);
         ValidationUtils.validateAmount(command.price().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -67,7 +67,7 @@ public class TransactionCommandValidator {
         validateCommonIds(command, errors);
 
         ValidationUtils.validateAmount(command.amount().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -79,7 +79,7 @@ public class TransactionCommandValidator {
         validateCommonIds(command, errors);
 
         ValidationUtils.validateAmount(command.amount().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -93,7 +93,7 @@ public class TransactionCommandValidator {
         // TODO: confirm if interest needs the assetSymbol()
         ValidationUtils.validateSymbol(command.assetSymbol(), errors);
         ValidationUtils.validateAmount(command.amount().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -106,7 +106,7 @@ public class TransactionCommandValidator {
 
         ValidationUtils.validateSymbol(command.assetSymbol(), errors);
         ValidationUtils.validateAmount(command.amount().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -127,7 +127,7 @@ public class TransactionCommandValidator {
 
         }
 
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -141,7 +141,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateSymbol(command.assetSymbol(), errors);
         ValidationUtils.validateAmount(command.distributionPerUnit().amount(), errors);
         ValidationUtils.validateQuantity(command.heldQuantity(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }
@@ -153,7 +153,7 @@ public class TransactionCommandValidator {
         validateCommonIds(command, errors);
 
         ValidationUtils.validateAmount(command.amount().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), errors);
+        ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
     }

@@ -37,12 +37,14 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     Money currentValue(Money currentPrice);
 
+    Instant lastModifiedAt();
+
     default Position copy() {
         return switch (this) {
             case AcbPosition acb -> new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(),
-                    acb.totalQuantity(), acb.totalCostBasis(), acb.firstAcquiredAt());
+                    acb.totalQuantity(), acb.totalCostBasis(), acb.firstAcquiredAt(), acb.lastModifiedAt());
             case FifoPosition fifo -> new FifoPosition(fifo.symbol(), fifo.type(),
-                    fifo.accountCurrency(), List.copyOf(fifo.lots()));
+                    fifo.accountCurrency(), List.copyOf(fifo.lots()), fifo.lastModifiedAt());
         };
     }
 
