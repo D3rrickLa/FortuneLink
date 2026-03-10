@@ -360,11 +360,21 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
     account.updatePosition(symbol, result.newPosition());
 
+    // SELL realized gains
     if (result instanceof ApplyResult.Sale<?> sale) {
       account.recordRealizedGain(
           symbol,
           sale.realizedGainLoss(),
           sale.costBasisSold(),
+          tx.occurredAt().timestamp());
+    }
+
+    // NEW: ROC excess capital gain
+    if (result instanceof ApplyResult.RocAdjustment<?> roc) {
+      account.recordRealizedGain(
+          symbol,
+          roc.excessCapitalGain(),
+          Money.ZERO(account.getAccountCurrency()), // cost basis sold = $0.00 per CRA
           tx.occurredAt().timestamp());
     }
   }

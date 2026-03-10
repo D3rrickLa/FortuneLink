@@ -92,6 +92,13 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 		Money totalReduction = price.calculateValue(heldQuantity);
 		Money totalCostBasis = totalCostBasis();
 
+		// If ACB is already zero, entire ROC amount is an excess capital gain — nothing
+		// to distribute
+		if (totalCostBasis.isZero()) {
+			Money excessGain = price.calculateValue(heldQuantity);
+			return new ApplyResult.RocAdjustment<>(this, excessGain);
+		}
+
 		Money excessGain = Money.ZERO(accountCurrency);
 
 		if (totalReduction.isAtLeast(totalCostBasis)) {
@@ -100,25 +107,32 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 		}
 
 		List<TaxLot> newLots = new ArrayList<>();
+		Money remainingReduction = totalReduction; // track what's left to distribute
 
-		for (TaxLot lot : lots) {
+		for (int i = 0; i < lots.size(); i++) {
+			TaxLot lot = lots.get(i);
+			boolean isLastLot = (i == lots.size() - 1);
 
-			BigDecimal ratio = lot.costBasis()
-					.amount()
-					.divide(totalCostBasis.amount(), MathContext.DECIMAL128);
-
-			Money lotReduction = totalReduction.multiply(ratio);
+			Money lotReduction;
+			if (isLastLot) {
+				// Last lot absorbs whatever is left — eliminates accumulated rounding drift
+				lotReduction = remainingReduction;
+			} else {
+				BigDecimal ratio = lot.costBasis().amount()
+						.divide(totalCostBasis.amount(), MathContext.DECIMAL128);
+				lotReduction = totalReduction.multiply(ratio);
+				remainingReduction = remainingReduction.subtract(lotReduction);
+			}
 
 			Money newCostBasis = lot.costBasis().subtract(lotReduction);
 
+			// Safety net: rounding on the last lot could push a near-zero lot slightly
+			// negative
 			if (newCostBasis.isNegative()) {
 				newCostBasis = Money.ZERO(accountCurrency);
 			}
 
-			newLots.add(new TaxLot(
-					lot.quantity(),
-					newCostBasis,
-					lot.acquiredDate()));
+			newLots.add(new TaxLot(lot.quantity(), newCostBasis, lot.acquiredDate()));
 		}
 
 		FifoPosition updated = new FifoPosition(
