@@ -87,12 +87,10 @@ public class Portfolio {
         notNull(currency, "currency");
         notNull(strategy, "strategy");
 
-        // if (strategy == PositionStrategy.FIFO ||
-        // strategy == PositionStrategy.LIFO ||
-        // strategy == PositionStrategy.SPECIFIC_ID) {
-        // throw new IllegalArgumentException(
-        // "Only ACB strategy is supported. " + strategy + " is not available.");
-        // }
+        if (strategy != PositionStrategy.ACB) {
+            throw new IllegalArgumentException(
+                    "Only ACB strategy is supported. " + strategy + " is not available.");
+        }
 
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Account name cannot be empty");

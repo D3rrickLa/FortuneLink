@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,14 +27,13 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class TransactionRecordingServiceImpl implements TransactionRecordingService {
-
   @Override
   public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
       Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
 
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     List<Fee> feeList = fees != null ? fees : List.of();
 
@@ -67,7 +68,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     // Position must exist before we can sell. Grab AssetType from it for metadata.
     Position existingPosition = account.getPosition(symbol)
@@ -106,7 +107,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordDeposit(Account account, Money amount, String notes, Instant date) {
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     Transaction tx = Transaction.builder()
         .transactionId(TransactionId.newId())
@@ -128,7 +129,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordWithdrawal(Account account, Money amount, String notes, Instant date) {
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     Transaction tx = Transaction.builder()
         .transactionId(TransactionId.newId())
@@ -150,7 +151,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordFee(Account account, Money amount, String notes, Instant date) {
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     Transaction tx = Transaction.builder()
         .transactionId(TransactionId.newId())
@@ -173,7 +174,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     Transaction tx = Transaction.builder()
         .transactionId(TransactionId.newId())
@@ -197,7 +198,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     Transaction tx = Transaction.builder()
         .transactionId(TransactionId.newId())
@@ -222,7 +223,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     AssetType type = account.getPosition(symbol)
         .map(Position::type)
@@ -255,7 +256,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateIsActive(account);
-    validateDate(date, account);
+    validateTransactionDate(date, account);
 
     Position existingPosition = account.getPosition(symbol)
         .orElseThrow(() -> new IllegalStateException(
@@ -389,6 +390,19 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Objects.requireNonNull(date, "date cannot be null");
   }
 
+  private void validateTransactionDate(Instant date, Account account) {
+    List<String> errors = new ArrayList<>();
+    ValidationUtils.validateDate(date, account.getCreationDate(), errors);
+    if (!errors.isEmpty()) {
+      throw new IllegalArgumentException(errors.get(0));
+    }
+    // domain-level check: requires the loaded Account — validator can't do this
+    if (date.isBefore(account.getCreationDate())) {
+      throw new IllegalArgumentException(
+          "Transaction date " + date + " predates account creation " + account.getCreationDate());
+    }
+  }
+
   private void validateCashInputs(Account account, Money amount, String notes, Instant date) {
     Objects.requireNonNull(account, "account cannot be null");
     Objects.requireNonNull(amount, "amount cannot be null");
@@ -400,18 +414,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     if (!account.isActive()) {
       throw new AccountClosedException(
           "Cannot record transaction on closed account: " + account.getAccountId());
-    }
-  }
-
-  private void validateDate(Instant date, Account account) {
-    if (date.isAfter(Instant.now())) {
-      throw new IllegalArgumentException(
-          "Transaction date cannot be in the future: " + date);
-    }
-    if (date.isBefore(account.getCreationDate())) {
-      throw new IllegalArgumentException(
-          "Transaction date " + date + " predates account creation "
-              + account.getCreationDate());
     }
   }
 
