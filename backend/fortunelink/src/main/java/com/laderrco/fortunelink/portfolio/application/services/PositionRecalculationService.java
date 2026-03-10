@@ -23,12 +23,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class PositionRecalculationService {
-
     private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
+    private final ConcurrentHashMap<String, Object> symbolLocks = new ConcurrentHashMap<>();
 
     private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
@@ -43,13 +44,18 @@ public class PositionRecalculationService {
     @Transactional // its own transaction — reads committed state
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
-        try {
-            scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(), event.symbol());
-        } catch (Exception e) {
-            log.error("Position recalculation failed for account={} symbol={}: {}",
-                    event.accountId(), event.symbol(), e.getMessage(), e);
+        String lockKey = event.accountId() + ":" + event.symbol().symbol();
+        Object lock = symbolLocks.computeIfAbsent(lockKey, k -> new Object());
 
-            accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+        synchronized (lock) {
+            try {
+                scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(), event.symbol());
+            } catch (Exception e) {
+                log.error("Recalculation failed...", e);
+                accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+            } finally {
+                symbolLocks.remove(lockKey); // cleanup — don't accumulate stale locks
+            }
         }
     }
 

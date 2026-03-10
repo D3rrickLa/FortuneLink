@@ -55,35 +55,33 @@ class PortfolioTest {
                     () -> assertNull(portfolio.getUserId()),
                     () -> assertNull(portfolio.getCreatedAt()));
         }
-        
+
         @Test
         @DisplayName("Create New static constructor")
         void constructor_Success_createNew_Factorymethod() {
-        	Portfolio portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.CAD);
-        	assertAll(
-        			() -> assertEquals(userId, portfolio.getUserId()),
-        			() -> assertEquals(portfolioName, portfolio.getName()),
-        			() -> assertEquals("description", portfolio.getDescription()),
-        			() -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency())
-        			);
+            Portfolio portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.CAD);
+            assertAll(
+                    () -> assertEquals(userId, portfolio.getUserId()),
+                    () -> assertEquals(portfolioName, portfolio.getName()),
+                    () -> assertEquals("description", portfolio.getDescription()),
+                    () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency()));
         }
-        
+
         @Test
         @DisplayName("Create New static constructor blank description")
         void constructor_Success_createNew_NoDescriptionShouldBeBlank() {
-        	Portfolio portfolio = Portfolio.createNew(userId, portfolioName, null, Currency.CAD);
-        	assertAll(
-        			() -> assertEquals(userId, portfolio.getUserId()),
-        			() -> assertEquals(portfolioName, portfolio.getName()),
-        			() -> assertTrue(portfolio.getDescription().isEmpty()),
-        			() -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency())
-        			);
+            Portfolio portfolio = Portfolio.createNew(userId, portfolioName, null, Currency.CAD);
+            assertAll(
+                    () -> assertEquals(userId, portfolio.getUserId()),
+                    () -> assertEquals(portfolioName, portfolio.getName()),
+                    () -> assertTrue(portfolio.getDescription().isEmpty()),
+                    () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency()));
         }
 
         @Test
         @DisplayName("Constructor_Success_ValidParameters")
         void constructor_Success_InitializesCorrectly() {
-            Portfolio portfolio = new Portfolio(portfolioId, userId, portfolioName);
+            Portfolio portfolio = Portfolio.createNew(userId, portfolioName, "desc", Currency.CAD);
 
             assertThat(portfolio.getPortfolioId()).isEqualTo(portfolioId);
             assertThat(portfolio.getUserId()).isEqualTo(userId);
@@ -98,19 +96,13 @@ class PortfolioTest {
         @Test
         @DisplayName("Constructor_Failure_NullOrEmptyParameters")
         void constructor_Failure_ThrowsExceptionOnInvalidInputs() {
-            assertThatThrownBy(() -> new Portfolio(null, userId, portfolioName))
+            assertThatThrownBy(() -> Portfolio.createNew(null, portfolioName, "desc", Currency.CAD))
                     .isInstanceOf(DomainArgumentException.class);
 
-            assertThatThrownBy(() -> new Portfolio(portfolioId, null, portfolioName))
+            assertThatThrownBy(() -> Portfolio.createNew(userId, null, "desc", Currency.CAD))
                     .isInstanceOf(DomainArgumentException.class);
 
-            assertThatThrownBy(() -> new Portfolio(portfolioId, userId, null))
-                    .isInstanceOf(IllegalArgumentException.class);
-
-            assertThatThrownBy(() -> new Portfolio(portfolioId, userId, ""))
-                    .isInstanceOf(IllegalArgumentException.class);
-
-            assertThatThrownBy(() -> new Portfolio(portfolioId, userId, "   "))
+            assertThatThrownBy(() -> Portfolio.createNew(userId, portfolioName, " ", null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -138,7 +130,8 @@ class PortfolioTest {
 
         @BeforeEach
         void initPortfolio() {
-            portfolio = new Portfolio(portfolioId, userId, portfolioName);
+            portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.CAD);
+            portfolioId = this.portfolio.getPortfolioId();
         }
 
         @Test
@@ -328,7 +321,8 @@ class PortfolioTest {
 
         @BeforeEach
         void init() {
-            portfolio = new Portfolio(portfolioId, userId, portfolioName);
+            portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.USD);
+            portfolioId = this.portfolio.getPortfolioId();
         }
 
         @Test
@@ -435,15 +429,15 @@ class PortfolioTest {
             assertThatThrownBy(() -> portfolio.updateDetails("   ", "Valid Desc"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
-        
+
         @Test
         @DisplayName("updateDisplayCurrency_Success_Changes_Currency")
         void updateDisplayCurrency_Success_NoErrors() {
-        	Currency oldCurrency = portfolio.getDisplayCurrency();
-        	portfolio.updateDisplayCurrency(Currency.EUR);
-        	
-        	assertEquals(Currency.EUR, portfolio.getDisplayCurrency());
-        	assertNotEquals(oldCurrency, portfolio.getDisplayCurrency());
+            Currency oldCurrency = portfolio.getDisplayCurrency();
+            portfolio.updateDisplayCurrency(Currency.EUR);
+
+            assertEquals(Currency.EUR, portfolio.getDisplayCurrency());
+            assertNotEquals(oldCurrency, portfolio.getDisplayCurrency());
         }
     }
 
@@ -455,7 +449,8 @@ class PortfolioTest {
 
         @BeforeEach
         void init() {
-            portfolio = new Portfolio(portfolioId, userId, portfolioName);
+            portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.USD);
+            portfolioId = this.portfolio.getPortfolioId();
             portfolio.createAccount("Checking", AccountType.TFSA, Currency.USD, PositionStrategy.FIFO);
         }
 
