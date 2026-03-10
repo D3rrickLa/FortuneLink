@@ -33,8 +33,8 @@ public class Portfolio {
 
     // private full args constructor
     private Portfolio(PortfolioId portfolioId, UserId userId, String name, String description,
-                      Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
-                      UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
+            Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
+            UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
         this.portfolioId = portfolioId;
         this.userId = userId;
         this.name = name;
@@ -52,27 +52,6 @@ public class Portfolio {
         this.portfolioId = null;
         this.userId = null;
         this.createdAt = null;
-    }
-
-    public Portfolio(PortfolioId portfolioId, UserId userId, String name) {
-        notNull(portfolioId, "portfolioId");
-        notNull(userId, "userId");
-
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Portfolio name cannot be empty");
-        }
-
-        this.portfolioId = portfolioId;
-        this.userId = userId;
-        this.name = name.trim();
-        this.description = "";
-        this.accounts = new HashMap<>();
-        this.displayCurrency = Currency.CAD;
-        this.deleted = false;
-        this.deletedOn = null;
-        this.deletedBy = null;
-        this.createdAt = Instant.now();
-        this.lastUpdatedAt = Instant.now();
     }
 
     public static Portfolio createNew(UserId userId, String name, String description, Currency displayCurrency) {
@@ -95,9 +74,9 @@ public class Portfolio {
 
     // Static factory for reconstitution
     public static Portfolio reconstitute(PortfolioId portfolioId, UserId userId, String name, String description,
-                                         Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
-                                         UserId deletedBy, Instant createdAt,
-                                         Instant lastUpdatedOn) {
+            Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted, Instant deletedOn,
+            UserId deletedBy, Instant createdAt,
+            Instant lastUpdatedOn) {
         return new Portfolio(portfolioId, userId, name, description, accounts, displayCurrency, deleted, deletedOn,
                 deletedBy, createdAt, lastUpdatedOn);
     }
@@ -108,12 +87,12 @@ public class Portfolio {
         notNull(currency, "currency");
         notNull(strategy, "strategy");
 
-//        if (strategy == PositionStrategy.FIFO ||
-//                strategy == PositionStrategy.LIFO ||
-//                strategy == PositionStrategy.SPECIFIC_ID) {
-//            throw new IllegalArgumentException(
-//                    "Only ACB strategy is supported. " + strategy + " is not available.");
-//        }
+        // if (strategy == PositionStrategy.FIFO ||
+        // strategy == PositionStrategy.LIFO ||
+        // strategy == PositionStrategy.SPECIFIC_ID) {
+        // throw new IllegalArgumentException(
+        // "Only ACB strategy is supported. " + strategy + " is not available.");
+        // }
 
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Account name cannot be empty");
@@ -203,10 +182,13 @@ public class Portfolio {
             throw new PortfolioAlreadyDeletedException("Portfolio is already deleted");
         }
 
-        if (!accounts.isEmpty()) {
+        // Check only ACTIVE accounts — closed accounts don't block deletion
+        boolean hasActiveAccounts = accounts.values().stream().anyMatch(Account::isActive);
+        if (hasActiveAccounts) {
+            long activeCount = accounts.values().stream().filter(Account::isActive).count();
             throw new PortfolioNotEmptyException(
-                    "Cannot delete portfolio with " + accounts.size() + " account(s). " +
-                            "Close and remove all accounts first.");
+                    "Cannot delete portfolio with " + activeCount + " active account(s). " +
+                            "Close all accounts first.");
         }
 
         this.deleted = true;
