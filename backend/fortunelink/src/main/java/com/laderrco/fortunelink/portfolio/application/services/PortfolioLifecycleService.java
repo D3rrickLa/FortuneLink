@@ -16,10 +16,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class PortfolioLifecycleService {
   private static final String DEFAULT_NAME = "Default Account";
 
   private final PortfolioRepository portfolioRepository;
+  private final TransactionRepository transactionRepository;
   private final PortfolioViewMapper portfolioViewMapper;
 
   private final MarketDataService marketDataService;
@@ -72,10 +75,9 @@ public class PortfolioLifecycleService {
   }
 
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
+
     validate(command, validator::validate, "updatePortfolio");
 
-    // Bug 15 fix: getPortfolio() now throws PortfolioNotFoundException for
-    // soft-deleted portfolios, so this call is safe.
     Portfolio existingPortfolio = getPortfolio(command.portfolioId(), command.userId());
 
     existingPortfolio.updateDetails(command.name(), command.description());
@@ -85,14 +87,28 @@ public class PortfolioLifecycleService {
 
     Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(saved);
     Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
-    Money totalValue = portfolioValuationService.calculateTotalValue(saved,
-        saved.getDisplayCurrency(), quoteCache);
+
+    Money totalValue = portfolioValuationService.calculateTotalValue(
+        saved,
+        saved.getDisplayCurrency(),
+        quoteCache);
+
+    // NEW: batch fee query
+    List<AccountId> accountIds = saved.getAccounts().stream()
+        .map(Account::getAccountId)
+        .toList();
+
+    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository
+        .sumBuyFeesByAccountAndSymbol(accountIds);
 
     List<AccountView> accountViews = saved.getAccounts().stream()
-        .map(account -> accountViewBuilder.build(account, quoteCache)).toList();
+        .map(account -> accountViewBuilder.build(
+            account,
+            quoteCache,
+            feeCache.getOrDefault(account.getAccountId(), Map.of())))
+        .toList();
 
     return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue);
-
   }
 
   public void deletePortfolio(DeletePortfolioCommand command) {
@@ -106,10 +122,9 @@ public class PortfolioLifecycleService {
     // NOTE: deletePortfolio intentionally calls the raw repository lookup,
     // not getPortfolio(), because we need to allow the user to hard-delete
     // a portfolio that is already soft-deleted (cleanup path).
-    Portfolio portfolio =
-        portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-            .orElseThrow(() -> new PortfolioNotFoundException(
-                "Portfolio not found or access denied for ID: " + command.portfolioId()));
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
+        .orElseThrow(() -> new PortfolioNotFoundException(
+            "Portfolio not found or access denied for ID: " + command.portfolioId()));
 
     if (command.softDelete()) {
       try {
@@ -133,7 +148,8 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
-    // Bug 15 fix: blocked by getPortfolio() - cannot add account to deleted portfolio.
+    // Bug 15 fix: blocked by getPortfolio() - cannot add account to deleted
+    // portfolio.
     Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
@@ -146,7 +162,8 @@ public class PortfolioLifecycleService {
   public void updateAccount(UpdateAccountCommand command) {
     validate(command, validator::validate, "updateAccount");
 
-    // Bug 15 fix: blocked by getPortfolio() - cannot rename account on deleted portfolio.
+    // Bug 15 fix: blocked by getPortfolio() - cannot rename account on deleted
+    // portfolio.
     Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
     portfolio.renameAccount(command.accountId(), command.accountName());
 
@@ -156,7 +173,8 @@ public class PortfolioLifecycleService {
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
-    // Bug 15 fix: blocked by getPortfolio() - cannot close account on deleted portfolio.
+    // Bug 15 fix: blocked by getPortfolio() - cannot close account on deleted
+    // portfolio.
     Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
     try {
       portfolio.closeAccount(command.accountId());
@@ -172,9 +190,12 @@ public class PortfolioLifecycleService {
   /**
    * Loads a portfolio for mutation.
    *
-   * Bug 15 fix: treats soft-deleted portfolios as non-existent, matching user expectations. A
-   * deleted resource should not be mutatable. The same PortfolioNotFoundException message is used
-   * intentionally — we do not want to confirm to a client that a deleted portfolio exists.
+   * Bug 15 fix: treats soft-deleted portfolios as non-existent, matching user
+   * expectations. A
+   * deleted resource should not be mutatable. The same PortfolioNotFoundException
+   * message is used
+   * intentionally — we do not want to confirm to a client that a deleted
+   * portfolio exists.
    */
   private Portfolio getPortfolio(PortfolioId portfolioId, UserId userId) {
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)

@@ -11,14 +11,17 @@ import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import lombok.RequiredArgsConstructor;
@@ -48,104 +51,117 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PortfolioQueryService {
-    private final PortfolioRepository portfolioRepository;
+  private final PortfolioRepository portfolioRepository;
+  private final TransactionRepository transactionRepository;
 
-    private final MarketDataService marketDataService;
-    private final PortfolioValuationService portfolioValuationService;
+  private final MarketDataService marketDataService;
+  private final PortfolioValuationService portfolioValuationService;
 
-    private final PortfolioViewMapper portfolioViewMapper;
-    private final AccountViewBuilder accountViewBuilder;
+  private final PortfolioViewMapper portfolioViewMapper;
+  private final AccountViewBuilder accountViewBuilder;
 
-    public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
-        Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
+  public PortfolioView getPortfolioById(GetPortfolioByIdQuery query) {
+    Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
 
-        Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
-        Currency displayCurrency = portfolio.getDisplayCurrency(); // owned by the aggregate
+    Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+    Currency displayCurrency = portfolio.getDisplayCurrency();
 
-        // Single batch call for the entire request
-        Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
 
-        List<AccountView> accountViews = portfolio.getAccounts().stream()
-                .map(account -> accountViewBuilder.build(account, quoteCache))
-                .toList();
+    List<AccountId> accountIds = portfolio.getAccounts()
+        .stream()
+        .map(Account::getAccountId)
+        .toList();
 
-        Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);
+    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository
+        .sumBuyFeesByAccountAndSymbol(accountIds);
 
-        return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue);
+    List<AccountView> accountViews = portfolio.getAccounts().stream()
+        .map(account -> accountViewBuilder.build(
+            account,
+            quoteCache,
+            feeCache.getOrDefault(account.getAccountId(), Map.of())))
+        .toList();
+
+    Money totalValue = portfolioValuationService.calculateTotalValue(
+        portfolio, displayCurrency, quoteCache);
+
+    return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue);
+  }
+
+  public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
+    Objects.requireNonNull(query, "GetPortfoliosByUserIdQuery cannot be null");
+
+    List<Portfolio> portfolios = portfolioRepository.findAllByUserId(query.userId())
+        .stream()
+        .filter(p -> !p.isDeleted())
+        .toList();
+
+    if (portfolios.isEmpty()) {
+      return List.of();
     }
 
-    public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
-        Objects.requireNonNull(query, "GetPortfoliosByUserIdQuery cannot be null");
+    // One batch call across ALL portfolios - critical for multi-portfolio future
+    Set<AssetSymbol> allSymbols = portfolios.stream()
+        .flatMap(p -> PortfolioServiceUtils.extractSymbols(p).stream())
+        .collect(Collectors.toSet());
 
-        List<Portfolio> portfolios = portfolioRepository.findAllByUserId(query.userId())
-                .stream()
-                .filter(p -> !p.isDeleted())
-                .toList();
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
-        if (portfolios.isEmpty()) {
-            return List.of();
-        }
+    return portfolios.stream()
+        .map(p -> {
+          Money totalValue = portfolioValuationService
+              .calculateTotalValue(p, p.getDisplayCurrency(), quoteCache);
+          return portfolioViewMapper.toPortfolioSummaryView(p, totalValue);
+        })
+        .toList();
+  }
 
-        // One batch call across ALL portfolios - critical for multi-portfolio future
-        Set<AssetSymbol> allSymbols = portfolios.stream()
-                .flatMap(p -> PortfolioServiceUtils.extractSymbols(p).stream())
-                .collect(Collectors.toSet());
+  /**
+   * Calculates net worth for a user's portfolio.
+   *
+   * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL
+   * into Loan/Debt context).
+   */
+  public NetWorthView getNetWorth(GetNetWorthQuery query) {
+    Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
 
-        Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
+    Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+    Currency displayCurrency = portfolio.getDisplayCurrency();
 
-        return portfolios.stream()
-                .map(p -> {
-                    Money totalValue = portfolioValuationService
-                            .calculateTotalValue(p, p.getDisplayCurrency(), quoteCache);
-                    return portfolioViewMapper.toPortfolioSummaryView(p, totalValue);
-                })
-                .toList();
-    }
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
 
-    /**
-     * Calculates net worth for a user's portfolio.
-     *
-     * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL
-     * into Loan/Debt context).
-     */
-    public NetWorthView getNetWorth(GetNetWorthQuery query) {
-        Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
+    Money totalAssets = portfolioValuationService.calculateTotalValue(
+        portfolio,
+        displayCurrency,
+        quoteCache);
 
-        Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
-        Instant asOf = query.asOfDate() != null ? query.asOfDate() : Instant.now();
-        Currency displayCurrency = portfolio.getDisplayCurrency();
+    // TODO: integrate liabilities via ACL (Loan / Debt context)
+    Money totalLiabilities = Money.ZERO(displayCurrency);
 
-        // One batch call - passed into valuation service, not re-fetched inside it
-        Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
+    Money netWorth = totalAssets.subtract(totalLiabilities);
 
-        Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);
+    return new NetWorthView(
+        totalAssets,
+        totalLiabilities,
+        netWorth,
+        displayCurrency,
+        Instant.now());
+  }
 
-        // TODO: integrate liabilities via ACL (Loan / Debt context)
-        Money totalLiabilities = Money.ZERO(displayCurrency);
+  private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
+    return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+        .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+  }
 
-        Money netWorth = totalAssets.subtract(totalLiabilities);
-
-        return new NetWorthView(
-                totalAssets,
-                totalLiabilities,
-                netWorth,
-                displayCurrency,
-                asOf);
-    }
-
-    private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-        return portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
-    }
-
-    /**
-     * Fetches all market quotes for positions in a portfolio.
-     * This is the ONLY place getBatchQuotes() should be called for portfolio
-     * queries.
-     */
-    private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Portfolio portfolio) {
-        Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
-        return marketDataService.getBatchQuotes(symbols);
-    }
+  /**
+   * Fetches all market quotes for positions in a portfolio.
+   * This is the ONLY place getBatchQuotes() should be called for portfolio
+   * queries.
+   */
+  private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Portfolio portfolio) {
+    Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
+    return marketDataService.getBatchQuotes(symbols);
+  }
 
 }

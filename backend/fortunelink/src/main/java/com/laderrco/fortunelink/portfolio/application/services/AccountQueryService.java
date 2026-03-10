@@ -14,10 +14,13 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundExcep
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,41 +49,54 @@ import java.util.Set;
 public class AccountQueryService {
 
 	private final PortfolioRepository portfolioRepository;
+	private final TransactionRepository transactionRepository;
 	private final MarketDataService marketDataService;
 	private final PortfolioViewMapper portfolioViewMapper;
 	private final AccountViewBuilder accountViewBuilder;
-
 
 	public List<AccountView> getAllAccounts(GetAllAccountsQuery query) {
 		Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
 
 		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
 
-		// Batch fetch across all accounts in one shot
 		Set<AssetSymbol> allSymbols = PortfolioServiceUtils.extractSymbols(portfolio);
-
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
+		// NEW batch fee fetch
+		List<AccountId> accountIds = portfolio.getAccounts().stream()
+				.map(Account::getAccountId)
+				.toList();
+
+		Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository
+				.sumBuyFeesByAccountAndSymbol(accountIds);
+
 		return portfolio.getAccounts().stream()
-				.map(account -> accountViewBuilder.build(account, quoteCache))
+				.map(account -> accountViewBuilder.build(
+						account,
+						quoteCache,
+						feeCache.getOrDefault(account.getAccountId(), Map.of())))
 				.toList();
 	}
-
 
 	public AccountView getAccountSummary(GetAccountSummaryQuery query) {
 		Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
 		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
 		Account account = portfolio.findAccount(query.accountId())
-				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
+				.orElseThrow(() -> new AccountNotFoundException(
+						query.accountId(),
+						query.portfolioId()));
 
-		// Scoped to THIS account only - don't "pay" for symbols we won't use
 		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbolsByAccount(account);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
-		return accountViewBuilder.build(account, quoteCache);
-	}
+		Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository
+				.sumBuyFeesByAccountAndSymbol(List.of(account.getAccountId()));
 
+		Map<AssetSymbol, Money> feeBreakdown = feeCache.getOrDefault(account.getAccountId(), Map.of());
+
+		return accountViewBuilder.build(account, quoteCache, feeBreakdown);
+	}
 
 	public List<PositionView> getAccountPositions(GetAccountSummaryQuery query) {
 		Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
@@ -97,7 +113,6 @@ public class AccountQueryService {
 						.toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
 				.toList();
 	}
-
 
 	public PositionView getAssetSummary(GetAssetQuery query) {
 		Objects.requireNonNull(query, "GetAssetQuery cannot be null");

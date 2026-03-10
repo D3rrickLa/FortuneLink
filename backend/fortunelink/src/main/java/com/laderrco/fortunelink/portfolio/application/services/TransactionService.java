@@ -228,6 +228,12 @@ public class TransactionService {
     public TransactionView restoreTransaction(RestoreTransactionCommand command) {
         validate(command, validator::validate, "restoreTransaction");
 
+        Portfolio portfolio = portfolioRepository
+                .findByIdAndUserId(command.portfolioId(), command.userId())
+                .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId().toString()));
+        if (portfolio.isDeleted()) {
+            throw new PortfolioNotFoundException(command.portfolioId().toString());
+        }
         Transaction existing = transactionRepository
                 .findByIdAndPortfolioIdAndUserIdAndAccountId(command.transactionId(),
                         command.portfolioId(), command.userId(), command.accountId())

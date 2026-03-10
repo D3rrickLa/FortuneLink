@@ -1,10 +1,12 @@
 package com.laderrco.fortunelink.portfolio.domain.repositories;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface TransactionRepository {
@@ -36,4 +38,8 @@ public interface TransactionRepository {
     List<Transaction> findByDateRange(AccountId accountId, Instant start, Instant end);
 
     int deleteAllExpiredTransactions(Instant cutoff);
+
+    Money sumBuyFeesForAccount(AccountId accountId, AssetSymbol symbol);
+
+    Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds);
 }
