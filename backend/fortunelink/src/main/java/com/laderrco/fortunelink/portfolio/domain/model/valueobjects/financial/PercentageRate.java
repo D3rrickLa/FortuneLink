@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 
 import com.laderrco.fortunelink.shared.enums.Precision;
@@ -45,12 +46,26 @@ public record PercentageRate(BigDecimal rate) implements Comparable<PercentageRa
         return new PercentageRate(rate.multiply(other.rate));
     }
 
-    public PercentageRate annualizedOver(double years) {
-        if (years <= 0) {
+    public PercentageRate annualizedOver(BigDecimal years) {
+        if (years.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Years must be positive");
         }
-
-        double annualized = Math.pow(1 + rate.doubleValue(), 1.0 / years) - 1;
+        /*
+         * BigDecimal does not support fractional exponentiation.
+         * We temporarily convert to double for Math.pow().
+         *
+         * This introduces minor floating-point rounding error, but the magnitude
+         * is extremely small for typical financial return values and acceptable
+         * for performance/return display purposes.
+         *
+         * If higher precision is required in the future, replace with a
+         * BigDecimal Newton-method implementation or a library such as
+         * BigDecimalMath / Apache Commons Math.
+         */
+        @SuppressWarnings("FloatingPointLiteralPrecision")
+        double annualized = Math.pow(BigDecimal.ONE.add(rate).doubleValue(),
+                BigDecimal.ONE.divide(years, MathContext.DECIMAL64).doubleValue())
+                - 1.0;
 
         return new PercentageRate(BigDecimal.valueOf(annualized));
     }

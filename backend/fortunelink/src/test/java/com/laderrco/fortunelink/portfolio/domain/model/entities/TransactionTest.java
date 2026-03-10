@@ -39,726 +39,726 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public class TransactionTest {
 
-    @Nested
-    @DisplayName("Constructor tests")
-    public class ConstructorTests {
+        @Nested
+        @DisplayName("Constructor tests")
+        public class ConstructorTests {
 
-        @ParameterizedTest
-        @MethodSource("validTransactionProvider")
-        void testConstructor_Success(TransactionType type, int delta) {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
+                @ParameterizedTest
+                @MethodSource("validTransactionProvider")
+                void testConstructor_Success(TransactionType type, int delta) {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(delta, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(delta, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, type, execution, spilt,
-                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-            assertAll(
-                    () -> assertEquals(transactionId, transaction.transactionId()));
-        }
+                        Transaction transaction = new Transaction(transactionId, accountId, type, execution, spilt,
+                                        cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
+                        assertAll(
+                                        () -> assertEquals(transactionId, transaction.transactionId()));
+                }
 
-        @Test
-        void testConstructor_Success_ExpectedCashDeltaFiresNONECase() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.DIVIDEND_REINVEST;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
+                @Test
+                void testConstructor_Success_ExpectedCashDeltaFiresNONECase() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.DIVIDEND_REINVEST;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(0, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(0, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(
-                    transactionId,
-                    accountId,
-                    transactionType,
-                    execution,
-                    spilt,
-                    cashDelta,
-                    fees,
-                    notes,
-                    occurredAt,
-                    relatedTransactionId,
-                    metadata);
+                        Transaction transaction = new Transaction(
+                                        transactionId,
+                                        accountId,
+                                        transactionType,
+                                        execution,
+                                        spilt,
+                                        cashDelta,
+                                        fees,
+                                        notes,
+                                        occurredAt,
+                                        relatedTransactionId,
+                                        metadata);
 
-            assertAll(
-                    () -> assertEquals(transactionId, transaction.transactionId()));
-        }
+                        assertAll(
+                                        () -> assertEquals(transactionId, transaction.transactionId()));
+                }
 
-        @Test
-        void testConstructor_Success_WhenDividend_PassesWithEmptyFee() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.DIVIDEND;
-            TradeExecution execution = null;
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                @Test
+                void testConstructor_Success_WhenDividend_PassesWithEmptyFee() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.DIVIDEND;
+                        TradeExecution execution = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
-                    spilt,
-                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-            assertAll(
-                    () -> assertEquals(transactionId, transaction.transactionId()),
-                    () -> assertTrue(transaction.fees().isEmpty()));
-        }
+                        Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
+                                        spilt,
+                                        cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
+                        assertAll(
+                                        () -> assertEquals(transactionId, transaction.transactionId()),
+                                        () -> assertTrue(transaction.fees().isEmpty()));
+                }
 
-        @Test
-        void testConstructor_Failure_WhenExecutionIsNullAndRequireExecutionIsTrue() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = null;
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                @Test
+                void testConstructor_Failure_WhenExecutionIsNullAndRequireExecutionIsTrue() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.BUY;
+                        TradeExecution execution = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution,
-                            spilt, cashDelta, fees,
-                            notes, occurredAt, relatedTransactionId, metadata));
+                        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction(transactionId, accountId, transactionType, execution,
+                                                        spilt, cashDelta, fees,
+                                                        notes, occurredAt, relatedTransactionId, metadata));
 
-            assertTrue(ex.getMessage().contains("requires execution details"));
-        }
+                        assertTrue(ex.getMessage().contains("requires execution details"));
+                }
 
-        @Test
-        void testConstructor_Failure_WhenExecutionIsNonNullAndTypeIsNotValid() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.DEPOSIT;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
+                @Test
+                void testConstructor_Failure_WhenExecutionIsNonNullAndTypeIsNotValid() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.DEPOSIT;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution,
-                            spilt, cashDelta, fees,
-                            notes, occurredAt, relatedTransactionId, metadata));
+                        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction(transactionId, accountId, transactionType, execution,
+                                                        spilt, cashDelta, fees,
+                                                        notes, occurredAt, relatedTransactionId, metadata));
 
-            assertTrue(ex.getMessage().contains("cannot have execution details"));
-        }
+                        assertTrue(ex.getMessage().contains("cannot have execution details"));
+                }
 
-        @Test
-        void testConstructor_Failure_WhenExecutionSpiltIsNonNullAndIsNotSpilt() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
+                @Test
+                void testConstructor_Failure_WhenExecutionSpiltIsNonNullAndIsNotSpilt() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.BUY;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-            SplitDetails spilt = new SplitDetails(new Ratio(12, 1));
-            Money cashDelta = Money.of(1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                        SplitDetails spilt = new SplitDetails(new Ratio(12, 1));
+                        Money cashDelta = Money.of(1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution,
-                            spilt, cashDelta, fees,
-                            notes, occurredAt, relatedTransactionId, metadata));
+                        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction(transactionId, accountId, transactionType, execution,
+                                                        spilt, cashDelta, fees,
+                                                        notes, occurredAt, relatedTransactionId, metadata));
 
-            assertTrue(ex.getMessage().contains("cannot have split details"));
-        }
+                        assertTrue(ex.getMessage().contains("cannot have split details"));
+                }
 
-        @Test
-        void testConstructor_Failure_RequiresSplitButSpiltIsNull() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.SPLIT;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
+                @Test
+                void testConstructor_Failure_RequiresSplitButSpiltIsNull() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.SPLIT;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution,
-                            spilt, cashDelta, fees,
-                            notes, occurredAt, relatedTransactionId, metadata));
+                        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction(transactionId, accountId, transactionType, execution,
+                                                        spilt, cashDelta, fees,
+                                                        notes, occurredAt, relatedTransactionId, metadata));
 
-            assertTrue(ex.getMessage().contains("requires split details"));
-        }
+                        assertTrue(ex.getMessage().contains("requires split details"));
+                }
 
-        @Test
-        void testConstructor_Failure_WhenNonExecutionAffectsCash() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.REINVESTED_CAPITAL_GAIN;
-            TradeExecution execution = null;
-            SplitDetails split = null;
-            Money cashDelta = Money.of(1, "USD"); // Invalid: Non-execution types cannot affect cash
-            List<Fee> fees = List.of();
-            String notes = "Testing cash validation";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                @Test
+                void testConstructor_Failure_WhenNonExecutionAffectsCash() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.TRANSFER_IN;
+                        TradeExecution execution = null;
+                        SplitDetails split = null;
+                        Money cashDelta = Money.of(1, "USD"); // Invalid: Non-execution types cannot affect cash
+                        List<Fee> fees = List.of();
+                        String notes = "Testing cash validation";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution,
-                            split, cashDelta, fees,
-                            notes, occurredAt, relatedTransactionId, metadata));
+                        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction(transactionId, accountId, transactionType, execution,
+                                                        split, cashDelta, fees,
+                                                        notes, occurredAt, relatedTransactionId, metadata));
 
-            assertTrue(ex.getMessage().contains("cannot affect cash"));
-        }
+                        assertTrue(ex.getMessage().contains("cannot affect cash"));
+                }
 
-        @Test
-        void testConstructor_Failure_WhenNonExecutionHasFees() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.REINVESTED_CAPITAL_GAIN;
-            TradeExecution execution = null;
-            SplitDetails split = null;
-            Money cashDelta = Money.ZERO("USD");
-            List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
-                    ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
-                    new FeeMetadata(Map.of())));
-            String notes = "Testing fee validation";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
+                @Test
+                void testConstructor_Failure_WhenNonExecutionHasFees() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.TRANSFER_OUT;
+                        TradeExecution execution = null;
+                        SplitDetails split = null;
+                        Money cashDelta = Money.ZERO("USD");
+                        List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
+                                        ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
+                                        new FeeMetadata(Map.of())));
+                        String notes = "Testing fee validation";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction(transactionId, accountId, transactionType, execution,
-                            split, cashDelta, fees,
-                            notes, occurredAt, relatedTransactionId, metadata));
+                        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction(transactionId, accountId, transactionType, execution,
+                                                        split, cashDelta, fees,
+                                                        notes, occurredAt, relatedTransactionId, metadata));
 
-            assertTrue(ex.getMessage().contains("cannot have fees"));
-        }
+                        assertTrue(ex.getMessage().contains("cannot have fees"));
+                }
 
-        static Stream<Arguments> validTransactionProvider() {
-            return Stream.of(
-                    Arguments.of(TransactionType.BUY, -1350), // Buying: Cash goes OUT (negative)
-                    Arguments.of(TransactionType.SELL, 1350) // Selling: Cash comes IN (positive)
-            );
+                static Stream<Arguments> validTransactionProvider() {
+                        return Stream.of(
+                                        Arguments.of(TransactionType.BUY, -1350), // Buying: Cash goes OUT (negative)
+                                        Arguments.of(TransactionType.SELL, 1350) // Selling: Cash comes IN (positive)
+                        );
+                }
+
+                @Nested
+                @DisplayName("validateTradeConsistencyTests")
+                public class ValidateTradeConsistencyTests {
+                        @Test
+                        void testValidateTradeConsistency_Failure_WhenGrossValueNotBuy() {
+                                TransactionId transactionId = TransactionId.newId();
+                                AccountId accountId = AccountId.newId();
+                                TransactionType transactionType = TransactionType.BUY;
+                                TradeExecution execution = new TradeExecution(
+                                                new AssetSymbol("AAPL"),
+                                                new Quantity(BigDecimal.TEN),
+                                                new Price(Money.of(135, "USD")));
+
+                                SplitDetails spilt = null;
+                                Money cashDelta = Money.of(1350, "USD");
+                                List<Fee> fees = List.of();
+                                String notes = "Some notes";
+                                TransactionDate occurredAt = TransactionDate.now();
+                                TransactionId relatedTransactionId = null;
+                                TransactionMetadata metadata = null;
+
+                                IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                                () -> new Transaction(transactionId, accountId, transactionType,
+                                                                execution, spilt, cashDelta,
+                                                                fees,
+                                                                notes, occurredAt, relatedTransactionId, metadata));
+
+                                assertTrue(ex.getMessage().contains("Cash delta mismatch"));
+                        }
+
+                        @Test
+                        void testValidateTradeConsistency_Failure_WhenExpectedCashDeltaDefaultPath() {
+                                TransactionId transactionId = TransactionId.newId();
+                                AccountId accountId = AccountId.newId();
+                                TransactionType transactionType = TransactionType.SPLIT;
+                                TradeExecution execution = new TradeExecution(
+                                                new AssetSymbol("AAPL"),
+                                                new Quantity(BigDecimal.TEN),
+                                                new Price(Money.of(135, "USD")));
+
+                                SplitDetails spilt = null;
+                                Money cashDelta = Money.of(1350, "USD");
+                                List<Fee> fees = List.of();
+                                String notes = "Some notes";
+                                TransactionDate occurredAt = TransactionDate.now();
+                                TransactionId relatedTransactionId = null;
+                                TransactionMetadata metadata = null;
+
+                                IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                                () -> new Transaction(transactionId, accountId, transactionType,
+                                                                execution, spilt, cashDelta,
+                                                                fees,
+                                                                notes, occurredAt, relatedTransactionId, metadata));
+
+                                assertTrue(ex.getMessage().contains("requires"));
+                        }
+                }
         }
 
         @Nested
-        @DisplayName("validateTradeConsistencyTests")
-        public class ValidateTradeConsistencyTests {
-            @Test
-            void testValidateTradeConsistency_Failure_WhenGrossValueNotBuy() {
-                TransactionId transactionId = TransactionId.newId();
-                AccountId accountId = AccountId.newId();
-                TransactionType transactionType = TransactionType.BUY;
-                TradeExecution execution = new TradeExecution(
-                        new AssetSymbol("AAPL"),
-                        new Quantity(BigDecimal.TEN),
-                        new Price(Money.of(135, "USD")));
+        @DisplayName("TotalFeesInAccountCurrency tests")
+        public class TotalFeesInAccountCurrencyTest {
+                @Test
+                void test_TotalFeesInAccountCurrency_Success() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.BUY;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-                SplitDetails spilt = null;
-                Money cashDelta = Money.of(1350, "USD");
-                List<Fee> fees = List.of();
-                String notes = "Some notes";
-                TransactionDate occurredAt = TransactionDate.now();
-                TransactionId relatedTransactionId = null;
-                TransactionMetadata metadata = null;
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(-1358.25, "USD");
+                        List<Fee> fees = List.of(
+                                        new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
+                                                        ExchangeRate.identity(Currency.USD, Instant.now()),
+                                                        Instant.now(),
+                                                        new FeeMetadata(Map.of())),
+                                        new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
+                                                        new ExchangeRate(Currency.CAD, Currency.USD,
+                                                                        BigDecimal.valueOf(1.35), Instant.now()),
+                                                        Instant.now(), new FeeMetadata(Map.of()))
 
-                IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                        () -> new Transaction(transactionId, accountId, transactionType,
-                                execution, spilt, cashDelta,
-                                fees,
-                                notes, occurredAt, relatedTransactionId, metadata));
+                        );
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionId relatedTransactionId = null;
+                        TransactionMetadata metadata = null;
 
-                assertTrue(ex.getMessage().contains("Cash delta mismatch"));
-            }
-
-            @Test
-            void testValidateTradeConsistency_Failure_WhenExpectedCashDeltaDefaultPath() {
-                TransactionId transactionId = TransactionId.newId();
-                AccountId accountId = AccountId.newId();
-                TransactionType transactionType = TransactionType.SPLIT;
-                TradeExecution execution = new TradeExecution(
-                        new AssetSymbol("AAPL"),
-                        new Quantity(BigDecimal.TEN),
-                        new Price(Money.of(135, "USD")));
-
-                SplitDetails spilt = null;
-                Money cashDelta = Money.of(1350, "USD");
-                List<Fee> fees = List.of();
-                String notes = "Some notes";
-                TransactionDate occurredAt = TransactionDate.now();
-                TransactionId relatedTransactionId = null;
-                TransactionMetadata metadata = null;
-
-                IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                        () -> new Transaction(transactionId, accountId, transactionType,
-                                execution, spilt, cashDelta,
-                                fees,
-                                notes, occurredAt, relatedTransactionId, metadata));
-
-                assertTrue(ex.getMessage().contains("requires"));
-            }
-        }
-    }
-
-    @Nested
-    @DisplayName("TotalFeesInAccountCurrency tests")
-    public class TotalFeesInAccountCurrencyTest {
-        @Test
-        void test_TotalFeesInAccountCurrency_Success() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
-
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(-1358.25, "USD");
-            List<Fee> fees = List.of(
-                    new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
-                            ExchangeRate.identity(Currency.USD, Instant.now()),
-                            Instant.now(),
-                            new FeeMetadata(Map.of())),
-                    new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
-                            new ExchangeRate(Currency.CAD, Currency.USD,
-                                    BigDecimal.valueOf(1.35), Instant.now()),
-                            Instant.now(), new FeeMetadata(Map.of()))
-
-            );
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionId relatedTransactionId = null;
-            TransactionMetadata metadata = null;
-
-            Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
-                    spilt,
-                    cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-            assertAll(
-                    () -> assertEquals(Money.of(8.25, "USD"),
-                            transaction.totalFeesInAccountCurrency()),
-                    () -> assertEquals(Currency.USD.getCode(),
-                            transaction.totalFeesInAccountCurrency().currency().getCode()),
-                    () -> assertEquals(2,
-                            transaction.totalFeesInAccountCurrency().currency()
-                                    .getDefaultFractionDigits()));
-        }
-
-    }
-
-    @Nested
-    @DisplayName("Restore and Exclude methods")
-    public class TransactionDeletionTests {
-
-        private Transaction transaction;
-
-        @BeforeEach
-        void setUp() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
-
-            SplitDetails spilt = null;
-            Money cashDelta = Money.of(-1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-            TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
-
-            transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
-                    cashDelta, fees, notes, occurredAt, null, metadata);
-        }
-
-        @Test
-        void testMarkAssetExcluded_Success_MarksTransactionAsExcluded() {
-            UserId userId = UserId.random();
-
-            assertFalse(transaction.isExcluded());
-
-            Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
-
-            assertTrue(excludedTransaction.metadata().excluded());
-            assertEquals(userId, excludedTransaction.metadata().excludedBy());
-            assertTrue(excludedTransaction.isExcluded());
-        }
-
-        @Test
-        void testRestore_Success_MarksTransactionAsRestored() {
-            UserId userId = UserId.random();
-            Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
-            assertTrue(excludedTransaction.metadata().excluded());
-            assertEquals(userId, excludedTransaction.metadata().excludedBy());
-
-            Transaction restored = excludedTransaction.restore();
-            assertFalse(restored.metadata().excluded());
-            assertNull(restored.metadata().excludedBy());
-            assertTrue(excludedTransaction.isExcluded());
-        }
-
-        @Test
-        void testMarketAssetExcluded_Failure_MetadataIsNull() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
-
-            Money cashDelta = Money.of(-1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
-
-            transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
-                    cashDelta, fees, notes, occurredAt, null, null);
-
-            IllegalStateException stateException = assertThrows(IllegalStateException.class,
-                    () -> transaction.markAsExcluded(UserId.random(), "reason"));
-
-            assertTrue(stateException.getMessage().contains("exclude transaction"));
-            assertFalse(transaction.isExcluded());
+                        Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
+                                        spilt,
+                                        cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
+                        assertAll(
+                                        () -> assertEquals(Money.of(8.25, "USD"),
+                                                        transaction.totalFeesInAccountCurrency()),
+                                        () -> assertEquals(Currency.USD.getCode(),
+                                                        transaction.totalFeesInAccountCurrency().currency().getCode()),
+                                        () -> assertEquals(2,
+                                                        transaction.totalFeesInAccountCurrency().currency()
+                                                                        .getDefaultFractionDigits()));
+                }
 
         }
 
-        @Test
-        void testRestore_Failure_MetadataIsNull() {
-            TransactionId transactionId = TransactionId.newId();
-            AccountId accountId = AccountId.newId();
-            TransactionType transactionType = TransactionType.BUY;
-            TradeExecution execution = new TradeExecution(
-                    new AssetSymbol("AAPL"),
-                    new Quantity(BigDecimal.TEN),
-                    new Price(Money.of(135, "USD")));
+        @Nested
+        @DisplayName("Restore and Exclude methods")
+        public class TransactionDeletionTests {
 
-            Money cashDelta = Money.of(-1350, "USD");
-            List<Fee> fees = List.of();
-            String notes = "Some notes";
-            TransactionDate occurredAt = TransactionDate.now();
+                private Transaction transaction;
 
-            transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
-                    cashDelta, fees, notes, occurredAt, null, null);
+                @BeforeEach
+                void setUp() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.BUY;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
 
-            IllegalStateException stateException = assertThrows(IllegalStateException.class,
-                    () -> transaction.restore());
+                        SplitDetails spilt = null;
+                        Money cashDelta = Money.of(-1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+                        TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
 
-            assertTrue(stateException.getMessage().contains("restore transaction"));
-            assertFalse(transaction.isExcluded());
+                        transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
+                                        cashDelta, fees, notes, occurredAt, null, metadata);
+                }
+
+                @Test
+                void testMarkAssetExcluded_Success_MarksTransactionAsExcluded() {
+                        UserId userId = UserId.random();
+
+                        assertFalse(transaction.isExcluded());
+
+                        Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+
+                        assertTrue(excludedTransaction.metadata().excluded());
+                        assertEquals(userId, excludedTransaction.metadata().excludedBy());
+                        assertTrue(excludedTransaction.isExcluded());
+                }
+
+                @Test
+                void testRestore_Success_MarksTransactionAsRestored() {
+                        UserId userId = UserId.random();
+                        Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+                        assertTrue(excludedTransaction.metadata().excluded());
+                        assertEquals(userId, excludedTransaction.metadata().excludedBy());
+
+                        Transaction restored = excludedTransaction.restore();
+                        assertFalse(restored.metadata().excluded());
+                        assertNull(restored.metadata().excludedBy());
+                        assertTrue(excludedTransaction.isExcluded());
+                }
+
+                @Test
+                void testMarketAssetExcluded_Failure_MetadataIsNull() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.BUY;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
+
+                        Money cashDelta = Money.of(-1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+
+                        transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
+                                        cashDelta, fees, notes, occurredAt, null, null);
+
+                        IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                                        () -> transaction.markAsExcluded(UserId.random(), "reason"));
+
+                        assertTrue(stateException.getMessage().contains("exclude transaction"));
+                        assertFalse(transaction.isExcluded());
+
+                }
+
+                @Test
+                void testRestore_Failure_MetadataIsNull() {
+                        TransactionId transactionId = TransactionId.newId();
+                        AccountId accountId = AccountId.newId();
+                        TransactionType transactionType = TransactionType.BUY;
+                        TradeExecution execution = new TradeExecution(
+                                        new AssetSymbol("AAPL"),
+                                        new Quantity(BigDecimal.TEN),
+                                        new Price(Money.of(135, "USD")));
+
+                        Money cashDelta = Money.of(-1350, "USD");
+                        List<Fee> fees = List.of();
+                        String notes = "Some notes";
+                        TransactionDate occurredAt = TransactionDate.now();
+
+                        transaction = new Transaction(transactionId, accountId, transactionType, execution, null,
+                                        cashDelta, fees, notes, occurredAt, null, null);
+
+                        IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                                        () -> transaction.restore());
+
+                        assertTrue(stateException.getMessage().contains("restore transaction"));
+                        assertFalse(transaction.isExcluded());
+                }
+
+                @Test
+                void testMarketAssetExcluded_Failure_AlreadyExcluded() {
+                        UserId userId = UserId.random();
+
+                        assertFalse(transaction.isExcluded());
+
+                        Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+
+                        IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                                        () -> excludedTransaction.markAsExcluded(UserId.random(), "reason 2"));
+
+                        assertTrue(stateException.getMessage().contains("already exclude"));
+                        assertFalse(transaction.isExcluded());
+
+                }
+
+                @Test
+                void testRestore_Failure_TransactionNotYetExcluded() {
+
+                        IllegalStateException stateException = assertThrows(IllegalStateException.class,
+                                        () -> transaction.restore());
+
+                        assertTrue(stateException.getMessage().contains("Transaction is not excluded"));
+                        assertFalse(transaction.isExcluded());
+
+                }
         }
 
-        @Test
-        void testMarketAssetExcluded_Failure_AlreadyExcluded() {
-            UserId userId = UserId.random();
+        @Nested
+        class TradeExecutionTest {
 
-            assertFalse(transaction.isExcluded());
+                @Test
+                @DisplayName("Should calculate gross value correctly for both Buy and Sell")
+                void testGrossValue() {
+                        Price price = new Price(Money.of(150.00, "USD"));
 
-            Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
+                        // Test Buy (Positive Quantity)
+                        var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
+                                        new Quantity(new BigDecimal("10")),
+                                        price);
+                        assertEquals(Money.of(1500.00, "USD"), buy.grossValue());
 
-            IllegalStateException stateException = assertThrows(IllegalStateException.class,
-                    () -> excludedTransaction.markAsExcluded(UserId.random(), "reason 2"));
+                        // Test Sell (Negative Quantity) - Gross value should stay positive/absolute
+                        var sell = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
+                                        new Quantity(new BigDecimal("-10")),
+                                        price);
+                        assertEquals(Money.of(1500.00, "USD"), sell.grossValue());
+                }
 
-            assertTrue(stateException.getMessage().contains("already exclude"));
-            assertFalse(transaction.isExcluded());
+                @Test
+                @DisplayName("Should throw exception for invalid inputs")
+                void testInvariants() {
+                        AssetSymbol symbol = new AssetSymbol("MSFT");
+                        Quantity qty = new Quantity(new BigDecimal("10"));
+                        Price price = new Price(Money.of(100.00, "USD"));
 
-        }
-
-        @Test
-        void testRestore_Failure_TransactionNotYetExcluded() {
-
-            IllegalStateException stateException = assertThrows(IllegalStateException.class,
-                    () -> transaction.restore());
-
-            assertTrue(stateException.getMessage().contains("Transaction is not excluded"));
-            assertFalse(transaction.isExcluded());
-
-        }
-    }
-
-    @Nested
-    class TradeExecutionTest {
-
-        @Test
-        @DisplayName("Should calculate gross value correctly for both Buy and Sell")
-        void testGrossValue() {
-            Price price = new Price(Money.of(150.00, "USD"));
-
-            // Test Buy (Positive Quantity)
-            var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
-                    new Quantity(new BigDecimal("10")),
-                    price);
-            assertEquals(Money.of(1500.00, "USD"), buy.grossValue());
-
-            // Test Sell (Negative Quantity) - Gross value should stay positive/absolute
-            var sell = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
-                    new Quantity(new BigDecimal("-10")),
-                    price);
-            assertEquals(Money.of(1500.00, "USD"), sell.grossValue());
-        }
-
-        @Test
-        @DisplayName("Should throw exception for invalid inputs")
-        void testInvariants() {
-            AssetSymbol symbol = new AssetSymbol("MSFT");
-            Quantity qty = new Quantity(new BigDecimal("10"));
-            Price price = new Price(Money.of(100.00, "USD"));
-
-            assertThrows(DomainArgumentException.class,
-                    () -> new Transaction.TradeExecution(null, qty, price));
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction.TradeExecution(symbol, qty,
-                            new Price(Money.of(-1.00, "USD"))));
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")),
-                            price));
-        }
-
-    }
-
-    @Nested
-    class TransactionMetadataTest {
-        @Test
-        void testNullSafetyAndDefaults() {
-            // Test that null map becomes empty map and null source becomes UNKNOWN
-            var meta = new Transaction.TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null);
-
-            assertEquals("UNKNOWN", meta.source());
-            assertNotNull(meta.additionalData());
-            assertTrue(meta.isEmpty());
-        }
-
-        @Test
-        void testNullSafetyAndDefaultsExcluded() {
-            // Test that null map becomes empty map and null source becomes UNKNOWN
-            var meta = new Transaction.TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    true,
-                    Instant.now(),
-                    UserId.random(),
-                    "Some reason",
-                    null);
-
-            assertEquals("UNKNOWN", meta.source());
-            assertNotNull(meta.additionalData());
-            assertTrue(meta.isEmpty());
-        }
-
-        @Test
-        void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAtAndExcludedBy() {
-            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    true,
-                    null,
-                    null,
-                    null,
-                    null));
-        }
-
-        @Test
-        void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAt() {
-            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    true,
-                    null,
-                    UserId.random(),
-                    null,
-                    null));
-        }
-
-        @Test
-        void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedBy() {
-            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    true,
-                    Instant.now(),
-                    null,
-                    null,
-                    null));
-        }
-
-        @Test
-        void testConstructorExceptionHandlingForExclusion_IsNotExcluded_ExclusionAreActive() {
-            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    false,
-                    Instant.now(),
-                    null,
-                    null,
-                    null));
-            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    false,
-                    null,
-                    UserId.random(),
-                    null,
-                    null));
-            assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    false,
-                    null,
-                    null,
-                    "reasons",
-                    null));
-        }
-
-        @Test
-        void testImmutabilityOfAdditionalData() {
-            Map<String, String> originalData = new HashMap<>();
-            originalData.put("key", "value");
-
-            var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null,
-                    null,
-                    originalData);
-
-            // Try to modify original map
-            originalData.put("key", "changed");
-
-            // Record should remain unchanged because of Map.copyOf()
-            assertEquals("value", meta.get("key"));
-            assertEquals("value", meta.getOrDefault("key", "NOTHING"));
-            assertEquals("NOTHING", meta.getOrDefault("key2", "NOTHING"));
-            assertTrue(meta.containsKey("key"));
-            assertFalse(meta.containsKey("keys"));
+                        assertThrows(DomainArgumentException.class,
+                                        () -> new Transaction.TradeExecution(null, qty, price));
+                        assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction.TradeExecution(symbol, qty,
+                                                        new Price(Money.of(-1.00, "USD"))));
+                        assertThrows(IllegalArgumentException.class,
+                                        () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")),
+                                                        price));
+                }
 
         }
 
-        @Test
-        void testWithMethods() {
-            var base = Transaction.TransactionMetadata.manual(AssetType.CRYPTO);
+        @Nested
+        class TransactionMetadataTest {
+                @Test
+                void testNullSafetyAndDefaults() {
+                        // Test that null map becomes empty map and null source becomes UNKNOWN
+                        var meta = new Transaction.TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        false,
+                                        null,
+                                        null,
+                                        null,
+                                        null);
 
-            // 'with' should return a NEW instance, leaving the old one untouched
-            var updated = base.with("broker_id", "123");
+                        assertEquals("UNKNOWN", meta.source());
+                        assertNotNull(meta.additionalData());
+                        assertTrue(meta.isEmpty());
+                }
 
-            assertNotSame(base, updated);
-            assertTrue(base.isEmpty());
-            assertEquals("123", updated.get("broker_id"));
-            assertEquals("MANUAL", updated.source());
+                @Test
+                void testNullSafetyAndDefaultsExcluded() {
+                        // Test that null map becomes empty map and null source becomes UNKNOWN
+                        var meta = new Transaction.TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        true,
+                                        Instant.now(),
+                                        UserId.random(),
+                                        "Some reason",
+                                        null);
 
-            Map<String, String> additionalData = new HashMap<>();
-            additionalData.put("key", "value");
-            TransactionMetadata newData = base.withAll(additionalData);
-            assertTrue(newData.containsKey("key"));
+                        assertEquals("UNKNOWN", meta.source());
+                        assertNotNull(meta.additionalData());
+                        assertTrue(meta.isEmpty());
+                }
+
+                @Test
+                void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAtAndExcludedBy() {
+                        assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        true,
+                                        null,
+                                        null,
+                                        null,
+                                        null));
+                }
+
+                @Test
+                void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAt() {
+                        assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        true,
+                                        null,
+                                        UserId.random(),
+                                        null,
+                                        null));
+                }
+
+                @Test
+                void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedBy() {
+                        assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        true,
+                                        Instant.now(),
+                                        null,
+                                        null,
+                                        null));
+                }
+
+                @Test
+                void testConstructorExceptionHandlingForExclusion_IsNotExcluded_ExclusionAreActive() {
+                        assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        false,
+                                        Instant.now(),
+                                        null,
+                                        null,
+                                        null));
+                        assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        false,
+                                        null,
+                                        UserId.random(),
+                                        null,
+                                        null));
+                        assertThrows(IllegalArgumentException.class, () -> new TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        false,
+                                        null,
+                                        null,
+                                        "reasons",
+                                        null));
+                }
+
+                @Test
+                void testImmutabilityOfAdditionalData() {
+                        Map<String, String> originalData = new HashMap<>();
+                        originalData.put("key", "value");
+
+                        var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null,
+                                        null,
+                                        originalData);
+
+                        // Try to modify original map
+                        originalData.put("key", "changed");
+
+                        // Record should remain unchanged because of Map.copyOf()
+                        assertEquals("value", meta.get("key"));
+                        assertEquals("value", meta.getOrDefault("key", "NOTHING"));
+                        assertEquals("NOTHING", meta.getOrDefault("key2", "NOTHING"));
+                        assertTrue(meta.containsKey("key"));
+                        assertFalse(meta.containsKey("keys"));
+
+                }
+
+                @Test
+                void testWithMethods() {
+                        var base = Transaction.TransactionMetadata.manual(AssetType.CRYPTO);
+
+                        // 'with' should return a NEW instance, leaving the old one untouched
+                        var updated = base.with("broker_id", "123");
+
+                        assertNotSame(base, updated);
+                        assertTrue(base.isEmpty());
+                        assertEquals("123", updated.get("broker_id"));
+                        assertEquals("MANUAL", updated.source());
+
+                        Map<String, String> additionalData = new HashMap<>();
+                        additionalData.put("key", "value");
+                        TransactionMetadata newData = base.withAll(additionalData);
+                        assertTrue(newData.containsKey("key"));
+                }
+
+                @Test
+                void testAsFlatMap() {
+                        var meta = new Transaction.TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        false,
+                                        null,
+                                        null,
+                                        null,
+                                        null);
+
+                        Map<String, String> map = meta.asFlatMap();
+                        assertEquals("STOCK", map.get("assetType"));
+                        assertEquals("UNKNOWN", map.get("source"));
+                        assertEquals("false", map.get("excluded"));
+                }
+
+                @Test
+                void testAsFlatMapExclusionTrue() {
+                        Instant now = Instant.now();
+                        UserId userId = UserId.random();
+                        var meta = new Transaction.TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        true,
+                                        now,
+                                        userId,
+                                        null,
+                                        null);
+
+                        Map<String, String> map = meta.asFlatMap();
+                        assertEquals("STOCK", map.get("assetType"));
+                        assertEquals("UNKNOWN", map.get("source"));
+                        assertEquals("true", map.get("excluded"));
+                        assertEquals(now.toString(), map.get("excludedAt"));
+                        assertEquals(userId.id().toString(), map.get("excludedBy"));
+                }
+
+                @Test
+                void testAsFlatMapExclusionTrue_WithComments() {
+                        Instant now = Instant.now();
+                        UserId userId = UserId.random();
+                        var meta = new Transaction.TransactionMetadata(
+                                        AssetType.STOCK,
+                                        null,
+                                        true,
+                                        now,
+                                        userId,
+                                        "for testing",
+                                        null);
+
+                        Map<String, String> map = meta.asFlatMap();
+                        assertEquals("STOCK", map.get("assetType"));
+                        assertEquals("UNKNOWN", map.get("source"));
+                        assertEquals("true", map.get("excluded"));
+                        assertEquals(now.toString(), map.get("excludedAt"));
+                        assertEquals(userId.id().toString(), map.get("excludedBy"));
+                        assertEquals("for testing", map.get("excludedReason"));
+                }
+
+                @Test
+                void testStaticFactories() {
+                        var csv = Transaction.TransactionMetadata.csvImport(AssetType.STOCK, "trades.csv");
+
+                        assertEquals("CSV_IMPORT", csv.source());
+                        assertEquals("trades.csv", csv.get("filename"));
+                }
         }
-
-        @Test
-        void testAsFlatMap() {
-            var meta = new Transaction.TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null);
-
-            Map<String, String> map = meta.asFlatMap();
-            assertEquals("STOCK", map.get("assetType"));
-            assertEquals("UNKNOWN", map.get("source"));
-            assertEquals("false", map.get("excluded"));
-        }
-
-        @Test
-        void testAsFlatMapExclusionTrue() {
-            Instant now = Instant.now();
-            UserId userId = UserId.random();
-            var meta = new Transaction.TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    true,
-                    now,
-                    userId,
-                    null,
-                    null);
-
-            Map<String, String> map = meta.asFlatMap();
-            assertEquals("STOCK", map.get("assetType"));
-            assertEquals("UNKNOWN", map.get("source"));
-            assertEquals("true", map.get("excluded"));
-            assertEquals(now.toString(), map.get("excludedAt"));
-            assertEquals(userId.id().toString(), map.get("excludedBy"));
-        }
-
-        @Test
-        void testAsFlatMapExclusionTrue_WithComments() {
-            Instant now = Instant.now();
-            UserId userId = UserId.random();
-            var meta = new Transaction.TransactionMetadata(
-                    AssetType.STOCK,
-                    null,
-                    true,
-                    now,
-                    userId,
-                    "for testing",
-                    null);
-
-            Map<String, String> map = meta.asFlatMap();
-            assertEquals("STOCK", map.get("assetType"));
-            assertEquals("UNKNOWN", map.get("source"));
-            assertEquals("true", map.get("excluded"));
-            assertEquals(now.toString(), map.get("excludedAt"));
-            assertEquals(userId.id().toString(), map.get("excludedBy"));
-            assertEquals("for testing", map.get("excludedReason"));
-        }
-
-        @Test
-        void testStaticFactories() {
-            var csv = Transaction.TransactionMetadata.csvImport(AssetType.STOCK, "trades.csv");
-
-            assertEquals("CSV_IMPORT", csv.source());
-            assertEquals("trades.csv", csv.get("filename"));
-        }
-    }
 }

@@ -132,7 +132,8 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
         }
 
         /**
-         * Gross value of the trade before fees. This is qty × price, representing the market value.
+         * Gross value of the trade before fees. This is qty × price, representing the
+         * market value.
          */
         public Money grossValue() {
             return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
@@ -142,11 +143,17 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
     public record SplitDetails(Ratio ratio) {
     }
 
-    public record TransactionMetadata(AssetType assetType, String source, boolean excluded, // ← NEW
-            Instant excludedAt, // ← NEW
-            UserId excludedBy, // ← NEW
-            String excludedReason, // ← NEW
+    public record TransactionMetadata(
+            AssetType assetType,
+            String source,
+            boolean excluded,
+            Instant excludedAt,
+            UserId excludedBy,
+            String excludedReason,
             Map<String, String> additionalData) {
+
+        public static final String KEY_SYMBOL = "symbol";
+        public static final String KEY_DRIP_SOURCE = "drip_source";
 
         public TransactionMetadata {
             notNull(assetType, "AssetType");

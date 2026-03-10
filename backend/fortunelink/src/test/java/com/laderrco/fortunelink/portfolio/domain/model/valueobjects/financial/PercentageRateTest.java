@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
 import org.junit.jupiter.api.*;
 
-
 import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.*;
 
@@ -25,8 +24,8 @@ class PercentageRateTest {
         @DisplayName("constructor_fail_NegativeRate")
         void constructor_fail_NegativeRate() {
             assertThatThrownBy(() -> new PercentageRate(new BigDecimal("-0.01")))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("cannot be negative");
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("cannot be negative");
         }
 
         @Test
@@ -54,7 +53,7 @@ class PercentageRateTest {
         void add_success_Summation() {
             PercentageRate pr1 = PercentageRate.fromRate(new BigDecimal("0.05"));
             PercentageRate pr2 = PercentageRate.fromRate(new BigDecimal("0.02"));
-            
+
             assertThat(pr1.add(pr2).rate()).isEqualByComparingTo("0.07");
         }
 
@@ -63,7 +62,7 @@ class PercentageRateTest {
         void compoundWith_success_Multiplication() {
             PercentageRate pr1 = PercentageRate.fromRate(new BigDecimal("0.10"));
             PercentageRate pr2 = PercentageRate.fromRate(new BigDecimal("0.10"));
-            
+
             // 0.10 * 0.10 = 0.01
             assertThat(pr1.compoundWith(pr2).rate()).isEqualByComparingTo("0.01");
         }
@@ -85,8 +84,8 @@ class PercentageRateTest {
         void annualizedOver_success_ValidCalculation() {
             // A 21% total return over 2 years: (1.21)^(1/2) - 1 = 0.10 (10% annual)
             PercentageRate totalReturn = PercentageRate.fromRate(new BigDecimal("0.21"));
-            PercentageRate annualized = totalReturn.annualizedOver(2.0);
-            
+            PercentageRate annualized = totalReturn.annualizedOver(BigDecimal.valueOf(2.0));
+
             assertThat(annualized.rate()).isEqualByComparingTo("0.10");
         }
 
@@ -94,12 +93,12 @@ class PercentageRateTest {
         @DisplayName("annualizedOver_fail_NonPositiveYears")
         void annualizedOver_fail_NonPositiveYears() {
             PercentageRate pr = PercentageRate.fromRate(new BigDecimal("0.10"));
-            
-            assertThatThrownBy(() -> pr.annualizedOver(0))
-                .isInstanceOf(IllegalArgumentException.class);
-                
-            assertThatThrownBy(() -> pr.annualizedOver(-1))
-                .isInstanceOf(IllegalArgumentException.class);
+
+            assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.ZERO))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.valueOf(-1)))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -112,7 +111,7 @@ class PercentageRateTest {
         void compareTo_success_StandardOrdering() {
             PercentageRate lower = PercentageRate.fromRate(new BigDecimal("0.05"));
             PercentageRate higher = PercentageRate.fromRate(new BigDecimal("0.10"));
-            
+
             assertThat(lower).isLessThan(higher);
             assertThat(higher).isEqualByComparingTo(PercentageRate.fromRate(new BigDecimal("0.10")));
         }

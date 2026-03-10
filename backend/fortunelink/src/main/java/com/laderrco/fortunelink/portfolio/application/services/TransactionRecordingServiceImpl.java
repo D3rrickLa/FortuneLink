@@ -184,7 +184,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .notes(notes)
         .occurredAt(TransactionDate.of(date))
         .metadata(TransactionMetadata.manual(AssetType.CASH)
-            .with("symbol", symbol.symbol()))
+            .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
         .build();
 
     account.deposit(amount, "INTEREST: " + symbol.symbol());
@@ -208,7 +208,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .notes(notes)
         .occurredAt(TransactionDate.of(date))
         .metadata(TransactionMetadata.manual(AssetType.CASH)
-            .with("symbol", symbol.symbol()))
+            .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
         .build();
 
     account.deposit(amount, "DIVIDEND: " + symbol.symbol());
