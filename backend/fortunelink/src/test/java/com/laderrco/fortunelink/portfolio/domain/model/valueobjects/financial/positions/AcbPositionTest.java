@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -164,7 +165,7 @@ class AcbPositionTest {
 
             Money currentPrice = new Money(new BigDecimal("15.00"), USD); // Total value 150
 
-            Money unrealized = position.calculateUnrealizedGain(currentPrice);
+            Money unrealized = position.calculateUnrealizedGain(new Price(currentPrice));
             assertEquals(new BigDecimal("50.0000000000000000000000000000000000"), unrealized.amount());
         }
     }

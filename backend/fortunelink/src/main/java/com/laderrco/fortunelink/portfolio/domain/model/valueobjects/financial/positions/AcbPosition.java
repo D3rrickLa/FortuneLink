@@ -122,12 +122,12 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
   }
 
   @Override
-  public Money currentValue(Money currentPrice) {
-    return currentPrice.multiply(totalQuantity.amount());
+  public Money currentValue(Price currentPrice) {
+    return currentPrice.calculateValue(totalQuantity);
 
   }
 
-  public Money calculateUnrealizedGain(Money currentPrice) {
+  public Money calculateUnrealizedGain(Price currentPrice) {
     return currentValue(currentPrice).subtract(totalCostBasis);
   }
 

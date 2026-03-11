@@ -142,7 +142,7 @@ public class PortfolioViewMapper {
         }
 
         Price currentPrice = quote.currentPrice();
-        Money marketValue = position.currentValue(currentPrice.pricePerUnit());
+        Money marketValue = position.currentValue(currentPrice);
         Money unrealizedPnL = marketValue.subtract(position.totalCostBasis());
         PercentageChange returnPct = calculateReturnPercentage(unrealizedPnL, position.totalCostBasis());
 

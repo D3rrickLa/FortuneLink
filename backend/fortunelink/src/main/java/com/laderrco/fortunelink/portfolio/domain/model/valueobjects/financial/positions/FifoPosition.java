@@ -166,8 +166,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	@Override
-	public Money currentValue(Money currentPrice) {
-		return currentPrice.multiply(totalQuantity());
+	public Money currentValue(Price currentPrice) {
+		return currentPrice.calculateValue(totalQuantity());
 	}
 
 }

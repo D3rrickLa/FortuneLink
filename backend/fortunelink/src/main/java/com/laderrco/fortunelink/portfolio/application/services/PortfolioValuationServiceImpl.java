@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.Objects;
 
-
 /**
  * Pure math implementation of PortfolioValuationService.
  *
@@ -99,7 +98,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
             return position.totalCostBasis();
         }
 
-        return position.currentValue(quote.currentPrice().pricePerUnit());
+        return position.currentValue(quote.currentPrice());
     }
 
 }

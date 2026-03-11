@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.services.AccountHealthService;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
@@ -32,6 +31,7 @@ public class PositionRecalculationExecutor {
   private final TransactionRepository transactionRepository;
   private final TransactionRecordingService transactionRecordingService;
   private final AccountHealthService accountHealthService;
+  private final PortfolioLoader portfolioLoader;
 
   /**
    * Surgical recalculation for a single symbol.`
@@ -41,7 +41,7 @@ public class PositionRecalculationExecutor {
    */
   @Transactional
   public void scheduleRecalculation(PortfolioId portfolioId, UserId userId, AccountId accountId, AssetSymbol symbol) {
-    Portfolio portfolio = loadPortfolio(portfolioId, userId);
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(portfolioId, userId);
     Account account = portfolio.getAccount(accountId);
 
     List<Transaction> active = transactionRepository
@@ -71,8 +71,33 @@ public class PositionRecalculationExecutor {
     portfolioRepository.save(portfolio);
   }
 
-  private Portfolio loadPortfolio(PortfolioId portfolioId, UserId userId) {
-    return portfolioRepository.findByIdAndUserId(portfolioId, userId)
-        .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+  /**
+   * Full account recovery. Resets everything to zero and re-runs history.
+   */
+  @Transactional
+  public void replayFullAccount(PortfolioId portfolioId, UserId userId, AccountId accountId) {
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(portfolioId, userId);
+    Account account = portfolio.getAccount(accountId);
+
+    List<Transaction> allActive = transactionRepository
+        .findByAccountId(accountId)
+        .stream()
+        .filter(tx -> !tx.isExcluded())
+        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
+        .toList();
+
+    try {
+      account.clearAllPositions();
+      account.resetCashToZero();
+      account.clearAllRealizedGains();
+      allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
+      portfolio.reportRecalculationSuccess(accountId);
+    } catch (Exception e) {
+      log.error("Full account replay failed for account {}", accountId, e);
+      accountHealthService.markStale(portfolioId, userId, accountId);
+      throw e; // rollback the transaction, don't commit partial state
+    }
+
+    portfolioRepository.save(portfolio);
   }
 }

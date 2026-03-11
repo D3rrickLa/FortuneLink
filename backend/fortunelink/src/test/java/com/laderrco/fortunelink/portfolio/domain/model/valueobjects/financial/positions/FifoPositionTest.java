@@ -197,7 +197,8 @@ class FifoPositionTest {
                             new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(100, "USD"), EARLIER)),
                     Instant.now());
             Money price = new Money(new BigDecimal("15.50"), USD);
-            assertEquals(new BigDecimal("155.0000000000000000000000000000000000"), pos.currentValue(price).amount());
+            assertEquals(new BigDecimal("155.0000000000000000000000000000000000"),
+                    pos.currentValue(new Price(price)).amount());
         }
     }
 

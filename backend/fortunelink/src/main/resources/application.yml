@@ -1,13 +1,10 @@
 spring:
   application:
     name: fortunelink
-
   profiles:
     active: local
-
   config:
     import: "optional:file:.env[.properties]"
-
   # ============================================
   # DATABASE
   # ============================================
@@ -16,17 +13,14 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
-
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: validate
-
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-
   # ============================================
   # REDIS (env-driven, Docker-friendly)
   # ============================================
@@ -43,7 +37,6 @@ spring:
           min-idle: 2
           max-wait: -1ms
         shutdown-timeout: 100ms
-
   # ============================================
   # SPRING CACHE (Redis-backed)
   # ============================================
@@ -54,7 +47,6 @@ spring:
       cache-null-values: false
       use-key-prefix: true
       key-prefix: "fortunelink:"
-
   # ============================================
   # Security - Uses Supabase for Auth
   # ============================================
@@ -64,8 +56,8 @@ spring:
         jwt:
           issuer-uri: ${SUPABASE_PROJ_URL} # This is the iss field in a jwt
           # we technically don't need this because the way we set up the path,
-          # oauth2 will discover the jwk-set-uri
-          # jwk-set-uri: ${SUPABASE_PROJ_URL}/jwks # fetching public keys to verify JWT signatures
+# oauth2 will discover the jwk-set-uri
+# jwk-set-uri: ${SUPABASE_PROJ_URL}/jwks # fetching public keys to verify JWT signatures
 
 # ============================================
 # APPLICATION CACHING
@@ -73,57 +65,45 @@ spring:
 fortunelink:
   cache:
     enabled: true
-
     ttl:
       current-prices: 300
       historical-prices: 86400
       asset-info: 604800
       trading-currency: 604800
       exchange-rates: 3600
-
     key-prefix:
       prices: "market:price:"
       historical: "market:historical:"
       asset-info: "market:info:"
       currency: "market:currency:"
-  
   purge:
     excluded-transaction-retention-days: 365
-
   # ============================================
   # RATE LIMITING (Redis / Bucket4j)
   # ============================================
   rate-limit:
     enabled: true
-
     global:
       requests-per-minute: 60
       requests-per-hour: 1000
       requests-per-day: 10000
-
     endpoints:
       market-data-price:
         requests-per-minute: 30
         requests-per-hour: 500
-
       market-data-batch:
         requests-per-minute: 10
         requests-per-hour: 100
-
       portfolio-read:
         requests-per-minute: 60
         requests-per-hour: 1000
-
       portfolio-write:
         requests-per-minute: 20
         requests-per-hour: 200
-
     fmp-quota:
       daily-limit: 250
       warning-threshold: 200
       reserve-buffer: 25
-    
-
 # ============================================
 # FMP API
 # ============================================
@@ -133,12 +113,12 @@ fmp:
   timeout-seconds: 10
   debug-logging: false
 # ============================================
+
 # BOC API
 # ============================================
 boc:
   timeout-seconds: 10
   debug-logging: false
-
 # ============================================
 # ACTUATOR & METRICS
 # ============================================
@@ -150,20 +130,16 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-    caches:
-      enabled: true
   metrics:
     tags:
       application: ${APPLICATION_NAME}
-
 # ============================================
 # LOGGING (safe defaults)
 # ============================================
 logging:
   level:
-    com.fortunelink: INFO
-    org.springframework.cache: INFO
-    io.lettuce.core: INFO
-    org.hibernate.SQL: ERROR # Change from DEBUG to ERROR
-    org.hibernate.type.descriptor.sql: ERROR
-
+    "com.fortunelink": INFO
+    "org.springframework.cache": INFO
+    "io.lettuce.core": INFO
+    "org.hibernate.SQL": ERROR
+    "org.hibernate.type.descriptor.sql": ERROR

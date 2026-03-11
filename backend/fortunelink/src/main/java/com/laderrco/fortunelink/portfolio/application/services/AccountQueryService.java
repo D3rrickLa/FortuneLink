@@ -1,13 +1,13 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAllAccountsQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAssetQuery;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
@@ -17,9 +17,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import lombok.RequiredArgsConstructor;
@@ -48,16 +45,16 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class AccountQueryService {
 
-	private final PortfolioRepository portfolioRepository;
 	private final TransactionRepository transactionRepository;
 	private final MarketDataService marketDataService;
 	private final PortfolioViewMapper portfolioViewMapper;
 	private final AccountViewBuilder accountViewBuilder;
+	private final PortfolioLoader portfolioLoader;
 
 	public List<AccountView> getAllAccounts(GetAllAccountsQuery query) {
 		Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
 
-		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+		Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
 
 		Set<AssetSymbol> allSymbols = PortfolioAccessUtils.extractSymbols(portfolio);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
@@ -81,7 +78,7 @@ public class AccountQueryService {
 	public AccountView getAccountSummary(GetAccountSummaryQuery query) {
 		Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
-		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+		Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(
 						query.accountId(),
@@ -101,7 +98,7 @@ public class AccountQueryService {
 	public List<PositionView> getAccountPositions(GetAccountSummaryQuery query) {
 		Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
-		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+		Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
@@ -117,7 +114,7 @@ public class AccountQueryService {
 	public PositionView getAssetSummary(GetAssetQuery query) {
 		Objects.requireNonNull(query, "GetAssetQuery cannot be null");
 
-		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
+		Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
@@ -130,13 +127,4 @@ public class AccountQueryService {
 		return portfolioViewMapper.toPositionView(position, quote);
 	}
 
-	private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-		Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-				.orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
-
-		if (portfolio.isDeleted()) {
-			throw new PortfolioNotFoundException(portfolioId);
-		}
-		return portfolio;
-	}
 }

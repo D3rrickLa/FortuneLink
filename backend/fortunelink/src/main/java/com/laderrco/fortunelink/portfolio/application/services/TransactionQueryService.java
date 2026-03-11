@@ -12,18 +12,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio.application.repositories.TransactionQueryRepository;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -35,8 +32,8 @@ public class TransactionQueryService {
 
     private final TransactionRepository transactionRepository; // for single lookups
     private final TransactionQueryRepository transactionQueryRepository; // for paginated history
-    private final PortfolioRepository portfolioRepository;
     private final TransactionViewMapper transactionViewMapper;
+    private final PortfolioLoader portfolioLoader;
 
     /**
      * Retrieves a single transaction by ID.
@@ -78,7 +75,7 @@ public class TransactionQueryService {
         Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
         // pagnation check here is done in query record
-        validateOwnership(query.portfolioId(), query.userId());
+        portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
         validateDateRange(query.startDate(), query.endDate());
 
         boolean hasDateRange = query.startDate() != null && query.endDate() != null;
@@ -125,17 +122,6 @@ public class TransactionQueryService {
         validateDateRange(start, end);
 
         return transactionRepository.findByDateRange(accountId, start, end);
-    }
-
-    /**
-     * Lightweight ownership check — does not load the Portfolio aggregate.
-     * Use existsByIdAndUserId wherever you only need to verify access without
-     * needing to mutate or read the portfolio itself.
-     */
-    private void validateOwnership(PortfolioId portfolioId, UserId userId) {
-        portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                .filter(p -> !p.isDeleted())
-                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 
     private void validateDateRange(Instant start, Instant end) {

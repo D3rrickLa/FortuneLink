@@ -5,6 +5,7 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -18,8 +19,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
@@ -49,6 +48,7 @@ public class PortfolioLifecycleService {
 
   private final PortfolioLifecycleCommandValidator validator;
   private final AccountViewBuilder accountViewBuilder;
+  private final PortfolioLoader portfolioLoader;
 
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     validate(command, validator::validate, "createPortfolio");
@@ -78,7 +78,7 @@ public class PortfolioLifecycleService {
 
     validate(command, validator::validate, "updatePortfolio");
 
-    Portfolio existingPortfolio = loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
 
     existingPortfolio.updateDetails(command.name(), command.description());
     existingPortfolio.updateDisplayCurrency(command.currency());
@@ -118,9 +118,9 @@ public class PortfolioLifecycleService {
       throw new PortfolioDeletionRequiresConfirmationException();
     }
 
-    // TODO: confirm is this is true/needed
     // NOTE: deletePortfolio intentionally calls the raw repository lookup,
-    // not loadUserPortfolio(), because we need to allow the user to hard-delete
+    // not portfolioLoader.loadUserPortfolio(), because we need to allow the user to
+    // hard-delete
     // a portfolio that is already soft-deleted (cleanup path).
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
         .orElseThrow(() -> new PortfolioNotFoundException(
@@ -148,9 +148,10 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
-    // Bug 15 fix: blocked by loadUserPortfolio() - cannot add account to deleted
+    // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot add
+    // account to deleted
     // portfolio.
-    Portfolio portfolio = loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
 
@@ -162,9 +163,10 @@ public class PortfolioLifecycleService {
   public void updateAccount(UpdateAccountCommand command) {
     validate(command, validator::validate, "updateAccount");
 
-    // Bug 15 fix: blocked by loadUserPortfolio() - cannot rename account on deleted
+    // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot rename
+    // account on deleted
     // portfolio.
-    Portfolio portfolio = loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
     portfolio.renameAccount(command.accountId(), command.accountName());
 
     portfolioRepository.save(portfolio);
@@ -173,9 +175,10 @@ public class PortfolioLifecycleService {
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
-    // Bug 15 fix: blocked by loadUserPortfolio() - cannot close account on deleted
+    // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot close
+    // account on deleted
     // portfolio.
-    Portfolio portfolio = loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
     try {
       portfolio.closeAccount(command.accountId());
 
@@ -185,16 +188,6 @@ public class PortfolioLifecycleService {
       throw new AccountCannotBeClosedException("Cannot close account: " + e.getMessage());
     }
     portfolioRepository.save(portfolio);
-  }
-
-  private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-    Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-        .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
-
-    if (portfolio.isDeleted()) {
-      throw new PortfolioNotFoundException(portfolioId);
-    }
-    return portfolio;
   }
 
   private <T> void validate(T command, Function<T, ValidationResult> validationLogic,

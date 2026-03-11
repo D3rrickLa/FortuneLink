@@ -35,7 +35,7 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     Money costPerUnit();
 
-    Money currentValue(Money currentPrice);
+    Money currentValue(Price currentPrice);
 
     Instant lastModifiedAt();
 

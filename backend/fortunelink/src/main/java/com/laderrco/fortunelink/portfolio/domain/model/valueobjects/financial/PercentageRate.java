@@ -12,7 +12,7 @@ import com.laderrco.fortunelink.shared.enums.Rounding;
 // always from o -> 100
 public record PercentageRate(BigDecimal rate) implements Comparable<PercentageRate> {
     private static final RoundingMode P_ROUNDING_MODE = Rounding.PERCENTAGE.getMode();
-    private static int RATE_PRECISION = Precision.PERCENTAGE.getDecimalPlaces();
+    private static final int RATE_PRECISION = Precision.PERCENTAGE.getDecimalPlaces();
 
     public PercentageRate {
         notNull(rate, "rate");
