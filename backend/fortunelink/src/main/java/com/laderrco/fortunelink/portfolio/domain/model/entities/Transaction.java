@@ -33,6 +33,7 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
         notNull(transactionType, "transactionType");
         notNull(cashDelta, "cashDelta");
         notNull(fees, "fees");
+        notNull(metadata, "metadata");
         notNull(occurredAt, "occurredAt");
         notNull(notes, "notes");
 
