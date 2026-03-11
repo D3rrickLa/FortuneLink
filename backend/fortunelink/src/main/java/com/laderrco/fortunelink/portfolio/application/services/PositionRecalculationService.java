@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
@@ -23,13 +25,18 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class PositionRecalculationService {
     private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
-    private final ConcurrentHashMap<String, Object> symbolLocks = new ConcurrentHashMap<>();
+
+    private final Cache<String, Object> symbolLocks = Caffeine.newBuilder()
+            .expireAfterAccess(5, TimeUnit.MINUTES)
+            .maximumSize(10_000)
+            .build();
+
     private final PositionRecalculationExecutor executor;
 
     private final PortfolioRepository portfolioRepository;
@@ -45,7 +52,7 @@ public class PositionRecalculationService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
         String lockKey = event.accountId() + ":" + event.symbol().symbol();
-        Object lock = symbolLocks.computeIfAbsent(lockKey, k -> new Object());
+        Object lock = symbolLocks.get(lockKey, k -> new Object());
 
         synchronized (lock) {
             try {
@@ -56,10 +63,6 @@ public class PositionRecalculationService {
                         event.symbol());
             } catch (Exception e) {
                 log.error("Recalculation failed...", e);
-            } finally {
-                // Added this back because it can cause mem-leak if we have too many
-                // symbols/accounts
-                symbolLocks.remove(lockKey);
             }
         }
     }

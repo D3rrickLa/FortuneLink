@@ -7,7 +7,7 @@ import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQ
 import com.laderrco.fortunelink.portfolio.application.queries.GetAllAccountsQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAssetQuery;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
-import com.laderrco.fortunelink.portfolio.application.utils.PortfolioServiceUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
@@ -59,7 +59,7 @@ public class AccountQueryService {
 
 		Portfolio portfolio = loadUserPortfolio(query.portfolioId(), query.userId());
 
-		Set<AssetSymbol> allSymbols = PortfolioServiceUtils.extractSymbols(portfolio);
+		Set<AssetSymbol> allSymbols = PortfolioAccessUtils.extractSymbols(portfolio);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
 		// NEW batch fee fetch
@@ -87,7 +87,7 @@ public class AccountQueryService {
 						query.accountId(),
 						query.portfolioId()));
 
-		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbolsByAccount(account);
+		Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbolsByAccount(account);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository
@@ -105,7 +105,7 @@ public class AccountQueryService {
 		Account account = portfolio.findAccount(query.accountId())
 				.orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
-		Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbolsByAccount(account);
+		Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbolsByAccount(account);
 		Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
 		return account.getPositionEntries().stream()

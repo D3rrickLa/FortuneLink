@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
-public class PortfolioServiceUtils {
+public class PortfolioAccessUtils {
     public static Set<AssetSymbol> extractSymbols(Portfolio portfolio) {
         return portfolio.getAccounts().stream()
                 .flatMap(account -> account.getPositionEntries().stream().map(Map.Entry::getKey))

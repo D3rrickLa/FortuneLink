@@ -133,9 +133,9 @@ public class TransactionQueryService {
      * needing to mutate or read the portfolio itself.
      */
     private void validateOwnership(PortfolioId portfolioId, UserId userId) {
-        if (!portfolioRepository.existsByIdAndUserId(portfolioId, userId)) {
-            throw new PortfolioNotFoundException(portfolioId);
-        }
+        portfolioRepository.findByIdAndUserId(portfolioId, userId)
+                .filter(p -> !p.isDeleted())
+                .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 
     private void validateDateRange(Instant start, Instant end) {

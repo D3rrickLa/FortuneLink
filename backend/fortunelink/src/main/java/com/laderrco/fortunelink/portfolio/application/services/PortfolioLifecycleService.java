@@ -4,7 +4,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.*;
 import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
-import com.laderrco.fortunelink.portfolio.application.utils.PortfolioServiceUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -85,7 +85,7 @@ public class PortfolioLifecycleService {
 
     Portfolio saved = portfolioRepository.save(existingPortfolio);
 
-    Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(saved);
+    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
     Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
     Money totalValue = portfolioValuationService.calculateTotalValue(

@@ -6,7 +6,7 @@ import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
-import com.laderrco.fortunelink.portfolio.application.utils.PortfolioServiceUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
@@ -103,7 +103,7 @@ public class PortfolioQueryService {
 
     // One batch call across ALL portfolios - critical for multi-portfolio future
     Set<AssetSymbol> allSymbols = portfolios.stream()
-        .flatMap(p -> PortfolioServiceUtils.extractSymbols(p).stream())
+        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream())
         .collect(Collectors.toSet());
 
     Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
@@ -166,7 +166,7 @@ public class PortfolioQueryService {
    * queries.
    */
   private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Portfolio portfolio) {
-    Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
+    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(portfolio);
     return marketDataService.getBatchQuotes(symbols);
   }
 }
