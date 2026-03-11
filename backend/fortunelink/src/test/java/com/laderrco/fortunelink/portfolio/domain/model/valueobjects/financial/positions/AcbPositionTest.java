@@ -59,6 +59,7 @@ class AcbPositionTest {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
                     new Money(new BigDecimal("100.00"), USD),
+                    Instant.now(),
                     Instant.now());
 
             Quantity sellQty = new Quantity(new BigDecimal("5"));
@@ -91,6 +92,7 @@ class AcbPositionTest {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
                     new Money(new BigDecimal("100.00000000"), USD),
+                    Instant.now(),
                     Instant.now());
 
             Quantity sellQty = new Quantity(new BigDecimal("11"));
@@ -110,6 +112,7 @@ class AcbPositionTest {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
                     new Money(new BigDecimal("100.00"), USD),
+                    Instant.now(),
                     Instant.now());
 
             Ratio ratio = new Ratio(2, 1);
@@ -145,6 +148,7 @@ class AcbPositionTest {
             AcbPosition populated = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("4")),
                     new Money(new BigDecimal("100.00"), USD),
+                    Instant.now(),
                     Instant.now());
             assertEquals(new BigDecimal("25.0000000000000000000000000000000000"), populated.costPerUnit().amount());
         }
@@ -155,6 +159,7 @@ class AcbPositionTest {
             AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
                     new Quantity(new BigDecimal("10")),
                     new Money(new BigDecimal("100.00"), USD),
+                    Instant.now(),
                     Instant.now());
 
             Money currentPrice = new Money(new BigDecimal("15.00"), USD); // Total value 150

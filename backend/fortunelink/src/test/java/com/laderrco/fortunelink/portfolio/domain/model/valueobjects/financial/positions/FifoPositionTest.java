@@ -27,7 +27,7 @@ class FifoPositionTest {
 
     @Test
     void testConstructor_sucess() {
-        FifoPosition position = new FifoPosition(SYMBOL, TYPE, USD, null);
+        FifoPosition position = new FifoPosition(SYMBOL, TYPE, USD, null, null);
         FifoPosition copy = (FifoPosition) position.copy();
         assertNotNull(position);
 
@@ -89,8 +89,12 @@ class FifoPositionTest {
         @DisplayName("sell_failure_bugDetection_partialLotSubtraction")
         void sell_logic_partialConsumption() {
             // Lot: 10 units @ $100
-            FifoPosition pos = new FifoPosition(SYMBOL, TYPE, USD,
-                    List.of(new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(100, "USD"), EARLIER)));
+            FifoPosition pos = new FifoPosition(
+                    SYMBOL,
+                    TYPE,
+                    USD,
+                    List.of(new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(100, "USD"), EARLIER)),
+                    Instant.now());
 
             // Sell 4 units
             var result = pos.sell(new Quantity(BigDecimal.valueOf(4)), Money.of(100, "USD"), Instant.now());
@@ -179,7 +183,8 @@ class FifoPositionTest {
         void totalCostBasis_calculation() {
             FifoPosition pos = new FifoPosition(SYMBOL, TYPE, USD, List.of(
                     new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(100.0, "USD"), EARLIER),
-                    new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(200.0, "USD"), LATER)));
+                    new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(200.0, "USD"), LATER)),
+                    Instant.now());
             assertEquals(new BigDecimal("300.0000000000000000000000000000000000"), pos.totalCostBasis().amount());
             assertEquals(new BigDecimal("15.0000000000000000000000000000000000"), pos.costPerUnit().amount());
         }
@@ -187,8 +192,10 @@ class FifoPositionTest {
         @Test
         @DisplayName("currentValue_success_multipliesTotalQuantity")
         void currentValue_calculation() {
-            FifoPosition pos = new FifoPosition(SYMBOL, TYPE, USD, List.of(
-                    new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(100, "USD"), EARLIER)));
+            FifoPosition pos = new FifoPosition(SYMBOL, TYPE, USD,
+                    List.of(
+                            new TaxLot(new Quantity(BigDecimal.valueOf(10)), Money.of(100, "USD"), EARLIER)),
+                    Instant.now());
             Money price = new Money(new BigDecimal("15.50"), USD);
             assertEquals(new BigDecimal("155.0000000000000000000000000000000000"), pos.currentValue(price).amount());
         }

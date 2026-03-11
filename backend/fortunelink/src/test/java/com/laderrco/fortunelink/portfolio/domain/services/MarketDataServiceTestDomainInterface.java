@@ -17,11 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class MarketDataServiceTestDomainInterface {
 
     private final MarketDataService marketDataService = new MarketDataService() {
+
         @Override
-        public Optional<MarketAssetQuote> getCurrentQuote(AssetSymbol symbol) {
+        public Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols) {
             AssetSymbol aapl = new AssetSymbol("AAPL");
 
-            if (aapl.equals(symbol)) {
+            if (symbols.contains(new AssetSymbol("AAPL"))) {
                 MarketAssetQuote quote = new MarketAssetQuote(
                         aapl,
                         new Price(Money.of(123, "USD")),
@@ -36,15 +37,10 @@ class MarketDataServiceTestDomainInterface {
                         null,
                         null);
 
-                return Optional.of(quote);
+                return Map.of(aapl, quote);
 
             }
 
-            return Optional.empty();
-        }
-
-        @Override
-        public Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols) {
             return Map.of();
         }
 
@@ -96,14 +92,17 @@ class MarketDataServiceTestDomainInterface {
 
     @Test
     void getCurrentPrice() {
-        Price currentPrice = marketDataService.getCurrentPrice(new AssetSymbol("AAPL"));
+        Map<AssetSymbol, MarketAssetQuote> currentquotes = marketDataService
+                .getBatchQuotes(Set.of(new AssetSymbol("AAPL")));
+
+        Price currentPrice = currentquotes.get(new AssetSymbol("AAPL")).currentPrice();
         assertEquals(new Price(Money.of(123, "USD")), currentPrice);
     }
 
     @Test
     void getCurrentPrice_Failure_ThrowsMarketDataException() {
         MarketDataException exception = assertThrows(MarketDataException.class,
-                () -> marketDataService.getCurrentPrice(new AssetSymbol("MSFT")));
+                () -> marketDataService.getBatchQuotes(Set.of(new AssetSymbol("MSFT"))));
 
         assertTrue(exception.getMessage().contains("Price unavailable for: MSFT"));
     }
