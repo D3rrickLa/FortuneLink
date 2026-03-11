@@ -3,6 +3,8 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.p
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -119,7 +121,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 				lotReduction = remainingReduction;
 			} else {
 				BigDecimal ratio = lot.costBasis().amount()
-						.divide(totalCostBasis.amount(), MathContext.DECIMAL128);
+						.divide(totalCostBasis.amount(), Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode());
 				lotReduction = totalReduction.multiply(ratio);
 				remainingReduction = remainingReduction.subtract(lotReduction);
 			}

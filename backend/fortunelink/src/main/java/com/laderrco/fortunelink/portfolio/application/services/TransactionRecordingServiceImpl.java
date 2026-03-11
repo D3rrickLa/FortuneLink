@@ -396,11 +396,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     if (!errors.isEmpty()) {
       throw new IllegalArgumentException(errors.get(0));
     }
-    // domain-level check: requires the loaded Account — validator can't do this
-    if (date.isBefore(account.getCreationDate())) {
-      throw new IllegalArgumentException(
-          "Transaction date " + date + " predates account creation " + account.getCreationDate());
-    }
   }
 
   private void validateCashInputs(Account account, Money amount, String notes, Instant date) {

@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
@@ -30,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PositionRecalculationService {
     private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
     private final ConcurrentHashMap<String, Object> symbolLocks = new ConcurrentHashMap<>();
+    private final PositionRecalculationExecutor executor;
 
     private final PortfolioRepository portfolioRepository;
     private final TransactionRepository transactionRepository;
@@ -41,7 +43,6 @@ public class PositionRecalculationService {
      * Ensures excluded/restored flags are persisted before we replay them.
      */
     @Async("recalculationExecutor")
-    @Transactional // its own transaction — reads committed state
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
         String lockKey = event.accountId() + ":" + event.symbol().symbol();
@@ -49,52 +50,19 @@ public class PositionRecalculationService {
 
         synchronized (lock) {
             try {
-                scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(), event.symbol());
+                executor.scheduleRecalculation(
+                        event.portfolioId(),
+                        event.userId(),
+                        event.accountId(),
+                        event.symbol());
             } catch (Exception e) {
                 log.error("Recalculation failed...", e);
-                accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+            } finally {
+                // Added this back because it can cause mem-leak if we have too many
+                // symbols/accounts
+                symbolLocks.remove(lockKey);
             }
-            // removed 'finally' it will only ever hold one entry per unique account+symbol
-            // pair
         }
-    }
-
-    /**
-     * Surgical recalculation for a single symbol.`
-     * Corrects ACB/Position but leaves Cash Balance as-is.
-     * 
-     * This filters to affectsHolding() before calling replayTransaction()
-     */
-    @Transactional
-    public void scheduleRecalculation(PortfolioId portfolioId, UserId userId, AccountId accountId, AssetSymbol symbol) {
-        Portfolio portfolio = loadPortfolio(portfolioId, userId);
-        Account account = portfolio.getAccount(accountId);
-
-        List<Transaction> active = transactionRepository
-                .findByAccountIdAndSymbol(accountId, symbol)
-                .stream()
-                .filter(tx -> !tx.isExcluded())
-                // EXPLICIT: only replay transactions that affect holdings.
-                // Cash events (DEPOSIT, WITHDRAWAL, DIVIDEND, FEE, etc.) are
-                // intentionally excluded — cash state is already correct in DB.
-                // If you ever need full-account reconstruction, use the dedicated
-                // replayFullAccount() path that resets cash to zero first.
-                .filter(tx -> tx.transactionType().affectsHoldings())
-                .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
-                .toList();
-
-        try {
-            account.clearPosition(symbol);
-            account.clearRealizedGains(symbol);
-            active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
-            portfolio.reportRecalculationSuccess(accountId);
-        } catch (Exception e) {
-            log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
-            accountHealthService.markStale(portfolioId, userId, accountId); // mark it dirty
-            throw e; // let @Transactional roll back — don't persist partial state
-        }
-
-        portfolioRepository.save(portfolio);
     }
 
     /**
@@ -127,6 +95,7 @@ public class PositionRecalculationService {
         portfolioRepository.save(portfolio);
     }
 
+    // TODO common method this
     private Portfolio loadPortfolio(PortfolioId portfolioId, UserId userId) {
         return portfolioRepository.findByIdAndUserId(portfolioId, userId)
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
