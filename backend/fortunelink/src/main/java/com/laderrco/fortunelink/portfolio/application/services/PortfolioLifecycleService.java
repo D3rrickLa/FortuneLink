@@ -114,10 +114,6 @@ public class PortfolioLifecycleService {
   public void deletePortfolio(DeletePortfolioCommand command) {
     validate(command, validator::validate, "deletePortfolio");
 
-    if (!command.confirmed()) {
-      throw new PortfolioDeletionRequiresConfirmationException();
-    }
-
     // NOTE: deletePortfolio intentionally calls the raw repository lookup,
     // not portfolioLoader.loadUserPortfolio(), because we need to allow the user to
     // hard-delete

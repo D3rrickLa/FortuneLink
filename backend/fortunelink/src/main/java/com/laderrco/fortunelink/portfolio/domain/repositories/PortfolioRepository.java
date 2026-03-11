@@ -57,5 +57,12 @@ public interface PortfolioRepository {
      */
     boolean existsByIdAndUserId(PortfolioId id, UserId userId);
 
+    /**
+     * Returns only ACTIVE (non-deleted) portfolios for a user.
+     * Deleted portfolios are invisible to the application layer — filtering
+     * belongs here, not in service code.
+     */
+    List<Portfolio> findAllActiveByUserId(UserId userId);
+
     void delete(PortfolioId id);
 }

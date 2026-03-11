@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
@@ -37,5 +39,15 @@ public class PortfolioLoader {
     portfolioRepository.findByIdAndUserId(portfolioId, userId)
         .filter(p -> !p.isDeleted())
         .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+  }
+
+  /**
+   * Loads all active portfolios for a user.
+   * Mirrors loadUserPortfolio() semantics: deleted portfolios are excluded
+   * at the query level. Returns empty list (not an exception) when the user
+   * has no active portfolios — that's a valid state, not an error.
+   */
+  public List<Portfolio> loadAllUserPortfolios(UserId userId) {
+    return portfolioRepository.findAllActiveByUserId(userId);
   }
 }

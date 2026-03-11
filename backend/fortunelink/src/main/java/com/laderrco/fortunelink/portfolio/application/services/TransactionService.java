@@ -6,6 +6,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.*;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.validators.TransactionCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
@@ -42,6 +43,7 @@ public class TransactionService {
 
     private final TransactionCommandValidator validator;
     private final ApplicationEventPublisher eventPublisher;
+    private final PortfolioLoader portfolioLoader;
 
     private final MarketDataService marketDataService;
     private final ExchangeRateService exchangeRateService;
@@ -256,15 +258,8 @@ public class TransactionService {
     }
 
     private PortfolioContext getPortfolioContext(TransactionCommand command) {
-        Portfolio portfolio = portfolioRepository
-                .findByIdAndUserId(command.portfolioId(), command.userId()).orElseThrow(
-                        () -> new PortfolioNotFoundException(command.portfolioId().toString()));
-
-        if (portfolio.isDeleted()) {
-            throw new PortfolioNotFoundException(command.portfolioId().toString());
-        }
+        Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
         Account account = portfolio.getAccount(command.accountId());
-
         return new PortfolioContext(portfolio, account);
     }
 

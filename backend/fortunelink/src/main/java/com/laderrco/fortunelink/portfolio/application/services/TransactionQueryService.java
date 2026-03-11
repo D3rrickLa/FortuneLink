@@ -15,12 +15,12 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRang
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionByIdQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionForCalculationQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio.application.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -114,14 +114,15 @@ public class TransactionQueryService {
      * Unbounded fetch for internal calculations (performance, tax reports).
      * Date range is MANDATORY — never call this from a controller directly.
      */
-    public List<Transaction> getTransactionsForCalculation(AccountId accountId, Instant start, Instant end) {
-        Objects.requireNonNull(accountId, "AccountId cannot be null");
-        Objects.requireNonNull(start, "Start date cannot be null for calculation queries");
-        Objects.requireNonNull(end, "End date cannot be null for calculation queries");
+    public List<Transaction> getTransactionsForCalculation(GetTransactionForCalculationQuery query) {
+        Objects.requireNonNull(query.accountId(), "AccountId cannot be null");
+        Objects.requireNonNull(query.start(), "Start date cannot be null for calculation queries");
+        Objects.requireNonNull(query.end(), "End date cannot be null for calculation queries");
 
-        validateDateRange(start, end);
+        validateDateRange(query.start(), query.end());
+        portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
 
-        return transactionRepository.findByDateRange(accountId, start, end);
+        return transactionRepository.findByDateRange(query.accountId(), query.start(), query.end());
     }
 
     private void validateDateRange(Instant start, Instant end) {
