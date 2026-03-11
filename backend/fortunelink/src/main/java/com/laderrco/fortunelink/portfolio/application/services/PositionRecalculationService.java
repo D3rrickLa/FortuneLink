@@ -53,9 +53,9 @@ public class PositionRecalculationService {
             } catch (Exception e) {
                 log.error("Recalculation failed...", e);
                 accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
-            } finally {
-                symbolLocks.remove(lockKey); // cleanup — don't accumulate stale locks
             }
+            // removed 'finally' it will only ever hold one entry per unique account+symbol
+            // pair
         }
     }
 

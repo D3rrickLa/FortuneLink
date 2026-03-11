@@ -149,9 +149,15 @@ public class PortfolioQueryService {
         Instant.now());
   }
 
+  // TODO: make this a common method for all
   private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-    return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
         .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+
+    if (portfolio.isDeleted()) {
+      throw new PortfolioNotFoundException(portfolioId);
+    }
+    return portfolio;
   }
 
   /**
@@ -163,5 +169,4 @@ public class PortfolioQueryService {
     Set<AssetSymbol> symbols = PortfolioServiceUtils.extractSymbols(portfolio);
     return marketDataService.getBatchQuotes(symbols);
   }
-
 }

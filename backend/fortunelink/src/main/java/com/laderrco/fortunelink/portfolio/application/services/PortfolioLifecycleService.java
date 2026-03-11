@@ -78,7 +78,7 @@ public class PortfolioLifecycleService {
 
     validate(command, validator::validate, "updatePortfolio");
 
-    Portfolio existingPortfolio = getPortfolio(command.portfolioId(), command.userId());
+    Portfolio existingPortfolio = loadUserPortfolio(command.portfolioId(), command.userId());
 
     existingPortfolio.updateDetails(command.name(), command.description());
     existingPortfolio.updateDisplayCurrency(command.currency());
@@ -120,7 +120,7 @@ public class PortfolioLifecycleService {
 
     // TODO: confirm is this is true/needed
     // NOTE: deletePortfolio intentionally calls the raw repository lookup,
-    // not getPortfolio(), because we need to allow the user to hard-delete
+    // not loadUserPortfolio(), because we need to allow the user to hard-delete
     // a portfolio that is already soft-deleted (cleanup path).
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
         .orElseThrow(() -> new PortfolioNotFoundException(
@@ -148,9 +148,9 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
-    // Bug 15 fix: blocked by getPortfolio() - cannot add account to deleted
+    // Bug 15 fix: blocked by loadUserPortfolio() - cannot add account to deleted
     // portfolio.
-    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = loadUserPortfolio(command.portfolioId(), command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
 
@@ -162,9 +162,9 @@ public class PortfolioLifecycleService {
   public void updateAccount(UpdateAccountCommand command) {
     validate(command, validator::validate, "updateAccount");
 
-    // Bug 15 fix: blocked by getPortfolio() - cannot rename account on deleted
+    // Bug 15 fix: blocked by loadUserPortfolio() - cannot rename account on deleted
     // portfolio.
-    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = loadUserPortfolio(command.portfolioId(), command.userId());
     portfolio.renameAccount(command.accountId(), command.accountName());
 
     portfolioRepository.save(portfolio);
@@ -173,9 +173,9 @@ public class PortfolioLifecycleService {
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
-    // Bug 15 fix: blocked by getPortfolio() - cannot close account on deleted
+    // Bug 15 fix: blocked by loadUserPortfolio() - cannot close account on deleted
     // portfolio.
-    Portfolio portfolio = getPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = loadUserPortfolio(command.portfolioId(), command.userId());
     try {
       portfolio.closeAccount(command.accountId());
 
@@ -187,26 +187,13 @@ public class PortfolioLifecycleService {
     portfolioRepository.save(portfolio);
   }
 
-  /**
-   * Loads a portfolio for mutation.
-   *
-   * Bug 15 fix: treats soft-deleted portfolios as non-existent, matching user
-   * expectations. A
-   * deleted resource should not be mutatable. The same PortfolioNotFoundException
-   * message is used
-   * intentionally — we do not want to confirm to a client that a deleted
-   * portfolio exists.
-   */
-  private Portfolio getPortfolio(PortfolioId portfolioId, UserId userId) {
+  private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-        .orElseThrow(() -> new PortfolioNotFoundException(
-            "Portfolio not found or access denied for ID: " + portfolioId));
+        .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
 
     if (portfolio.isDeleted()) {
-      throw new PortfolioNotFoundException(
-          "Portfolio not found or access denied for ID: " + portfolioId);
+      throw new PortfolioNotFoundException(portfolioId);
     }
-
     return portfolio;
   }
 

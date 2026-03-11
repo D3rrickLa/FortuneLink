@@ -124,14 +124,19 @@ public class AccountQueryService {
 		var position = account.getPosition(query.symbol())
 				.orElseThrow(() -> new AssetNotFoundException(query.symbol()));
 
-		// Single quote, not a batch
-		MarketAssetQuote quote = marketDataService.getCurrentQuote(query.symbol()).orElse(null);
+		Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(Set.of(query.symbol()));
+		MarketAssetQuote quote = quotes.get(query.symbol()); // null if not found, same behavior
 
 		return portfolioViewMapper.toPositionView(position, quote);
 	}
 
 	private Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-		return portfolioRepository.findByIdAndUserId(portfolioId, userId)
+		Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
 				.orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+
+		if (portfolio.isDeleted()) {
+			throw new PortfolioNotFoundException(portfolioId);
+		}
+		return portfolio;
 	}
 }

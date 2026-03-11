@@ -268,10 +268,10 @@ public class TransactionService {
         return new PortfolioContext(portfolio, account);
     }
 
+    // CRITICAL: Portfolio save must happen first to persist position updates
+    // Then persist the transaction record
     private void persistChanges(PortfolioContext ctx, Transaction recordedTransaction) {
-        // CRITICAL: Portfolio save must happen first to persist position updates
         portfolioRepository.save(ctx.portfolio());
-        // Then persist the transaction record
         transactionRepository.save(recordedTransaction);
     }
 
