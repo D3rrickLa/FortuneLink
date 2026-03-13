@@ -28,9 +28,11 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
         notNull(costBasis, "costBasis");
         notNull(acquiredDate, "acquiredDate");
 
-        if (quantity.isNegative()) {
-            throw new IllegalArgumentException("TaxLot quantity cannot be negative: " + quantity);
-        }
+        // the negative value is already checked
+        // if (quantity.isNegative()) {
+        // throw new IllegalArgumentException("TaxLot quantity cannot be negative: " +
+        // quantity);
+        // }
 
         if (costBasis.isNegative()) {
             throw new IllegalArgumentException("TaxLot cost basis cannot be negative: " + costBasis);

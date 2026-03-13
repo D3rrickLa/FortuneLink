@@ -196,7 +196,7 @@ class MoneyTest {
             BigDecimal smallScale = new BigDecimal("10.5"); // scale 1
             Money money = new Money(smallScale, USD);
 
-            assertThat(money.amount().scale()).isEqualTo(34);
+            assertThat(money.amount().scale()).isEqualTo(10);
             assertThat(money.amount()).isEqualByComparingTo("10.5");
         }
 
@@ -209,7 +209,7 @@ class MoneyTest {
             Money result = m1.multiply(multiplier);
 
             // Ensure result didn't jump to scale 35
-            assertThat(result.amount().scale()).isEqualTo(34);
+            assertThat(result.amount().scale()).isEqualTo(10);
         }
     }
 

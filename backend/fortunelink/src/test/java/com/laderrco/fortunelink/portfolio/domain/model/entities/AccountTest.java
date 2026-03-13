@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
+import static com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency.USD;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,6 +16,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
@@ -34,6 +38,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
@@ -385,20 +390,80 @@ class AccountTest {
             account.resetCashToZero();
             assertEquals(Money.ZERO("USD"), account.getCashBalance());
         }
+
+        @Test
+        void testMarkStaleAndRestoreHealth_Sucess() {
+            account.markStale();
+            assertThat(account.isStale()).isEqualTo(true);
+            account.restoreHealth();
+            assertThat(account.isStale()).isEqualTo(false);
+        }
+
     }
 
     @Nested
-    class InternalValidation {
+    class RealizedGainsManagement {
+
+        private final AssetSymbol AAPL = new AssetSymbol("AAPL");
+        private final AssetSymbol TSLA = new AssetSymbol("TSLA");
+        private final Currency USD = Currency.of("USD");
+
+        @BeforeEach
+        void setUpGains() {
+            // Setup initial state with multiple records
+            account.recordRealizedGain(AAPL, Money.of("100", USD), Money.of("500", USD), Instant.now());
+            account.recordRealizedGain(AAPL, Money.of("50", USD), Money.of("200", USD), Instant.now());
+            account.recordRealizedGain(TSLA, Money.of("300", USD), Money.of("1000", USD), Instant.now());
+        }
+
         @Test
-        void testValidate_Fails_WhenInactiveMissingCloseDate() {
-            // This tests the logic: if (!isActive && closeDate == null)
-            // Manual state manipulation would be needed here as the public close() method
-            // sets the date.
+        void testClearRealizedGains_SpecificSymbol_RemovesOnlyTargetedGains() {
+            Instant beforeUpdate = account.getLastUpdatedOn();
+
+            // Act
+            account.clearRealizedGains(AAPL);
+
+            // Assert
+            List<RealizedGainRecord> remainingGains = account.getRealizedGains();
+            assertEquals(1, remainingGains.size(), "Should only have 1 record left");
+            assertEquals(TSLA, remainingGains.get(0).symbol(), "Remaining record should be TSLA");
+
+            // Verify touch() was called
+            assertTrue(account.getLastUpdatedOn().isAfter(beforeUpdate) ||
+                    account.getLastUpdatedOn().equals(beforeUpdate));
+        }
+
+        @Test
+        void testClearRealizedGains_NonExistentSymbol_DoesNothing() {
+            int initialSize = account.getRealizedGains().size();
+
+            account.clearRealizedGains(new AssetSymbol("MSFT"));
+
+            assertEquals(initialSize, account.getRealizedGains().size());
+        }
+
+        @Test
+        void testClearAllRealizedGains_Success_EmptyList() {
+            // Ensure we have gains first
+            assertFalse(account.getRealizedGains().isEmpty());
+
+            // Act
+            account.clearAllRealizedGains();
+
+            // Assert
+            assertTrue(account.getRealizedGains().isEmpty());
+            assertEquals(Money.ZERO(USD), account.getTotalRealizedGainLoss());
+        }
+
+        @Test
+        void testClearRealizedGains_ThrowsException_WhenSymbolIsNull() {
+            assertThrows(DomainArgumentException.class, () -> account.clearRealizedGains(null));
         }
     }
 
     @Nested
     class GettersAndEncapsulation {
+        private final Currency USD = Currency.USD;
 
         @Test
         void testGetAllPositions_ReturnsUnmodifiableCopy() {
@@ -419,6 +484,24 @@ class AccountTest {
         void testGetPosition_ReturnsOptionalEmptyWhenMissing() {
             Optional<Position> result = account.getPosition(new AssetSymbol("NONE"));
             assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void testGetRealizedGainsFor_Success_ReturnNothing() {
+            AssetSymbol apple = new AssetSymbol("AAPL");
+            List<RealizedGainRecord> records = account.getRealizedGainsFor(apple);
+            assertThat(records.size()).isEqualTo(0);
+        }
+
+        @Test
+        void testGetRealizedGainsFor_Success_ReturnOne() {
+            AssetSymbol apple = new AssetSymbol("AAPL");
+            AssetSymbol TSLA = new AssetSymbol("TSLA");
+            account.recordRealizedGain(apple, Money.of("100", USD), Money.of("500", USD), Instant.now());
+            account.recordRealizedGain(apple, Money.of("50", USD), Money.of("200", USD), Instant.now());
+            account.recordRealizedGain(TSLA, Money.of("300", USD), Money.of("1000", USD), Instant.now());
+            List<RealizedGainRecord> records = account.getRealizedGainsFor(apple);
+            assertThat(records.size()).isEqualTo(2);
         }
 
         @Nested

@@ -117,7 +117,7 @@ public class CanadianAcbGroundTruthTest {
 		// Note: Adjust the expected decimal based on your Money/Quantity scale
 		assertThat(position.totalCostBasis().amount())
 				.as("Remaining cost basis should be reduced proportionally")
-				.isEqualByComparingTo(new BigDecimal("6005.99"));
+				.isEqualByComparingTo(new BigDecimal("6005.994").setScale(MONEY_PRECISION, ROUNDING_MODE));
 
 		// 4. Assert - Verify the Result Record specifically
 		List<RealizedGainRecord> gains = account.getRealizedGains();

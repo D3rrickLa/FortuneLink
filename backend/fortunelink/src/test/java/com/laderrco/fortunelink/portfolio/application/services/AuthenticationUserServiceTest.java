@@ -176,7 +176,7 @@ class AuthenticationUserServiceTest {
 
             assertThatThrownBy(() -> authService.verifyUserOwnsPortfolio(strangerId, portfolio))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessage("No authenticated user found");
+                    .hasMessage("Access denied: user does not own this portfolio");
         }
     }
 

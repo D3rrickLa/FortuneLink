@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -16,6 +17,11 @@ public record PercentageChange(BigDecimal change) implements Comparable<Percenta
     private static final int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
     private static final RoundingMode MODE = Rounding.PERCENTAGE.getMode();
     public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
+
+    public PercentageChange {
+        notNull(change, "percentage change");
+        change = change.setScale(SCALE, MODE);
+    }
 
     // -0.20
     public static PercentageChange loss(double percent) {

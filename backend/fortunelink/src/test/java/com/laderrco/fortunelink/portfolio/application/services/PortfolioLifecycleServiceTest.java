@@ -52,10 +52,11 @@ class PortfolioLifecycleServiceTest {
     @InjectMocks
     private PortfolioLifecycleService service;
 
-
     @Nested
     @DisplayName("Create Portfolio Tests")
     class CreatePortfolioTests {
+
+        private static final PositionStrategy ACB = PositionStrategy.ACB;
 
         @BeforeEach
         void setup() {
@@ -66,7 +67,7 @@ class PortfolioLifecycleServiceTest {
         @Test
         @DisplayName("createPortfolio_Success_ValidCommand")
         void createPortfolio_Success_NewPortfolioWithDefaultAccount() {
-            var command = new CreatePortfolioCommand(userId, "My Wealth", "Desc", USD, true, PositionStrategy.FIFO);
+            var command = new CreatePortfolioCommand(userId, "My Wealth", "Desc", USD, true, ACB);
             when(portfolioRepository.countByUserId(userId)).thenReturn(0L);
             when(portfolioRepository.save(any(Portfolio.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -79,7 +80,7 @@ class PortfolioLifecycleServiceTest {
         @Test
         @DisplayName("createPortfolio_Success_ValidCommand")
         void createPortfolio_Success_NewPortfolioWithoutDefaultAccount() {
-            var command = new CreatePortfolioCommand(userId, "My Wealth", "Desc", USD, false, PositionStrategy.FIFO);
+            var command = new CreatePortfolioCommand(userId, "My Wealth", "Desc", USD, false, ACB);
             when(portfolioRepository.countByUserId(userId)).thenReturn(0L);
             when(portfolioRepository.save(any(Portfolio.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -94,7 +95,8 @@ class PortfolioLifecycleServiceTest {
         void createPortfolio_Failure_ValidationFails() {
             var command = new CreatePortfolioCommand(userId, "", "Desc", USD, false, null);
             // Mock the specific validation failure
-            when(validator.validate(command)).thenReturn(ValidationResult.failure(List.of("Portfolio name is required")));
+            when(validator.validate(command))
+                    .thenReturn(ValidationResult.failure(List.of("Portfolio name is required")));
 
             assertThatThrownBy(() -> service.createPortfolio(command))
                     .isInstanceOf(InvalidCommandException.class)
@@ -115,7 +117,8 @@ class PortfolioLifecycleServiceTest {
         @DisplayName("createPortfolio_Failure_ValidationFailed")
         void createPortfolio_Failure_InvalidCommand() {
             var command = new CreatePortfolioCommand(userId, "", null, USD, false, null);
-            when(validator.validate(command)).thenReturn(ValidationResult.failure(Collections.singletonList("Name required")));
+            when(validator.validate(command))
+                    .thenReturn(ValidationResult.failure(Collections.singletonList("Name required")));
 
             assertThatThrownBy(() -> service.createPortfolio(command))
                     .isInstanceOf(InvalidCommandException.class);
@@ -162,7 +165,8 @@ class PortfolioLifecycleServiceTest {
         @DisplayName("updatePortfolio_Failure_NotFound")
         void updatePortfolio_Failure_WhenPortfolioDoesNotExist() {
             var command = new UpdatePortfolioCommand(portfolioId, userId, "Name", "Desc", USD);
-            // Ensure the repository returns empty to trigger the orElseThrow in getPortfolio()
+            // Ensure the repository returns empty to trigger the orElseThrow in
+            // getPortfolio()
             when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.empty());
             when(validator.validate(any(UpdatePortfolioCommand.class))).thenReturn(ValidationResult.success());
 

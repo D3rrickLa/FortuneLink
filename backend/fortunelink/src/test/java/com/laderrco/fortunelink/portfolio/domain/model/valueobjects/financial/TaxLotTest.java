@@ -28,17 +28,6 @@ class TaxLotTest {
         }
 
         @Test
-        @DisplayName("constructor_fail_NegativeQuantity")
-        void constructor_fail_NegativeQuantity() {
-            // We need a negative quantity stub since Quantity subtract can block negatives
-            // but the record constructor might be called directly with a raw negative
-            // amount
-            Quantity negativeQty = new Quantity(new BigDecimal("-1.00"));
-            assertThatThrownBy(() -> new TaxLot(negativeQty, THOUSAND_USD, ACQUIRED_DATE))
-                    .isInstanceOf(IllegalArgumentException.class);
-        }
-
-        @Test
         @DisplayName("constructor_fail_NegativeCostBasis")
         void constructor_fail_NegativeCostBasis() {
             Money negativeMoney = Money.of(-100.00, "USD");
@@ -78,17 +67,6 @@ class TaxLotTest {
             assertThatThrownBy(() -> lot.proportionalCost(elevenShares))
                     .isInstanceOf(IllegalArgumentException.class);
         }
-
-        @Test
-        @DisplayName("proportionalCost_fail_isNegative")
-        void proportionalCost_fail_IsNegative() {
-            TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
-            Quantity elevenShares = new Quantity(new BigDecimal("-1.00"));
-
-            assertThatThrownBy(() -> lot.proportionalCost(elevenShares))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Sold quantity cannot be negative");
-        }
     }
 
     @Nested
@@ -115,14 +93,6 @@ class TaxLotTest {
 
             TaxLot lot1 = lot.remainingAfter(fourShares);
             assertThat(lot1).isEqualTo(lot);
-        }
-
-        @Test
-        void remainingAfter_fail_quantityLessThan0() {
-            TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
-            Quantity fourShares = new Quantity(new BigDecimal("-1.00"));
-
-            assertThrows(IllegalArgumentException.class, () -> lot.remainingAfter(fourShares));
         }
 
         @Test

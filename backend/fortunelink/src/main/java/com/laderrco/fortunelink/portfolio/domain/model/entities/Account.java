@@ -27,7 +27,7 @@ public class Account {
     private AccountType accountType;
     private final Currency accountCurrency;
     private String name;
-    private final PositionStrategy positionStrategy; // ← Explicit
+    private final PositionStrategy positionStrategy;
     private HealthStatus healthStatus;
 
     private Money cashBalance;
