@@ -80,10 +80,6 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
                     soldQuantity, quantity));
         }
 
-        if (soldQuantity.isNegative()) {
-            throw new IllegalArgumentException("Sold quantity cannot be negative: " + soldQuantity);
-        }
-
         if (soldQuantity.isZero()) {
             return this; // No change
         }

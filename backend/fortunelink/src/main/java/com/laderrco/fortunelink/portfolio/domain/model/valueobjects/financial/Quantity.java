@@ -66,10 +66,6 @@ public record Quantity(BigDecimal amount) implements Comparable<Quantity> {
         return amount.compareTo(BigDecimal.ZERO) > 0;
     }
 
-    public boolean isNegative() {
-        return amount.compareTo(BigDecimal.ZERO) < 0;
-    }
-
     public boolean isZero() {
         return amount.compareTo(BigDecimal.ZERO) == 0;
     }

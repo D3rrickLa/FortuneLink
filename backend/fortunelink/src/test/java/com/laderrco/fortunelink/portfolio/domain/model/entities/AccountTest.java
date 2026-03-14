@@ -505,12 +505,17 @@ class AccountTest {
         @Test
         void testGetRealizedGainsFor_Success_ReturnOne() {
             AssetSymbol apple = new AssetSymbol("AAPL");
-            AssetSymbol TSLA = new AssetSymbol("TSLA");
+            AssetSymbol MFST = new AssetSymbol("MSFT");
             account.recordRealizedGain(apple, Money.of("100", USD), Money.of("500", USD), Instant.now());
             account.recordRealizedGain(apple, Money.of("50", USD), Money.of("200", USD), Instant.now());
-            account.recordRealizedGain(TSLA, Money.of("300", USD), Money.of("1000", USD), Instant.now());
+            account.recordRealizedGain(MFST, Money.of("-300", USD), Money.of("1000", USD), Instant.now());
+
             List<RealizedGainRecord> records = account.getRealizedGainsFor(apple);
             assertThat(records.size()).isEqualTo(2);
+            assertThat(records.get(0).isGain()).isTrue();
+
+            List<RealizedGainRecord> recordsMFST = account.getRealizedGainsFor(MFST);
+            assertThat(recordsMFST.get(0).isLoss()).isTrue();
         }
 
         @Nested

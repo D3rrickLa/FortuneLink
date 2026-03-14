@@ -24,6 +24,8 @@ class QuantityTest {
 
       assertThat(q1.amount()).isEqualByComparingTo("2.22500000");
       assertThat(q2.amount()).isEqualByComparingTo("2.23500000");
+      assertThat(q1.isPositive()).isTrue();
+      assertThat(q1.abs()).isEqualTo(q1);
     }
 
     @Test
@@ -124,7 +126,6 @@ class QuantityTest {
       assertThat(zero.isPositive()).isFalse();
       assertThat(zero.isNonZero()).isFalse();
 
-      assertThat(zero.isNegative()).isFalse();
       assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-1)))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Quantity cannot be negative");

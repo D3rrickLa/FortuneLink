@@ -116,7 +116,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 			Money lotReduction;
 			if (isLastLot) {
-				// Last lot absorbs whatever is left — eliminates accumulated rounding drift
+				// Last lot absorbs whatever is left - eliminates accumulated rounding drift
 				lotReduction = remainingReduction;
 			} else {
 				BigDecimal ratio = lot.costBasis().amount()

@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -13,6 +14,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
+
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -182,7 +186,8 @@ public class TransactionTest {
           new Quantity(BigDecimal.TEN),
           new Price(Money.of(135, "USD")));
 
-      SplitDetails spilt = new SplitDetails(new Ratio(12, 1));
+      Ratio ratio = new Ratio(12, 1);
+      SplitDetails spilt = new SplitDetails(ratio);
       Money cashDelta = Money.of(1350, "USD");
       List<Fee> fees = List.of();
       String notes = "Some notes";
@@ -196,6 +201,9 @@ public class TransactionTest {
               notes, occurredAt, relatedTransactionId, metadata));
 
       assertTrue(ex.getMessage().contains("cannot have split details"));
+      assertThat(ratio.multiplier())
+          .isEqualTo(BigDecimal.valueOf(12)
+              .setScale(Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode()));
     }
 
     @Test
