@@ -33,7 +33,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	@Override
-	public ApplyResult<FifoPosition> buy(Quantity quantity, Money totalCost, Instant at) {
+	public ApplyResult.Purchase<FifoPosition> buy(Quantity quantity, Money totalCost, Instant at) {
 		TaxLot newLot = new TaxLot(quantity, totalCost, at);
 
 		List<TaxLot> updatedLots = new ArrayList<>(lots);
@@ -43,7 +43,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	@Override
-	public ApplyResult<FifoPosition> sell(Quantity quantity, Money proceeds, Instant at) {
+	public ApplyResult.Sale<FifoPosition> sell(Quantity quantity, Money proceeds, Instant at) {
 		if (hasInSufficientQuantity(quantity)) {
 			throw new IllegalStateException("Insufficient quantity");
 		}
@@ -77,7 +77,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	}
 
 	@Override
-	public ApplyResult<FifoPosition> split(Ratio ratio) {
+	public ApplyResult.Adjustment<FifoPosition> split(Ratio ratio) {
 		List<TaxLot> splitLots = lots.stream().map(lot -> lot.split(ratio)).toList();
 
 		return new ApplyResult.Adjustment<>(new FifoPosition(symbol, type, accountCurrency, splitLots, Instant.now()));
