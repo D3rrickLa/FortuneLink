@@ -5,8 +5,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
-
 import org.junit.jupiter.api.Test;
+
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
 
 public class TransactionDateTest {
 
@@ -21,7 +22,7 @@ public class TransactionDateTest {
         TransactionDate date = TransactionDate.of(Instant.now());
         assertNotNull(date);
     }
-    
+
     @Test
     void testMethods() {
         Instant time = Instant.now();
@@ -33,7 +34,6 @@ public class TransactionDateTest {
         assertTrue(date.isAfter(otherDate2));
 
         assertEquals(time.toEpochMilli(), date.toEpochMilli());
-
 
     }
 }

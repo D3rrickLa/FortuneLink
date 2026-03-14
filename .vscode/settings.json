@@ -16,6 +16,7 @@
   ],
   // Point to the official Google Style XML for Eclipse (used by VS Code Java)
   // "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  "editor.tabSize": 2,
   "java.format.settings.profile": "GoogleStyle",
   "[java]": {
     "editor.defaultFormatter": "redhat.java",
@@ -23,9 +24,9 @@
     "editor.detectIndentation": true,
     "editor.insertSpaces": true, // Google style strictly forbids tabs
     "editor.wordWrapColumn": 100,
-    "editor.tabSize": 2,
     "editor.rulers": [
       100
     ]
   },
+  "editor.detectIndentation": false,
 }

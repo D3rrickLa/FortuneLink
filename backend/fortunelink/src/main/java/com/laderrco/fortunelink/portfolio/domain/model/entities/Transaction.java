@@ -22,232 +22,251 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 // account and portfolio reconstruct state from these transaction(s)
 @Builder
 public record Transaction(TransactionId transactionId, AccountId accountId,
-        TransactionType transactionType, TradeExecution execution, SplitDetails split,
-        Money cashDelta, List<Fee> fees, String notes, TransactionDate occurredAt,
-        TransactionId relatedTransactionId, TransactionMetadata metadata
+    TransactionType transactionType, TradeExecution execution, SplitDetails split,
+    Money cashDelta, List<Fee> fees, String notes, TransactionDate occurredAt,
+    TransactionId relatedTransactionId, TransactionMetadata metadata
 
 ) {
-    public Transaction {
-        notNull(transactionId, "transactionId");
-        notNull(accountId, "accountId");
-        notNull(transactionType, "transactionType");
-        notNull(cashDelta, "cashDelta");
-        notNull(fees, "fees");
-        notNull(metadata, "metadata");
-        notNull(occurredAt, "occurredAt");
-        notNull(notes, "notes");
+  public Transaction {
+    notNull(transactionId, "transactionId");
+    notNull(accountId, "accountId");
+    notNull(transactionType, "transactionType");
+    notNull(cashDelta, "cashDelta");
+    notNull(fees, "fees");
+    notNull(metadata, "metadata");
+    notNull(occurredAt, "occurredAt");
+    notNull(notes, "notes");
 
-        fees = List.copyOf(fees);
-        notes = notes.trim();
+    validateConsistency("execution details", transactionType.requiresExecution(), execution != null);
+    validateConsistency("split details", transactionType.requiresSplitDetails(), split != null);
 
-        validateConsistency("execution details", transactionType.requiresExecution(),
-                execution != null);
+    fees = List.copyOf(fees);
+    notes = notes.trim();
 
-        validateConsistency("split details", transactionType.requiresSplitDetails(), split != null);
-
-        if (transactionType.cashImpact() == CashImpact.NONE && !cashDelta.isZero()) {
-            throw new IllegalArgumentException(transactionType + " cannot affect cash");
-        }
-
-        if (!transactionType.requiresExecution()) {
-            if (!fees.isEmpty()) {
-                throw new IllegalArgumentException(transactionType + " cannot have fees");
-            }
-        } else {
-            // Only run trade consistency if execution is required
-            validateTradeConsistency(execution, transactionType, cashDelta, fees);
-        }
+    if (transactionType.cashImpact() == CashImpact.NONE && !cashDelta.isZero()) {
+      throw new IllegalArgumentException(transactionType + " cannot affect cash");
     }
 
-    public Transaction markAsExcluded(UserId userId, String reason) {
-        if (metadata == null) {
-            throw new IllegalStateException("Cannot exclude transaction without metadata");
-        }
-        TransactionMetadata updatedMetadata = metadata.markAsExcluded(userId, reason);
-        return new Transaction(transactionId, accountId, transactionType, execution, split,
-                cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
+    if (!transactionType.requiresExecution()) {
+      if (!fees.isEmpty()) {
+        throw new IllegalArgumentException(transactionType + " cannot have fees");
+      }
+    } else {
+      // Only run trade consistency if execution is required
+      validateTradeConsistency(execution, transactionType, cashDelta, fees);
+    }
+  }
+
+  public Transaction markAsExcluded(UserId userId, String reason) {
+    TransactionMetadata updatedMetadata = metadata.markAsExcluded(userId, reason);
+    return new Transaction(transactionId, accountId, transactionType, execution, split,
+        cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
+  }
+
+  public Transaction restore() {
+    TransactionMetadata updatedMetadata = metadata.restore();
+    return new Transaction(transactionId, accountId, transactionType, execution, split,
+        cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
+  }
+
+  public boolean isExcluded() {
+    return metadata.excluded();
+  }
+
+  public Money totalFeesInAccountCurrency() {
+    return Fee.totalInAccountCurrency(fees, cashDelta.currency());
+  }
+
+  private void validateConsistency(String label, boolean isRequired, boolean isPresent) {
+    if (isRequired && !isPresent) {
+      throw new IllegalArgumentException(transactionType + " requires " + label);
+    }
+    if (!isRequired && isPresent) {
+      throw new IllegalArgumentException(transactionType + " cannot have " + label);
+    }
+  }
+
+  private void validateTradeConsistency(TradeExecution execution, TransactionType type,
+      Money cashDelta, List<Fee> fees) {
+    Money grossValue = execution.grossValue();
+    Money totalFees = Fee.totalInAccountCurrency(fees, cashDelta.currency());
+
+    Money expectedCashDelta = switch (type.cashImpact()) {
+      case IN -> grossValue.subtract(totalFees);
+      case OUT -> grossValue.add(totalFees).negate();
+      case NONE -> Money.ZERO(cashDelta.currency());
+    };
+
+    if (!cashDelta.equals(expectedCashDelta)) {
+      throw new IllegalArgumentException("Cash delta mismatch for " + type + ". Expected: "
+          + expectedCashDelta + ", got: " + cashDelta);
+    }
+  }
+
+  // old code before, in 90f8c03428f84c687a02cc8d6835a35743a11899
+  // did computation in th sense that
+  // it knows how cash should be computed
+  // this is bad, we are now only enforcing invariants
+  public record TradeExecution(AssetSymbol asset, Quantity quantity, Price pricePerUnit) {
+    public TradeExecution {
+      notNull(asset, "Asset symbol cannot be null");
+      notNull(quantity, "Quantity cannot be null");
+      notNull(pricePerUnit, "Price per unit cannot be null");
+
+      if (quantity.isZero()) {
+        throw new IllegalArgumentException("Trade quantity cannot be zero");
+      }
+
+      // not needed as Price.java already does this
+      // if (pricePerUnit.pricePerUnit().isNegative()) {
+      // throw new IllegalArgumentException(
+      // "Price per unit cannot be negative (got: " + pricePerUnit + ")");
+      // }
     }
 
-    public Transaction restore() {
-        if (metadata == null) {
-            throw new IllegalStateException("Cannot restore transaction without metadata");
-        }
-        TransactionMetadata updatedMetadata = metadata.restore();
-        return new Transaction(transactionId, accountId, transactionType, execution, split,
-                cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
+    /**
+     * Gross value of the trade before fees. This is qty × price, representing the
+     * market value.
+     */
+    public Money grossValue() {
+      return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
+    }
+  }
+
+  public record SplitDetails(Ratio ratio) {
+  }
+
+  public record TransactionMetadata(
+      AssetType assetType,
+      String source,
+      boolean excluded,
+      Instant excludedAt,
+      UserId excludedBy,
+      String excludedReason,
+      Map<String, String> additionalData) {
+
+    public static final String KEY_SYMBOL = "symbol";
+    public static final String KEY_DRIP_SOURCE = "drip_source";
+
+    public TransactionMetadata {
+      notNull(assetType, "AssetType");
+      source = source == null ? "UNKNOWN" : source.trim();
+      additionalData = additionalData == null ? Map.of() : Map.copyOf(additionalData);
+
+      // Validate exclusion consistency
+      if (excluded && (excludedAt == null || excludedBy == null)) {
+        throw new IllegalArgumentException(
+            "excludedAt and excludedBy required when excluded=true");
+      }
+
+      if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
+        throw new IllegalArgumentException(
+            "Cannot have exclusion metadata when excluded=false");
+      }
     }
 
-    public boolean isExcluded() {
-        return metadata != null && metadata.excluded();
+    public static TransactionMetadata manual(AssetType assetType) {
+      return new TransactionMetadata(assetType, "MANUAL", false, null, null, null, Map.of());
     }
 
-    public Money totalFeesInAccountCurrency() {
-        return Fee.totalInAccountCurrency(fees, cashDelta.currency());
+    public static TransactionMetadata csvImport(AssetType assetType, String filename) {
+      return new TransactionMetadata(assetType, "CSV_IMPORT", false, null, null, null,
+          Map.of("filename", filename));
     }
 
-    private void validateConsistency(String label, boolean isRequired, boolean isPresent) {
-        if (isRequired && !isPresent) {
-            throw new IllegalArgumentException(transactionType + " requires " + label);
-        }
-        if (!isRequired && isPresent) {
-            throw new IllegalArgumentException(transactionType + " cannot have " + label);
-        }
+    // New method to mark as excluded
+    public TransactionMetadata markAsExcluded(UserId userId, String reason) {
+      if (excluded) {
+        throw new IllegalStateException("Transaction already excluded");
+      }
+      return new TransactionMetadata(assetType, source, true, Instant.now(), userId, reason,
+          additionalData);
     }
 
-    private void validateTradeConsistency(TradeExecution execution, TransactionType type,
-            Money cashDelta, List<Fee> fees) {
-        Money grossValue = execution.grossValue();
-        Money totalFees = Fee.totalInAccountCurrency(fees, cashDelta.currency());
-
-        Money expectedCashDelta = switch (type.cashImpact()) {
-            case IN -> grossValue.subtract(totalFees);
-            case OUT -> grossValue.add(totalFees).negate();
-            case NONE -> Money.ZERO(cashDelta.currency());
-        };
-
-        if (!cashDelta.equals(expectedCashDelta)) {
-            throw new IllegalArgumentException("Cash delta mismatch for " + type + ". Expected: "
-                    + expectedCashDelta + ", got: " + cashDelta);
-        }
+    // New method to restore
+    public TransactionMetadata restore() {
+      if (!excluded) {
+        throw new IllegalStateException("Transaction is not excluded");
+      }
+      return new TransactionMetadata(assetType, source, false, null, null, null,
+          additionalData);
     }
 
-    // old code before, in 90f8c03428f84c687a02cc8d6835a35743a11899
-    // did computation in th sense that
-    // it knows how cash should be computed
-    // this is bad, we are now only enforcing invariants
-    public record TradeExecution(AssetSymbol asset, Quantity quantity, Price pricePerUnit) {
-        public TradeExecution {
-            notNull(asset, "Asset symbol cannot be null");
-            notNull(quantity, "Quantity cannot be null");
-            notNull(pricePerUnit, "Price per unit cannot be null");
+    public Map<String, String> asFlatMap() {
+      Map<String, String> flat = new HashMap<>(additionalData);
 
-            if (quantity.isZero()) {
-                throw new IllegalArgumentException("Trade quantity cannot be zero");
-            }
+      // Core fields
+      flat.put("assetType", assetType.name());
+      flat.put("source", source);
+      flat.put("excluded", String.valueOf(excluded));
 
-            // not needed as Price.java already does this
-            // if (pricePerUnit.pricePerUnit().isNegative()) {
-            // throw new IllegalArgumentException(
-            // "Price per unit cannot be negative (got: " + pricePerUnit + ")");
-            // }
+      // Conditional fields (only add if present to keep the view clean)
+      if (excluded) {
+        flat.put("excludedAt", excludedAt.toString());
+        flat.put("excludedBy", excludedBy.id().toString());
+        if (excludedReason != null) {
+          flat.put("excludedReason", excludedReason);
         }
+      }
 
-        /**
-         * Gross value of the trade before fees. This is qty × price, representing the
-         * market value.
-         */
-        public Money grossValue() {
-            return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
-        }
+      return Collections.unmodifiableMap(flat);
     }
 
-    public record SplitDetails(Ratio ratio) {
+    public String get(String key) {
+      return additionalData.get(key);
     }
 
-    public record TransactionMetadata(
-            AssetType assetType,
-            String source,
-            boolean excluded,
-            Instant excludedAt,
-            UserId excludedBy,
-            String excludedReason,
-            Map<String, String> additionalData) {
-
-        public static final String KEY_SYMBOL = "symbol";
-        public static final String KEY_DRIP_SOURCE = "drip_source";
-
-        public TransactionMetadata {
-            notNull(assetType, "AssetType");
-            source = source == null ? "UNKNOWN" : source.trim();
-            additionalData = additionalData == null ? Map.of() : Map.copyOf(additionalData);
-
-            // Validate exclusion consistency
-            if (excluded && (excludedAt == null || excludedBy == null)) {
-                throw new IllegalArgumentException(
-                        "excludedAt and excludedBy required when excluded=true");
-            }
-
-            if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
-                throw new IllegalArgumentException(
-                        "Cannot have exclusion metadata when excluded=false");
-            }
-        }
-
-        public static TransactionMetadata manual(AssetType assetType) {
-            return new TransactionMetadata(assetType, "MANUAL", false, null, null, null, Map.of());
-        }
-
-        public static TransactionMetadata csvImport(AssetType assetType, String filename) {
-            return new TransactionMetadata(assetType, "CSV_IMPORT", false, null, null, null,
-                    Map.of("filename", filename));
-        }
-
-        // New method to mark as excluded
-        public TransactionMetadata markAsExcluded(UserId userId, String reason) {
-            if (excluded) {
-                throw new IllegalStateException("Transaction already excluded");
-            }
-            return new TransactionMetadata(assetType, source, true, Instant.now(), userId, reason,
-                    additionalData);
-        }
-
-        // New method to restore
-        public TransactionMetadata restore() {
-            if (!excluded) {
-                throw new IllegalStateException("Transaction is not excluded");
-            }
-            return new TransactionMetadata(assetType, source, false, null, null, null,
-                    additionalData);
-        }
-
-        public Map<String, String> asFlatMap() {
-            Map<String, String> flat = new HashMap<>(additionalData);
-
-            // Core fields
-            flat.put("assetType", assetType.name());
-            flat.put("source", source);
-            flat.put("excluded", String.valueOf(excluded));
-
-            // Conditional fields (only add if present to keep the view clean)
-            if (excluded) {
-                flat.put("excludedAt", excludedAt.toString());
-                flat.put("excludedBy", excludedBy.id().toString());
-                if (excludedReason != null) {
-                    flat.put("excludedReason", excludedReason);
-                }
-            }
-
-            return Collections.unmodifiableMap(flat);
-        }
-
-        public String get(String key) {
-            return additionalData.get(key);
-        }
-
-        public String getOrDefault(String key, String defaultValue) {
-            return additionalData.getOrDefault(key, defaultValue);
-        }
-
-        public TransactionMetadata with(String key, String value) {
-            Map<String, String> copy = new HashMap<>(additionalData);
-            copy.put(key, value);
-            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
-                    excludedReason, copy);
-        }
-
-        public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
-            Map<String, String> copy = new HashMap<>(additionalData);
-            copy.putAll(additionalMetadata);
-            return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
-                    excludedReason, copy);
-        }
-
-        public boolean containsKey(String key) {
-            return additionalData.containsKey(key);
-        }
-
-        public boolean isEmpty() {
-            return additionalData.isEmpty();
-        }
+    public String getOrDefault(String key, String defaultValue) {
+      return additionalData.getOrDefault(key, defaultValue);
     }
+
+    public TransactionMetadata with(String key, String value) {
+      Map<String, String> copy = new HashMap<>(additionalData);
+      copy.put(key, value);
+      return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
+          excludedReason, copy);
+    }
+
+    public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
+      Map<String, String> copy = new HashMap<>(additionalData);
+      copy.putAll(additionalMetadata);
+      return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
+          excludedReason, copy);
+    }
+
+    public boolean containsKey(String key) {
+      return additionalData.containsKey(key);
+    }
+
+    public boolean isEmpty() {
+      return additionalData.isEmpty();
+    }
+  }
+
+  public record TransactionDate(Instant timestamp) {
+
+    public TransactionDate {
+      notNull(timestamp, "timestamp");
+    }
+
+    public static TransactionDate of(Instant timestamp) {
+      return new TransactionDate(timestamp);
+    }
+
+    public static TransactionDate now() {
+      return new TransactionDate(Instant.now());
+    }
+
+    public boolean isBefore(TransactionDate other) {
+      return timestamp.isBefore(other.timestamp());
+    }
+
+    public boolean isAfter(TransactionDate other) {
+      return timestamp.isAfter(other.timestamp());
+    }
+
+    public long toEpochMilli() {
+      return timestamp.toEpochMilli();
+    }
+  }
 }

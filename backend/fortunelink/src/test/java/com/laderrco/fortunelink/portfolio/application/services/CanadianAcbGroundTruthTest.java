@@ -475,7 +475,7 @@ class TransactionFixtures {
 				cashDelta,
 				fees,
 				"notes",
-				new TransactionDate(Instant.now()),
+				new Transaction.TransactionDate(Instant.now()),
 				null,
 				Transaction.TransactionMetadata.manual(AssetType.STOCK));
 

@@ -55,8 +55,7 @@ class PortfolioTest {
       assertAll(
           () -> assertNull(portfolio.getPortfolioId()),
           () -> assertNull(portfolio.getUserId()),
-          () -> assertNull(portfolio.getCreatedAt())
-      );
+          () -> assertNull(portfolio.getCreatedAt()));
     }
 
     @Test
@@ -67,8 +66,7 @@ class PortfolioTest {
           () -> assertEquals(userId, portfolio.getUserId()),
           () -> assertEquals(portfolioName, portfolio.getName()),
           () -> assertEquals("description", portfolio.getDescription()),
-          () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency())
-      );
+          () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency()));
     }
 
     @Test
@@ -79,8 +77,7 @@ class PortfolioTest {
           () -> assertEquals(userId, portfolio.getUserId()),
           () -> assertEquals(portfolioName, portfolio.getName()),
           () -> assertTrue(portfolio.getDescription().isEmpty()),
-          () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency())
-      );
+          () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency()));
     }
 
     @Test
@@ -118,8 +115,7 @@ class PortfolioTest {
 
       Portfolio portfolio = Portfolio.reconstitute(
           portfolioId, userId, "Old Name", "Desc", accounts, Currency.CAD,
-          true, fixedTime, userId, fixedTime, fixedTime
-      );
+          true, fixedTime, userId, fixedTime, fixedTime);
 
       assertThat(portfolio.isDeleted()).isTrue();
       assertThat(portfolio.getDeletedOn()).isEqualTo(fixedTime);
@@ -146,8 +142,7 @@ class PortfolioTest {
 
       Account account = portfolio.createAccount(
           "Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
 
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
       assertThat(portfolio.getAccounts()).contains(account);
@@ -164,10 +159,19 @@ class PortfolioTest {
       assertThatThrownBy(
           () -> portfolio.createAccount(
               "SAVINGS", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-              PositionStrategy.ACB
-          ))
+              PositionStrategy.ACB))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("already exists");
+    }
+
+    @Test
+    @DisplayName("createAccount_Failure_NotACB")
+    void createAccount_Failure_NotACB() {
+      assertThatThrownBy(
+          () -> portfolio.createAccount(
+              "SAVINGS", AccountType.REGISTERED_INVESTMENT, Currency.USD, PositionStrategy.FIFO))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Only ACB strategy is supported.");
     }
 
     @Test
@@ -176,8 +180,7 @@ class PortfolioTest {
       assertThatThrownBy(
           () -> portfolio.createAccount(
               " ", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-              PositionStrategy.ACB
-          ))
+              PositionStrategy.ACB))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Account name cannot be empty");
     }
@@ -187,8 +190,7 @@ class PortfolioTest {
     void removeAccount_Success_RemovesInactiveAccount() {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       // Mocking internal account state for removal conditions
@@ -205,8 +207,7 @@ class PortfolioTest {
     void removeAccount_Failure_ThrowsIfAccountNotReady() {
       Account account = portfolio.createAccount(
           "Active", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
 
       assertThatThrownBy(() -> portfolio.removeAccount(account.getAccountId()))
           .isInstanceOf(IllegalStateException.class)
@@ -218,8 +219,7 @@ class PortfolioTest {
     void reopenAccount_Success() {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       // Mocking internal account state for removal conditions
@@ -241,8 +241,7 @@ class PortfolioTest {
 
       Account account = portfolio.createAccount(
           "Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
 
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
       assertThat(portfolio.getAccounts()).contains(account);
@@ -256,7 +255,7 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = {"  ", "\t", "\n"}) // Testing null, empty, and blank
+    @ValueSource(strings = { "  ", "\t", "\n" }) // Testing null, empty, and blank
     @DisplayName("findAccountByName_ReturnEmpty_WhenNameIsInvalid")
     void findAccountByName_Failure_ReturnsEmptyWhenNameIsNullOrBlank(String invalidName) {
       portfolio.createAccount(
@@ -272,8 +271,7 @@ class PortfolioTest {
     void findAccountByType_Success() {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
 
       List<Account> foundAccount = portfolio.findAccountsByType(AccountType.REGISTERED_INVESTMENT);
       assertTrue(foundAccount.size() == 1);
@@ -285,8 +283,7 @@ class PortfolioTest {
     void renameAccount_Success() {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       portfolio.renameAccount(id, "AMONGUS");
@@ -299,8 +296,7 @@ class PortfolioTest {
     void renameAccount_Success_SameName() {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
 
       // This should NOT throw an exception
       portfolio.renameAccount(account.getAccountId(), "Test");
@@ -311,13 +307,12 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = {"  ", "\t", "\n"})
-      // Testing null, empty, and blank
+    @ValueSource(strings = { "  ", "\t", "\n" })
+    // Testing null, empty, and blank
     void renameAccount_Failure_NameIsNullAndOrEmpty(String invalidName) {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       assertThatThrownBy(() -> portfolio.renameAccount(id, invalidName))
@@ -331,12 +326,10 @@ class PortfolioTest {
     void renameAccount_Failure_NameExistsAlready() {
       Account account = portfolio.createAccount(
           "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
       portfolio.createAccount(
           "Test_2", AccountType.REGISTERED_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB
-      );
+          PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       assertThatThrownBy(() -> portfolio.renameAccount(id, "Test_2"))
@@ -489,6 +482,15 @@ class PortfolioTest {
           "Invest", AccountType.TFSA, Currency.USD, PositionStrategy.ACB);
       portfolio.reportRecalculationFailure(account_1.getAccountId());
       assertThat(account_1.isStale()).isTrue();
+
+      portfolio.reportRecalculationSuccess(account_1.getAccountId());
+      assertThat(account_1.isStale()).isFalse();
+    }
+
+    @Test
+    void reportRecalculationSuccess_Success_DoesNothingWhenHealthyStatus() {
+      Account account_1 = portfolio.createAccount(
+          "Invest", AccountType.TFSA, Currency.USD, PositionStrategy.ACB);
 
       portfolio.reportRecalculationSuccess(account_1.getAccountId());
       assertThat(account_1.isStale()).isFalse();

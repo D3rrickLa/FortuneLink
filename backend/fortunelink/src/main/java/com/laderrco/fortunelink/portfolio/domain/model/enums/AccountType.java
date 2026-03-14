@@ -18,7 +18,7 @@ public enum AccountType {
   REGISTERED_INVESTMENT,
   NON_REGISTERED_INVESTMENT;
 
-  public boolean requriesCaptialGainsTracking() {
+  public boolean requiresCapitalGainsTracking() {
     // All non-registered, non-sheltered accounts require CRA capital gains tracking
     return this == NON_REGISTERED_INVESTMENT || this == MARGIN || this == REGISTERED_INVESTMENT;
   }

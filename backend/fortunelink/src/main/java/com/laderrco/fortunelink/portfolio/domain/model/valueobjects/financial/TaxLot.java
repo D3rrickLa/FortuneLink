@@ -54,10 +54,6 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
             throw new IllegalArgumentException("Cannot sell more than lot quantity");
         }
 
-        if (soldQuantity.isNegative()) {
-            throw new IllegalArgumentException("Sold quantity cannot be negative: " + soldQuantity);
-        }
-
         if (soldQuantity.isZero()) {
             return Money.ZERO(costBasis.currency());
         }

@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency.USD;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -57,7 +56,7 @@ class AccountTest {
         accountId = AccountId.newId();
         usd = Currency.of("USD");
         strategy = PositionStrategy.SPECIFIC_ID;
-        account = new Account(accountId, "Main Investment", AccountType.CHEQUING, usd, strategy);
+        account = new Account(accountId, "Main Investment", AccountType.REGISTERED_INVESTMENT, usd, strategy);
     }
 
     @Nested
@@ -71,10 +70,11 @@ class AccountTest {
             assertTrue(account.getCashBalance().isZero());
             assertTrue(account.isActive());
             assertNotNull(account.getCreationDate());
-            assertEquals(AccountType.CHEQUING, account.getAccountType());
+            assertEquals(AccountType.REGISTERED_INVESTMENT, account.getAccountType());
             assertNotNull(account.getLastUpdatedOn());
             assertEquals(0, account.getPositionCount());
             assertEquals(strategy, account.getPositionStrategy());
+            assertTrue(account.getAccountType().requiresCapitalGainsTracking());
         }
 
         @Test
@@ -275,6 +275,7 @@ class AccountTest {
 
                 // THEN: It should be a FifoPosition
                 assertTrue(position instanceof FifoPosition, "Account with FIFO strategy must produce FifoPosition");
+                assertFalse(usdAccount.getAccountType().requiresCapitalGainsTracking());
             }
 
             @ParameterizedTest
@@ -458,6 +459,14 @@ class AccountTest {
         @Test
         void testClearRealizedGains_ThrowsException_WhenSymbolIsNull() {
             assertThrows(DomainArgumentException.class, () -> account.clearRealizedGains(null));
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = AccountType.class, names = { "NON_REGISTERED_INVESTMENT", "MARGIN",
+                "REGISTERED_INVESTMENT" })
+        void testGetAccountType_Sucess_RequiresCapitalGainsTracking(AccountType type) {
+            Account testAccount = new Account(accountId, "null", type, usd, strategy);
+            assertTrue(testAccount.getAccountType().requiresCapitalGainsTracking());
         }
     }
 

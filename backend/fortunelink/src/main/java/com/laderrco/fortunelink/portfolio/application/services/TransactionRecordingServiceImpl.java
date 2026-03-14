@@ -5,6 +5,7 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedExcepti
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
