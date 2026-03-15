@@ -5,36 +5,40 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 
 public final class TransactionApplier {
-	private TransactionApplier() {
-	}
 
-	// single source of truth. Every path that needs to compute a new position state
-	// goes through TransactionApplier.apply()
-	public static ApplyResult<? extends Position> apply(Position position, Transaction tx) {
-		// cost paid (stored on tx at record time)
-		return switch (tx.transactionType()) {
-			case BUY -> position.buy(
-					tx.execution().quantity(),
-					tx.cashDelta().abs(),
-					tx.occurredAt().timestamp());
-			// net proceeds (stored on tx at record time)
-			case SELL -> position.sell(
-					tx.execution().quantity(),
-					tx.cashDelta(),
-					tx.occurredAt().timestamp());
+  private TransactionApplier() {
+    // Utility class
+  }
 
-			case SPLIT -> position.split(tx.split().ratio());
-			// DRIP has no cashDelta use gross value
-			case DIVIDEND_REINVEST -> position.buy(
-					tx.execution().quantity(),
-					tx.execution().grossValue(),
-					tx.occurredAt().timestamp());
+  /**
+   * Routes a transaction to the correct position update logic. This is the single source of truth
+   * for applying transactions to positions.
+   */
+  public static ApplyResult<? extends Position> apply(Position position, Transaction tx) {
+    return switch (tx.transactionType()) {
+      case BUY -> applyBuy(position, tx);
+      case SELL -> applySell(position, tx);
+      case SPLIT -> position.split(tx.split().ratio());
+      case DIVIDEND_REINVEST -> applyDrip(position, tx);
+      case RETURN_OF_CAPITAL -> applyReturnOfCapital(position, tx);
+      default -> new ApplyResult.NoChange<>(position);
+    };
+  }
 
-			case RETURN_OF_CAPITAL -> position.applyReturnOfCapital(
-					tx.execution().pricePerUnit(),
-					tx.execution().quantity());
+  private static ApplyResult<? extends Position> applyBuy(Position p, Transaction tx) {
+    return p.buy(tx.execution().quantity(), tx.cashDelta().abs(), tx.occurredAt().timestamp());
+  }
 
-			default -> new ApplyResult.NoChange<>(position);
-		};
-	}
+  private static ApplyResult<? extends Position> applySell(Position p, Transaction tx) {
+    return p.sell(tx.execution().quantity(), tx.cashDelta(), tx.occurredAt().timestamp());
+  }
+
+  private static ApplyResult<? extends Position> applyDrip(Position p, Transaction tx) {
+    return p.buy(
+        tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
+  }
+
+  private static ApplyResult<? extends Position> applyReturnOfCapital(Position p, Transaction tx) {
+    return p.applyReturnOfCapital(tx.execution().pricePerUnit(), tx.execution().quantity());
+  }
 }

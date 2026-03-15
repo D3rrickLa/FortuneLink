@@ -1,11 +1,10 @@
-package com.laderrco.fortunelink.shared.enums;
+package com.laderrco.fortunelink.shared.interfaces;
 
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 
 public interface GenericId {
-
   static <T extends GenericId> T generate(Function<UUID, T> constructor) {
     return constructor.apply(UUID.randomUUID());
   }

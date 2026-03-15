@@ -1,8 +1,5 @@
 package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
-import java.util.Comparator;
-import java.util.List;
-
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -10,6 +7,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import java.util.Comparator;
+import java.util.List;
 
 public final class AcbPositionProjector implements Projector<AcbPosition, Transaction> {
   private final AssetSymbol symbol;

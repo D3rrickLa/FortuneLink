@@ -18,7 +18,8 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
       implements ApplyResult<P> {
   }
 
-  public record RocAdjustment<P extends Position>(P newPosition, Money excessCapitalGain) implements ApplyResult<P> {
+  public record RocAdjustment<P extends Position>(P newPosition, Money excessCapitalGain) implements
+      ApplyResult<P> {
   }
 
   record Adjustment<P extends Position>(P newPosition) implements ApplyResult<P> {
@@ -27,7 +28,8 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
   record NoChange<P extends Position>(P newPosition) implements ApplyResult<P> {
   }
 
-  record ClosedPosition<P extends Position>(P newPosition, RealizedGainRecord gain) implements ApplyResult<P> {
+  record ClosedPosition<P extends Position>(P newPosition, RealizedGainRecord gain) implements
+      ApplyResult<P> {
   }
 
 }

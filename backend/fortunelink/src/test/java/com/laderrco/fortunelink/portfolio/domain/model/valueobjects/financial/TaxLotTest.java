@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -117,6 +118,31 @@ class TaxLotTest {
 			assertThat(splitLot.quantity().amount()).isEqualByComparingTo("20.00");
 			assertThat(splitLot.costBasis()).isEqualTo(THOUSAND_USD); // Cost basis stays same in a split
 		}
+
+    @Test
+    void testSplitAndReverseSplitIsLossless() {
+      // 1. Setup initial state
+      Quantity initialQty = new Quantity(new BigDecimal("10.00000000"));
+      Money initialCost = new Money(new BigDecimal("1000.00"), Currency.of("USD"));
+      TaxLot originalLot = new TaxLot(initialQty, initialCost, Instant.now());
+
+      // 2. Perform a 3-for-1 split (3, 1)
+      Ratio forwardSplit = new Ratio(3, 1);
+      TaxLot splitLot = originalLot.split(forwardSplit);
+
+      // 3. Perform a 1-for-3 reverse split (1, 3)
+      Ratio reverseSplit = new Ratio(1, 3);
+      TaxLot reversedLot = splitLot.split(reverseSplit);
+
+      // 4. Verification
+      // If the math is precise, the original and the reversed lot should be equal
+      assertEquals(originalLot.quantity(), reversedLot.quantity(),
+                   "Quantity should match original after round-trip");
+      assertEquals(originalLot.costBasis(), reversedLot.costBasis(),
+                   "Cost basis should remain unchanged");
+      assertEquals(originalLot, reversedLot,
+                   "TaxLot state should be identical after round-trip");
+    }
 	}
 
 	@Nested

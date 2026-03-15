@@ -1,120 +1,116 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import com.laderrco.fortunelink.shared.enums.Precision;
-import com.laderrco.fortunelink.shared.enums.Rounding;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.Instant;
-
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.Instant;
+
 /**
- * Preserves history, i.e.:
- * Lot 1: 10 shares @ $100 (Jan 1)
- * Lot 2: 5 shares @ $120 (Feb 2)
+ * Represents a single batch of an asset acquired at a specific time and cost.
  * <p>
- * NOTE ON COSTBASIS: it is the 'pps * units' FOR EACH TRANSACTION
- * so the example above would be $1000 + $600 = $1600 is our cost basis
- * the avg pps is $106.67 or cost basis / # of shares
+ * This record maintains the history of a tax lot through partial sales and stock splits.
+ * <b>Note on Cost Basis:</b> The {@code costBasis} represents the total amount paid for the
+ * entire lot. The average price per share (PPS) is derived as {@code costBasis / quantity}.
  */
 public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
+  private static final int MONEY_PRECISION = Precision.getMoneyPrecision();
+  private static final RoundingMode M_ROUNDING_MODE = Rounding.MONEY.getMode();
 
-	private static final int MONEY_PRECISION = Precision.getMoneyPrecision();
-	private static final RoundingMode M_ROUNDING_MODE = Rounding.MONEY.getMode();
+  public TaxLot {
+    notNull(quantity, "quantity");
+    notNull(costBasis, "costBasis");
+    notNull(acquiredDate, "acquiredDate");
 
-	public TaxLot {
-		notNull(quantity, "quantity");
-		notNull(costBasis, "costBasis");
-		notNull(acquiredDate, "acquiredDate");
+    if (costBasis.isNegative()) {
+      throw new IllegalArgumentException("TaxLot cost basis cannot be negative: " + costBasis);
+    }
+  }
 
-		// the negative value is already checked
-		// if (quantity.isNegative()) {
-		// throw new IllegalArgumentException("TaxLot quantity cannot be negative: " +
-		// quantity);
-		// }
+  /**
+   * Calculates the portion of the cost basis to realize for a partial sale.
+   * <p>
+   * <b>Example:</b> If you hold 10 shares with a $1000 cost basis and sell 4 shares,
+   * this calculates the 40% pro rata cost: {@code 4/10 * $1000 = $400}.
+   *
+   * @param soldQuantity The number of shares being sold.
+   * @return The portion of the cost basis associated with the sold quantity.
+   */
+  public Money proportionalCost(Quantity soldQuantity) {
+    if (soldQuantity.compareTo(quantity) > 0) {
+      throw new IllegalArgumentException("Cannot sell more than lot quantity");
+    }
 
-		if (costBasis.isNegative()) {
-			throw new IllegalArgumentException("TaxLot cost basis cannot be negative: " + costBasis);
-		}
-	}
+    if (soldQuantity.isZero()) {
+      return Money.ZERO(costBasis.currency());
+    }
 
-	/**
-	 * Proportion of cost for a partial sale
-	 * <p>
-	 * If we had 10 shares for $1000
-	 * <p>
-	 * and we sell 4 shares, how much of the OG $1000
-	 * cost basis should be 'used up/ sold'?
-	 * <p>
-	 * ANSWER: 4/10 = 40% and 40% of $1000 = $400. That is what we are doing here
-	 */
-	public Money proportionalCost(Quantity soldQuantity) {
-		if (soldQuantity.compareTo(quantity) > 0) {
-			throw new IllegalArgumentException("Cannot sell more than lot quantity");
-		}
+    BigDecimal proportion = soldQuantity.amount()
+        .divide(quantity.amount(), MONEY_PRECISION, M_ROUNDING_MODE);
 
-		if (soldQuantity.isZero()) {
-			return Money.ZERO(costBasis.currency());
-		}
+    return costBasis.multiply(proportion);
+  }
 
-		BigDecimal proportion = soldQuantity.amount().divide(quantity.amount(), MONEY_PRECISION, M_ROUNDING_MODE);
+  /**
+   * Returns a new {@code TaxLot} representing the remainder of this lot after a sale.
+   * <p>
+   * <b>Example:</b> Selling 4 shares from a 10-share/ $1000-cost-basis lot results
+   * in a new lot: {@code qty = 6, costBasis = $600, acquiredDate = original}.
+   *
+   * @param soldQuantity The number of shares removed from this lot.
+   * @return A new {@link TaxLot} instance with reduced quantity and cost basis.
+   */
+  public TaxLot remainingAfter(Quantity soldQuantity) {
+    if (soldQuantity.compareTo(quantity) > 0) {
+      throw new IllegalArgumentException(
+          String.format("Cannot reduce lot by %s when it only has %s", soldQuantity, quantity));
+    }
 
-		return costBasis.multiply(proportion);
-	}
+    if (soldQuantity.isZero()) {
+      return this; // No change
+    }
 
-	/**
-	 * Reduce this lot by sold quantity, returns new TaxLot
-	 * <p>
-	 * We are returning the aftermath of the 'selling'
-	 * If we had 10 shares for $1000 and we sell 4 shares, we return :
-	 * TaxLot(
-	 * qty = 6,
-	 * costBasis = $600,
-	 * acquiredDate = Jan 1
-	 * )
-	 */
-	public TaxLot remainingAfter(Quantity soldQuantity) {
-		if (soldQuantity.compareTo(quantity) > 0) {
-			throw new IllegalArgumentException(String.format("Cannot reduce lot by %s when it only has %s",
-					soldQuantity, quantity));
-		}
+    Money soldCost = proportionalCost(soldQuantity);
+    Money newCost = costBasis.subtract(soldCost);
+    Quantity newQty = quantity.subtract(soldQuantity);
 
-		if (soldQuantity.isZero()) {
-			return this; // No change
-		}
+    return new TaxLot(newQty, newCost, acquiredDate);
+  }
 
-		Money soldCost = proportionalCost(soldQuantity);
-		Money newCost = costBasis.subtract(soldCost);
-		Quantity newQty = quantity.subtract(soldQuantity);
+  /**
+   * Adjusts this lot to account for a stock split.
+   *
+   * @param ratio The split ratio (e.g., 2:1 ratio for a 2-for-1 split).
+   * @return A new {@link TaxLot} with adjusted quantity, maintaining the total cost basis.
+   * @implNote We might have an issue with accuracy. If we have any rounding/precision loss during
+   * the newQuantity calculation, the 'cost basis per share' will drift. If BigDecimal doesn't have
+   * the same scale as your Money object, you might lose pennies.
+   */
+  public TaxLot split(Ratio ratio) {
+    BigDecimal factor = ratio.multiplier();
+    Quantity newQuantity = this.quantity.multiply(factor)
+        .setScale(Precision.QUANTITY.getDecimalPlaces(), Rounding.QUANTITY.getMode());
 
-		return new TaxLot(newQty, newCost, acquiredDate);
-	}
+    // Total cost basis for the lot remains the same
+    return new TaxLot(newQuantity, costBasis, acquiredDate);
+  }
 
-	public TaxLot split(Ratio ratio) {
-		Quantity newQuantity = this.quantity
-				.multiply(BigDecimal.valueOf(ratio.numerator()))
-				.divide(BigDecimal.valueOf(ratio.denominator()));
+  /**
+   * Returns the number of days between acquisition and sale.
+   * <p>
+   * Useful for determining long-term vs short-term capital gains.
+   */
+  public long getHoldingPeriodDays(Instant saleDate) {
+    return Duration.between(acquiredDate, saleDate).toDays();
+  }
 
-		return new TaxLot(
-				newQuantity,
-				costBasis, // Total cost basis for the lot remains the same
-				acquiredDate);
-	}
-
-	/**
-	 * Calculate the holding period in days.
-	 * Useful for determining long-term vs short-term capital gains.
-	 */
-	public long getHoldingPeriodDays(Instant saleDate) {
-		return java.time.Duration.between(acquiredDate, saleDate).toDays();
-	}
-
-	/**
-	 * Check if this lot qualifies for long-term capital gains treatment.
-	 * In most jurisdictions, this is 365+ days.
-	 */
-	public boolean isLongTerm(Instant saleDate) {
-		return getHoldingPeriodDays(saleDate) >= 365;
-	}
+  /**
+   * Determines if the lot qualifies for long-term capital gains tax treatment (365+ days).
+   */
+  public boolean isLongTerm(Instant saleDate) {
+    return getHoldingPeriodDays(saleDate) >= 365;
+  }
 }

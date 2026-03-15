@@ -4,7 +4,6 @@ package com.laderrco.fortunelink.portfolio.domain.utils;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 
 public final class Guard {
-
   private Guard() {
   }
 

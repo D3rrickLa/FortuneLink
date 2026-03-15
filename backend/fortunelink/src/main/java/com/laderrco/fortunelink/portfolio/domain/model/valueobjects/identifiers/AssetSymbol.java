@@ -1,3 +1,5 @@
+package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers;
+
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 // BEFORE WE HAD A @Embeddable, don't use that here, instead we have a JPA converter in the infra layer, looks something like this:

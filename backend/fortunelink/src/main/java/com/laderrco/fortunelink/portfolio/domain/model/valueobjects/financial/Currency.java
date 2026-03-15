@@ -8,33 +8,32 @@ import lombok.ToString;
 @EqualsAndHashCode
 @RequiredArgsConstructor
 public class Currency {
-    private final java.util.Currency currency;
+  public static final Currency CAD = new Currency("CAD");
+  public static final Currency EUR = new Currency("EUR");
+  public static final Currency GBP = new Currency("GBP");
+  public static final Currency JPY = new Currency("JPY");
+  public static final Currency USD = new Currency("USD");
+  private final java.util.Currency currency;
 
-    public static final Currency CAD = new Currency("CAD");
-    public static final Currency EUR = new Currency("EUR");
-    public static final Currency GBP = new Currency("GBP");
-    public static final Currency JPY = new Currency("JPY");
-    public static final Currency USD = new Currency("USD");
+  private Currency(String locale) {
+    this.currency = java.util.Currency.getInstance(locale);
+  }
 
-    private Currency(String locale) {
-        this.currency = java.util.Currency.getInstance(locale);
-    }
+  public static Currency of(String locale) {
+    return new Currency(locale);
+  }
 
-    public static Currency of(String locale) {
-        return new Currency(locale);
-    }
+  // i.e. USD
+  public String getCode() {
+    return this.currency.getCurrencyCode();
+  }
 
-    // i.e. USD
-    public String getCode() {
-        return this.currency.getCurrencyCode();
-    }
+  // i.e. $US
+  public String getSymbol() {
+    return this.currency.getSymbol();
+  }
 
-    // i.e. $US
-    public String getSymbol() {
-        return this.currency.getSymbol();
-    }
-
-    public int getDefaultFractionDigits() {
-        return this.currency.getDefaultFractionDigits();
-    }
+  public int getDefaultFractionDigits() {
+    return this.currency.getDefaultFractionDigits();
+  }
 }

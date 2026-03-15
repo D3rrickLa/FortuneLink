@@ -9,8 +9,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Primary gateway for retrieving financial market data.
+ * <p>
+ * This service provides a unified interface to fetch real-time quotes, historical prices, and asset
+ * metadata, shielding the rest of the application from the complexities of specific external market
+ * data providers.
+ */
 public interface MarketDataService {
-
   /**
    * Returns current quotes for the specified assets.
    *

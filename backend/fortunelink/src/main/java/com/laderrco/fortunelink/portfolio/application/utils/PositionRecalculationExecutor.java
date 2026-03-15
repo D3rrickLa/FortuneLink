@@ -79,18 +79,18 @@ public class PositionRecalculationExecutor {
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(portfolioId, userId);
     Account account = portfolio.getAccount(accountId);
 
-    List<Transaction> allActive = transactionRepository
-        .findByAccountId(accountId)
-        .stream()
-        .filter(tx -> !tx.isExcluded())
-        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
-        .toList();
+//    List<Transaction> allActive = transactionRepository
+//        .findByAccountId(accountId)
+//        .stream()
+//        .filter(tx -> !tx.isExcluded())
+//        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
+//        .toList();
 
     try {
       account.clearAllPositions();
       account.resetCashToZero();
       account.clearAllRealizedGains();
-      allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
+//      allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Full account replay failed for account {}", accountId, e);

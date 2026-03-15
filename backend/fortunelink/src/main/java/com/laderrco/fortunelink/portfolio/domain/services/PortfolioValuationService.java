@@ -16,7 +16,6 @@ import java.util.Map;
  * API usage.
  */
 public interface PortfolioValuationService {
-
   /**
    * Calculates the total value of a portfolio in the specified currency.
    *
