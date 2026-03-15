@@ -16,6 +16,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.SplitDetails;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionFactory;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
@@ -155,36 +156,5 @@ public class TransactionApplierTest {
 
   private TaxLot lot(String qty, String basis, Instant date) {
     return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), CAD), date);
-  }
-
-  class TransactionFactory {
-    private final static Currency CAD = Currency.CAD;
-
-    public static Transaction.TransactionBuilder baseBuilder() {
-      return Transaction.builder()
-          .transactionId(TransactionId.newId())
-          .accountId(AccountId.newId())
-          .cashDelta(Money.ZERO(CAD)) // Default to zero if not relevant
-          .fees(List.of())
-          .metadata(TransactionMetadata.manual(AssetType.STOCK))
-          .occurredAt(TransactionDate.of(Instant.now()))
-          .notes("");
-    }
-
-    public static Transaction.TransactionBuilder sellBuilder(Quantity q, Price p) {
-      return baseBuilder()
-          .transactionType(TransactionType.SELL)
-          .execution(new TradeExecution(new AssetSymbol("AAPL"), q, p))
-          .cashDelta(p.calculateValue(q)); // Correctly calculate the delta
-    }
-
-    public static Transaction.TransactionBuilder buyBuilder(Quantity q, Price p) {
-      Money totalCost = p.calculateValue(q).negate();
-
-      return baseBuilder()
-          .transactionType(TransactionType.BUY)
-          .execution(new TradeExecution(new AssetSymbol("AAPL"), q, p))
-          .cashDelta(totalCost);
-    }
   }
 }

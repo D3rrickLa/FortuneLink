@@ -12,39 +12,38 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public final class AcbPositionProjector implements Projector<AcbPosition, Transaction> {
-    private final AssetSymbol symbol;
-    private final AssetType type;
-    private final Currency accountCurrency;
+  private final AssetSymbol symbol;
+  private final AssetType type;
+  private final Currency accountCurrency;
 
-    public AcbPositionProjector(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
-        this.symbol = symbol;
-        this.type = type;
-        this.accountCurrency = accountCurrency;
+  public AcbPositionProjector(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
+    this.symbol = symbol;
+    this.type = type;
+    this.accountCurrency = accountCurrency;
+  }
+
+  @Override
+  public AcbPosition project(List<Transaction> transactions) {
+    AcbPosition current = AcbPosition.empty(symbol, type, accountCurrency);
+
+    List<Transaction> sorted = transactions.stream()
+        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
+
+    for (Transaction tx : sorted) {
+      ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
+      Position next = result.newPosition();
+
+      // Safe-guard against future changes to the Position type hierarchy.
+      // Fail loudly if somehow a non-ACB position comes back.
+      // This is intentionally unreachable with current implementation.
+      if (!(next instanceof AcbPosition acb)) {
+        throw new IllegalStateException(
+            "AcbPositionProjector received non-AcbPosition result for tx type: "
+                + tx.transactionType());
+      }
+      current = acb;
     }
 
-    @Override
-    public AcbPosition project(List<Transaction> transactions) {
-
-        AcbPosition current = AcbPosition.empty(symbol, type, accountCurrency);
-
-        List<Transaction> sorted = transactions.stream()
-                .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
-
-        for (Transaction tx : sorted) {
-            ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
-            Position next = result.newPosition();
-
-            // Fail loudly if somehow a non-ACB position comes back -
-            // this projector is ACB-only and wrong results here silently corrupt ACB
-            // history
-            if (!(next instanceof AcbPosition acb)) {
-                throw new IllegalStateException(
-                        "AcbPositionProjector received non-AcbPosition result for tx type: "
-                                + tx.transactionType());
-            }
-            current = acb;
-        }
-
-        return current;
-    }
+    return current;
+  }
 }

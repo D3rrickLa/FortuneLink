@@ -11,8 +11,17 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 import java.util.List;
 
-// meant for 'assets' where we can AVG cost, ACB, etc.
-// cash events will need their own 'positon.java'
+/**
+ * Internal domain interface — not part of the public API.
+ *
+ * Position mutations are intentionally public to satisfy Java's sealed
+ * interface constraints, but ALL callers MUST go through
+ * {@link TransactionApplier#apply(Position, Transaction)}.
+ *
+ * Direct calls to buy(), sell(), split(), applyReturnOfCapital() 
+ * outside of {@link TransactionApplier} are a domain violation.
+ * Enforce this in code review.
+ */
 public sealed interface Position permits AcbPosition, FifoPosition {
     ApplyResult<? extends Position> buy(Quantity quantity, Money totalCost, Instant at);
 
@@ -20,8 +29,7 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
     ApplyResult<? extends Position> split(Ratio ratio);
 
-    ApplyResult<? extends Position> applyReturnOfCapital(Price distributionPerUnit,
-            Quantity heldQuantity);
+    ApplyResult<? extends Position> applyReturnOfCapital(Price distributionPerUnit, Quantity heldQuantity);
 
     AssetSymbol symbol();
 
