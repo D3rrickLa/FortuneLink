@@ -2,8 +2,6 @@ package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertThat;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -15,9 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.SplitDetails;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionFactory;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -30,16 +26,13 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 
 public class TransactionApplierTest {
   private final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
   private final AssetType TYPE = AssetType.STOCK;
   private final Currency CAD = Currency.CAD;
   private final Instant T1 = Instant.parse("2023-01-01T10:00:00Z");
-  private final Instant T2 = Instant.parse("2023-02-01T10:00:00Z");
 
   @Nested
   @DisplayName("BUY/SELL Transactions")

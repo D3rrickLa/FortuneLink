@@ -1,11 +1,16 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import org.junit.jupiter.api.*;
-
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
-import static org.assertj.core.api.Assertions.*;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 
 @DisplayName("Quantity Value Object Unit Tests")
 class QuantityTest {
