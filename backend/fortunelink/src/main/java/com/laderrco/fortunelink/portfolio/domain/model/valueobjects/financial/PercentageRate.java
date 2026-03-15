@@ -62,10 +62,9 @@ public record PercentageRate(BigDecimal rate) implements Comparable<PercentageRa
      * BigDecimal Newton-method implementation or a library such as
      * BigDecimalMath / Apache Commons Math.
      */
-    @SuppressWarnings("FloatingPointLiteralPrecision") double annualized = Math.pow(
-        BigDecimal.ONE.add(rate).doubleValue(),
-        BigDecimal.ONE.divide(years, MathContext.DECIMAL64).doubleValue()
-    ) - 1.0;
+    @SuppressWarnings("FloatingPointLiteralPrecision") double annualized =
+        Math.pow(BigDecimal.ONE.add(rate).doubleValue(),
+            BigDecimal.ONE.divide(years, MathContext.DECIMAL64).doubleValue()) - 1.0;
 
     return new PercentageRate(BigDecimal.valueOf(annualized));
   }

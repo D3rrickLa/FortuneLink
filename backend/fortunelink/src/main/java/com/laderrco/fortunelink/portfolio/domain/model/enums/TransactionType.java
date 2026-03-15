@@ -20,7 +20,7 @@ public enum TransactionType {
   // removed it so it won't be called
   // REINVESTED_CAPITAL_GAIN(false, true, false, CashImpact.NONE),
   
-  // Bug 6 - transger in/out are orphaned, exists in Enum only
+  // Bug 6 - transfer in/out are orphaned, exists in Enum only
   TRANSFER_IN(false, false, false, CashImpact.IN), 
   TRANSFER_OUT(false, false, false, CashImpact.OUT),
   

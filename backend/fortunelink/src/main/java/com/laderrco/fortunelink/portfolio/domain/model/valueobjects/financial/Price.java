@@ -13,7 +13,7 @@ public record Price(Money pricePerUnit) {
   }
 
   public static Price ZERO(Currency currency) {
-    return new Price(Money.ZERO(currency));
+    return new Price(Money.zero(currency));
   }
 
   public static Price of(BigDecimal amount, Currency currency) {

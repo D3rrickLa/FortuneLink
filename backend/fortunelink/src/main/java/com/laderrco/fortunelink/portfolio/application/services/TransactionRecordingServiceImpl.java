@@ -238,7 +238,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId())
         .transactionType(TransactionType.DIVIDEND_REINVEST)
         .execution(new TradeExecution(symbol, quantity, price))
-        .cashDelta(Money.ZERO(account.getAccountCurrency()))
+        .cashDelta(Money.zero(account.getAccountCurrency()))
         .fees(List.of())
         .notes(notes)
         .occurredAt(TransactionDate.of(date))
@@ -376,7 +376,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       account.recordRealizedGain(
           symbol,
           roc.excessCapitalGain(),
-          Money.ZERO(account.getAccountCurrency()), // cost basis sold = $0.00 per CRA
+          Money.zero(account.getAccountCurrency()), // cost basis sold = $0.00 per CRA
           tx.occurredAt().timestamp());
     }
   }

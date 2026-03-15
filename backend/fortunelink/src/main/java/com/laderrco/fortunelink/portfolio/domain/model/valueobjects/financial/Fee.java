@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount,
-                  ExchangeRate exchangeRate, Instant occurredAt, FeeMetadata metadata) {
+    ExchangeRate exchangeRate, Instant occurredAt, FeeMetadata metadata) {
   public Fee {
     notNull(feeType, "Fee type cannot be null");
     notNull(nativeAmount, "Native amount cannot be null");
@@ -31,13 +31,13 @@ public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount,
 
   public static Fee withConversion(FeeType feeType, Money nativeAmount, Money accountAmount,
       ExchangeRate appliedRate, Instant occurredAt) {
-    return new Fee(
-        feeType, nativeAmount, accountAmount, appliedRate, occurredAt, new FeeMetadata(Map.of()));
+    return new Fee(feeType, nativeAmount, accountAmount, appliedRate, occurredAt,
+        new FeeMetadata(Map.of()));
   }
 
   public static Fee zero(Currency currency) {
-    return new Fee(
-        FeeType.NONE, Money.zero(currency), null, null, Instant.now(), new FeeMetadata(Map.of()));
+    return new Fee(FeeType.NONE, Money.zero(currency), null, null, Instant.now(),
+        new FeeMetadata(Map.of()));
   }
 
   /**

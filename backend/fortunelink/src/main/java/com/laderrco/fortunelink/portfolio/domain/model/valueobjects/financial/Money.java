@@ -67,8 +67,7 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
     if (divisor.compareTo(BigDecimal.ZERO) == 0) {
       throw new ArithmeticException("Cannot divide by zero");
     }
-    return new Money(
-        this.amount.divide(divisor, MONEY_PRECISION, M_ROUNDING_MODE), this.currency);
+    return new Money(this.amount.divide(divisor, MONEY_PRECISION, M_ROUNDING_MODE), this.currency);
   }
 
   public Money divide(Quantity divisor) {

@@ -39,8 +39,8 @@ public record ExchangeRate(Currency from, Currency to, BigDecimal rate, Instant 
 
     // Scale it down to match Money's precision before passing to the constructor
     BigDecimal rawAmount = money.amount().multiply(rate);
-    BigDecimal scaledAmount = rawAmount.setScale(
-        Precision.getMoneyPrecision(), Rounding.MONEY.getMode());
+    BigDecimal scaledAmount = rawAmount.setScale(Precision.getMoneyPrecision(),
+        Rounding.MONEY.getMode());
 
     return new Money(scaledAmount, to);
   }

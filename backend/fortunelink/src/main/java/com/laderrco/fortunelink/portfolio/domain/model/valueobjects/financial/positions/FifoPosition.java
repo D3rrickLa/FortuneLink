@@ -18,8 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-                           List<TaxLot> lots, Instant lastModifiedAt) implements Position {
-
+    List<TaxLot> lots, Instant lastModifiedAt) implements Position {
   public FifoPosition {
     notNull(symbol, "AssetSymbol");
     notNull(type, "type");
@@ -68,10 +67,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
     Money realizedGainLoss = proceeds.subtract(costBasisSold);
 
     return new ApplyResult.Sale<>(
-        new FifoPosition(symbol, type, accountCurrency, remainingLots, at),
-        costBasisSold,
-        realizedGainLoss
-    );
+        new FifoPosition(symbol, type, accountCurrency, remainingLots, at), costBasisSold,
+        realizedGainLoss);
   }
 
   @Override
@@ -106,8 +103,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
           .map(l -> new TaxLot(l.quantity(), Money.zero(accountCurrency), l.acquiredDate()))
           .toList();
 
-      FifoPosition updated = new FifoPosition(
-          symbol, type, accountCurrency, zeroedLots, Instant.now());
+      FifoPosition updated = new FifoPosition(symbol, type, accountCurrency, zeroedLots,
+          Instant.now());
       return new ApplyResult.RocAdjustment<>(updated, excessGain);
     }
 
@@ -124,11 +121,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
         lotReduction = remainingReduction; // absorbs accumulated rounding drift
       } else {
         BigDecimal ratio = lot.costBasis().amount()
-            .divide(
-                totalCostBasis.amount(),
-                Precision.DIVISION.getDecimalPlaces(),
-                Rounding.DIVISION.getMode()
-            );
+            .divide(totalCostBasis.amount(), Precision.DIVISION.getDecimalPlaces(),
+                Rounding.DIVISION.getMode());
 
         lotReduction = totalReduction.multiply(ratio);
         remainingReduction = remainingReduction.subtract(lotReduction);
@@ -177,5 +171,4 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
   public Money currentValue(Price currentPrice) {
     return currentPrice.calculateValue(totalQuantity());
   }
-
 }

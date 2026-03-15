@@ -45,7 +45,7 @@ public record TaxLot(Quantity quantity, Money costBasis, Instant acquiredDate) {
     }
 
     if (soldQuantity.isZero()) {
-      return Money.ZERO(costBasis.currency());
+      return Money.zero(costBasis.currency());
     }
 
     BigDecimal proportion = soldQuantity.amount()

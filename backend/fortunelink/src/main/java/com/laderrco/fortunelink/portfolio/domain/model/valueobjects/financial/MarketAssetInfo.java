@@ -24,6 +24,5 @@ public record MarketAssetInfo(
     String exchange,
     Currency tradingCurrency,
     String sector,
-    String description
-) {
+    String description) {
 }

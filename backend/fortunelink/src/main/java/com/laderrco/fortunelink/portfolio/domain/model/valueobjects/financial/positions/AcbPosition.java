@@ -15,9 +15,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-                          Quantity totalQuantity, Money totalCostBasis, Instant firstAcquiredAt,
-                          Instant lastModifiedAt) implements Position {
-
+    Quantity totalQuantity, Money totalCostBasis, Instant firstAcquiredAt,
+    Instant lastModifiedAt) implements Position {
   public AcbPosition {
     notNull(symbol, "AssetSymbol");
     notNull(type, "type");
@@ -36,42 +35,31 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
 
     // totalQuantity.add() -> accumulate quantity
     // totalCostBasis.add() -> net price + commission
-    AcbPosition updated = new AcbPosition(
-        symbol, type, accountCurrency,
-        totalQuantity.add(quantity), totalCostBasis.add(totalCost), newAcquiredDate, at
-    );
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+        totalQuantity.add(quantity), totalCostBasis.add(totalCost), newAcquiredDate, at);
 
     return new ApplyResult.Purchase<>(updated);
   }
 
   @Override
   public ApplyResult.Sale<AcbPosition> sell(Quantity quantity, Money proceeds, Instant at) {
-    if (hasInSufficientQuantity(quantity)) {
-      throw new IllegalStateException("Insufficient quantity");
-    }
-
     BigDecimal ratio = quantity.amount()
-        .divide(
-            totalQuantity.amount(), Precision.DIVISION.getDecimalPlaces(),
-            Rounding.DIVISION.getMode()
-        );
+        .divide(totalQuantity.amount(), Precision.DIVISION.getDecimalPlaces(),
+            Rounding.DIVISION.getMode());
 
     // handles ghost rounding
     boolean isFullLiquidation = quantity.equals(totalQuantity);
     Money costBasisSold = isFullLiquidation ? totalCostBasis : totalCostBasis.multiply(ratio);
 
-    Money newCostBasis = isFullLiquidation ? Money.zero(accountCurrency)
-        : totalCostBasis.subtract(costBasisSold);
+    Money newCostBasis =
+        isFullLiquidation ? Money.zero(accountCurrency) : totalCostBasis.subtract(costBasisSold);
 
     Money realizedGain = proceeds.subtract(costBasisSold);
 
-    AcbPosition updated = new AcbPosition(
-        symbol, type, accountCurrency,
-        totalQuantity.subtract(quantity), newCostBasis, firstAcquiredAt, at
-    );
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+        totalQuantity.subtract(quantity), newCostBasis, firstAcquiredAt, at);
 
     return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
-
   }
 
   @Override
@@ -81,10 +69,8 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
         .divide(BigDecimal.valueOf(ratio.denominator()));
 
     // Cost basis doesn't change in a split
-    AcbPosition updated = new AcbPosition(
-        symbol, type, accountCurrency, newQuantity,
-        totalCostBasis, firstAcquiredAt, Instant.now()
-    );
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, newQuantity,
+        totalCostBasis, firstAcquiredAt, Instant.now());
     return new ApplyResult.Adjustment<>(updated);
   }
 
@@ -109,15 +95,8 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
       newCostBasis = totalCostBasis.subtract(totalReduction);
     }
 
-    AcbPosition updated = new AcbPosition(
-        symbol,
-        type,
-        accountCurrency,
-        totalQuantity,
-        newCostBasis,
-        firstAcquiredAt,
-        Instant.now()
-    );
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency, totalQuantity,
+        newCostBasis, firstAcquiredAt, Instant.now());
 
     if (excessCapitalGain.isPositive()) {
       return new ApplyResult.RocAdjustment<>(updated, excessCapitalGain);
@@ -128,8 +107,7 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
 
   @Override
   public Money costPerUnit() {
-    return isEmpty() ? Money.zero(accountCurrency)
-        : totalCostBasis.divide(totalQuantity.amount());
+    return isEmpty() ? Money.zero(accountCurrency) : totalCostBasis.divide(totalQuantity.amount());
   }
 
   @Override
@@ -141,5 +119,4 @@ public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCu
   public Money calculateUnrealizedGain(Price currentPrice) {
     return currentValue(currentPrice).subtract(totalCostBasis);
   }
-
 }

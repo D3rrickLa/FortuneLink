@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Represents a mathematical ratio used for asset adjustments such as stock splits.
@@ -15,6 +16,9 @@ import java.math.BigDecimal;
  * </ul>
  */
 public record Ratio(int numerator, int denominator) {
+  public static final int DECIMAL_PLACES = Precision.DIVISION.getDecimalPlaces();
+  public static final RoundingMode ROUNDING_MODE = Rounding.DIVISION.getMode();
+
   public Ratio {
     if (numerator <= 0) {
       throw new IllegalArgumentException("Numerator must be greater than zero");
@@ -25,9 +29,7 @@ public record Ratio(int numerator, int denominator) {
   }
 
   public BigDecimal multiplier() {
-    return BigDecimal.valueOf(numerator).divide(
-        BigDecimal.valueOf(denominator),
-        Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode()
-    );
+    return BigDecimal.valueOf(numerator)
+        .divide(BigDecimal.valueOf(denominator), DECIMAL_PLACES, ROUNDING_MODE);
   }
 }

@@ -49,22 +49,15 @@ public sealed interface Position permits AcbPosition, FifoPosition {
 
   default Position copy() {
     return switch (this) {
-      case AcbPosition acb -> new AcbPosition(
-          acb.symbol(), acb.type(), acb.accountCurrency(),
-          acb.totalQuantity(), acb.totalCostBasis(), acb.firstAcquiredAt(), acb.lastModifiedAt()
-      );
-      case FifoPosition fifo -> new FifoPosition(
-          fifo.symbol(), fifo.type(),
-          fifo.accountCurrency(), List.copyOf(fifo.lots()), fifo.lastModifiedAt()
-      );
+      case AcbPosition acb ->
+          new AcbPosition(acb.symbol(), acb.type(), acb.accountCurrency(), acb.totalQuantity(),
+              acb.totalCostBasis(), acb.firstAcquiredAt(), acb.lastModifiedAt());
+      case FifoPosition fifo -> new FifoPosition(fifo.symbol(), fifo.type(), fifo.accountCurrency(),
+          List.copyOf(fifo.lots()), fifo.lastModifiedAt());
     };
   }
 
   default boolean isEmpty() {
     return totalQuantity().isZero();
-  }
-
-  default boolean hasInSufficientQuantity(Quantity required) {
-    return totalQuantity().compareTo(required) < 0;
   }
 }
