@@ -1,8 +1,6 @@
-package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers;
-
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
-// BEFORE WE HAD A @Embeddable, don't use that here, instead we have a JPA converter in the infra layer, looks something liek this:
+// BEFORE WE HAD A @Embeddable, don't use that here, instead we have a JPA converter in the infra layer, looks something like this:
 /*
 Converter(autoApply = true)
 public class AssetSymbolConverter implements AttributeConverter<AssetSymbol, String> {
@@ -18,28 +16,27 @@ public class AssetSymbolConverter implements AttributeConverter<AssetSymbol, Str
 }
 */
 public record AssetSymbol(String symbol) {
+  public AssetSymbol {
+    notNull(symbol, "Symbol");
+    symbol = normalizeAndValidate(symbol);
+  }
 
-    public AssetSymbol {
-        notNull(symbol, "Symbol cannot be null or blank");
-        symbol = normalizeAndValidate(symbol);
+  private static String normalizeAndValidate(String raw) {
+    String trimmed = raw.trim().toUpperCase();
+
+    if (!trimmed.matches("^[A-Z0-9.-]+$")) {
+      throw new IllegalArgumentException(
+          "Symbol must contain only letters, numbers, dots, and hyphens: " + raw);
     }
 
-    public String value() {
-        return symbol;
+    if (trimmed.length() > 20) {
+      throw new IllegalArgumentException("Symbol too long (max 20 characters): " + raw);
     }
 
-    private static String normalizeAndValidate(String raw) {
-        String trimmed = raw.trim().toUpperCase();
+    return trimmed;
+  }
 
-        if (!trimmed.matches("^[A-Z0-9.-]+$")) {
-            throw new IllegalArgumentException(
-                    "Symbol must contain only letters, numbers, dots, and hyphens: " + raw);
-        }
-
-        if (trimmed.length() > 20) {
-            throw new IllegalArgumentException("Symbol too long (max 20 characters): " + raw);
-        }
-
-        return trimmed;
-    }
+  public String value() {
+    return symbol;
+  }
 }
