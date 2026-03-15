@@ -1,28 +1,28 @@
 package com.laderrco.fortunelink.shared.enums;
 
 public enum Precision {
-    BOND(6),
-    CASH(6),
-    COMMODITY(6),
-    CRYPTO(8),
-    DIVISION(10),
-    FOREX(6),
-    MONEY(10),
-    PERCENTAGE(8),
-    QUANTITY(8),
-    STOCK(6);
+  BOND(6),
+  CASH(6),
+  COMMODITY(6),
+  CRYPTO(8),
+  DIVISION(10),
+  FOREX(6),
+  MONEY(10),
+  PERCENTAGE(8),
+  QUANTITY(8),
+  STOCK(6);
 
-    private final int precision;
+  private final int precision;
 
-    Precision(int precision) {
-        this.precision = precision;
-    }
+  Precision(int precision) {
+    this.precision = precision;
+  }
 
-    public int getDecimalPlaces() {
-        return precision;
-    }
+  public static int getMoneyPrecision() {
+    return MONEY.getDecimalPlaces();
+  }
 
-    public static final int getMoneyPrecision() {
-        return MONEY.getDecimalPlaces();
-    }
+  public int getDecimalPlaces() {
+    return precision;
+  }
 }

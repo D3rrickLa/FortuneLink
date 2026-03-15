@@ -5,13 +5,13 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentExcept
 
 public final class Guard {
 
-    private Guard() {
-    }
+  private Guard() {
+  }
 
-    public static <T> T notNull(T value, String name) {
-        if (value == null) {
-            throw new DomainArgumentException("%s is required and cannot be null".formatted(name));
-        }
-        return value;
+  public static <T> T notNull(T value, String name) {
+    if (value == null) {
+      throw new DomainArgumentException("%s is required and cannot be null".formatted(name));
     }
+    return value;
+  }
 }
