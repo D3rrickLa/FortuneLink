@@ -21,15 +21,13 @@ public record Price(Money pricePerUnit) {
         return new Price(new Money(amount, currency));
     }
 
+    public static Price of(String amount, Currency currency) {
+        return new Price(new Money(new BigDecimal(amount), currency));
+    }
+
     public Money calculateValue(Quantity quantity) {
         notNull(quantity, "quantity");
         return pricePerUnit.multiply(quantity.amount());
-    }
-
-    public Price multiply(BigDecimal multiplier) {
-        notNull(multiplier, "multiplier");
-        Money money = new Money(pricePerUnit.amount().multiply(multiplier), pricePerUnit.currency());
-        return new Price(money);
     }
 
     public Currency currency() {

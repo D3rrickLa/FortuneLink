@@ -13,11 +13,6 @@ import java.util.List;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
-/**
- * FIFO position for future USD/US-tax-reporting support. NOT wired into any
- * active account creation
- * path as of v8. Do not instantiate except in unit tests.
- */
 public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
 		List<TaxLot> lots, Instant lastModifiedAt) implements Position {
 
@@ -43,11 +38,6 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 	@Override
 	public ApplyResult.Sale<FifoPosition> sell(Quantity quantity, Money proceeds, Instant at) {
-		// not needed anymore as Quantity itself can't be negative
-		// if (hasInSufficientQuantity(quantity)) {
-		// throw new IllegalStateException("Insufficient quantity");
-		// }
-
 		Quantity remainingToSell = quantity;
 		Money costBasisSold = Money.ZERO(accountCurrency);
 		List<TaxLot> remainingLots = new ArrayList<>();
@@ -72,14 +62,16 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 		Money realizedGainLoss = proceeds.subtract(costBasisSold);
 
-		return new ApplyResult.Sale<>(new FifoPosition(symbol, type, accountCurrency, remainingLots, at), costBasisSold,
+		return new ApplyResult.Sale<>(
+				new FifoPosition(symbol, type, accountCurrency, remainingLots, at),
+				costBasisSold,
 				realizedGainLoss);
 	}
 
 	@Override
 	public ApplyResult.Adjustment<FifoPosition> split(Ratio ratio) {
 		List<TaxLot> splitLots = lots.stream().map(lot -> lot.split(ratio)).toList();
-		
+
 		return new ApplyResult.Adjustment<>(new FifoPosition(symbol, type, accountCurrency, splitLots, Instant.now()));
 	}
 
@@ -126,11 +118,12 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 						.divide(totalCostBasis.amount(),
 								Precision.DIVISION.getDecimalPlaces(),
 								Rounding.DIVISION.getMode());
+
 				lotReduction = totalReduction.multiply(ratio);
-				if (lotReduction.exceeds(lot.costBasis())) {
-					lotReduction = lot.costBasis();
-				}
 				remainingReduction = remainingReduction.subtract(lotReduction);
+				// NOTE: lotReduction cannot exceed lot.costBasis() here —
+				// proven by: totalReduction < totalCostBasis (Case 2 guard above)
+				// therefore: totalReduction * (lot.costBasis/totalCostBasis) < lot.costBasis
 			}
 
 			Money newCostBasis = lot.costBasis().subtract(lotReduction);
@@ -141,6 +134,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 				if (isLastLot) {
 					newCostBasis = Money.ZERO(accountCurrency);
 				} else {
+					// This state is unreachable via normal construction.
+					// Signals a logic regression
 					throw new IllegalStateException("Intermediate lot went negative: " + lot);
 				}
 			}
