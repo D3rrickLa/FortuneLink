@@ -51,8 +51,8 @@ public record Quantity(BigDecimal amount) implements Comparable<Quantity> {
 
     public Quantity divide(BigDecimal divisor) {
         notNull(divisor, "factor");
-        if (divisor.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Divisor cannot be negative");
+        if (divisor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Divisor must be positive");
         }
         return new Quantity(this.amount.divide(divisor, QUANTITY_PRECISION, Q_ROUNDING_MODE));
     }
@@ -72,9 +72,5 @@ public record Quantity(BigDecimal amount) implements Comparable<Quantity> {
 
     public boolean isNonZero() {
         return !isZero();
-    }
-
-    public Quantity abs() {
-        return new Quantity(this.amount.abs());
     }
 }

@@ -7,7 +7,7 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 public record Price(Money pricePerUnit) {
 
     public Price {
-        notNull(pricePerUnit, "pricePerUnit cannot be null");
+        notNull(pricePerUnit, "pricePerUnit");
         if (pricePerUnit.isNegative()) {
             throw new IllegalArgumentException("Price cannot be negative");
         }
@@ -22,8 +22,14 @@ public record Price(Money pricePerUnit) {
     }
 
     public Money calculateValue(Quantity quantity) {
-        notNull(quantity, "quantity cannot be null");
+        notNull(quantity, "quantity");
         return pricePerUnit.multiply(quantity.amount());
+    }
+
+    public Price multiply(BigDecimal multiplier) {
+        notNull(multiplier, "multiplier");
+        Money money = new Money(pricePerUnit.amount().multiply(multiplier), pricePerUnit.currency());
+        return new Price(money);
     }
 
     public Currency currency() {

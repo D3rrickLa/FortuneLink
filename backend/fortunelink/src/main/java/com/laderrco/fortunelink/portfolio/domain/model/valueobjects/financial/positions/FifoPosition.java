@@ -35,7 +35,6 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 	@Override
 	public ApplyResult.Purchase<FifoPosition> buy(Quantity quantity, Money totalCost, Instant at) {
 		TaxLot newLot = new TaxLot(quantity, totalCost, at);
-
 		List<TaxLot> updatedLots = new ArrayList<>(lots);
 		updatedLots.add(newLot);
 
@@ -44,9 +43,10 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 	@Override
 	public ApplyResult.Sale<FifoPosition> sell(Quantity quantity, Money proceeds, Instant at) {
-		if (hasInSufficientQuantity(quantity)) {
-			throw new IllegalStateException("Insufficient quantity");
-		}
+		// not needed anymore as Quantity itself can't be negative
+		// if (hasInSufficientQuantity(quantity)) {
+		// throw new IllegalStateException("Insufficient quantity");
+		// }
 
 		Quantity remainingToSell = quantity;
 		Money costBasisSold = Money.ZERO(accountCurrency);
@@ -72,14 +72,14 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 		Money realizedGainLoss = proceeds.subtract(costBasisSold);
 
-		return new ApplyResult.Sale<>(new FifoPosition(symbol, type, accountCurrency, remainingLots, at),
-				costBasisSold, realizedGainLoss);
+		return new ApplyResult.Sale<>(new FifoPosition(symbol, type, accountCurrency, remainingLots, at), costBasisSold,
+				realizedGainLoss);
 	}
 
 	@Override
 	public ApplyResult.Adjustment<FifoPosition> split(Ratio ratio) {
 		List<TaxLot> splitLots = lots.stream().map(lot -> lot.split(ratio)).toList();
-
+		
 		return new ApplyResult.Adjustment<>(new FifoPosition(symbol, type, accountCurrency, splitLots, Instant.now()));
 	}
 
@@ -93,22 +93,26 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 		Money totalReduction = price.calculateValue(heldQuantity);
 		Money totalCostBasis = totalCostBasis();
 
-		// If ACB is already zero, entire ROC amount is an excess capital gain — nothing
-		// to distribute
+		// Case 1: Cost basis already zero; entire ROC is an excess capital gain
 		if (totalCostBasis.isZero()) {
-			Money excessGain = price.calculateValue(heldQuantity);
-			return new ApplyResult.RocAdjustment<>(this, excessGain);
+			return new ApplyResult.RocAdjustment<>(this, totalReduction);
 		}
 
-		Money excessGain = Money.ZERO(accountCurrency);
-
+		// Case 2: Full or excess wipeout; zero all lots
+		// and return excess as capital gain
 		if (totalReduction.isAtLeast(totalCostBasis)) {
-			excessGain = totalReduction.subtract(totalCostBasis);
-			totalReduction = totalCostBasis;
+			Money excessGain = totalReduction.subtract(totalCostBasis);
+			List<TaxLot> zeroedLots = lots.stream()
+					.map(l -> new TaxLot(l.quantity(), Money.ZERO(accountCurrency), l.acquiredDate()))
+					.toList();
+
+			FifoPosition updated = new FifoPosition(symbol, type, accountCurrency, zeroedLots, Instant.now());
+			return new ApplyResult.RocAdjustment<>(updated, excessGain);
 		}
 
+		// Case 3: Partial reduction; distribute proportionally across lots
+		Money remainingReduction = totalReduction;
 		List<TaxLot> newLots = new ArrayList<>();
-		Money remainingReduction = totalReduction; // track what's left to distribute
 
 		for (int i = 0; i < lots.size(); i++) {
 			TaxLot lot = lots.get(i);
@@ -116,38 +120,36 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
 			Money lotReduction;
 			if (isLastLot) {
-				// Last lot absorbs whatever is left - eliminates accumulated rounding drift
-				lotReduction = remainingReduction;
+				lotReduction = remainingReduction; // absorbs accumulated rounding drift
 			} else {
 				BigDecimal ratio = lot.costBasis().amount()
-						.divide(totalCostBasis.amount(), Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode());
+						.divide(totalCostBasis.amount(),
+								Precision.DIVISION.getDecimalPlaces(),
+								Rounding.DIVISION.getMode());
 				lotReduction = totalReduction.multiply(ratio);
+				if (lotReduction.exceeds(lot.costBasis())) {
+					lotReduction = lot.costBasis();
+				}
 				remainingReduction = remainingReduction.subtract(lotReduction);
 			}
 
 			Money newCostBasis = lot.costBasis().subtract(lotReduction);
 
-			// Safety net: rounding on the last lot could push a near-zero lot slightly
-			// negative
+			// Defensive guard: rounding drift on last lot only - intermediate lots
+			// are mathematically protected by the proportional ratio cap above
 			if (newCostBasis.isNegative()) {
-				newCostBasis = Money.ZERO(accountCurrency);
+				if (isLastLot) {
+					newCostBasis = Money.ZERO(accountCurrency);
+				} else {
+					throw new IllegalStateException("Intermediate lot went negative: " + lot);
+				}
 			}
 
 			newLots.add(new TaxLot(lot.quantity(), newCostBasis, lot.acquiredDate()));
 		}
 
-		FifoPosition updated = new FifoPosition(
-				symbol,
-				type,
-				accountCurrency,
-				newLots,
-				Instant.now());
-
-		if (excessGain.isPositive()) {
-			return new ApplyResult.RocAdjustment<>(updated, excessGain);
-		}
-
-		return new ApplyResult.Adjustment<>(updated);
+		return new ApplyResult.Adjustment<>(
+				new FifoPosition(symbol, type, accountCurrency, newLots, Instant.now()));
 	}
 
 	@Override

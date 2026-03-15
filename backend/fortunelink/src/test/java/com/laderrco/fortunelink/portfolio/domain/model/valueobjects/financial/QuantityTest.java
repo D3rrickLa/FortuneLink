@@ -25,7 +25,6 @@ class QuantityTest {
       assertThat(q1.amount()).isEqualByComparingTo("2.22500000");
       assertThat(q2.amount()).isEqualByComparingTo("2.23500000");
       assertThat(q1.isPositive()).isTrue();
-      assertThat(q1.abs()).isEqualTo(q1);
     }
 
     @Test
@@ -106,7 +105,17 @@ class QuantityTest {
 
       assertThatThrownBy(() -> q1.divide(new BigDecimal("-3")))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Divisor cannot be negative");
+          .hasMessageContaining("Divisor must be positive");
+    }
+
+    @Test
+    @DisplayName("divide_fail_amountlessthan0")
+    void divide_fail_lessZero() {
+      Quantity q1 = new Quantity(new BigDecimal("10.00"));
+
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("0")))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Divisor must be positive");
     }
   }
 

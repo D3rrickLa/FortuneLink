@@ -90,6 +90,65 @@ class AcbPositionTest {
     }
 
     @Test
+    @DisplayName("Should wipe basis to exactly zero on full liquidation (Ternary True branch)")
+    void sell_Success_FullLiquidationClearsBasis() {
+      // Arrange
+      AssetSymbol symbol = new AssetSymbol("ETH");
+      Currency usd = Currency.USD;
+      // Setup a position with a "difficult" number for division
+      // Total cost $100.00 for 3 units ($33.3333... per unit)
+      AcbPosition position = new AcbPosition(
+          symbol, AssetType.CRYPTO, usd,
+          Quantity.of(3), Money.of("100", usd),
+          Instant.now(), Instant.now());
+
+      // Sell all 3 units
+      Quantity sellQty = Quantity.of(3);
+      Money proceeds = Money.of("150", usd);
+
+      // Act
+      ApplyResult.Sale<AcbPosition> result = position.sell(sellQty, proceeds, Instant.now());
+
+      // Assert
+      AcbPosition updated = result.newPosition();
+
+      // The ternary logic should trigger here:
+      // costBasisSold should be exactly 100, not 99.99
+      assertThat(result.costBasisSold()).isEqualTo(Money.of("100", usd));
+      // newCostBasis should be exactly 0
+      assertThat(updated.totalCostBasis()).isEqualTo(Money.ZERO(usd));
+      assertThat(updated.totalQuantity().isZero()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should calculate proportional basis on partial sale (Ternary False branch)")
+    void sell_Success_PartialSaleUsesRatio() {
+      // Arrange
+      AssetSymbol symbol = new AssetSymbol("AAPL");
+      Currency usd = Currency.USD;
+      AcbPosition position = new AcbPosition(
+          symbol, AssetType.STOCK, usd,
+          Quantity.of(10), Money.of("100", usd),
+          Instant.now(), Instant.now());
+
+      // Sell 4 out of 10 shares (40%)
+      Quantity sellQty = Quantity.of(4);
+      Money proceeds = Money.of("60", usd);
+
+      // Act
+      ApplyResult.Sale<AcbPosition> result = position.sell(sellQty, proceeds, Instant.now());
+
+      // Assert
+      // costBasisSold should be 40% of 100 = $40
+      assertThat(result.costBasisSold()).isEqualTo(Money.of("40", usd));
+
+      AcbPosition updated = result.newPosition();
+      // Remaining basis should be 100 - 40 = $60
+      assertThat(updated.totalCostBasis()).isEqualTo(Money.of("60", usd));
+      assertThat(updated.totalQuantity()).isEqualTo(Quantity.of(6));
+    }
+
+    @Test
     @DisplayName("sell_failure_insufficientQuantityThrowsException")
     void sell_failure_insufficientQuantity() {
       AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
