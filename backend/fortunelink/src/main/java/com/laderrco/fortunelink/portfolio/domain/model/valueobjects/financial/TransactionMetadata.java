@@ -9,95 +9,92 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Carries auditing information, source tracking, and exclusion status for a transaction.
+ * <p>
+ * This record uses an optional {@link ExclusionRecord} to handle the lifecycle of transactions that
+ * are hidden from portfolio performance or balance calculations.
+ * </p>
+ *
+ * @param assetType      The category of asset (STOCK, CRYPTO, etc.).
+ * @param source         The origin of the data (e.g., "MANUAL", "CSV_IMPORT", "API").
+ * @param exclusion      Details regarding why and when this transaction was excluded, if
+ *                       applicable.
+ * @param additionalData Extensible key-value pairs for vendor-specific or custom identifiers.
+ */
 public record TransactionMetadata(
     AssetType assetType,
     String source,
-    boolean excluded,
-    Instant excludedAt,
-    UserId excludedBy,
-    String excludedReason,
+    ExclusionRecord exclusion,
     Map<String, String> additionalData) {
   public static final String KEY_SYMBOL = "symbol";
 
+
   public TransactionMetadata {
     notNull(assetType, "AssetType");
-    source = source == null ? "UNKNOWN" : source.trim();
-    additionalData = additionalData == null ? Map.of() : Map.copyOf(additionalData);
-
-    if (excluded && (excludedAt == null || excludedBy == null)) {
-      throw new IllegalArgumentException("excludedAt and excludedBy required when excluded=true");
-    }
-
-    if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
-      throw new IllegalArgumentException("Cannot have exclusion metadata when excluded=false");
-    }
+    source = (source == null) ? "UNKNOWN" : source.trim();
+    additionalData = (additionalData == null) ? Map.of() : Map.copyOf(additionalData);
   }
 
   public static TransactionMetadata manual(AssetType assetType) {
-    return new TransactionMetadata(assetType, "MANUAL", false, null, null, null, Map.of());
+    return new TransactionMetadata(assetType, "MANUAL", null, Map.of());
   }
 
   public static TransactionMetadata csvImport(AssetType assetType, String filename) {
-    return new TransactionMetadata(assetType, "CSV_IMPORT", false, null, null, null,
-        Map.of("filename", filename));
+    return new TransactionMetadata(assetType, "CSV_IMPORT", null, Map.of("filename", filename));
   }
 
+  /**
+   * Checks if the transaction is currently excluded from calculations.
+   */
+  public boolean isExcluded() {
+    return exclusion != null;
+  }
+
+  /**
+   * Marks the transaction as excluded. * @throws IllegalStateException if the transaction is
+   * already excluded.
+   */
   public TransactionMetadata markAsExcluded(UserId userId, String reason) {
-    if (excluded) {
-      throw new IllegalStateException("Transaction already excluded");
+    if (isExcluded()) {
+      throw new IllegalStateException("Transaction is already excluded");
     }
-    return new TransactionMetadata(assetType, source, true, Instant.now(), userId, reason,
-        additionalData);
+    return new TransactionMetadata(assetType, source,
+        new ExclusionRecord(Instant.now(), userId, reason), additionalData);
   }
 
+  /**
+   * Restores a transaction to an active state by removing the exclusion record. * @throws
+   * IllegalStateException if the transaction is not currently excluded.
+   */
   public TransactionMetadata restore() {
-    if (!excluded) {
+    if (!isExcluded()) {
       throw new IllegalStateException("Transaction is not excluded");
     }
-    return new TransactionMetadata(assetType, source, false, null, null, excludedReason,
-        additionalData);
+    return new TransactionMetadata(assetType, source, null, additionalData);
   }
 
+  /**
+   * Flattens the metadata into a single-level map for UI display or logging.
+   */
   public Map<String, String> asFlatMap() {
     Map<String, String> flat = new HashMap<>(additionalData);
-
-    // Core fields
     flat.put("assetType", assetType.name());
     flat.put("source", source);
-    flat.put("excluded", String.valueOf(excluded));
+    flat.put("excluded", String.valueOf(isExcluded()));
 
-    // Conditional fields (only add if present to keep the view clean)
-    if (excluded) {
-      flat.put("excludedAt", excludedAt.toString());
-      flat.put("excludedBy", excludedBy.id().toString());
-      if (excludedReason != null) {
-        flat.put("excludedReason", excludedReason);
+    if (exclusion != null) {
+      flat.put("excludedAt", exclusion.occurredAt().toString());
+      flat.put("excludedBy", exclusion.by().id().toString());
+      if (exclusion.reason() != null) {
+        flat.put("excludedReason", exclusion.reason());
       }
     }
-
     return Collections.unmodifiableMap(flat);
   }
 
   public String get(String key) {
     return additionalData.get(key);
-  }
-
-  public String getOrDefault(String key, String defaultValue) {
-    return additionalData.getOrDefault(key, defaultValue);
-  }
-
-  public TransactionMetadata with(String key, String value) {
-    Map<String, String> copy = new HashMap<>(additionalData);
-    copy.put(key, value);
-    return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
-        excludedReason, copy);
-  }
-
-  public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
-    Map<String, String> copy = new HashMap<>(additionalData);
-    copy.putAll(additionalMetadata);
-    return new TransactionMetadata(assetType, source, excluded, excludedAt, excludedBy,
-        excludedReason, copy);
   }
 
   public boolean containsKey(String key) {
@@ -106,5 +103,29 @@ public record TransactionMetadata(
 
   public boolean isEmpty() {
     return additionalData.isEmpty();
+  }
+
+  // --- Wither Methods (Immutable updates) ---
+
+  public TransactionMetadata with(String key, String value) {
+    Map<String, String> copy = new HashMap<>(additionalData);
+    copy.put(key, value);
+    return new TransactionMetadata(assetType, source, exclusion, copy);
+  }
+
+  public TransactionMetadata withAll(Map<String, String> additionalMetadata) {
+    Map<String, String> copy = new HashMap<>(additionalData);
+    copy.putAll(additionalMetadata);
+    return new TransactionMetadata(assetType, source, exclusion, copy);
+  }
+
+  /**
+   * Audit record representing the "Who, When, and Why" of a transaction's exclusion.
+   */
+  public record ExclusionRecord(Instant occurredAt, UserId by, String reason) {
+    public ExclusionRecord {
+      notNull(occurredAt, "Exclusion timestamp");
+      notNull(by, "User performing exclusion");
+    }
   }
 }

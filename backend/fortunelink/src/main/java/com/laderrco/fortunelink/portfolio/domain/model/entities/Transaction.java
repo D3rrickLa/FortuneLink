@@ -92,7 +92,7 @@ public record Transaction(
   }
 
   public boolean isExcluded() {
-    return metadata.excluded();
+    return metadata.isExcluded();
   }
 
   /**
