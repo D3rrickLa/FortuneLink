@@ -48,11 +48,13 @@ public record Transaction(
     AccountId accountId,
     TransactionType transactionType,
     TradeExecution execution,
-    SplitDetails split,
+    // was SplitDetails
+    Ratio split,
     Money cashDelta,
     List<Fee> fees,
     String notes,
-    TransactionDate occurredAt,
+    // was TransactionDate
+    Instant occurredAt,
     TransactionId relatedTransactionId,
     TransactionMetadata metadata) {
   public Transaction {
@@ -76,23 +78,17 @@ public record Transaction(
     }
 
     if (transactionType.requiresExecution()) {
-      validateTradeConsistency(execution, transactionType, cashDelta, fees);
+      validateTradeConsistency();
     } else if (!fees.isEmpty()) {
       throw new IllegalArgumentException(transactionType + " cannot have fees");
     }
   }
 
-  /**
-   * Creates a copy of this transaction marked as excluded from portfolio calculations.
-   */
   public Transaction markAsExcluded(UserId userId, String reason) {
     return new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta,
         fees, notes, occurredAt, relatedTransactionId, metadata.markAsExcluded(userId, reason));
   }
 
-  /**
-   * Restores an excluded transaction to an active state.
-   */
   public Transaction restore() {
     return new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta,
         fees, notes, occurredAt, relatedTransactionId, metadata.restore());
@@ -118,12 +114,11 @@ public record Transaction(
     }
   }
 
-  private void validateTradeConsistency(TradeExecution execution, TransactionType type,
-      Money cashDelta, List<Fee> fees) {
+  private void validateTradeConsistency() {
     Money grossValue = execution.grossValue();
     Money totalFees = Fee.totalInAccountCurrency(fees, cashDelta.currency());
 
-    Money expectedCashDelta = switch (type.cashImpact()) {
+    Money expectedCashDelta = switch (transactionType.cashImpact()) {
       case IN -> grossValue.subtract(totalFees);
       case OUT -> grossValue.add(totalFees).negate();
       case NONE -> Money.zero(cashDelta.currency());
@@ -146,13 +141,12 @@ public record Transaction(
       }
     }
 
+    /**
+     * Gross value of the trade before fees.
+     */
     public Money grossValue() {
-      // Gross value of the trade before fees.
-      return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
+      return pricePerUnit.pricePerUnit().multiply(quantity);
     }
-  }
-
-  public record SplitDetails(Ratio ratio) {
   }
 
   public record TransactionMetadata(
@@ -251,32 +245,6 @@ public record Transaction(
 
     public boolean isEmpty() {
       return additionalData.isEmpty();
-    }
-  }
-
-  public record TransactionDate(Instant timestamp) {
-    public TransactionDate {
-      notNull(timestamp, "timestamp");
-    }
-
-    public static TransactionDate of(Instant timestamp) {
-      return new TransactionDate(timestamp);
-    }
-
-    public static TransactionDate now() {
-      return new TransactionDate(Instant.now());
-    }
-
-    public boolean isBefore(TransactionDate other) {
-      return timestamp.isBefore(other.timestamp());
-    }
-
-    public boolean isAfter(TransactionDate other) {
-      return timestamp.isAfter(other.timestamp());
-    }
-
-    public long toEpochMilli() {
-      return timestamp.toEpochMilli();
     }
   }
 }

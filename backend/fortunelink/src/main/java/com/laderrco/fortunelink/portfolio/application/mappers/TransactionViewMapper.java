@@ -21,7 +21,7 @@ public class TransactionViewMapper {
                     transaction.fees(),
                     transaction.cashDelta(),
                     transaction.metadata().asFlatMap(),
-                    transaction.occurredAt().timestamp(),
+                    transaction.occurredAt(),
                     transaction.notes());
         }
         return new TransactionView(
@@ -33,7 +33,7 @@ public class TransactionViewMapper {
                 transaction.fees(),
                 transaction.cashDelta(),
                 transaction.metadata().asFlatMap(),
-                transaction.occurredAt().timestamp(),
+                transaction.occurredAt(),
                 transaction.notes());
     }
 

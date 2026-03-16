@@ -17,7 +17,7 @@ public final class TransactionApplier {
     return switch (tx.transactionType()) {
       case BUY -> applyBuy(position, tx);
       case SELL -> applySell(position, tx);
-      case SPLIT -> position.split(tx.split().ratio());
+      case SPLIT -> position.split(tx.split());
       case DIVIDEND_REINVEST -> applyDrip(position, tx);
       case RETURN_OF_CAPITAL -> applyReturnOfCapital(position, tx);
       default -> new ApplyResult.NoChange<>(position);
@@ -25,16 +25,16 @@ public final class TransactionApplier {
   }
 
   private static ApplyResult<? extends Position> applyBuy(Position p, Transaction tx) {
-    return p.buy(tx.execution().quantity(), tx.cashDelta().abs(), tx.occurredAt().timestamp());
+    return p.buy(tx.execution().quantity(), tx.cashDelta().abs(), tx.occurredAt());
   }
 
   private static ApplyResult<? extends Position> applySell(Position p, Transaction tx) {
-    return p.sell(tx.execution().quantity(), tx.cashDelta(), tx.occurredAt().timestamp());
+    return p.sell(tx.execution().quantity(), tx.cashDelta(), tx.occurredAt());
   }
 
   private static ApplyResult<? extends Position> applyDrip(Position p, Transaction tx) {
     return p.buy(tx.execution().quantity(), tx.execution().grossValue(),
-        tx.occurredAt().timestamp());
+        tx.occurredAt());
   }
 
   private static ApplyResult<? extends Position> applyReturnOfCapital(Position p, Transaction tx) {

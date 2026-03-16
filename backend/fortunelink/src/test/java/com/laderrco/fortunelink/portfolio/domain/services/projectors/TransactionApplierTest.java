@@ -85,7 +85,7 @@ public class TransactionApplierTest {
       Position pos = setupPosition();
       Transaction tx = TransactionFactory.baseBuilder()
           .transactionType(TransactionType.SPLIT)
-          .split(new SplitDetails(new Ratio(2, 1)))
+          .split(new Ratio(2, 1))
           .execution(new TradeExecution(SYMBOL, Quantity.of(10), Price.of("1", CAD)))
           .build();
 
