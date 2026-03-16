@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
+
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
@@ -15,45 +17,45 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
 import java.time.Instant;
-import java.util.*;
-
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import lombok.Getter;
 
 // presents and maintains current state
+@Getter
 public class Account {
   private final AccountId accountId;
-  private AccountType accountType;
   private final Currency accountCurrency;
-  private String name;
   private final PositionStrategy positionStrategy;
+  private final Instant creationDate;
+  private AccountType accountType;
+  private String name;
   private HealthStatus healthStatus;
-
   private Money cashBalance;
   private Map<AssetSymbol, Position> positions;
   private List<RealizedGainRecord> realizedGains;
-
-  private final Instant creationDate;
   private boolean isActive;
   private Instant closeDate;
   private Instant lastUpdatedOn;
 
   /**
-   * JPA-only constructor. Object is in a partially invalid state until
-   * Hibernate fully hydrates it — do NOT call business methods on a proxy
-   * before that happens.
-   *
-   * positions and cashBalance are initialized to safe empty defaults so that
-   * defensive calls like getPositionEntries() and getCashBalance() on a
-   * partially-hydrated proxy don't NPE. All other fields remain null and are
-   * set by Hibernate via field injection.
-   *
-   * accountCurrency is null here, which means any method that calls
-   * validateCurrency() will NPE until hydration completes. This is
-   * intentional — it surfaces the problem loudly rather than silently
-   * operating on wrong currency. Never pass a JPA proxy into business logic
-   * before the owning transaction has loaded the full entity.
+   * JPA-only constructor. Object is in a partially invalid state until Hibernate fully hydrates it
+   * — do NOT call business methods on a proxy before that happens.
+   * <p>
+   * positions and cashBalance are initialized to safe empty defaults so that defensive calls like
+   * getPositionEntries() and getCashBalance() on a partially-hydrated proxy don't NPE. All other
+   * fields remain null and are set by Hibernate via field injection.
+   * <p>
+   * accountCurrency is null here, which means any method that calls validateCurrency() will NPE
+   * until hydration completes. This is intentional — it surfaces the problem loudly rather than
+   * silently operating on wrong currency. Never pass a JPA proxy into business logic before the
+   * owning transaction has loaded the full entity.
    */
   protected Account() {
     this.accountId = null;
@@ -63,12 +65,12 @@ public class Account {
     this.positions = new HashMap<>(); // safe: getPositionEntries() won't NPE
     this.realizedGains = new ArrayList<>();
     this.cashBalance = null; // intentionally null: any arithmetic will
-                             // fail loudly rather than silently wrong
+    // fail loudly rather than silently wrong
     this.healthStatus = null;
   }
 
-  public Account(AccountId accountId, String name, AccountType accountType, Currency accountCurrency,
-      PositionStrategy positionStrategy) {
+  public Account(AccountId accountId, String name, AccountType accountType,
+      Currency accountCurrency, PositionStrategy positionStrategy) {
     notNull(accountId, "accountId");
     notNull(name, "name");
     notNull(accountType, "accountType");
@@ -85,7 +87,7 @@ public class Account {
     this.accountCurrency = accountCurrency;
     this.positionStrategy = positionStrategy;
     this.healthStatus = HealthStatus.HEALTHY;
-    this.cashBalance = Money.ZERO(accountCurrency);
+    this.cashBalance = Money.zero(accountCurrency);
     this.positions = new HashMap<>();
     this.realizedGains = new ArrayList<>();
     this.creationDate = Instant.now();
@@ -151,13 +153,12 @@ public class Account {
 
   /**
    * Records the realized gain/loss from a sell event.
-   *
-   * Called by the replay service immediately after position.sell() so that
-   * capital gains history is preserved on the account without requiring a
-   * full transaction log replay to reconstruct it.
-   *
-   * This is the only place RealizedGainRecord entries are created.
-   * Do NOT call this for unrealized gains, only on actual sell events.
+   * <p>
+   * Called by the replay service immediately after position.sell() so that capital gains history is
+   * preserved on the account without requiring a full transaction log replay to reconstruct it.
+   * <p>
+   * This is the only place RealizedGainRecord entries are created. Do NOT call this for unrealized
+   * gains, only on actual sell events.
    */
   public void recordRealizedGain(AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold,
       Instant occurredAt) {
@@ -248,48 +249,8 @@ public class Account {
     this.healthStatus = HealthStatus.HEALTHY;
   }
 
-  public AccountId getAccountId() {
-    return accountId;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public AccountType getAccountType() {
-    return accountType;
-  }
-
-  public Currency getAccountCurrency() {
-    return accountCurrency;
-  }
-
-  public PositionStrategy getPositionStrategy() {
-    return positionStrategy;
-  }
-
   public List<RealizedGainRecord> getRealizedGains() {
     return Collections.unmodifiableList(realizedGains);
-  }
-
-  public Money getCashBalance() {
-    return cashBalance;
-  }
-
-  public Instant getCreationDate() {
-    return creationDate;
-  }
-
-  public boolean isActive() {
-    return isActive;
-  }
-
-  public Instant getCloseDate() {
-    return closeDate;
-  }
-
-  public Instant getLastUpdatedOn() {
-    return lastUpdatedOn;
   }
 
   public boolean isStale() {
@@ -297,28 +258,22 @@ public class Account {
   }
 
   public Money getTotalRealizedGainLoss() {
-    return realizedGains.stream()
-        .map(RealizedGainRecord::realizedGainLoss)
-        .reduce(Money.ZERO(accountCurrency), Money::add);
+    return realizedGains.stream().map(RealizedGainRecord::realizedGainLoss)
+        .reduce(Money.zero(accountCurrency), Money::add);
   }
 
   public List<RealizedGainRecord> getRealizedGainsFor(AssetSymbol symbol) {
     notNull(symbol, "symbol");
-    return realizedGains.stream()
-        .filter(r -> r.symbol().equals(symbol))
-        .toList();
+    return realizedGains.stream().filter(r -> r.symbol().equals(symbol)).toList();
   }
 
   public Collection<Position> getAllPositions() {
-    return positions.values().stream()
-        .map(Position::copy)
-        .toList();
+    return positions.values().stream().map(Position::copy).toList();
   }
 
   public Collection<Map.Entry<AssetSymbol, Position>> getPositionEntries() {
     return positions.entrySet().stream()
-        .map(entry -> Map.entry(entry.getKey(), entry.getValue().copy()))
-        .toList();
+        .map(entry -> Map.entry(entry.getKey(), entry.getValue().copy())).toList();
   }
 
   public int getPositionCount() {
@@ -353,7 +308,7 @@ public class Account {
   }
 
   public void resetCashToZero() {
-    this.cashBalance = Money.ZERO(this.accountCurrency);
+    this.cashBalance = Money.zero(this.accountCurrency);
     touch();
   }
 
@@ -374,8 +329,7 @@ public class Account {
 
   private void validateCurrency(Money amount) {
     if (!amount.currency().equals(accountCurrency)) {
-      throw new CurrencyMismatchException(
-          "Expected " + accountCurrency + " but got " + amount.currency());
+      throw new CurrencyMismatchException(accountCurrency, amount.currency());
     }
   }
 

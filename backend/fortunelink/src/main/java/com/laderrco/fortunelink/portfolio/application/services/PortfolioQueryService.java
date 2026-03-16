@@ -131,7 +131,7 @@ public class PortfolioQueryService {
         quoteCache);
 
     // TODO: integrate liabilities via ACL (Loan / Debt context)
-    Money totalLiabilities = Money.ZERO(displayCurrency);
+    Money totalLiabilities = Money.zero(displayCurrency);
 
     Money netWorth = totalAssets.subtract(totalLiabilities);
 

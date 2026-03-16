@@ -160,7 +160,7 @@ class PortfolioValuationServiceImplTest {
       AssetSymbol cashSym = new AssetSymbol("CASH");
 
       Account account = new Account(AccountId.newId(), "FilterTest",
-          AccountType.REGISTERED_INVESTMENT, USD,
+          AccountType.TAXABLE_INVESTMENT, USD,
           PositionStrategy.ACB);
 
       // Stock position

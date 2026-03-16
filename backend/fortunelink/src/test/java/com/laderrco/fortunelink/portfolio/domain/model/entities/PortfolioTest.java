@@ -142,7 +142,7 @@ class PortfolioTest {
       Instant beforeUpdate = portfolio.getLastUpdatedAt();
 
       Account account = portfolio.createAccount(
-          "Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
 
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
@@ -155,11 +155,11 @@ class PortfolioTest {
     @DisplayName("createAccount_Failure_DuplicateName")
     void createAccount_Failure_DuplicateNameThrows() {
       portfolio.createAccount(
-          "Savings", AccountType.REGISTERED_INVESTMENT, Currency.USD, PositionStrategy.ACB);
+          "Savings", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.ACB);
 
       assertThatThrownBy(
           () -> portfolio.createAccount(
-              "SAVINGS", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+              "SAVINGS", AccountType.TAXABLE_INVESTMENT, Currency.USD,
               PositionStrategy.ACB))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("already exists");
@@ -170,7 +170,7 @@ class PortfolioTest {
     void createAccount_Failure_NotACB() {
       assertThatThrownBy(
           () -> portfolio.createAccount(
-              "SAVINGS", AccountType.REGISTERED_INVESTMENT, Currency.USD, PositionStrategy.FIFO))
+              "SAVINGS", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.FIFO))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Only ACB strategy is supported.");
     }
@@ -180,7 +180,7 @@ class PortfolioTest {
     void createAccount_Failure_AccountNameEmpty() {
       assertThatThrownBy(
           () -> portfolio.createAccount(
-              " ", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+              " ", AccountType.TAXABLE_INVESTMENT, Currency.USD,
               PositionStrategy.ACB))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Account name cannot be empty");
@@ -190,7 +190,7 @@ class PortfolioTest {
     @DisplayName("removeAccount_Success_WhenClosedAndEmpty")
     void removeAccount_Success_RemovesInactiveAccount() {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
@@ -207,7 +207,7 @@ class PortfolioTest {
     @DisplayName("removeAccount_Failure_WhenActiveOrHasBalance")
     void removeAccount_Failure_ThrowsIfAccountNotReady() {
       Account account = portfolio.createAccount(
-          "Active", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Active", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
 
       assertThatThrownBy(() -> portfolio.removeAccount(account.getAccountId()))
@@ -219,7 +219,7 @@ class PortfolioTest {
     @DisplayName("reopenAccount_Success_WhenClosedAndReOpen")
     void reopenAccount_Success() {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
@@ -241,7 +241,7 @@ class PortfolioTest {
       Instant beforeUpdate = portfolio.getLastUpdatedAt();
 
       Account account = portfolio.createAccount(
-          "Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
 
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
@@ -260,7 +260,7 @@ class PortfolioTest {
     @DisplayName("findAccountByName_ReturnEmpty_WhenNameIsInvalid")
     void findAccountByName_Failure_ReturnsEmptyWhenNameIsNullOrBlank(String invalidName) {
       portfolio.createAccount(
-          "Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD, PositionStrategy.ACB);
+          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.ACB);
 
       Optional<Account> foundAccount = portfolio.findAccountByName(invalidName);
 
@@ -271,10 +271,10 @@ class PortfolioTest {
     @DisplayName("findAccountByType_Success")
     void findAccountByType_Success() {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
 
-      List<Account> foundAccount = portfolio.findAccountsByType(AccountType.REGISTERED_INVESTMENT);
+      List<Account> foundAccount = portfolio.findAccountsByType(AccountType.TAXABLE_INVESTMENT);
       assertTrue(foundAccount.size() == 1);
       assertEquals(account, foundAccount.get(0));
     }
@@ -283,7 +283,7 @@ class PortfolioTest {
     @DisplayName("renameAccount_Success")
     void renameAccount_Success() {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
@@ -296,7 +296,7 @@ class PortfolioTest {
     @DisplayName("renameAccount_Success_SameNameIsNoOp")
     void renameAccount_Success_SameName() {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
 
       // This should NOT throw an exception
@@ -312,7 +312,7 @@ class PortfolioTest {
     // Testing null, empty, and blank
     void renameAccount_Failure_NameIsNullAndOrEmpty(String invalidName) {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
@@ -326,10 +326,10 @@ class PortfolioTest {
     @DisplayName("renameAccount_Failure_NameExistsAlready")
     void renameAccount_Failure_NameExistsAlready() {
       Account account = portfolio.createAccount(
-          "Test", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       portfolio.createAccount(
-          "Test_2", AccountType.REGISTERED_INVESTMENT, Currency.USD,
+          "Test_2", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
@@ -367,7 +367,7 @@ class PortfolioTest {
     @DisplayName("markAsDeleted_Failure_HasActiveAccounts")
     void markAsDeleted_Failure_ThrowsIfNotEmpty() {
       portfolio.createAccount(
-          "Trading", AccountType.REGISTERED_INVESTMENT, Currency.USD, PositionStrategy.ACB);
+          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> portfolio.markAsDeleted(userId))
           .isInstanceOf(PortfolioNotEmptyException.class)

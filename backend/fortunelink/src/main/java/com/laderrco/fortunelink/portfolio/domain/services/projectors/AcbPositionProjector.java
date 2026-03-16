@@ -32,7 +32,7 @@ public final class AcbPositionProjector implements Projector<AcbPosition, Transa
       ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
       Position next = result.newPosition();
 
-      // Safe-guard against future changes to the Position type hierarchy.
+      // Safeguard against future changes to the Position type hierarchy.
       // Fail loudly if somehow a non-ACB position comes back.
       // This is intentionally unreachable with current implementation.
       if (!(next instanceof AcbPosition acb)) {

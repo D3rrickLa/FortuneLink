@@ -1,32 +1,60 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
+import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
+
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.CashImpact;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import lombok.Builder;
-
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.Builder;
 
-import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
-
-// THIS IS AN IMMUTABLE STATE
-// account and portfolio reconstruct state from these transaction(s)
+/**
+ * Represents an immutable record of a financial event within an account.
+ * <p>
+ * This is the "source of truth" used to reconstruct account balances and portfolio positions. It
+ * enforces strict invariants between the transaction type, trade execution details, and the
+ * resulting impact on cash (cashDelta).
+ * </p>
+ *
+ * @param transactionId        Unique identifier for this transaction.
+ * @param accountId            The account to which this transaction belongs.
+ * @param transactionType      The nature of the event (e.g., BUY, SELL, DIVIDEND, SPLIT).
+ * @param execution            Details of the asset trade (required for trade-based types).
+ * @param split                Ratio details (required for stock splits).
+ * @param cashDelta            The net change in account cash ('+' for inflows, '-' for outflows).
+ * @param fees                 A list of charges associated with this transaction.
+ * @param notes                User or system-generated remarks.
+ * @param occurredAt           The date and time the transaction took place.
+ * @param relatedTransactionId Reference to another transaction (e.g., for reversals or linked
+ *                             trades).
+ * @param metadata             Audit data, source tracking, and exclusion status.
+ */
 @Builder
-public record Transaction(TransactionId transactionId, AccountId accountId,
-    TransactionType transactionType, TradeExecution execution, SplitDetails split,
-    Money cashDelta, List<Fee> fees, String notes, TransactionDate occurredAt,
-    TransactionId relatedTransactionId, TransactionMetadata metadata
-
-) {
+public record Transaction(
+    TransactionId transactionId,
+    AccountId accountId,
+    TransactionType transactionType,
+    TradeExecution execution,
+    SplitDetails split,
+    Money cashDelta,
+    List<Fee> fees,
+    String notes,
+    TransactionDate occurredAt,
+    TransactionId relatedTransactionId,
+    TransactionMetadata metadata) {
   public Transaction {
     notNull(transactionId, "transactionId");
     notNull(accountId, "accountId");
@@ -37,7 +65,7 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
     notNull(occurredAt, "occurredAt");
     notNull(notes, "notes");
 
-    validateConsistency("execution details", transactionType.requiresExecution(), execution != null);
+    validateConsistency("execution", transactionType.requiresExecution(), execution != null);
     validateConsistency("split details", transactionType.requiresSplitDetails(), split != null);
 
     fees = List.copyOf(fees);
@@ -47,32 +75,36 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
       throw new IllegalArgumentException(transactionType + " cannot affect cash");
     }
 
-    if (!transactionType.requiresExecution()) {
-      if (!fees.isEmpty()) {
-        throw new IllegalArgumentException(transactionType + " cannot have fees");
-      }
-    } else {
-      // Only run trade consistency if execution is required
+    if (transactionType.requiresExecution()) {
       validateTradeConsistency(execution, transactionType, cashDelta, fees);
+    } else if (!fees.isEmpty()) {
+      throw new IllegalArgumentException(transactionType + " cannot have fees");
     }
   }
 
+  /**
+   * Creates a copy of this transaction marked as excluded from portfolio calculations.
+   */
   public Transaction markAsExcluded(UserId userId, String reason) {
-    TransactionMetadata updatedMetadata = metadata.markAsExcluded(userId, reason);
-    return new Transaction(transactionId, accountId, transactionType, execution, split,
-        cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
+    return new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta,
+        fees, notes, occurredAt, relatedTransactionId, metadata.markAsExcluded(userId, reason));
   }
 
+  /**
+   * Restores an excluded transaction to an active state.
+   */
   public Transaction restore() {
-    TransactionMetadata updatedMetadata = metadata.restore();
-    return new Transaction(transactionId, accountId, transactionType, execution, split,
-        cashDelta, fees, notes, occurredAt, relatedTransactionId, updatedMetadata);
+    return new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta,
+        fees, notes, occurredAt, relatedTransactionId, metadata.restore());
   }
 
   public boolean isExcluded() {
     return metadata.excluded();
   }
 
+  /**
+   * Sums all fees associated with this transaction in the currency of the cashDelta.
+   */
   public Money totalFeesInAccountCurrency() {
     return Fee.totalInAccountCurrency(fees, cashDelta.currency());
   }
@@ -94,19 +126,15 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
     Money expectedCashDelta = switch (type.cashImpact()) {
       case IN -> grossValue.subtract(totalFees);
       case OUT -> grossValue.add(totalFees).negate();
-      case NONE -> Money.ZERO(cashDelta.currency());
+      case NONE -> Money.zero(cashDelta.currency());
     };
 
     if (!cashDelta.equals(expectedCashDelta)) {
-      throw new IllegalArgumentException("Cash delta mismatch for " + type + ". Expected: "
-          + expectedCashDelta + ", got: " + cashDelta);
+      throw new IllegalArgumentException(
+          "Cash delta mismatch. Expected: " + expectedCashDelta + ", got: " + cashDelta);
     }
   }
 
-  // old code before, in 90f8c03428f84c687a02cc8d6835a35743a11899
-  // did computation in th sense that
-  // it knows how cash should be computed
-  // this is bad, we are now only enforcing invariants
   public record TradeExecution(AssetSymbol asset, Quantity quantity, Price pricePerUnit) {
     public TradeExecution {
       notNull(asset, "Asset symbol cannot be null");
@@ -116,19 +144,10 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
       if (quantity.isZero()) {
         throw new IllegalArgumentException("Trade quantity cannot be zero");
       }
-
-      // not needed as Price.java already does this
-      // if (pricePerUnit.pricePerUnit().isNegative()) {
-      // throw new IllegalArgumentException(
-      // "Price per unit cannot be negative (got: " + pricePerUnit + ")");
-      // }
     }
 
-    /**
-     * Gross value of the trade before fees. This is qty × price, representing the
-     * market value.
-     */
     public Money grossValue() {
+      // Gross value of the trade before fees.
       return pricePerUnit.pricePerUnit().multiply(quantity.amount().abs());
     }
   }
@@ -144,24 +163,19 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
       UserId excludedBy,
       String excludedReason,
       Map<String, String> additionalData) {
-
     public static final String KEY_SYMBOL = "symbol";
-    public static final String KEY_DRIP_SOURCE = "drip_source";
 
     public TransactionMetadata {
       notNull(assetType, "AssetType");
       source = source == null ? "UNKNOWN" : source.trim();
       additionalData = additionalData == null ? Map.of() : Map.copyOf(additionalData);
 
-      // Validate exclusion consistency
       if (excluded && (excludedAt == null || excludedBy == null)) {
-        throw new IllegalArgumentException(
-            "excludedAt and excludedBy required when excluded=true");
+        throw new IllegalArgumentException("excludedAt and excludedBy required when excluded=true");
       }
 
       if (!excluded && (excludedAt != null || excludedBy != null || excludedReason != null)) {
-        throw new IllegalArgumentException(
-            "Cannot have exclusion metadata when excluded=false");
+        throw new IllegalArgumentException("Cannot have exclusion metadata when excluded=false");
       }
     }
 
@@ -174,7 +188,6 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
           Map.of("filename", filename));
     }
 
-    // New method to mark as excluded
     public TransactionMetadata markAsExcluded(UserId userId, String reason) {
       if (excluded) {
         throw new IllegalStateException("Transaction already excluded");
@@ -183,13 +196,11 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
           additionalData);
     }
 
-    // New method to restore
     public TransactionMetadata restore() {
       if (!excluded) {
         throw new IllegalStateException("Transaction is not excluded");
       }
-      return new TransactionMetadata(assetType, source, false, null, null, null,
-          additionalData);
+      return new TransactionMetadata(assetType, source, false, null, null, null, additionalData);
     }
 
     public Map<String, String> asFlatMap() {
@@ -244,7 +255,6 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
   }
 
   public record TransactionDate(Instant timestamp) {
-
     public TransactionDate {
       notNull(timestamp, "timestamp");
     }
@@ -267,37 +277,6 @@ public record Transaction(TransactionId transactionId, AccountId accountId,
 
     public long toEpochMilli() {
       return timestamp.toEpochMilli();
-    }
-  }
-
-  public final class TransactionFactory {
-    private final static Currency CAD = Currency.CAD;
-
-    public static Transaction.TransactionBuilder baseBuilder() {
-      return Transaction.builder()
-          .transactionId(TransactionId.newId())
-          .accountId(AccountId.newId())
-          .cashDelta(Money.ZERO(CAD)) // Default to zero if not relevant
-          .fees(List.of())
-          .metadata(TransactionMetadata.manual(AssetType.STOCK))
-          .occurredAt(TransactionDate.of(Instant.now()))
-          .notes("");
-    }
-
-    public static Transaction.TransactionBuilder sellBuilder(Quantity q, Price p) {
-      return baseBuilder()
-          .transactionType(TransactionType.SELL)
-          .execution(new TradeExecution(new AssetSymbol("AAPL"), q, p))
-          .cashDelta(p.calculateValue(q)); // Correctly calculate the delta
-    }
-
-    public static Transaction.TransactionBuilder buyBuilder(Quantity q, Price p) {
-      Money totalCost = p.calculateValue(q).negate();
-
-      return baseBuilder()
-          .transactionType(TransactionType.BUY)
-          .execution(new TradeExecution(new AssetSymbol("AAPL"), q, p))
-          .cashDelta(totalCost);
     }
   }
 }

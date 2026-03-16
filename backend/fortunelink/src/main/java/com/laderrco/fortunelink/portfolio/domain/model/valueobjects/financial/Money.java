@@ -122,7 +122,7 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
 
   private void requireSameCurrency(Currency otherCurrency, String operation) {
     if (!this.currency.equals(otherCurrency)) {
-      throw new CurrencyMismatchException(this.currency, otherCurrency);
+      throw new CurrencyMismatchException(this.currency, otherCurrency, operation);
     }
   }
 }

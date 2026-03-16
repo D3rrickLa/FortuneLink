@@ -1,25 +1,30 @@
 package com.laderrco.fortunelink.portfolio.domain.model.enums;
 
 public enum AccountType {
-  // CAD SPECIFIC
-  FHSA,
-  TFSA,
-  RRSP,
-  RESP,
+  // CAD registered accounts
+  FHSA(false),
+  TFSA(false),
+  RRSP(false),
+  RESP(false),
 
-  // USD SPECIFIC
-  ROTH_IRA,
-  SOLO_401K,
+  // US registered accounts
+  ROTH_IRA(false),
+  SOLO_401K(false),
 
-  // GENERIC
-  CHEQUING,
-  SAVINGS,
-  MARGIN,
-  REGISTERED_INVESTMENT,
-  NON_REGISTERED_INVESTMENT;
+  // Generic / unregistered accounts
+  CHEQUING(false),
+  SAVINGS(false),
+  MARGIN(true),
+  TAXABLE_INVESTMENT(true),
+  NON_REGISTERED_INVESTMENT(true);
+
+  private final boolean requiresCapitalGainsTracking;
+
+  AccountType(boolean requiresCapitalGainsTracking) {
+    this.requiresCapitalGainsTracking = requiresCapitalGainsTracking;
+  }
 
   public boolean requiresCapitalGainsTracking() {
-    // All non-registered, non-sheltered accounts require CRA capital gains tracking
-    return this == NON_REGISTERED_INVESTMENT || this == MARGIN || this == REGISTERED_INVESTMENT;
+    return requiresCapitalGainsTracking;
   }
 }

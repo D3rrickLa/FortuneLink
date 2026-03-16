@@ -55,7 +55,7 @@ class AccountTest {
 		accountId = AccountId.newId();
 		usd = Currency.of("USD");
 		strategy = PositionStrategy.SPECIFIC_ID;
-		account = new Account(accountId, "Main Investment", AccountType.REGISTERED_INVESTMENT, usd, strategy);
+		account = new Account(accountId, "Main Investment", AccountType.TAXABLE_INVESTMENT, usd, strategy);
 	}
 
 	@Nested
@@ -69,7 +69,7 @@ class AccountTest {
 			assertTrue(account.getCashBalance().isZero());
 			assertTrue(account.isActive());
 			assertNotNull(account.getCreationDate());
-			assertEquals(AccountType.REGISTERED_INVESTMENT, account.getAccountType());
+			assertEquals(AccountType.TAXABLE_INVESTMENT, account.getAccountType());
 			assertNotNull(account.getLastUpdatedOn());
 			assertEquals(0, account.getPositionCount());
 			assertEquals(strategy, account.getPositionStrategy());
@@ -388,7 +388,7 @@ class AccountTest {
 		@Test
 		void testResetCashToZero_Success() {
 			account.resetCashToZero();
-			assertEquals(Money.ZERO("USD"), account.getCashBalance());
+			assertEquals(Money.zero("USD"), account.getCashBalance());
 		}
 
 		@Test
@@ -452,7 +452,7 @@ class AccountTest {
 
 			// Assert
 			assertTrue(account.getRealizedGains().isEmpty());
-			assertEquals(Money.ZERO(USD), account.getTotalRealizedGainLoss());
+			assertEquals(Money.zero(USD), account.getTotalRealizedGainLoss());
 		}
 
 		@Test
@@ -462,7 +462,7 @@ class AccountTest {
 
 		@ParameterizedTest
 		@EnumSource(value = AccountType.class, names = { "NON_REGISTERED_INVESTMENT", "MARGIN",
-				"REGISTERED_INVESTMENT" })
+        "TAXABLE_INVESTMENT"})
 		void testGetAccountType_Sucess_RequiresCapitalGainsTracking(AccountType type) {
 			Account testAccount = new Account(accountId, "null", type, usd, strategy);
 			assertTrue(testAccount.getAccountType().requiresCapitalGainsTracking());

@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers;
 
 import com.laderrco.fortunelink.shared.interfaces.GenericId;
-import jakarta.annotation.Nonnull;
 import java.util.UUID;
 
 public record UserId(UUID id) implements GenericId {

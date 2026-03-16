@@ -1,12 +1,10 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString
 @EqualsAndHashCode
-@RequiredArgsConstructor
 public class Currency {
   public static final Currency CAD = new Currency("CAD");
   public static final Currency EUR = new Currency("EUR");

@@ -29,7 +29,7 @@ public class AccountViewBuilder {
           AssetSymbol symbol = entry.getKey();
 
           Money feesIncurred = feeBreakdownBySymbol
-              .getOrDefault(symbol, Money.ZERO(account.getAccountCurrency()));
+              .getOrDefault(symbol, Money.zero(account.getAccountCurrency()));
 
           return portfolioViewMapper.toPositionView(
               entry.getValue(),
@@ -47,7 +47,7 @@ public class AccountViewBuilder {
   /**
    * Builds an AccountView without fee data - for summary screens where tax
    * breakdown is not needed. Avoids the extra transaction fetch.
-   * totalFeesIncurred will be Price.ZERO on all PositionViews.
+   * totalFeesIncurred will be Price.zero on all PositionViews.
    */
   public AccountView buildSummary(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
     List<PositionView> positionViews = account.getPositionEntries().stream()

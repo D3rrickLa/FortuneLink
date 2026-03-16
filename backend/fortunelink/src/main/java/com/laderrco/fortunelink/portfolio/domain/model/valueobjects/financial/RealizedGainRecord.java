@@ -14,7 +14,10 @@ import java.time.Instant;
  * <b>Note:</b> {@code realizedGainLoss} is signed: a positive value represents a
  * capital gain, while a negative value represents a capital loss.
  */
-public record RealizedGainRecord(AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold,
+public record RealizedGainRecord(
+    AssetSymbol symbol,
+    Money realizedGainLoss,
+    Money costBasisSold,
     Instant occurredAt) {
   public RealizedGainRecord {
     notNull(symbol, "symbol");

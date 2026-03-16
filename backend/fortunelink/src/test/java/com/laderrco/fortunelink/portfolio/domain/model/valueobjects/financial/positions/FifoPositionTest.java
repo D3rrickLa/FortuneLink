@@ -148,7 +148,7 @@ class FifoPositionTest {
     void applyRoc_returnsRocAdjustmentWhenTotalCostBasisIsZero() {
       Currency usd = Currency.USD;
       AssetSymbol symbol = new AssetSymbol("BTC");
-      TaxLot lot = new TaxLot(Quantity.of(1), Money.ZERO(usd), Instant.now());
+      TaxLot lot = new TaxLot(Quantity.of(1), Money.zero(usd), Instant.now());
       FifoPosition position = new FifoPosition(symbol, AssetType.CRYPTO, usd, List.of(lot), Instant.now());
 
       Price rocPrice = Price.of(BigDecimal.valueOf(100), usd);
@@ -157,7 +157,7 @@ class FifoPositionTest {
       ApplyResult.RocAdjustment<FifoPosition> rocResult = (ApplyResult.RocAdjustment<FifoPosition>) result;
 
       assertThat(rocResult.excessCapitalGain()).isEqualTo(Money.of("100", usd));
-      assertThat(rocResult.getUpdatedPosition().totalCostBasis()).isEqualTo(Money.ZERO(usd));
+      assertThat(rocResult.getUpdatedPosition().totalCostBasis()).isEqualTo(Money.zero(usd));
     }
 
     @Test
@@ -226,7 +226,7 @@ class FifoPositionTest {
       // 3. Reduction Lot 1: 3.00 * 0.3333333333 = 0.9999999999
       // 4. Reduction Lot 2: 3.00 * 0.3333333333 = 0.9999999999
       // 5. Remaining for Lot 3: 3.00 - 0.9999999999 - 0.9999999999 = 1.0000000002
-      // 6. Lot 3 New Basis: 1.00 - 1.0000000002 = -0.0000000002 -> CLAMP TO ZERO!
+      // 6. Lot 3 New Basis: 1.00 - 1.0000000002 = -0.0000000002 -> CLAMP TO zero!
 
       assertThat(updated.lots().get(2).costBasis().isZero()).isTrue();
       assertThat(updated.totalCostBasis().isZero()).isTrue();

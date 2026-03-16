@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 
 public final class TransactionApplier {
-
   private TransactionApplier() {
     // Utility class
   }
@@ -34,8 +33,8 @@ public final class TransactionApplier {
   }
 
   private static ApplyResult<? extends Position> applyDrip(Position p, Transaction tx) {
-    return p.buy(
-        tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt().timestamp());
+    return p.buy(tx.execution().quantity(), tx.execution().grossValue(),
+        tx.occurredAt().timestamp());
   }
 
   private static ApplyResult<? extends Position> applyReturnOfCapital(Position p, Transaction tx) {

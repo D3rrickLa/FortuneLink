@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionFactory;
+import com.laderrco.fortunelink.portfolio.domain.model.factories.TransactionFactory;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;

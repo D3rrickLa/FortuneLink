@@ -112,7 +112,7 @@ class FeeTest {
 		@DisplayName("ZERO_success_StandardResetState")
 		void ZERO_success_StandardResetState() {
 			Currency usd = Currency.of("USD");
-			Fee zeroFee = Fee.ZERO(usd);
+			Fee zeroFee = Fee.zero(usd);
 
 			assertThat(zeroFee.feeType()).isEqualTo(FeeType.NONE);
 			assertThat(zeroFee.nativeAmount().isZero()).isTrue();

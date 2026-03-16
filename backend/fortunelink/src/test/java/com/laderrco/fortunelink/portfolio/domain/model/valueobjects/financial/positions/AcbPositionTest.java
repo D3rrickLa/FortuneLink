@@ -116,7 +116,7 @@ class AcbPositionTest {
       // costBasisSold should be exactly 100, not 99.99
       assertThat(result.costBasisSold()).isEqualTo(Money.of("100", usd));
       // newCostBasis should be exactly 0
-      assertThat(updated.totalCostBasis()).isEqualTo(Money.ZERO(usd));
+      assertThat(updated.totalCostBasis()).isEqualTo(Money.zero(usd));
       assertThat(updated.totalQuantity().isZero()).isTrue();
     }
 
@@ -254,7 +254,7 @@ class AcbPositionTest {
       var rocResult = (ApplyResult.RocAdjustment<AcbPosition>) result;
 
       // Basis should be capped at zero
-      assertThat(rocResult.getUpdatedPosition().totalCostBasis()).isEqualTo(Money.ZERO(usd));
+      assertThat(rocResult.getUpdatedPosition().totalCostBasis()).isEqualTo(Money.zero(usd));
       // Excess should be $50
       assertThat(rocResult.excessCapitalGain()).isEqualTo(Money.of("50", usd));
     }

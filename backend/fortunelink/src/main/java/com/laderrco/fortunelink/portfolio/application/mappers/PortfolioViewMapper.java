@@ -35,7 +35,7 @@ public class PortfolioViewMapper {
                 portfolio.getName(),
                 portfolio.getDescription(),
                 List.of(), // no accounts with positions yet
-                Money.ZERO(portfolio.getDisplayCurrency()),
+                Money.zero(portfolio.getDisplayCurrency()),
                 portfolio.getCreatedAt(),
                 portfolio.getLastUpdatedAt());
     }
@@ -72,8 +72,8 @@ public class PortfolioViewMapper {
                 account.getAccountType(),
                 Collections.emptyList(),
                 account.getAccountCurrency(),
-                Money.ZERO(account.getAccountCurrency()),
-                Money.ZERO(account.getAccountCurrency()),
+                Money.zero(account.getAccountCurrency()),
+                Money.zero(account.getAccountCurrency()),
                 account.getCreationDate());
     }
 
@@ -93,10 +93,10 @@ public class PortfolioViewMapper {
     /**
      * Maps a position to its view with no fee data.
      * Used for summary screens where tax data is not needed.
-     * totalFeesIncurred will be Price.ZERO.
+     * totalFeesIncurred will be Price.zero.
      */
     public PositionView toPositionView(Position position, MarketAssetQuote quote) {
-        return toPositionView(position, quote, Money.ZERO(position.accountCurrency()));
+        return toPositionView(position, quote, Money.zero(position.accountCurrency()));
     }
 
     /**
@@ -122,7 +122,7 @@ public class PortfolioViewMapper {
         // computation
         Money fees = (feesForSymbol != null && feesForSymbol.currency().equals(currency))
                 ? feesForSymbol
-                : Money.ZERO(currency);
+                : Money.zero(currency);
 
         if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
             return new PositionView(
@@ -132,9 +132,9 @@ public class PortfolioViewMapper {
                     new Price(position.totalCostBasis()),
                     new Price(position.costPerUnit()),
                     fees, // fees even when quote unavailable
-                    Price.ZERO(currency), // current price unknown
-                    Money.ZERO(currency), // market value unknown
-                    Money.ZERO(currency), // unrealized P&L unknown
+                    Price.zero(currency), // current price unknown
+                    Money.zero(currency), // market value unknown
+                    Money.zero(currency), // unrealized P&L unknown
                     PercentageChange.ZERO,
                     determineMethodology(position),
                     extractFirstAcquiredDate(position),
@@ -164,7 +164,7 @@ public class PortfolioViewMapper {
 
     /**
      * Calculates return percentage: (gain / cost basis) * 100
-     * Returns ZERO if cost basis is zero/null to avoid division by zero.
+     * Returns zero if cost basis is zero/null to avoid division by zero.
      */
     private static PercentageChange calculateReturnPercentage(Money gain, Money costBasis) {
         if (costBasis == null || costBasis.isZero()) {

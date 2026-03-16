@@ -44,7 +44,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
                 .map(account -> calculateAccountValue(account, quoteCache))
                 .map(accountValue -> exchangeRateService.convert(accountValue, targetCurrency))
                 .reduce(Money::add)
-                .orElse(Money.ZERO(targetCurrency));
+                .orElse(Money.zero(targetCurrency));
     }
 
     /**
@@ -82,7 +82,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
                 .filter(entry -> entry.getValue().type() != AssetType.CASH) // cash tracked separately
                 .map(entry -> resolvePositionValue(entry.getValue(), quoteCache.get(entry.getKey()), accountCurrency))
                 .reduce(Money::add)
-                .orElse(Money.ZERO(accountCurrency));
+                .orElse(Money.zero(accountCurrency));
     }
 
     /**

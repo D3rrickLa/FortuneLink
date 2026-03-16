@@ -12,7 +12,7 @@ public record Price(Money pricePerUnit) {
     }
   }
 
-  public static Price ZERO(Currency currency) {
+  public static Price zero(Currency currency) {
     return new Price(Money.zero(currency));
   }
 

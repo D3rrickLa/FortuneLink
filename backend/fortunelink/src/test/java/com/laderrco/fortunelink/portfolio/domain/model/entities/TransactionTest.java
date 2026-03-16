@@ -270,7 +270,7 @@ public class TransactionTest {
 			TransactionType transactionType = TransactionType.TRANSFER_OUT;
 			TradeExecution execution = null;
 			SplitDetails split = null;
-			Money cashDelta = Money.ZERO("USD");
+			Money cashDelta = Money.zero("USD");
 			List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
 					ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
 					new FeeMetadata(Map.of())));

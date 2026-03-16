@@ -8,13 +8,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount,
-    ExchangeRate exchangeRate, Instant occurredAt, FeeMetadata metadata) {
+/**
+ * Represents a service charge or transaction fee applied to an asset or account. This record
+ * supports multi-currency scenarios by tracking both the fee in its original (native) currency and
+ * its converted value in the account's base currency.
+ *
+ * @param feeType       The classification of the fee (e.g., COMMISSION, TAX, SPREAD).
+ * @param nativeAmount  The fee amount in the currency it was originally charged.
+ * @param accountAmount The fee amount converted into the user's account currency.
+ * @param exchangeRate  The specific rate used to convert nativeAmount to accountAmount.
+ * @param occurredAt    The timestamp of when the fee was incurred.
+ * @param metadata      Additional key-value pairs for audit trails or vendor-specific data.
+ */
+public record Fee(
+    FeeType feeType,
+    Money nativeAmount,
+    Money accountAmount,
+    ExchangeRate exchangeRate,
+    Instant occurredAt,
+    FeeMetadata metadata) {
   public Fee {
-    notNull(feeType, "Fee type cannot be null");
-    notNull(nativeAmount, "Native amount cannot be null");
-    notNull(occurredAt, "Occurred at cannot be null");
-    notNull(metadata, "Metadata at cannot be null");
+    notNull(feeType, "Fee type");
+    notNull(nativeAmount, "Native amount");
+    notNull(occurredAt, "Occurred at");
+    notNull(metadata, "Metadata at");
 
     if (nativeAmount.isNegative()) {
       throw new IllegalArgumentException("Fee amount cannot be negative");
@@ -41,9 +58,16 @@ public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount,
   }
 
   /**
-   * Sum fees in account currency. Prefers accountAmount, falls back to nativeAmount
+   * Calculates the total sum of a list of fees in the target account currency.
    * <p>
-   * only if no conversion was applied (same currency). Null-safe on the list.
+   * This method prioritizes {@code accountAmount}. If a fee only has a {@code nativeAmount}, it
+   * will be used only if its currency matches the target {@code accountCurrency}.
+   * </p>
+   *
+   * @param fees            The list of fees to sum (null-safe).
+   * @param accountCurrency The target currency for the total.
+   * @return The total sum as a {@link Money} object.
+   * @throws IllegalArgumentException if a fee's currency does not match the account currency.
    */
   public static Money totalInAccountCurrency(List<Fee> fees, Currency accountCurrency) {
     if (fees == null || fees.isEmpty()) {
@@ -55,13 +79,17 @@ public record Fee(FeeType feeType, Money nativeAmount, Money accountAmount,
       if (!amount.currency().equals(accountCurrency)) {
         throw new IllegalArgumentException(
             "Fee currency mismatch: expected " + accountCurrency + ", got " + amount.currency()
-                + " — ensure accountAmount is set for cross-currency fees");
+                + " - ensure accountAmount is set for cross-currency fees");
       }
       total = total.add(amount);
     }
     return total;
   }
 
+  /**
+   * Extensible container for supplementary fee information. Used for storing vendor IDs, tax codes,
+   * or transaction references.
+   */
   public record FeeMetadata(Map<String, String> values) {
     public FeeMetadata {
       values = values == null ? Map.of() : Map.copyOf(values);

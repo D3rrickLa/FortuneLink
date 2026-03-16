@@ -18,7 +18,7 @@ public class PriceTest {
 
 	@Test
 	void testZeroConstructor_Success() {
-		Price price = Price.ZERO(Currency.USD);
+		Price price = Price.zero(Currency.USD);
 		assertNotNull(price);
 		assertEquals(Currency.USD, price.currency());
 	}
