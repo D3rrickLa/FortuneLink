@@ -5,24 +5,25 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedExcepti
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.domain.services.projectors.TransactionApplier;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 // handle like this Position + Transaction -> Apply Result (PositioNTransactionApplier)
 @Service
@@ -53,7 +54,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(cashDelta)
         .fees(feeList)
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt(date)
         .metadata(TransactionMetadata.manual(type))
         .build();
 
@@ -91,7 +92,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(cashDelta)
         .fees(feeList)
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt(date)
         .metadata(TransactionMetadata.manual(existingPosition.type()))
         .build();
 
@@ -117,7 +118,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount)
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH))
         .build();
 
@@ -139,7 +140,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount.negate())
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH))
         .build();
 
@@ -161,7 +162,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount.negate())
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH))
         .build();
 
@@ -184,7 +185,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount)
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH)
             .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
         .build();
@@ -208,7 +209,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount)
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH)
             .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
         .build();
@@ -241,7 +242,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(Money.zero(account.getAccountCurrency()))
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(type))
         .build();
 
@@ -275,7 +276,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(cashDelta)
         .fees(List.of())
         .notes(notes)
-        .occurredAt(TransactionDate.of(date))
+        .occurredAt((date))
         .metadata(TransactionMetadata.manual(existingPosition.type()))
         .build();
 

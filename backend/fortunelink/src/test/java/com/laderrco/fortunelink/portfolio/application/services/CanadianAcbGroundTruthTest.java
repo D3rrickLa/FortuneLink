@@ -19,6 +19,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
@@ -450,7 +451,7 @@ class TransactionFixtures {
     Transaction tx = new Transaction(TransactionId.newId(), this.accountId, this.type,
         new Transaction.TradeExecution(new AssetSymbol(this.symbol), Quantity.of(this.quantity),
             this.pricePerUnit), null, cashDelta, fees, "notes", Instant.now(), null,
-        Transaction.TransactionMetadata.manual(AssetType.STOCK));
+        TransactionMetadata.manual(AssetType.STOCK));
 
     return tx;
   }

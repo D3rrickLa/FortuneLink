@@ -27,9 +27,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.SplitDetails;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
@@ -64,11 +63,11 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(delta, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -88,11 +87,11 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(0, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -119,11 +118,11 @@ public class TransactionTest {
 			AccountId accountId = AccountId.newId();
 			TransactionType transactionType = TransactionType.DIVIDEND;
 			TradeExecution execution = null;
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(1350, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -141,11 +140,11 @@ public class TransactionTest {
 			AccountId accountId = AccountId.newId();
 			TransactionType transactionType = TransactionType.BUY;
 			TradeExecution execution = null;
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(1350, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -167,11 +166,11 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(1350, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -193,12 +192,11 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			Ratio ratio = new Ratio(12, 1);
-			SplitDetails spilt = new SplitDetails(ratio);
+			Ratio split = new Ratio(12, 1);
 			Money cashDelta = Money.of(1350, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -223,11 +221,11 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(1350, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -248,11 +246,11 @@ public class TransactionTest {
 					new AssetSymbol("AAPL"),
 					Quantity.of(10),
 					new Price(Money.of("20", Currency.USD)));
-			SplitDetails split = null;
+			Ratio split = null;
 			Money cashDelta = Money.of(1, "USD"); // Invalid: Non-execution types cannot affect cash
 			List<Fee> fees = List.of();
 			String notes = "Testing cash validation";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -269,13 +267,13 @@ public class TransactionTest {
 			AccountId accountId = AccountId.newId();
 			TransactionType transactionType = TransactionType.TRANSFER_OUT;
 			TradeExecution execution = null;
-			SplitDetails split = null;
+			Ratio split = null;
 			Money cashDelta = Money.zero("USD");
 			List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
 					ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
 					new FeeMetadata(Map.of())));
 			String notes = "Testing fee validation";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
 			TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -307,11 +305,11 @@ public class TransactionTest {
 						new Quantity(BigDecimal.TEN),
 						new Price(Money.of(135, "USD")));
 
-				SplitDetails spilt = null;
+				Ratio spilt = null;
 				Money cashDelta = Money.of(1350, "USD");
 				List<Fee> fees = List.of();
 				String notes = "Some notes";
-				Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+				Instant occurredAt = Instant.now();
 				TransactionId relatedTransactionId = null;
 				TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -334,11 +332,11 @@ public class TransactionTest {
 						new Quantity(BigDecimal.TEN),
 						new Price(Money.of(135, "USD")));
 
-				SplitDetails spilt = null;
+				Ratio spilt = null;
 				Money cashDelta = Money.of(1350, "USD");
 				List<Fee> fees = List.of();
 				String notes = "Some notes";
-				Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+				Instant occurredAt = Instant.now();
 				TransactionId relatedTransactionId = null;
 				TransactionMetadata metadata = mock(TransactionMetadata.class);
 
@@ -366,7 +364,7 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(-1358.25, "USD");
 			List<Fee> fees = List.of(
 					new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
@@ -380,9 +378,9 @@ public class TransactionTest {
 
 			);
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionId relatedTransactionId = null;
-			TransactionMetadata metadata = Transaction.TransactionMetadata.manual(AssetType.STOCK);
+			TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
 
 			Transaction transaction = new Transaction(transactionId, accountId, transactionType, execution,
 					spilt, cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
@@ -413,11 +411,11 @@ public class TransactionTest {
 					new Quantity(BigDecimal.TEN),
 					new Price(Money.of(135, "USD")));
 
-			SplitDetails spilt = null;
+			Ratio spilt = null;
 			Money cashDelta = Money.of(-1350, "USD");
 			List<Fee> fees = List.of();
 			String notes = "Some notes";
-			Transaction.TransactionDate occurredAt = Transaction.TransactionDate.now();
+			Instant occurredAt = Instant.now();
 			TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
 
 			transaction = new Transaction(transactionId, accountId, transactionType, execution, spilt,
@@ -524,7 +522,7 @@ public class TransactionTest {
 		@Test
 		void testNullSafetyAndDefaults() {
 			// Test that null map becomes empty map and null source becomes UNKNOWN
-			var meta = new Transaction.TransactionMetadata(
+			var meta = new TransactionMetadata(
 					AssetType.STOCK,
 					null,
 					false,
@@ -541,7 +539,7 @@ public class TransactionTest {
 		@Test
 		void testNullSafetyAndDefaultsExcluded() {
 			// Test that null map becomes empty map and null source becomes UNKNOWN
-			var meta = new Transaction.TransactionMetadata(
+			var meta = new TransactionMetadata(
 					AssetType.STOCK,
 					null,
 					true,
@@ -624,7 +622,7 @@ public class TransactionTest {
 			Map<String, String> originalData = new HashMap<>();
 			originalData.put("key", "value");
 
-			var meta = new Transaction.TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null,
+			var meta = new TransactionMetadata(AssetType.STOCK, "SOURCE", false, null, null,
 					null,
 					originalData);
 
@@ -642,7 +640,7 @@ public class TransactionTest {
 
 		@Test
 		void testWithMethods() {
-			var base = Transaction.TransactionMetadata.manual(AssetType.CRYPTO);
+			var base = TransactionMetadata.manual(AssetType.CRYPTO);
 
 			// 'with' should return a NEW instance, leaving the old one untouched
 			var updated = base.with("broker_id", "123");
@@ -660,7 +658,7 @@ public class TransactionTest {
 
 		@Test
 		void testAsFlatMap() {
-			var meta = new Transaction.TransactionMetadata(
+			var meta = new TransactionMetadata(
 					AssetType.STOCK,
 					null,
 					false,
@@ -679,7 +677,7 @@ public class TransactionTest {
 		void testAsFlatMapExclusionTrue() {
 			Instant now = Instant.now();
 			UserId userId = UserId.random();
-			var meta = new Transaction.TransactionMetadata(
+			var meta = new TransactionMetadata(
 					AssetType.STOCK,
 					null,
 					true,
@@ -700,7 +698,7 @@ public class TransactionTest {
 		void testAsFlatMapExclusionTrue_WithComments() {
 			Instant now = Instant.now();
 			UserId userId = UserId.random();
-			var meta = new Transaction.TransactionMetadata(
+			var meta = new TransactionMetadata(
 					AssetType.STOCK,
 					null,
 					true,
@@ -720,7 +718,7 @@ public class TransactionTest {
 
 		@Test
 		void testStaticFactories() {
-			var csv = Transaction.TransactionMetadata.csvImport(AssetType.STOCK, "trades.csv");
+			var csv = TransactionMetadata.csvImport(AssetType.STOCK, "trades.csv");
 
 			assertEquals("CSV_IMPORT", csv.source());
 			assertEquals("trades.csv", csv.get("filename"));

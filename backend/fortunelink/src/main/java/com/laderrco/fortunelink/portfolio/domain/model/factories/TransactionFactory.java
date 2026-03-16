@@ -2,8 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.factories;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionMetadata;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -23,7 +22,7 @@ public final class TransactionFactory {
     return Transaction.builder().transactionId(TransactionId.newId()).accountId(AccountId.newId())
         .cashDelta(Money.zero(CAD)) // Default to zero if not relevant
         .fees(List.of()).metadata(TransactionMetadata.manual(AssetType.STOCK))
-        .occurredAt(TransactionDate.of(Instant.now())).notes("");
+        .occurredAt((Instant.now())).notes("");
   }
 
   public static Transaction.TransactionBuilder sellBuilder(Quantity q, Price p) {
