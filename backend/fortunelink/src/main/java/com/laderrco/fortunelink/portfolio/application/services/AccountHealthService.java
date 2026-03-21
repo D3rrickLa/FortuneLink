@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AccountHealthService {
-
   private static final Logger log = LoggerFactory.getLogger(AccountHealthService.class);
   private final PortfolioRepository portfolioRepository;
 

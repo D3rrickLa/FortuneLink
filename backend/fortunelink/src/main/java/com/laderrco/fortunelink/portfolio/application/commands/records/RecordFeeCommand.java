@@ -7,11 +7,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 
 public record RecordFeeCommand(
-    PortfolioId portfolioId,
-    UserId userId,
-    AccountId accountId,
-    Money amount,
+    PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount,
     // just the total
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    Instant transactionDate, String notes) implements TransactionCommand {
 }

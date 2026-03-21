@@ -6,8 +6,5 @@ import java.time.Instant;
 
 // when we have multiple portfolios - we use this
 public record PortfolioSummaryView(
-    PortfolioId id,
-    String name,
-    Money totalValue,
-    Instant lastUpdated) {
+    PortfolioId id, String name, Money totalValue, Instant lastUpdated) {
 }

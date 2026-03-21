@@ -12,12 +12,15 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthenticationUserService {
-
   public UUID getCurrentUser() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
       // Supabase stores the User UUID in the "sub" claim
-      return UUID.fromString(jwt.getSubject());
+      String sub = jwt.getSubject();
+      if (sub == null) {
+        throw new AuthenticationException("JWT missing subject claim");
+      }
+      return UUID.fromString(sub);
     }
     throw new AuthenticationException("No authenticated user");
   }

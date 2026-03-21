@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
+import com.laderrco.fortunelink.portfolio.application.queries.GetAccountPositionQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAllAccountsQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAssetQuery;
@@ -41,12 +42,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AccountQueryService {
-
-  private final TransactionRepository transactionRepository;
   private final MarketDataService marketDataService;
-  private final PortfolioViewMapper portfolioViewMapper;
-  private final AccountViewBuilder accountViewBuilder;
+  private final TransactionRepository transactionRepository;
+
   private final PortfolioLoader portfolioLoader;
+  private final PortfolioViewMapper portfolioViewMapper;
+
+  private final AccountViewBuilder accountViewBuilder;
 
   public List<AccountView> getAllAccounts(GetAllAccountsQuery query) {
     Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
@@ -56,7 +58,6 @@ public class AccountQueryService {
     Set<AssetSymbol> allSymbols = PortfolioAccessUtils.extractSymbols(portfolio);
     Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
 
-    // NEW batch fee fetch
     List<AccountId> accountIds = portfolio.getAccounts().stream().map(Account::getAccountId)
         .toList();
 
@@ -86,13 +87,19 @@ public class AccountQueryService {
     return accountViewBuilder.build(account, quoteCache, feeBreakdown);
   }
 
-  public List<PositionView> getAccountPositions(GetAccountSummaryQuery query) {
+  // Note: Don't know why we even have this now thinking about it. This is redundant as positions
+  // list is already inside AccountView.assets(), the frontend doesn't need a separate endpoint for this
+  // the data can be rendered from the return of getAccountSummary()
+  @Deprecated
+  public List<PositionView> getAccountPositions(GetAccountPositionQuery query) {
     Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
     Account account = portfolio.findAccount(query.accountId())
         .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
+    // Intentionally lightweight: no fee data. Use getAccountSummary() if fee
+    // breakdown is needed. Mirrors AccountViewBuilder.buildSummary() contract.
     Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbolsByAccount(account);
     Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
@@ -101,6 +108,9 @@ public class AccountQueryService {
             quoteCache.get(entry.getKey()))).toList();
   }
 
+  // Wrong tool, think the original idea was for stock lookup, but we don't need the user id
+  // and this also belongs to a MarketDataQueryService
+  @Deprecated
   public PositionView getAssetSummary(GetAssetQuery query) {
     Objects.requireNonNull(query, "GetAssetQuery cannot be null");
 
@@ -111,11 +121,12 @@ public class AccountQueryService {
     var position = account.getPosition(query.symbol())
         .orElseThrow(() -> new AssetNotFoundException(query.symbol()));
 
+    // Intentionally lightweight: no fee data. Call site gets cost basis only.
+    // If fee breakdown is required, add a dedicated getAssetDetail() method.
     Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(
         Set.of(query.symbol()));
-    MarketAssetQuote quote = quotes.get(query.symbol()); // null if not found, same behavior
+    MarketAssetQuote quote = quotes.get(query.symbol());
 
     return portfolioViewMapper.toPositionView(position, quote);
   }
-
 }

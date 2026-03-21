@@ -26,7 +26,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PortfolioViewMapper {
-
   /**
    * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost basis is zero/null
    * to avoid division by zero.

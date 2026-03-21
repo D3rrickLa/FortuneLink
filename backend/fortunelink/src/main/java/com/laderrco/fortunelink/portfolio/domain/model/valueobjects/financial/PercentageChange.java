@@ -23,9 +23,9 @@ import java.math.RoundingMode;
 public record PercentageChange(BigDecimal change) implements Comparable<PercentageChange> {
   // we need SCALE and MODE to load first, if this is the first thing declared
   // it will error out
-  public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
   private static final int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
   private static final RoundingMode MODE = Rounding.PERCENTAGE.getMode();
+  public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
 
   public PercentageChange {
     notNull(change, "percentage change");
