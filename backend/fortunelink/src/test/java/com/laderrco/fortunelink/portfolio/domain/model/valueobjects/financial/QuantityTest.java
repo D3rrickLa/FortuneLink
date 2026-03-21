@@ -4,13 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import java.math.BigDecimal;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 
 @DisplayName("Quantity Value Object Unit Tests")
 class QuantityTest {
@@ -35,8 +33,7 @@ class QuantityTest {
     @Test
     @DisplayName("constructor_fail_NullAmount")
     void constructor_fail_NullAmount() {
-      assertThatThrownBy(() -> new Quantity(null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> new Quantity(null)).isInstanceOf(DomainArgumentException.class);
     }
 
     @Test
@@ -73,8 +70,7 @@ class QuantityTest {
       Quantity q1 = new Quantity(new BigDecimal("5.00"));
       Quantity q2 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.subtract(q2))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> q1.subtract(q2)).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("cannot be negative");
     }
 
@@ -90,8 +86,8 @@ class QuantityTest {
     @DisplayName("multiply_fail_NegativeFactor")
     void multiply_fail_NegativeFactor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
-      assertThatThrownBy(() -> q1.multiply(new BigDecimal("-1.0")))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> q1.multiply(new BigDecimal("-1.0"))).isInstanceOf(
+          IllegalArgumentException.class);
     }
 
     @Test
@@ -99,8 +95,7 @@ class QuantityTest {
     void divide_success_HandlesRepeatingDecimals() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       // 10 / 3 = 3.3333... should round based on Q_ROUNDING_MODE
-      assertThatCode(() -> q1.divide(new BigDecimal("3")))
-          .doesNotThrowAnyException();
+      assertThatCode(() -> q1.divide(new BigDecimal("3"))).doesNotThrowAnyException();
     }
 
     @Test
@@ -108,9 +103,8 @@ class QuantityTest {
     void divide_fail_lessThanZero() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.divide(new BigDecimal("-3")))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Divisor must be positive");
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("-3"))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Divisor must be positive");
     }
 
     @Test
@@ -118,9 +112,8 @@ class QuantityTest {
     void divide_fail_lessZero() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.divide(new BigDecimal("0")))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Divisor must be positive");
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("0"))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Divisor must be positive");
     }
   }
 
@@ -140,9 +133,8 @@ class QuantityTest {
       assertThat(zero.isPositive()).isFalse();
       assertThat(zero.isNonZero()).isFalse();
 
-      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-1)))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Quantity cannot be negative");
+      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-1))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
     }
 
     @Test
@@ -158,9 +150,8 @@ class QuantityTest {
     @Test
     @DisplayName("should_fail_when_quantity_given_negative")
     void constructor_fail_when_negative_value() {
-      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10)))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Quantity cannot be negative");
+      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
     }
   }
 }

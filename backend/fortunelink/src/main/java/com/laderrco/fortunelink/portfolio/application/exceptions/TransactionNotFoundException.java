@@ -4,8 +4,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public class TransactionNotFoundException extends RuntimeException {
 
-    public TransactionNotFoundException(TransactionId transactionId) {
-        super("Transaction not found with id: " + transactionId.id().toString());
-    }
+  public TransactionNotFoundException(TransactionId transactionId) {
+    super("Transaction not found with id: " + transactionId.id().toString());
+  }
 
 }

@@ -33,8 +33,7 @@ public final class TransactionApplier {
   }
 
   private static ApplyResult<? extends Position> applyDrip(Position p, Transaction tx) {
-    return p.buy(tx.execution().quantity(), tx.execution().grossValue(),
-        tx.occurredAt());
+    return p.buy(tx.execution().quantity(), tx.execution().grossValue(), tx.occurredAt());
   }
 
   private static ApplyResult<? extends Position> applyReturnOfCapital(Position p, Transaction tx) {

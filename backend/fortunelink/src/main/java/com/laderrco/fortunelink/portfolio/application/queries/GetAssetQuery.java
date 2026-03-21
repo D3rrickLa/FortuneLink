@@ -5,6 +5,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-public record GetAssetQuery(PortfolioId portfolioId, UserId userId, AccountId accountId, AssetSymbol symbol) {
-    
+public record GetAssetQuery(
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    AssetSymbol symbol) {
+
 }

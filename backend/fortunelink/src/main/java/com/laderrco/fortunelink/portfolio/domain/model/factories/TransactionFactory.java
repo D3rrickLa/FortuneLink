@@ -2,13 +2,13 @@ package com.laderrco.fortunelink.portfolio.domain.model.factories;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
@@ -18,8 +18,9 @@ import java.util.List;
 public final class TransactionFactory {
   private final static Currency CAD = Currency.CAD;
 
-  private TransactionFactory() {}
-  
+  private TransactionFactory() {
+  }
+
   public static Transaction.TransactionBuilder baseBuilder() {
     return Transaction.builder().transactionId(TransactionId.newId()).accountId(AccountId.newId())
         .cashDelta(Money.zero(CAD)) // Default to zero if not relevant

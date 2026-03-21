@@ -5,14 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -21,6 +13,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TaxLot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 class FifoPositionTest {
   private final AssetSymbol SYMBOL = new AssetSymbol("MSFT");
@@ -52,12 +50,23 @@ class FifoPositionTest {
     assertThat(pos).isEqualTo(pos.copy());
   }
 
+  // --- Helpers used across all nested classes ---
+  private TaxLot lot(String qty, String basis, Instant date) {
+    return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), USD),
+        date);
+  }
+
+  private FifoPosition position(TaxLot... lots) {
+    return new FifoPosition(SYMBOL, TYPE, USD, List.of(lots), Instant.now());
+  }
+
   @Nested
   @DisplayName("Trading Logic (Buy/Sell/Split)")
   class TradingTests {
     @Test
     void buy_appendsNewLot() {
-      var result = FifoPosition.empty(SYMBOL, TYPE, USD).buy(new Quantity(BigDecimal.TEN), Money.of(100, "USD"), T1);
+      var result = FifoPosition.empty(SYMBOL, TYPE, USD)
+          .buy(new Quantity(BigDecimal.TEN), Money.of(100, "USD"), T1);
       assertThat(result.newPosition().lots()).hasSize(1);
     }
 
@@ -65,8 +74,8 @@ class FifoPositionTest {
     void sell_consumesInFifoOrder() {
       FifoPosition pos = position(lot("10", "100", T1), lot("10", "200", T2));
       // Sell 15: 10 from Lot1 ($100) + 5 from Lot2 ($100) = $200 cost sold
-      var result = (ApplyResult.Sale<FifoPosition>) pos.sell(new Quantity(new BigDecimal("15")), Money.of(450, "USD"),
-          Instant.now());
+      var result = pos.sell(new Quantity(new BigDecimal("15")),
+          Money.of(450, "USD"), Instant.now());
 
       assertThat(result.costBasisSold().amount()).isEqualByComparingTo("200");
       assertThat(result.newPosition().lots()).hasSize(1);
@@ -87,10 +96,8 @@ class FifoPositionTest {
 
       // Action: Sell 15 units.
       // This consumes Lot 1, 5 units of Lot 2, and should trigger isZero() for Lot 3.
-      var result = (ApplyResult.Sale<FifoPosition>) pos.sell(
-          new Quantity(BigDecimal.valueOf(15)),
-          Money.of(500, "USD"),
-          Instant.now());
+      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)),
+          Money.of(500, "USD"), Instant.now());
 
       FifoPosition updated = result.newPosition();
 
@@ -123,7 +130,8 @@ class FifoPositionTest {
       FifoPosition pos = position(lot("10", "400", T1), lot("10", "600", T1));
       Price rocPrice = Price.of(new BigDecimal("5"), USD); // Total reduction $100
 
-      var result = (ApplyResult.Adjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice, Quantity.of(20));
+      var result = (ApplyResult.Adjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice,
+          Quantity.of(20));
       FifoPosition updated = (FifoPosition) result.getUpdatedPosition();
 
       // Lot 1 (40% of basis) -> $360 | Lot 2 (60% of basis) -> $540
@@ -137,7 +145,8 @@ class FifoPositionTest {
       FifoPosition pos = position(lot("10", "100", T1));
       Price rocPrice = Price.of(new BigDecimal("15"), USD); // $150 total
 
-      var result = (ApplyResult.RocAdjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice, Quantity.of(10));
+      var result = (ApplyResult.RocAdjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice,
+          Quantity.of(10));
 
       assertThat(result.getUpdatedPosition().totalCostBasis().isZero()).isTrue();
       assertThat(result.excessCapitalGain().amount()).isEqualByComparingTo("50");
@@ -149,7 +158,8 @@ class FifoPositionTest {
       Currency usd = Currency.USD;
       AssetSymbol symbol = new AssetSymbol("BTC");
       TaxLot lot = new TaxLot(Quantity.of(1), Money.zero(usd), Instant.now());
-      FifoPosition position = new FifoPosition(symbol, AssetType.CRYPTO, usd, List.of(lot), Instant.now());
+      FifoPosition position = new FifoPosition(symbol, AssetType.CRYPTO, usd, List.of(lot),
+          Instant.now());
 
       Price rocPrice = Price.of(BigDecimal.valueOf(100), usd);
 
@@ -175,8 +185,9 @@ class FifoPositionTest {
       Money lotBasis = Money.of("0.01", USD);
       Money lotReduction = Money.of("0.03", USD);
 
-      assertThatThrownBy(() -> FifoPosition.applyLotReduction(lotBasis, lotReduction, false, USD))
-          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(
+          () -> FifoPosition.applyLotReduction(lotBasis, lotReduction, false, USD)).isInstanceOf(
+          IllegalStateException.class);
     }
 
     @Test
@@ -197,8 +208,7 @@ class FifoPositionTest {
 
       // Verification:
       // Total Basis (3.00) - Total Reduction (0.0099999999) = 2.9900000001
-      assertThat(updated.totalCostBasis().amount())
-          .isEqualByComparingTo("2.9900000001");
+      assertThat(updated.totalCostBasis().amount()).isEqualByComparingTo("2.9900000001");
     }
 
     @Test
@@ -235,8 +245,8 @@ class FifoPositionTest {
     @DisplayName("Error Case: Quantity mismatch")
     void applyRoc_throwsOnMismatchedQuantity() {
       FifoPosition pos = position(lot("10", "100", T1));
-      assertThatThrownBy(() -> pos.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD), Quantity.of(5)))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> pos.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD),
+          Quantity.of(5))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -254,9 +264,9 @@ class FifoPositionTest {
       Money lotBasis = Money.of("10.00", CAD);
       Money lotReduction = Money.of("15.00", CAD);
 
-      assertThatThrownBy(() -> FifoPosition.applyLotReduction(lotBasis, lotReduction, false, CAD))
-          .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Intermediate lot went negative");
+      assertThatThrownBy(
+          () -> FifoPosition.applyLotReduction(lotBasis, lotReduction, false, CAD)).isInstanceOf(
+          IllegalStateException.class).hasMessageContaining("Intermediate lot went negative");
     }
 
     @Test
@@ -278,7 +288,9 @@ class FifoPositionTest {
       FifoPosition pos = position(lot("10", "100", T1));
       assertThat(pos.totalCostBasis().amount()).isEqualByComparingTo("100");
       assertThat(pos.costPerUnit().amount()).isEqualByComparingTo("10");
-      assertThat(pos.currentValue(Price.of(new BigDecimal("15"), USD)).amount()).isEqualByComparingTo("150");
+      assertThat(
+          pos.currentValue(Price.of(new BigDecimal("15"), USD)).amount()).isEqualByComparingTo(
+          "150");
     }
   }
 
@@ -310,15 +322,6 @@ class FifoPositionTest {
       // $300 / 20 units = $15.00
       assertEquals(new BigDecimal("15.0000000000"), result.amount());
     }
-  }
-
-  // --- Helpers used across all nested classes ---
-  private TaxLot lot(String qty, String basis, Instant date) {
-    return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), USD), date);
-  }
-
-  private FifoPosition position(TaxLot... lots) {
-    return new FifoPosition(SYMBOL, TYPE, USD, List.of(lots), Instant.now());
   }
 
 }

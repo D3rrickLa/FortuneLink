@@ -17,19 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AccountHealthService {
 
-    private static final Logger log = LoggerFactory.getLogger(AccountHealthService.class);
-    private final PortfolioRepository portfolioRepository;
+  private static final Logger log = LoggerFactory.getLogger(AccountHealthService.class);
+  private final PortfolioRepository portfolioRepository;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // own transaction, always commits
-    public void markStale(PortfolioId portfolioId, UserId userId, AccountId accountId) {
-        try {
-            Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
-                    .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
-            portfolio.reportRecalculationFailure(accountId);
-            portfolioRepository.save(portfolio);
-        } catch (Exception e) {
-            log.error("Failed to mark account as stale - manual intervention required. portfolioId={} accountId={}",
-                    portfolioId, accountId, e);
-        }
+  @Transactional(propagation = Propagation.REQUIRES_NEW) // own transaction, always commits
+  public void markStale(PortfolioId portfolioId, UserId userId, AccountId accountId) {
+    try {
+      Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
+          .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+      portfolio.reportRecalculationFailure(accountId);
+      portfolioRepository.save(portfolio);
+    } catch (Exception e) {
+      log.error(
+          "Failed to mark account as stale - manual intervention required. portfolioId={} accountId={}",
+          portfolioId, accountId, e);
     }
+  }
 }

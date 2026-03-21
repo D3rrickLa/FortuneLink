@@ -5,12 +5,16 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
 import java.time.Instant;
 import java.util.List;
 
 
-public record RecordDepositCommand(PortfolioId portfolioId, UserId userId, AccountId accountId,
-    Money amount, List<Fee> fees, Instant transactionDate, String notes)
-    implements TransactionCommand {
+public record RecordDepositCommand(
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    Money amount,
+    List<Fee> fees,
+    Instant transactionDate,
+    String notes) implements TransactionCommand {
 }

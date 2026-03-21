@@ -8,21 +8,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EmptySource;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
@@ -33,6 +18,19 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EmptySource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class PortfolioTest {
   private PortfolioId portfolioId;
@@ -53,18 +51,15 @@ class PortfolioTest {
     @Test
     void constructor_Success_InitializesCorrectly_Default() {
       Portfolio portfolio = new Portfolio();
-      assertAll(
-          () -> assertNull(portfolio.getPortfolioId()),
-          () -> assertNull(portfolio.getUserId()),
-          () -> assertNull(portfolio.getCreatedAt()));
+      assertAll(() -> assertNull(portfolio.getPortfolioId()),
+          () -> assertNull(portfolio.getUserId()), () -> assertNull(portfolio.getCreatedAt()));
     }
 
     @Test
     @DisplayName("Create New static constructor")
     void constructor_Success_createNew_Factorymethod() {
       Portfolio portfolio = Portfolio.createNew(userId, portfolioName, "description", Currency.CAD);
-      assertAll(
-          () -> assertEquals(userId, portfolio.getUserId()),
+      assertAll(() -> assertEquals(userId, portfolio.getUserId()),
           () -> assertEquals(portfolioName, portfolio.getName()),
           () -> assertEquals("description", portfolio.getDescription()),
           () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency()));
@@ -74,8 +69,7 @@ class PortfolioTest {
     @DisplayName("Create New static constructor blank description")
     void constructor_Success_createNew_NoDescriptionShouldBeBlank() {
       Portfolio portfolio = Portfolio.createNew(userId, portfolioName, null, Currency.CAD);
-      assertAll(
-          () -> assertEquals(userId, portfolio.getUserId()),
+      assertAll(() -> assertEquals(userId, portfolio.getUserId()),
           () -> assertEquals(portfolioName, portfolio.getName()),
           () -> assertTrue(portfolio.getDescription().isEmpty()),
           () -> assertEquals(Currency.CAD, portfolio.getDisplayCurrency()));
@@ -98,14 +92,16 @@ class PortfolioTest {
     @Test
     @DisplayName("Constructor_Failure_NullOrEmptyParameters")
     void constructor_Failure_ThrowsExceptionOnInvalidInputs() {
-      assertThatThrownBy(() -> Portfolio.createNew(null, portfolioName, "desc", Currency.CAD))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> Portfolio.createNew(null, portfolioName, "desc", Currency.CAD)).isInstanceOf(
+          DomainArgumentException.class);
 
-      assertThatThrownBy(() -> Portfolio.createNew(userId, null, "desc", Currency.CAD))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> Portfolio.createNew(userId, null, "desc", Currency.CAD)).isInstanceOf(
+          DomainArgumentException.class);
 
-      assertThatThrownBy(() -> Portfolio.createNew(userId, portfolioName, " ", null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> Portfolio.createNew(userId, portfolioName, " ", null)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test
@@ -114,9 +110,8 @@ class PortfolioTest {
       Instant fixedTime = Instant.now();
       Map<AccountId, Account> accounts = new HashMap<>();
 
-      Portfolio portfolio = Portfolio.reconstitute(
-          portfolioId, userId, "Old Name", "Desc", accounts, Currency.CAD,
-          true, fixedTime, userId, fixedTime, fixedTime);
+      Portfolio portfolio = Portfolio.reconstitute(portfolioId, userId, "Old Name", "Desc",
+          accounts, Currency.CAD, true, fixedTime, userId, fixedTime, fixedTime);
 
       assertThat(portfolio.isDeleted()).isTrue();
       assertThat(portfolio.getDeletedOn()).isEqualTo(fixedTime);
@@ -141,9 +136,8 @@ class PortfolioTest {
     void createAccount_Success_AddsAccount() {
       Instant beforeUpdate = portfolio.getLastUpdatedAt();
 
-      Account account = portfolio.createAccount(
-          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Trading", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
 
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
       assertThat(portfolio.getAccounts()).contains(account);
@@ -154,14 +148,12 @@ class PortfolioTest {
     @Test
     @DisplayName("createAccount_Failure_DuplicateName")
     void createAccount_Failure_DuplicateNameThrows() {
-      portfolio.createAccount(
-          "Savings", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.ACB);
+      portfolio.createAccount("Savings", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+          PositionStrategy.ACB);
 
       assertThatThrownBy(
-          () -> portfolio.createAccount(
-              "SAVINGS", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-              PositionStrategy.ACB))
-          .isInstanceOf(IllegalArgumentException.class)
+          () -> portfolio.createAccount("SAVINGS", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+              PositionStrategy.ACB)).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("already exists");
     }
 
@@ -169,9 +161,8 @@ class PortfolioTest {
     @DisplayName("createAccount_Failure_NotACB")
     void createAccount_Failure_NotACB() {
       assertThatThrownBy(
-          () -> portfolio.createAccount(
-              "SAVINGS", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.FIFO))
-          .isInstanceOf(IllegalArgumentException.class)
+          () -> portfolio.createAccount("SAVINGS", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+              PositionStrategy.FIFO)).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Only ACB strategy is supported.");
     }
 
@@ -179,19 +170,16 @@ class PortfolioTest {
     @DisplayName("createAccount_Failure_NameEmpty")
     void createAccount_Failure_AccountNameEmpty() {
       assertThatThrownBy(
-          () -> portfolio.createAccount(
-              " ", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-              PositionStrategy.ACB))
-          .isInstanceOf(IllegalArgumentException.class)
+          () -> portfolio.createAccount(" ", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+              PositionStrategy.ACB)).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Account name cannot be empty");
     }
 
     @Test
     @DisplayName("removeAccount_Success_WhenClosedAndEmpty")
     void removeAccount_Success_RemovesInactiveAccount() {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       // Mocking internal account state for removal conditions
@@ -206,21 +194,18 @@ class PortfolioTest {
     @Test
     @DisplayName("removeAccount_Failure_WhenActiveOrHasBalance")
     void removeAccount_Failure_ThrowsIfAccountNotReady() {
-      Account account = portfolio.createAccount(
-          "Active", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Active", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
 
-      assertThatThrownBy(() -> portfolio.removeAccount(account.getAccountId()))
-          .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Close it first");
+      assertThatThrownBy(() -> portfolio.removeAccount(account.getAccountId())).isInstanceOf(
+          IllegalStateException.class).hasMessageContaining("Close it first");
     }
 
     @Test
     @DisplayName("reopenAccount_Success_WhenClosedAndReOpen")
     void reopenAccount_Success() {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       // Mocking internal account state for removal conditions
@@ -240,9 +225,8 @@ class PortfolioTest {
     void findAccountByName_Success_FindsAccount() {
       Instant beforeUpdate = portfolio.getLastUpdatedAt();
 
-      Account account = portfolio.createAccount(
-          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Trading", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
 
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
       assertThat(portfolio.getAccounts()).contains(account);
@@ -256,11 +240,11 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = { "  ", "\t", "\n" }) // Testing null, empty, and blank
+    @ValueSource(strings = {"  ", "\t", "\n"}) // Testing null, empty, and blank
     @DisplayName("findAccountByName_ReturnEmpty_WhenNameIsInvalid")
     void findAccountByName_Failure_ReturnsEmptyWhenNameIsNullOrBlank(String invalidName) {
-      portfolio.createAccount(
-          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.ACB);
+      portfolio.createAccount("Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+          PositionStrategy.ACB);
 
       Optional<Account> foundAccount = portfolio.findAccountByName(invalidName);
 
@@ -270,21 +254,19 @@ class PortfolioTest {
     @Test
     @DisplayName("findAccountByType_Success")
     void findAccountByType_Success() {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
 
       List<Account> foundAccount = portfolio.findAccountsByType(AccountType.TAXABLE_INVESTMENT);
-      assertTrue(foundAccount.size() == 1);
+      assertEquals(1, foundAccount.size());
       assertEquals(account, foundAccount.get(0));
     }
 
     @Test
     @DisplayName("renameAccount_Success")
     void renameAccount_Success() {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
       portfolio.renameAccount(id, "AMONGUS");
@@ -295,9 +277,8 @@ class PortfolioTest {
     @Test
     @DisplayName("renameAccount_Success_SameNameIsNoOp")
     void renameAccount_Success_SameName() {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
 
       // This should NOT throw an exception
       portfolio.renameAccount(account.getAccountId(), "Test");
@@ -308,34 +289,29 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = { "  ", "\t", "\n" })
-    // Testing null, empty, and blank
+    @ValueSource(strings = {"  ", "\t", "\n"})
+      // Testing null, empty, and blank
     void renameAccount_Failure_NameIsNullAndOrEmpty(String invalidName) {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
-      assertThatThrownBy(() -> portfolio.renameAccount(id, invalidName))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Account name cannot be empty");
+      assertThatThrownBy(() -> portfolio.renameAccount(id, invalidName)).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Account name cannot be empty");
 
     }
 
     @Test
     @DisplayName("renameAccount_Failure_NameExistsAlready")
     void renameAccount_Failure_NameExistsAlready() {
-      Account account = portfolio.createAccount(
-          "Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-          PositionStrategy.ACB);
-      portfolio.createAccount(
-          "Test_2", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+      Account account = portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
+          Currency.USD, PositionStrategy.ACB);
+      portfolio.createAccount("Test_2", AccountType.TAXABLE_INVESTMENT, Currency.USD,
           PositionStrategy.ACB);
       AccountId id = account.getAccountId();
 
-      assertThatThrownBy(() -> portfolio.renameAccount(id, "Test_2"))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Account name already exists");
+      assertThatThrownBy(() -> portfolio.renameAccount(id, "Test_2")).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Account name already exists");
 
     }
 
@@ -366,20 +342,19 @@ class PortfolioTest {
     @Test
     @DisplayName("markAsDeleted_Failure_HasActiveAccounts")
     void markAsDeleted_Failure_ThrowsIfNotEmpty() {
-      portfolio.createAccount(
-          "Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD, PositionStrategy.ACB);
+      portfolio.createAccount("Trading", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+          PositionStrategy.ACB);
 
-      assertThatThrownBy(() -> portfolio.markAsDeleted(userId))
-          .isInstanceOf(PortfolioNotEmptyException.class)
-          .hasMessageContaining("Cannot delete portfolio with");
+      assertThatThrownBy(() -> portfolio.markAsDeleted(userId)).isInstanceOf(
+          PortfolioNotEmptyException.class).hasMessageContaining("Cannot delete portfolio with");
     }
 
     @Test
     @DisplayName("markAsDeleted_Failure_AlreadyDeleted")
     void markAsDeleted_Failure_ThrowsWhenAlreadyDeleted() {
       portfolio.markAsDeleted(userId);
-      assertThatThrownBy(() -> portfolio.markAsDeleted(userId))
-          .isInstanceOf(PortfolioAlreadyDeletedException.class)
+      assertThatThrownBy(() -> portfolio.markAsDeleted(userId)).isInstanceOf(
+              PortfolioAlreadyDeletedException.class)
           .hasMessageContaining("Portfolio is already deleted");
     }
 
@@ -397,8 +372,7 @@ class PortfolioTest {
     @Test
     @DisplayName("restore_Failure_IfNotDeleted")
     void restore_Failure_ThrowsIfNotInDeletedState() {
-      assertThatThrownBy(() -> portfolio.restore())
-          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> portfolio.restore()).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -418,8 +392,7 @@ class PortfolioTest {
       assertThat(portfolio.getDescription()).isEqualTo(newDesc);
 
       // Use isAfterOrEqualTo to handle ultra-fast execution
-      assertThat(portfolio.getLastUpdatedAt())
-          .as("The lastUpdatedOn timestamp should be refreshed")
+      assertThat(portfolio.getLastUpdatedAt()).as("The lastUpdatedOn timestamp should be refreshed")
           .isAfterOrEqualTo(beforeUpdate);
     }
 
@@ -446,17 +419,16 @@ class PortfolioTest {
     @DisplayName("updateDetails_Failure_EmptyOrNullName")
     void updateDetails_Failure_ThrowsExceptionForInvalidNames() {
       // Test Null
-      assertThatThrownBy(() -> portfolio.updateDetails(null, "Valid Desc"))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessage("Portfolio name cannot be empty");
+      assertThatThrownBy(() -> portfolio.updateDetails(null, "Valid Desc")).isInstanceOf(
+          IllegalArgumentException.class).hasMessage("Portfolio name cannot be empty");
 
       // Test Empty
-      assertThatThrownBy(() -> portfolio.updateDetails("", "Valid Desc"))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> portfolio.updateDetails("", "Valid Desc")).isInstanceOf(
+          IllegalArgumentException.class);
 
       // Test Blank/Whitespace
-      assertThatThrownBy(() -> portfolio.updateDetails("   ", "Valid Desc"))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> portfolio.updateDetails("   ", "Valid Desc")).isInstanceOf(
+          IllegalArgumentException.class);
     }
 
     @Test
@@ -471,28 +443,29 @@ class PortfolioTest {
 
     @Test
     void reportRecalculationFailure_Success_MarkAsStale() {
-      Account account_1 = portfolio.createAccount(
-          "Invest", AccountType.TFSA, Currency.USD, PositionStrategy.ACB);
+      Account account_1 = portfolio.createAccount("Invest", AccountType.TFSA, Currency.USD,
+          PositionStrategy.ACB);
       portfolio.reportRecalculationFailure(account_1.getAccountId());
       assertThat(account_1.isStale()).isTrue();
     }
 
     @Test
     void reportRecalculationFailure_failure_accountNotFound() {
-      Account account_1 = new Account(
-          AccountId.newId(), "Not Found", AccountType.CHEQUING, Currency.USD, PositionStrategy.ACB);
+      Account account_1 = new Account(AccountId.newId(), "Not Found", AccountType.CHEQUING,
+          Currency.USD, PositionStrategy.ACB);
       String id = account_1.getAccountId().id().toString();
 
-      assertThatThrownBy(() -> portfolio.reportRecalculationFailure(account_1.getAccountId()))
-          .isInstanceOf(AccountNotFoundException.class)
-          .hasMessageContaining(
-              "Portfolio, " + portfolio.getPortfolioId().id().toString() + " does not have/cannot find " + id);
+      assertThatThrownBy(
+          () -> portfolio.reportRecalculationFailure(account_1.getAccountId())).isInstanceOf(
+          AccountNotFoundException.class).hasMessageContaining(
+          "Portfolio, " + portfolio.getPortfolioId().id().toString() + " does not have/cannot find "
+              + id);
     }
 
     @Test
     void reportRecalculationSuccess_Success_MarkAsHealth() {
-      Account account_1 = portfolio.createAccount(
-          "Invest", AccountType.TFSA, Currency.USD, PositionStrategy.ACB);
+      Account account_1 = portfolio.createAccount("Invest", AccountType.TFSA, Currency.USD,
+          PositionStrategy.ACB);
       portfolio.reportRecalculationFailure(account_1.getAccountId());
       assertThat(account_1.isStale()).isTrue();
 
@@ -502,21 +475,22 @@ class PortfolioTest {
 
     @Test
     void reportRecalculationSuccess_failure_accountNotFound() {
-      Account account_1 = new Account(
-          AccountId.newId(), "Not Found", AccountType.CHEQUING, Currency.USD, PositionStrategy.ACB);
+      Account account_1 = new Account(AccountId.newId(), "Not Found", AccountType.CHEQUING,
+          Currency.USD, PositionStrategy.ACB);
 
       String id = account_1.getAccountId().id().toString();
 
-      assertThatThrownBy(() -> portfolio.reportRecalculationSuccess(account_1.getAccountId()))
-          .isInstanceOf(AccountNotFoundException.class)
-          .hasMessageContaining(
-              "Portfolio, " + portfolio.getPortfolioId().id().toString() + " does not have/cannot find " + id);
+      assertThatThrownBy(
+          () -> portfolio.reportRecalculationSuccess(account_1.getAccountId())).isInstanceOf(
+          AccountNotFoundException.class).hasMessageContaining(
+          "Portfolio, " + portfolio.getPortfolioId().id().toString() + " does not have/cannot find "
+              + id);
     }
 
     @Test
     void reportRecalculationSuccess_Success_DoesNothingWhenHealthyStatus() {
-      Account account_1 = portfolio.createAccount(
-          "Invest", AccountType.TFSA, Currency.USD, PositionStrategy.ACB);
+      Account account_1 = portfolio.createAccount("Invest", AccountType.TFSA, Currency.USD,
+          PositionStrategy.ACB);
 
       portfolio.reportRecalculationSuccess(account_1.getAccountId());
       assertThat(account_1.isStale()).isFalse();
@@ -548,8 +522,8 @@ class PortfolioTest {
     @DisplayName("getAccount_Failure_ThrowsOnMissingId")
     void getAccount_Failure_ThrowsNotFound() {
       AccountId randomId = AccountId.newId();
-      assertThatThrownBy(() -> portfolio.getAccount(randomId))
-          .isInstanceOf(AccountNotFoundException.class);
+      assertThatThrownBy(() -> portfolio.getAccount(randomId)).isInstanceOf(
+          AccountNotFoundException.class);
     }
 
     @Test

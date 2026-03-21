@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,41 +13,34 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.concurrent.TimeUnit;
-
 @Service
 @RequiredArgsConstructor
 public class PositionRecalculationService {
 
-    private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
+  private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
 
-    private final Cache<String, Object> symbolLocks = Caffeine.newBuilder()
-            .expireAfterAccess(5, TimeUnit.MINUTES)
-            .maximumSize(10_000)
-            .build();
+  private final Cache<String, Object> symbolLocks = Caffeine.newBuilder()
+      .expireAfterAccess(5, TimeUnit.MINUTES).maximumSize(10_000).build();
 
-    private final PositionRecalculationExecutor executor;
+  private final PositionRecalculationExecutor executor;
 
-    /**
-     * Async listener that triggers after a transaction commit.
-     * Ensures excluded/restored flags are persisted before we replay them.
-     */
-    @Async("recalculationExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
-        String lockKey = event.accountId() + ":" + event.symbol().symbol();
-        Object lock = symbolLocks.get(lockKey, k -> new Object());
+  /**
+   * Async listener that triggers after a transaction commit. Ensures excluded/restored flags are
+   * persisted before we replay them.
+   */
+  @Async("recalculationExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
+    String lockKey = event.accountId() + ":" + event.symbol().symbol();
+    Object lock = symbolLocks.get(lockKey, k -> new Object());
 
-        synchronized (lock) {
-            try {
-                executor.scheduleRecalculation(
-                        event.portfolioId(),
-                        event.userId(),
-                        event.accountId(),
-                        event.symbol());
-            } catch (Exception e) {
-                log.error("Recalculation failed...", e);
-            }
-        }
+    synchronized (lock) {
+      try {
+        executor.scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(),
+            event.symbol());
+      } catch (Exception e) {
+        log.error("Recalculation failed...", e);
+      }
     }
+  }
 }

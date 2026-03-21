@@ -6,11 +6,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public final class FifoPositionProjector extends BasePositionProjector<FifoPosition> {
-    public FifoPositionProjector(AssetSymbol s, AssetType t, Currency c) {
-        super(s, t, c, FifoPosition.class);
-    }
-    @Override
-    protected FifoPosition getEmptyPosition(AssetSymbol s, AssetType t, Currency c) {
-        return FifoPosition.empty(s, t, c);
-    }
+  public FifoPositionProjector(AssetSymbol s, AssetType t, Currency c) {
+    super(s, t, c, FifoPosition.class);
+  }
+
+  @Override
+  protected FifoPosition getEmptyPosition(AssetSymbol s, AssetType t, Currency c) {
+    return FifoPosition.empty(s, t, c);
+  }
 }

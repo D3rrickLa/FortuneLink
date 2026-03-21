@@ -46,17 +46,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
     Money cashDelta = gross.add(totalFees).negate();
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.BUY)
-        .execution(new TradeExecution(symbol, quantity, price))
-        .cashDelta(cashDelta)
-        .fees(feeList)
-        .notes(notes)
-        .occurredAt(date)
-        .metadata(TransactionMetadata.manual(type))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.BUY)
+        .execution(new TradeExecution(symbol, quantity, price)).cashDelta(cashDelta).fees(feeList)
+        .notes(notes).occurredAt(date).metadata(TransactionMetadata.manual(type)).build();
 
     applyPositionEffect(account, tx);
     account.withdraw(cashDelta.abs(), "BUY " + symbol.symbol());
@@ -65,17 +58,16 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity,
-      Price price, List<Fee> fees, String notes, Instant date) {
+  public Transaction recordSell(Account account, AssetSymbol symbol, Quantity quantity, Price price,
+      List<Fee> fees, String notes, Instant date) {
 
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateIsActive(account);
     validateTransactionDate(date, account);
 
     // Position must exist before we can sell. Grab AssetType from it for metadata.
-    Position existingPosition = account.getPosition(symbol)
-        .orElseThrow(() -> new IllegalStateException(
-            "Cannot sell: no open position for " + symbol.symbol()));
+    Position existingPosition = account.getPosition(symbol).orElseThrow(
+        () -> new IllegalStateException("Cannot sell: no open position for " + symbol.symbol()));
 
     List<Fee> feeList = fees != null ? fees : List.of();
 
@@ -84,16 +76,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
     Money cashDelta = gross.subtract(totalFees);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.SELL)
-        .execution(new TradeExecution(symbol, quantity, price))
-        .cashDelta(cashDelta)
-        .fees(feeList)
-        .notes(notes)
-        .occurredAt(date)
-        .metadata(TransactionMetadata.manual(existingPosition.type()))
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.SELL)
+        .execution(new TradeExecution(symbol, quantity, price)).cashDelta(cashDelta).fees(feeList)
+        .notes(notes).occurredAt(date).metadata(TransactionMetadata.manual(existingPosition.type()))
         .build();
 
     // Position first: realized gain is recorded inside applyPositionEffect via
@@ -111,16 +97,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.DEPOSIT)
-        .cashDelta(amount)
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(AssetType.CASH))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.DEPOSIT)
+        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt((date))
+        .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
     account.deposit(amount, "DEPOSIT");
 
@@ -133,16 +113,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.WITHDRAWAL)
-        .cashDelta(amount.negate())
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(AssetType.CASH))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.WITHDRAWAL)
+        .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date))
+        .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
     account.withdraw(amount, "WITHDRAWAL");
 
@@ -155,16 +129,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.FEE)
-        .cashDelta(amount.negate())
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(AssetType.CASH))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.FEE)
+        .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date))
+        .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
     account.applyFee(amount, "FEE: " + notes);
 
@@ -172,23 +140,18 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes, Instant date) {
+  public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes,
+      Instant date) {
     Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.INTEREST)
-        .cashDelta(amount)
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(AssetType.CASH)
-            .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
+        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt((date)).metadata(
+            TransactionMetadata.manual(AssetType.CASH)
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, "INTEREST: " + symbol.symbol());
 
@@ -196,23 +159,18 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, String notes, Instant date) {
+  public Transaction recordDividend(Account account, AssetSymbol symbol, Money amount, String notes,
+      Instant date) {
     Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.DIVIDEND)
-        .cashDelta(amount)
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(AssetType.CASH)
-            .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
+        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt((date)).metadata(
+            TransactionMetadata.manual(AssetType.CASH)
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, "DIVIDEND: " + symbol.symbol());
 
@@ -227,24 +185,16 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    AssetType type = account.getPosition(symbol)
-        .map(Position::type)
-        .orElse(AssetType.STOCK);
+    AssetType type = account.getPosition(symbol).map(Position::type).orElse(AssetType.STOCK);
 
     // DRIP cashImpact = NONE → cashDelta must be zero.
     // grossValue on the execution is what TransactionApplier uses for ACB.
     // Do NOT call recordDividend() for the same event — the cash never lands first.
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.DIVIDEND_REINVEST)
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND_REINVEST)
         .execution(new TradeExecution(symbol, quantity, price))
-        .cashDelta(Money.zero(account.getAccountCurrency()))
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(type))
-        .build();
+        .cashDelta(Money.zero(account.getAccountCurrency())).fees(List.of()).notes(notes)
+        .occurredAt((date)).metadata(TransactionMetadata.manual(type)).build();
 
     applyPositionEffect(account, tx);
     // No cash mutation — DRIP is self-contained.
@@ -253,32 +203,26 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordReturnOfCapital(Account account, AssetSymbol symbol,
-      Quantity quantity, Price price, String notes, Instant date) {
+  public Transaction recordReturnOfCapital(Account account, AssetSymbol symbol, Quantity quantity,
+      Price price, String notes, Instant date) {
 
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateIsActive(account);
     validateTransactionDate(date, account);
 
-    Position existingPosition = account.getPosition(symbol)
-        .orElseThrow(() -> new IllegalStateException(
+    Position existingPosition = account.getPosition(symbol).orElseThrow(
+        () -> new IllegalStateException(
             "Cannot apply ROC: no open position for " + symbol.symbol()));
 
     // ROC cashImpact = IN → gross distribution paid to the investor.
     // No fees on ROC distributions.
     Money cashDelta = price.calculateValue(quantity);
 
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.RETURN_OF_CAPITAL)
-        .execution(new TradeExecution(symbol, quantity, price))
-        .cashDelta(cashDelta)
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt((date))
-        .metadata(TransactionMetadata.manual(existingPosition.type()))
-        .build();
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.RETURN_OF_CAPITAL)
+        .execution(new TradeExecution(symbol, quantity, price)).cashDelta(cashDelta).fees(List.of())
+        .notes(notes).occurredAt((date))
+        .metadata(TransactionMetadata.manual(existingPosition.type())).build();
 
     // Position first: applyReturnOfCapital() reduces ACB on the position.
     // Cash deposit follows.
@@ -301,20 +245,20 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   /**
    * Position-only replay. Cash state is NOT touched.
-   *
-   * Passing a non-holdings type is a programming error — throws immediately so it
-   * surfaces in tests rather than silently corrupting state.
+   * <p>
+   * Passing a non-holdings type is a programming error — throws immediately so it surfaces in tests
+   * rather than silently corrupting state.
    */
   @Override
   public void replayTransaction(Account account, Transaction tx) {
-    if (tx.isExcluded())
+    if (tx.isExcluded()) {
       return;
+    }
 
     if (!tx.transactionType().affectsHoldings()) {
       throw new IllegalArgumentException(
-          "replayTransaction() is position-only. TransactionType."
-              + tx.transactionType() + " does not affect holdings. "
-              + "Use replayFullTransaction() for cash events.");
+          "replayTransaction() is position-only. TransactionType." + tx.transactionType()
+              + " does not affect holdings. " + "Use replayFullTransaction() for cash events.");
     }
 
     applyPositionEffect(account, tx);
@@ -325,8 +269,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
    */
   @Override
   public void replayFullTransaction(Account account, Transaction tx) {
-    if (tx.isExcluded())
+    if (tx.isExcluded()) {
       return;
+    }
 
     if (tx.transactionType().affectsHoldings()) {
       applyPositionEffect(account, tx);
@@ -339,13 +284,15 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       case IN -> account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
       case OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType(), true);
       case NONE -> {
-        /* DRIP, SPLIT — no cash effect */ }
+        /* DRIP, SPLIT — no cash effect */
+      }
     }
   }
 
   private void applyPositionEffect(Account account, Transaction tx) {
-    if (tx.execution() == null)
+    if (tx.execution() == null) {
       return;
+    }
 
     AssetSymbol symbol = tx.execution().asset();
     AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
@@ -354,7 +301,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     switch (tx.transactionType()) {
       case BUY, DIVIDEND_REINVEST -> current = account.ensurePosition(symbol, type);
-      case SELL, RETURN_OF_CAPITAL, SPLIT -> current = requirePosition(account, symbol, tx.transactionType());
+      case SELL, RETURN_OF_CAPITAL, SPLIT ->
+          current = requirePosition(account, symbol, tx.transactionType());
       default -> {
         return; // no position effect
       }
@@ -365,18 +313,13 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     // SELL realized gains
     if (result instanceof ApplyResult.Sale<?> sale) {
-      account.recordRealizedGain(
-          symbol,
-          sale.realizedGainLoss(),
-          sale.costBasisSold(),
+      account.recordRealizedGain(symbol, sale.realizedGainLoss(), sale.costBasisSold(),
           tx.occurredAt());
     }
 
     // NEW: ROC excess capital gain
     if (result instanceof ApplyResult.RocAdjustment<?> roc) {
-      account.recordRealizedGain(
-          symbol,
-          roc.excessCapitalGain(),
+      account.recordRealizedGain(symbol, roc.excessCapitalGain(),
           Money.zero(account.getAccountCurrency()), // cost basis sold = $0.00 per CRA
           tx.occurredAt());
     }
@@ -415,8 +358,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   private Position requirePosition(Account account, AssetSymbol symbol, TransactionType kind) {
-    return account.getPosition(symbol)
-        .orElseThrow(() -> new IllegalStateException(
-            "Replay error: " + kind + " requires existing position for " + symbol));
+    return account.getPosition(symbol).orElseThrow(() -> new IllegalStateException(
+        "Replay error: " + kind + " requires existing position for " + symbol));
   }
 }

@@ -5,5 +5,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-public record GetTransactionByIdQuery(PortfolioId portfolioId, UserId userId, AccountId accountId, TransactionId transactionId) {
+public record GetTransactionByIdQuery(
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    TransactionId transactionId) {
 }

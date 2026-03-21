@@ -9,16 +9,15 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 /**
  * Marks a transaction as excluded from position and capital gains calculation.
- *
- * CASH BALANCE NOTE: Excluding a trade does NOT reverse the cash impact.
- * The cash balance reflects actual money movement. Only ACB/position state
- * is recalculated. This is INTENTIONAL - your brokerage statement, not this
- * app, is the source of truth for cash.
+ * <p>
+ * CASH BALANCE NOTE: Excluding a trade does NOT reverse the cash impact. The cash balance reflects
+ * actual money movement. Only ACB/position state is recalculated. This is INTENTIONAL - your
+ * brokerage statement, not this app, is the source of truth for cash.
  */
 public record ExcludeTransactionCommand(
-        TransactionId transactionId,
-        PortfolioId portfolioId,
-        UserId userId,
-        AccountId accountId,
-        String reason) implements TransactionCommand {
+    TransactionId transactionId,
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    String reason) implements TransactionCommand {
 }

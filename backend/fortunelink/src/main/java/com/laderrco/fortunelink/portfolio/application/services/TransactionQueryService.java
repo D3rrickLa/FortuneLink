@@ -39,13 +39,8 @@ public class TransactionQueryService {
   public TransactionView getTransaction(GetTransactionByIdQuery query) {
     Objects.requireNonNull(query, "GetTransactionByIdQuery cannot be null");
 
-    Transaction transaction = transactionRepository
-        .findByIdAndPortfolioIdAndUserIdAndAccountId(
-            query.transactionId(),
-            query.portfolioId(),
-            query.userId(),
-            query.accountId()
-        )
+    Transaction transaction = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+            query.transactionId(), query.portfolioId(), query.userId(), query.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(query.transactionId()));
 
     return transactionViewMapper.toTransactionView(transaction);
@@ -76,27 +71,23 @@ public class TransactionQueryService {
     // Reject ambiguous combinations — callers must pick one filter mode
     if (hasDateRange && hasSymbol) {
       throw new IllegalArgumentException(
-          "Cannot filter by both date range and symbol simultaneously. " +
-              "Provide either a date range or a symbol, not both.");
+          "Cannot filter by both date range and symbol simultaneously. "
+              + "Provide either a date range or a symbol, not both.");
     }
 
-    Pageable pageable = PageRequest.of(
-        query.page(),
-        query.size(),
-        Sort.by("occurredAt").descending()
-    );
+    Pageable pageable = PageRequest.of(query.page(), query.size(),
+        Sort.by("occurredAt").descending());
 
     Page<Transaction> page;
 
     // when we add back transactionType to GetTransactionHistoryQuery
     // we will do the check here for the 'page'
     if (hasDateRange) {
-      page = transactionQueryRepository
-          .findByAccountIdAndDateRange(
-              query.accountId(), query.startDate(), query.endDate(), pageable);
+      page = transactionQueryRepository.findByAccountIdAndDateRange(query.accountId(),
+          query.startDate(), query.endDate(), pageable);
     } else if (hasSymbol) {
-      page = transactionQueryRepository
-          .findByAccountIdAndSymbol(query.accountId(), query.symbol(), pageable);
+      page = transactionQueryRepository.findByAccountIdAndSymbol(query.accountId(), query.symbol(),
+          pageable);
     } else {
       page = transactionQueryRepository.findByAccountId(query.accountId(), pageable);
     }
@@ -116,7 +107,7 @@ public class TransactionQueryService {
     validateDateRange(query.start(), query.end());
     portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
 
-//        return transactionRepository.findByDateRange(query.accountId(), query.start(), query.end());
+    //        return transactionRepository.findByDateRange(query.accountId(), query.start(), query.end());
     return null;
   }
 

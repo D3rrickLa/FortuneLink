@@ -4,12 +4,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public class AssetNotFoundException extends RuntimeException {
 
-    public AssetNotFoundException(String message) {
-        super(message);
-    }
+  public AssetNotFoundException(String message) {
+    super(message);
+  }
 
-    public AssetNotFoundException(AssetSymbol assetSymbol) {
-        super("Not position found for sybmol: " + assetSymbol.symbol());
-    }
+  public AssetNotFoundException(AssetSymbol assetSymbol) {
+    super("Not position found for sybmol: " + assetSymbol.symbol());
+  }
 
 }

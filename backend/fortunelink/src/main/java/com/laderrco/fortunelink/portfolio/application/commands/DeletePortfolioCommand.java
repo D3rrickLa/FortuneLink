@@ -4,13 +4,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 /**
- * PortfolioId -> what to del
- * UserId -> who is requesting it (for auth)
+ * PortfolioId -> what to del UserId -> who is requesting it (for auth)
  */
 public record DeletePortfolioCommand(
-    PortfolioId portfolioId,
-    UserId userId,
-    boolean confirmed,
-    boolean softDelete) implements PortfolioLifecycleCommand {
+    PortfolioId portfolioId, UserId userId, boolean confirmed, boolean softDelete) implements
+    PortfolioLifecycleCommand {
 
 }

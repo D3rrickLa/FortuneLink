@@ -5,13 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -20,6 +13,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.shared.enums.Precision;
+import java.math.BigDecimal;
+import java.time.Instant;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 class AcbPositionTest {
 
@@ -59,11 +57,8 @@ class AcbPositionTest {
     @DisplayName("sell_success_reducesQuantityAndProportionalCostBasis")
     void sell_success_calculatesRealizedGain() {
       // Setup: 10 units at $100 total cost ($10/unit)
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
-          new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00"), USD),
-          Instant.now(),
-          Instant.now());
+      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
+          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
 
       Quantity sellQty = new Quantity(new BigDecimal("5"));
       Money proceeds = new Money(new BigDecimal("80.00"), USD); // Sold for $16/unit
@@ -74,8 +69,7 @@ class AcbPositionTest {
       }
       assertThat(rawResult.isNoChange()).isFalse();
 
-      @SuppressWarnings("unchecked")
-      var result = (ApplyResult.Sale<AcbPosition>) rawResult;
+      @SuppressWarnings("unchecked") var result = (ApplyResult.Sale<AcbPosition>) rawResult;
 
       AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
 
@@ -98,10 +92,8 @@ class AcbPositionTest {
       Currency usd = Currency.USD;
       // Setup a position with a "difficult" number for division
       // Total cost $100.00 for 3 units ($33.3333... per unit)
-      AcbPosition position = new AcbPosition(
-          symbol, AssetType.CRYPTO, usd,
-          Quantity.of(3), Money.of("100", usd),
-          Instant.now(), Instant.now());
+      AcbPosition position = new AcbPosition(symbol, AssetType.CRYPTO, usd, Quantity.of(3),
+          Money.of("100", usd), Instant.now(), Instant.now());
 
       // Sell all 3 units
       Quantity sellQty = Quantity.of(3);
@@ -127,10 +119,8 @@ class AcbPositionTest {
       // Arrange
       AssetSymbol symbol = new AssetSymbol("AAPL");
       Currency usd = Currency.USD;
-      AcbPosition position = new AcbPosition(
-          symbol, AssetType.STOCK, usd,
-          Quantity.of(10), Money.of("100", usd),
-          Instant.now(), Instant.now());
+      AcbPosition position = new AcbPosition(symbol, AssetType.STOCK, usd, Quantity.of(10),
+          Money.of("100", usd), Instant.now(), Instant.now());
 
       // Sell 4 out of 10 shares (40%)
       Quantity sellQty = Quantity.of(4);
@@ -152,11 +142,8 @@ class AcbPositionTest {
     @Test
     @DisplayName("sell_failure_insufficientQuantityThrowsException")
     void sell_failure_insufficientQuantity() {
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
-          new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00000000"), USD),
-          Instant.now(),
-          Instant.now());
+      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
+          new Money(new BigDecimal("100.00000000"), USD), Instant.now(), Instant.now());
 
       Quantity sellQty = new Quantity(new BigDecimal("11"));
       Money proceeds = new Money(new BigDecimal("150.00"), USD);
@@ -172,11 +159,8 @@ class AcbPositionTest {
     @Test
     @DisplayName("split_success_adjustsQuantityKeepsBasisFixed")
     void split_success_2For1Split() {
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
-          new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00"), USD),
-          Instant.now(),
-          Instant.now());
+      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
+          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
 
       Ratio ratio = new Ratio(2, 1);
       var result = position.split(ratio);
@@ -208,10 +192,8 @@ class AcbPositionTest {
       // Arrange: Position with 100 shares at $1000 total cost basis
       AssetSymbol symbol = new AssetSymbol("VTI");
       Currency usd = Currency.USD;
-      AcbPosition position = new AcbPosition(
-          symbol, AssetType.ETF, usd,
-          Quantity.of(100), Money.of("1000", usd),
-          Instant.now(), Instant.now());
+      AcbPosition position = new AcbPosition(symbol, AssetType.ETF, usd, Quantity.of(100),
+          Money.of("1000", usd), Instant.now(), Instant.now());
 
       // ROC of $2 per share = $200 reduction
       Price rocPrice = Price.of(BigDecimal.TWO, usd);
@@ -235,14 +217,8 @@ class AcbPositionTest {
       // Arrange: Position with $100 total cost basis
       AssetSymbol symbol = new AssetSymbol("REIT");
       Currency usd = Currency.USD;
-      AcbPosition position = new AcbPosition(
-          symbol,
-          AssetType.STOCK,
-          usd,
-          Quantity.of(10),
-          Money.of("100", usd),
-          Instant.now(),
-          Instant.now());
+      AcbPosition position = new AcbPosition(symbol, AssetType.STOCK, usd, Quantity.of(10),
+          Money.of("100", usd), Instant.now(), Instant.now());
 
       // ROC of $15 per share = $150 reduction (which is $50 over basis)
       Price rocPrice = Price.of(BigDecimal.valueOf(15), usd);
@@ -264,13 +240,13 @@ class AcbPositionTest {
     @DisplayName("Should throw exception if heldQuantity does not match total quantity")
     void applyReturnOfCapital_Failure_MismatchedQuantity() {
       // Arrange
-      AcbPosition position = AcbPosition.empty(new AssetSymbol("AAPL"), AssetType.STOCK, Currency.USD)
-          .buy(Quantity.of(50), Money.of("500", Currency.USD), Instant.now()).newPosition();
+      AcbPosition position = AcbPosition.empty(new AssetSymbol("AAPL"), AssetType.STOCK,
+              Currency.USD).buy(Quantity.of(50), Money.of("500", Currency.USD), Instant.now())
+          .newPosition();
 
       // Act & Assert
-      assertThatThrownBy(
-          () -> position.applyReturnOfCapital(Price.of(BigDecimal.ONE, Currency.USD), Quantity.of(49)))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> position.applyReturnOfCapital(Price.of(BigDecimal.ONE, Currency.USD),
+          Quantity.of(49))).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("does not match position quantity");
     }
   }
@@ -283,24 +259,19 @@ class AcbPositionTest {
     @DisplayName("costPerUnit_success_handlesEmptyAndPopulatedPositions")
     void costPerUnit_logic() {
       AcbPosition empty = AcbPosition.empty(SYMBOL, TYPE, USD);
-      assertEquals(BigDecimal.ZERO.setScale(Precision.getMoneyPrecision()), empty.costPerUnit().amount());
+      assertEquals(BigDecimal.ZERO.setScale(Precision.getMoneyPrecision()),
+          empty.costPerUnit().amount());
 
-      AcbPosition populated = new AcbPosition(SYMBOL, TYPE, USD,
-          new Quantity(new BigDecimal("4")),
-          new Money(new BigDecimal("100.00"), USD),
-          Instant.now(),
-          Instant.now());
+      AcbPosition populated = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("4")),
+          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
       assertEquals(new BigDecimal("25.0000000000"), populated.costPerUnit().amount());
     }
 
     @Test
     @DisplayName("calculateUnrealizedGain_success_correctDifference")
     void calculateUnrealizedGain_success() {
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD,
-          new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00"), USD),
-          Instant.now(),
-          Instant.now());
+      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
+          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
 
       Money currentPrice = new Money(new BigDecimal("15.00"), USD); // Total value 150
 

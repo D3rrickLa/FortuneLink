@@ -14,8 +14,13 @@ import com.laderrco.fortunelink.shared.enums.Rounding;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-public record AcbPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-    Quantity totalQuantity, Money totalCostBasis, Instant firstAcquiredAt,
+public record AcbPosition(
+    AssetSymbol symbol,
+    AssetType type,
+    Currency accountCurrency,
+    Quantity totalQuantity,
+    Money totalCostBasis,
+    Instant firstAcquiredAt,
     Instant lastModifiedAt) implements Position {
   public AcbPosition {
     notNull(symbol, "AssetSymbol");

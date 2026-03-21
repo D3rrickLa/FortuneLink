@@ -323,8 +323,8 @@ public class TransactionTest {
       Ratio split = null;
       Money cashDelta = Money.of(-1358.25, "USD");
       List<Fee> fees = List.of(new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
-          ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
-          new FeeMetadata(Map.of())),
+              ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
+              new FeeMetadata(Map.of())),
           new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
               new ExchangeRate(Currency.CAD, Currency.USD, BigDecimal.valueOf(1.35), Instant.now()),
               Instant.now(), new FeeMetadata(Map.of()))
@@ -339,8 +339,7 @@ public class TransactionTest {
           execution, split, cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
       assertAll(() -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()),
           () -> assertEquals(Currency.USD.getCode(),
-              transaction.totalFeesInAccountCurrency().currency().getCode()),
-          () -> assertEquals(2,
+              transaction.totalFeesInAccountCurrency().currency().getCode()), () -> assertEquals(2,
               transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits()));
     }
 
@@ -496,7 +495,7 @@ public class TransactionTest {
       // Record should remain unchanged because of Map.copyOf()
       assertEquals("value", meta.get("key"));
       assertEquals("value", meta.get("key"));
-      assertEquals(null, meta.get("key2"));
+      assertNull(meta.get("key2"));
       assertTrue(meta.containsKey("key"));
       assertFalse(meta.containsKey("keys"));
 

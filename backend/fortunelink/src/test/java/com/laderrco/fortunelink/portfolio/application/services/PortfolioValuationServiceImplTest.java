@@ -1,11 +1,23 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TaxLot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
@@ -14,6 +26,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,26 +37,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class PortfolioValuationServiceImplTest {
 
-  @Mock
-  private ExchangeRateService exchangeRateService;
-
-  @InjectMocks
-  private PortfolioValuationServiceImpl valuationService;
-
   private final Currency USD = Currency.of("USD");
   private final Currency CAD = Currency.of("CAD");
-
+  @Mock
+  private ExchangeRateService exchangeRateService;
+  @InjectMocks
+  private PortfolioValuationServiceImpl valuationService;
   private PortfolioId portfolioId;
   private UserId userId;
 
@@ -50,6 +54,43 @@ class PortfolioValuationServiceImplTest {
     portfolioId = PortfolioId.newId();
     userId = UserId.random();
   }
+
+  private MarketAssetQuote createQuote(AssetSymbol symbol, double price) {
+    return new MarketAssetQuote(symbol, new Price(Money.of(price, "USD")), null, null, null, null,
+        null, null, null, null, "TEST", Instant.now());
+
+  }
+
+  private Position createPosition(AssetSymbol symbol, int qty, double totalCost) {
+    // Note: AcbPosition.empty or a manual constructor works here.
+    // Ensure the Currency matches the account currency.
+    return new AcbPosition(symbol, AssetType.STOCK, USD, Quantity.of(qty),
+        Money.of(totalCost, "USD"), Instant.now(), Instant.now());
+  }
+
+  private Account createAccount(Currency currency, double cash, List<Position> positions) {
+    // 1. Use the public constructor defined in Account.java
+    Account account = new Account(AccountId.newId(), "Test Account", AccountType.CHEQUING,
+        // Default for testing
+        currency, PositionStrategy.ACB // Matches your AcbPosition usage
+    );
+
+    // 2. Set the cash balance.
+    // Since cashBalance is private and handled via deposit,
+    // we use deposit() to maintain internal state correctly.
+    if (cash > 0) {
+      account.deposit(Money.of(cash, currency.getCode()), "Initial balance");
+    }
+
+    // 3. Use the public updatePosition method to populate the map
+    for (Position pos : positions) {
+      account.updatePosition(pos.symbol(), pos);
+    }
+
+    return account;
+  }
+
+  // --- Helpers ---
 
   @Nested
   class CalculateTotalValue {
@@ -66,26 +107,16 @@ class PortfolioValuationServiceImplTest {
       // Account 2 (CAD): $0 Positions + $100 Cash = $100 CAD
       Account cadAccount = createAccount(CAD, 100.0, List.of());
 
-      Portfolio portfolio = Portfolio.reconstitute(
-          portfolioId,
-          userId,
-          "Portfolio Test",
+      Portfolio portfolio = Portfolio.reconstitute(portfolioId, userId, "Portfolio Test",
           "description",
-          Map.of(
-              usdAccount.getAccountId(), usdAccount,
-              cadAccount.getAccountId(), cadAccount),
-          Currency.CAD,
-          false,
-          null,
-          null,
-          Instant.now(),
-          Instant.now());
+          Map.of(usdAccount.getAccountId(), usdAccount, cadAccount.getAccountId(), cadAccount),
+          Currency.CAD, false, null, null, Instant.now(), Instant.now());
 
       // Mock FX: $200 USD -> $200 USD, $100 CAD -> $75 USD
-      when(exchangeRateService.convert(any(Money.class), eq(USD)))
-          .thenAnswer(inv -> inv.getArgument(0)); // Simple pass-through for USD
-      when(exchangeRateService.convert(argThat(m -> m.currency().equals(CAD)), eq(USD)))
-          .thenReturn(Money.of(75.0, "USD"));
+      when(exchangeRateService.convert(any(Money.class), eq(USD))).thenAnswer(
+          inv -> inv.getArgument(0)); // Simple pass-through for USD
+      when(exchangeRateService.convert(argThat(m -> m.currency().equals(CAD)), eq(USD))).thenReturn(
+          Money.of(75.0, "USD"));
 
       // Act
       Money total = valuationService.calculateTotalValue(portfolio, USD, cache);
@@ -136,14 +167,14 @@ class PortfolioValuationServiceImplTest {
           Money.of(1000, "USD"), Instant.now(), Instant.now());
 
       AssetSymbol aapl = new AssetSymbol("AAPL");
-      Position fifoPos = new FifoPosition(aapl, AssetType.STOCK, USD, List.of(
-          new TaxLot(Quantity.of(5), Money.of(700, "USD"), Instant.now())), Instant.now());
+      Position fifoPos = new FifoPosition(aapl, AssetType.STOCK, USD,
+          List.of(new TaxLot(Quantity.of(5), Money.of(700, "USD"), Instant.now())), Instant.now());
 
       account.updatePosition(msft, acbPos);
       account.updatePosition(aapl, fifoPos);
 
-      Map<AssetSymbol, MarketAssetQuote> cache = Map.of(
-          msft, createQuote(msft, 150.0), // $1500 value
+      Map<AssetSymbol, MarketAssetQuote> cache = Map.of(msft, createQuote(msft, 150.0),
+          // $1500 value
           aapl, createQuote(aapl, 200.0) // $1000 value
       );
 
@@ -159,21 +190,19 @@ class PortfolioValuationServiceImplTest {
       AssetSymbol stockSym = new AssetSymbol("STK");
       AssetSymbol cashSym = new AssetSymbol("CASH");
 
-      Account account = new Account(AccountId.newId(), "FilterTest",
-          AccountType.TAXABLE_INVESTMENT, USD,
-          PositionStrategy.ACB);
+      Account account = new Account(AccountId.newId(), "FilterTest", AccountType.TAXABLE_INVESTMENT,
+          USD, PositionStrategy.ACB);
 
       // Stock position
       account.updatePosition(stockSym,
-          new AcbPosition(stockSym, AssetType.STOCK, USD, Quantity.of(1),
-              Money.of(100, "USD"), Instant.now(), Instant.now()));
+          new AcbPosition(stockSym, AssetType.STOCK, USD, Quantity.of(1), Money.of(100, "USD"),
+              Instant.now(), Instant.now()));
       // Cash position (e.g., a Money Market Fund tagged as CASH type)
       account.updatePosition(cashSym,
-          new AcbPosition(cashSym, AssetType.CASH, USD, Quantity.of(100),
-              Money.of(100, "USD"), Instant.now(), Instant.now()));
+          new AcbPosition(cashSym, AssetType.CASH, USD, Quantity.of(100), Money.of(100, "USD"),
+              Instant.now(), Instant.now()));
 
-      Map<AssetSymbol, MarketAssetQuote> cache = Map.of(
-          stockSym, createQuote(stockSym, 120.0),
+      Map<AssetSymbol, MarketAssetQuote> cache = Map.of(stockSym, createQuote(stockSym, 120.0),
           cashSym, createQuote(cashSym, 1.0));
 
       Money result = valuationService.calculatePositionsValue(account, cache);
@@ -186,13 +215,12 @@ class PortfolioValuationServiceImplTest {
     void calculatePositionsValue_Fallback_UsesCostBasisWhenQuoteIsMissing() {
       AssetSymbol msft = new AssetSymbol("MSFT");
       Account account = new Account(AccountId.newId(), "Fallback",
-          AccountType.NON_REGISTERED_INVESTMENT, USD,
-          PositionStrategy.ACB);
+          AccountType.NON_REGISTERED_INVESTMENT, USD, PositionStrategy.ACB);
 
       // Cost basis is $1000
       account.updatePosition(msft,
-          new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10),
-              Money.of(1000, "USD"), Instant.now(), Instant.now()));
+          new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD"),
+              Instant.now(), Instant.now()));
 
       // Act: Empty cache
       Money result = valuationService.calculatePositionsValue(account, Map.of());
@@ -205,11 +233,10 @@ class PortfolioValuationServiceImplTest {
     void calculatePositionsValue_Fallback_UsesCostBasisWhenPriceIsZero() {
       AssetSymbol msft = new AssetSymbol("MSFT");
       Account account = new Account(AccountId.newId(), "ZeroPrice",
-          AccountType.NON_REGISTERED_INVESTMENT, USD,
-          PositionStrategy.ACB);
+          AccountType.NON_REGISTERED_INVESTMENT, USD, PositionStrategy.ACB);
       account.updatePosition(msft,
-          new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10),
-              Money.of(1000, "USD"), Instant.now(), Instant.now()));
+          new AcbPosition(msft, AssetType.STOCK, USD, Quantity.of(10), Money.of(1000, "USD"),
+              Instant.now(), Instant.now()));
 
       // Quote exists but price is zero
       Map<AssetSymbol, MarketAssetQuote> cache = Map.of(msft, createQuote(msft, 0.0));
@@ -218,62 +245,5 @@ class PortfolioValuationServiceImplTest {
 
       assertEquals(1000.0, result.amount().doubleValue());
     }
-  }
-
-  // --- Helpers ---
-
-  private MarketAssetQuote createQuote(AssetSymbol symbol, double price) {
-    return new MarketAssetQuote(
-        symbol,
-        new Price(Money.of(price, "USD")),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        "TEST",
-        Instant.now());
-
-  }
-
-  private Position createPosition(AssetSymbol symbol, int qty, double totalCost) {
-    // Note: AcbPosition.empty or a manual constructor works here.
-    // Ensure the Currency matches the account currency.
-    return new AcbPosition(
-        symbol,
-        AssetType.STOCK,
-        USD,
-        Quantity.of(qty),
-        Money.of(totalCost, "USD"),
-        Instant.now(),
-        Instant.now());
-  }
-
-  private Account createAccount(Currency currency, double cash, List<Position> positions) {
-    // 1. Use the public constructor defined in Account.java
-    Account account = new Account(
-        AccountId.newId(),
-        "Test Account",
-        AccountType.CHEQUING, // Default for testing
-        currency,
-        PositionStrategy.ACB // Matches your AcbPosition usage
-    );
-
-    // 2. Set the cash balance.
-    // Since cashBalance is private and handled via deposit,
-    // we use deposit() to maintain internal state correctly.
-    if (cash > 0) {
-      account.deposit(Money.of(cash, currency.getCode()), "Initial balance");
-    }
-
-    // 3. Use the public updatePosition method to populate the map
-    for (Position pos : positions) {
-      account.updatePosition(pos.symbol(), pos);
-    }
-
-    return account;
   }
 }

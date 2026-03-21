@@ -17,8 +17,7 @@ public class PortfolioLoader {
   }
 
   public Portfolio loadUserPortfolio(PortfolioId portfolioId, UserId userId) {
-    Portfolio portfolio = portfolioRepository
-        .findByIdAndUserId(portfolioId, userId)
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(portfolioId, userId)
         .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
 
     if (portfolio.isDeleted()) {

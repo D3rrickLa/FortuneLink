@@ -6,11 +6,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public final class AcbPositionProjector extends BasePositionProjector<AcbPosition> {
-    public AcbPositionProjector(AssetSymbol s, AssetType t, Currency c) {
-        super(s, t, c, AcbPosition.class);
-    }
-    @Override
-    protected AcbPosition getEmptyPosition(AssetSymbol s, AssetType t, Currency c) {
-        return AcbPosition.empty(s, t, c);
-    }
+  public AcbPositionProjector(AssetSymbol s, AssetType t, Currency c) {
+    super(s, t, c, AcbPosition.class);
+  }
+
+  @Override
+  protected AcbPosition getEmptyPosition(AssetSymbol s, AssetType t, Currency c) {
+    return AcbPosition.empty(s, t, c);
+  }
 }

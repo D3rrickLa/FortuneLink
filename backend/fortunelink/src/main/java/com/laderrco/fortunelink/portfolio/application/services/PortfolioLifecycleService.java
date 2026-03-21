@@ -1,7 +1,16 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.application.commands.*;
-import com.laderrco.fortunelink.portfolio.application.exceptions.*;
+import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
@@ -23,14 +32,13 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -78,7 +86,8 @@ public class PortfolioLifecycleService {
 
     validate(command, validator::validate, "updatePortfolio");
 
-    Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
 
     existingPortfolio.updateDetails(command.name(), command.description());
     existingPortfolio.updateDisplayCurrency(command.currency());
@@ -88,25 +97,18 @@ public class PortfolioLifecycleService {
     Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
     Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
-    Money totalValue = portfolioValuationService.calculateTotalValue(
-        saved,
-        saved.getDisplayCurrency(),
-        quoteCache);
+    Money totalValue = portfolioValuationService.calculateTotalValue(saved,
+        saved.getDisplayCurrency(), quoteCache);
 
     // NEW: batch fee query
-    List<AccountId> accountIds = saved.getAccounts().stream()
-        .map(Account::getAccountId)
-        .toList();
+    List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId).toList();
 
-    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository
-        .sumBuyFeesByAccountAndSymbol(accountIds);
+    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(
+        accountIds);
 
-    List<AccountView> accountViews = saved.getAccounts().stream()
-        .map(account -> accountViewBuilder.build(
-            account,
-            quoteCache,
-            feeCache.getOrDefault(account.getAccountId(), Map.of())))
-        .toList();
+    List<AccountView> accountViews = saved.getAccounts().stream().map(
+        account -> accountViewBuilder.build(account, quoteCache,
+            feeCache.getOrDefault(account.getAccountId(), Map.of()))).toList();
 
     return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue);
   }
@@ -118,9 +120,9 @@ public class PortfolioLifecycleService {
     // not portfolioLoader.loadUserPortfolio(), because we need to allow the user to
     // hard-delete
     // a portfolio that is already soft-deleted (cleanup path).
-    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-        .orElseThrow(() -> new PortfolioNotFoundException(
-            "Portfolio not found or access denied for ID: " + command.portfolioId()));
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
+        command.userId()).orElseThrow(() -> new PortfolioNotFoundException(
+        "Portfolio not found or access denied for ID: " + command.portfolioId()));
 
     if (command.softDelete()) {
       try {
@@ -147,7 +149,8 @@ public class PortfolioLifecycleService {
     // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot add
     // account to deleted
     // portfolio.
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
 
@@ -162,7 +165,8 @@ public class PortfolioLifecycleService {
     // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot rename
     // account on deleted
     // portfolio.
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     portfolio.renameAccount(command.accountId(), command.accountName());
 
     portfolioRepository.save(portfolio);
@@ -174,7 +178,8 @@ public class PortfolioLifecycleService {
     // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot close
     // account on deleted
     // portfolio.
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     try {
       portfolio.closeAccount(command.accountId());
 

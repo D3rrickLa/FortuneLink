@@ -4,9 +4,9 @@ import java.util.List;
 
 public class InvalidCommandException extends RuntimeException {
 
-    public InvalidCommandException(String message, List<String> errors) {
-        String s = String.format("%s: %s", message, errors);
-        super(s);
-    }
+  public InvalidCommandException(String message, List<String> errors) {
+    String s = String.format("%s: %s", message, errors);
+    super(s);
+  }
 
 }

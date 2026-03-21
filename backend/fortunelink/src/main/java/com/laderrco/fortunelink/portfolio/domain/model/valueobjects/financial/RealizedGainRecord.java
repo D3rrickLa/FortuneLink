@@ -15,10 +15,7 @@ import java.time.Instant;
  * capital gain, while a negative value represents a capital loss.
  */
 public record RealizedGainRecord(
-    AssetSymbol symbol,
-    Money realizedGainLoss,
-    Money costBasisSold,
-    Instant occurredAt) {
+    AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold, Instant occurredAt) {
   public RealizedGainRecord {
     notNull(symbol, "symbol");
     notNull(realizedGainLoss, "realizedGainLoss");

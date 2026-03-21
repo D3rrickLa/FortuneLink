@@ -17,8 +17,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountCurrency,
-    List<TaxLot> lots, Instant lastModifiedAt) implements Position {
+public record FifoPosition(
+    AssetSymbol symbol,
+    AssetType type,
+    Currency accountCurrency,
+    List<TaxLot> lots,
+    Instant lastModifiedAt) implements Position {
   public FifoPosition {
     notNull(symbol, "AssetSymbol");
     notNull(type, "type");
@@ -28,6 +32,22 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
 
   public static FifoPosition empty(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
     return new FifoPosition(symbol, type, accountCurrency, List.of(), null);
+  }
+
+  static Money applyLotReduction(Money lotBasis, Money lotReduction, boolean isLastLot,
+      Currency currency) {
+    Money newCostBasis = lotBasis.subtract(lotReduction);
+
+    if (newCostBasis.isNegative()) {
+      if (isLastLot) {
+        return Money.zero(currency);
+      } else {
+        throw new IllegalStateException(
+            "Intermediate lot went negative -> lotBasis: " + lotBasis + ", lotReduction: "
+                + lotReduction);
+      }
+    }
+    return newCostBasis;
   }
 
   @Override
@@ -121,8 +141,7 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
         lotReduction = remainingReduction; // absorbs accumulated rounding drift
       } else {
         BigDecimal ratio = lot.costBasis().amount()
-            .divide(totalCostBasis.amount(),
-                Precision.DIVISION.getDecimalPlaces(),
+            .divide(totalCostBasis.amount(), Precision.DIVISION.getDecimalPlaces(),
                 Rounding.DIVISION.getMode());
 
         lotReduction = totalReduction.multiply(ratio);
@@ -132,7 +151,8 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
         // therefore: totalReduction * (lot.costBasis/totalCostBasis) < lot.costBasis
       }
 
-      Money newCostBasis = applyLotReduction(lot.costBasis(), lotReduction, isLastLot, accountCurrency);
+      Money newCostBasis = applyLotReduction(lot.costBasis(), lotReduction, isLastLot,
+          accountCurrency);
       newLots.add(new TaxLot(lot.quantity(), newCostBasis, lot.acquiredDate()));
     }
 
@@ -158,19 +178,5 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
   @Override
   public Money currentValue(Price currentPrice) {
     return currentPrice.calculateValue(totalQuantity());
-  }
-
-  static Money applyLotReduction(Money lotBasis, Money lotReduction, boolean isLastLot, Currency currency) {
-    Money newCostBasis = lotBasis.subtract(lotReduction);
-
-    if (newCostBasis.isNegative()) {
-      if (isLastLot) {
-        return Money.zero(currency);
-      } else {
-        throw new IllegalStateException("Intermediate lot went negative -> lotBasis: " + lotBasis +
-            ", lotReduction: " + lotReduction);
-      }
-    }
-    return newCostBasis;
   }
 }

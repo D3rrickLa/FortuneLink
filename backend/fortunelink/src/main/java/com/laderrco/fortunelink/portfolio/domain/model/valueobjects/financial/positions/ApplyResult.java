@@ -13,8 +13,8 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
   record Purchase<P extends Position>(P newPosition) implements ApplyResult<P> {
   }
 
-  record Sale<P extends Position>(P newPosition, Money costBasisSold,
-      Money realizedGainLoss) implements ApplyResult<P> {
+  record Sale<P extends Position>(
+      P newPosition, Money costBasisSold, Money realizedGainLoss) implements ApplyResult<P> {
   }
 
   record RocAdjustment<P extends Position>(P newPosition, Money excessCapitalGain) implements

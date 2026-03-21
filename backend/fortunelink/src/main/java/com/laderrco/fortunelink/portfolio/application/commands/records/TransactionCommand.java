@@ -5,7 +5,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 public interface TransactionCommand {
-    PortfolioId portfolioId();
-    UserId userId();
-    AccountId accountId();
+  PortfolioId portfolioId();
+
+  UserId userId();
+
+  AccountId accountId();
 }

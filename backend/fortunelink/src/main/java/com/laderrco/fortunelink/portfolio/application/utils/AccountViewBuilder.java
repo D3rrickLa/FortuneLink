@@ -1,9 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
-import java.util.List;
-import java.util.Map;
-import org.springframework.stereotype.Component;
-
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
@@ -12,8 +8,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -24,19 +22,15 @@ public class AccountViewBuilder {
   public AccountView build(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache,
       Map<AssetSymbol, Money> feeBreakdownBySymbol) {
 
-    List<PositionView> positionViews = account.getPositionEntries().stream()
-        .map(entry -> {
-          AssetSymbol symbol = entry.getKey();
+    List<PositionView> positionViews = account.getPositionEntries().stream().map(entry -> {
+      AssetSymbol symbol = entry.getKey();
 
-          Money feesIncurred = feeBreakdownBySymbol
-              .getOrDefault(symbol, Money.zero(account.getAccountCurrency()));
+      Money feesIncurred = feeBreakdownBySymbol.getOrDefault(symbol,
+          Money.zero(account.getAccountCurrency()));
 
-          return portfolioViewMapper.toPositionView(
-              entry.getValue(),
-              quoteCache.get(symbol),
-              feesIncurred);
-        })
-        .toList();
+      return portfolioViewMapper.toPositionView(entry.getValue(), quoteCache.get(symbol),
+          feesIncurred);
+    }).toList();
 
     Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
     Money cashBalance = account.getCashBalance();
@@ -45,15 +39,13 @@ public class AccountViewBuilder {
   }
 
   /**
-   * Builds an AccountView without fee data - for summary screens where tax
-   * breakdown is not needed. Avoids the extra transaction fetch.
-   * totalFeesIncurred will be Price.zero on all PositionViews.
+   * Builds an AccountView without fee data - for summary screens where tax breakdown is not needed.
+   * Avoids the extra transaction fetch. totalFeesIncurred will be Price.zero on all PositionViews.
    */
   public AccountView buildSummary(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-    List<PositionView> positionViews = account.getPositionEntries().stream()
-        .map(entry -> portfolioViewMapper
-            .toPositionView(entry.getValue(), quoteCache.get(entry.getKey())))
-        .toList();
+    List<PositionView> positionViews = account.getPositionEntries().stream().map(
+        entry -> portfolioViewMapper.toPositionView(entry.getValue(),
+            quoteCache.get(entry.getKey()))).toList();
 
     Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
     Money cashBalance = account.getCashBalance();

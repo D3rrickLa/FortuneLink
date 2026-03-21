@@ -156,8 +156,8 @@ public class CanadianAcbGroundTruthTest {
       var resultWithFee = empty.buy(qty, cashDeltaOnBuy.abs(), T1);
       var resultWithoutFee = empty.buy(qty, grossValue, T1);
 
-      AcbPosition positionCraCorrect = (AcbPosition) resultWithFee.newPosition();
-      AcbPosition positionBuggy = (AcbPosition) resultWithoutFee.newPosition();
+      AcbPosition positionCraCorrect = resultWithFee.newPosition();
+      AcbPosition positionBuggy = resultWithoutFee.newPosition();
 
       // Assert — CRA correct: ACB = $10,009.99
       assertThat(positionCraCorrect.totalCostBasis().amount()).as("CRA ACB must include commission")
@@ -186,7 +186,7 @@ public class CanadianAcbGroundTruthTest {
 
       // Using var here relies on the covariant return mentioned above
       var buyResult = empty.buy(buyQty, buyAmount, T1);
-      AcbPosition position = (AcbPosition) buyResult.newPosition();
+      AcbPosition position = buyResult.newPosition();
 
       // Sell 40 shares
       // cashDelta on sell = (40 × 120) - 9.99 = +4790.01 (net proceeds, CRA correct)
@@ -256,16 +256,16 @@ public class CanadianAcbGroundTruthTest {
       AcbPosition pos = AcbPosition.empty(VFV, ETF, CAD);
 
       // BUY 1
-      pos = ((ApplyResult<AcbPosition>) pos.buy(Quantity.of(100), Money.of(10009.99, "CAD"),
-          T1)).newPosition();
+      pos = pos.buy(Quantity.of(100), Money.of(10009.99, "CAD"),
+          T1).newPosition();
 
       assertThat(pos.totalCostBasis().amount()).as("After BUY 1: ACB should be $10,009.99")
           .isEqualByComparingTo(new BigDecimal("10009.99"));
       assertThat(pos.totalQuantity().amount()).isEqualByComparingTo(new BigDecimal("100"));
 
       // BUY 2
-      pos = ((ApplyResult<AcbPosition>) pos.buy(Quantity.of(50), Money.of(5509.99, "CAD"),
-          T2)).newPosition();
+      pos = pos.buy(Quantity.of(50), Money.of(5509.99, "CAD"),
+          T2).newPosition();
 
       assertThat(pos.totalCostBasis().amount()).as("After BUY 2: ACB should be $15,519.98")
           .isEqualByComparingTo(new BigDecimal("15519.98"));
@@ -273,7 +273,7 @@ public class CanadianAcbGroundTruthTest {
 
       // SELL 60 — using net proceeds (cashDelta), CRA correct
       Money netProceeds = Money.of(7790.01, "CAD"); // (60 × 130) - 9.99
-      ApplyResult.Sale<AcbPosition> sale = (ApplyResult.Sale<AcbPosition>) pos.sell(Quantity.of(60),
+      ApplyResult.Sale<AcbPosition> sale = pos.sell(Quantity.of(60),
           netProceeds, T3);
 
       // ACB per unit = 15519.98 / 150 = 103.46653...
@@ -328,10 +328,10 @@ public class CanadianAcbGroundTruthTest {
 
       FifoPosition pos = FifoPosition.empty(VFV, ETF, CAD);
       Money lotCost = Money.of(339.99, "CAD"); // 33 shares, commission included
-      pos = ((ApplyResult<FifoPosition>) pos.buy(Quantity.of(33), lotCost, T1)).newPosition();
+      pos = pos.buy(Quantity.of(33), lotCost, T1).newPosition();
 
       Money netProceeds = Money.of(400.01, "CAD"); // 10 × $41.00 - 9.99
-      ApplyResult.Sale<FifoPosition> sale = (ApplyResult.Sale<FifoPosition>) pos.sell(
+      ApplyResult.Sale<FifoPosition> sale = pos.sell(
           Quantity.of(10), netProceeds, T2);
 
       FifoPosition remaining = sale.newPosition();
@@ -382,12 +382,12 @@ public class CanadianAcbGroundTruthTest {
 
       // Simulate replayTransaction (current code — cashDelta)
       Money cashDeltaNet = Money.of(4790.01, "CAD"); // (40 × 120) - 9.99
-      ApplyResult.Sale<AcbPosition> withCashDelta = (ApplyResult.Sale<AcbPosition>) pos.sell(
+      ApplyResult.Sale<AcbPosition> withCashDelta = pos.sell(
           Quantity.of(40), cashDeltaNet, T2);
 
       // Simulate replayFullTransaction (current code — grossValue)
       Money grossValue = Money.of(4800.00, "CAD"); // 40 × 120, ignores commission
-      ApplyResult.Sale<AcbPosition> withGrossValue = (ApplyResult.Sale<AcbPosition>) pos.sell(
+      ApplyResult.Sale<AcbPosition> withGrossValue = pos.sell(
           Quantity.of(40), grossValue, T2);
 
       // CRA-correct: capital gain does NOT include the commission as income

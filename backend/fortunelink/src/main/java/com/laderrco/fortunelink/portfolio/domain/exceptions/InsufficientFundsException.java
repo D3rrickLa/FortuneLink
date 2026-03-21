@@ -1,7 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.exceptions;
 
 public class InsufficientFundsException extends RuntimeException {
-    public InsufficientFundsException(String s) {
-        super(s);
-    }
+  public InsufficientFundsException(String s) {
+    super(s);
+  }
 }

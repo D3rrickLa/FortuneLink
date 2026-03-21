@@ -2,19 +2,12 @@ package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
-import com.laderrco.fortunelink.portfolio.domain.model.factories.TransactionFactory;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
+import com.laderrco.fortunelink.portfolio.domain.model.factories.TransactionFactory;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
@@ -26,12 +19,27 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 public class TransactionApplierTest {
   private final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
   private final AssetType TYPE = AssetType.STOCK;
   private final Currency CAD = Currency.CAD;
   private final Instant T1 = Instant.parse("2023-01-01T10:00:00Z");
+
+  private Position setupPosition() {
+    return new FifoPosition(SYMBOL, TYPE, CAD, List.of(lot("10", "100", T1)), T1);
+  }
+
+  private TaxLot lot(String qty, String basis, Instant date) {
+    return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), CAD),
+        date);
+  }
 
   @Nested
   @DisplayName("BUY/SELL Transactions")
@@ -40,9 +48,7 @@ public class TransactionApplierTest {
     @DisplayName("apply_success_mapsBuyTransactionToPositionBuy")
     void apply_success_mapsBuyTransactionToPositionBuy() {
       Position pos = setupPosition();
-      Transaction tx = TransactionFactory
-          .buyBuilder(Quantity.of(5), Price.of("10", CAD))
-          .build();
+      Transaction tx = TransactionFactory.buyBuilder(Quantity.of(5), Price.of("10", CAD)).build();
 
       var result = TransactionApplier.apply(pos, tx);
       assertThat(result.getUpdatedPosition().totalQuantity().amount()).isEqualByComparingTo("15");
@@ -52,11 +58,9 @@ public class TransactionApplierTest {
     @DisplayName("apply_success_mapsSellTransactionToPositionSell")
     void apply_success_mapsSellTransactionToPositionSell() {
       Position pos = setupPosition();
-      Transaction tx = TransactionFactory.baseBuilder()
-          .transactionType(TransactionType.SELL)
+      Transaction tx = TransactionFactory.baseBuilder().transactionType(TransactionType.SELL)
           .execution(new TradeExecution(SYMBOL, Quantity.of(5), Price.of("10", CAD)))
-          .cashDelta(Money.of("50", CAD))
-          .build();
+          .cashDelta(Money.of("50", CAD)).build();
 
       var result = TransactionApplier.apply(pos, tx);
       assertThat(result.getUpdatedPosition().totalQuantity().amount()).isEqualByComparingTo("5");
@@ -66,12 +70,11 @@ public class TransactionApplierTest {
     @DisplayName("apply_fail_throwsOnInsufficientQuantityForSell")
     void apply_fail_throwsOnInsufficientQuantityForSell() {
       Position pos = AcbPosition.empty(SYMBOL, TYPE, CAD);
-      Transaction tx = TransactionFactory
-          .sellBuilder(Quantity.of(999), Price.of("1.00", CAD))
+      Transaction tx = TransactionFactory.sellBuilder(Quantity.of(999), Price.of("1.00", CAD))
           .build();
 
-      assertThatThrownBy(() -> TransactionApplier.apply(pos, tx))
-          .isInstanceOf(RuntimeException.class);
+      assertThatThrownBy(() -> TransactionApplier.apply(pos, tx)).isInstanceOf(
+          RuntimeException.class);
     }
   }
 
@@ -82,11 +85,9 @@ public class TransactionApplierTest {
     @DisplayName("apply_success_mapsSplitTransactionToPositionSplit")
     void apply_success_mapsSplitTransactionToPositionSplit() {
       Position pos = setupPosition();
-      Transaction tx = TransactionFactory.baseBuilder()
-          .transactionType(TransactionType.SPLIT)
+      Transaction tx = TransactionFactory.baseBuilder().transactionType(TransactionType.SPLIT)
           .split(new Ratio(2, 1))
-          .execution(new TradeExecution(SYMBOL, Quantity.of(10), Price.of("1", CAD)))
-          .build();
+          .execution(new TradeExecution(SYMBOL, Quantity.of(10), Price.of("1", CAD))).build();
 
       var result = TransactionApplier.apply(pos, tx);
       assertThat(result.getUpdatedPosition().totalQuantity().amount()).isEqualByComparingTo("20");
@@ -100,8 +101,7 @@ public class TransactionApplierTest {
       Transaction tx = TransactionFactory.baseBuilder()
           .transactionType(TransactionType.RETURN_OF_CAPITAL)
           .execution(new TradeExecution(SYMBOL, Quantity.of(10), Price.of("1", CAD)))
-          .cashDelta(expectedCashDelta)
-          .build();
+          .cashDelta(expectedCashDelta).build();
 
       var result = TransactionApplier.apply(pos, tx);
       assertThat(result.getUpdatedPosition().totalCostBasis().amount()).isEqualByComparingTo("90");
@@ -118,8 +118,7 @@ public class TransactionApplierTest {
       // Maps to position.buy() internally
       Transaction tx = TransactionFactory.baseBuilder()
           .transactionType(TransactionType.DIVIDEND_REINVEST)
-          .execution(new TradeExecution(SYMBOL, Quantity.of(5), Price.of("10", CAD)))
-          .build();
+          .execution(new TradeExecution(SYMBOL, Quantity.of(5), Price.of("10", CAD))).build();
 
       var result = TransactionApplier.apply(pos, tx);
       assertThat(result.getUpdatedPosition().totalQuantity().amount()).isEqualByComparingTo("15");
@@ -140,13 +139,5 @@ public class TransactionApplierTest {
       var result = TransactionApplier.apply(pos, tx);
       assertThat(result).isInstanceOf(ApplyResult.NoChange.class);
     }
-  }
-
-  private Position setupPosition() {
-    return new FifoPosition(SYMBOL, TYPE, CAD, List.of(lot("10", "100", T1)), T1);
-  }
-
-  private TaxLot lot(String qty, String basis, Instant date) {
-    return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), CAD), date);
   }
 }
