@@ -27,7 +27,7 @@ class AcbPositionProjectorTest {
 
   @Test
   @DisplayName("project_success_accumulatesPositionStateCorrectly")
-  void project_success_accumulatesPositionStateCorrectly() {
+  void testProject_success_accumulatesPositionStateCorrectly() {
     // 1. Arrange: Create a stream of events
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
         .occurredAt(Instant.parse("2023-01-01T10:00:00Z")).build();
@@ -45,7 +45,7 @@ class AcbPositionProjectorTest {
   @Test
   @Disabled("Unreachable via normal construction -> AcbPosition methods always return AcbPosition."
       + " Guard exists to catch future Position hierarchy changes or TransactionApplier regressions.")
-  void project_fail_throwsOnTypeMismatch() {
+  void testProject_fail_throwsOnTypeMismatch() {
     // To trigger: TransactionApplier.apply() would need to return a FifoPosition
     // from an AcbPosition input, which is structurally impossible given the
     // sealed interface + concrete implementations.

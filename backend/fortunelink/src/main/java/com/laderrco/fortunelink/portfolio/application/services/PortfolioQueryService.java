@@ -47,11 +47,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PortfolioQueryService {
-  private final TransactionRepository transactionRepository;
-
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
-
+  private final TransactionRepository transactionRepository;
+  
   private final PortfolioViewMapper portfolioViewMapper;
   private final AccountViewBuilder accountViewBuilder;
   private final PortfolioLoader portfolioLoader;

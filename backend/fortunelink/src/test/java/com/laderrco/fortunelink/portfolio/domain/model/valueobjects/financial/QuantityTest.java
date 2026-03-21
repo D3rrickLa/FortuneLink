@@ -16,10 +16,9 @@ class QuantityTest {
   @Nested
   @DisplayName("Creation and Scaling")
   class CreationTests {
-
     @Test
     @DisplayName("constructor_success_AppliesBankersRounding")
-    void constructor_success_AppliesBankersRounding() {
+    void testConstructor_success_appliesBankersRounding() {
       // HALF_EVEN rounds to the nearest even neighbor for .5 cases
       // Assuming QUANTITY_PRECISION is 2 for this example
       Quantity q1 = new Quantity(new BigDecimal("2.225")); // Should round to 2.22
@@ -32,13 +31,20 @@ class QuantityTest {
 
     @Test
     @DisplayName("constructor_fail_NullAmount")
-    void constructor_fail_NullAmount() {
+    void testConstructor_fail_nullAmount() {
       assertThatThrownBy(() -> new Quantity(null)).isInstanceOf(DomainArgumentException.class);
     }
 
     @Test
+    @DisplayName("should_fail_when_quantity_given_negative")
+    void constructor_fail_when_negative_value() {
+      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
+    }
+
+    @Test
     @DisplayName("ZERO_success_ConstantCheck")
-    void ZERO_success_ConstantCheck() {
+    void testZERO_success_constantCheck() {
       assertThat(Quantity.ZERO.amount()).isEqualByComparingTo(BigDecimal.ZERO);
       assertThat(Quantity.ZERO.isZero()).isTrue();
     }
@@ -47,10 +53,9 @@ class QuantityTest {
   @Nested
   @DisplayName("Arithmetic Operations")
   class ArithmeticTests {
-
     @Test
     @DisplayName("add_success_SimpleAddition")
-    void add_success_SimpleAddition() {
+    void testAdd_success_simpleAddition() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       Quantity q2 = new Quantity(new BigDecimal("5.50"));
       assertThat(q1.add(q2).amount()).isEqualByComparingTo("15.50");
@@ -58,7 +63,7 @@ class QuantityTest {
 
     @Test
     @DisplayName("subtract_success_ValidResult")
-    void subtract_success_ValidResult() {
+    void testSubtract_success_validResult() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       Quantity q2 = new Quantity(new BigDecimal("4.00"));
       assertThat(q1.subtract(q2).amount()).isEqualByComparingTo("6.00");
@@ -66,7 +71,7 @@ class QuantityTest {
 
     @Test
     @DisplayName("subtract_fail_ResultingNegative")
-    void subtract_fail_ResultingNegative() {
+    void testSubtract_fail_resultingNegative() {
       Quantity q1 = new Quantity(new BigDecimal("5.00"));
       Quantity q2 = new Quantity(new BigDecimal("10.00"));
 
@@ -76,7 +81,7 @@ class QuantityTest {
 
     @Test
     @DisplayName("multiply_success_WithPositiveFactor")
-    void multiply_success_WithPositiveFactor() {
+    void testMultiply_success_withPositiveFactor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       Quantity result = q1.multiply(new BigDecimal("2.5"));
       assertThat(result.amount()).isEqualByComparingTo("25.00");
@@ -84,7 +89,7 @@ class QuantityTest {
 
     @Test
     @DisplayName("multiply_fail_NegativeFactor")
-    void multiply_fail_NegativeFactor() {
+    void testMultiply_fail_negativeFactor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       assertThatThrownBy(() -> q1.multiply(new BigDecimal("-1.0"))).isInstanceOf(
           IllegalArgumentException.class);
@@ -92,15 +97,15 @@ class QuantityTest {
 
     @Test
     @DisplayName("divide_success_HandlesRepeatingDecimals")
-    void divide_success_HandlesRepeatingDecimals() {
+    void testDivide_success_handlesRepeatingDecimals() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       // 10 / 3 = 3.3333... should round based on Q_ROUNDING_MODE
       assertThatCode(() -> q1.divide(new BigDecimal("3"))).doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("divide_fail_amountlessthan0")
-    void divide_fail_lessThanZero() {
+    @DisplayName("divide_fail_amountLessThanZero")
+    void testDivide_fail_lessThanZero() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
 
       assertThatThrownBy(() -> q1.divide(new BigDecimal("-3"))).isInstanceOf(
@@ -108,8 +113,8 @@ class QuantityTest {
     }
 
     @Test
-    @DisplayName("divide_fail_amountlessthan0")
-    void divide_fail_lessZero() {
+    @DisplayName("divide_fail_amountIsZero")
+    void testDivide_fail_isZero() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
 
       assertThatThrownBy(() -> q1.divide(new BigDecimal("0"))).isInstanceOf(
@@ -120,10 +125,9 @@ class QuantityTest {
   @Nested
   @DisplayName("Predicates and Comparisons")
   class PredicateTests {
-
     @Test
     @DisplayName("isPositive_isZero_isNonZero_success")
-    void isPositive_isZero_isNonZero_success() {
+    void testIsPositive_success_isZero_isNonZero() {
       Quantity pos = new Quantity(new BigDecimal("1.00"));
       Quantity zero = Quantity.ZERO;
 
@@ -145,13 +149,6 @@ class QuantityTest {
 
       assertThat(small).isLessThan(large);
       assertThat(large).isGreaterThan(small);
-    }
-
-    @Test
-    @DisplayName("should_fail_when_quantity_given_negative")
-    void constructor_fail_when_negative_value() {
-      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10))).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
     }
   }
 }

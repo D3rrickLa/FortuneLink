@@ -10,13 +10,13 @@ import org.junit.jupiter.api.Test;
 public class PriceTest {
 
   @Test
-  void testConstructor_Success() {
+  void testConstructor_success() {
     Price price = new Price(Money.of(25, "USD"));
     assertNotNull(price);
   }
 
   @Test
-  void testZeroConstructor_Success() {
+  void testZeroConstructor_success() {
     Price price = Price.zero(Currency.USD);
     assertNotNull(price);
     assertEquals(Currency.USD, price.currency());
@@ -30,20 +30,20 @@ public class PriceTest {
   }
 
   @Test
-  void testCalculateValue_Success() {
+  void testCalculateValue_success() {
     Price price = new Price(Money.of(25, "USD"));
     Money actual = price.calculateValue(new Quantity(BigDecimal.TEN));
     assertEquals(Money.of(250, "USD"), actual);
   }
 
   @Test
-  void testCurrency_Success() {
+  void testCurrency_success() {
     Price price = new Price(Money.of(25, "USD"));
     assertEquals(Currency.USD, price.currency());
   }
 
   @Test
-  void testAmount_Success() {
+  void testAmount_success() {
     Price price = new Price(Money.of(25, "USD"));
     assertEquals(Money.of(25, "USD").amount(), price.amount());
   }

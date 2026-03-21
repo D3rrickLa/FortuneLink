@@ -8,21 +8,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Optional;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-
+import java.util.Optional;
 import nl.altindag.log.LogCaptor;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public class AccountHealthServiceTest {
@@ -40,7 +37,8 @@ public class AccountHealthServiceTest {
 
     Portfolio mockPortfolio = mock(Portfolio.class);
 
-    when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.of(mockPortfolio));
+    when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(
+        Optional.of(mockPortfolio));
     when(portfolioRepository.save(mockPortfolio)).thenReturn(mockPortfolio);
 
     assertDoesNotThrow(() -> accountHealthService.markStale(portfolioId, userId, accountId));
@@ -57,9 +55,8 @@ public class AccountHealthServiceTest {
 
     when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.empty());
     assertDoesNotThrow(() -> accountHealthService.markStale(portfolioId, userId, accountId));
-    assertThat(logCaptor.getErrorLogs())
-      .hasSize(1)
-      .anyMatch(log -> log.contains("Failed to mark account as stale"));
+    assertThat(logCaptor.getErrorLogs()).hasSize(1)
+        .anyMatch(log -> log.contains("Failed to mark account as stale"));
 
     verify(portfolioRepository, never()).save(any());
   }

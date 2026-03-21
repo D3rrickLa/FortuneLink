@@ -15,7 +15,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class MarketDataServiceTestDomainInterface {
@@ -72,12 +71,8 @@ class MarketDataServiceTestDomainInterface {
     }
   };
 
-  @BeforeEach
-  void setUp() {
-  }
-
   @Test
-  void getCurrentPrice_success_getsMockPrice() {
+  void testGetCurrentPrice_success_getsMockPrice() {
     Map<AssetSymbol, MarketAssetQuote> currentquotes = marketDataService.getBatchQuotes(
         Set.of(new AssetSymbol("AAPL")));
 
@@ -86,7 +81,7 @@ class MarketDataServiceTestDomainInterface {
   }
 
   @Test
-  void getCurrentPrice_failure_returnsEmpty() {
+  void testGetCurrentPrice_failure_returnsEmpty() {
     Map<AssetSymbol, MarketAssetQuote> currentquotes = marketDataService.getBatchQuotes(
         Set.of(new AssetSymbol("MSFT")));
 

@@ -21,10 +21,9 @@ class TaxLotTest {
   @Nested
   @DisplayName("Creation and Validation")
   class CreationTests {
-
     @Test
     @DisplayName("constructor_success_ValidInitialization")
-    void constructor_success_ValidInitialization() {
+    void testConstructor_success_ValidInitialization() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       assertThat(lot.quantity()).isEqualTo(TEN_SHARES);
       assertThat(lot.costBasis()).isEqualTo(THOUSAND_USD);
@@ -32,7 +31,7 @@ class TaxLotTest {
 
     @Test
     @DisplayName("constructor_fail_NegativeCostBasis")
-    void constructor_fail_NegativeCostBasis() {
+    void testConstructor_fail_NegativeCostBasis() {
       Money negativeMoney = Money.of(-100.00, "USD");
       assertThatThrownBy(() -> new TaxLot(TEN_SHARES, negativeMoney, ACQUIRED_DATE)).isInstanceOf(
           IllegalArgumentException.class);
@@ -42,10 +41,9 @@ class TaxLotTest {
   @Nested
   @DisplayName("Proportional Logic")
   class ProportionalTests {
-
     @Test
     @DisplayName("proportionalCost_success_PartialSaleMath")
-    void proportionalCost_success_PartialSaleMath() {
+    void testProportionalCost_success_PartialSaleMath() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       Quantity fourShares = new Quantity(new BigDecimal("4.00"));
 
@@ -78,7 +76,7 @@ class TaxLotTest {
 
     @Test
     @DisplayName("remainingAfter_success_ReducesStateCorrectly")
-    void remainingAfter_success_ReducesStateCorrectly() {
+    void testRemainingAfter_success_ReducesStateCorrectly() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       Quantity fourShares = new Quantity(new BigDecimal("4.00"));
 
@@ -90,7 +88,7 @@ class TaxLotTest {
     }
 
     @Test
-    void remainingAfter_success_quantityIs0() {
+    void testRemainingAfter_success_quantityIs0() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       Quantity fourShares = new Quantity(new BigDecimal("0.00"));
 
@@ -99,7 +97,7 @@ class TaxLotTest {
     }
 
     @Test
-    void remainingAfter_fail_SoldQuantityGreaterThanQuantity() {
+    void testRemainingAfter_fail_SoldQuantityGreaterThanQuantity() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       Quantity fourShares = new Quantity(new BigDecimal("1000000.00"));
 
@@ -108,7 +106,7 @@ class TaxLotTest {
 
     @Test
     @DisplayName("split_success_AdjustsQuantityOnly")
-    void split_success_AdjustsQuantityOnly() {
+    void testSplit_success_adjustsQuantityOnly() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       // 2-for-1 split (ratio 2.0)
       Ratio ratio = new Ratio(2, 1);
@@ -146,10 +144,9 @@ class TaxLotTest {
   @Nested
   @DisplayName("Tax Calculations")
   class TaxTimingTests {
-
     @Test
     @DisplayName("isLongTerm_success_TrueAfterOneYear")
-    void isLongTerm_success_TrueAfterOneYear() {
+    void testIsLongTerm_success_TrueAfterOneYear() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
 
       Instant exactlyOneYear = ACQUIRED_DATE.plus(365, ChronoUnit.DAYS);
@@ -161,7 +158,7 @@ class TaxLotTest {
 
     @Test
     @DisplayName("getHoldingPeriodDays_success_CalculatesRange")
-    void getHoldingPeriodDays_success_CalculatesRange() {
+    void testGetHoldingPeriodDays_success_CalculatesRange() {
       TaxLot lot = new TaxLot(TEN_SHARES, THOUSAND_USD, ACQUIRED_DATE);
       Instant tenDaysLater = ACQUIRED_DATE.plus(10, ChronoUnit.DAYS);
 

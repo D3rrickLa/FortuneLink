@@ -12,14 +12,12 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("PercentageChange Value Object Unit Tests")
 class PercentageChangeTest {
-
   @Nested
   @DisplayName("Creation and Scaling")
   class CreationTests {
-
     @Test
     @DisplayName("constructor_success_AppliesScaleAndMode")
-    void constructor_success_AppliesScaleAndMode() {
+    void constructor_success_appliesScaleAndMode() {
       // Providing a raw value with too many decimals
       BigDecimal raw = new BigDecimal("0.123456789");
       PercentageChange pc = new PercentageChange(raw);
@@ -30,14 +28,14 @@ class PercentageChangeTest {
 
     @Test
     @DisplayName("constructor_fail_NullValue")
-    void constructor_fail_NullValue() {
+    void constructor_fail_nullValue() {
       assertThatThrownBy(() -> new PercentageChange(null)).isInstanceOf(
           DomainArgumentException.class);
     }
 
     @Test
     @DisplayName("gain_success_ConvertsToDecimalForm")
-    void gain_success_ConvertsToDecimalForm() {
+    void gain_success_convertsToDecimalForm() {
       // 10% should become 0.10
       PercentageChange pc = PercentageChange.gain(10.0);
       assertThat(pc.change()).isEqualByComparingTo("0.10");
@@ -46,7 +44,7 @@ class PercentageChangeTest {
 
     @Test
     @DisplayName("loss_success_ConvertsToNegativeDecimalForm")
-    void loss_success_ConvertsToNegativeDecimalForm() {
+    void loss_success_convertsToNegativeDecimalForm() {
       // 20% loss should become -0.20
       PercentageChange pc = PercentageChange.loss(20.0);
       assertThat(pc.change()).isEqualByComparingTo("-0.20");
@@ -57,18 +55,17 @@ class PercentageChangeTest {
   @Nested
   @DisplayName("Predicates and Math")
   class PredicateTests {
-
     @Test
     @DisplayName("isGain_isLoss_success_ZeroBehavior")
-    void isGain_isLoss_success_ZeroBehavior() {
+    void isGain_isLoss_success_zeroBehavior() {
       PercentageChange zero = new PercentageChange(BigDecimal.ZERO);
       assertThat(zero.isGain()).isFalse();
       assertThat(zero.isLoss()).isFalse();
     }
 
     @Test
-    @DisplayName("toPercent_success_CalculatesProperly")
-    void toPercent_success_CalculatesProperly() {
+    @DisplayName("toPercent_success_calculatesProperly")
+    void toPercent_success_calculatesProperly() {
       PercentageChange pc = new PercentageChange(new BigDecimal("0.50"));
       // 0.50 * 100 = 50.00
       assertThat(pc.toPercent()).isEqualByComparingTo("50.00");
@@ -78,10 +75,9 @@ class PercentageChangeTest {
   @Nested
   @DisplayName("Comparisons")
   class ComparisonTests {
-
     @Test
     @DisplayName("compareTo_success_LogicChecks")
-    void compareTo_success_LogicChecks() {
+    void compareTo_success_logicChecks() {
       PercentageChange gain = PercentageChange.gain(10);
       PercentageChange loss = PercentageChange.loss(10);
       PercentageChange deepLoss = PercentageChange.loss(50);

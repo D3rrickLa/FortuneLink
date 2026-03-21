@@ -74,8 +74,8 @@ class FifoPositionTest {
     void sell_consumesInFifoOrder() {
       FifoPosition pos = position(lot("10", "100", T1), lot("10", "200", T2));
       // Sell 15: 10 from Lot1 ($100) + 5 from Lot2 ($100) = $200 cost sold
-      var result = pos.sell(new Quantity(new BigDecimal("15")),
-          Money.of(450, "USD"), Instant.now());
+      var result = pos.sell(new Quantity(new BigDecimal("15")), Money.of(450, "USD"),
+          Instant.now());
 
       assertThat(result.costBasisSold().amount()).isEqualByComparingTo("200");
       assertThat(result.newPosition().lots()).hasSize(1);
@@ -96,8 +96,8 @@ class FifoPositionTest {
 
       // Action: Sell 15 units.
       // This consumes Lot 1, 5 units of Lot 2, and should trigger isZero() for Lot 3.
-      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)),
-          Money.of(500, "USD"), Instant.now());
+      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)), Money.of(500, "USD"),
+          Instant.now());
 
       FifoPosition updated = result.newPosition();
 

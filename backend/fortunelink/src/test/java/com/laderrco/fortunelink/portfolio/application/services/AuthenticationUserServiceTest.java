@@ -7,9 +7,11 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,10 +28,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-
-import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthenticationUserServiceTest {
@@ -77,6 +75,20 @@ public class AuthenticationUserServiceTest {
   @Nested
   @DisplayName("GetCurrentUser Tests")
   class GetCurrentUserTests {
+    private static Stream<Arguments> provideAuthFailures() {
+      // We need a JWT mock that specifically returns a non-UUID string
+      // to trigger the IllegalArgumentException in UUID.fromString()
+      Jwt mockJwtWithBadSub = mock(Jwt.class);
+      when(mockJwtWithBadSub.getSubject()).thenReturn("not-a-uuid");
+      return Stream.of(Arguments.of(null, AuthenticationException.class), // Auth is null
+          Arguments.of("not-a-jwt", AuthenticationException.class), // Principal wrong type
+          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class),
+          // JWT exists but sub is invalid (null)
+          Arguments.of(mock(Jwt.class), AuthenticationException.class)
+          // Jwt exist, but missing data
+      );
+    }
+
     @Test
     void getCurrentUser_success() {
       UUID expectedId = UUID.randomUUID();
@@ -95,21 +107,7 @@ public class AuthenticationUserServiceTest {
         mockAuthWithPrincipal(principal);
       }
 
-      assertThatThrownBy(() -> authenticationUserService.getCurrentUser())
-          .isInstanceOf(expectedEx);
-    }
-
-    private static Stream<Arguments> provideAuthFailures() {
-      // We need a JWT mock that specifically returns a non-UUID string
-      // to trigger the IllegalArgumentException in UUID.fromString()
-      Jwt mockJwtWithBadSub = mock(Jwt.class);
-      when(mockJwtWithBadSub.getSubject()).thenReturn("not-a-uuid");
-      return Stream.of(
-          Arguments.of(null, AuthenticationException.class), // Auth is null
-          Arguments.of("not-a-jwt", AuthenticationException.class), // Principal wrong type
-          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class), // JWT exists but sub is invalid (null)
-          Arguments.of(mock(Jwt.class), AuthenticationException.class) // Jwt exist, but missing data
-      );
+      assertThatThrownBy(() -> authenticationUserService.getCurrentUser()).isInstanceOf(expectedEx);
     }
 
     private void mockAuthWithPrincipal(Object principal) {
@@ -170,8 +168,8 @@ public class AuthenticationUserServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getUserId()).thenReturn(userId);
 
-      assertThatCode(() -> authenticationUserService.verifyUserOwnsPortfolio(userId, portfolio))
-          .doesNotThrowAnyException();
+      assertThatCode(() -> authenticationUserService.verifyUserOwnsPortfolio(userId,
+          portfolio)).doesNotThrowAnyException();
     }
 
     @Test
@@ -182,9 +180,8 @@ public class AuthenticationUserServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getUserId()).thenReturn(ownerId);
 
-      assertThatThrownBy(
-          () -> authenticationUserService.verifyUserOwnsPortfolio(strangerId, portfolio)).isInstanceOf(
-              RuntimeException.class)
+      assertThatThrownBy(() -> authenticationUserService.verifyUserOwnsPortfolio(strangerId,
+          portfolio)).isInstanceOf(RuntimeException.class)
           .hasMessage("Access denied: user does not own this portfolio");
     }
   }
@@ -198,7 +195,7 @@ public class AuthenticationUserServiceTest {
       when(securityContext.getAuthentication()).thenReturn(null);
       when(authentication.isAuthenticated()).thenReturn(false);
       assertThat(authenticationUserService.isAuthenticated()).isFalse();
-      
+
       // Check false
       when(securityContext.getAuthentication()).thenReturn(null);
       when(authentication.isAuthenticated()).thenReturn(true);

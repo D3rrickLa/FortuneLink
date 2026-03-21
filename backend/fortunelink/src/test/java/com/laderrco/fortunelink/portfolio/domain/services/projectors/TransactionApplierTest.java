@@ -46,7 +46,7 @@ public class TransactionApplierTest {
   class TradeTests {
     @Test
     @DisplayName("apply_success_mapsBuyTransactionToPositionBuy")
-    void apply_success_mapsBuyTransactionToPositionBuy() {
+    void testApply_success_mapsBuyTransactionToPositionBuy() {
       Position pos = setupPosition();
       Transaction tx = TransactionFactory.buyBuilder(Quantity.of(5), Price.of("10", CAD)).build();
 
@@ -56,7 +56,7 @@ public class TransactionApplierTest {
 
     @Test
     @DisplayName("apply_success_mapsSellTransactionToPositionSell")
-    void apply_success_mapsSellTransactionToPositionSell() {
+    void testApply_success_mapsSellTransactionToPositionSell() {
       Position pos = setupPosition();
       Transaction tx = TransactionFactory.baseBuilder().transactionType(TransactionType.SELL)
           .execution(new TradeExecution(SYMBOL, Quantity.of(5), Price.of("10", CAD)))
@@ -68,7 +68,7 @@ public class TransactionApplierTest {
 
     @Test
     @DisplayName("apply_fail_throwsOnInsufficientQuantityForSell")
-    void apply_fail_throwsOnInsufficientQuantityForSell() {
+    void testApply_fail_throwsOnInsufficientQuantityForSell() {
       Position pos = AcbPosition.empty(SYMBOL, TYPE, CAD);
       Transaction tx = TransactionFactory.sellBuilder(Quantity.of(999), Price.of("1.00", CAD))
           .build();
@@ -83,7 +83,7 @@ public class TransactionApplierTest {
   class CorporateActionTests {
     @Test
     @DisplayName("apply_success_mapsSplitTransactionToPositionSplit")
-    void apply_success_mapsSplitTransactionToPositionSplit() {
+    void testApply_success_mapsSplitTransactionToPositionSplit() {
       Position pos = setupPosition();
       Transaction tx = TransactionFactory.baseBuilder().transactionType(TransactionType.SPLIT)
           .split(new Ratio(2, 1))
@@ -95,7 +95,7 @@ public class TransactionApplierTest {
 
     @Test
     @DisplayName("apply_success_mapsReturnOfCapitalToPositionApplyRoc")
-    void apply_success_mapsReturnOfCapitalToPositionApplyRoc() {
+    void testApply_success_mapsReturnOfCapitalToPositionApplyRoc() {
       Position pos = setupPosition();
       Money expectedCashDelta = Money.of("10.00", CAD);
       Transaction tx = TransactionFactory.baseBuilder()
@@ -113,7 +113,7 @@ public class TransactionApplierTest {
   class DividendTests {
     @Test
     @DisplayName("apply_success_mapsDividendReinvestToPositionBuy")
-    void apply_success_mapsDividendReinvestToPositionBuy() {
+    void testApply_success_mapsDividendReinvestToPositionBuy() {
       Position pos = setupPosition();
       // Maps to position.buy() internally
       Transaction tx = TransactionFactory.baseBuilder()
@@ -130,7 +130,7 @@ public class TransactionApplierTest {
   class DefaultTests {
     @Test
     @DisplayName("apply_success_mapsUnknownTypeToNoChangeResult")
-    void apply_success_mapsUnknownTypeToNoChangeResult() {
+    void testApply_success_mapsUnknownTypeToNoChangeResult() {
       Position pos = setupPosition();
       Transaction tx = TransactionFactory.baseBuilder()
           .transactionType(TransactionType.TRANSFER_OUT) // Or any type without a case
