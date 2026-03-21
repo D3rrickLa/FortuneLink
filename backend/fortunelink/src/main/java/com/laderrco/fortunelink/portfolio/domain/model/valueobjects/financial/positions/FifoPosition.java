@@ -121,30 +121,18 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
         lotReduction = remainingReduction; // absorbs accumulated rounding drift
       } else {
         BigDecimal ratio = lot.costBasis().amount()
-            .divide(totalCostBasis.amount(), Precision.DIVISION.getDecimalPlaces(),
+            .divide(totalCostBasis.amount(),
+                Precision.DIVISION.getDecimalPlaces(),
                 Rounding.DIVISION.getMode());
 
         lotReduction = totalReduction.multiply(ratio);
         remainingReduction = remainingReduction.subtract(lotReduction);
-        // NOTE: lotReduction cannot exceed lot.costBasis() here —
-        // proven by: totalReduction < totalCostBasis (Case 2 guard above)
+        // NOTE: lotReduction cannot exceed lot.costBasis() here.
+        // Proven by: totalReduction < totalCostBasis (Case 2 guard above)
         // therefore: totalReduction * (lot.costBasis/totalCostBasis) < lot.costBasis
       }
 
-      Money newCostBasis = lot.costBasis().subtract(lotReduction);
-
-      // Defensive guard: rounding drift on last lot only - intermediate lots
-      // are mathematically protected by the proportional ratio cap above
-      if (newCostBasis.isNegative()) {
-        if (isLastLot) {
-          newCostBasis = Money.zero(accountCurrency);
-        } else {
-          // This state is unreachable via normal construction.
-          // Signals a logic regression
-          throw new IllegalStateException("Intermediate lot went negative: " + lot);
-        }
-      }
-
+      Money newCostBasis = applyLotReduction(lot.costBasis(), lotReduction, isLastLot, accountCurrency);
       newLots.add(new TaxLot(lot.quantity(), newCostBasis, lot.acquiredDate()));
     }
 
@@ -170,5 +158,19 @@ public record FifoPosition(AssetSymbol symbol, AssetType type, Currency accountC
   @Override
   public Money currentValue(Price currentPrice) {
     return currentPrice.calculateValue(totalQuantity());
+  }
+
+  static Money applyLotReduction(Money lotBasis, Money lotReduction, boolean isLastLot, Currency currency) {
+    Money newCostBasis = lotBasis.subtract(lotReduction);
+
+    if (newCostBasis.isNegative()) {
+      if (isLastLot) {
+        return Money.zero(currency);
+      } else {
+        throw new IllegalStateException("Intermediate lot went negative -> lotBasis: " + lotBasis +
+            ", lotReduction: " + lotReduction);
+      }
+    }
+    return newCostBasis;
   }
 }

@@ -72,6 +72,7 @@ class AcbPositionTest {
       if (!(rawResult instanceof ApplyResult.Sale)) {
         throw new AssertionError("Expected a Sale result but got " + rawResult.getClass());
       }
+      assertThat(rawResult.isNoChange()).isFalse();
 
       @SuppressWarnings("unchecked")
       var result = (ApplyResult.Sale<AcbPosition>) rawResult;
@@ -160,7 +161,7 @@ class AcbPositionTest {
       Quantity sellQty = new Quantity(new BigDecimal("11"));
       Money proceeds = new Money(new BigDecimal("150.00"), USD);
 
-      assertThrows(IllegalStateException.class, () -> position.sell(sellQty, proceeds, NOW));
+      assertThrows(IllegalArgumentException.class, () -> position.sell(sellQty, proceeds, NOW));
     }
   }
 

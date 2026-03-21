@@ -478,6 +478,18 @@ class PortfolioTest {
     }
 
     @Test
+    void reportRecalculationFailure_failure_accountNotFound() {
+      Account account_1 = new Account(
+          AccountId.newId(), "Not Found", AccountType.CHEQUING, Currency.USD, PositionStrategy.ACB);
+      String id = account_1.getAccountId().id().toString();
+
+      assertThatThrownBy(() -> portfolio.reportRecalculationFailure(account_1.getAccountId()))
+          .isInstanceOf(AccountNotFoundException.class)
+          .hasMessageContaining(
+              "Portfolio, " + portfolio.getPortfolioId().id().toString() + " does not have/cannot find " + id);
+    }
+
+    @Test
     void reportRecalculationSuccess_Success_MarkAsHealth() {
       Account account_1 = portfolio.createAccount(
           "Invest", AccountType.TFSA, Currency.USD, PositionStrategy.ACB);
@@ -486,6 +498,19 @@ class PortfolioTest {
 
       portfolio.reportRecalculationSuccess(account_1.getAccountId());
       assertThat(account_1.isStale()).isFalse();
+    }
+
+    @Test
+    void reportRecalculationSuccess_failure_accountNotFound() {
+      Account account_1 = new Account(
+          AccountId.newId(), "Not Found", AccountType.CHEQUING, Currency.USD, PositionStrategy.ACB);
+
+      String id = account_1.getAccountId().id().toString();
+
+      assertThatThrownBy(() -> portfolio.reportRecalculationSuccess(account_1.getAccountId()))
+          .isInstanceOf(AccountNotFoundException.class)
+          .hasMessageContaining(
+              "Portfolio, " + portfolio.getPortfolioId().id().toString() + " does not have/cannot find " + id);
     }
 
     @Test

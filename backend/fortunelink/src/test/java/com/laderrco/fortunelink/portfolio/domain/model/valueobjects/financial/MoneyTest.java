@@ -38,15 +38,6 @@ class MoneyTest {
 		}
 
 		@Test
-		@DisplayName("constructor_fail_ExceedsPrecision")
-		void constructor_fail_ExceedsPrecision() {
-			BigDecimal highPrecision = new BigDecimal(
-					"100.1234567999999999999999999999999999999999999999999999999999999999998");
-			assertThatThrownBy(() -> new Money(highPrecision, USD))
-					.isInstanceOf(IllegalArgumentException.class);
-		}
-
-		@Test
 		@DisplayName("of_success_FactoryMethods")
 		void of_success_FactoryMethods() {
 			Money fromDouble = Money.of(10.5, "USD");

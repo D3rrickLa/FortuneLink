@@ -1,48 +1,16 @@
 package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import java.util.Comparator;
-import java.util.List;
 
-public final class FifoPositionProjector implements Projector<FifoPosition, Transaction> {
-  private final AssetSymbol symbol;
-  private final AssetType type;
-  private final Currency accountCurrency;
-
-  public FifoPositionProjector(AssetSymbol symbol, AssetType type, Currency accountCurrency) {
-    this.symbol = symbol;
-    this.type = type;
-    this.accountCurrency = accountCurrency;
-  }
-
-  @Override
-  public FifoPosition project(List<Transaction> transactions) {
-    FifoPosition current = FifoPosition.empty(symbol, type, accountCurrency);
-
-    List<Transaction> sorted = transactions.stream()
-        .sorted(Comparator.comparing(tx -> tx.occurredAt())).toList();
-
-    for (Transaction tx : sorted) {
-      ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
-      Position next = result.newPosition();
-
-      // Safeguard against future changes to the Position type hierarchy.
-      // Fail loudly if somehow a non-Fifo position comes back.
-      // This is intentionally unreachable with current implementation.
-      if (!(next instanceof FifoPosition fifo)) {
-        throw new IllegalStateException(
-            "FifoPositionProjector received non-FifoPosition result for tx type: "
-                + tx.transactionType());
-      }
-      current = fifo;
+public final class FifoPositionProjector extends BasePositionProjector<FifoPosition> {
+    public FifoPositionProjector(AssetSymbol s, AssetType t, Currency c) {
+        super(s, t, c, FifoPosition.class);
     }
-
-    return current;
-  }
+    @Override
+    protected FifoPosition getEmptyPosition(AssetSymbol s, AssetType t, Currency c) {
+        return FifoPosition.empty(s, t, c);
+    }
 }

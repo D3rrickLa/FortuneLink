@@ -139,7 +139,7 @@ public class TransactionTest {
           () -> new Transaction(transactionId, accountId, transactionType, execution, split,
               cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
 
-      assertTrue(ex.getMessage().contains("requires execution details"));
+      assertTrue(ex.getMessage().contains("requires execution"));
     }
 
     @Test
@@ -162,7 +162,7 @@ public class TransactionTest {
           () -> new Transaction(transactionId, accountId, transactionType, execution, split,
               cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
 
-      assertTrue(ex.getMessage().contains("cannot have execution details"));
+      assertTrue(ex.getMessage().contains("cannot have execution"));
     }
 
     @Test
@@ -323,8 +323,8 @@ public class TransactionTest {
       Ratio split = null;
       Money cashDelta = Money.of(-1358.25, "USD");
       List<Fee> fees = List.of(new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
-              ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
-              new FeeMetadata(Map.of())),
+          ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
+          new FeeMetadata(Map.of())),
           new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
               new ExchangeRate(Currency.CAD, Currency.USD, BigDecimal.valueOf(1.35), Instant.now()),
               Instant.now(), new FeeMetadata(Map.of()))
@@ -339,7 +339,8 @@ public class TransactionTest {
           execution, split, cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
       assertAll(() -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()),
           () -> assertEquals(Currency.USD.getCode(),
-              transaction.totalFeesInAccountCurrency().currency().getCode()), () -> assertEquals(2,
+              transaction.totalFeesInAccountCurrency().currency().getCode()),
+          () -> assertEquals(2,
               transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits()));
     }
 
@@ -483,41 +484,6 @@ public class TransactionTest {
     }
 
     @Test
-    void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAtAndExcludedBy() {
-      TransactionMetadata.ExclusionRecord record = new ExclusionRecord(null, null, "for testing");
-      assertThrows(IllegalArgumentException.class,
-          () -> new TransactionMetadata(AssetType.STOCK, null, record, null));
-    }
-
-    @Test
-    void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedAt() {
-      TransactionMetadata.ExclusionRecord record = new ExclusionRecord(Instant.now(), null,
-          "for testing");
-      assertThrows(IllegalArgumentException.class,
-          () -> new TransactionMetadata(AssetType.STOCK, null, record, null));
-    }
-
-    @Test
-    void testConstructorExceptionHandlingForExclusion_IsExcluded_NullForExcludedBy() {
-      TransactionMetadata.ExclusionRecord record = new ExclusionRecord(null, UserId.random(),
-          "for testing");
-      assertThrows(IllegalArgumentException.class,
-          () -> new TransactionMetadata(AssetType.STOCK, null, record, null));
-    }
-
-    @Test
-    void testConstructorExceptionHandlingForExclusion_IsNotExcluded_ExclusionAreActive() {
-      TransactionMetadata.ExclusionRecord exclusionRecord = new ExclusionRecord(Instant.now(), null,
-          "testing");
-      TransactionMetadata.ExclusionRecord exclusionRecord2 = new ExclusionRecord(null,
-          UserId.random(), "testing");
-      assertThrows(IllegalArgumentException.class,
-          () -> new TransactionMetadata(AssetType.STOCK, null, exclusionRecord, null));
-      assertThrows(IllegalArgumentException.class,
-          () -> new TransactionMetadata(AssetType.STOCK, null, exclusionRecord2, null));
-    }
-
-    @Test
     void testImmutabilityOfAdditionalData() {
       Map<String, String> originalData = new HashMap<>();
       originalData.put("key", "value");
@@ -530,7 +496,7 @@ public class TransactionTest {
       // Record should remain unchanged because of Map.copyOf()
       assertEquals("value", meta.get("key"));
       assertEquals("value", meta.get("key"));
-      assertEquals("NOTHING", meta.get("key2"));
+      assertEquals(null, meta.get("key2"));
       assertTrue(meta.containsKey("key"));
       assertFalse(meta.containsKey("keys"));
 

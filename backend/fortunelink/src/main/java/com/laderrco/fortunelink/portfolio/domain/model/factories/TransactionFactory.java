@@ -18,6 +18,8 @@ import java.util.List;
 public final class TransactionFactory {
   private final static Currency CAD = Currency.CAD;
 
+  private TransactionFactory() {}
+  
   public static Transaction.TransactionBuilder baseBuilder() {
     return Transaction.builder().transactionId(TransactionId.newId()).accountId(AccountId.newId())
         .cashDelta(Money.zero(CAD)) // Default to zero if not relevant

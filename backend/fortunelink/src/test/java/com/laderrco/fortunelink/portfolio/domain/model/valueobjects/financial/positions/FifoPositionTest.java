@@ -161,23 +161,22 @@ class FifoPositionTest {
     }
 
     @Test
-    void applyRoc_astLotClampedToZero_whenRoundingDriftAccumulates() {
-      TaxLot lot1 = lot("100", "400.00", T1);
-      TaxLot lot2 = lot("100", "400.00", T2);
-      TaxLot lot3 = lot("100", "0.01", T3); // tiny last lot
-      FifoPosition pos = position(lot1, lot2, lot3);
+    void applyLotReduction_lastLotGoesNegative_clampsToZero() {
+      Money lotBasis = Money.of("0.01", USD);
+      Money lotReduction = Money.of("0.03", USD); // deliberately exceeds basis
 
-      // 799.00 < 800.01 (totalCostBasis) → Case 3 guaranteed
-      Price rocPrice = Price.of(new BigDecimal("7.99"), USD);
-      Quantity held = Quantity.of(100);
+      Money result = FifoPosition.applyLotReduction(lotBasis, lotReduction, true, USD);
 
-      ApplyResult<?> result = pos.applyReturnOfCapital(rocPrice, held);
-      FifoPosition updated = extractUpdatedPosition(result);
+      assertThat(result).isEqualTo(Money.zero(USD));
+    }
 
-      assertThat(result).isInstanceOf(ApplyResult.Adjustment.class); // no excess gain
-      assertThat(updated.lots().getLast().costBasis().isZero()).isTrue(); // clamped
-      assertThat(updated.lots().get(0).costBasis().isNegative()).isFalse();
-      assertThat(updated.lots().get(1).costBasis().isNegative()).isFalse();
+    @Test
+    void applyLotReduction_intermediateLotGoesNegative_throwsIllegalState() {
+      Money lotBasis = Money.of("0.01", USD);
+      Money lotReduction = Money.of("0.03", USD);
+
+      assertThatThrownBy(() -> FifoPosition.applyLotReduction(lotBasis, lotReduction, false, USD))
+          .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -239,6 +238,36 @@ class FifoPositionTest {
       assertThatThrownBy(() -> pos.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD), Quantity.of(5)))
           .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void applyLotReduction_lastLotGoesNegative_returnsZero() {
+      Money lotBasis = Money.of("10.00", CAD);
+      Money lotReduction = Money.of("15.00", CAD); // exceeds basis
+
+      Money result = FifoPosition.applyLotReduction(lotBasis, lotReduction, true, CAD);
+
+      assertThat(result).isEqualTo(Money.zero(CAD));
+    }
+
+    @Test
+    void applyLotReduction_intermediateLotGoesNegative_throws() {
+      Money lotBasis = Money.of("10.00", CAD);
+      Money lotReduction = Money.of("15.00", CAD);
+
+      assertThatThrownBy(() -> FifoPosition.applyLotReduction(lotBasis, lotReduction, false, CAD))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Intermediate lot went negative");
+    }
+
+    @Test
+    void applyLotReduction_normalCase_subtractsCorrectly() {
+      Money lotBasis = Money.of("100.00", CAD);
+      Money lotReduction = Money.of("30.00", CAD);
+
+      Money result = FifoPosition.applyLotReduction(lotBasis, lotReduction, false, CAD);
+
+      assertThat(result).isEqualTo(Money.of("70.00", CAD));
+    }
   }
 
   @Nested
@@ -292,12 +321,4 @@ class FifoPositionTest {
     return new FifoPosition(SYMBOL, TYPE, USD, List.of(lots), Instant.now());
   }
 
-  private FifoPosition extractUpdatedPosition(ApplyResult<?> result) {
-    if (result instanceof ApplyResult.Adjustment<?> adjustment) {
-      return (FifoPosition) adjustment.getUpdatedPosition();
-    } else if (result instanceof ApplyResult.RocAdjustment<?> rocAdjustment) {
-      return (FifoPosition) rocAdjustment.getUpdatedPosition();
-    }
-    throw new IllegalArgumentException("Unknown ApplyResult type: " + result.getClass());
-  }
 }

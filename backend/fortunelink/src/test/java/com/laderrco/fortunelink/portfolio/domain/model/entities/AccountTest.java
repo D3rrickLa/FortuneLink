@@ -142,7 +142,25 @@ class AccountTest {
 		void testWithdraw_Fails_NegativeAmount() {
 			account.deposit(Money.of(100, "USD"), "Funding");
 			assertThrows(IllegalArgumentException.class,
+					() -> account.withdraw(Money.of(-50, "USD"), "Too much"));
+		}
+
+		@Test
+		void testWithdraw_Fails_NegativeAmountAndInsufficientFund() {
+			account.deposit(Money.of(100, "USD"), "Funding");
+			assertThrows(IllegalArgumentException.class,
 					() -> account.withdraw(Money.of(-200, "USD"), "Too much"));
+
+			// 00, 01, 10, 11
+		}
+
+		@Test
+		void testWithdraw_Success_AllowsNegativeBalance_WhenAllowed() {
+			account.deposit(Money.of(100, "USD"), "Funding");
+
+			account.withdraw(Money.of(200, "USD"), "Overdraft", true);
+
+			assertEquals(Money.of(-100, "USD"), account.getCashBalance());
 		}
 
 		@Test
@@ -462,7 +480,7 @@ class AccountTest {
 
 		@ParameterizedTest
 		@EnumSource(value = AccountType.class, names = { "NON_REGISTERED_INVESTMENT", "MARGIN",
-        "TAXABLE_INVESTMENT"})
+				"TAXABLE_INVESTMENT" })
 		void testGetAccountType_Sucess_RequiresCapitalGainsTracking(AccountType type) {
 			Account testAccount = new Account(accountId, "null", type, usd, strategy);
 			assertTrue(testAccount.getAccountType().requiresCapitalGainsTracking());

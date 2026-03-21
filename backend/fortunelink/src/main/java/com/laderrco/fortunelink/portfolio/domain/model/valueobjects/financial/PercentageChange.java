@@ -8,20 +8,27 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Represents a relative change in value, which can be positive (gain) or negative (loss).
+ * Represents a relative change in value, which can be positive (gain) or
+ * negative (loss).
  * <p>
- * This record is used for performance metrics such as returns, growth rates, and period-over-period
+ * This record is used for performance metrics such as returns, growth rates,
+ * and period-over-period
  * comparisons (e.g., YTD, MOM).
  * </p>
- * * <p> Values are stored internally as a decimal rate (e.g., {@code 0.15} for +15%, {@code -0.25}
- * for -25%).</p>
+ * <p>
+ * Values are stored internally as a decimal rate (e.g., {@code 0.15} for +15%,
+ * {@code -0.25}
+ * for -25%).
+ * </p>
  *
  * @param change The decimal representation of the percentage change.
  */
 public record PercentageChange(BigDecimal change) implements Comparable<PercentageChange> {
-  public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
   private static final int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
   private static final RoundingMode MODE = Rounding.PERCENTAGE.getMode();
+  // we need SCALE and MODE to load first, if this is the first thing declared
+  // it will error out 
+  public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
 
   public PercentageChange {
     notNull(change, "percentage change");
@@ -31,7 +38,8 @@ public record PercentageChange(BigDecimal change) implements Comparable<Percenta
   /**
    * Static factory to create a gain from a positive percentage number.
    *
-   * @param percent The percentage value to be treated as a gain (e.g. {@code 10.0} creates 0.10).
+   * @param percent The percentage value to be treated as a gain (e.g.
+   *                {@code 10.0} creates 0.10).
    * @return A new PercentageChange instance representing a positive rate.
    */
   public static PercentageChange gain(double percent) {
@@ -42,7 +50,8 @@ public record PercentageChange(BigDecimal change) implements Comparable<Percenta
   /**
    * Static factory to create a loss from a positive percentage number.
    *
-   * @param percent The percentage value to be treated as a loss (e.g. {@code 20.0} creates -0.20).
+   * @param percent The percentage value to be treated as a loss (e.g.
+   *                {@code 20.0} creates -0.20).
    * @return A new PercentageChange instance representing a negative rate.
    */
   public static PercentageChange loss(double percent) {
@@ -51,7 +60,8 @@ public record PercentageChange(BigDecimal change) implements Comparable<Percenta
   }
 
   /**
-   * Converts the internal decimal rate back to a percentage value. * @return The change multiplied
+   * Converts the internal decimal rate back to a percentage value. * @return The
+   * change multiplied
    * by 100 (e.g., -0.25 returns -25.0).
    */
   public BigDecimal toPercent() {
