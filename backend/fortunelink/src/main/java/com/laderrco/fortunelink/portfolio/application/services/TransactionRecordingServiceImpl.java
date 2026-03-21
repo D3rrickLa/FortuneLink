@@ -369,7 +369,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
           symbol,
           sale.realizedGainLoss(),
           sale.costBasisSold(),
-          tx.occurredAt().timestamp());
+          tx.occurredAt());
     }
 
     // NEW: ROC excess capital gain
@@ -378,7 +378,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
           symbol,
           roc.excessCapitalGain(),
           Money.zero(account.getAccountCurrency()), // cost basis sold = $0.00 per CRA
-          tx.occurredAt().timestamp());
+          tx.occurredAt());
     }
   }
 

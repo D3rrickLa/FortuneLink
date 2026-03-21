@@ -26,7 +26,7 @@ public final class FifoPositionProjector implements Projector<FifoPosition, Tran
     FifoPosition current = FifoPosition.empty(symbol, type, accountCurrency);
 
     List<Transaction> sorted = transactions.stream()
-        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
+        .sorted(Comparator.comparing(tx -> tx.occurredAt())).toList();
 
     for (Transaction tx : sorted) {
       ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);

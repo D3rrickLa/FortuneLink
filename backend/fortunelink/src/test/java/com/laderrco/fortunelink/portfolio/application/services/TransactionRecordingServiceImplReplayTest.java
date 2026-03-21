@@ -81,7 +81,7 @@ public class TransactionRecordingServiceImplReplayTest {
         .execution(new Transaction.TradeExecution(VFV, qty, new Price(price)))
         .fees(List.of(buildCommissionFee(commission, at)))
         .cashDelta(cashDelta)
-        .occurredAt(new Transaction.TransactionDate(at))
+        .occurredAt(at)
         .notes("")
         .build();
   }
@@ -115,7 +115,7 @@ public class TransactionRecordingServiceImplReplayTest {
         .execution(new Transaction.TradeExecution(VFV, qty, new Price(price)))
         .fees(List.of(buildCommissionFee(commission, at)))
         .cashDelta(cashDelta)
-        .occurredAt(new Transaction.TransactionDate(at))
+        .occurredAt(at)
         .notes("")
         .build();
   }
@@ -292,7 +292,7 @@ public class TransactionRecordingServiceImplReplayTest {
       when(tx.execution()).thenReturn(
           new Transaction.TradeExecution(VFV, Quantity.of(quantity),
               new Price(Money.of(unitPrice, "CAD"))));
-      when(tx.occurredAt()).thenReturn(Transaction.TransactionDate.of(BUY_DATE));
+      when(tx.occurredAt()).thenReturn(BUY_DATE);
       when(tx.cashDelta()).thenReturn(Money.of(-totalImpact, "CAD"));
 
       service.replayTransaction(account, tx);

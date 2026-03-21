@@ -21,11 +21,10 @@ import java.util.Optional;
 import lombok.Getter;
 
 // so we are going to actually add back a 'currency preference'
-// it is only meant to be used to display your aggreagate data
+// it is only meant to be used to display your aggregate data
 // in one currency
 @Getter
 public class Portfolio {
-
   private final PortfolioId portfolioId;
   private final UserId userId;
   private final Instant createdAt;
@@ -41,8 +40,7 @@ public class Portfolio {
   // private full args constructor
   private Portfolio(PortfolioId portfolioId, UserId userId, String name, String description,
       Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted,
-      Instant deletedOn,
-      UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
+      Instant deletedOn, UserId deletedBy, Instant createdAt, Instant lastUpdatedAt) {
     this.portfolioId = notNull(portfolioId, "portfolioId");
     this.userId = notNull(userId, "userId");
     this.name = notNull(name, "name");
@@ -66,14 +64,9 @@ public class Portfolio {
       Currency displayCurrency) {
     Instant now = Instant.now();
     String cleanDesc = description == null ? "" : description;
-    return new Portfolio(
-        PortfolioId.newId(), // ← Generated ID
-        userId,
-        name,
-        cleanDesc,
-        new HashMap<>(), // ← Empty accounts
-        displayCurrency,
-        false, // ← Not deleted
+    return new Portfolio(PortfolioId.newId(), // ← Generated ID
+        userId, name, cleanDesc, new HashMap<>(), // ← Empty accounts
+        displayCurrency, false, // ← Not deleted
         null, // ← No deletion date
         null, // ← No deleter
         now, // ← Creation timestamp
@@ -83,15 +76,11 @@ public class Portfolio {
 
   // Static factory for reconstitution
   public static Portfolio reconstitute(PortfolioId portfolioId, UserId userId, String name,
-      String description,
-      Map<AccountId, Account> accounts, Currency displayCurrency, boolean deleted,
-      Instant deletedOn,
-      UserId deletedBy, Instant createdAt,
+      String description, Map<AccountId, Account> accounts, Currency displayCurrency,
+      boolean deleted, Instant deletedOn, UserId deletedBy, Instant createdAt,
       Instant lastUpdatedOn) {
-    return new Portfolio(
-        portfolioId, userId, name, description, accounts, displayCurrency, deleted, deletedOn,
-        deletedBy, createdAt, lastUpdatedOn
-    );
+    return new Portfolio(portfolioId, userId, name, description, accounts, displayCurrency, deleted,
+        deletedOn, deletedBy, createdAt, lastUpdatedOn);
   }
 
   public Account createAccount(String name, AccountType type, Currency currency,
@@ -200,8 +189,8 @@ public class Portfolio {
     if (hasActiveAccounts) {
       long activeCount = accounts.values().stream().filter(Account::isActive).count();
       throw new PortfolioNotEmptyException(
-          "Cannot delete portfolio with " + activeCount + " active account(s). " +
-              "Close all accounts first.");
+          "Cannot delete portfolio with " + activeCount + " active account(s). "
+              + "Close all accounts first.");
     }
 
     this.deleted = true;
@@ -222,15 +211,15 @@ public class Portfolio {
   }
 
   public void reportRecalculationFailure(AccountId accountId) {
-    Account account = findAccount(accountId)
-        .orElseThrow(() -> new AccountNotFoundException(accountId, portfolioId));
+    Account account = findAccount(accountId).orElseThrow(
+        () -> new AccountNotFoundException(accountId, portfolioId));
     account.markStale();
     touch();
   }
 
   public void reportRecalculationSuccess(AccountId accountId) {
-    Account account = findAccount(accountId)
-        .orElseThrow(() -> new AccountNotFoundException(accountId, portfolioId));
+    Account account = findAccount(accountId).orElseThrow(
+        () -> new AccountNotFoundException(accountId, portfolioId));
 
     if (account.isStale()) {
       account.restoreHealth();
@@ -262,17 +251,14 @@ public class Portfolio {
       return Optional.empty();
     }
 
-    return accounts.values().stream()
-        .filter(a -> a.getName().equalsIgnoreCase(name.trim()))
+    return accounts.values().stream().filter(a -> a.getName().equalsIgnoreCase(name.trim()))
         .findFirst();
   }
 
   public List<Account> findAccountsByType(AccountType type) {
     notNull(type, "type");
 
-    return accounts.values().stream()
-        .filter(a -> a.getAccountType().equals(type))
-        .toList();
+    return accounts.values().stream().filter(a -> a.getAccountType().equals(type)).toList();
 
   }
 
@@ -293,8 +279,7 @@ public class Portfolio {
   }
 
   private boolean accountNameExists(String name) {
-    return accounts.values().stream()
-        .anyMatch(a -> a.getName().equalsIgnoreCase(name));
+    return accounts.values().stream().anyMatch(a -> a.getName().equalsIgnoreCase(name));
   }
 
   private void touch() {

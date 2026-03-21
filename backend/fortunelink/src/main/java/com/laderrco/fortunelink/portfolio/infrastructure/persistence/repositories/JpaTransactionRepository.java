@@ -2,10 +2,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

@@ -45,12 +45,10 @@ public record Transaction(
     AccountId accountId,
     TransactionType transactionType,
     TradeExecution execution,
-    // was SplitDetails
     Ratio split,
     Money cashDelta,
     List<Fee> fees,
     String notes,
-    // was TransactionDate
     Instant occurredAt,
     TransactionId relatedTransactionId,
     TransactionMetadata metadata) {

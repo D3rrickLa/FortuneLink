@@ -26,7 +26,7 @@ public final class AcbPositionProjector implements Projector<AcbPosition, Transa
     AcbPosition current = AcbPosition.empty(symbol, type, accountCurrency);
 
     List<Transaction> sorted = transactions.stream()
-        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp())).toList();
+        .sorted(Comparator.comparing(tx -> tx.occurredAt())).toList();
 
     for (Transaction tx : sorted) {
       ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);

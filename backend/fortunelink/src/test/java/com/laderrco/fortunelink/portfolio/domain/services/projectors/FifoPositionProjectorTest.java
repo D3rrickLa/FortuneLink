@@ -10,7 +10,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
 import com.laderrco.fortunelink.portfolio.domain.model.factories.TransactionFactory;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -31,11 +30,11 @@ public class FifoPositionProjectorTest {
   void project_success_accumulatesPositionStateCorrectly() {
     // 1. Arrange: Create a stream of events
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
-        .occurredAt(TransactionDate.of(Instant.parse("2023-01-01T10:00:00Z")))
+        .occurredAt(Instant.parse("2023-01-01T10:00:00Z"))
         .build();
 
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
-        .occurredAt(TransactionDate.of(Instant.parse("2023-01-02T10:00:00Z")))
+        .occurredAt(Instant.parse("2023-01-02T10:00:00Z"))
         .build();
 
     // 2. Act: Project the stream

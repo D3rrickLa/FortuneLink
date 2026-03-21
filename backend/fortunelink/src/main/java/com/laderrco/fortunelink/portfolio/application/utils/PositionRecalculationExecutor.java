@@ -54,7 +54,7 @@ public class PositionRecalculationExecutor {
         // If you ever need full-account reconstruction, use the dedicated
         // replayFullAccount() path that resets cash to zero first.
         .filter(tx -> tx.transactionType().affectsHoldings())
-        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
+        .sorted(Comparator.comparing(tx -> tx.occurredAt()))
         .toList();
 
     try {

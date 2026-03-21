@@ -4,32 +4,31 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TransactionDate;
-
-public class TransactionDateTest {
+public class InstantTest {
 
 	@Test
-	void testTransactionDateConstructor_Success() {
-		TransactionDate date = new TransactionDate(Instant.now());
+	void testInstantConstructor_Success() {
+		Instant date = Instant.now();
 		assertNotNull(date);
 	}
 
 	@Test
 	void testStaticConstructor_Success() {
-		TransactionDate date = TransactionDate.of(Instant.now());
+		Instant date = Instant.now().plus(Duration.ofDays(30));
 		assertNotNull(date);
 	}
 
 	@Test
 	void testMethods() {
 		Instant time = Instant.now();
-		TransactionDate date = new TransactionDate(time);
-		TransactionDate otherDate = new TransactionDate(Instant.MAX);
-		TransactionDate otherDate2 = new TransactionDate(Instant.MIN);
+		Instant date = time;
+		Instant otherDate = Instant.MAX;
+		Instant otherDate2 =Instant.MIN;
 
 		assertTrue(date.isBefore(otherDate));
 		assertTrue(date.isAfter(otherDate2));
