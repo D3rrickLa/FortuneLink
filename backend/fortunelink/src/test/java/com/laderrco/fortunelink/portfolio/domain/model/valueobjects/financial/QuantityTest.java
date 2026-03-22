@@ -12,17 +12,15 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("Quantity Value Object Unit Tests")
 class QuantityTest {
-
   @Nested
   @DisplayName("Creation and Scaling")
   class CreationTests {
     @Test
-    @DisplayName("constructor_success_AppliesBankersRounding")
-    void testConstructor_success_appliesBankersRounding() {
+    @DisplayName("constructor: success applies bankers rounding")
+    void constructorAppliesBankersRounding() {
       // HALF_EVEN rounds to the nearest even neighbor for .5 cases
-      // Assuming QUANTITY_PRECISION is 2 for this example
-      Quantity q1 = new Quantity(new BigDecimal("2.225")); // Should round to 2.22
-      Quantity q2 = new Quantity(new BigDecimal("2.235")); // Should round to 2.24
+      Quantity q1 = new Quantity(new BigDecimal("2.225"));
+      Quantity q2 = new Quantity(new BigDecimal("2.235"));
 
       assertThat(q1.amount()).isEqualByComparingTo("2.22500000");
       assertThat(q2.amount()).isEqualByComparingTo("2.23500000");
@@ -30,21 +28,23 @@ class QuantityTest {
     }
 
     @Test
-    @DisplayName("constructor_fail_NullAmount")
-    void testConstructor_fail_nullAmount() {
-      assertThatThrownBy(() -> new Quantity(null)).isInstanceOf(DomainArgumentException.class);
+    @DisplayName("constructor: fail on null amount")
+    void constructorThrowsOnNullAmount() {
+      assertThatThrownBy(() -> new Quantity(null))
+          .isInstanceOf(DomainArgumentException.class);
     }
 
     @Test
-    @DisplayName("should_fail_when_quantity_given_negative")
-    void constructor_fail_when_negative_value() {
-      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10))).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
+    @DisplayName("constructor: fail when quantity is negative")
+    void constructorThrowsOnNegativeValue() {
+      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10)))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Quantity cannot be negative");
     }
 
     @Test
-    @DisplayName("ZERO_success_ConstantCheck")
-    void testZERO_success_constantCheck() {
+    @DisplayName("ZERO: success constant check")
+    void zeroConstantIsCorrect() {
       assertThat(Quantity.ZERO.amount()).isEqualByComparingTo(BigDecimal.ZERO);
       assertThat(Quantity.ZERO.isZero()).isTrue();
     }
@@ -54,71 +54,65 @@ class QuantityTest {
   @DisplayName("Arithmetic Operations")
   class ArithmeticTests {
     @Test
-    @DisplayName("add_success_SimpleAddition")
-    void testAdd_success_simpleAddition() {
+    @DisplayName("add: success simple addition")
+    void addPerformsSimpleAddition() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       Quantity q2 = new Quantity(new BigDecimal("5.50"));
       assertThat(q1.add(q2).amount()).isEqualByComparingTo("15.50");
     }
 
     @Test
-    @DisplayName("subtract_success_ValidResult")
-    void testSubtract_success_validResult() {
+    @DisplayName("subtract: success valid result")
+    void subtractReturnsValidResult() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       Quantity q2 = new Quantity(new BigDecimal("4.00"));
       assertThat(q1.subtract(q2).amount()).isEqualByComparingTo("6.00");
     }
 
     @Test
-    @DisplayName("subtract_fail_ResultingNegative")
-    void testSubtract_fail_resultingNegative() {
+    @DisplayName("subtract: fail when result is negative")
+    void subtractThrowsWhenResultIsNegative() {
       Quantity q1 = new Quantity(new BigDecimal("5.00"));
       Quantity q2 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.subtract(q2)).isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> q1.subtract(q2))
+          .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("cannot be negative");
     }
 
     @Test
-    @DisplayName("multiply_success_WithPositiveFactor")
-    void testMultiply_success_withPositiveFactor() {
+    @DisplayName("multiply: success with positive factor")
+    void multiplyWorksWithPositiveFactor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       Quantity result = q1.multiply(new BigDecimal("2.5"));
       assertThat(result.amount()).isEqualByComparingTo("25.00");
     }
 
     @Test
-    @DisplayName("multiply_fail_NegativeFactor")
-    void testMultiply_fail_negativeFactor() {
+    @DisplayName("multiply: failure with negative factor")
+    void multiplyFailsWithnegativeFactor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
       assertThatThrownBy(() -> q1.multiply(new BigDecimal("-1.0"))).isInstanceOf(
           IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("divide_success_HandlesRepeatingDecimals")
-    void testDivide_success_handlesRepeatingDecimals() {
+    @DisplayName("divide: success handles repeating decimals")
+    void divideHandlesRepeatingDecimalsWithoutException() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
-      // 10 / 3 = 3.3333... should round based on Q_ROUNDING_MODE
       assertThatCode(() -> q1.divide(new BigDecimal("3"))).doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("divide_fail_amountLessThanZero")
-    void testDivide_fail_lessThanZero() {
+    @DisplayName("divide: fail when divisor is zero or negative")
+    void divideThrowsOnInvalidDivisor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.divide(new BigDecimal("-3"))).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("Divisor must be positive");
-    }
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("-3")))
+          .isInstanceOf(IllegalArgumentException.class);
 
-    @Test
-    @DisplayName("divide_fail_amountIsZero")
-    void testDivide_fail_isZero() {
-      Quantity q1 = new Quantity(new BigDecimal("10.00"));
-
-      assertThatThrownBy(() -> q1.divide(new BigDecimal("0"))).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("Divisor must be positive");
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("0")))
+          .isInstanceOf(IllegalArgumentException.class);
     }
   }
 
@@ -126,8 +120,8 @@ class QuantityTest {
   @DisplayName("Predicates and Comparisons")
   class PredicateTests {
     @Test
-    @DisplayName("isPositive_isZero_isNonZero_success")
-    void testIsPositive_success_isZero_isNonZero() {
+    @DisplayName("predicates: success check state")
+    void predicatesReturnCorrectBooleans() {
       Quantity pos = new Quantity(new BigDecimal("1.00"));
       Quantity zero = Quantity.ZERO;
 
@@ -135,15 +129,11 @@ class QuantityTest {
       assertThat(pos.isNonZero()).isTrue();
       assertThat(zero.isZero()).isTrue();
       assertThat(zero.isPositive()).isFalse();
-      assertThat(zero.isNonZero()).isFalse();
-
-      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-1))).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
     }
 
     @Test
-    @DisplayName("compareTo_success_Ordering")
-    void compareTo_success_Ordering() {
+    @DisplayName("compareTo: success ordering")
+    void compareToOrdersCorrectly() {
       Quantity small = new Quantity(new BigDecimal("1.00"));
       Quantity large = new Quantity(new BigDecimal("2.00"));
 

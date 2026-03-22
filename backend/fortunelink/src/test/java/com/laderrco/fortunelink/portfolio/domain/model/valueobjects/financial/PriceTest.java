@@ -1,50 +1,58 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 import java.math.BigDecimal;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+@DisplayName("Price Value Object Unit Tests")
 public class PriceTest {
-
   @Test
-  void testConstructor_success() {
+  @DisplayName("constructor: success on valid initialization")
+  void constructorInitializesCorrectly() {
     Price price = new Price(Money.of(25, "USD"));
-    assertNotNull(price);
+    assertThat(price).isNotNull();
   }
 
   @Test
-  void testZeroConstructor_success() {
+  @DisplayName("zero: creates zero price with correct currency")
+  void zeroCreatesPriceWithCorrectCurrency() {
     Price price = Price.zero(Currency.USD);
-    assertNotNull(price);
-    assertEquals(Currency.USD, price.currency());
+
+    assertThat(price).isNotNull();
+    assertThat(price.currency()).isEqualTo(Currency.USD);
   }
 
   @Test
-  void testConstructor_fail_priceNegative() {
-    assertThatThrownBy(() -> new Price(Money.of(-25, "USD"))).isInstanceOf(
-        IllegalArgumentException.class).hasMessageContaining("cannot be negative");
-
+  @DisplayName("constructor: fail when price is negative")
+  void constructorThrowsOnNegativePrice() {
+    assertThatThrownBy(() -> new Price(Money.of(-25, "USD")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("cannot be negative");
   }
 
   @Test
-  void testCalculateValue_success() {
+  @DisplayName("calculateValue: success on simple multiplication")
+  void calculateValueReturnsProductOfPriceAndQuantity() {
     Price price = new Price(Money.of(25, "USD"));
     Money actual = price.calculateValue(new Quantity(BigDecimal.TEN));
-    assertEquals(Money.of(250, "USD"), actual);
+
+    assertThat(actual).isEqualTo(Money.of(250, "USD"));
   }
 
   @Test
-  void testCurrency_success() {
+  @DisplayName("currency: returns correct currency")
+  void currencyReturnsExpectedValue() {
     Price price = new Price(Money.of(25, "USD"));
-    assertEquals(Currency.USD, price.currency());
+    assertThat(price.currency()).isEqualTo(Currency.USD);
   }
 
   @Test
-  void testAmount_success() {
+  @DisplayName("amount: returns correct money amount")
+  void amountReturnsExpectedMoneyValue() {
     Price price = new Price(Money.of(25, "USD"));
-    assertEquals(Money.of(25, "USD").amount(), price.amount());
+    assertThat(price.amount()).isEqualTo(Money.of(25, "USD").amount());
   }
 }

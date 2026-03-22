@@ -14,33 +14,24 @@ class PercentageRateTest {
   @DisplayName("Creation and Constraints")
   class CreationTests {
     @Test
-    @DisplayName("constructor_success_ValidRate")
-    void constructor_success_validRate() {
-      BigDecimal valid = new BigDecimal("0.05");
-      PercentageRate pr = new PercentageRate(valid);
+    @DisplayName("constructor: success on valid rate and factory methods")
+    void factoryMethodsCreateCorrectRates() {
+      BigDecimal rateValue = new BigDecimal("0.05");
+      PercentageRate pr = new PercentageRate(rateValue);
+      PercentageRate fromPercent = PercentageRate.fromPercent(new BigDecimal("5.5"));
+      PercentageRate fromRate = PercentageRate.fromRate(new BigDecimal("0.12"));
+
       assertThat(pr.rate()).isEqualByComparingTo("0.05");
+      assertThat(fromPercent.rate()).isEqualByComparingTo("0.055");
+      assertThat(fromRate.rate()).isEqualByComparingTo("0.12");
     }
 
     @Test
-    @DisplayName("constructor_fail_NegativeRate")
-    void constructor_fail_negativeRate() {
-      assertThatThrownBy(() -> new PercentageRate(new BigDecimal("-0.01"))).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("cannot be negative");
-    }
-
-    @Test
-    @DisplayName("fromPercent_success_ConvertsCorrectly")
-    void fromPercent_success_convertsCorrectly() {
-      // 5.5% should be 0.055
-      PercentageRate pr = PercentageRate.fromPercent(new BigDecimal("5.5"));
-      assertThat(pr.rate()).isEqualByComparingTo("0.055");
-    }
-
-    @Test
-    @DisplayName("fromRate_success_FactoryMethod")
-    void fromRate_success_factoryMethod() {
-      PercentageRate pr = PercentageRate.fromRate(new BigDecimal("0.12"));
-      assertThat(pr.rate()).isEqualByComparingTo("0.12");
+    @DisplayName("constructor: fail when rate is negative")
+    void constructorThrowsOnNegativeRate() {
+      assertThatThrownBy(() -> new PercentageRate(new BigDecimal("-0.01")))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("cannot be negative");
     }
   }
 
@@ -48,39 +39,25 @@ class PercentageRateTest {
   @DisplayName("Arithmetic and Compounding")
   class ArithmeticTests {
     @Test
-    @DisplayName("add_success_Summation")
-    void add_success_summation() {
+    @DisplayName("arithmetic: success on sum and compound calculations")
+    void arithmeticOperationsPerformCorrectMath() {
       PercentageRate pr1 = PercentageRate.fromRate(new BigDecimal("0.05"));
       PercentageRate pr2 = PercentageRate.fromRate(new BigDecimal("0.02"));
+      PercentageRate compound1 = PercentageRate.fromRate(new BigDecimal("0.10"));
+      PercentageRate compound2 = PercentageRate.fromRate(new BigDecimal("0.10"));
 
       assertThat(pr1.add(pr2).rate()).isEqualByComparingTo("0.07");
-    }
-
-    @Test
-    @DisplayName("compoundWith_success_Multiplication")
-    void compoundWith_success_multiplication() {
-      PercentageRate pr1 = PercentageRate.fromRate(new BigDecimal("0.10"));
-      PercentageRate pr2 = PercentageRate.fromRate(new BigDecimal("0.10"));
-
-      // 0.10 * 0.10 = 0.01
-      assertThat(pr1.compoundWith(pr2).rate()).isEqualByComparingTo("0.01");
-    }
-
-    @Test
-    @DisplayName("toPercent_success_ReciprocalCalculation")
-    void toPercent_success_reciprocalCalculation() {
-      PercentageRate pr = PercentageRate.fromRate(new BigDecimal("0.075"));
-      assertThat(pr.toPercent()).isEqualByComparingTo("7.5");
+      assertThat(compound1.compoundWith(compound2).rate()).isEqualByComparingTo("0.01");
+      assertThat(pr1.toPercent()).isEqualByComparingTo("5.0");
     }
   }
 
   @Nested
   @DisplayName("Time-Based Calculations")
   class TimeTests {
-
     @Test
-    @DisplayName("annualizedOver_success_ValidCalculation")
-    void annualizedOver_success_validCalculation() {
+    @DisplayName("annualizedOver: success on valid calculation")
+    void annualizationCalculatesCorrectRate() {
       // A 21% total return over 2 years: (1.21)^(1/2) - 1 = 0.10 (10% annual)
       PercentageRate totalReturn = PercentageRate.fromRate(new BigDecimal("0.21"));
       PercentageRate annualized = totalReturn.annualizedOver(BigDecimal.valueOf(2.0));
@@ -89,15 +66,15 @@ class PercentageRateTest {
     }
 
     @Test
-    @DisplayName("annualizedOver_fail_NonPositiveYears")
-    void annualizedOver_fail_nonPositiveYears() {
+    @DisplayName("annualizedOver: fail on non-positive years")
+    void annualizationThrowsOnInvalidYears() {
       PercentageRate pr = PercentageRate.fromRate(new BigDecimal("0.10"));
 
-      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.ZERO)).isInstanceOf(
-          IllegalArgumentException.class);
+      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.ZERO))
+          .isInstanceOf(IllegalArgumentException.class);
 
-      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.valueOf(-1))).isInstanceOf(
-          IllegalArgumentException.class);
+      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.valueOf(-1)))
+          .isInstanceOf(IllegalArgumentException.class);
     }
   }
 
@@ -105,8 +82,8 @@ class PercentageRateTest {
   @DisplayName("Comparisons")
   class ComparisonTests {
     @Test
-    @DisplayName("compareTo_success_StandardOrdering")
-    void compareTo_success_standardOrdering() {
+    @DisplayName("compareTo: success on standard ordering")
+    void ratesOrderCorrectly() {
       PercentageRate lower = PercentageRate.fromRate(new BigDecimal("0.05"));
       PercentageRate higher = PercentageRate.fromRate(new BigDecimal("0.10"));
 

@@ -30,7 +30,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 @ExtendWith(MockitoExtension.class)
-public class AuthenticationUserServiceTest {
+@DisplayName("Authentication User Service Tests")
+class AuthenticationUserServiceTest {
   @Mock
   private SecurityContext securityContext;
 
@@ -44,20 +45,11 @@ public class AuthenticationUserServiceTest {
   private AuthenticationUserService authenticationUserService;
 
   @BeforeEach
-  void setup() {
-    // TLDR: We must set the security holder to return our mocked context
+  void setUp() {
     /*
-     * MORE INFO:
-     * <p>
-     * Normally, Mockito injects mocks into our class via constructor, but
-     * with SecurityContextHolder, we use it directly, like a static call
-     * we can't just pass a mock of it into the service as when running the code,
-     * it will try to talke to Spring Security context (frfr). This will give
-     * us a NPE because it is empty during unit testing - not integration.
-     * </p>
-     * <p>
-     * To get around this, we are hijacking the getContext() and making
-     * it return a mock context, easier for us to test.
+     * We hijack the static SecurityContextHolder.getContext() by setting
+     * it to our mock context. This prevents NullPointerExceptions that
+     * occur when the service tries to talk to an empty Spring Security context.
      */
     SecurityContextHolder.setContext(securityContext);
 
@@ -67,32 +59,31 @@ public class AuthenticationUserServiceTest {
 
   @AfterEach
   void tearDown() {
-    // Because this is static, the mock acts globally
-    // so we need to clear it each time we are done
+    // Clear global static state to prevent test pollution
     SecurityContextHolder.clearContext();
   }
 
   @Nested
-  @DisplayName("GetCurrentUser Tests")
+  @DisplayName("getCurrentUser() Operations")
   class GetCurrentUserTests {
+
     private static Stream<Arguments> provideAuthFailures() {
-      // We need a JWT mock that specifically returns a non-UUID string
-      // to trigger the IllegalArgumentException in UUID.fromString()
       Jwt mockJwtWithBadSub = mock(Jwt.class);
       when(mockJwtWithBadSub.getSubject()).thenReturn("not-a-uuid");
-      return Stream.of(Arguments.of(null, AuthenticationException.class), // Auth is null
+
+      return Stream.of(
+          Arguments.of(null, AuthenticationException.class), // Auth is null
           Arguments.of("not-a-jwt", AuthenticationException.class), // Principal wrong type
-          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class),
-          // JWT exists but sub is invalid (null)
-          Arguments.of(mock(Jwt.class), AuthenticationException.class)
-          // Jwt exist, but missing data
+          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class), // Invalid UUID string
+          Arguments.of(mock(Jwt.class), AuthenticationException.class) // Missing data
       );
     }
 
     @Test
-    void getCurrentUser_success() {
+    @DisplayName("getCurrentUser: returns UUID when JWT subject is valid")
+    void getCurrentUserValidSubjectReturnsUuid() {
       UUID expectedId = UUID.randomUUID();
-      mockAuthWithPrincipal(jwt); // Helper method to reduce boilerplate
+      mockAuthWithPrincipal(jwt);
       when(jwt.getSubject()).thenReturn(expectedId.toString());
 
       assertThat(authenticationUserService.getCurrentUser()).isEqualTo(expectedId);
@@ -100,7 +91,8 @@ public class AuthenticationUserServiceTest {
 
     @ParameterizedTest
     @MethodSource("provideAuthFailures")
-    void getCurrentUser_failures(Object principal, Class<? extends Exception> expectedEx) {
+    @DisplayName("getCurrentUser: throws expected exception on auth failures")
+    void getCurrentUserAuthFailuresThrowCorrectException(Object principal, Class<? extends Exception> expectedEx) {
       if (principal == null) {
         when(securityContext.getAuthentication()).thenReturn(null);
       } else {
@@ -112,10 +104,8 @@ public class AuthenticationUserServiceTest {
 
     private void mockAuthWithPrincipal(Object principal) {
       if (principal == null) {
-        // Handle the "No Auth" case
         lenient().when(securityContext.getAuthentication()).thenReturn(null);
       } else {
-        // Handle the "Authenticated" case
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         lenient().when(authentication.getPrincipal()).thenReturn(principal);
       }
@@ -123,90 +113,92 @@ public class AuthenticationUserServiceTest {
   }
 
   @Nested
-  @DisplayName("GetCurrentUserEmail Tests")
+  @DisplayName("getCurrentUserEmail() Operations")
   class GetCurrentUserEmailTests {
+
     @Test
-    @DisplayName("getCurrentUserEmail_success_ReturnsEmailString")
-    void getCurrentUserEmail_success_WhenEmailClaimExists() {
+    @DisplayName("getCurrentUserEmail: returns email claim from JWT")
+    void getCurrentUserEmailSuccessWhenClaimExists() {
       String expectedEmail = "user@example.com";
       when(securityContext.getAuthentication()).thenReturn(authentication);
       when(authentication.getPrincipal()).thenReturn(jwt);
       when(jwt.getClaim("email")).thenReturn(expectedEmail);
 
-      String result = authenticationUserService.getCurrentUserEmail();
-
-      assertThat(result).isEqualTo(expectedEmail);
+      assertThat(authenticationUserService.getCurrentUserEmail()).isEqualTo(expectedEmail);
     }
 
     @Test
-    @DisplayName("getCurrentUserEmail_failure_NoAuth")
-    void getCurrentUserEmail_failure_WhenNotAuthenticated() {
+    @DisplayName("getCurrentUserEmail: throws exception when not authenticated")
+    void getCurrentUserEmailFailureWhenNotAuthenticated() {
       when(securityContext.getAuthentication()).thenReturn(null);
 
-      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail()).isInstanceOf(
-          AuthenticationException.class).hasMessage("No authenticated user found");
+      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail())
+          .isInstanceOf(AuthenticationException.class)
+          .hasMessage("No authenticated user found");
     }
 
     @Test
-    @DisplayName("getCurrentUserEmail_failure_PrincipalNotJwt")
-    void getCurrentUserEmail_failure_WhenPrincipalIsWrongType() {
+    @DisplayName("getCurrentUserEmail: throws exception when principal is wrong type")
+    void getCurrentUserEmailFailureWhenPrincipalIsWrongType() {
       when(securityContext.getAuthentication()).thenReturn(authentication);
-      when(authentication.getPrincipal()).thenReturn("not-a-jwt"); // Wrong type
+      when(authentication.getPrincipal()).thenReturn("not-a-jwt");
 
-      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail()).isInstanceOf(
-          AuthenticationException.class);
+      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail())
+          .isInstanceOf(AuthenticationException.class);
     }
   }
 
   @Nested
-  @DisplayName("VerifyOwnership Tests")
+  @DisplayName("verifyOwnership() Operations")
   class VerifyOwnershipTests {
+
     @Test
-    @DisplayName("verifyUserOwnsPortfolio_success_IdsMatch")
-    void verifyUserOwnsPortfolio_success_WhenUserIsOwner() {
+    @DisplayName("verifyUserOwnsPortfolio: allows access when IDs match")
+    void verifyUserOwnsPortfolioSuccessWhenIdsMatch() {
       UserId userId = UserId.random();
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getUserId()).thenReturn(userId);
 
-      assertThatCode(() -> authenticationUserService.verifyUserOwnsPortfolio(userId,
-          portfolio)).doesNotThrowAnyException();
+      assertThatCode(() -> authenticationUserService.verifyUserOwnsPortfolio(userId, portfolio))
+          .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("verifyUserOwnsPortfolio_failure_IdsDoNotMatch")
-    void verifyUserOwnsPortfolio_failure_WhenUserIsNotOwner() {
+    @DisplayName("verifyUserOwnsPortfolio: denies access when IDs do not match")
+    void verifyUserOwnsPortfolioFailureWhenIdsDoNotMatch() {
       UserId ownerId = UserId.random();
       UserId strangerId = UserId.random();
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getUserId()).thenReturn(ownerId);
 
-      assertThatThrownBy(() -> authenticationUserService.verifyUserOwnsPortfolio(strangerId,
-          portfolio)).isInstanceOf(RuntimeException.class)
+      assertThatThrownBy(() -> authenticationUserService.verifyUserOwnsPortfolio(strangerId, portfolio))
+          .isInstanceOf(RuntimeException.class)
           .hasMessage("Access denied: user does not own this portfolio");
     }
   }
 
   @Nested
-  @DisplayName("IsAuthenticated Tests")
+  @DisplayName("isAuthenticated() Operations")
   class IsAuthenticatedTests {
+
     @Test
-    void testIsAuthenticated() {
-      // Check false
+    @DisplayName("isAuthenticated: returns false if authentication object is missing")
+    void isAuthenticatedFalseWhenAuthMissing() {
       when(securityContext.getAuthentication()).thenReturn(null);
-      when(authentication.isAuthenticated()).thenReturn(false);
       assertThat(authenticationUserService.isAuthenticated()).isFalse();
+    }
 
-      // Check false
-      when(securityContext.getAuthentication()).thenReturn(null);
-      when(authentication.isAuthenticated()).thenReturn(true);
-      assertThat(authenticationUserService.isAuthenticated()).isFalse();
-
-      // Check false
+    @Test
+    @DisplayName("isAuthenticated: returns false if authentication object says it is not authenticated")
+    void isAuthenticatedFalseWhenAuthSaysFalse() {
       when(securityContext.getAuthentication()).thenReturn(authentication);
       when(authentication.isAuthenticated()).thenReturn(false);
       assertThat(authenticationUserService.isAuthenticated()).isFalse();
+    }
 
-      // Check true
+    @Test
+    @DisplayName("isAuthenticated: returns true only if auth exists and is flagged as true")
+    void isAuthenticatedTrueWhenAuthExistsAndIsTrue() {
       when(securityContext.getAuthentication()).thenReturn(authentication);
       when(authentication.isAuthenticated()).thenReturn(true);
       assertThat(authenticationUserService.isAuthenticated()).isTrue();

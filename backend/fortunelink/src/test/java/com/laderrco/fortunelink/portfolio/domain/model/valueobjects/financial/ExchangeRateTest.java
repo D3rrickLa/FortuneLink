@@ -3,13 +3,15 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import java.math.BigDecimal;
 import java.time.Instant;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 
 @DisplayName("ExchangeRate Value Object Unit Tests")
 class ExchangeRateTest {
@@ -21,77 +23,76 @@ class ExchangeRateTest {
   @Nested
   @DisplayName("Constructor and Validation")
   class ConstructorTests {
-
     @Test
-    @DisplayName("constructor_success_ValidInitialization")
-    void constructor_success_ValidInitialization() {
+    @DisplayName("constructor: success with valid initialization")
+    void constructorValidInitializationSuccess() {
       ExchangeRate rate = new ExchangeRate(USD, EUR, VALID_RATE, NOW);
+
       assertThat(rate.from()).isEqualTo(USD);
       assertThat(rate.to()).isEqualTo(EUR);
-      // rate is set to FOREX scale automatically
       assertThat(rate.rate()).isEqualByComparingTo(VALID_RATE);
     }
 
     @Test
-    @DisplayName("constructor_fail_NullParameters")
-    void constructor_fail_NullParameters() {
-      assertThatThrownBy(() -> new ExchangeRate(null, EUR, VALID_RATE, NOW)).isInstanceOf(
-          DomainArgumentException.class);
+    @DisplayName("constructor: fail on null parameters")
+    void constructorNullParametersThrowsException() {
+      assertThatThrownBy(() -> new ExchangeRate(null, EUR, VALID_RATE, NOW))
+          .isInstanceOf(DomainArgumentException.class);
     }
 
     @Test
-    @DisplayName("constructor_fail_NonPositiveRate")
-    void constructor_fail_NonPositiveRate() {
-      assertThatThrownBy(() -> new ExchangeRate(USD, EUR, BigDecimal.ZERO, NOW)).isInstanceOf(
-          IllegalArgumentException.class).hasMessageContaining("must be positive");
+    @DisplayName("constructor: fail on non-positive rate")
+    void constructorNonPositiveRateThrowsException() {
+      assertThatThrownBy(() -> new ExchangeRate(USD, EUR, BigDecimal.ZERO, NOW))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("must be positive");
 
-      assertThatThrownBy(
-          () -> new ExchangeRate(USD, EUR, new BigDecimal("-1.5"), NOW)).isInstanceOf(
-          IllegalArgumentException.class);
+      assertThatThrownBy(() -> new ExchangeRate(USD, EUR, new BigDecimal("-1.5"), NOW))
+          .isInstanceOf(IllegalArgumentException.class);
     }
   }
 
   @Nested
   @DisplayName("Conversion Logic")
   class ConversionTests {
-
     @Test
-    @DisplayName("convert_success_CorrectCalculation")
-    void convert_success_CorrectCalculation() {
+    @DisplayName("convert: success with correct calculation")
+    void convertValidMoneySuccess() {
       ExchangeRate rate = new ExchangeRate(USD, EUR, new BigDecimal("0.90"), NOW);
-      Money hundredUsd = Money.of(100, "USD");
+      Money input = Money.of(100, "USD");
 
-      Money result = rate.convert(hundredUsd);
+      Money result = rate.convert(input);
 
       assertThat(result.currency()).isEqualTo(EUR);
       assertThat(result.amount()).isEqualByComparingTo("90.00");
     }
 
     @Test
-    @DisplayName("convert_fail_CurrencyMismatch")
-    void convert_fail_CurrencyMismatch() {
+    @DisplayName("convert: fail on currency mismatch")
+    void convertCurrencyMismatchThrowsException() {
       ExchangeRate rate = new ExchangeRate(USD, EUR, VALID_RATE, NOW);
-      Money gbpMoney = Money.of(100, "GBP");
+      Money invalid = Money.of(100, "GBP");
 
-      assertThatThrownBy(() -> rate.convert(gbpMoney)).isInstanceOf(
-          CurrencyMismatchException.class);
+      assertThatThrownBy(() -> rate.convert(invalid))
+          .isInstanceOf(CurrencyMismatchException.class);
     }
 
     @Test
-    @DisplayName("convert_fail_NullMoney")
-    void convert_fail_NullMoney() {
+    @DisplayName("convert: fail on null money")
+    void convertNullMoneyThrowsException() {
       ExchangeRate rate = new ExchangeRate(USD, EUR, VALID_RATE, NOW);
-      assertThatThrownBy(() -> rate.convert(null)).isInstanceOf(DomainArgumentException.class);
+
+      assertThatThrownBy(() -> rate.convert(null))
+          .isInstanceOf(DomainArgumentException.class);
     }
   }
 
   @Nested
   @DisplayName("Identity and Inverse")
   class IdentityAndInverseTests {
-
     @Test
-    @DisplayName("identity_success_RateIsOne")
-    void identity_success_RateIsOne() {
+    @DisplayName("identity: returns rate of one")
+    void identityReturnsRateOfOne() {
       ExchangeRate identity = ExchangeRate.identity(USD, NOW);
 
       assertThat(identity.from()).isEqualTo(USD);
@@ -100,15 +101,14 @@ class ExchangeRateTest {
     }
 
     @Test
-    @DisplayName("inverse_success_FlipsCurrenciesAndRate")
-    void inverse_success_FlipsCurrenciesAndRate() {
-      // Rate 2.0: 1 USD = 2 EUR
+    @DisplayName("inverse: flips currencies and rate")
+    void inverseFlipsCurrenciesAndRate() {
       ExchangeRate rate = new ExchangeRate(USD, EUR, new BigDecimal("2.0"), NOW);
+
       ExchangeRate inverse = rate.inverse();
 
       assertThat(inverse.from()).isEqualTo(EUR);
       assertThat(inverse.to()).isEqualTo(USD);
-      // Inverse Rate: 1 / 2.0 = 0.5
       assertThat(inverse.rate()).isEqualByComparingTo("0.5");
     }
   }

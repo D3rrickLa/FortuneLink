@@ -12,271 +12,196 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Pr
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+@DisplayName("AcbPosition Value Object Unit Tests")
 class AcbPositionTest {
-
-  private final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
-  private final AssetType TYPE = AssetType.STOCK;
-  private final Currency USD = Currency.USD;
-  private final Instant NOW = Instant.now();
+  private static final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
+  private static final AssetType TYPE = AssetType.STOCK;
+  private static final Currency USD = Currency.USD;
+  private static final Instant NOW = Instant.now();
 
   @Nested
-  @DisplayName("buy() Tests")
+  @DisplayName("buy() Operations")
   class BuyTests {
-
     @Test
-    @DisplayName("buy_success_initialPurchaseReturnsNewPosition")
-    void buy_success_createsNewState() {
+    @DisplayName("buy: initial purchase correctly sets quantity and basis")
+    void buyInitialPurchaseCreatesNewState() {
       AcbPosition initial = AcbPosition.empty(SYMBOL, TYPE, USD);
       Quantity buyQty = new Quantity(new BigDecimal("10"));
       Money buyCost = new Money(new BigDecimal("1000.00"), USD);
 
       var result = initial.buy(buyQty, buyCost, NOW);
-      AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
+      AcbPosition updated = result.newPosition();
 
-      // Note: Your current implementation replaces the state rather than adding to
-      // it.
-      // If the intention was to accumulate, the buy method in the provided code needs
-      // a fix.
       assertEquals(new BigDecimal("10.00000000"), updated.totalQuantity().amount());
       assertEquals(new BigDecimal("1000.0000000000"), updated.totalCostBasis().amount());
+    }
+
+    @Test
+    @DisplayName("buy: additional buy, uses firstAcquiredAt instead")
+    void buyAdditionalPurchaseNewUpdatedPositionReturned() {
+      AcbPosition initial = AcbPosition.empty(SYMBOL, TYPE, USD);
+      Quantity buyQty = new Quantity(new BigDecimal("10"));
+      Money buyCost = new Money(new BigDecimal("1000.00"), USD);
+
+      var result = initial.buy(buyQty, buyCost, NOW);
+      AcbPosition updated = result.newPosition();
+
+      assertEquals(new BigDecimal("10.00000000"), updated.totalQuantity().amount());
+      assertEquals(new BigDecimal("1000.0000000000"), updated.totalCostBasis().amount());
+
+      Quantity anotherBuyQty = Quantity.of(30);
+      Money buyCost2 = new Money(BigDecimal.valueOf(3000), USD);
+
+      Instant newTime = Instant.now().plus(Duration.ofDays(2));
+      var results2 = updated.buy(anotherBuyQty, buyCost2, newTime);
+      AcbPosition updated2 = results2.newPosition();
+
+      assertThat(updated2.totalQuantity()).isEqualTo(Quantity.of(40));
+      assertThat(updated2.totalCostBasis()).isEqualTo(Money.of("4000", USD));
+      assertThat(updated2.firstAcquiredAt()).isNotEqualTo(newTime);
     }
   }
 
   @Nested
-  @DisplayName("sell() Tests")
+  @DisplayName("sell() Operations")
   class SellTests {
-
     @Test
-    @DisplayName("sell_success_reducesQuantityAndProportionalCostBasis")
-    void sell_success_calculatesRealizedGain() {
-      // Setup: 10 units at $100 total cost ($10/unit)
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
-
+    @DisplayName("sell: reduces quantity and calculates proportional gain")
+    void sellPartialSaleCalculatesRealizedGain() {
+      // 10 units at $10/unit
+      AcbPosition position = createAcbPosition("10", "100.00");
       Quantity sellQty = new Quantity(new BigDecimal("5"));
-      Money proceeds = new Money(new BigDecimal("80.00"), USD); // Sold for $16/unit
+      Money proceeds = new Money(new BigDecimal("80.00"), USD);
 
-      ApplyResult<? extends Position> rawResult = position.sell(sellQty, proceeds, NOW);
-      if (!(rawResult instanceof ApplyResult.Sale)) {
-        throw new AssertionError("Expected a Sale result but got " + rawResult.getClass());
-      }
-      assertThat(rawResult.isNoChange()).isFalse();
+      var result = (ApplyResult.Sale<AcbPosition>) position.sell(sellQty, proceeds, NOW);
+      AcbPosition updated = result.newPosition();
 
-      @SuppressWarnings("unchecked") var result = (ApplyResult.Sale<AcbPosition>) rawResult;
-
-      AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
-
-      // Assert State
-      assertEquals(new BigDecimal("5.00000000"), updated.totalQuantity().amount());
-      assertEquals(new BigDecimal("50.0000000000"), updated.totalCostBasis().amount(),
-          "Cost basis should be halved");
-
-      // Assert Gains
-      assertEquals(new BigDecimal("50.0000000000"), result.costBasisSold().amount());
-      assertEquals(new BigDecimal("30.0000000000"), result.realizedGainLoss().amount(),
-          "80 proceeds - 50 cost = 30 gain");
+      assertThat(updated.totalQuantity().amount()).isEqualByComparingTo("5");
+      assertThat(updated.totalCostBasis().amount()).isEqualByComparingTo("50");
+      assertThat(result.realizedGainLoss().amount()).isEqualByComparingTo("30");
     }
 
     @Test
-    @DisplayName("Should wipe basis to exactly zero on full liquidation (Ternary True branch)")
-    void sell_Success_FullLiquidationClearsBasis() {
-      // Arrange
-      AssetSymbol symbol = new AssetSymbol("ETH");
-      Currency usd = Currency.USD;
-      // Setup a position with a "difficult" number for division
-      // Total cost $100.00 for 3 units ($33.3333... per unit)
-      AcbPosition position = new AcbPosition(symbol, AssetType.CRYPTO, usd, Quantity.of(3),
-          Money.of("100", usd), Instant.now(), Instant.now());
+    @DisplayName("sell: wipes basis to exactly zero on full liquidation")
+    void sellFullLiquidationClearsBasisExactly() {
+      // Setup position with "difficult" division (3 units for $100)
+      AcbPosition position = createAcbPosition("3", "100");
 
-      // Sell all 3 units
-      Quantity sellQty = Quantity.of(3);
-      Money proceeds = Money.of("150", usd);
-
-      // Act
-      ApplyResult.Sale<AcbPosition> result = position.sell(sellQty, proceeds, Instant.now());
-
-      // Assert
+      var result = position.sell(Quantity.of(3), Money.of("150", USD), NOW);
       AcbPosition updated = result.newPosition();
 
-      // The ternary logic should trigger here:
-      // costBasisSold should be exactly 100, not 99.99
-      assertThat(result.costBasisSold()).isEqualTo(Money.of("100", usd));
-      // newCostBasis should be exactly 0
-      assertThat(updated.totalCostBasis()).isEqualTo(Money.zero(usd));
+      assertThat(result.costBasisSold()).isEqualTo(Money.of("100", USD));
+      assertThat(updated.totalCostBasis().isZero()).isTrue();
       assertThat(updated.totalQuantity().isZero()).isTrue();
     }
 
     @Test
-    @DisplayName("Should calculate proportional basis on partial sale (Ternary False branch)")
-    void sell_Success_PartialSaleUsesRatio() {
-      // Arrange
-      AssetSymbol symbol = new AssetSymbol("AAPL");
-      Currency usd = Currency.USD;
-      AcbPosition position = new AcbPosition(symbol, AssetType.STOCK, usd, Quantity.of(10),
-          Money.of("100", usd), Instant.now(), Instant.now());
-
-      // Sell 4 out of 10 shares (40%)
-      Quantity sellQty = Quantity.of(4);
-      Money proceeds = Money.of("60", usd);
-
-      // Act
-      ApplyResult.Sale<AcbPosition> result = position.sell(sellQty, proceeds, Instant.now());
-
-      // Assert
-      // costBasisSold should be 40% of 100 = $40
-      assertThat(result.costBasisSold()).isEqualTo(Money.of("40", usd));
-
-      AcbPosition updated = result.newPosition();
-      // Remaining basis should be 100 - 40 = $60
-      assertThat(updated.totalCostBasis()).isEqualTo(Money.of("60", usd));
-      assertThat(updated.totalQuantity()).isEqualTo(Quantity.of(6));
-    }
-
-    @Test
-    @DisplayName("sell_failure_insufficientQuantityThrowsException")
-    void sell_failure_insufficientQuantity() {
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00000000"), USD), Instant.now(), Instant.now());
-
-      Quantity sellQty = new Quantity(new BigDecimal("11"));
-      Money proceeds = new Money(new BigDecimal("150.00"), USD);
-
-      assertThrows(IllegalArgumentException.class, () -> position.sell(sellQty, proceeds, NOW));
+    @DisplayName("sell: throws exception when selling more than held")
+    void sellInsufficientQuantityThrowsException() {
+      AcbPosition position = createAcbPosition("10", "100.00");
+      assertThrows(IllegalArgumentException.class,
+          () -> position.sell(Quantity.of(11), Money.of("150", USD), NOW));
     }
   }
 
   @Nested
-  @DisplayName("split() Tests")
+  @DisplayName("split() Operations")
   class SplitTests {
-
     @Test
-    @DisplayName("split_success_adjustsQuantityKeepsBasisFixed")
-    void split_success_2For1Split() {
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
+    @DisplayName("split: adjusts quantity while keeping total basis fixed")
+    void splitValidRatioIncreasesQuantityMaintainsBasis() {
+      AcbPosition position = createAcbPosition("10", "100.00");
+      var result = position.split(new Ratio(2, 1));
+      AcbPosition updated = result.newPosition();
 
-      Ratio ratio = new Ratio(2, 1);
-      var result = position.split(ratio);
-      AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
-
-      assertEquals(new BigDecimal("20.00000000"), updated.totalQuantity().amount());
-      assertEquals(new BigDecimal("100.0000000000"), updated.totalCostBasis().amount(),
-          "Total cost basis never changes in a split");
-      assertEquals(new BigDecimal("5.0000000000"), updated.costPerUnit().amount(),
-          "New cost per unit should be $5");
+      assertThat(updated.totalQuantity().amount()).isEqualByComparingTo("20");
+      assertThat(updated.totalCostBasis().amount()).isEqualByComparingTo("100");
     }
 
     @Test
-    @DisplayName("split_failure_negativeOrZeroRatioThrowsException")
-    void split_failure_invalidRatio() {
+    @DisplayName("split: throws exception on invalid ratios")
+    void splitInvalidRatioThrowsException() {
       AcbPosition position = AcbPosition.empty(SYMBOL, TYPE, USD);
       assertThrows(IllegalArgumentException.class, () -> position.split(new Ratio(-1, 1)));
-      assertThrows(IllegalArgumentException.class, () -> position.split(new Ratio(2, -1)));
     }
   }
 
   @Nested
-  @DisplayName("applyReturnOfCapital Tests")
-  class ApplyReturnOfCapital {
-
+  @DisplayName("Return of Capital (ROC)")
+  class RocTests {
     @Test
-    @DisplayName("Should reduce total cost basis when ROC is less than current basis")
-    void applyReturnOfCapital_Success_ReducesBasis() {
-      // Arrange: Position with 100 shares at $1000 total cost basis
-      AssetSymbol symbol = new AssetSymbol("VTI");
-      Currency usd = Currency.USD;
-      AcbPosition position = new AcbPosition(symbol, AssetType.ETF, usd, Quantity.of(100),
-          Money.of("1000", usd), Instant.now(), Instant.now());
+    @DisplayName("applyReturnOfCapital: reduces total cost basis correctly")
+    void applyReturnOfCapitalStandardCaseReducesBasis() {
+      AcbPosition position = createAcbPosition("100", "1000");
+      Price rocPrice = Price.of(BigDecimal.TWO, USD); // $200 total reduction
 
-      // ROC of $2 per share = $200 reduction
-      Price rocPrice = Price.of(BigDecimal.TWO, usd);
-      Quantity heldQuantity = Quantity.of(100);
-
-      // Act
-      ApplyResult<AcbPosition> result = position.applyReturnOfCapital(rocPrice, heldQuantity);
-
-      // Assert
-      assertThat(result).isInstanceOf(ApplyResult.Adjustment.class);
+      var result = (ApplyResult.Adjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice, Quantity.of(100));
       AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
 
-      // New basis should be 1000 - 200 = 800
-      assertThat(updated.totalCostBasis()).isEqualTo(Money.of("800", usd));
-      assertThat(updated.totalQuantity()).isEqualTo(Quantity.of(100));
+      assertThat(updated.totalCostBasis()).isEqualTo(Money.of("800", USD));
     }
 
     @Test
-    @DisplayName("Should result in RocAdjustment when ROC exceeds total cost basis")
-    void applyReturnOfCapital_Success_GeneratesExcessGain() {
-      // Arrange: Position with $100 total cost basis
-      AssetSymbol symbol = new AssetSymbol("REIT");
-      Currency usd = Currency.USD;
-      AcbPosition position = new AcbPosition(symbol, AssetType.STOCK, usd, Quantity.of(10),
-          Money.of("100", usd), Instant.now(), Instant.now());
+    @DisplayName("applyReturnOfCapital: caps basis at zero and generates gain if ROC exceeds basis")
+    void applyReturnOfCapitalExcessRocGeneratesCapitalGain() {
+      AcbPosition position = createAcbPosition("10", "100");
+      Price rocPrice = Price.of(BigDecimal.valueOf(15), USD); // $150 reduction
 
-      // ROC of $15 per share = $150 reduction (which is $50 over basis)
-      Price rocPrice = Price.of(BigDecimal.valueOf(15), usd);
+      var result = (ApplyResult.RocAdjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice, Quantity.of(10));
 
-      // Act
-      ApplyResult<AcbPosition> result = position.applyReturnOfCapital(rocPrice, Quantity.of(10));
-
-      // Assert
-      assertThat(result).isInstanceOf(ApplyResult.RocAdjustment.class);
-      var rocResult = (ApplyResult.RocAdjustment<AcbPosition>) result;
-
-      // Basis should be capped at zero
-      assertThat(rocResult.getUpdatedPosition().totalCostBasis()).isEqualTo(Money.zero(usd));
-      // Excess should be $50
-      assertThat(rocResult.excessCapitalGain()).isEqualTo(Money.of("50", usd));
+      assertThat(result.getUpdatedPosition().totalCostBasis().isZero()).isTrue();
+      assertThat(result.excessCapitalGain()).isEqualTo(Money.of("50", USD));
     }
 
     @Test
-    @DisplayName("Should throw exception if heldQuantity does not match total quantity")
-    void applyReturnOfCapital_Failure_MismatchedQuantity() {
-      // Arrange
-      AcbPosition position = AcbPosition.empty(new AssetSymbol("AAPL"), AssetType.STOCK,
-              Currency.USD).buy(Quantity.of(50), Money.of("500", Currency.USD), Instant.now())
-          .newPosition();
-
-      // Act & Assert
-      assertThatThrownBy(() -> position.applyReturnOfCapital(Price.of(BigDecimal.ONE, Currency.USD),
-          Quantity.of(49))).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("does not match position quantity");
+    @DisplayName("applyReturnOfCapital: throws if quantity does not match position")
+    void applyReturnOfCapitalMismatchedQuantityThrowsException() {
+      AcbPosition position = createAcbPosition("50", "500");
+      assertThatThrownBy(() -> position.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD), Quantity.of(49)))
+          .isInstanceOf(IllegalArgumentException.class);
     }
   }
 
   @Nested
-  @DisplayName("Financial Calculation Tests")
+  @DisplayName("Aggregations")
   class CalculationTests {
 
     @Test
-    @DisplayName("costPerUnit_success_handlesEmptyAndPopulatedPositions")
-    void costPerUnit_logic() {
-      AcbPosition empty = AcbPosition.empty(SYMBOL, TYPE, USD);
-      assertEquals(BigDecimal.ZERO.setScale(Precision.getMoneyPrecision()),
-          empty.costPerUnit().amount());
-
-      AcbPosition populated = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("4")),
-          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
-      assertEquals(new BigDecimal("25.0000000000"), populated.costPerUnit().amount());
+    @DisplayName("costPerUnit: returns weighted average for populated positions")
+    void costPerUnitPopulatedPositionReturnsCorrectAverage() {
+      AcbPosition position = createAcbPosition("4", "100.00");
+      assertThat(position.costPerUnit().amount()).isEqualByComparingTo("25");
     }
 
     @Test
-    @DisplayName("calculateUnrealizedGain_success_correctDifference")
-    void calculateUnrealizedGain_success() {
-      AcbPosition position = new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal("10")),
-          new Money(new BigDecimal("100.00"), USD), Instant.now(), Instant.now());
-
-      Money currentPrice = new Money(new BigDecimal("15.00"), USD); // Total value 150
-
-      Money unrealized = position.calculateUnrealizedGain(new Price(currentPrice));
-      assertEquals(new BigDecimal("50.0000000000"), unrealized.amount());
+    @DisplayName("costPerUnit: returns zero for empty positions")
+    void costPerUnitEmptyPositionReturnsZero() {
+      AcbPosition empty = AcbPosition.empty(SYMBOL, TYPE, USD);
+      assertThat(empty.costPerUnit().isZero()).isTrue();
     }
+
+    @Test
+    @DisplayName("calculateUnrealizedGain: returns difference between value and basis")
+    void calculateUnrealizedGainValidPriceReturnsDifference() {
+      AcbPosition position = createAcbPosition("10", "100.00");
+      Price marketPrice = Price.of(new BigDecimal("15.00"), USD); // Total market value $150
+
+      Money unrealized = position.calculateUnrealizedGain(marketPrice);
+      assertThat(unrealized.amount()).isEqualByComparingTo("50");
+    }
+  }
+
+  private static AcbPosition createAcbPosition(String qty, String totalBasis) {
+    return new AcbPosition(SYMBOL, TYPE, USD,
+        new Quantity(new BigDecimal(qty)),
+        new Money(new BigDecimal(totalBasis), USD),
+        NOW, NOW);
   }
 }

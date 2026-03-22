@@ -5,27 +5,34 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.laderrco.fortunelink.shared.enums.Precision;
+
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class AllEnumTest {
+@DisplayName("Enum Attribute and Behavioral Validation")
+class AllEnumTest {
+
   @Test
-  void testAssetType_All() {
-    AssetType type = AssetType.BOND;
-    assertEquals(Precision.BOND, type.precision());
-    assertEquals(AssetCategory.FIXED_INCOME, type.category());
-    assertTrue(type.isMarketTraded());
-    assertFalse(type.isCrypto());
+  @DisplayName("assetType: verifies precision, category, and trading flags")
+  void assetTypeAttributesAndBehavior() {
+    AssetType bond = AssetType.BOND;
+    assertEquals(Precision.BOND, bond.precision());
+    assertEquals(AssetCategory.FIXED_INCOME, bond.category());
+    assertTrue(bond.isMarketTraded());
+    assertFalse(bond.isCrypto());
+
     assertTrue(AssetType.CRYPTO.isCrypto());
     assertFalse(AssetType.REAL_ESTATE.isMarketTraded());
   }
 
   @Test
-  void testFeeType_All() {
-    FeeType type = FeeType.BROKERAGE;
-    assertEquals(FeeCategory.TRADING, type.category());
-    assertFalse(type.isTax());
-    assertTrue(type.affectsCostBasis());
-    assertFalse(type.isDeductibleExpense());
+  @DisplayName("feeType: verifies tax status, cost basis impact, and deductibility")
+  void feeTypeCategoryAndTaxImpact() {
+    FeeType brokerage = FeeType.BROKERAGE;
+    assertEquals(FeeCategory.TRADING, brokerage.category());
+    assertFalse(brokerage.isTax());
+    assertTrue(brokerage.affectsCostBasis());
+    assertFalse(brokerage.isDeductibleExpense());
 
     assertTrue(FeeType.ADVISORY_FEE.isDeductibleExpense());
     assertTrue(FeeType.STAMP_DUTY.isTax());
@@ -33,21 +40,22 @@ public class AllEnumTest {
   }
 
   @Test
-  void testPositionStrategy_All() {
-    PositionStrategy type = PositionStrategy.ACB;
-    assertEquals("Average Cost Basis", type.getDisplayName());
-    assertEquals("Required for Canadian tax reporting", type.getDescription());
+  @DisplayName("positionStrategy: verifies display names and regulatory descriptions")
+  void positionStrategyDisplayMetadata() {
+    PositionStrategy acb = PositionStrategy.ACB;
+    assertEquals("Average Cost Basis", acb.getDisplayName());
+    assertEquals("Required for Canadian tax reporting", acb.getDescription());
   }
 
   @Test
-  void testTransactionType_All() {
-    TransactionType type = TransactionType.BUY;
-    assertTrue(type.affectsHoldings());
-    assertTrue(type.isTaxable());
+  @DisplayName("transactionType: verifies holding impact and taxability flags")
+  void transactionTypeImpactAndTaxability() {
+    TransactionType buy = TransactionType.BUY;
+    assertTrue(buy.affectsHoldings());
+    assertTrue(buy.isTaxable());
 
-    assertFalse(TransactionType.DEPOSIT.affectsHoldings());
-    assertFalse(TransactionType.DEPOSIT.isTaxable());
-
+    TransactionType deposit = TransactionType.DEPOSIT;
+    assertFalse(deposit.affectsHoldings());
+    assertFalse(deposit.isTaxable());
   }
-
 }
