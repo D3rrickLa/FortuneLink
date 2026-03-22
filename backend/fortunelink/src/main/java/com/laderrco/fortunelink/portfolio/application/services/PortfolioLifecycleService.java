@@ -110,7 +110,7 @@ public class PortfolioLifecycleService {
         account -> accountViewBuilder.build(account, quoteCache,
             feeCache.getOrDefault(account.getAccountId(), Map.of()))).toList();
 
-    return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue);
+    return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, false);
   }
 
   public void deletePortfolio(DeletePortfolioCommand command) {

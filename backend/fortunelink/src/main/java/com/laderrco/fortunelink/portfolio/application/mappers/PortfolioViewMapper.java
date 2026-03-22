@@ -87,16 +87,16 @@ public class PortfolioViewMapper {
     return new PortfolioView(portfolio.getPortfolioId(), portfolio.getUserId(), portfolio.getName(),
         portfolio.getDescription(), List.of(), // no accounts with positions yet
         Money.zero(portfolio.getDisplayCurrency()), portfolio.getCreatedAt(),
-        portfolio.getLastUpdatedAt());
+        portfolio.getLastUpdatedAt(), false);
   }
 
   public PortfolioView toPortfolioView(Portfolio portfolio, List<AccountView> accountViews,
-      Money totalValue) {
+      Money totalValue, boolean hasStaleData) {
     Objects.requireNonNull(portfolio, "Portfolio cannot be null");
 
     return new PortfolioView(portfolio.getPortfolioId(), portfolio.getUserId(), portfolio.getName(),
         portfolio.getDescription(), accountViews, totalValue, portfolio.getCreatedAt(),
-        portfolio.getLastUpdatedAt());
+        portfolio.getLastUpdatedAt(), hasStaleData);
   }
 
   public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Money totalValue) {

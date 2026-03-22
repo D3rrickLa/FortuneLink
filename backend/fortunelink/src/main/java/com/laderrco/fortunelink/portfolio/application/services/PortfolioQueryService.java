@@ -50,7 +50,7 @@ public class PortfolioQueryService {
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
   private final TransactionRepository transactionRepository;
-  
+
   private final PortfolioViewMapper portfolioViewMapper;
   private final AccountViewBuilder accountViewBuilder;
   private final PortfolioLoader portfolioLoader;
@@ -61,22 +61,28 @@ public class PortfolioQueryService {
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
     Currency displayCurrency = portfolio.getDisplayCurrency();
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
+    List<Account> accounts = List.copyOf(portfolio.getAccounts());
+    List<AccountId> accountIds = accounts.stream().map(Account::getAccountId).toList();
 
-    List<AccountId> accountIds = portfolio.getAccounts().stream().map(Account::getAccountId)
-        .toList();
+    Set<AssetSymbol> symbols = accounts.stream()
+        .flatMap(a -> PortfolioAccessUtils.extractSymbolsByAccount(a).stream())
+        .collect(Collectors.toSet());
+
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(symbols);
 
     Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(
         accountIds);
 
-    List<AccountView> accountViews = portfolio.getAccounts().stream().map(
+    List<AccountView> accountViews = accounts.stream().map(
         account -> accountViewBuilder.build(account, quoteCache,
             feeCache.getOrDefault(account.getAccountId(), Map.of()))).toList();
 
     Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency,
         quoteCache);
 
-    return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue);
+    boolean hasStaleData = accounts.stream().anyMatch(Account::isStale);
+
+    return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue, hasStaleData);
   }
 
   public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
@@ -88,12 +94,10 @@ public class PortfolioQueryService {
       return List.of();
     }
 
-    // One batch call across ALL portfolios - critical for multi-portfolio future
-    Set<AssetSymbol> allSymbols = portfolios.stream()
-        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotesForMultiple(portfolios);
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
-
+    // PortfolioSummaryView contains only totalValue - fees are position-level detail
+    // and intentionally excluded here. Do NOT add fee loading to this method.
     return portfolios.stream().map(p -> {
       Money totalValue = portfolioValuationService.calculateTotalValue(p, p.getDisplayCurrency(),
           quoteCache);
@@ -131,8 +135,21 @@ public class PortfolioQueryService {
    * Fetches all market quotes for positions in a portfolio. This is the ONLY place getBatchQuotes()
    * should be called for portfolio queries.
    */
+  private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Set<AssetSymbol> symbols) {
+    return symbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(symbols);
+  }
+
   private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Portfolio portfolio) {
-    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(portfolio);
-    return marketDataService.getBatchQuotes(symbols);
+    return fetchQuotes(PortfolioAccessUtils.extractSymbols(portfolio));
+  }
+
+  /**
+   * Fetches all quotes for all portfolios a user has
+   */
+  private Map<AssetSymbol, MarketAssetQuote> fetchQuotesForMultiple(List<Portfolio> portfolios) {
+    Set<AssetSymbol> allSymbols = portfolios.stream()
+        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
+
+    return allSymbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
   }
 }
