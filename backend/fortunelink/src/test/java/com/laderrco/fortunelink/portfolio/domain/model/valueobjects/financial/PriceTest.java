@@ -28,9 +28,8 @@ public class PriceTest {
   @Test
   @DisplayName("constructor: fail when price is negative")
   void constructorThrowsOnNegativePrice() {
-    assertThatThrownBy(() -> new Price(Money.of(-25, "USD")))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("cannot be negative");
+    assertThatThrownBy(() -> new Price(Money.of(-25, "USD"))).isInstanceOf(
+        IllegalArgumentException.class).hasMessageContaining("cannot be negative");
   }
 
   @Test

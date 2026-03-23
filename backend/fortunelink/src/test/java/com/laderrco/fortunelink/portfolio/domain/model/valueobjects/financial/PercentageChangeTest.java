@@ -3,14 +3,12 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
+import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
-import com.laderrco.fortunelink.shared.enums.Precision;
 
 @DisplayName("PercentageChange Value Object Unit Tests")
 class PercentageChangeTest {
@@ -29,8 +27,8 @@ class PercentageChangeTest {
     @Test
     @DisplayName("constructor: fail on null value")
     void constructorThrowsOnNullValue() {
-      assertThatThrownBy(() -> new PercentageChange(null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> new PercentageChange(null)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test

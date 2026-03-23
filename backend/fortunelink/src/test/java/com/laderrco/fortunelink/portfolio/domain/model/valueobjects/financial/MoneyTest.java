@@ -3,15 +3,13 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.math.BigDecimal;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.shared.enums.Precision;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("Money Value Object Unit Tests")
 class MoneyTest {
@@ -62,8 +60,7 @@ class MoneyTest {
       Money m1 = Money.of(10, "USD");
       Money m2 = Money.of(10, "EUR");
 
-      assertThatThrownBy(() -> m1.add(m2))
-          .isInstanceOf(CurrencyMismatchException.class);
+      assertThatThrownBy(() -> m1.add(m2)).isInstanceOf(CurrencyMismatchException.class);
     }
 
     @Test
@@ -77,8 +74,7 @@ class MoneyTest {
     @Test
     @DisplayName("multiply: success with Quantity")
     void multiplyQuantitySuccess() {
-      Money result = Money.of(10, "USD")
-          .multiply(new Quantity(new BigDecimal("1.555")));
+      Money result = Money.of(10, "USD").multiply(new Quantity(new BigDecimal("1.555")));
 
       assertThat(result.currency()).isEqualTo(USD);
     }
@@ -94,8 +90,7 @@ class MoneyTest {
     @Test
     @DisplayName("divide: success with Quantity")
     void divideQuantitySuccess() {
-      Money result = Money.of(10, "USD")
-          .divide(new Quantity(BigDecimal.TWO));
+      Money result = Money.of(10, "USD").divide(new Quantity(BigDecimal.TWO));
 
       assertThat(result).isEqualTo(Money.of(5, "USD"));
     }
@@ -103,8 +98,8 @@ class MoneyTest {
     @Test
     @DisplayName("divide: fail on division by zero")
     void divideByZeroThrowsException() {
-      assertThatThrownBy(() -> Money.of(10, "USD").divide(BigDecimal.ZERO))
-          .isInstanceOf(ArithmeticException.class);
+      assertThatThrownBy(() -> Money.of(10, "USD").divide(BigDecimal.ZERO)).isInstanceOf(
+          ArithmeticException.class);
     }
   }
 
@@ -155,8 +150,7 @@ class MoneyTest {
       Money m1 = Money.of(10, "USD");
       Money m2 = Money.of(10, "EUR");
 
-      assertThatThrownBy(() -> m1.compareTo(m2))
-          .isInstanceOf(CurrencyMismatchException.class);
+      assertThatThrownBy(() -> m1.compareTo(m2)).isInstanceOf(CurrencyMismatchException.class);
     }
   }
 
@@ -212,28 +206,23 @@ class MoneyTest {
 
       Money result = m1.add(m2);
 
-      assertThat(result.amount().scale())
-          .isEqualTo(Precision.getMoneyPrecision());
+      assertThat(result.amount().scale()).isEqualTo(Precision.getMoneyPrecision());
     }
 
     @Test
     @DisplayName("multiply: prevents scale expansion")
     void multiplyPreventsScaleExpansion() {
-      Money result = Money.of(10.00, "USD")
-          .multiply(new BigDecimal("1.123"));
+      Money result = Money.of(10.00, "USD").multiply(new BigDecimal("1.123"));
 
-      assertThat(result.amount().scale())
-          .isEqualTo(Precision.getMoneyPrecision());
+      assertThat(result.amount().scale()).isEqualTo(Precision.getMoneyPrecision());
     }
 
     @Test
     @DisplayName("divide: uses internal rounding mode")
     void divideUsesInternalRoundingMode() {
-      Money result = Money.of(10.00, "USD")
-          .divide(new BigDecimal("3"));
+      Money result = Money.of(10.00, "USD").divide(new BigDecimal("3"));
 
-      assertThat(result.amount().scale())
-          .isEqualTo(Precision.getMoneyPrecision());
+      assertThat(result.amount().scale()).isEqualTo(Precision.getMoneyPrecision());
       assertThat(result.amount()).isNotNull();
     }
   }

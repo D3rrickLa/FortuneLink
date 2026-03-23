@@ -30,16 +30,14 @@ class QuantityTest {
     @Test
     @DisplayName("constructor: fail on null amount")
     void constructorThrowsOnNullAmount() {
-      assertThatThrownBy(() -> new Quantity(null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> new Quantity(null)).isInstanceOf(DomainArgumentException.class);
     }
 
     @Test
     @DisplayName("constructor: fail when quantity is negative")
     void constructorThrowsOnNegativeValue() {
-      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10)))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Quantity cannot be negative");
+      assertThatThrownBy(() -> new Quantity(BigDecimal.valueOf(-10))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Quantity cannot be negative");
     }
 
     @Test
@@ -75,8 +73,7 @@ class QuantityTest {
       Quantity q1 = new Quantity(new BigDecimal("5.00"));
       Quantity q2 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.subtract(q2))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> q1.subtract(q2)).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("cannot be negative");
     }
 
@@ -108,11 +105,11 @@ class QuantityTest {
     void divideThrowsOnInvalidDivisor() {
       Quantity q1 = new Quantity(new BigDecimal("10.00"));
 
-      assertThatThrownBy(() -> q1.divide(new BigDecimal("-3")))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("-3"))).isInstanceOf(
+          IllegalArgumentException.class);
 
-      assertThatThrownBy(() -> q1.divide(new BigDecimal("0")))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> q1.divide(new BigDecimal("0"))).isInstanceOf(
+          IllegalArgumentException.class);
     }
   }
 

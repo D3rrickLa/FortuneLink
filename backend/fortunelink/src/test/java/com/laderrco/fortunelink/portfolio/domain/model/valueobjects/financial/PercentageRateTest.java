@@ -29,9 +29,8 @@ class PercentageRateTest {
     @Test
     @DisplayName("constructor: fail when rate is negative")
     void constructorThrowsOnNegativeRate() {
-      assertThatThrownBy(() -> new PercentageRate(new BigDecimal("-0.01")))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("cannot be negative");
+      assertThatThrownBy(() -> new PercentageRate(new BigDecimal("-0.01"))).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("cannot be negative");
     }
   }
 
@@ -70,11 +69,11 @@ class PercentageRateTest {
     void annualizationThrowsOnInvalidYears() {
       PercentageRate pr = PercentageRate.fromRate(new BigDecimal("0.10"));
 
-      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.ZERO))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.ZERO)).isInstanceOf(
+          IllegalArgumentException.class);
 
-      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.valueOf(-1)))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> pr.annualizedOver(BigDecimal.valueOf(-1))).isInstanceOf(
+          IllegalArgumentException.class);
     }
   }
 

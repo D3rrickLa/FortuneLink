@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,8 +32,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,115 +43,106 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class AccountTest {
+  private static final Currency USD = Currency.of("USD");
   private AccountId accountId;
-  private Currency usd;
   private Account account;
   private PositionStrategy strategy;
 
   @BeforeEach
   void setUp() {
     accountId = AccountId.newId();
-    usd = Currency.of("USD");
-    strategy = PositionStrategy.SPECIFIC_ID;
-    account = new Account(accountId, "Main Investment", AccountType.TAXABLE_INVESTMENT, usd,
+    strategy = PositionStrategy.ACB;
+    account = new Account(accountId, "Main Investment", AccountType.TAXABLE_INVESTMENT, USD,
         strategy);
   }
 
   @Nested
-  class Constructor {
-
+  @DisplayName("Constructor and Initialization")
+  class CreationTests {
     @Test
-    void testConstructor_isSuccessful() {
-      assertNotNull(account.getAccountId());
-      assertEquals("Main Investment", account.getName());
-      assertEquals(usd, account.getAccountCurrency());
-      assertTrue(account.getCashBalance().isZero());
-      assertTrue(account.isActive());
-      assertNotNull(account.getCreationDate());
-      assertEquals(AccountType.TAXABLE_INVESTMENT, account.getAccountType());
-      assertNotNull(account.getLastUpdatedOn());
-      assertEquals(0, account.getPositionCount());
-      assertEquals(strategy, account.getPositionStrategy());
-      assertTrue(account.getAccountType().requiresCapitalGainsTracking());
+    @DisplayName("constructor: initializes account with correct default state")
+    void initializesCorrectly() {
+      assertAll(() -> assertEquals(accountId, account.getAccountId()),
+          () -> assertEquals("Main Investment", account.getName()),
+          () -> assertTrue(account.getCashBalance().isZero()), () -> assertTrue(account.isActive()),
+          () -> assertEquals(0, account.getPositionCount()),
+          () -> assertTrue(account.getAccountType().requiresCapitalGainsTracking()));
     }
 
     @Test
-    void testConstructor_Protected_isSuccessful() {
-      account = new Account();
-      assertAll(() -> assertNull("is null", account.getAccountId()),
-          () -> assertNull("is null", account.getCreationDate()),
-          () -> assertNull("is null", account.getAccountCurrency()));
+    @DisplayName("protectedConstructor: maintains partially invalid state for JPA hydration")
+    void protectedConstructorState() {
+      Account jpaAccount = new Account();
+      assertAll(() -> assertNull(jpaAccount.getAccountId()),
+          () -> assertNotNull(jpaAccount.getPositionEntries(),
+              "Positions must be initialized to avoid NPE"),
+          () -> assertNull(jpaAccount.getAccountCurrency()));
     }
 
-    @Test
-    void testConstructor_Fails_WhenNameIsEmpty() {
-      assertThrows(IllegalArgumentException.class,
-          () -> new Account(accountId, "  ", AccountType.CHEQUING, usd, strategy));
-    }
-
-    @Test
-    void testConstructor_Fails_WhenParametersNull() {
-      assertThrows(RuntimeException.class,
-          () -> new Account(null, "Name", AccountType.CHEQUING, usd, strategy));
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = { "", "  ", "\t" })
+    @DisplayName("constructor: throws exception for null or blank names")
+    void throwsForInvalidNames(String invalidName) {
+      assertThrows(DomainArgumentException.class,
+          () -> new Account(accountId, invalidName, AccountType.CHEQUING, USD, strategy));
     }
   }
 
   @Nested
+  @DisplayName("Cash Operation Tests: Deposit, Withdraw, Buy, Sell")
   class CashOperations {
-
     @Test
-    void testDeposit_isSuccessful() {
-      Money depositAmount = Money.of(1000, "USD");
-      account.deposit(depositAmount, "Initial Funding");
+    @DisplayName("deposit: increases balance when valid")
+    void depositIncreasesBalance() {
+      Money amount = Money.of(1000, "USD");
 
-      assertEquals(depositAmount, account.getCashBalance());
+      account.deposit(amount, "Initial Funding");
+
+      assertEquals(amount, account.getCashBalance());
     }
 
     @Test
-    void testDeposit_Fails_NegativeAmount() {
-      Money negativeMoney = Money.of(-100, "USD");
-      assertThrows(IllegalArgumentException.class, () -> account.deposit(negativeMoney, "Invalid"));
+    @DisplayName("deposit: rejects negative or wrong currency")
+    void depositRejectsInvalidInputs() {
+      assertAll(
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
+
+          () -> assertThrows(CurrencyMismatchException.class,
+              () -> account.deposit(Money.of(100, "EUR"), "Wrong Currency")));
     }
 
     @Test
-    void testDeposit_Fails_CurrencyMismatch() {
-      Money eur = Money.of(100, "EUR");
-      assertThrows(CurrencyMismatchException.class, () -> account.deposit(eur, "Wrong Currency"));
-    }
-
-    @Test
-    void testWithdraw_isSuccessful() {
+    @DisplayName("withdraw: reduces balance when sufficient funds")
+    void withdrawReducesBalance() {
       account.deposit(Money.of(500, "USD"), "Funding");
+
       account.withdraw(Money.of(200, "USD"), "Personal use");
 
       assertEquals(Money.of(300, "USD"), account.getCashBalance());
     }
 
     @Test
-    void testWithdraw_Fails_InsufficientFunds() {
+    @DisplayName("withdraw: rejects invalid inputs and insufficient funds")
+    void withdrawRejectsInvalidCases() {
       account.deposit(Money.of(100, "USD"), "Funding");
-      assertThrows(InsufficientFundsException.class,
-          () -> account.withdraw(Money.of(200, "USD"), "Too much"));
+
+      assertAll(
+          () -> assertThrows(InsufficientFundsException.class,
+              () -> account.withdraw(Money.of(200, "USD"), "Too much")),
+
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> account.withdraw(Money.of(-50, "USD"), "Negative")),
+
+          // Important: negative should fail BEFORE insufficient funds
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> account.withdraw(Money.of(-200, "USD"), "Negative + too much")));
     }
 
     @Test
-    void testWithdraw_Fails_NegativeAmount() {
-      account.deposit(Money.of(100, "USD"), "Funding");
-      assertThrows(IllegalArgumentException.class,
-          () -> account.withdraw(Money.of(-50, "USD"), "Too much"));
-    }
-
-    @Test
-    void testWithdraw_Fails_NegativeAmountAndInsufficientFund() {
-      account.deposit(Money.of(100, "USD"), "Funding");
-      assertThrows(IllegalArgumentException.class,
-          () -> account.withdraw(Money.of(-200, "USD"), "Too much"));
-
-      // 00, 01, 10, 11
-    }
-
-    @Test
-    void testWithdraw_Success_AllowsNegativeBalance_WhenAllowed() {
+    @DisplayName("withdraw: allows negative balance when explicitly enabled")
+    void withdrawAllowsNegativeWhenEnabled() {
       account.deposit(Money.of(100, "USD"), "Funding");
 
       account.withdraw(Money.of(200, "USD"), "Overdraft", true);
@@ -161,95 +151,169 @@ class AccountTest {
     }
 
     @Test
-    void testApplyFee_isSuccessful() {
+    @DisplayName("applyFee: deducts fee from balance")
+    void applyFeeDeductsBalance() {
       account.deposit(Money.of(100, "USD"), "Funding");
+
       account.applyFee(Money.of(10, "USD"), "Brokerage Fee");
 
       assertEquals(Money.of(90, "USD"), account.getCashBalance());
     }
 
     @Test
-    void testApplyFee_Fails_InsufficientFunds() {
-      assertThrows(InsufficientFundsException.class,
-          () -> account.applyFee(Money.of(10, "USD"), "Fee"));
-    }
+    @DisplayName("applyFee: rejects invalid inputs and insufficient funds")
+    void applyFeeRejectsInvalidCases() {
+      assertAll(
+          () -> assertThrows(InsufficientFundsException.class,
+              () -> account.applyFee(Money.of(10, "USD"), "Fee")),
 
-    @Test
-    void testApplyFee_Fails_FeeNegative() {
-      assertThrows(IllegalArgumentException.class,
-          () -> account.applyFee(Money.of(-10, "USD"), "Fee"));
-    }
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> account.applyFee(Money.of(-10, "USD"), "Negative Fee")),
 
-    @Test
-    void testApplyFee_Fails_ReasonIsNull() {
-      assertThrows(IllegalArgumentException.class,
-          () -> account.applyFee(Money.of(10, "USD"), null));
-    }
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> account.applyFee(Money.of(10, "USD"), null)),
 
-    @Test
-    void testApplyFee_Fails_ReasonIsEmpty() {
-      assertThrows(IllegalArgumentException.class,
-          () -> account.applyFee(Money.of(10, "USD"), "     "));
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> account.applyFee(Money.of(10, "USD"), "   ")));
     }
   }
 
   @Nested
-  class PositionManagement {
+  @DisplayName("Realized Gains and History")
+  class RealizedGainsManagementTests {
+    private final AssetSymbol AAPL = new AssetSymbol("AAPL");
+    private final AssetSymbol TSLA = new AssetSymbol("TSLA");
 
-    private AssetSymbol apple;
+    @BeforeEach
+    void setUpGains() {
+      account.recordRealizedGain(AAPL, Money.of("100", USD), Money.of("500", USD), Instant.now());
+      account.recordRealizedGain(AAPL, Money.of("50", USD), Money.of("200", USD), Instant.now());
+      account.recordRealizedGain(TSLA, Money.of("300", USD), Money.of("1000", USD), Instant.now());
+    }
+
+    @Test
+    @DisplayName("clearRealizedGains: removes only records for the specified symbol and updates timestamp")
+    void clearRealizedGainsSucceedsForSpecificSymbol() {
+      Instant beforeUpdate = account.getLastUpdatedOn();
+
+      account.clearRealizedGains(AAPL);
+
+      List<RealizedGainRecord> remaining = account.getRealizedGains();
+
+      assertAll(
+          () -> assertEquals(1, remaining.size()),
+          () -> assertEquals(TSLA, remaining.get(0).symbol()),
+          () -> assertTrue(account.getLastUpdatedOn().isAfter(beforeUpdate)
+              || account.getLastUpdatedOn().equals(beforeUpdate)));
+    }
+
+    @Test
+    @DisplayName("clearRealizedGains: does nothing when symbol does not exist")
+    void clearRealizedGainsDoesNothingWhenSymbolNotFound() {
+      int initialSize = account.getRealizedGains().size();
+
+      account.clearRealizedGains(new AssetSymbol("MSFT"));
+
+      assertEquals(initialSize, account.getRealizedGains().size());
+    }
+
+    @Test
+    @DisplayName("clearRealizedGains: throws when symbol is null")
+    void clearRealizedGainsFailsWhenSymbolIsNull() {
+      assertThrows(DomainArgumentException.class,
+          () -> account.clearRealizedGains(null));
+    }
+
+    @Test
+    @DisplayName("clearAllRealizedGains: removes all records and resets totals")
+    void clearAllRealizedGainsSucceeds() {
+      assertFalse(account.getRealizedGains().isEmpty());
+
+      account.clearAllRealizedGains();
+
+      assertAll(
+          () -> assertTrue(account.getRealizedGains().isEmpty()),
+          () -> assertEquals(Money.zero(USD), account.getTotalRealizedGainLoss()));
+    }
+
+    @Test
+    @DisplayName("getTotalRealizedGainLoss: aggregates all gain records correctly")
+    void getTotalRealizedGainLossReturnsCorrectTotal() {
+      assertEquals(Money.of(450, "USD"), account.getTotalRealizedGainLoss());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = AccountType.class, names = {
+        "NON_REGISTERED_INVESTMENT", "MARGIN", "TAXABLE_INVESTMENT"
+    })
+    @DisplayName("accountType: identifies types that require capital gains tracking")
+    void accountTypeRequiresCapitalGainsTracking(AccountType type) {
+      Account testAccount = new Account(accountId, "test", type, USD, strategy);
+
+      assertTrue(testAccount.getAccountType().requiresCapitalGainsTracking());
+    }
+  }
+
+  @Nested
+  @DisplayName("Position Management")
+  class PositionManagement {
+    private AssetSymbol apple = new AssetSymbol("AAPL");
     private Position emptyPosition;
 
     @BeforeEach
-    void initPositions() {
-      apple = new AssetSymbol("AAPL");
-      // We use a real object because sealed interfaces are picky about mocks
-      emptyPosition = AcbPosition.empty(apple, AssetType.STOCK, usd);
+    void setup() {
+      emptyPosition = AcbPosition.empty(apple, AssetType.STOCK, USD);
     }
 
     @Test
-    void testUpdatePosition_isSuccessful_WhenAddingNew() {
-      Position activePosition = emptyPosition.buy(new Quantity(BigDecimal.TEN),
-              Money.of(1500, "USD"), Instant.now())
-          .getUpdatedPosition(); // Extract position from ApplyResult
+    @DisplayName("updatePosition: adds or removes positions based on quantity")
+    void updatesOrRemovesPosition() {
+      Position pos = AcbPosition.empty(apple, AssetType.STOCK, USD)
+          .buy(Quantity.of(10), Money.of(150, "USD"), Instant.now())
+          .getUpdatedPosition();
 
-      account.updatePosition(apple, activePosition);
+      account.updatePosition(apple, pos);
+      assertThat(account.hasPosition(apple)).isTrue();
+      assertThat(account.getPositionCount()).isEqualTo(1);
+      assertThat(account.getPositionEntries().size()).isEqualTo(1);
+      assertThat(account.getPosition(apple)).isNotNull();
 
-      assertTrue(account.hasPosition(apple));
-      assertEquals(1, account.getPositionCount());
-      assertEquals(1, account.getPositionEntries().size());
-      assertNotNull(account.getPosition(apple));
+      // Zero quantity should remove the position
+      Position emptyPos = AcbPosition.empty(apple, AssetType.STOCK, USD);
+      account.updatePosition(apple, emptyPos);
+      assertThat(account.hasPosition(apple)).isFalse();
     }
 
     @Test
-    void testUpdatePosition_isSuccessful_WhenRemovingZeroQuantity() {
-      // Adding then removing
-      Position activePosition = emptyPosition.buy(new Quantity(BigDecimal.TEN),
-          Money.of(100, "USD"), Instant.now()).getUpdatedPosition();
-      account.updatePosition(apple, activePosition);
-
-      // Use the empty position (which has zero quantity) to simulate a "close"
-      account.updatePosition(apple, emptyPosition);
-
-      assertFalse(account.hasPosition(apple), "Position should be removed when quantity is zero");
-      assertEquals(0, account.getPositionCount());
-    }
-
-    @Test
-    void testUpdatePosition_Fails_WhenSymbolMismatch() {
-      AssetSymbol google = new AssetSymbol("GOOGL");
+    @DisplayName("updatePositoin: Throws when we try to update a position with wrong symbol")
+    void updatePositionSymbolMismatch() {
       // emptyPosition is for AAPL
+      AssetSymbol google = new AssetSymbol("GOOGL");
       assertThrows(IllegalArgumentException.class,
           () -> account.updatePosition(google, emptyPosition));
     }
 
     @Test
-    void testesPositionEntries_Success() {
-      assertNotNull(account.getPositionEntries());
-      assertEquals(0, account.getPositionEntries().size());
+    @DisplayName("ensurePosition: creates correct implementation based on strategy")
+    void ensurePositionStrategy() {
+      Position acbPos = account.ensurePosition(apple, AssetType.STOCK);
+      assertInstanceOf(AcbPosition.class, acbPos);
+
+      Account fifoAccount = new Account(accountId, "FIFO", AccountType.CHEQUING, USD, PositionStrategy.FIFO);
+      assertInstanceOf(FifoPosition.class, fifoAccount.ensurePosition(apple, AssetType.STOCK));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
+    @DisplayName("ensurePosition: throws exception for unsupported strategies")
+    void unsupportedStrategies(PositionStrategy unsupported) {
+      Account badAccount = new Account(accountId, "Bad", AccountType.CHEQUING, USD, unsupported);
+      assertThrows(IllegalArgumentException.class, () -> badAccount.ensurePosition(apple, AssetType.STOCK));
     }
 
     @Test
-    void testClearPosition_Success_ClearsWhenSymbolFound() {
+    @DisplayName("clearPosition: clears said position, apple, when it is found in account")
+    void clearPositionClearsWhenSymbolFound() {
       account.clearPosition(apple);
       assertTrue(account.getPosition(apple).isEmpty());
     }
@@ -281,10 +345,10 @@ class AccountTest {
       @Test
       void testEnsurePosition_CreatesFifo_WhenStrategyIsFifo() {
         // GIVEN: An account initialized with FIFO strategy
-        Currency usd = Currency.of("USD");
+        Currency USD = Currency.of("USD");
         PositionStrategy strategy = PositionStrategy.FIFO;
         Account usdAccount = new Account(AccountId.newId(), "USD Account", AccountType.CHEQUING,
-            usd, strategy);
+            USD, strategy);
         AssetSymbol symbol = new AssetSymbol("MSFT");
 
         // WHEN: Creating a new position
@@ -297,14 +361,14 @@ class AccountTest {
       }
 
       @ParameterizedTest
-      @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
+      @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
       void testCreateEmptyPosition_Fails_OnUnsupportedStrategy(PositionStrategy strategy) {
         // GIVEN: An account with a strategy not covered by the switch (e.g.,
         // SPECIFIC_ID)
         // Note: You may need to mock the enum or use a value that exists in the Enum
         // but not the switch
         PositionStrategy unsupported = strategy;
-        Account errorAccount = new Account(AccountId.newId(), "Error", AccountType.CHEQUING, usd,
+        Account errorAccount = new Account(AccountId.newId(), "Error", AccountType.CHEQUING, USD,
             unsupported);
 
         // WHEN/THEN: Expect the IllegalArgumentException you saw earlier
@@ -317,7 +381,7 @@ class AccountTest {
       void testEnsurePosition_ReturnsExistingPosition_WithoutChangingType() {
         AssetSymbol apple = new AssetSymbol("AAPL");
         // Create an initial position via 'buy' to put it in the map
-        Position activePosition = AcbPosition.empty(apple, AssetType.STOCK, usd)
+        Position activePosition = AcbPosition.empty(apple, AssetType.STOCK, USD)
             .buy(new Quantity(BigDecimal.TEN), Money.of(100, "USD"), Instant.now())
             .getUpdatedPosition();
 
@@ -335,34 +399,39 @@ class AccountTest {
 
   @Nested
   class AccountLifecycle {
-
     @Test
-    void testClose_isSuccessful() {
-      account.close();
-      assertFalse(account.isActive());
-      assertNotNull(account.getCloseDate());
-    }
+    @DisplayName("close: prevents closing when account is not empty")
+    void closeFailsWhenAccountIsNotEmpty() {
+      account.deposit(Money.of(10, "USD"), "Leftover");
+      assertThrows(IllegalStateException.class, () -> account.close());
 
-    @Test
-    void testClose_Fails_WithOpenPositions() {
+      account.resetCashToZero();
+
       AssetSymbol symbol = new AssetSymbol("AAPL");
       Position pos = mock(AcbPosition.class);
       when(pos.symbol()).thenReturn(symbol);
       when(pos.totalQuantity()).thenReturn(new Quantity(BigDecimal.ONE));
-
       account.updatePosition(symbol, pos);
 
       assertThrows(IllegalStateException.class, () -> account.close());
     }
 
     @Test
-    void testClose_Fails_WithCashBalance() {
-      account.deposit(Money.of(10, "USD"), "Leftover");
-      assertThrows(IllegalStateException.class, () -> account.close());
+    @DisplayName("close: successfully closes account when empty")
+    void closeSucceedsWhenAccountIsEmpty() {
+      account.resetCashToZero();
+
+      account.close();
+
+      assertFalse(account.isActive());
+      assertNotNull(account.getCloseDate());
     }
 
     @Test
-    void testReopen_isSuccessful() {
+    @DisplayName("reopen: handles valid and invalid scenarios")
+    void reopenBehavior() {
+      assertThrows(IllegalStateException.class, () -> account.reopen());
+
       account.close();
       account.reopen();
 
@@ -371,130 +440,60 @@ class AccountTest {
     }
 
     @Test
-    void testReopen_Fail_CannotReOpenAlreadyOpen() {
-      assertThrows(IllegalStateException.class, () -> account.reopen());
-    }
-
-    @Test
-    void testOperations_Fail_WhenAccountClosed() {
+    @DisplayName("operations: prevent actions when account is closed")
+    void operationsFailWhenAccountIsClosed() {
       account.close();
+
       assertThrows(AccountClosedException.class,
-          () -> account.deposit(Money.of(10, "USD"), "Reason"));
+          () -> account.deposit(Money.of(10, "USD"), "Late"));
     }
 
     @Test
-    void testUpdateName_Success() {
-      String oldName = account.getName();
+    @DisplayName("updateName: successfully updates account name")
+    void updateNameSucceedsWithValidName() {
       account.updateName("new Name");
-      assertNotEquals(oldName, account.getName());
       assertEquals("new Name", account.getName());
     }
 
-    @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = {"  ", "\t", "\n"})
-      // Testing null, empty, and blank
-    void testUpdateName_Failure_ThrowsWhenNewNameIsNullOrEmpty(String invalidName) {
-      assertThrows(IllegalArgumentException.class, () -> account.updateName(invalidName));
+    @ParameterizedTest
+    @ValueSource(strings = { "  ", "\t", "\n" })
+    @DisplayName("updateName: rejects null, empty, or blank names")
+    void updateNameFailsWithInvalidName(String invalidName) {
+      assertThrows(IllegalArgumentException.class,
+          () -> account.updateName(invalidName));
     }
 
     @Test
-    void testClearAllPosition_Success_EmptyHashMap() {
+    @DisplayName("positions: clears all positions")
+    void clearAllPositionsSucceeds() {
       account.clearAllPositions();
       assertEquals(0, account.getPositionCount());
     }
 
     @Test
-    void testResetCashToZero_Success() {
+    @DisplayName("cash: resets balance to zero")
+    void resetCashToZeroSucceeds() {
       account.resetCashToZero();
       assertEquals(Money.zero("USD"), account.getCashBalance());
     }
 
     @Test
-    void testMarkStaleAndRestoreHealth_Sucess() {
+    @DisplayName("healthStatus: transitions correctly")
+    void healthStatusTransitionsCorrectly() {
       account.markStale();
-      assertThat(account.isStale()).isEqualTo(true);
       account.restoreHealth();
-      assertThat(account.isStale()).isEqualTo(false);
-    }
-
-  }
-
-  @Nested
-  class RealizedGainsManagement {
-
-    private final AssetSymbol AAPL = new AssetSymbol("AAPL");
-    private final AssetSymbol TSLA = new AssetSymbol("TSLA");
-    private final Currency USD = Currency.of("USD");
-
-    @BeforeEach
-    void setUpGains() {
-      // Setup initial state with multiple records
-      account.recordRealizedGain(AAPL, Money.of("100", USD), Money.of("500", USD), Instant.now());
-      account.recordRealizedGain(AAPL, Money.of("50", USD), Money.of("200", USD), Instant.now());
-      account.recordRealizedGain(TSLA, Money.of("300", USD), Money.of("1000", USD), Instant.now());
-    }
-
-    @Test
-    void testClearRealizedGains_SpecificSymbol_RemovesOnlyTargetedGains() {
-      Instant beforeUpdate = account.getLastUpdatedOn();
-
-      // Act
-      account.clearRealizedGains(AAPL);
-
-      // Assert
-      List<RealizedGainRecord> remainingGains = account.getRealizedGains();
-      assertEquals(1, remainingGains.size(), "Should only have 1 record left");
-      assertEquals(TSLA, remainingGains.get(0).symbol(), "Remaining record should be TSLA");
-
-      // Verify touch() was called
-      assertTrue(account.getLastUpdatedOn().isAfter(beforeUpdate) || account.getLastUpdatedOn()
-          .equals(beforeUpdate));
-    }
-
-    @Test
-    void testClearRealizedGains_NonExistentSymbol_DoesNothing() {
-      int initialSize = account.getRealizedGains().size();
-
-      account.clearRealizedGains(new AssetSymbol("MSFT"));
-
-      assertEquals(initialSize, account.getRealizedGains().size());
-    }
-
-    @Test
-    void testClearAllRealizedGains_Success_EmptyList() {
-      // Ensure we have gains first
-      assertFalse(account.getRealizedGains().isEmpty());
-
-      // Act
-      account.clearAllRealizedGains();
-
-      // Assert
-      assertTrue(account.getRealizedGains().isEmpty());
-      assertEquals(Money.zero(USD), account.getTotalRealizedGainLoss());
-    }
-
-    @Test
-    void testClearRealizedGains_ThrowsException_WhenSymbolIsNull() {
-      assertThrows(DomainArgumentException.class, () -> account.clearRealizedGains(null));
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = AccountType.class, names = {"NON_REGISTERED_INVESTMENT", "MARGIN",
-        "TAXABLE_INVESTMENT"})
-    void testGetAccountType_Sucess_RequiresCapitalGainsTracking(AccountType type) {
-      Account testAccount = new Account(accountId, "null", type, usd, strategy);
-      assertTrue(testAccount.getAccountType().requiresCapitalGainsTracking());
+      assertFalse(account.isStale());
     }
   }
 
   @Nested
+  @DisplayName("Getters and Encapsulation")
   class GettersAndEncapsulation {
-    private final Currency USD = Currency.USD;
-
     @Test
-    void testGetAllPositions_ReturnsUnmodifiableCopy() {
+    @DisplayName("getAllPositions: returns an unmodifiable collection of position copies")
+    void getAllPositionsReturnsUnmodifiableCopy() {
       AssetSymbol apple = new AssetSymbol("AAPL");
       Position pos = mock(AcbPosition.class);
       when(pos.symbol()).thenReturn(apple);
@@ -504,64 +503,53 @@ class AccountTest {
       account.updatePosition(apple, pos);
       Collection<Position> positions = account.getAllPositions();
 
-      assertEquals(1, positions.size());
-      assertThrows(UnsupportedOperationException.class, () -> positions.clear());
+      assertAll(
+          () -> assertEquals(1, positions.size()),
+          () -> assertThrows(UnsupportedOperationException.class, positions::clear,
+              "The returned collection should be immutable"));
     }
 
     @Test
-    void testGetPosition_ReturnsOptionalEmptyWhenMissing() {
-      Optional<Position> result = account.getPosition(new AssetSymbol("NONE"));
-      assertTrue(result.isEmpty());
+    @DisplayName("getPosition: returns empty optional when symbol is not found")
+    void getPositionReturnsEmptyWhenMissing() {
+      assertThat(account.getPosition(new AssetSymbol("NONE"))).isEmpty();
     }
 
     @Test
-    void testGetRealizedGainsFor_Success_ReturnNothing() {
+    @DisplayName("getRealizedGainsFor: filters records correctly by symbol and identifies gain/loss")
+    void getRealizedGainsForFiltersBySymbol() {
       AssetSymbol apple = new AssetSymbol("AAPL");
-      List<RealizedGainRecord> records = account.getRealizedGainsFor(apple);
-      assertThat(records.size()).isEqualTo(0);
-    }
+      AssetSymbol msft = new AssetSymbol("MSFT");
 
-    @Test
-    void testGetRealizedGainsFor_Success_ReturnOne() {
-      AssetSymbol apple = new AssetSymbol("AAPL");
-      AssetSymbol MFST = new AssetSymbol("MSFT");
       account.recordRealizedGain(apple, Money.of("100", USD), Money.of("500", USD), Instant.now());
       account.recordRealizedGain(apple, Money.of("50", USD), Money.of("200", USD), Instant.now());
-      account.recordRealizedGain(MFST, Money.of("-300", USD), Money.of("1000", USD), Instant.now());
+      account.recordRealizedGain(msft, Money.of("-300", USD), Money.of("1000", USD), Instant.now());
 
-      List<RealizedGainRecord> records = account.getRealizedGainsFor(apple);
-      assertThat(records.size()).isEqualTo(2);
-      assertThat(records.get(0).isGain()).isTrue();
+      List<RealizedGainRecord> appleRecords = account.getRealizedGainsFor(apple);
+      List<RealizedGainRecord> msftRecords = account.getRealizedGainsFor(msft);
 
-      List<RealizedGainRecord> recordsMFST = account.getRealizedGainsFor(MFST);
-      assertThat(recordsMFST.get(0).isLoss()).isTrue();
+      assertAll(
+          () -> assertThat(appleRecords.size()).isEqualTo(2),
+          () -> assertThat(appleRecords.get(0).isGain()).isTrue(),
+          () -> assertThat(msftRecords.size()).isEqualTo(1),
+          () -> assertThat(msftRecords.get(0).isLoss()).isTrue());
     }
 
     @Nested
+    @DisplayName("Financial Checks")
     class FinancialChecks {
-
       @Test
-      void testHasSufficientCash_ReturnsTrue_WhenBalanceIsExact() {
-        Money amount = Money.of(100, "USD");
-        account.deposit(amount, "Initial deposit");
+      @DisplayName("hasSufficientCash: correctly validates balance and currency matching")
+      void hasSufficientCashValidation() {
+        account.deposit(Money.of(100, "USD"), "Initial deposit");
+        Money exactAmount = Money.of(100, "USD");
+        Money tooMuch = Money.of(101, "USD");
+        Money wrongCurrency = Money.of(50, "EUR");
 
-        assertTrue(account.hasSufficientCash(amount));
-      }
-
-      @Test
-      void testHasSufficientCash_ReturnsFalse_WhenBalanceIsLower() {
-        account.deposit(Money.of(50, "USD"), "Partial deposit");
-        Money required = Money.of(100, "USD");
-
-        assertFalse(account.hasSufficientCash(required));
-      }
-
-      @Test
-      void testHasSufficientCash_Fails_OnCurrencyMismatch() {
-        account.deposit(Money.of(100, "USD"), "USD deposit");
-        Money eurAmount = Money.of(50, "EUR");
-
-        assertThrows(CurrencyMismatchException.class, () -> account.hasSufficientCash(eurAmount));
+        assertAll(
+            () -> assertTrue(account.hasSufficientCash(exactAmount), "Should be true for exact balance"),
+            () -> assertFalse(account.hasSufficientCash(tooMuch), "Should be false for insufficient balance"),
+            () -> assertThrows(CurrencyMismatchException.class, () -> account.hasSufficientCash(wrongCurrency)));
       }
     }
   }

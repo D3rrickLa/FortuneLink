@@ -33,8 +33,8 @@ class TaxLotTest {
     @DisplayName("constructor: fail on negative cost basis")
     void constructorThrowsOnNegativeCostBasis() {
       Money negativeMoney = Money.of(-100.00, "USD");
-      assertThatThrownBy(() -> new TaxLot(tenShares, negativeMoney, acquiredDate))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> new TaxLot(tenShares, negativeMoney, acquiredDate)).isInstanceOf(
+          IllegalArgumentException.class);
     }
   }
 
@@ -65,8 +65,8 @@ class TaxLotTest {
       TaxLot lot = new TaxLot(tenShares, thousandUsd, acquiredDate);
       Quantity elevenShares = new Quantity(new BigDecimal("11.00"));
 
-      assertThatThrownBy(() -> lot.proportionalCost(elevenShares))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> lot.proportionalCost(elevenShares)).isInstanceOf(
+          IllegalArgumentException.class);
     }
   }
 

@@ -4,6 +4,7 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
@@ -78,7 +79,7 @@ public class Account {
     notNull(positionStrategy, "positionStrategy");
 
     if (name.trim().isEmpty()) {
-      throw new IllegalArgumentException("Account name cannot be empty");
+      throw new DomainArgumentException("Account name cannot be empty");
     }
 
     this.accountId = accountId;
@@ -342,5 +343,4 @@ public class Account {
   private void touch() {
     this.lastUpdatedOn = Instant.now();
   }
-
 }

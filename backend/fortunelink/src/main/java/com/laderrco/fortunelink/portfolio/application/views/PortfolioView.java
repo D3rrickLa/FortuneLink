@@ -15,8 +15,7 @@ public record PortfolioView(
     String description,
     List<AccountView> accounts,
     Money totalValue,
+    boolean hasStaleData,
     Instant createDate,
-    Instant lastUpdated,
-    boolean hasStaleData) {
-
+    Instant lastUpdated) {
 }

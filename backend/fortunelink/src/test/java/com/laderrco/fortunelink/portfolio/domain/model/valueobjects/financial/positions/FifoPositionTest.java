@@ -30,9 +30,19 @@ class FifoPositionTest {
   private static final Instant T2 = Instant.parse("2023-02-01T10:00:00Z");
   private static final Instant T3 = Instant.parse("2023-03-01T10:00:00Z");
 
+  // --- Helpers used across all nested classes ---
+  private static TaxLot createLot(String qty, String basis, Instant date) {
+    return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), USD),
+        date);
+  }
+
+  private static FifoPosition createPosition(TaxLot... lots) {
+    return new FifoPosition(SYMBOL, TYPE, USD, List.of(lots), Instant.now());
+  }
+
   @Nested
   @DisplayName("Constructor and Validation")
-  class ConstructorTests {
+  class CreationTests {
     @Test
     @DisplayName("constructor: success with valid initialization")
     void constructor_validInitialization_success() {
@@ -72,11 +82,13 @@ class FifoPositionTest {
     void sell_multipleLots_consumesInFifoOrder() {
       FifoPosition pos = createPosition(createLot("10", "100", T1), createLot("10", "200", T2));
       // Sell 15: 10 from T1 ($100) + 5 from T2 ($100)
-      var result = pos.sell(new Quantity(new BigDecimal("15")), Money.of(450, "USD"), Instant.now());
+      var result = pos.sell(new Quantity(new BigDecimal("15")), Money.of(450, "USD"),
+          Instant.now());
 
       assertThat(result.costBasisSold().amount()).isEqualByComparingTo("200");
       assertThat(result.newPosition().lots()).hasSize(1);
-      assertThat(result.newPosition().lots().get(0).quantity().amount()).isEqualByComparingTo("5");
+      assertThat(result.newPosition().lots().getFirst().quantity().amount()).isEqualByComparingTo(
+          "5");
     }
 
     @Test
@@ -87,7 +99,8 @@ class FifoPositionTest {
           .buy(new Quantity(BigDecimal.valueOf(10)), Money.of(200, "USD"), T2).newPosition()
           .buy(new Quantity(BigDecimal.valueOf(10)), Money.of(300, "USD"), T3).newPosition();
 
-      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)), Money.of(500, "USD"), Instant.now());
+      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)), Money.of(500, "USD"),
+          Instant.now());
       FifoPosition updated = result.newPosition();
 
       assertEquals(2, updated.lots().size());
@@ -115,7 +128,8 @@ class FifoPositionTest {
       FifoPosition pos = createPosition(createLot("10", "400", T1), createLot("10", "600", T1));
       Price rocPrice = Price.of(new BigDecimal("5"), USD); // $100 total
 
-      var result = (ApplyResult.Adjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice, Quantity.of(20));
+      var result = (ApplyResult.Adjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice,
+          Quantity.of(20));
       FifoPosition updated = (FifoPosition) result.getUpdatedPosition();
 
       assertThat(updated.lots().get(0).costBasis().amount()).isEqualByComparingTo("360");
@@ -128,7 +142,8 @@ class FifoPositionTest {
       FifoPosition pos = createPosition(createLot("10", "100", T1));
       Price rocPrice = Price.of(new BigDecimal("15"), USD); // $150 total
 
-      var result = (ApplyResult.RocAdjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice, Quantity.of(10));
+      var result = (ApplyResult.RocAdjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice,
+          Quantity.of(10));
 
       assertThat(result.getUpdatedPosition().totalCostBasis().isZero()).isTrue();
       assertThat(result.excessCapitalGain().amount()).isEqualByComparingTo("50");
@@ -138,22 +153,24 @@ class FifoPositionTest {
     @DisplayName("applyReturnOfCapital: throws when quantity doesn't match position")
     void applyReturnOfCapital_mismatchedQuantity_throwsException() {
       FifoPosition pos = createPosition(createLot("10", "100", T1));
-      assertThatThrownBy(() -> pos.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD), Quantity.of(5)))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> pos.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD),
+          Quantity.of(5))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("applyLotReduction: clamps last lot to zero when reduction exceeds basis")
     void applyLotReduction_lastLotExcess_clampsToZero() {
-      Money result = FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD), true, USD);
+      Money result = FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD),
+          true, USD);
       assertThat(result).isEqualTo(Money.zero(USD));
     }
 
     @Test
     @DisplayName("applyLotReduction: throws if intermediate lot would go negative")
     void applyLotReduction_intermediateLotExcess_throwsIllegalState() {
-      assertThatThrownBy(() -> FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD), false, USD))
-          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(
+          () -> FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD), false,
+              USD)).isInstanceOf(IllegalStateException.class);
     }
   }
 
@@ -218,14 +235,5 @@ class FifoPositionTest {
       // $300 / 20 units = $15.00
       assertEquals(new BigDecimal("15.0000000000"), result.amount());
     }
-  }
-
-  // --- Helpers used across all nested classes ---
-  private static TaxLot createLot(String qty, String basis, Instant date) {
-    return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), USD), date);
-  }
-
-  private static FifoPosition createPosition(TaxLot... lots) {
-    return new FifoPosition(SYMBOL, TYPE, USD, List.of(lots), Instant.now());
   }
 }

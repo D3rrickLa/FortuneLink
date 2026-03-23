@@ -9,6 +9,7 @@ public record NetWorthView(
     Money totalLiabilities,
     Money netWorth,
     Currency displayCurrency,
+    boolean hasStale,
     Instant asOfDate) {
 
 }

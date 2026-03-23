@@ -3,17 +3,15 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 
 @DisplayName("Fee Value Object Unit Tests")
 class FeeTest {
@@ -24,7 +22,7 @@ class FeeTest {
 
   @Nested
   @DisplayName("Constructor Validation Logic")
-  class ConstructorValidation {
+  class CreationTests {
     @Test
     @DisplayName("constructor: success with valid parameters")
     void constructorValidParametersSuccess() {
@@ -38,29 +36,33 @@ class FeeTest {
     @Test
     @DisplayName("constructor: fail on null fee type")
     void constructorNullFeeTypeThrowsException() {
-      assertThatThrownBy(() -> new Fee(null, VALID_MONEY, null, null, NOW, EMPTY_METADATA))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> new Fee(null, VALID_MONEY, null, null, NOW, EMPTY_METADATA)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test
     @DisplayName("constructor: fail on null native amount")
     void constructorNullNativeAmountThrowsException() {
-      assertThatThrownBy(() -> new Fee(VALID_TYPE, null, null, null, NOW, EMPTY_METADATA))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> new Fee(VALID_TYPE, null, null, null, NOW, EMPTY_METADATA)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test
     @DisplayName("constructor: fail on null occurredAt")
     void constructorNullOccurredAtThrowsException() {
-      assertThatThrownBy(() -> new Fee(VALID_TYPE, VALID_MONEY, null, null, null, EMPTY_METADATA))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> new Fee(VALID_TYPE, VALID_MONEY, null, null, null, EMPTY_METADATA)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test
     @DisplayName("constructor: fail on null metadata")
     void constructorNullMetadataThrowsException() {
-      assertThatThrownBy(() -> new Fee(VALID_TYPE, VALID_MONEY, null, null, NOW, null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> new Fee(VALID_TYPE, VALID_MONEY, null, null, NOW, null)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test
@@ -68,9 +70,9 @@ class FeeTest {
     void constructorNegativeAmountThrowsException() {
       Money negativeMoney = Money.of(-1.0, "USD");
 
-      assertThatThrownBy(() -> new Fee(VALID_TYPE, negativeMoney, null, null, NOW, EMPTY_METADATA))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("cannot be negative");
+      assertThatThrownBy(
+          () -> new Fee(VALID_TYPE, negativeMoney, null, null, NOW, EMPTY_METADATA)).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("cannot be negative");
     }
   }
 
@@ -101,11 +103,8 @@ class FeeTest {
     void withConversionFullStateSuccess() {
       Money accountMoney = Money.of(8.5, "EUR");
 
-      ExchangeRate rate = new ExchangeRate(
-          Currency.of("USD"),
-          Currency.of("EUR"),
-          new BigDecimal("0.85"),
-          Instant.now());
+      ExchangeRate rate = new ExchangeRate(Currency.of("USD"), Currency.of("EUR"),
+          new BigDecimal("0.85"), Instant.now());
 
       Fee fee = Fee.withConversion(VALID_TYPE, VALID_MONEY, accountMoney, rate, NOW);
 
@@ -128,10 +127,8 @@ class FeeTest {
     @Test
     @DisplayName("totalInAccountCurrency: success with multiple fees")
     void totalInAccountCurrencyMultipleFeesSuccess() {
-      List<Fee> fees = List.of(
-          Fee.of(VALID_TYPE, VALID_MONEY, NOW),
-          Fee.of(VALID_TYPE, VALID_MONEY, NOW),
-          Fee.of(VALID_TYPE, VALID_MONEY, NOW));
+      List<Fee> fees = List.of(Fee.of(VALID_TYPE, VALID_MONEY, NOW),
+          Fee.of(VALID_TYPE, VALID_MONEY, NOW), Fee.of(VALID_TYPE, VALID_MONEY, NOW));
 
       Money total = Fee.totalInAccountCurrency(fees, Currency.USD);
 
@@ -151,13 +148,11 @@ class FeeTest {
     @Test
     @DisplayName("totalInAccountCurrency: fail on currency mismatch")
     void totalInAccountCurrencyCurrencyMismatchThrowsException() {
-      List<Fee> fees = List.of(
-          Fee.of(VALID_TYPE, VALID_MONEY, NOW),
+      List<Fee> fees = List.of(Fee.of(VALID_TYPE, VALID_MONEY, NOW),
           Fee.of(VALID_TYPE, VALID_MONEY, NOW));
 
-      assertThatThrownBy(() -> Fee.totalInAccountCurrency(fees, Currency.JPY))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Fee currency mismatch");
+      assertThatThrownBy(() -> Fee.totalInAccountCurrency(fees, Currency.JPY)).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Fee currency mismatch");
     }
   }
 

@@ -3,15 +3,13 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import java.math.BigDecimal;
 import java.time.Instant;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 
 @DisplayName("ExchangeRate Value Object Unit Tests")
 class ExchangeRateTest {
@@ -22,7 +20,7 @@ class ExchangeRateTest {
 
   @Nested
   @DisplayName("Constructor and Validation")
-  class ConstructorTests {
+  class CreationTests {
     @Test
     @DisplayName("constructor: success with valid initialization")
     void constructorValidInitializationSuccess() {
@@ -36,19 +34,19 @@ class ExchangeRateTest {
     @Test
     @DisplayName("constructor: fail on null parameters")
     void constructorNullParametersThrowsException() {
-      assertThatThrownBy(() -> new ExchangeRate(null, EUR, VALID_RATE, NOW))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> new ExchangeRate(null, EUR, VALID_RATE, NOW)).isInstanceOf(
+          DomainArgumentException.class);
     }
 
     @Test
     @DisplayName("constructor: fail on non-positive rate")
     void constructorNonPositiveRateThrowsException() {
-      assertThatThrownBy(() -> new ExchangeRate(USD, EUR, BigDecimal.ZERO, NOW))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("must be positive");
+      assertThatThrownBy(() -> new ExchangeRate(USD, EUR, BigDecimal.ZERO, NOW)).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("must be positive");
 
-      assertThatThrownBy(() -> new ExchangeRate(USD, EUR, new BigDecimal("-1.5"), NOW))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+          () -> new ExchangeRate(USD, EUR, new BigDecimal("-1.5"), NOW)).isInstanceOf(
+          IllegalArgumentException.class);
     }
   }
 
@@ -73,8 +71,7 @@ class ExchangeRateTest {
       ExchangeRate rate = new ExchangeRate(USD, EUR, VALID_RATE, NOW);
       Money invalid = Money.of(100, "GBP");
 
-      assertThatThrownBy(() -> rate.convert(invalid))
-          .isInstanceOf(CurrencyMismatchException.class);
+      assertThatThrownBy(() -> rate.convert(invalid)).isInstanceOf(CurrencyMismatchException.class);
     }
 
     @Test
@@ -82,8 +79,7 @@ class ExchangeRateTest {
     void convertNullMoneyThrowsException() {
       ExchangeRate rate = new ExchangeRate(USD, EUR, VALID_RATE, NOW);
 
-      assertThatThrownBy(() -> rate.convert(null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> rate.convert(null)).isInstanceOf(DomainArgumentException.class);
     }
   }
 

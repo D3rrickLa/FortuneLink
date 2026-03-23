@@ -26,6 +26,11 @@ class AcbPositionTest {
   private static final Currency USD = Currency.USD;
   private static final Instant NOW = Instant.now();
 
+  private static AcbPosition createAcbPosition(String qty, String totalBasis) {
+    return new AcbPosition(SYMBOL, TYPE, USD, new Quantity(new BigDecimal(qty)),
+        new Money(new BigDecimal(totalBasis), USD), NOW, NOW);
+  }
+
   @Nested
   @DisplayName("buy() Operations")
   class BuyTests {
@@ -142,7 +147,8 @@ class AcbPositionTest {
       AcbPosition position = createAcbPosition("100", "1000");
       Price rocPrice = Price.of(BigDecimal.TWO, USD); // $200 total reduction
 
-      var result = (ApplyResult.Adjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice, Quantity.of(100));
+      var result = (ApplyResult.Adjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice,
+          Quantity.of(100));
       AcbPosition updated = (AcbPosition) result.getUpdatedPosition();
 
       assertThat(updated.totalCostBasis()).isEqualTo(Money.of("800", USD));
@@ -154,7 +160,8 @@ class AcbPositionTest {
       AcbPosition position = createAcbPosition("10", "100");
       Price rocPrice = Price.of(BigDecimal.valueOf(15), USD); // $150 reduction
 
-      var result = (ApplyResult.RocAdjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice, Quantity.of(10));
+      var result = (ApplyResult.RocAdjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice,
+          Quantity.of(10));
 
       assertThat(result.getUpdatedPosition().totalCostBasis().isZero()).isTrue();
       assertThat(result.excessCapitalGain()).isEqualTo(Money.of("50", USD));
@@ -164,8 +171,8 @@ class AcbPositionTest {
     @DisplayName("applyReturnOfCapital: throws if quantity does not match position")
     void applyReturnOfCapitalMismatchedQuantityThrowsException() {
       AcbPosition position = createAcbPosition("50", "500");
-      assertThatThrownBy(() -> position.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD), Quantity.of(49)))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> position.applyReturnOfCapital(Price.of(BigDecimal.ONE, USD),
+          Quantity.of(49))).isInstanceOf(IllegalArgumentException.class);
     }
   }
 
@@ -196,12 +203,5 @@ class AcbPositionTest {
       Money unrealized = position.calculateUnrealizedGain(marketPrice);
       assertThat(unrealized.amount()).isEqualByComparingTo("50");
     }
-  }
-
-  private static AcbPosition createAcbPosition(String qty, String totalBasis) {
-    return new AcbPosition(SYMBOL, TYPE, USD,
-        new Quantity(new BigDecimal(qty)),
-        new Money(new BigDecimal(totalBasis), USD),
-        NOW, NOW);
   }
 }
