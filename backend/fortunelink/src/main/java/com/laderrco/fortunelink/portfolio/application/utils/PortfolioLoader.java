@@ -30,10 +30,8 @@ public class PortfolioLoader {
   }
 
   /**
-   * Loads all active portfolios for a user. Mirrors loadUserPortfolio()
-   * semantics: deleted
-   * portfolios are excluded at the query level. Returns empty list (not an
-   * exception) when the user
+   * Loads all active portfolios for a user. Mirrors loadUserPortfolio() semantics: deleted
+   * portfolios are excluded at the query level. Returns empty list (not an exception) when the user
    * has no active portfolios — that's a valid state, not an error.
    */
   public List<Portfolio> loadAllUserPortfolios(UserId userId) {
@@ -41,10 +39,8 @@ public class PortfolioLoader {
   }
 
   /**
-   * Lightweight ownership check, does not load the Portfolio aggregate. Use
-   * existsByIdAndUserId
-   * wherever you only need to verify access without needing to mutate or read the
-   * portfolio
+   * Lightweight ownership check, does not load the Portfolio aggregate. Use existsByIdAndUserId
+   * wherever you only need to verify access without needing to mutate or read the portfolio
    * itself.
    */
   public void validateOwnership(PortfolioId portfolioId, UserId userId) {
@@ -53,18 +49,21 @@ public class PortfolioLoader {
     }
   }
 
-  /** 
-   * keeping this around as we might need this one check rather than validatePortfolioAndAccountOwnership
-  */
+  /**
+   * keeping this around as we might need this one check rather than
+   * validatePortfolioAndAccountOwnership
+   */
   public void validateAccountOwnershipToPortfolio(PortfolioId portfolioId, AccountId accountId) {
     if (!portfolioRepository.existsByPortfolioIdAndAccountId(portfolioId, accountId)) {
-        throw new AccountNotFoundException(accountId, portfolioId);
+      throw new AccountNotFoundException(accountId, portfolioId);
     }
-}
+  }
 
-  public void validatePortfolioAndAccountOwnership(PortfolioId portfolioId, UserId userId, AccountId accountId) {
+  public void validatePortfolioAndAccountOwnership(PortfolioId portfolioId, UserId userId,
+      AccountId accountId) {
     if (!portfolioRepository.existsByIdAndUserIdAndAccountId(portfolioId, userId, accountId)) {
-      throw new PortfolioNotFoundException(portfolioId); // intentionally vague — don't leak structure
+      throw new PortfolioNotFoundException(
+          portfolioId); // intentionally vague — don't leak structure
     }
   }
 }

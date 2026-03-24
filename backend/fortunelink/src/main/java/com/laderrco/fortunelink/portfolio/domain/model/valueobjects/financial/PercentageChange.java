@@ -21,11 +21,11 @@ import java.math.RoundingMode;
  * @param change The decimal representation of the percentage change.
  */
 public record PercentageChange(BigDecimal change) implements Comparable<PercentageChange> {
+  public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
   // we need SCALE and MODE to load first, if this is the first thing declared
   // it will error out
   private static final int SCALE = Precision.PERCENTAGE.getDecimalPlaces();
   private static final RoundingMode MODE = Rounding.PERCENTAGE.getMode();
-  public static final PercentageChange ZERO = new PercentageChange(BigDecimal.ZERO);
 
   public PercentageChange {
     notNull(change, "percentage change");

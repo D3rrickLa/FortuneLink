@@ -71,8 +71,7 @@ class AuthenticationUserServiceTest {
       Jwt mockJwtWithBadSub = mock(Jwt.class);
       when(mockJwtWithBadSub.getSubject()).thenReturn("not-a-uuid");
 
-      return Stream.of(
-          Arguments.of(null, AuthenticationException.class), // Auth is null
+      return Stream.of(Arguments.of(null, AuthenticationException.class), // Auth is null
           Arguments.of("not-a-jwt", AuthenticationException.class), // Principal wrong type
           Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class), // Invalid UUID string
           Arguments.of(mock(Jwt.class), AuthenticationException.class) // Missing data
@@ -92,7 +91,8 @@ class AuthenticationUserServiceTest {
     @ParameterizedTest
     @MethodSource("provideAuthFailures")
     @DisplayName("getCurrentUser: throws expected exception on auth failures")
-    void getCurrentUserAuthFailuresThrowCorrectException(Object principal, Class<? extends Exception> expectedEx) {
+    void getCurrentUserAuthFailuresThrowCorrectException(Object principal,
+        Class<? extends Exception> expectedEx) {
       if (principal == null) {
         when(securityContext.getAuthentication()).thenReturn(null);
       } else {
@@ -132,9 +132,8 @@ class AuthenticationUserServiceTest {
     void getCurrentUserEmailFailureWhenNotAuthenticated() {
       when(securityContext.getAuthentication()).thenReturn(null);
 
-      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail())
-          .isInstanceOf(AuthenticationException.class)
-          .hasMessage("No authenticated user found");
+      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail()).isInstanceOf(
+          AuthenticationException.class).hasMessage("No authenticated user found");
     }
 
     @Test
@@ -143,8 +142,8 @@ class AuthenticationUserServiceTest {
       when(securityContext.getAuthentication()).thenReturn(authentication);
       when(authentication.getPrincipal()).thenReturn("not-a-jwt");
 
-      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail())
-          .isInstanceOf(AuthenticationException.class);
+      assertThatThrownBy(() -> authenticationUserService.getCurrentUserEmail()).isInstanceOf(
+          AuthenticationException.class);
     }
   }
 
@@ -159,8 +158,8 @@ class AuthenticationUserServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getUserId()).thenReturn(userId);
 
-      assertThatCode(() -> authenticationUserService.verifyUserOwnsPortfolio(userId, portfolio))
-          .doesNotThrowAnyException();
+      assertThatCode(() -> authenticationUserService.verifyUserOwnsPortfolio(userId,
+          portfolio)).doesNotThrowAnyException();
     }
 
     @Test
@@ -171,8 +170,8 @@ class AuthenticationUserServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getUserId()).thenReturn(ownerId);
 
-      assertThatThrownBy(() -> authenticationUserService.verifyUserOwnsPortfolio(strangerId, portfolio))
-          .isInstanceOf(RuntimeException.class)
+      assertThatThrownBy(() -> authenticationUserService.verifyUserOwnsPortfolio(strangerId,
+          portfolio)).isInstanceOf(RuntimeException.class)
           .hasMessage("Access denied: user does not own this portfolio");
     }
   }

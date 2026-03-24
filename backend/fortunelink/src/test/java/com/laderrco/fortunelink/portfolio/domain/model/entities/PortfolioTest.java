@@ -1,7 +1,11 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
@@ -34,6 +38,15 @@ class PortfolioTest {
     userId = UserId.random();
   }
 
+  private Portfolio createDefaultPortfolio() {
+    return Portfolio.createNew(userId, DEFAULT_NAME, DEFAULT_DESC, DEFAULT_CURRENCY);
+  }
+
+  private Account createAccount(Portfolio portfolio, String name) {
+    return portfolio.createAccount(name, AccountType.TAXABLE_INVESTMENT, Currency.USD,
+        PositionStrategy.ACB);
+  }
+
   @Nested
   @DisplayName("Initialization")
   class InitializationTests {
@@ -43,10 +56,8 @@ class PortfolioTest {
     void constructorCreatesEmptyInstance() {
       Portfolio portfolio = new Portfolio();
 
-      assertAll(
-          () -> assertNull(portfolio.getPortfolioId()),
-          () -> assertNull(portfolio.getUserId()),
-          () -> assertNull(portfolio.getCreatedAt()));
+      assertAll(() -> assertNull(portfolio.getPortfolioId()),
+          () -> assertNull(portfolio.getUserId()), () -> assertNull(portfolio.getCreatedAt()));
     }
 
     @Test
@@ -54,8 +65,7 @@ class PortfolioTest {
     void createNewSucceedsWithValidInput() {
       Portfolio portfolio = createDefaultPortfolio();
 
-      assertAll(
-          () -> assertEquals(userId, portfolio.getUserId()),
+      assertAll(() -> assertEquals(userId, portfolio.getUserId()),
           () -> assertEquals(DEFAULT_NAME, portfolio.getName()),
           () -> assertEquals(DEFAULT_DESC, portfolio.getDescription()),
           () -> assertEquals(DEFAULT_CURRENCY, portfolio.getDisplayCurrency()),
@@ -74,14 +84,16 @@ class PortfolioTest {
     @Test
     @DisplayName("createNew: rejects invalid inputs")
     void createNewFailsWithInvalidInputs() {
-      assertThatThrownBy(() -> Portfolio.createNew(null, DEFAULT_NAME, "desc", DEFAULT_CURRENCY))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> Portfolio.createNew(null, DEFAULT_NAME, "desc", DEFAULT_CURRENCY)).isInstanceOf(
+          DomainArgumentException.class);
 
-      assertThatThrownBy(() -> Portfolio.createNew(userId, null, "desc", DEFAULT_CURRENCY))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(
+          () -> Portfolio.createNew(userId, null, "desc", DEFAULT_CURRENCY)).isInstanceOf(
+          DomainArgumentException.class);
 
-      assertThatThrownBy(() -> Portfolio.createNew(userId, DEFAULT_NAME, " ", null))
-          .isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> Portfolio.createNew(userId, DEFAULT_NAME, " ", null)).isInstanceOf(
+          DomainArgumentException.class);
     }
   }
 
@@ -105,8 +117,7 @@ class PortfolioTest {
 
       Account account = createAccount(portfolio, "Trading");
 
-      assertAll(
-          () -> assertEquals(1, portfolio.getAccountCount()),
+      assertAll(() -> assertEquals(1, portfolio.getAccountCount()),
           () -> assertTrue(portfolio.getAccounts().contains(account)),
           () -> assertTrue(isAfterOrEqualTo(portfolio.getLastUpdatedAt(), before)));
     }
@@ -120,16 +131,16 @@ class PortfolioTest {
     void createAccountFailsWhenDuplicateNameExists() {
       createAccount(portfolio, "Savings");
 
-      assertThatThrownBy(() -> createAccount(portfolio, "SAVINGS"))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> createAccount(portfolio, "SAVINGS")).isInstanceOf(
+          IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("createAccount: rejects invalid strategy")
     void createAccountFailsWhenStrategyInvalid() {
-      assertThatThrownBy(() -> portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT,
-          Currency.USD, PositionStrategy.FIFO))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+          () -> portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
+              PositionStrategy.FIFO)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -148,8 +159,8 @@ class PortfolioTest {
     void removeAccountFailsWhenActive() {
       Account account = createAccount(portfolio, "Active");
 
-      assertThatThrownBy(() -> portfolio.removeAccount(account.getAccountId()))
-          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> portfolio.removeAccount(account.getAccountId())).isInstanceOf(
+          IllegalStateException.class);
     }
 
     @Test
@@ -175,13 +186,14 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = { "  ", "\t" })
+    @ValueSource(strings = {"  ", "\t"})
     @DisplayName("renameAccount: rejects invalid names")
     void renameAccountFailsWithInvalidName(String invalid) {
       Account account = createAccount(portfolio, "Test");
 
-      assertThatThrownBy(() -> portfolio.renameAccount(account.getAccountId(), invalid))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+          () -> portfolio.renameAccount(account.getAccountId(), invalid)).isInstanceOf(
+          IllegalArgumentException.class);
     }
   }
 
@@ -212,8 +224,8 @@ class PortfolioTest {
     void markAsDeletedFailsWhenNotEmpty() {
       createAccount(portfolio, "Trading");
 
-      assertThatThrownBy(() -> portfolio.markAsDeleted(userId))
-          .isInstanceOf(PortfolioNotEmptyException.class);
+      assertThatThrownBy(() -> portfolio.markAsDeleted(userId)).isInstanceOf(
+          PortfolioNotEmptyException.class);
     }
 
     @Test
@@ -231,16 +243,15 @@ class PortfolioTest {
     void updateDetailsSucceeds() {
       portfolio.updateDetails("New", "Desc");
 
-      assertAll(
-          () -> assertEquals("New", portfolio.getName()),
+      assertAll(() -> assertEquals("New", portfolio.getName()),
           () -> assertEquals("Desc", portfolio.getDescription()));
     }
 
     @Test
     @DisplayName("updateDetails: rejects invalid name")
     void updateDetailsFailsWithInvalidName() {
-      assertThatThrownBy(() -> portfolio.updateDetails(null, "desc"))
-          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> portfolio.updateDetails(null, "desc")).isInstanceOf(
+          IllegalArgumentException.class);
     }
 
     @Test
@@ -276,8 +287,8 @@ class PortfolioTest {
     @Test
     @DisplayName("getAccount: throws when not found")
     void getAccountFailsWhenMissing() {
-      assertThatThrownBy(() -> portfolio.getAccount(AccountId.newId()))
-          .isInstanceOf(AccountNotFoundException.class);
+      assertThatThrownBy(() -> portfolio.getAccount(AccountId.newId())).isInstanceOf(
+          AccountNotFoundException.class);
     }
 
     @Test
@@ -286,14 +297,5 @@ class PortfolioTest {
       assertTrue(portfolio.belongsToUser(userId));
       assertFalse(portfolio.belongsToUser(UserId.random()));
     }
-  }
-
-  private Portfolio createDefaultPortfolio() {
-    return Portfolio.createNew(userId, DEFAULT_NAME, DEFAULT_DESC, DEFAULT_CURRENCY);
-  }
-
-  private Account createAccount(Portfolio portfolio, String name) {
-    return portfolio.createAccount(name, AccountType.TAXABLE_INVESTMENT,
-        Currency.USD, PositionStrategy.ACB);
   }
 }

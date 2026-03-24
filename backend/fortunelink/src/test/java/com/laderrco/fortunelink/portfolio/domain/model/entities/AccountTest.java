@@ -1,12 +1,12 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -81,7 +81,7 @@ class AccountTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "  ", "\t" })
+    @ValueSource(strings = {"", "  ", "\t"})
     @DisplayName("constructor: throws exception for null or blank names")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
@@ -105,8 +105,7 @@ class AccountTest {
     @Test
     @DisplayName("deposit: rejects negative or wrong currency")
     void depositRejectsInvalidInputs() {
-      assertAll(
-          () -> assertThrows(IllegalArgumentException.class,
+      assertAll(() -> assertThrows(IllegalArgumentException.class,
               () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
 
           () -> assertThrows(CurrencyMismatchException.class,
@@ -128,8 +127,7 @@ class AccountTest {
     void withdrawRejectsInvalidCases() {
       account.deposit(Money.of(100, "USD"), "Funding");
 
-      assertAll(
-          () -> assertThrows(InsufficientFundsException.class,
+      assertAll(() -> assertThrows(InsufficientFundsException.class,
               () -> account.withdraw(Money.of(200, "USD"), "Too much")),
 
           () -> assertThrows(IllegalArgumentException.class,
@@ -163,8 +161,7 @@ class AccountTest {
     @Test
     @DisplayName("applyFee: rejects invalid inputs and insufficient funds")
     void applyFeeRejectsInvalidCases() {
-      assertAll(
-          () -> assertThrows(InsufficientFundsException.class,
+      assertAll(() -> assertThrows(InsufficientFundsException.class,
               () -> account.applyFee(Money.of(10, "USD"), "Fee")),
 
           () -> assertThrows(IllegalArgumentException.class,
@@ -200,11 +197,10 @@ class AccountTest {
 
       List<RealizedGainRecord> remaining = account.getRealizedGains();
 
-      assertAll(
-          () -> assertEquals(1, remaining.size()),
-          () -> assertEquals(TSLA, remaining.get(0).symbol()),
-          () -> assertTrue(account.getLastUpdatedOn().isAfter(beforeUpdate)
-              || account.getLastUpdatedOn().equals(beforeUpdate)));
+      assertAll(() -> assertEquals(1, remaining.size()),
+          () -> assertEquals(TSLA, remaining.get(0).symbol()), () -> assertTrue(
+              account.getLastUpdatedOn().isAfter(beforeUpdate) || account.getLastUpdatedOn()
+                  .equals(beforeUpdate)));
     }
 
     @Test
@@ -220,8 +216,7 @@ class AccountTest {
     @Test
     @DisplayName("clearRealizedGains: throws when symbol is null")
     void clearRealizedGainsFailsWhenSymbolIsNull() {
-      assertThrows(DomainArgumentException.class,
-          () -> account.clearRealizedGains(null));
+      assertThrows(DomainArgumentException.class, () -> account.clearRealizedGains(null));
     }
 
     @Test
@@ -231,8 +226,7 @@ class AccountTest {
 
       account.clearAllRealizedGains();
 
-      assertAll(
-          () -> assertTrue(account.getRealizedGains().isEmpty()),
+      assertAll(() -> assertTrue(account.getRealizedGains().isEmpty()),
           () -> assertEquals(Money.zero(USD), account.getTotalRealizedGainLoss()));
     }
 
@@ -243,9 +237,8 @@ class AccountTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = AccountType.class, names = {
-        "NON_REGISTERED_INVESTMENT", "MARGIN", "TAXABLE_INVESTMENT"
-    })
+    @EnumSource(value = AccountType.class, names = {"NON_REGISTERED_INVESTMENT", "MARGIN",
+        "TAXABLE_INVESTMENT"})
     @DisplayName("accountType: identifies types that require capital gains tracking")
     void accountTypeRequiresCapitalGainsTracking(AccountType type) {
       Account testAccount = new Account(accountId, "test", type, USD, strategy);
@@ -257,7 +250,7 @@ class AccountTest {
   @Nested
   @DisplayName("Position Management")
   class PositionManagement {
-    private AssetSymbol apple = new AssetSymbol("AAPL");
+    private final AssetSymbol apple = new AssetSymbol("AAPL");
     private Position emptyPosition;
 
     @BeforeEach
@@ -269,8 +262,7 @@ class AccountTest {
     @DisplayName("updatePosition: adds or removes positions based on quantity")
     void updatesOrRemovesPosition() {
       Position pos = AcbPosition.empty(apple, AssetType.STOCK, USD)
-          .buy(Quantity.of(10), Money.of(150, "USD"), Instant.now())
-          .getUpdatedPosition();
+          .buy(Quantity.of(10), Money.of(150, "USD"), Instant.now()).getUpdatedPosition();
 
       account.updatePosition(apple, pos);
       assertThat(account.hasPosition(apple)).isTrue();
@@ -299,16 +291,18 @@ class AccountTest {
       Position acbPos = account.ensurePosition(apple, AssetType.STOCK);
       assertInstanceOf(AcbPosition.class, acbPos);
 
-      Account fifoAccount = new Account(accountId, "FIFO", AccountType.CHEQUING, USD, PositionStrategy.FIFO);
+      Account fifoAccount = new Account(accountId, "FIFO", AccountType.CHEQUING, USD,
+          PositionStrategy.FIFO);
       assertInstanceOf(FifoPosition.class, fifoAccount.ensurePosition(apple, AssetType.STOCK));
     }
 
     @ParameterizedTest
-    @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
+    @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
     @DisplayName("ensurePosition: throws exception for unsupported strategies")
     void unsupportedStrategies(PositionStrategy unsupported) {
       Account badAccount = new Account(accountId, "Bad", AccountType.CHEQUING, USD, unsupported);
-      assertThrows(IllegalArgumentException.class, () -> badAccount.ensurePosition(apple, AssetType.STOCK));
+      assertThrows(IllegalArgumentException.class,
+          () -> badAccount.ensurePosition(apple, AssetType.STOCK));
     }
 
     @Test
@@ -361,7 +355,7 @@ class AccountTest {
       }
 
       @ParameterizedTest
-      @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
+      @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
       void testCreateEmptyPosition_Fails_OnUnsupportedStrategy(PositionStrategy strategy) {
         // GIVEN: An account with a strategy not covered by the switch (e.g.,
         // SPECIFIC_ID)
@@ -458,11 +452,10 @@ class AccountTest {
     @NullSource
     @EmptySource
     @ParameterizedTest
-    @ValueSource(strings = { "  ", "\t", "\n" })
+    @ValueSource(strings = {"  ", "\t", "\n"})
     @DisplayName("updateName: rejects null, empty, or blank names")
     void updateNameFailsWithInvalidName(String invalidName) {
-      assertThrows(IllegalArgumentException.class,
-          () -> account.updateName(invalidName));
+      assertThrows(IllegalArgumentException.class, () -> account.updateName(invalidName));
     }
 
     @Test
@@ -503,8 +496,7 @@ class AccountTest {
       account.updatePosition(apple, pos);
       Collection<Position> positions = account.getAllPositions();
 
-      assertAll(
-          () -> assertEquals(1, positions.size()),
+      assertAll(() -> assertEquals(1, positions.size()),
           () -> assertThrows(UnsupportedOperationException.class, positions::clear,
               "The returned collection should be immutable"));
     }
@@ -528,8 +520,7 @@ class AccountTest {
       List<RealizedGainRecord> appleRecords = account.getRealizedGainsFor(apple);
       List<RealizedGainRecord> msftRecords = account.getRealizedGainsFor(msft);
 
-      assertAll(
-          () -> assertThat(appleRecords.size()).isEqualTo(2),
+      assertAll(() -> assertThat(appleRecords.size()).isEqualTo(2),
           () -> assertThat(appleRecords.get(0).isGain()).isTrue(),
           () -> assertThat(msftRecords.size()).isEqualTo(1),
           () -> assertThat(msftRecords.get(0).isLoss()).isTrue());
@@ -546,10 +537,12 @@ class AccountTest {
         Money tooMuch = Money.of(101, "USD");
         Money wrongCurrency = Money.of(50, "EUR");
 
-        assertAll(
-            () -> assertTrue(account.hasSufficientCash(exactAmount), "Should be true for exact balance"),
-            () -> assertFalse(account.hasSufficientCash(tooMuch), "Should be false for insufficient balance"),
-            () -> assertThrows(CurrencyMismatchException.class, () -> account.hasSufficientCash(wrongCurrency)));
+        assertAll(() -> assertTrue(account.hasSufficientCash(exactAmount),
+                "Should be true for exact balance"),
+            () -> assertFalse(account.hasSufficientCash(tooMuch),
+                "Should be false for insufficient balance"),
+            () -> assertThrows(CurrencyMismatchException.class,
+                () -> account.hasSufficientCash(wrongCurrency)));
       }
     }
   }

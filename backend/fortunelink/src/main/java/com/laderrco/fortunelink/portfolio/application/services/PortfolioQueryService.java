@@ -22,7 +22,11 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,16 +35,13 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Handles portfolio-level read operations only.
  * <p>
- * Responsibilities: portfolio aggregate identity, total valuation, net worth,
- * performance, and
+ * Responsibilities: portfolio aggregate identity, total valuation, net worth, performance, and
  * allocation.
  * <p>
  * Account/position detail lives in AccountQueryService.
  * <p>
- * API call discipline: ONE getBatchQuotes() call per request, resolved here at
- * the service layer
- * and passed down into mappers and domain services. Domain services must NOT
- * independently call
+ * API call discipline: ONE getBatchQuotes() call per request, resolved here at the service layer
+ * and passed down into mappers and domain services. Domain services must NOT independently call
  * MarketDataService.
  */
 @Service
@@ -75,8 +76,7 @@ public class PortfolioQueryService {
 
     List<AccountView> accountViews = accounts.stream().map(
         account -> accountViewBuilder.build(account, quoteCache,
-            feeCache.getOrDefault(account.getAccountId(), Map.of())))
-        .toList();
+            feeCache.getOrDefault(account.getAccountId(), Map.of()))).toList();
 
     Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency,
         quoteCache);
@@ -110,8 +110,7 @@ public class PortfolioQueryService {
   /**
    * Calculates net worth for a user's portfolio.
    * <p>
-   * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL
-   * into Loan/Debt
+   * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL into Loan/Debt
    * context).
    */
   public NetWorthView getNetWorth(GetNetWorthQuery query) {
@@ -131,12 +130,12 @@ public class PortfolioQueryService {
     Money netWorth = totalAssets.subtract(totalLiabilities);
 
     boolean isStale = portfolio.getAccounts().stream().anyMatch(Account::isStale);
-    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency, isStale, Instant.now());
+    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency, isStale,
+        Instant.now());
   }
 
   /**
-   * Fetches all market quotes for positions in a portfolio. This is the ONLY
-   * place getBatchQuotes()
+   * Fetches all market quotes for positions in a portfolio. This is the ONLY place getBatchQuotes()
    * should be called for portfolio queries.
    */
   private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Set<AssetSymbol> symbols) {

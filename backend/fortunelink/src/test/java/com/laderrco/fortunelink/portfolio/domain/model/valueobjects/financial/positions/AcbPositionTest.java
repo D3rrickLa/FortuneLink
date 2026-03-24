@@ -85,7 +85,7 @@ class AcbPositionTest {
       Quantity sellQty = new Quantity(new BigDecimal("5"));
       Money proceeds = new Money(new BigDecimal("80.00"), USD);
 
-      var result = (ApplyResult.Sale<AcbPosition>) position.sell(sellQty, proceeds, NOW);
+      var result = position.sell(sellQty, proceeds, NOW);
       AcbPosition updated = result.newPosition();
 
       assertThat(updated.totalQuantity().amount()).isEqualByComparingTo("5");

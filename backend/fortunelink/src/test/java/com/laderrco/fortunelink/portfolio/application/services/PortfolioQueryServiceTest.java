@@ -2,7 +2,10 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -68,7 +71,7 @@ public class PortfolioQueryServiceTest {
   private PortfolioLoader portfolioLoader;
   @InjectMocks
   private PortfolioQueryService portfolioQueryService;
-  
+
   private UserId userId;
   private PortfolioId portfolioId;
 
@@ -229,9 +232,8 @@ public class PortfolioQueryServiceTest {
       when(marketDataService.getBatchQuotes(Set.of(aapl))).thenReturn(quotes);
       when(transactionRepository.sumBuyFeesByAccountAndSymbol(any())).thenReturn(Map.of());
       when(accountViewBuilder.build(eq(staleAccount), eq(quotes), any())).thenReturn(accountView);
-      when(
-              portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD), eq(quotes)))
-          .thenReturn(totalValue);
+      when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
+          eq(quotes))).thenReturn(totalValue);
       when(portfolioViewMapper.toPortfolioView(eq(portfolio), any(), eq(totalValue),
           eq(true))) // <-- stale = true
           .thenReturn(expected);
@@ -267,7 +269,8 @@ public class PortfolioQueryServiceTest {
           eq(Map.of(aapl, feeAmount)))).thenReturn(accountView);
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
           Money.zero(CAD));
-      when(portfolioViewMapper.toPortfolioView(any(), any(), any(), anyBoolean())).thenReturn(expected);
+      when(portfolioViewMapper.toPortfolioView(any(), any(), any(), anyBoolean())).thenReturn(
+          expected);
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
@@ -287,7 +290,7 @@ public class PortfolioQueryServiceTest {
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(Map.of());
       // account absent
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(any())).thenReturn(Map.of()); 
+      when(transactionRepository.sumBuyFeesByAccountAndSymbol(any())).thenReturn(Map.of());
       when(accountViewBuilder.build(eq(account), any(), eq(Map.of()))).thenReturn(
           buildAccountView(accountId));
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(

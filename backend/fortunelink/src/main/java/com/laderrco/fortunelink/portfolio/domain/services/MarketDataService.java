@@ -18,11 +18,10 @@ import java.util.Set;
  */
 public interface MarketDataService {
   /**
-   * Returns current quotes for the specified assets.
-   * NOTE: we need to confirm the impl of this. If aa portfolio has accounts
-   * with nothing in them,  extractSymbols returns empty set. but our MarketDataService.java
-   * contract says missing symbols are excluded from the result map.
-   * We need to verify this impl handles getBatchQuotes(Set.of()) without hitting the API
+   * Returns current quotes for the specified assets. NOTE: we need to confirm the impl of this. If
+   * aa portfolio has accounts with nothing in them,  extractSymbols returns empty set. but our
+   * MarketDataService.java contract says missing symbols are excluded from the result map. We need
+   * to verify this impl handles getBatchQuotes(Set.of()) without hitting the API
    *
    * @param symbols a set of asset symbols to fetch
    * @return a map of symbol to quote; symbols not found are excluded

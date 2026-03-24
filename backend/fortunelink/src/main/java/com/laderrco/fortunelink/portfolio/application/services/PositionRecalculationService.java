@@ -16,13 +16,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Service
 @RequiredArgsConstructor
 public class PositionRecalculationService {
-
   private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
-
+  
+  private final PositionRecalculationExecutor executor;
   private final Cache<String, Object> symbolLocks = Caffeine.newBuilder()
       .expireAfterAccess(5, TimeUnit.MINUTES).maximumSize(10_000).build();
-
-  private final PositionRecalculationExecutor executor;
 
   /**
    * Async listener that triggers after a transaction commit. Ensures excluded/restored flags are

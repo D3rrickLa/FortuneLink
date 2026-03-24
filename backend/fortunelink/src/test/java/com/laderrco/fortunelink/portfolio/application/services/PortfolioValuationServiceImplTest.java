@@ -1,0 +1,173 @@
+package com.laderrco.fortunelink.portfolio.application.services;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("Portfolio Valuation Service Unit Tests")
+class PortfolioValuationServiceTest {
+  private static final Currency USD = Currency.of("USD");
+  private static final Currency CAD = Currency.of("CAD");
+  private static final AssetSymbol AAPL = new AssetSymbol("AAPL");
+  private static final Money HUNDRED_USD = Money.of(new BigDecimal("100.00"), "USD");
+  private static final Money HUNDRED_CAD = Money.of(new BigDecimal("100.00"), "CAD");
+  @Mock
+  private ExchangeRateService exchangeRateService;
+  @InjectMocks
+  private PortfolioValuationServiceImpl valuationService;
+
+  private Account createMockAccount(Currency currency, Money cash,
+      Map<AssetSymbol, Position> positions) {
+    Account acc = mock(Account.class);
+    when(acc.isActive()).thenReturn(true);
+    when(acc.getAccountCurrency()).thenReturn(currency);
+    when(acc.getCashBalance()).thenReturn(cash);
+    when(acc.getPositionEntries()).thenReturn(positions.entrySet());
+    return acc;
+  }
+
+  @Nested
+  @DisplayName("Total Portfolio Calculation")
+  class TotalPortfolioTests {
+
+    @Test
+    @DisplayName("calculateTotalValue: success with empty portfolio returning zero")
+    void calculateTotalValueReturnsZeroForEmptyPortfolio() {
+      Portfolio portfolio = mock(Portfolio.class);
+      when(portfolio.getAccounts()).thenReturn(List.of());
+
+      Money result = valuationService.calculateTotalValue(portfolio, USD, Map.of());
+
+      assertThat(result).isEqualTo(Money.zero(USD));
+    }
+
+    @Test
+    @DisplayName("calculateTotalValue: aggregates by currency before converting")
+    void calculateTotalValueGroupsByCurrency() {
+      // Setup: 2 USD accounts, 1 CAD account
+      Account usdAcc1 = createMockAccount(USD, HUNDRED_USD, Map.of());
+      Account usdAcc2 = createMockAccount(USD, HUNDRED_USD, Map.of());
+      Account cadAcc = createMockAccount(CAD, HUNDRED_CAD, Map.of());
+
+      Portfolio portfolio = mock(Portfolio.class);
+      when(portfolio.getAccounts()).thenReturn(List.of(usdAcc1, usdAcc2, cadAcc));
+
+      // Mock exchange service
+      when(exchangeRateService.convert(Money.of(200, "USD"), USD)).thenReturn(Money.of(200, "USD"));
+      when(exchangeRateService.convert(Money.of(100, "CAD"), USD)).thenReturn(Money.of(75, "USD"));
+
+      Money total = valuationService.calculateTotalValue(portfolio, USD, Map.of());
+
+      assertThat(total).isEqualTo(Money.of(275, "USD"));
+      // Verify convert was called only twice (once for the USD sum, once for CAD)
+      verify(exchangeRateService, times(2)).convert(any(), eq(USD));
+    }
+  }
+
+  @Nested
+  @DisplayName("Account and Position Valuations")
+  class AccountValuationTests {
+
+    @Test
+    @DisplayName("calculateAccountValue: returns zero for inactive accounts")
+    void calculateAccountValueReturnsZeroForInactive() {
+      Account inactiveAccount = mock(Account.class);
+      when(inactiveAccount.isActive()).thenReturn(false);
+      when(inactiveAccount.getAccountCurrency()).thenReturn(USD);
+
+      Money result = valuationService.calculateAccountValue(inactiveAccount, Map.of());
+
+      assertThat(result).isEqualTo(Money.zero(USD));
+    }
+
+    @Test
+    @DisplayName("calculatePositionsValue: filters out cash assets")
+    void calculatePositionsValueExcludesCashType() {
+      Position stockPos = mock(Position.class);
+      Position cashPos = mock(Position.class);
+      when(stockPos.type()).thenReturn(AssetType.STOCK);
+      when(cashPos.type()).thenReturn(AssetType.CASH);
+
+      // Stock has a quote, should be valued at 150
+      MarketAssetQuote quote = new MarketAssetQuote(AAPL, Price.of("150", USD), null, null, null,
+          null, null, null, null, null, "Unit testing source", Instant.now());
+      when(stockPos.currentValue(any())).thenReturn(Money.of(150, "USD"));
+
+      Account account = mock(Account.class);
+      when(account.getAccountCurrency()).thenReturn(USD);
+      when(account.getPositionEntries()).thenReturn(
+          Set.of(Map.entry(AAPL, stockPos), Map.entry(new AssetSymbol("CASH"), cashPos)));
+
+      Money result = valuationService.calculatePositionsValue(account, Map.of(AAPL, quote));
+
+      assertThat(result).isEqualTo(Money.of(150, "USD"));
+    }
+  }
+
+  // --- Helper Methods ---
+
+  @Nested
+  @DisplayName("Quote Resolution and Fallbacks")
+  class QuoteResolutionTests {
+
+    @Test
+    @DisplayName("resolvePositionValue: falls back to cost basis when quote missing")
+    void resolvePositionValueUsesCostBasisOnMissingQuote() {
+      Position pos = mock(Position.class);
+      Money costBasis = Money.of(50, "USD");
+      when(pos.totalCostBasis()).thenReturn(costBasis);
+
+      Account account = createMockAccount(USD, Money.zero(USD), Map.of(AAPL, pos));
+
+      Money result = valuationService.calculatePositionsValue(account, Map.of());
+
+      assertThat(result).isEqualTo(costBasis);
+    }
+
+    @Test
+    @DisplayName("resolvePositionValue: throws exception on currency mismatch")
+    void resolvePositionValueThrowsOnMismatch() {
+      Position pos = mock(Position.class);
+      when(pos.symbol()).thenReturn(AAPL);
+
+      // Quote is CAD, Account is USD
+      MarketAssetQuote cadQuote = new MarketAssetQuote(AAPL, Price.of("100", CAD), null, null, null,
+          null, null, null, null, null, "Unit testing source", Instant.now());
+      Account account = createMockAccount(USD, Money.zero(USD), Map.of(AAPL, pos));
+
+      assertThatThrownBy(() -> valuationService.calculatePositionsValue(account,
+          Map.of(AAPL, cadQuote))).isInstanceOf(CurrencyMismatchException.class)
+          .hasMessageContaining("does not match account currency");
+    }
+  }
+}

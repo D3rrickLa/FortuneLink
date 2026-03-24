@@ -77,7 +77,8 @@ class AccountQueryServiceTest {
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
 
-      List<AccountView> result = accountQueryService.getAllAccounts(new GetAllAccountsQuery(portfolioId, userId));
+      List<AccountView> result = accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(portfolioId, userId));
 
       assertThat(result).isEmpty();
       verifyNoInteractions(marketDataService, transactionRepository);
@@ -106,12 +107,15 @@ class AccountQueryServiceTest {
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteMap);
 
       Map<AssetSymbol, Money> feeMap = Map.of(btc, Money.of("5", Currency.USD));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(Map.of(accountId, feeMap));
+      when(transactionRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(
+          Map.of(accountId, feeMap));
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.build(eq(account), eq(quoteMap), eq(feeMap))).thenReturn(expectedView);
+      when(accountViewBuilder.build(eq(account), eq(quoteMap), eq(feeMap))).thenReturn(
+          expectedView);
 
-      List<AccountView> result = accountQueryService.getAllAccounts(new GetAllAccountsQuery(portfolioId, userId));
+      List<AccountView> result = accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(portfolioId, userId));
 
       assertThat(result).containsExactly(expectedView);
     }
@@ -134,7 +138,7 @@ class AccountQueryServiceTest {
       Account acc2 = mock(Account.class);
       Map<AssetSymbol, Position> positions2 = Map.of(eth, mock(AcbPosition.class));
       when(acc2.getAccountId()).thenReturn(acc2Id);
-      when(acc2.getPositionEntries()).thenReturn( positions2.entrySet());
+      when(acc2.getPositionEntries()).thenReturn(positions2.entrySet());
 
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.hasAccounts()).thenReturn(true);
@@ -147,15 +151,16 @@ class AccountQueryServiceTest {
 
       Map<AssetSymbol, Money> feesAcc1 = Map.of(btc, Money.of("10", Currency.USD));
       Map<AssetSymbol, Money> feesAcc2 = Map.of(eth, Money.of("20", Currency.USD));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(acc1Id, acc2Id)))
-          .thenReturn(Map.of(acc1Id, feesAcc1, acc2Id, feesAcc2));
+      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(acc1Id, acc2Id))).thenReturn(
+          Map.of(acc1Id, feesAcc1, acc2Id, feesAcc2));
 
       AccountView view1 = mock(AccountView.class);
       AccountView view2 = mock(AccountView.class);
       when(accountViewBuilder.build(acc1, quoteCache, feesAcc1)).thenReturn(view1);
       when(accountViewBuilder.build(acc2, quoteCache, feesAcc2)).thenReturn(view2);
 
-      List<AccountView> result = accountQueryService.getAllAccounts(new GetAllAccountsQuery(portfolioId, userId));
+      List<AccountView> result = accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(portfolioId, userId));
 
       assertThat(result).containsExactly(view1, view2);
     }
@@ -163,9 +168,8 @@ class AccountQueryServiceTest {
     @Test
     @DisplayName("getAllAccounts: throws exception when query is null")
     void getAllAccountsNullQueryThrowsException() {
-      assertThatThrownBy(() -> accountQueryService.getAllAccounts(null))
-          .isInstanceOf(NullPointerException.class)
-          .hasMessageContaining("GetAllAccountsQuery cannot be null");
+      assertThatThrownBy(() -> accountQueryService.getAllAccounts(null)).isInstanceOf(
+          NullPointerException.class).hasMessageContaining("GetAllAccountsQuery cannot be null");
     }
   }
 
@@ -180,9 +184,11 @@ class AccountQueryServiceTest {
       AccountId accountId = AccountId.newId();
       AssetSymbol shop = new AssetSymbol("SHOP.TO");
 
-      Account account = new Account(accountId, "Resp", AccountType.RESP, Currency.CAD, PositionStrategy.ACB);
-      account.updatePosition(shop, new AcbPosition(shop, AssetType.STOCK, Currency.CAD, Quantity.of(100),
-          Money.of(2010, "CAD"), Instant.now(), Instant.now()));
+      Account account = new Account(accountId, "Resp", AccountType.RESP, Currency.CAD,
+          PositionStrategy.ACB);
+      account.updatePosition(shop,
+          new AcbPosition(shop, AssetType.STOCK, Currency.CAD, Quantity.of(100),
+              Money.of(2010, "CAD"), Instant.now(), Instant.now()));
 
       Portfolio mockPortfolio = mock(Portfolio.class);
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(mockPortfolio);
@@ -191,14 +197,17 @@ class AccountQueryServiceTest {
       Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(shop, mock(MarketAssetQuote.class));
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteCache);
 
-      Map<AccountId, Map<AssetSymbol, Money>> feeCache = Map.of(accountId, Map.of(shop, Money.of(10, "CAD")));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(accountId))).thenReturn(feeCache);
+      Map<AccountId, Map<AssetSymbol, Money>> feeCache = Map.of(accountId,
+          Map.of(shop, Money.of(10, "CAD")));
+      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(accountId))).thenReturn(
+          feeCache);
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.build(eq(account), eq(quoteCache), anyMap())).thenReturn(expectedView);
+      when(accountViewBuilder.build(eq(account), eq(quoteCache), anyMap())).thenReturn(
+          expectedView);
 
-      AccountView result = accountQueryService
-          .getAccountSummary(new GetAccountSummaryQuery(portfolioId, userId, accountId));
+      AccountView result = accountQueryService.getAccountSummary(
+          new GetAccountSummaryQuery(portfolioId, userId, accountId));
 
       assertThat(result).isEqualTo(expectedView);
     }
@@ -211,10 +220,9 @@ class AccountQueryServiceTest {
       when(portfolio.findAccount(accId)).thenReturn(Optional.empty());
       when(portfolioLoader.loadUserPortfolio(any(), any())).thenReturn(portfolio);
 
-      assertThatThrownBy(() -> accountQueryService
-          .getAccountSummary(new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId)))
-          .isInstanceOf(AccountNotFoundException.class)
-          .hasMessageContaining(accId.toString());
+      assertThatThrownBy(() -> accountQueryService.getAccountSummary(
+          new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId))).isInstanceOf(
+          AccountNotFoundException.class).hasMessageContaining(accId.toString());
     }
 
     @Test
@@ -231,8 +239,8 @@ class AccountQueryServiceTest {
       AccountView expectedView = mock(AccountView.class);
       when(accountViewBuilder.build(emptyAccount, Map.of(), Map.of())).thenReturn(expectedView);
 
-      AccountView result = accountQueryService
-          .getAccountSummary(new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId));
+      AccountView result = accountQueryService.getAccountSummary(
+          new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId));
 
       assertThat(result).isEqualTo(expectedView);
       verifyNoInteractions(marketDataService, transactionRepository);
@@ -253,7 +261,8 @@ class AccountQueryServiceTest {
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
       when(transactionRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(Map.of());
 
-      accountQueryService.getAccountSummary(new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId));
+      accountQueryService.getAccountSummary(
+          new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId));
 
       verify(accountViewBuilder).build(eq(account), anyMap(), eq(Map.of()));
     }
@@ -261,9 +270,8 @@ class AccountQueryServiceTest {
     @Test
     @DisplayName("getAccountSummary: throws exception when query is null")
     void getAccountSummaryNullQueryThrowsException() {
-      assertThatThrownBy(() -> accountQueryService.getAccountSummary(null))
-          .isInstanceOf(NullPointerException.class)
-          .hasMessageContaining("GetAccountSummaryQuery cannot be null");
+      assertThatThrownBy(() -> accountQueryService.getAccountSummary(null)).isInstanceOf(
+          NullPointerException.class).hasMessageContaining("GetAccountSummaryQuery cannot be null");
     }
   }
 }

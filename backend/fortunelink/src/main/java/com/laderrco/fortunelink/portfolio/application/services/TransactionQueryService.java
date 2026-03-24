@@ -75,11 +75,15 @@ public class TransactionQueryService {
   /**
    * Unbounded fetch for internal calculations only.
    * NEVER expose this through a controller endpoint.
+   * <p>
+   * Used in PerformanceCalculationService - needs full transaction history to calc time-weighted
+   * returns. Additionally, used to calculate capital gains, and for planning. Basically,
+   * Anything that uses our Transactions (for returns, etc.) we call this.
    */
   public List<Transaction> getTransactionsForCalculation(GetTransactionForCalculationQuery query) {
     Objects.requireNonNull(query, "GetTransactionForCalculationQuery cannot be null");
-    Objects.requireNonNull(query.portfolioId(), "PortfolioId cannot be null");  // add
-    Objects.requireNonNull(query.userId(), "UserId cannot be null");             // add
+    Objects.requireNonNull(query.portfolioId(), "PortfolioId cannot be null"); // add
+    Objects.requireNonNull(query.userId(), "UserId cannot be null"); // add
     Objects.requireNonNull(query.accountId(), "AccountId cannot be null");
     Objects.requireNonNull(query.start(), "Start date cannot be null for calculation queries");
     Objects.requireNonNull(query.end(), "End date cannot be null for calculation queries");
@@ -87,8 +91,7 @@ public class TransactionQueryService {
     portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(), query.accountId());
     validateDateRange(query.start(), query.end());
 
-    return transactionRepository.findByAccountIdAndDateRange(
-        query.accountId(), query.start(), query.end());
+    return transactionRepository.findByAccountIdAndDateRange(query.accountId(), query.start(), query.end());
   }
 
   private void validateDateRange(Instant start, Instant end) {
