@@ -15,10 +15,14 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Repository responsible for persistence and lifecycle operations on {@link Transaction} entities.
+ * Repository responsible for persistence and lifecycle operations on
+ * {@link Transaction} entities.
  *
- * <p><b>Read/Query Separation:</b> Paginated and filtered list queries (history, date range,
- * symbol filter) live in {@link TransactionQueryRepository} in the application layer. This
+ * <p>
+ * <b>Read/Query Separation:</b> Paginated and filtered list queries (history,
+ * date range,
+ * symbol filter) live in {@link TransactionQueryRepository} in the application
+ * layer. This
  * interface owns single-record lookups, mutations, aggregations, and cleanup.
  */
 public interface TransactionRepository {
@@ -31,7 +35,8 @@ public interface TransactionRepository {
   Transaction save(Transaction transaction);
 
   /**
-   * Removes excluded transactions for a specific account that occurred before the cutoff date.
+   * Removes excluded transactions for a specific account that occurred before the
+   * cutoff date.
    *
    * @param accountId The account ID.
    * @param cutoff    The threshold timestamp for deletion.
@@ -58,24 +63,35 @@ public interface TransactionRepository {
   List<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol);
 
   /**
+   * Finds transaction from a specific account between two date ranges
+   * 
+   * @param accountId The account ID
+   * @param start     The Instant start date
+   * @param end       The Instant end date
+   * @return A list of {@link Transaction} entities matching the criteria.
+   */
+  List<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start, Instant end);
+
+  /**
    * Retrieves a specific transaction scoped by its parent entities.
    *
    * @param id          The transaction ID.
    * @param portfolioId The ID of the portfolio containing the transaction.
    * @param userId      The ID of the user who owns the account.
    * @param accountId   The ID of the account.
-   * @return An {@link Optional} containing the transaction if found, otherwise empty.
+   * @return An {@link Optional} containing the transaction if found, otherwise
+   *         empty.
    */
   Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id,
       PortfolioId portfolioId, UserId userId, AccountId accountId);
-
 
   /**
    * Aggregates buy fees by account and asset symbol.
    *
    * @param accountIds A list of account IDs to include in the report.
-   * @return A map where keys are {@link AccountId} and values are maps of {@link AssetSymbol} to
-   * total {@link Money}.
+   * @return A map where keys are {@link AccountId} and values are maps of
+   *         {@link AssetSymbol} to
+   *         total {@link Money}.
    */
   Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds);
 }

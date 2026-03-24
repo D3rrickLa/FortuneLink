@@ -5,5 +5,4 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 public record GetAccountSummaryQuery(PortfolioId portfolioId, UserId userId, AccountId accountId) {
-
 }

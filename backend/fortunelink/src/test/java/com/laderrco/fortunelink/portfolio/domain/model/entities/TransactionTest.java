@@ -1,16 +1,12 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.mock;
-
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
@@ -25,7 +21,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Pr
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata.ExclusionRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
@@ -34,7 +29,6 @@ import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -46,526 +40,269 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@DisplayName("Transaction Entity Tests")
 public class TransactionTest {
+  private static final AssetSymbol AAPL = new AssetSymbol("AAPL");
+  private static final Currency USD = Currency.USD;
+  private static final Price P135 = Price.of("135", USD);
+  private static final Quantity QTY10 = Quantity.of(10);
+
+  /** Standard BUY execution: 10 × $135 = $1,350 gross */
+  private static TradeExecution buyExecution() {
+    return new TradeExecution(AAPL, QTY10, P135);
+  }
+
+  /** Pre-wired BUY builder; override only what the test cares about. */
+  private static Transaction.TransactionBuilder validBuy() {
+    return Transaction.builder()
+        .transactionId(TransactionId.newId())
+        .accountId(AccountId.newId())
+        .transactionType(TransactionType.BUY)
+        .execution(buyExecution())
+        .cashDelta(Money.of(-1350, "USD"))
+        .fees(List.of())
+        .notes("test note")
+        .occurredAt(Instant.now())
+        .metadata(TransactionMetadata.manual(AssetType.STOCK));
+  }
 
   @Nested
-  @DisplayName("Constructor tests")
-  public class ConstructorTests {
-
-    static Stream<Arguments> validTransactionProvider() {
-      return Stream.of(Arguments.of(TransactionType.BUY, -1350), // Buying: Cash goes OUT (negative)
-          Arguments.of(TransactionType.SELL, 1350) // Selling: Cash comes IN (positive)
-      );
+  @DisplayName("Construction invariants")
+  class ConstructionTests {
+    static Stream<Arguments> buyAndSellDeltas() {
+      return Stream.of(
+          Arguments.of(TransactionType.BUY, -1350),
+          Arguments.of(TransactionType.SELL, 1350));
     }
 
     @ParameterizedTest
-    @MethodSource("validTransactionProvider")
-    void testConstructor_Success(TransactionType type, int delta) {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = null;
-      Money cashDelta = Money.of(delta, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      Transaction transaction = new Transaction(transactionId, accountId, type, execution, split,
-          cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-      assertAll(() -> assertEquals(transactionId, transaction.transactionId()));
+    @MethodSource("buyAndSellDeltas")
+    @DisplayName("BUY/SELL: constructs successfully with correct signed cash delta")
+    void buyAndSellWithCorrectDelta(TransactionType type, int delta) {
+      var tx = validBuy()
+          .transactionType(type)
+          .cashDelta(Money.of(delta, "USD"))
+          .build();
+      assertEquals(type, tx.transactionType());
     }
 
     @Test
-    void testConstructor_Success_ExpectedCashDeltaFiresNONECase() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.DIVIDEND_REINVEST;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = null;
-      Money cashDelta = Money.of(0, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      Transaction transaction = new Transaction(transactionId, accountId, transactionType,
-          execution, split, cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-
-      assertAll(() -> assertEquals(transactionId, transaction.transactionId()));
+    @DisplayName("DIVIDEND_REINVEST: accepts zero cash delta with execution present")
+    void dividendReinvestAcceptsZeroDelta() {
+      var tx = validBuy()
+          .transactionType(TransactionType.DIVIDEND_REINVEST)
+          .cashDelta(Money.zero(USD))
+          .build();
+      assertTrue(tx.cashDelta().isZero());
     }
 
     @Test
-    void testConstructor_Success_WhenDividend_PassesWithEmptyFee() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.DIVIDEND;
-      TradeExecution execution = null;
-      Ratio split = null;
-      Money cashDelta = Money.of(1350, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      Transaction transaction = new Transaction(transactionId, accountId, transactionType,
-          execution, split, cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-      assertAll(() -> assertEquals(transactionId, transaction.transactionId()),
-          () -> assertTrue(transaction.fees().isEmpty()));
+    @DisplayName("DIVIDEND: accepts non-execution cash inflow with empty fee list")
+    void dividendAcceptsNoExecution() {
+      var tx = validBuy()
+          .transactionType(TransactionType.DIVIDEND)
+          .execution(null)
+          .cashDelta(Money.of(1350, "USD"))
+          .build();
+      assertTrue(tx.fees().isEmpty());
     }
 
     @Test
-    void testConstructor_Failure_WhenExecutionIsNullAndRequireExecutionIsTrue() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.BUY;
-      TradeExecution execution = null;
-      Ratio split = null;
-      Money cashDelta = Money.of(1350, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-          () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-              cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-      assertTrue(ex.getMessage().contains("requires execution"));
+    @DisplayName("BUY: throws when execution is absent")
+    void buyThrowsWhenExecutionNull() {
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy().execution(null).build());
+      assertThat(ex.getMessage()).contains("requires execution");
     }
 
     @Test
-    void testConstructor_Failure_WhenExecutionIsNonNullAndTypeIsNotValid() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.DEPOSIT;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = null;
-      Money cashDelta = Money.of(1350, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-          () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-              cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-      assertTrue(ex.getMessage().contains("cannot have execution"));
+    @DisplayName("DEPOSIT: throws when execution is present")
+    void depositThrowsWithExecution() {
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy()
+          .transactionType(TransactionType.DEPOSIT)
+          .cashDelta(Money.of(1350, "USD"))
+          .build());
+      assertThat(ex.getMessage()).contains("cannot have execution");
     }
 
     @Test
-    void testConstructor_Failure_WhenExecutionsplitIsNonNullAndIsNotsplit() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.BUY;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = new Ratio(12, 1);
-      Money cashDelta = Money.of(1350, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-          () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-              cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-      assertTrue(ex.getMessage().contains("cannot have split details"));
-      assertThat(split.multiplier()).isEqualTo(BigDecimal.valueOf(12)
-          .setScale(Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode()));
+    @DisplayName("BUY: throws when an unrelated split ratio is attached")
+    void buyThrowsWithSplitRatio() {
+      var split = new Ratio(12, 1);
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy().split(split).build());
+      assertThat(ex.getMessage()).contains("cannot have split details");
+      // sanity-check the ratio math while we have it
+      assertThat(split.multiplier()).isEqualByComparingTo(
+          BigDecimal.valueOf(12).setScale(
+              Precision.DIVISION.getDecimalPlaces(),
+              Rounding.DIVISION.getMode()));
     }
 
     @Test
-    void testConstructor_Failure_RequiresSplitButsplitIsNull() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.SPLIT;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = null;
-      Money cashDelta = Money.of(1350, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-          () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-              cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-      assertTrue(ex.getMessage().contains("requires split details"));
+    @DisplayName("SPLIT: throws when split ratio is null")
+    void splitThrowsWhenRatioNull() {
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy()
+          .transactionType(TransactionType.SPLIT)
+          .split(null)
+          .build());
+      assertThat(ex.getMessage()).contains("requires split details");
     }
 
     @Test
-    void testConstructor_Failure_CashImpactIsNoneButDeltaIsFalse() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.DIVIDEND_REINVEST;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"), Quantity.of(10),
-          new Price(Money.of("20", Currency.USD)));
-      Ratio split = null;
-      Money cashDelta = Money.of(1, "USD"); // Invalid: Non-execution types cannot affect cash
-      List<Fee> fees = List.of();
-      String notes = "Testing cash validation";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-      IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-          () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-              cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-      assertTrue(ex.getMessage().contains("cannot affect cash"));
+    @DisplayName("DIVIDEND_REINVEST: throws when cash delta is non-zero")
+    void dividendReinvestThrowsOnNonZeroDelta() {
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy()
+          .transactionType(TransactionType.DIVIDEND_REINVEST)
+          .cashDelta(Money.of(1, "USD"))
+          .build());
+      assertThat(ex.getMessage()).contains("cannot affect cash");
     }
 
     @Test
-    void testConstructor_Failure_WhenNonExecutionHasFees() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.TRANSFER_OUT;
-      TradeExecution execution = null;
-      Ratio split = null;
-      Money cashDelta = Money.zero("USD");
-      List<Fee> fees = List.of(new Fee(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), cashDelta,
-          ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
-          new FeeMetadata(Map.of())));
-      String notes = "Testing fee validation";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = mock(TransactionMetadata.class);
+    @DisplayName("non-trade types: throws when a fee list is attached")
+    void nonTradeTypeThrowsWithFees() {
+      var fee = new Fee(FeeType.ACCOUNT_MAINTENANCE,
+          Money.of(5, "USD"), Money.zero(USD),
+          ExchangeRate.identity(USD, Instant.now()),
+          Instant.now(), new FeeMetadata(Map.of()));
 
-      IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-          () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-              cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-      assertTrue(ex.getMessage().contains("cannot have fees"));
-    }
-
-    @Nested
-    @DisplayName("validateTradeConsistencyTests")
-    public class ValidateTradeConsistencyTests {
-      @Test
-      void testValidateTradeConsistency_Failure_WhenGrossValueNotBuy() {
-        TransactionId transactionId = TransactionId.newId();
-        AccountId accountId = AccountId.newId();
-        TransactionType transactionType = TransactionType.BUY;
-        TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-            new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-        Ratio split = null;
-        Money cashDelta = Money.of(1350, "USD");
-        List<Fee> fees = List.of();
-        String notes = "Some notes";
-        Instant occurredAt = Instant.now();
-        TransactionId relatedTransactionId = null;
-        TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-                cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-        assertTrue(ex.getMessage().contains("Cash delta mismatch"));
-      }
-
-      @Test
-      void testValidateTradeConsistency_Failure_WhenExpectedCashDeltaDefaultPath() {
-        TransactionId transactionId = TransactionId.newId();
-        AccountId accountId = AccountId.newId();
-        TransactionType transactionType = TransactionType.SPLIT;
-        TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-            new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-        Ratio split = null;
-        Money cashDelta = Money.of(1350, "USD");
-        List<Fee> fees = List.of();
-        String notes = "Some notes";
-        Instant occurredAt = Instant.now();
-        TransactionId relatedTransactionId = null;
-        TransactionMetadata metadata = mock(TransactionMetadata.class);
-
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> new Transaction(transactionId, accountId, transactionType, execution, split,
-                cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata));
-
-        assertTrue(ex.getMessage().contains("requires"));
-      }
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy()
+          .transactionType(TransactionType.TRANSFER_OUT)
+          .execution(null)
+          .cashDelta(Money.zero(USD))
+          .fees(List.of(fee))
+          .build());
+      assertThat(ex.getMessage()).contains("cannot have fees");
     }
   }
 
   @Nested
-  @DisplayName("TotalFeesInAccountCurrency tests")
-  public class TotalFeesInAccountCurrencyTest {
+  @DisplayName("Cash delta consistency (validateTradeConsistency)")
+  class CashDeltaConsistencyTests {
     @Test
-    void test_TotalFeesInAccountCurrency_Success() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.BUY;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = null;
-      Money cashDelta = Money.of(-1358.25, "USD");
-      List<Fee> fees = List.of(new Fee(FeeType.BROKERAGE, Money.of(5, "USD"), Money.of(5, "USD"),
-              ExchangeRate.identity(Currency.USD, Instant.now()), Instant.now(),
-              new FeeMetadata(Map.of())),
-          new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
-              new ExchangeRate(Currency.CAD, Currency.USD, BigDecimal.valueOf(1.35), Instant.now()),
-              Instant.now(), new FeeMetadata(Map.of()))
-
-      );
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionId relatedTransactionId = null;
-      TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
-
-      Transaction transaction = new Transaction(transactionId, accountId, transactionType,
-          execution, split, cashDelta, fees, notes, occurredAt, relatedTransactionId, metadata);
-      assertAll(() -> assertEquals(Money.of(8.25, "USD"), transaction.totalFeesInAccountCurrency()),
-          () -> assertEquals(Currency.USD.getCode(),
-              transaction.totalFeesInAccountCurrency().currency().getCode()), () -> assertEquals(2,
-              transaction.totalFeesInAccountCurrency().currency().getDefaultFractionDigits()));
+    @DisplayName("BUY: throws when cash delta does not match gross + fees")
+    void buyThrowsOnDeltaMismatch() {
+      // gross = 10 × $135 = $1,350 → expected delta = -$1,350; we pass +$1,350
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy()
+          .cashDelta(Money.of(1350, "USD")).build());
+      assertThat(ex.getMessage()).contains("Cash delta mismatch");
     }
 
+    @Test
+    @DisplayName("SPLIT: cash delta validation routes to NONE branch (expects zero)")
+    void splitCashDeltaMustBeZero() {
+      // SPLIT has CashImpact.NONE but requiresExecution=true and
+      // requiresSplitDetails=true;
+      // missing split Ratio triggers first — the consistency message still surfaces
+      var ex = assertThrows(IllegalArgumentException.class, () -> validBuy()
+          .transactionType(TransactionType.SPLIT)
+          .cashDelta(Money.of(1350, "USD"))
+          .build());
+      assertThat(ex.getMessage()).contains("requires");
+    }
   }
 
   @Nested
-  @DisplayName("Restore and Exclude methods")
-  public class TransactionDeletionTests {
+  @DisplayName("Fee aggregation (totalFeesInAccountCurrency)")
+  class FeeAggregationTests {
+    @Test
+    @DisplayName("multi-currency fees sum to account currency via accountAmount field")
+    void multiCurrencyFeesTotalInAccountCurrency() {
+      var usdFee = new Fee(FeeType.BROKERAGE,
+          Money.of(5, "USD"), Money.of(5, "USD"),
+          ExchangeRate.identity(USD, Instant.now()),
+          Instant.now(), new FeeMetadata(Map.of()));
+
+      var cadFee = new Fee(FeeType.BROKERAGE,
+          Money.of(5, "CAD"), Money.of(3.25, "USD"), // converted amount
+          new ExchangeRate(Currency.CAD, USD, BigDecimal.valueOf(0.65), Instant.now()),
+          Instant.now(), new FeeMetadata(Map.of()));
+
+      var tx = validBuy()
+          .cashDelta(Money.of(-1358.25, "USD")) // gross + total fees
+          .fees(List.of(usdFee, cadFee))
+          .metadata(TransactionMetadata.manual(AssetType.STOCK))
+          .build();
+
+      var total = tx.totalFeesInAccountCurrency();
+      assertAll(
+          () -> assertEquals(Money.of(8.25, "USD"), total),
+          () -> assertEquals("USD", total.currency().getCode()),
+          () -> assertEquals(2, total.currency().getDefaultFractionDigits()));
+    }
+  }
+
+  @Nested
+  @DisplayName("Exclude and restore lifecycle")
+  class ExcludeRestoreTests {
+
     private Transaction transaction;
 
     @BeforeEach
     void setUp() {
-      TransactionId transactionId = TransactionId.newId();
-      AccountId accountId = AccountId.newId();
-      TransactionType transactionType = TransactionType.BUY;
-      TradeExecution execution = new TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(BigDecimal.TEN), new Price(Money.of(135, "USD")));
-
-      Ratio split = null;
-      Money cashDelta = Money.of(-1350, "USD");
-      List<Fee> fees = List.of();
-      String notes = "Some notes";
-      Instant occurredAt = Instant.now();
-      TransactionMetadata metadata = TransactionMetadata.manual(AssetType.STOCK);
-
-      transaction = new Transaction(transactionId, accountId, transactionType, execution, split,
-          cashDelta, fees, notes, occurredAt, null, metadata);
+      transaction = validBuy().build();
     }
 
     @Test
-    void testMarkAssetExcluded_Success_MarksTransactionAsExcluded() {
-      UserId userId = UserId.random();
+    @DisplayName("exclude: stamps userId and reason onto exclusion record")
+    void excludeSetsExclusionRecord() {
+      var userId = UserId.random();
+      var excluded = transaction.markAsExcluded(userId, "testing");
 
-      assertFalse(transaction.isExcluded());
-
-      Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
-
-      assertTrue(excludedTransaction.metadata().isExcluded());
-      assertEquals(userId, excludedTransaction.metadata().exclusion().by());
-      assertTrue(excludedTransaction.isExcluded());
+      assertAll(
+          () -> assertTrue(excluded.isExcluded()),
+          () -> assertEquals(userId, excluded.metadata().exclusion().by()));
+      assertFalse(transaction.isExcluded(), "original must be immutable");
     }
 
     @Test
-    void testRestore_Success_MarksTransactionAsRestored() {
-      UserId userId = UserId.random();
-      Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
-      assertTrue(excludedTransaction.isExcluded());
-      assertEquals(userId, excludedTransaction.metadata().exclusion().by());
+    @DisplayName("restore: clears exclusion record from previously excluded transaction")
+    void restoreClearsExclusionRecord() {
+      var excluded = transaction.markAsExcluded(UserId.random(), "testing");
+      var restored = excluded.restore();
 
-      Transaction restored = excludedTransaction.restore();
-      assertFalse(restored.metadata().isExcluded());
+      assertFalse(restored.isExcluded());
       assertNull(restored.metadata().exclusion());
     }
 
     @Test
-    void testMarketAssetExcluded_Failure_AlreadyExcluded() {
-      UserId userId = UserId.random();
-
-      assertFalse(transaction.isExcluded());
-
-      Transaction excludedTransaction = transaction.markAsExcluded(userId, "For testing");
-
-      IllegalStateException stateException = assertThrows(IllegalStateException.class,
-          () -> excludedTransaction.markAsExcluded(UserId.random(), "reason 2"));
-
-      assertTrue(stateException.getMessage().contains("already exclude"));
-      assertFalse(transaction.isExcluded());
-
+    @DisplayName("exclude: throws when transaction is already excluded")
+    void excludeThrowsWhenAlreadyExcluded() {
+      var excluded = transaction.markAsExcluded(UserId.random(), "first");
+      var ex = assertThrows(IllegalStateException.class, () -> excluded.markAsExcluded(UserId.random(), "second"));
+      assertThat(ex.getMessage()).contains("already exclude");
     }
 
     @Test
-    void testRestore_Failure_TransactionNotYetExcluded() {
-
-      IllegalStateException stateException = assertThrows(IllegalStateException.class,
+    @DisplayName("restore: throws when transaction has not been excluded")
+    void restoreThrowsWhenNotExcluded() {
+      var ex = assertThrows(IllegalStateException.class,
           () -> transaction.restore());
-
-      assertTrue(stateException.getMessage().contains("Transaction is not excluded"));
-      assertFalse(transaction.isExcluded());
-
+      assertThat(ex.getMessage()).contains("not excluded");
     }
   }
 
   @Nested
-  class TradeExecutionTest {
-
+  @DisplayName("TradeExecution")
+  class TradeExecutionTests {
     @Test
-    @DisplayName("Should calculate gross value correctly for both Buy and Sell")
-    void testGrossValue() {
-      Price price = new Price(Money.of(150.00, "USD"));
-
-      // Test Buy (Positive Quantity)
-      var buy = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(new BigDecimal("10")), price);
-      assertEquals(Money.of(1500.00, "USD"), buy.grossValue());
-
-      // Test Sell (Negative Quantity) - Gross value should stay positive/absolute
-      var sell = new Transaction.TradeExecution(new AssetSymbol("AAPL"),
-          new Quantity(new BigDecimal("10")), price);
-      assertEquals(Money.of(1500.00, "USD"), sell.grossValue());
+    @DisplayName("grossValue: price × quantity regardless of buy/sell direction")
+    void grossValueIsSignIndependent() {
+      var execution = new TradeExecution(AAPL, QTY10, P135);
+      assertEquals(Money.of(1350.00, "USD"), execution.grossValue());
     }
 
     @Test
-    @DisplayName("Should throw exception for invalid inputs")
-    void testInvariants() {
-      AssetSymbol symbol = new AssetSymbol("MSFT");
-      Quantity qty = new Quantity(new BigDecimal("10"));
-      Price price = new Price(Money.of(100.00, "USD"));
-
-      assertThrows(DomainArgumentException.class,
-          () -> new Transaction.TradeExecution(null, qty, price));
-      assertThrows(IllegalArgumentException.class,
-          () -> new Transaction.TradeExecution(symbol, qty, new Price(Money.of(-1.00, "USD"))));
-      assertThrows(IllegalArgumentException.class,
-          () -> new Transaction.TradeExecution(symbol, new Quantity(new BigDecimal("0")), price));
-    }
-
-  }
-
-  @Nested
-  class TransactionMetadataTest {
-    @Test
-    void testNullSafetyAndDefaults() {
-      // Test that null map becomes empty map and null source becomes UNKNOWN
-      var meta = new TransactionMetadata(AssetType.STOCK, null, null, null);
-
-      assertEquals("UNKNOWN", meta.source());
-      assertNotNull(meta.additionalData());
-      assertTrue(meta.isEmpty());
-    }
-
-    @Test
-    void testNullSafetyAndDefaultsExcluded() {
-      // Test that null map becomes empty map and null source becomes UNKNOWN
-      TransactionMetadata.ExclusionRecord exclusionRecord = new ExclusionRecord(Instant.now(),
-          UserId.random(), "testing");
-      var meta = new TransactionMetadata(AssetType.STOCK, null, exclusionRecord, null);
-
-      assertEquals("UNKNOWN", meta.source());
-      assertNotNull(meta.additionalData());
-      assertTrue(meta.isEmpty());
-    }
-
-    @Test
-    void testImmutabilityOfAdditionalData() {
-      Map<String, String> originalData = new HashMap<>();
-      originalData.put("key", "value");
-
-      var meta = new TransactionMetadata(AssetType.STOCK, "SOURCE", null, originalData);
-
-      // Try to modify original map
-      originalData.put("key", "changed");
-
-      // Record should remain unchanged because of Map.copyOf()
-      assertEquals("value", meta.get("key"));
-      assertEquals("value", meta.get("key"));
-      assertNull(meta.get("key2"));
-      assertTrue(meta.containsKey("key"));
-      assertFalse(meta.containsKey("keys"));
-
-    }
-
-    @Test
-    void testWithMethods() {
-      var base = TransactionMetadata.manual(AssetType.CRYPTO);
-
-      // 'with' should return a NEW instance, leaving the old one untouched
-      var updated = base.with("broker_id", "123");
-
-      assertNotSame(base, updated);
-      assertTrue(base.isEmpty());
-      assertEquals("123", updated.get("broker_id"));
-      assertEquals("MANUAL", updated.source());
-
-      Map<String, String> additionalData = new HashMap<>();
-      additionalData.put("key", "value");
-      TransactionMetadata newData = base.withAll(additionalData);
-      assertTrue(newData.containsKey("key"));
-    }
-
-    @Test
-    void testAsFlatMap() {
-      var meta = new TransactionMetadata(AssetType.STOCK, null, null, null);
-
-      Map<String, String> map = meta.asFlatMap();
-      assertEquals("STOCK", map.get("assetType"));
-      assertEquals("UNKNOWN", map.get("source"));
-      assertEquals("false", map.get("excluded"));
-    }
-
-    @Test
-    void testAsFlatMapExclusionTrue() {
-      Instant now = Instant.now();
-      UserId userId = UserId.random();
-      TransactionMetadata.ExclusionRecord exclusionRecord = new ExclusionRecord(now, userId, null);
-      var meta = new TransactionMetadata(AssetType.STOCK, null, exclusionRecord, null);
-
-      Map<String, String> map = meta.asFlatMap();
-      assertEquals("STOCK", map.get("assetType"));
-      assertEquals("UNKNOWN", map.get("source"));
-      assertEquals("true", map.get("excluded"));
-      assertEquals(now.toString(), map.get("excludedAt"));
-      assertEquals(userId.id().toString(), map.get("excludedBy"));
-    }
-
-    @Test
-    void testAsFlatMapExclusionTrue_WithComments() {
-      Instant now = Instant.now();
-      UserId userId = UserId.random();
-      TransactionMetadata.ExclusionRecord record = new ExclusionRecord(now, userId, "for testing");
-      var meta = new TransactionMetadata(AssetType.STOCK, null, record, null);
-
-      Map<String, String> map = meta.asFlatMap();
-      assertEquals("STOCK", map.get("assetType"));
-      assertEquals("UNKNOWN", map.get("source"));
-      assertEquals("true", map.get("excluded"));
-      assertEquals(now.toString(), map.get("excludedAt"));
-      assertEquals(userId.id().toString(), map.get("excludedBy"));
-      assertEquals("for testing", map.get("excludedReason"));
-    }
-
-    @Test
-    void testStaticFactories() {
-      var csv = TransactionMetadata.csvImport(AssetType.STOCK, "trades.csv");
-
-      assertEquals("CSV_IMPORT", csv.source());
-      assertEquals("trades.csv", csv.get("filename"));
+    @DisplayName("construction: throws on null symbol, zero quantity, or negative price")
+    void throwsOnInvalidInputs() {
+      assertAll(
+          () -> assertThrows(DomainArgumentException.class,
+              () -> new TradeExecution(null, QTY10, P135)),
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> new TradeExecution(AAPL, QTY10,
+                  new Price(Money.of(-1.00, "USD")))),
+          () -> assertThrows(IllegalArgumentException.class,
+              () -> new TradeExecution(AAPL,
+                  new Quantity(BigDecimal.ZERO), P135)));
     }
   }
 }

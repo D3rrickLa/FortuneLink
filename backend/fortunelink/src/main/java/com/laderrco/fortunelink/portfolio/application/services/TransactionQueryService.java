@@ -16,9 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,68 +24,47 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TransactionQueryService {
-
-  private final TransactionRepository transactionRepository; // for single lookups
-  private final TransactionQueryRepository transactionQueryRepository; // for paginated history
+  private final TransactionRepository transactionRepository;
+  private final TransactionQueryRepository transactionQueryRepository;
   private final TransactionViewMapper transactionViewMapper;
   private final PortfolioLoader portfolioLoader;
 
-  /**
-   * Retrieves a single transaction by ID. Ownership is enforced via the compound key lookup — no
-   * separate portfolio load needed.
-   */
   public TransactionView getTransaction(GetTransactionByIdQuery query) {
     Objects.requireNonNull(query, "GetTransactionByIdQuery cannot be null");
 
-    Transaction transaction = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+    Transaction transaction = transactionRepository
+        .findByIdAndPortfolioIdAndUserIdAndAccountId(
             query.transactionId(), query.portfolioId(), query.userId(), query.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(query.transactionId()));
 
     return transactionViewMapper.toTransactionView(transaction);
   }
 
-  /**
-   * Paginated transaction history for an account. Default sort: transactionDate DESC.
-   * <p>
-   * Filter routing — exactly one filter mode is active per request: 1. Date range (startDate +
-   * endDate both present): returns transactions in range. 2. Symbol only (symbol present, no
-   * dates): returns transactions for that symbol. 3. No filter: returns all transactions for the
-   * account, paginated.
-   * <p>
-   * Fix #5: Combining date range AND symbol was previously silently ignoring the symbol filter.
-   * This is now explicitly rejected — callers must choose one filter mode. If you need date-range +
-   * symbol filtering later, add a dedicated repository method and a fourth branch here.
-   */
   public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
     Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
-    // pagnation check here is done in query record
-    portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(), query.accountId());
     validateDateRange(query.startDate(), query.endDate());
 
     boolean hasDateRange = query.startDate() != null && query.endDate() != null;
     boolean hasSymbol = query.symbol() != null;
 
-    // Reject ambiguous combinations — callers must pick one filter mode
+    // MVP limitation
     if (hasDateRange && hasSymbol) {
       throw new IllegalArgumentException(
-          "Cannot filter by both date range and symbol simultaneously. "
-              + "Provide either a date range or a symbol, not both.");
+          "Cannot filter by both date range and symbol simultaneously. " +
+              "Provide either a date range or a symbol, not both.");
     }
 
-    Pageable pageable = PageRequest.of(query.page(), query.size(),
-        Sort.by("occurredAt").descending());
+    Pageable pageable = query.toPageable();
 
     Page<Transaction> page;
-
-    // when we add back transactionType to GetTransactionHistoryQuery
-    // we will do the check here for the 'page'
     if (hasDateRange) {
-      page = transactionQueryRepository.findByAccountIdAndDateRange(query.accountId(),
-          query.startDate(), query.endDate(), pageable);
+      page = transactionQueryRepository.findByAccountIdAndDateRange(
+          query.accountId(), query.startDate(), query.endDate(), pageable);
     } else if (hasSymbol) {
-      page = transactionQueryRepository.findByAccountIdAndSymbol(query.accountId(), query.symbol(),
-          pageable);
+      page = transactionQueryRepository.findByAccountIdAndSymbol(
+          query.accountId(), query.symbol(), pageable);
     } else {
       page = transactionQueryRepository.findByAccountId(query.accountId(), pageable);
     }
@@ -96,21 +73,23 @@ public class TransactionQueryService {
   }
 
   /**
-   * Unbounded fetch for internal calculations (performance, tax reports). Date range is MANDATORY —
-   * never call this from a controller directly.
+   * Unbounded fetch for internal calculations only.
+   * NEVER expose this through a controller endpoint.
    */
   public List<Transaction> getTransactionsForCalculation(GetTransactionForCalculationQuery query) {
+    Objects.requireNonNull(query, "GetTransactionForCalculationQuery cannot be null");
+    Objects.requireNonNull(query.portfolioId(), "PortfolioId cannot be null");  // add
+    Objects.requireNonNull(query.userId(), "UserId cannot be null");             // add
     Objects.requireNonNull(query.accountId(), "AccountId cannot be null");
     Objects.requireNonNull(query.start(), "Start date cannot be null for calculation queries");
     Objects.requireNonNull(query.end(), "End date cannot be null for calculation queries");
 
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(), query.accountId());
     validateDateRange(query.start(), query.end());
-    portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
 
-    //        return transactionRepository.findByDateRange(query.accountId(), query.start(), query.end());
-    return null;
+    return transactionRepository.findByAccountIdAndDateRange(
+        query.accountId(), query.start(), query.end());
   }
-
 
   private void validateDateRange(Instant start, Instant end) {
     if (start != null && end != null && start.isAfter(end)) {
@@ -118,5 +97,4 @@ public class TransactionQueryService {
           String.format("Start date cannot be after end date: start=%s, end=%s", start, end));
     }
   }
-
 }

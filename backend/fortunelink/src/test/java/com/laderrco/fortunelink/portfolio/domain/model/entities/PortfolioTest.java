@@ -1,9 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
@@ -24,6 +21,7 @@ import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+@DisplayName("Domain Entity Tests For Portfolio")
 class PortfolioTest {
   private static final String DEFAULT_NAME = "Main Portfolio";
   private static final String DEFAULT_DESC = "description";

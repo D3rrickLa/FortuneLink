@@ -7,6 +7,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 /*
  * Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are
@@ -26,7 +27,7 @@ public record GetTransactionHistoryQuery(
     // endDate can be null (means until now)
     // transactionType can be null (means all types)
 
-    // NOTE: originally we did not have this, as if 'null' it means all accounts.
+    // NOTE: originally we did not have this, as in 'null' it means all accounts.
     // that is kind of hard to do so for now, MVP, requires an accountId
     if (accountId == null) {
       throw new IllegalArgumentException("AccountId is required for transaction history queries");
@@ -35,9 +36,8 @@ public record GetTransactionHistoryQuery(
     validatePagination(page, size);
   }
 
-  // update this if you want sorting later
   public Pageable toPageable() {
-    return PageRequest.of(page, size);
+    return PageRequest.of(page, size, Sort.by("occurredAt").descending());
   }
 
   private void validatePagination(int page, int size) {

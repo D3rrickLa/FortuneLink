@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.repositories;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.util.List;
@@ -42,15 +43,6 @@ public interface PortfolioRepository {
   List<Portfolio> findAllActiveByUserId(UserId userId);
 
   /**
-   * Checks if a portfolio exists by its ID.
-   *
-   * @param portfolioId The identifier to check.
-   * @return True if the portfolio exists, false otherwise.
-   */
-  @Deprecated
-  boolean exists(PortfolioId portfolioId);
-
-  /**
    * Performs a lightweight ownership check without loading the full aggregate.
    *
    * @param id     The portfolio identifier.
@@ -58,6 +50,24 @@ public interface PortfolioRepository {
    * @return True if the portfolio belongs to the user, false otherwise.
    */
   boolean existsByIdAndUserId(PortfolioId id, UserId userId);
+
+  /**
+   * Ownership check if Portfolio has this account id in it or not. NOTE: this should be used after
+   * checking if the Portfolio is apart of the user id via {@Link existsByIdAndUserId()}
+   * @param id
+   * @param accountId
+   * @return True if the account belongs to the portfolio, false otherwise.
+   */
+  boolean existsByPortfolioIdAndAccountId(PortfolioId id, AccountId accountId);
+
+  /**
+   * Ownership check if account belongs to portfolio which belongs to user.
+   * @param portfolioId
+   * @param userId
+   * @param accountId
+   * @return
+   */
+  boolean existsByIdAndUserIdAndAccountId(PortfolioId portfolioId, UserId userId, AccountId accountId);
 
   /**
    * Counts ACTIVE (non-deleted) portfolios for a user.

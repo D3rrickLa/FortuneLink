@@ -17,33 +17,45 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
 
   @Override
   public Transaction save(Transaction transaction) {
-    return null;
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'save'");
   }
 
   @Override
   public int deleteExpiredTransactions(AccountId accountId, Instant cutoff) {
-    return 0;
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'deleteExpiredTransactions'");
   }
 
   @Override
   public int deleteAllExpiredTransactions(Instant cutoff) {
-    return 0;
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'deleteAllExpiredTransactions'");
   }
 
   @Override
   public List<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol) {
-    return List.of();
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'findByAccountIdAndSymbol'");
   }
 
   @Override
-  public Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id,
-      PortfolioId portfolioId, UserId userId, AccountId accountId) {
-    return Optional.empty();
+  public List<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start, Instant end) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'findByAccountIdAndDateRange'");
   }
 
   @Override
-  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(
-      List<AccountId> accountIds) {
-    return Map.of();
+  public Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id, PortfolioId portfolioId,
+      UserId userId, AccountId accountId) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'findByIdAndPortfolioIdAndUserIdAndAccountId'");
   }
+
+  @Override
+  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'sumBuyFeesByAccountAndSymbol'");
+  }
+
 }
