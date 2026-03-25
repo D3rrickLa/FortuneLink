@@ -89,13 +89,21 @@ public class PortfolioViewMapper {
     return position.lastModifiedAt();
   }
 
-  public PortfolioView toNewPortfolioView(Portfolio portfolio, Account optionalAccount) {
-    // no accounts with positions yet
-    List<AccountView> optionalAccountViews = optionalAccount == null ? List.of()
-        : List.of(toNewAccountView(optionalAccount));
-    return new PortfolioView(portfolio.getPortfolioId(), portfolio.getUserId(), portfolio.getName(),
-        portfolio.getDescription(), optionalAccountViews, Money.zero(portfolio.getDisplayCurrency()), false,
-        portfolio.getCreatedAt(), portfolio.getLastUpdatedAt());
+  public PortfolioView toNewPortfolioView(Portfolio portfolio) {
+    List<AccountView> accountViews = portfolio.getAccounts().stream()
+        .map(this::toNewAccountView)
+        .toList();
+
+    return new PortfolioView(
+        portfolio.getPortfolioId(),
+        portfolio.getUserId(),
+        portfolio.getName(),
+        portfolio.getDescription(),
+        accountViews,
+        Money.zero(portfolio.getDisplayCurrency()),
+        false,
+        portfolio.getCreatedAt(),
+        portfolio.getLastUpdatedAt());
   }
 
   public PortfolioView toPortfolioView(Portfolio portfolio, List<AccountView> accountViews,

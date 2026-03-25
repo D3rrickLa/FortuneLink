@@ -1,11 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.commands.*;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
@@ -26,12 +22,16 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class PortfolioLifecycleService {
+  private static final Logger log = LoggerFactory.getLogger(PortfolioLifecycleService.class);
   private static final int MAX_PORTFOLIOS_PER_USER = 1;
   private static final String DEFAULT_NAME = "Default Account";
 
@@ -65,61 +66,70 @@ public class PortfolioLifecycleService {
     Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
         command.description(), command.currency());
 
-    Account account = null;
     if (command.createDefaultAccount()) {
-      account = portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(),
+      portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(),
           command.currency(), command.defaultStrategy());
     }
 
     try {
       Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-      return portfolioViewMapper.toNewPortfolioView(savedPortfolio, account);
+      return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
     } catch (DataIntegrityViolationException e) {
       // Handle race condition if DB unique constraint is hit
       throw new PortfolioLimitReachedException("Portfolio already exists for this user");
     }
   }
 
+  // On the method, override the class-level annotation
+  // to a lower timeout - helps with concurrency
+  // real fix is to move the post-save view construction into a separate
+  // non-transactional method
+  @Transactional(timeout = 3)
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     validate(command, validator::validate, "updatePortfolio");
 
-    Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
-        command.userId());
+    Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(
+        command.portfolioId(), command.userId());
 
     existingPortfolio.updateDetails(command.name(), command.description());
     existingPortfolio.updateDisplayCurrency(command.currency());
 
     Portfolio saved = portfolioRepository.save(existingPortfolio);
 
+    List<AccountId> accountIds = saved.getAccounts().stream()
+        .map(Account::getAccountId).toList();
+    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(accountIds);
+
+    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache;
+    Money totalValue;
+    boolean isStale = false;
+
     try {
-      Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
-      Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
-
-      Money totalValue = portfolioValuationService.calculateTotalValue(saved,
-          saved.getDisplayCurrency(), quoteCache);
-
-      // Issue #6: Optimization Note - Still fetching, but now safe from throwing
-      List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId).toList();
-      Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(accountIds);
-
-      List<AccountView> accountViews = saved.getAccounts().stream().map(
-          account -> accountViewBuilder.build(account, quoteCache,
-              feeCache.getOrDefault(account.getAccountId(), Map.of())))
-          .toList();
-
-      return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, false);
-
+      quoteCache = marketDataService.getBatchQuotes(symbols);
+      totalValue = portfolioValuationService.calculateTotalValue(
+          saved, saved.getDisplayCurrency(), quoteCache);
     } catch (Exception e) {
-      // Fallback: If market data fails, return basic view with zeroed/stale values
-      // This prevents a network timeout from "un-renaming" the portfolio
-      return portfolioViewMapper.toPortfolioView(saved, List.of(), Money.zero(saved.getDisplayCurrency()), true);
+      log.warn("Market data failure for portfolio {}: {}", saved.getPortfolioId(), e.getMessage());
+      quoteCache = Map.of();
+      totalValue = Money.zero(saved.getDisplayCurrency());
+      isStale = true;
     }
+
+    List<AccountView> accountViews = buildAccountViews(saved.getAccounts(), quoteCache, feeCache);
+
+    return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, isStale);
   }
 
   public void restoreAccount(RestoreAccountCommand command) {
     validate(command, validator::validate, "restoreAccount");
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
-    portfolio.reopenAccount(command.accountId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(
+        command.portfolioId(), command.userId());
+    try {
+      portfolio.reopenAccount(command.accountId());
+    } catch (IllegalStateException e) {
+      throw new AccountCannotBeReopenedException("Cannot reopen account: " + e.getMessage());
+    }
     portfolioRepository.save(portfolio);
   }
 
@@ -199,5 +209,18 @@ public class PortfolioLifecycleService {
       String msg = String.format("Invalid %s command", methodName);
       throw new InvalidCommandException(msg, result.errors());
     }
+  }
+
+  private List<AccountView> buildAccountViews(
+      Collection<Account> accounts,
+      Map<AssetSymbol, MarketAssetQuote> quotes,
+      Map<AccountId, Map<AssetSymbol, Money>> fees) {
+
+    return accounts.stream()
+        .map(account -> accountViewBuilder.build(
+            account,
+            quotes,
+            fees.getOrDefault(account.getAccountId(), Map.of())))
+        .toList();
   }
 }
