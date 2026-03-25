@@ -23,10 +23,7 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 
@@ -34,7 +31,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -52,12 +51,15 @@ public class PortfolioLifecycleService {
   private final PortfolioValuationService portfolioValuationService;
 
   private final PortfolioLifecycleCommandValidator validator;
+  private final TransactionTemplate transactionTemplate;
   private final AccountViewBuilder accountViewBuilder;
   private final PortfolioLoader portfolioLoader;
 
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     validate(command, validator::validate, "createPortfolio");
 
+    // Optimistic check: reduces DB load but relies on DB constraint for absolute
+    // safety
     long currentCount = portfolioRepository.countByUserId(command.userId());
     if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
       throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
@@ -80,26 +82,45 @@ public class PortfolioLifecycleService {
     }
   }
 
-  // On the method, override the class-level annotation
-  // to a lower timeout - helps with concurrency
-  // real fix is to move the post-save view construction into a separate
-  // non-transactional method
-  @Transactional(timeout = 3)
+  /**
+   * NOT_SUPPORTED ensures the class-level @Transactional is suspended.
+   * This allows the TransactionTemplate to commit and release the connection
+   * immediately after the write (P1), before we hit potentially slow external
+   * services.
+   */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     validate(command, validator::validate, "updatePortfolio");
 
-    Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(
-        command.portfolioId(), command.userId());
+    // P1: ATOMIC WRITE
+    Portfolio saved = Objects.requireNonNull(
+        transactionTemplate.execute(status -> {
+          Portfolio existing = portfolioLoader.loadUserPortfolio(
+              command.portfolioId(), command.userId());
 
-    existingPortfolio.updateDetails(command.name(), command.description());
-    existingPortfolio.updateDisplayCurrency(command.currency());
+          existing.updateDetails(command.name(), command.description());
+          existing.updateDisplayCurrency(command.currency());
 
-    Portfolio saved = portfolioRepository.save(existingPortfolio);
+          return portfolioRepository.save(existing);
+        }),
+        "Portfolio save returned null");
 
+    // P2: Read-only data enrichment (Uses short-lived connection from pool)
     List<AccountId> accountIds = saved.getAccounts().stream()
         .map(Account::getAccountId).toList();
-    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(accountIds);
+    Map<AccountId, Map<AssetSymbol, Money>> feeCache = Map.of();
+    if (!accountIds.isEmpty()) {
+      try {
+        feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(accountIds);
+      } catch (Exception e) {
+        // Decision: Fail gracefully with empty fees rather than 500ing after a
+        // successful write
+        log.error("Failed to fetch fee data for portfolio {}. View may be incomplete.",
+            saved.getPortfolioId(), e);
+      }
+    }
 
+    // P3: External Market Data (No connection held here)
     Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
     Map<AssetSymbol, MarketAssetQuote> quoteCache;
     Money totalValue;
@@ -110,58 +131,53 @@ public class PortfolioLifecycleService {
       totalValue = portfolioValuationService.calculateTotalValue(
           saved, saved.getDisplayCurrency(), quoteCache);
     } catch (Exception e) {
-      log.warn("Market data failure for portfolio {}: {}", saved.getPortfolioId(), e.getMessage());
+      log.warn("Market data unavailable for portfolio {}. Returning stale view.",
+          saved.getPortfolioId());
       quoteCache = Map.of();
       totalValue = Money.zero(saved.getDisplayCurrency());
       isStale = true;
     }
 
+    // P4: View Mapping
     List<AccountView> accountViews = buildAccountViews(saved.getAccounts(), quoteCache, feeCache);
-
     return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, isStale);
   }
 
-  public void restoreAccount(RestoreAccountCommand command) {
-    validate(command, validator::validate, "restoreAccount");
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(
-        command.portfolioId(), command.userId());
-    try {
-      portfolio.reopenAccount(command.accountId());
-    } catch (IllegalStateException e) {
-      throw new AccountCannotBeReopenedException("Cannot reopen account: " + e.getMessage());
-    }
-    portfolioRepository.save(portfolio);
+  public void reopenAccount(ReopenAccountCommand command) {
+    validate(command, validator::validate, "reopenAccount");
+
+    transactionTemplate.executeWithoutResult(status -> {
+      Portfolio portfolio = portfolioLoader.loadUserPortfolio(
+          command.portfolioId(), command.userId());
+      try {
+        portfolio.reopenAccount(command.accountId());
+        portfolioRepository.save(portfolio);
+      } catch (IllegalStateException e) {
+        status.setRollbackOnly();
+        throw new AccountCannotBeReopenedException("Cannot reopen account: " + e.getMessage());
+      }
+    });
   }
 
   public void deletePortfolio(DeletePortfolioCommand command) {
     validate(command, validator::validate, "deletePortfolio");
 
-    // NOTE: deletePortfolio intentionally calls the raw repository lookup,
-    // not portfolioLoader.loadUserPortfolio(), because we need to allow the user to
-    // hard-delete
-    // a portfolio that is already soft-deleted (cleanup path).
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
         command.userId()).orElseThrow(
-            () -> new PortfolioNotFoundException(
-                "Portfolio not found or access denied for ID: " + command.portfolioId()));
+            () -> new PortfolioNotFoundException("Portfolio not found for ID: " + command.portfolioId()));
 
     if (command.softDelete()) {
       try {
         portfolio.markAsDeleted(command.userId());
         portfolioRepository.save(portfolio);
-      } catch (PortfolioAlreadyDeletedException e) {
-        throw new PortfolioDeletionException("Portfolio already deleted");
-      } catch (PortfolioNotEmptyException e) {
+      } catch (PortfolioAlreadyDeletedException | PortfolioNotEmptyException e) {
+        // Specific domain exceptions mapped to the generic deletion failure
         throw new PortfolioDeletionException(e.getMessage());
-      } catch (IllegalStateException e) {
-        throw new PortfolioDeletionException("Cannot delete portfolio: " + e.getMessage());
       }
+      // IllegalStateException catch removed as it was unreachable per domain model
     } else {
-      // Hard delete intentionally bypasses the markAsDeleted checks.
-      // The user wants to start over and doesn't want to close all accounts first.
       portfolioRepository.delete(command.portfolioId());
     }
-
   }
 
   public AccountView createAccount(CreateAccountCommand command) {
@@ -191,6 +207,8 @@ public class PortfolioLifecycleService {
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
 
+    // NOTE: Uses raw repository lookup to allow hard-delete/cleanup of already
+    // soft-deleted records.
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
         command.userId());
     try {

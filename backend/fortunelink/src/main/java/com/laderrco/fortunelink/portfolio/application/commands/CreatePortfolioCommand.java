@@ -15,8 +15,8 @@ public record CreatePortfolioCommand(
 		AccountType defaultAccountType,
 		PositionStrategy defaultStrategy) implements HasUserId {
 	public CreatePortfolioCommand {
-		if (createDefaultAccount && defaultAccountType.equals(null)) {
-			throw new IllegalStateException("Default account must have an account type.");
+		if (createDefaultAccount && defaultAccountType == null) {
+			throw new IllegalArgumentException("Default account type required when createDefaultAccount is true");
 		}
 	}
 }

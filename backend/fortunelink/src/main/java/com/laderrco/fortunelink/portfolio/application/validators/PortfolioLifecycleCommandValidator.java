@@ -104,7 +104,7 @@ public class PortfolioLifecycleCommandValidator {
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
 
-  public ValidationResult validate(RestoreAccountCommand command) {
+  public ValidationResult validate(ReopenAccountCommand command) {
     Objects.requireNonNull(command);
     List<String> errors = new ArrayList<>();
 
