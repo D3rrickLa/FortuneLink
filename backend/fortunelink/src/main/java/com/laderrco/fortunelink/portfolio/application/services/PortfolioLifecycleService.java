@@ -6,6 +6,7 @@ import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMappe
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
+import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.UpdatePortfolioResult;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
@@ -92,37 +93,45 @@ public class PortfolioLifecycleService {
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     validate(command, validator::validate, "updatePortfolio");
 
-    // P1: ATOMIC WRITE
-    Portfolio saved = Objects.requireNonNull(
-        transactionTemplate.execute(status -> {
-          Portfolio existing = portfolioLoader.loadUserPortfolio(
-              command.portfolioId(), command.userId());
+    // refactored like this as saved.getAccounts().stream() from a
+    // PortfolioEntity.java
+    // will throw LazyInitializationException as the session is gone.
+    var writeResult = transactionTemplate.execute(status -> {
+      Portfolio existing = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
 
-          existing.updateDetails(command.name(), command.description());
-          existing.updateDisplayCurrency(command.currency());
+      existing.updateDetails(command.name(), command.description());
+      existing.updateDisplayCurrency(command.currency());
 
-          return portfolioRepository.save(existing);
-        }),
-        "Portfolio save returned null");
+      Portfolio saved = portfolioRepository.save(existing);
 
-    // P2: Read-only data enrichment (Uses short-lived connection from pool)
-    List<AccountId> accountIds = saved.getAccounts().stream()
-        .map(Account::getAccountId).toList();
+      // This prevents LazyInitializationException in extractSymbols and
+      // buildAccountViews
+      List<AccountId> accountIds = saved.getAccounts().stream()
+          .peek(acc -> acc.getPositions().size()) // Trigger lazy load for positions
+          .map(Account::getAccountId)
+          .toList();
+
+      // could make this a map to reduce overhead?
+      return new UpdatePortfolioResult(saved, accountIds);
+    });
+
+    Portfolio saved = writeResult.portfolio();
+    List<AccountId> accountIds = writeResult.accountIds();
+
+    // P2: Fee Enrichment
     Map<AccountId, Map<AssetSymbol, Money>> feeCache = Map.of();
     if (!accountIds.isEmpty()) {
       try {
         feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(accountIds);
       } catch (Exception e) {
-        // Decision: Fail gracefully with empty fees rather than 500ing after a
-        // successful write
-        log.error("Failed to fetch fee data for portfolio {}. View may be incomplete.",
-            saved.getPortfolioId(), e);
+        log.error("Failed to fetch fee data for portfolio {}.", saved.getPortfolioId(), e);
       }
     }
 
     // P3: External Market Data (No connection held here)
     Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
     Map<AssetSymbol, MarketAssetQuote> quoteCache;
+
     Money totalValue;
     boolean isStale = false;
 
@@ -130,9 +139,12 @@ public class PortfolioLifecycleService {
       quoteCache = marketDataService.getBatchQuotes(symbols);
       totalValue = portfolioValuationService.calculateTotalValue(
           saved, saved.getDisplayCurrency(), quoteCache);
+
     } catch (Exception e) {
+
       log.warn("Market data unavailable for portfolio {}. Returning stale view.",
           saved.getPortfolioId());
+
       quoteCache = Map.of();
       totalValue = Money.zero(saved.getDisplayCurrency());
       isStale = true;
@@ -141,6 +153,7 @@ public class PortfolioLifecycleService {
     // P4: View Mapping
     List<AccountView> accountViews = buildAccountViews(saved.getAccounts(), quoteCache, feeCache);
     return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, isStale);
+
   }
 
   public void reopenAccount(ReopenAccountCommand command) {
@@ -162,6 +175,8 @@ public class PortfolioLifecycleService {
   public void deletePortfolio(DeletePortfolioCommand command) {
     validate(command, validator::validate, "deletePortfolio");
 
+    // NOTE: To allow hard-deleting a soft-deleted portfolio, we bypass the loader
+    // and use the repository directly.
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
         command.userId()).orElseThrow(
             () -> new PortfolioNotFoundException("Portfolio not found for ID: " + command.portfolioId()));
@@ -171,10 +186,8 @@ public class PortfolioLifecycleService {
         portfolio.markAsDeleted(command.userId());
         portfolioRepository.save(portfolio);
       } catch (PortfolioAlreadyDeletedException | PortfolioNotEmptyException e) {
-        // Specific domain exceptions mapped to the generic deletion failure
         throw new PortfolioDeletionException(e.getMessage());
       }
-      // IllegalStateException catch removed as it was unreachable per domain model
     } else {
       portfolioRepository.delete(command.portfolioId());
     }
@@ -183,8 +196,7 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
-        command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
 
@@ -207,10 +219,8 @@ public class PortfolioLifecycleService {
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
 
-    // NOTE: Uses raw repository lookup to allow hard-delete/cleanup of already
-    // soft-deleted records.
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
-        command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+
     try {
       portfolio.closeAccount(command.accountId());
 
