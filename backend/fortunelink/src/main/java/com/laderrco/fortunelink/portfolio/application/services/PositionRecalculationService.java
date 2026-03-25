@@ -1,10 +1,12 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
-import java.util.concurrent.TimeUnit;
+
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,28 +19,36 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PositionRecalculationService {
   private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
-  
+
   private final PositionRecalculationExecutor executor;
-  private final Cache<String, Object> symbolLocks = Caffeine.newBuilder()
-      .expireAfterAccess(5, TimeUnit.MINUTES).maximumSize(10_000).build();
+  private final ConcurrentHashMap<String, ReentrantLock> symbolLocks = new ConcurrentHashMap<>();
 
   /**
-   * Async listener that triggers after a transaction commit. Ensures excluded/restored flags are
+   * Async listener that triggers after a transaction commit. Ensures
+   * excluded/restored flags are
    * persisted before we replay them.
    */
   @Async("recalculationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
-    String lockKey = event.accountId() + ":" + event.symbol().symbol();
-    Object lock = symbolLocks.get(lockKey, k -> new Object());
+    Objects.requireNonNull(event, "PositionRecalculationRequestedEvent cannot be null");
 
-    synchronized (lock) {
-      try {
-        executor.scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(),
-            event.symbol());
-      } catch (Exception e) {
-        log.error("Recalculation failed...", e);
+    String lockKey = event.accountId() + ":" + event.symbol().symbol();
+    ReentrantLock lock = symbolLocks.computeIfAbsent(lockKey, k -> new ReentrantLock());
+
+    lock.lock();
+    try {
+      executor.scheduleRecalculation(
+          event.portfolioId(), event.userId(), event.accountId(), event.symbol());
+    } catch (Exception e) {
+      log.error("Recalculation failed for portfolioId={} accountId={} symbol={}",
+          event.portfolioId(), event.accountId(), event.symbol().symbol(), e);
+    } finally {
+      if (!lock.hasQueuedThreads()) {
+        symbolLocks.remove(lockKey, lock);
       }
+      lock.unlock();
     }
+
   }
 }

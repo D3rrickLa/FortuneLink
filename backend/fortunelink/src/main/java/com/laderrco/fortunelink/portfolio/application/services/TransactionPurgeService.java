@@ -18,10 +18,8 @@ public class TransactionPurgeService {
   private final Logger log = LoggerFactory.getLogger(TransactionPurgeService.class);
 
   /**
-   * Bug 14 fix: retention window is now configurable, not hardcoded.
-   * <p>
    * Default is 365 days. Financial data should never disappear on a 30-day timer with no user
-   * warning — a user who excludes a transaction by mistake and misses a 30-day window loses it
+   * warning -> a user who excludes a transaction by mistake and misses a 30-day window loses it
    * permanently, corrupting their ACB history.
    * <p>
    * Override in application.yml: fortunelink.purge.excluded-transaction-retention-days: 365
