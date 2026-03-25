@@ -39,6 +39,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
+
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
@@ -195,7 +197,7 @@ public class PortfolioQueryServiceTest {
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl), googl,
           buildQuote(googl));
 
-      Money totalValue = Money.of("50000.00", CAD);
+      Money totalValue = new Money(new BigDecimal("50000.0000000000"), CAD);
       AccountView view1 = buildAccountView(account1.getAccountId());
       AccountView view2 = buildAccountView(account2.getAccountId());
       PortfolioView expected = buildPortfolioView(portfolioId, userId);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,11 +18,13 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,17 +52,94 @@ class PortfolioValuationServiceTest {
   private Account createMockAccount(Currency currency, Money cash,
       Map<AssetSymbol, Position> positions) {
     Account acc = mock(Account.class);
-    when(acc.isActive()).thenReturn(true);
-    when(acc.getAccountCurrency()).thenReturn(currency);
-    when(acc.getCashBalance()).thenReturn(cash);
-    when(acc.getPositionEntries()).thenReturn(positions.entrySet());
+    lenient().when(acc.isActive()).thenReturn(true);
+    lenient().when(acc.getAccountCurrency()).thenReturn(currency);
+    lenient().when(acc.getCashBalance()).thenReturn(cash);
+    lenient().when(acc.getPositionEntries()).thenReturn(positions.entrySet());
     return acc;
+  }
+
+  @Test
+  @DisplayName("resolvePositionValue: falls back to cost basis when quote is null")
+  void resolvePositionValueFallsBackOnNullQuote() {
+    Position pos = mock(AcbPosition.class);
+    Money costBasis = Money.of(1200.00, "USD");
+    when(pos.totalCostBasis()).thenReturn(costBasis);
+
+    // Passing null as the quote in the map
+    Money result = invokeResolvePositionValue(pos, null, USD);
+
+    assertThat(result).isEqualTo(costBasis);
+  }
+
+  @Test
+  @DisplayName("resolvePositionValue: falls back to cost basis when currentPrice is null")
+  void resolvePositionValueFallsBackOnNullPrice() {
+    Position pos = mock(AcbPosition.class);
+    Money costBasis = Money.of(1200.00, "USD");
+    when(pos.totalCostBasis()).thenReturn(costBasis);
+
+    // Quote exists, but internal price is null
+    MarketAssetQuote emptyQuote = new MarketAssetQuote(AAPL, null, null, null, null, null, null,
+        null, null, null, "Unit testing source", Instant.now());
+
+    Money result = invokeResolvePositionValue(pos, emptyQuote, USD);
+
+    assertThat(result).isEqualTo(costBasis);
+  }
+
+  @Test
+  @DisplayName("resolvePositionValue: falls back to cost basis when price per unit is zero")
+  void resolvePositionValueFallsBackOnZeroPrice() {
+    Position pos = mock(AcbPosition.class);
+    Money costBasis = Money.of(1200.00, "USD");
+    when(pos.totalCostBasis()).thenReturn(costBasis);
+
+    // Quote has a price of 0.00
+    Price zeroPrice = Price.of(BigDecimal.ZERO, USD);
+    MarketAssetQuote quote = new MarketAssetQuote(AAPL, zeroPrice, null, null, null, null, null,
+        null, null, null, "Unit testing source", Instant.now());
+
+    Money result = invokeResolvePositionValue(pos, quote, USD);
+
+    assertThat(result).isEqualTo(costBasis);
+  }
+
+  @Test
+  @DisplayName("resolvePositionValue: success when valid quote and currency match")
+  void resolvePositionValueReturnsMarketValueOnSuccess() {
+    Position pos = mock(AcbPosition.class);
+    Price validPrice = Price.of("150.00", USD);
+    MarketAssetQuote quote = new MarketAssetQuote(AAPL, validPrice, null, null, null, null, null,
+        null, null, null, "Unit testing source", Instant.now());
+    Money marketValue = Money.of(1500.00, "USD");
+
+    when(pos.currentValue(validPrice)).thenReturn(marketValue);
+
+    Money result = invokeResolvePositionValue(pos, quote, USD);
+
+    assertThat(result).isEqualTo(marketValue);
+  }
+
+  /**
+   * Private helper to trigger the 'resolvePositionValue' logic via the public
+   * calculatePositionsValue entry point.
+   */
+  private Money invokeResolvePositionValue(Position pos, MarketAssetQuote quote,
+      Currency currency) {
+    Account account = mock(Account.class);
+    when(account.getAccountCurrency()).thenReturn(currency);
+    when(account.getPositionEntries()).thenReturn(Set.of(Map.entry(AAPL, pos)));
+
+    Map<AssetSymbol, MarketAssetQuote> quotes = new HashMap<>();
+    quotes.put(AAPL, quote);
+
+    return valuationService.calculatePositionsValue(account, quotes);
   }
 
   @Nested
   @DisplayName("Total Portfolio Calculation")
   class TotalPortfolioTests {
-
     @Test
     @DisplayName("calculateTotalValue: success with empty portfolio returning zero")
     void calculateTotalValueReturnsZeroForEmptyPortfolio() {
@@ -82,7 +162,6 @@ class PortfolioValuationServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getAccounts()).thenReturn(List.of(usdAcc1, usdAcc2, cadAcc));
 
-      // Mock exchange service
       when(exchangeRateService.convert(Money.of(200, "USD"), USD)).thenReturn(Money.of(200, "USD"));
       when(exchangeRateService.convert(Money.of(100, "CAD"), USD)).thenReturn(Money.of(75, "USD"));
 
@@ -97,7 +176,6 @@ class PortfolioValuationServiceTest {
   @Nested
   @DisplayName("Account and Position Valuations")
   class AccountValuationTests {
-
     @Test
     @DisplayName("calculateAccountValue: returns zero for inactive accounts")
     void calculateAccountValueReturnsZeroForInactive() {
@@ -113,8 +191,8 @@ class PortfolioValuationServiceTest {
     @Test
     @DisplayName("calculatePositionsValue: filters out cash assets")
     void calculatePositionsValueExcludesCashType() {
-      Position stockPos = mock(Position.class);
-      Position cashPos = mock(Position.class);
+      Position stockPos = mock(AcbPosition.class);
+      Position cashPos = mock(AcbPosition.class);
       when(stockPos.type()).thenReturn(AssetType.STOCK);
       when(cashPos.type()).thenReturn(AssetType.CASH);
 
@@ -134,16 +212,13 @@ class PortfolioValuationServiceTest {
     }
   }
 
-  // --- Helper Methods ---
-
   @Nested
   @DisplayName("Quote Resolution and Fallbacks")
   class QuoteResolutionTests {
-
     @Test
     @DisplayName("resolvePositionValue: falls back to cost basis when quote missing")
     void resolvePositionValueUsesCostBasisOnMissingQuote() {
-      Position pos = mock(Position.class);
+      Position pos = mock(AcbPosition.class);
       Money costBasis = Money.of(50, "USD");
       when(pos.totalCostBasis()).thenReturn(costBasis);
 
@@ -157,7 +232,7 @@ class PortfolioValuationServiceTest {
     @Test
     @DisplayName("resolvePositionValue: throws exception on currency mismatch")
     void resolvePositionValueThrowsOnMismatch() {
-      Position pos = mock(Position.class);
+      Position pos = mock(AcbPosition.class);
       when(pos.symbol()).thenReturn(AAPL);
 
       // Quote is CAD, Account is USD
