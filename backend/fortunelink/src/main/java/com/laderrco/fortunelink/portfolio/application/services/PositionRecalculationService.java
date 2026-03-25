@@ -1,12 +1,11 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import com.google.common.util.concurrent.Striped;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
 
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-
+import java.util.concurrent.locks.Lock;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +20,7 @@ public class PositionRecalculationService {
   private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
 
   private final PositionRecalculationExecutor executor;
-  final ConcurrentHashMap<String, ReentrantLock> symbolLocks = new ConcurrentHashMap<>();
+  private final Striped<Lock> symbolLocks = Striped.lock(1024);
 
   /**
    * Async listener that triggers after a transaction commit. Ensures
@@ -34,7 +33,7 @@ public class PositionRecalculationService {
     Objects.requireNonNull(event, "PositionRecalculationRequestedEvent cannot be null");
 
     String lockKey = event.accountId() + ":" + event.symbol().symbol();
-    ReentrantLock lock = symbolLocks.computeIfAbsent(lockKey, k -> new ReentrantLock());
+    Lock lock = symbolLocks.get(lockKey); // Gets the lock for this "stripe"
 
     lock.lock();
     try {
@@ -44,33 +43,7 @@ public class PositionRecalculationService {
       log.error("Recalculation failed for portfolioId={} accountId={} symbol={}",
           event.portfolioId(), event.accountId(), event.symbol().symbol(), e);
     } finally {
-      /*
-       * There is a race condition here between the if and remove call. Basically the
-       * scenario is this:
-       * Thread A - finishes work and checks the !lock.hasQueuedThreads(), returns
-       * true - no one waiting
-       * 
-       * Thread B - proceeds to symbolLocks.remove(lockKey, lock), sees the lock is
-       * still in the map, calls lock.lock(); now a queued thread
-       * 
-       * Thread A is removed, lock is removed from the map
-       * 
-       * Thread C arrives -> calls the computeIfAbsent and sees that Thread A removed
-       * old lock, thread C creates a new Lock Object
-       * 
-       * Now both Thread B and C are running reclculation for the same symbol
-       * simultaneously as they are
-       * sync on different lock objects
-       * 
-       * The fix is that we allow it for now, unless we need to save a lot of memory - i.e. remove
-       * them both for atomic removal via a Striped lock form Guava - no point. Another option is
-       * to remove the finally statement
-       */
-      if (!lock.hasQueuedThreads()) {
-        symbolLocks.remove(lockKey, lock);
-      }
-      lock.unlock();
+      lock.unlock(); // No map.remove() needed!
     }
-
   }
 }
