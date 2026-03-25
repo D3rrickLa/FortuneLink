@@ -6,11 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
@@ -200,7 +196,6 @@ public class PortfolioQueryServiceTest {
       Money totalValue = new Money(new BigDecimal("50000.0000000000"), CAD);
       AccountView view1 = buildAccountView(account1.getAccountId());
       AccountView view2 = buildAccountView(account2.getAccountId());
-      PortfolioView expected = buildPortfolioView(portfolioId, userId);
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl, googl))).thenReturn(quotes);
@@ -209,12 +204,10 @@ public class PortfolioQueryServiceTest {
       when(accountViewBuilder.build(eq(account2), eq(quotes), any())).thenReturn(view2);
       when(portfolioValuationService.calculateTotalValue(any(), eq(CAD), eq(quotes))).thenReturn(
           totalValue);
-      when(portfolioViewMapper.toPortfolioView(eq(portfolio), eq(List.of(view1, view2)),
-          eq(totalValue), eq(false))).thenReturn(expected);
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
-      // The critical invariant — one batch call, never N calls for N accounts
+      // The critical invariant, one batch call, never N calls for N accounts
       verify(marketDataService, times(1)).getBatchQuotes(any());
     }
 

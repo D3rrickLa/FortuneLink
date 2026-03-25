@@ -12,5 +12,5 @@ public record CreateAccountCommand(
     String accountName,
     AccountType accountType,
     PositionStrategy strategy,
-    Currency baseCurrency) implements PortfolioLifecycleCommand {
+    Currency baseCurrency) implements HasPortfolioId {
 }

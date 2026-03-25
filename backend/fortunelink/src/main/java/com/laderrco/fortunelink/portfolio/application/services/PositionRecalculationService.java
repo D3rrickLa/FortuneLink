@@ -18,7 +18,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PositionRecalculationService {
   private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
-
   private final PositionRecalculationExecutor executor;
   private final Striped<Lock> symbolLocks = Striped.lock(1024);
 

@@ -9,6 +9,6 @@ public record UpdatePortfolioCommand(
     UserId userId,
     String name,
     String description,
-    Currency currency) implements PortfolioLifecycleCommand {
+    Currency currency) implements HasPortfolioId {
 
 }

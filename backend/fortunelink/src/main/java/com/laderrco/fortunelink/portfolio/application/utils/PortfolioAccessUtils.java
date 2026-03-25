@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+
 public class PortfolioAccessUtils {
   public static Set<AssetSymbol> extractSymbols(Portfolio portfolio) {
     return portfolio.getAccounts().stream()

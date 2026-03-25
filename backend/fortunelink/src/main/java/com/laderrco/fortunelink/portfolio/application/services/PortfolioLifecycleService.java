@@ -1,11 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.*;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
@@ -23,7 +18,6 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDele
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -37,6 +31,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,8 +57,6 @@ public class PortfolioLifecycleService {
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     validate(command, validator::validate, "createPortfolio");
 
-    // Bug 13: countByUserId MUST exclude soft-deleted portfolios.
-    // See PortfolioRepository.countByUserId() contract comment.
     long currentCount = portfolioRepository.countByUserId(command.userId());
     if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
       throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
@@ -71,19 +65,22 @@ public class PortfolioLifecycleService {
     Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
         command.description(), command.currency());
 
+    Account account = null;
     if (command.createDefaultAccount()) {
-
-      portfolio.createAccount(DEFAULT_NAME, AccountType.NON_REGISTERED_INVESTMENT,
+      account = portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(),
           command.currency(), command.defaultStrategy());
     }
 
-    Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-    return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
-
+    try {
+      Portfolio savedPortfolio = portfolioRepository.save(portfolio);
+      return portfolioViewMapper.toNewPortfolioView(savedPortfolio, account);
+    } catch (DataIntegrityViolationException e) {
+      // Handle race condition if DB unique constraint is hit
+      throw new PortfolioLimitReachedException("Portfolio already exists for this user");
+    }
   }
 
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
-
     validate(command, validator::validate, "updatePortfolio");
 
     Portfolio existingPortfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
@@ -94,23 +91,36 @@ public class PortfolioLifecycleService {
 
     Portfolio saved = portfolioRepository.save(existingPortfolio);
 
-    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
+    try {
+      Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(saved);
+      Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
 
-    Money totalValue = portfolioValuationService.calculateTotalValue(saved,
-        saved.getDisplayCurrency(), quoteCache);
+      Money totalValue = portfolioValuationService.calculateTotalValue(saved,
+          saved.getDisplayCurrency(), quoteCache);
 
-    // NEW: batch fee query
-    List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId).toList();
+      // Issue #6: Optimization Note - Still fetching, but now safe from throwing
+      List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId).toList();
+      Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(accountIds);
 
-    Map<AccountId, Map<AssetSymbol, Money>> feeCache = transactionRepository.sumBuyFeesByAccountAndSymbol(
-        accountIds);
+      List<AccountView> accountViews = saved.getAccounts().stream().map(
+          account -> accountViewBuilder.build(account, quoteCache,
+              feeCache.getOrDefault(account.getAccountId(), Map.of())))
+          .toList();
 
-    List<AccountView> accountViews = saved.getAccounts().stream().map(
-        account -> accountViewBuilder.build(account, quoteCache,
-            feeCache.getOrDefault(account.getAccountId(), Map.of()))).toList();
+      return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, false);
 
-    return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, false);
+    } catch (Exception e) {
+      // Fallback: If market data fails, return basic view with zeroed/stale values
+      // This prevents a network timeout from "un-renaming" the portfolio
+      return portfolioViewMapper.toPortfolioView(saved, List.of(), Money.zero(saved.getDisplayCurrency()), true);
+    }
+  }
+
+  public void restoreAccount(RestoreAccountCommand command) {
+    validate(command, validator::validate, "restoreAccount");
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    portfolio.reopenAccount(command.accountId());
+    portfolioRepository.save(portfolio);
   }
 
   public void deletePortfolio(DeletePortfolioCommand command) {
@@ -121,8 +131,9 @@ public class PortfolioLifecycleService {
     // hard-delete
     // a portfolio that is already soft-deleted (cleanup path).
     Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
-        command.userId()).orElseThrow(() -> new PortfolioNotFoundException(
-        "Portfolio not found or access denied for ID: " + command.portfolioId()));
+        command.userId()).orElseThrow(
+            () -> new PortfolioNotFoundException(
+                "Portfolio not found or access denied for ID: " + command.portfolioId()));
 
     if (command.softDelete()) {
       try {
@@ -146,9 +157,6 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
-    // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot add
-    // account to deleted
-    // portfolio.
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
         command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
@@ -162,9 +170,6 @@ public class PortfolioLifecycleService {
   public void updateAccount(UpdateAccountCommand command) {
     validate(command, validator::validate, "updateAccount");
 
-    // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot rename
-    // account on deleted
-    // portfolio.
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
         command.userId());
     portfolio.renameAccount(command.accountId(), command.accountName());
@@ -175,17 +180,13 @@ public class PortfolioLifecycleService {
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
-    // Bug 15 fix: blocked by portfolioLoader.loadUserPortfolio() - cannot close
-    // account on deleted
-    // portfolio.
+
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
         command.userId());
     try {
       portfolio.closeAccount(command.accountId());
 
     } catch (IllegalStateException e) {
-      // Bug 4 fix: IllegalStateException from account.close() becomes a typed
-      // application exception, not a raw 500.
       throw new AccountCannotBeClosedException("Cannot close account: " + e.getMessage());
     }
     portfolioRepository.save(portfolio);
