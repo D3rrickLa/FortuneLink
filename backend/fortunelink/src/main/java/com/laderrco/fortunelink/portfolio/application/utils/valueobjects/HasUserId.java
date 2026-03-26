@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.application.commands;
+package com.laderrco.fortunelink.portfolio.application.utils.valueobjects;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 

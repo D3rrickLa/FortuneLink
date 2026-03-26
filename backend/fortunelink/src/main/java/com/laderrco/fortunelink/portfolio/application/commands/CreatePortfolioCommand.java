@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands;
 
+import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.HasUserId;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;

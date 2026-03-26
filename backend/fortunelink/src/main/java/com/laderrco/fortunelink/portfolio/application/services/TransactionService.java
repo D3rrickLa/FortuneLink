@@ -20,6 +20,7 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFou
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
+import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.PortfolioContext;
 import com.laderrco.fortunelink.portfolio.application.validators.TransactionCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
@@ -295,8 +296,5 @@ public class TransactionService {
       String msg = String.format("Invalid %s command", methodName);
       throw new InvalidTransactionException(msg, result.errors());
     }
-  }
-
-  private record PortfolioContext(Portfolio portfolio, Account account) {
   }
 }

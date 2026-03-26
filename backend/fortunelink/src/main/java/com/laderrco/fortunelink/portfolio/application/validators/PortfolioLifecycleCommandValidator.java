@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.portfolio.application.validators;
 
 import com.laderrco.fortunelink.portfolio.application.commands.*;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.HasPortfolioId;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
