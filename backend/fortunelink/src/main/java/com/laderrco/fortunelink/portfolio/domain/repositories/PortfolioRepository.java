@@ -24,7 +24,8 @@ public interface PortfolioRepository {
   void delete(PortfolioId id);
 
   /**
-   * Retrieves the full aggregate, ensuring both ID and ownership match. Use this when performing
+   * Retrieves the full aggregate, ensuring both ID and ownership match. Use this
+   * when performing
    * mutations to maintain consistency.
    *
    * @param id     The portfolio identifier.
@@ -34,13 +35,30 @@ public interface PortfolioRepository {
   Optional<Portfolio> findByIdAndUserId(PortfolioId id, UserId userId);
 
   /**
-   * Retrieves only active (non-deleted) portfolios for a user. Deleted portfolios are invisible to
+   * Retrieves only active (non-deleted) portfolios for a user. Deleted portfolios
+   * are invisible to
    * the application layer and is filtered here.
    *
    * @param userId The user identifier.
    * @return A list of active portfolios.
    */
   List<Portfolio> findAllActiveByUserId(UserId userId);
+
+  /**
+   * Retrieves portfolios that have accounts by id and user id
+   * @param id
+   * @param userId
+   * @return
+   */
+  Optional<Portfolio> findWithAccountsByIdAndUserId(PortfolioId id, UserId userId);
+
+  /**
+   * Boolean if a portfolio already exists for a user that is active
+   * 
+   * @param userId
+   * @return
+   */
+  boolean existsActiveByUserId(UserId userId);
 
   /**
    * Performs a lightweight ownership check without loading the full aggregate.
@@ -52,8 +70,11 @@ public interface PortfolioRepository {
   boolean existsByIdAndUserId(PortfolioId id, UserId userId);
 
   /**
-   * Ownership check if Portfolio has this account id in it or not. NOTE: this should be used after
-   * checking if the Portfolio is apart of the user id via {@Link existsByIdAndUserId()}
+   * Ownership check if Portfolio has this account id in it or not. NOTE: this
+   * should be used after
+   * checking if the Portfolio is apart of the user id via
+   * {@Link existsByIdAndUserId()}
+   * 
    * @param id
    * @param accountId
    * @return True if the account belongs to the portfolio, false otherwise.
@@ -62,6 +83,7 @@ public interface PortfolioRepository {
 
   /**
    * Ownership check if account belongs to portfolio which belongs to user.
+   * 
    * @param portfolioId
    * @param userId
    * @param accountId
@@ -74,11 +96,15 @@ public interface PortfolioRepository {
    *
    * @param userId The user identifier.
    * @return The count of active portfolios.
-   * @implNote Implementations MUST exclude soft-deleted portfolios (WHERE deleted = false). If
-   * soft-deleted portfolios are counted, a user who deletes their portfolio to start anew, will be
-   * permanently locked out of creating a new one.
-   * @implNote JPA implementation example: @Query("SELECT COUNT(p) FROM Portfolio p WHERE p.userId =
-   * :userId AND p.deleted = false") Long countActiveByUserId(@Param("userId") UserId userId);
+   * @implNote Implementations MUST exclude soft-deleted portfolios (WHERE deleted
+   *           = false). If
+   *           soft-deleted portfolios are counted, a user who deletes their
+   *           portfolio to start anew, will be
+   *           permanently locked out of creating a new one.
+   * @implNote JPA implementation example: @Query("SELECT COUNT(p) FROM Portfolio
+   *           p WHERE p.userId =
+   *           :userId AND p.deleted = false") Long
+   *           countActiveByUserId(@Param("userId") UserId userId);
    */
   Long countByUserId(UserId userId);
 }

@@ -7,7 +7,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
  * PortfolioId -> what to del UserId -> who is requesting it (for auth)
  */
 public record DeletePortfolioCommand(
-		PortfolioId portfolioId, UserId userId, boolean confirmed, boolean softDelete) implements
-		HasPortfolioId {
+		PortfolioId portfolioId, UserId userId, boolean confirmed, boolean softDelete, boolean recursive) 
+		implements HasPortfolioId {
 
 }

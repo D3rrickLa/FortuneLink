@@ -13,6 +13,7 @@ CREATE TABLE portfolios (
     portfolio_name VARCHAR(255) NOT NULL,
     portfolio_currency_preference VARCHAR(3) NOT NULL,
     portfolio_description VARCHAR(255),
+    status BOOLEAN DEFAULT TRUE,
     deleted BOOLEAN DEFAULT FALSE,
     deleted_at TIMESTAMPTZ,
     deleted_by UUID,
@@ -138,6 +139,9 @@ CREATE TABLE transaction_fees (
 );
 
 -- Performance Indexes
+
+CREATE UNIQUE INDEX idx_unique_active_portfolio on portfolios (user_id) WHERE status = 'ACTIVE';
+
 CREATE INDEX idx_portfolios_user_id ON portfolios(user_id);
 CREATE INDEX idx_accounts_portfolio_id ON accounts(portfolio_id);
 CREATE INDEX idx_assets_account_id ON assets(account_id);

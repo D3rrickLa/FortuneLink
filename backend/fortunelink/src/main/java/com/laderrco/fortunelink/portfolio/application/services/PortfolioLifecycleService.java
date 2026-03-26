@@ -41,7 +41,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RequiredArgsConstructor
 public class PortfolioLifecycleService {
   private static final Logger log = LoggerFactory.getLogger(PortfolioLifecycleService.class);
-  private static final int MAX_PORTFOLIOS_PER_USER = 1;
   private static final String DEFAULT_NAME = "Default Account";
 
   private final PortfolioRepository portfolioRepository;
@@ -56,31 +55,30 @@ public class PortfolioLifecycleService {
   private final AccountViewBuilder accountViewBuilder;
   private final PortfolioLoader portfolioLoader;
 
+  /*
+   * in the schema.sql file, we have/will have something like
+   * CREATE UNIQUE INDEX idx_unique_active_portfolio on portfolios (user_id) WHERE
+   * status = 'ACTIVE';
+   * 
+   */
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     validate(command, validator::validate, "createPortfolio");
 
-    // Optimistic check: reduces DB load but relies on DB constraint for absolute
-    // safety
-    long currentCount = portfolioRepository.countByUserId(command.userId());
-    if (currentCount >= MAX_PORTFOLIOS_PER_USER) {
-      throw new PortfolioLimitReachedException("Already reached max allowed portfolio limit");
-    }
-
-    Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
-        command.description(), command.currency());
+    Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description(),
+        command.currency());
 
     if (command.createDefaultAccount()) {
-      portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(),
-          command.currency(), command.defaultStrategy());
+      portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(), command.currency(),
+          command.defaultStrategy());
     }
 
+    Portfolio savedPortfolio;
     try {
-      Portfolio savedPortfolio = portfolioRepository.save(portfolio);
-      return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
+      savedPortfolio = portfolioRepository.save(portfolio);
     } catch (DataIntegrityViolationException e) {
-      // Handle race condition if DB unique constraint is hit
       throw new PortfolioLimitReachedException("Portfolio already exists for this user");
     }
+    return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
   }
 
   /**
@@ -93,27 +91,23 @@ public class PortfolioLifecycleService {
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     validate(command, validator::validate, "updatePortfolio");
 
-    // refactored like this as saved.getAccounts().stream() from a
-    // PortfolioEntity.java
-    // will throw LazyInitializationException as the session is gone.
     var writeResult = transactionTemplate.execute(status -> {
-      Portfolio existing = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+      Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(), command.userId());
 
       existing.updateDetails(command.name(), command.description());
       existing.updateDisplayCurrency(command.currency());
 
       Portfolio saved = portfolioRepository.save(existing);
 
-      // This prevents LazyInitializationException in extractSymbols and
-      // buildAccountViews
-      List<AccountId> accountIds = saved.getAccounts().stream()
-          .peek(acc -> acc.getPositions().size()) // Trigger lazy load for positions
-          .map(Account::getAccountId)
+      List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId)
           .toList();
 
-      // could make this a map to reduce overhead?
       return new UpdatePortfolioResult(saved, accountIds);
     });
+
+    if (writeResult == null) {
+      throw new IllegalStateException("Transaction failed for: " + command.portfolioId());
+    }
 
     Portfolio saved = writeResult.portfolio();
     List<AccountId> accountIds = writeResult.accountIds();
@@ -133,13 +127,13 @@ public class PortfolioLifecycleService {
     Map<AssetSymbol, MarketAssetQuote> quoteCache;
 
     Money totalValue;
-    boolean isStale = false;
+
+    boolean hasStaleAccounts = saved.getAccounts().stream().anyMatch(Account::isStale);
+    boolean isStale = hasStaleAccounts;
 
     try {
       quoteCache = marketDataService.getBatchQuotes(symbols);
-      totalValue = portfolioValuationService.calculateTotalValue(
-          saved, saved.getDisplayCurrency(), quoteCache);
-
+      totalValue = portfolioValuationService.calculateTotalValue(saved, saved.getDisplayCurrency(), quoteCache);
     } catch (Exception e) {
 
       log.warn("Market data unavailable for portfolio {}. Returning stale view.",
@@ -153,42 +147,44 @@ public class PortfolioLifecycleService {
     // P4: View Mapping
     List<AccountView> accountViews = buildAccountViews(saved.getAccounts(), quoteCache, feeCache);
     return portfolioViewMapper.toPortfolioView(saved, accountViews, totalValue, isStale);
-
-  }
-
-  public void reopenAccount(ReopenAccountCommand command) {
-    validate(command, validator::validate, "reopenAccount");
-
-    transactionTemplate.executeWithoutResult(status -> {
-      Portfolio portfolio = portfolioLoader.loadUserPortfolio(
-          command.portfolioId(), command.userId());
-      try {
-        portfolio.reopenAccount(command.accountId());
-        portfolioRepository.save(portfolio);
-      } catch (IllegalStateException e) {
-        status.setRollbackOnly();
-        throw new AccountCannotBeReopenedException("Cannot reopen account: " + e.getMessage());
-      }
-    });
   }
 
   public void deletePortfolio(DeletePortfolioCommand command) {
     validate(command, validator::validate, "deletePortfolio");
 
-    // NOTE: To allow hard-deleting a soft-deleted portfolio, we bypass the loader
-    // and use the repository directly.
-    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
-        command.userId()).orElseThrow(
-            () -> new PortfolioNotFoundException("Portfolio not found for ID: " + command.portfolioId()));
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
+        .orElseThrow(() -> new PortfolioNotFoundException("Portfolio not found"));
 
     if (command.softDelete()) {
       try {
+        // Handle Use Case #6: Bulk close if requested
+        if (command.recursive()) {
+          boolean hasNonEmptyAccounts = portfolio.getAccounts().stream()
+              .filter(Account::isActive)
+              .anyMatch(acc -> acc.getPositionCount() > 0 || acc.getCashBalance().isPositive());
+
+          if (hasNonEmptyAccounts) {
+            throw new PortfolioDeletionException(
+                "Recursive delete requires all accounts to have zero positions and zero cash balance.");
+          }
+
+          portfolio.getAccounts().stream()
+              .filter(Account::isActive)
+              .forEach(acc -> portfolio.closeAccount(acc.getAccountId()));
+        }
+
         portfolio.markAsDeleted(command.userId());
         portfolioRepository.save(portfolio);
-      } catch (PortfolioAlreadyDeletedException | PortfolioNotEmptyException e) {
+      } catch (PortfolioDeletionException e) {
+        throw e;
+      } catch (PortfolioNotEmptyException e) {
+        throw new PortfolioDeletionException(
+            "Cannot delete portfolio: close accounts first or use recursive delete.");
+      } catch (PortfolioAlreadyDeletedException | IllegalStateException e) {
         throw new PortfolioDeletionException(e.getMessage());
       }
     } else {
+      // Hard delete path
       portfolioRepository.delete(command.portfolioId());
     }
   }
@@ -215,19 +211,27 @@ public class PortfolioLifecycleService {
     portfolioRepository.save(portfolio);
   }
 
+  public void reopenAccount(ReopenAccountCommand command) {
+    validate(command, validator::validate, "reopenAccount");
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    try {
+      portfolio.reopenAccount(command.accountId());
+      portfolioRepository.save(portfolio);
+    } catch (IllegalStateException e) {
+      throw new AccountCannotBeReopenedException("Cannot reopen account: " + e.getMessage());
+    }
+  }
+
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
-
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
-
     try {
       portfolio.closeAccount(command.accountId());
-
+      portfolioRepository.save(portfolio);
     } catch (IllegalStateException e) {
       throw new AccountCannotBeClosedException("Cannot close account: " + e.getMessage());
     }
-    portfolioRepository.save(portfolio);
   }
 
   private <T> void validate(T command, Function<T, ValidationResult> validationLogic,
@@ -239,16 +243,11 @@ public class PortfolioLifecycleService {
     }
   }
 
-  private List<AccountView> buildAccountViews(
-      Collection<Account> accounts,
-      Map<AssetSymbol, MarketAssetQuote> quotes,
-      Map<AccountId, Map<AssetSymbol, Money>> fees) {
-
+  private List<AccountView> buildAccountViews(Collection<Account> accounts,
+      Map<AssetSymbol, MarketAssetQuote> quotes, Map<AccountId, Map<AssetSymbol, Money>> fees) {
     return accounts.stream()
-        .map(account -> accountViewBuilder.build(
-            account,
-            quotes,
-            fees.getOrDefault(account.getAccountId(), Map.of())))
+        .map(account -> accountViewBuilder.build(account, quotes, fees
+            .getOrDefault(account.getAccountId(), Map.of())))
         .toList();
   }
 }

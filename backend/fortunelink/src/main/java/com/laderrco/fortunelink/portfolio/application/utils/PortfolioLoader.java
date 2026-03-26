@@ -29,6 +29,12 @@ public class PortfolioLoader {
     return portfolio;
   }
 
+  public Portfolio loadUserPortfolioWithGraph(PortfolioId portfolioId, UserId userId) {
+    return portfolioRepository.findWithAccountsByIdAndUserId(portfolioId, userId)
+        .filter(p -> !p.isDeleted())
+        .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+  }
+
   /**
    * Loads all active portfolios for a user. Mirrors loadUserPortfolio() semantics: deleted
    * portfolios are excluded at the query level. Returns empty list (not an exception) when the user
