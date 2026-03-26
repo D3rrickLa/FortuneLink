@@ -64,7 +64,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .build();
 
     applyPositionEffect(account, tx);
-    account.withdraw(cashRequired, REASON_BUY + symbol);
+    account.withdraw(cashRequired, REASON_BUY + symbol, false);
     return tx;
   }
 
@@ -131,7 +131,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
-    account.withdraw(amount, REASON_FEE + amount.amount().toString());
+    account.withdraw(amount, REASON_FEE + amount.amount().toString(), false);
     return tx;
   }
 
@@ -234,7 +234,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt(date)
         .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
-    account.withdraw(amount, REASON_WITHDRAWAL);
+    account.withdraw(amount, REASON_WITHDRAWAL, false);
     return tx;
   }
 
@@ -292,7 +292,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         () -> new IllegalStateException(tx.transactionType() + " requires position for " + symbol));
 
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
-    account.updatePosition(symbol, result.newPosition());
+    account.applyPositionResult(symbol, result.newPosition());
 
     if (result instanceof ApplyResult.Sale<?> sale) {
       account.recordRealizedGain(symbol, sale.realizedGainLoss(), sale.costBasisSold(),

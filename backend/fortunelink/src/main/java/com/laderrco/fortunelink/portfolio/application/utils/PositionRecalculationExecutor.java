@@ -31,7 +31,8 @@ public class PositionRecalculationExecutor {
   private final PortfolioLoader portfolioLoader;
 
   /**
-   * Surgical recalculation for a single symbol.` Corrects ACB/Position but leaves Cash Balance
+   * Surgical recalculation for a single symbol.` Corrects ACB/Position but leaves
+   * Cash Balance
    * as-is.
    * <p>
    * This filters to affectsHolding() before calling replayTransaction()
@@ -53,17 +54,9 @@ public class PositionRecalculationExecutor {
         .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
-      account.clearPosition(symbol);
-      account.clearRealizedGains(symbol);
-      for (Transaction tx : active) {
-        try {
-          transactionRecordingService.replayTransaction(account, tx);
-        } catch (Exception e) {
-          log.error("replayTransaction failed for txId={} symbol={} accountId={}",
-              tx.transactionId(), symbol, accountId);
-          throw e;
-        }
-      }
+      account.beginReplay();
+      active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
+      account.endReplay();
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
@@ -83,7 +76,7 @@ public class PositionRecalculationExecutor {
     Account account = portfolio.getAccount(accountId);
 
     List<Transaction> allActive = transactionRepository.findByPortfolioIdAndUserIdAndAccountId(
-            portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
+        portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
         .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
