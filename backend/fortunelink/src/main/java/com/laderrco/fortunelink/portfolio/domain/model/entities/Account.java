@@ -6,16 +6,17 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedExcepti
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.*;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.HealthStatus;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
-import lombok.Getter;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.Getter;
 
 // presents and maintains current state
 @Getter
@@ -40,7 +42,7 @@ public class Account {
   private Instant closeDate;
   private Instant lastUpdatedOn;
 
-  private PositionBook positionBook;
+  private final PositionBook positionBook;
   private List<RealizedGainRecord> realizedGains;
 
   protected Account() {
@@ -55,8 +57,8 @@ public class Account {
     this.state = null;
   }
 
-  public Account(AccountId accountId, String name, AccountType accountType, Currency accountCurrency,
-      PositionStrategy positionStrategy) {
+  public Account(AccountId accountId, String name, AccountType accountType,
+      Currency accountCurrency, PositionStrategy positionStrategy) {
     notNull(accountId, "accountId");
     notNull(name, "name");
     notNull(accountType, "accountType");
@@ -86,8 +88,9 @@ public class Account {
     requireActive();
     validateCurrency(amount);
     validateReason(reason);
-    if (!amount.isPositive())
+    if (!amount.isPositive()) {
       throw new IllegalArgumentException("Deposit amount must be positive");
+    }
     cashBalance = cashBalance.add(amount);
     touch();
   }
@@ -96,8 +99,9 @@ public class Account {
     requireActive();
     validateCurrency(amount);
     validateReason(reason);
-    if (amount.isNegative())
+    if (amount.isNegative()) {
       throw new IllegalArgumentException("Withdrawal amount must be positive");
+    }
     if (!allowNegative && cashBalance.isLessThan(amount)) {
       throw new InsufficientFundsException(
           "Insufficient funds: required " + amount + ", available " + cashBalance);
@@ -110,8 +114,9 @@ public class Account {
     requireActive();
     validateCurrency(feeAmount);
     validateReason(description);
-    if (!feeAmount.isPositive())
+    if (!feeAmount.isPositive()) {
       throw new IllegalArgumentException("Fee must be positive");
+    }
     if (cashBalance.isLessThan(feeAmount)) {
       throw new InsufficientFundsException(
           "Insufficient cash to cover fee: required " + feeAmount + ", available " + cashBalance);
@@ -129,14 +134,18 @@ public class Account {
     return positionBook.ensurePosition(symbol, assetType);
   }
 
-  /** Replaces updatePosition, name reflects domain intent, not implementation */
+  /**
+   * Replaces updatePosition, name reflects domain intent, not implementation
+   */
   public void applyPositionResult(AssetSymbol symbol, Position updated) {
     requireActive();
     positionBook.applyResult(symbol, updated);
     touch();
   }
 
-  /** Package-private: only used during surgical recalculation */
+  /**
+   * Package-private: only used during surgical recalculation
+   */
   void clearPositionForRecalculation(AssetSymbol symbol) {
     positionBook.clearSymbol(symbol);
     touch();
@@ -158,7 +167,8 @@ public class Account {
     return positionBook.entries();
   }
 
-  public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold, Instant at) {
+  public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold,
+      Instant at) {
     requireNotClosed(); // gains can be recorded during replay
     notNull(symbol, "symbol");
     notNull(gainLoss, "gainLoss");
@@ -168,7 +178,9 @@ public class Account {
     touch();
   }
 
-  /** Package-private: surgical recalculation only */
+  /**
+   * Package-private: surgical recalculation only
+   */
   void clearRealizedGainsForSymbol(AssetSymbol symbol) {
     notNull(symbol, "symbol");
     realizedGains.removeIf(g -> g.symbol().equals(symbol));
@@ -185,14 +197,13 @@ public class Account {
   }
 
   public Money getTotalRealizedGainLoss() {
-    return realizedGains.stream()
-        .map(RealizedGainRecord::realizedGainLoss)
+    return realizedGains.stream().map(RealizedGainRecord::realizedGainLoss)
         .reduce(Money.zero(accountCurrency), Money::add);
   }
 
   /**
-   * Atomically enters replay mode and resets ALL mutable state.
-   * Callers no longer own the reset sequence — this contract is internal.
+   * Atomically enters replay mode and resets ALL mutable state. Callers no longer own the reset
+   * sequence — this contract is internal.
    */
   public void beginReplay() {
     if (this.state == AccountLifecycleState.CLOSED) {
@@ -265,8 +276,9 @@ public class Account {
   }
 
   private void requireActive() {
-    if (!isActive())
+    if (!isActive()) {
       throw new AccountClosedException("Account " + accountId + " is closed");
+    }
   }
 
   private void requireNotClosed() {

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
@@ -43,7 +44,8 @@ class AccountTest {
   void setUp() {
     accountId = AccountId.newId();
     strategy = PositionStrategy.ACB;
-    account = new Account(accountId, "Main Investment", AccountType.TAXABLE_INVESTMENT, USD, strategy);
+    account = new Account(accountId, "Main Investment", AccountType.TAXABLE_INVESTMENT, USD,
+        strategy);
   }
 
   @Nested
@@ -52,11 +54,9 @@ class AccountTest {
     @Test
     @DisplayName("constructor: initializes account with correct default state")
     void initializesCorrectly() {
-      assertAll(
-          () -> assertEquals(accountId, account.getAccountId()),
+      assertAll(() -> assertEquals(accountId, account.getAccountId()),
           () -> assertEquals("Main Investment", account.getName()),
-          () -> assertTrue(account.getCashBalance().isZero()),
-          () -> assertTrue(account.isActive()),
+          () -> assertTrue(account.getCashBalance().isZero()), () -> assertTrue(account.isActive()),
           () -> assertEquals(0, account.getPositionCount()),
           () -> assertEquals(AccountLifecycleState.ACTIVE, account.getState()),
           () -> assertTrue(account.getAccountType().requiresCapitalGainsTracking()));
@@ -66,8 +66,7 @@ class AccountTest {
     @DisplayName("protectedConstructor: maintains partially invalid state for JPA hydration")
     void protectedConstructorState() {
       Account jpaAccount = new Account();
-      assertAll(
-          () -> assertNull(jpaAccount.getAccountId()),
+      assertAll(() -> assertNull(jpaAccount.getAccountId()),
           // PositionBook is initialized in protected constructor but contains nulls/empty
           // map
           () -> assertNotNull(jpaAccount.getPositionBook(), "PositionBook must be initialized"),
@@ -76,7 +75,7 @@ class AccountTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "   ", "\t" })
+    @ValueSource(strings = {"", "   ", "\t"})
     @DisplayName("constructor: throws exception for null or blank names")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
@@ -98,8 +97,7 @@ class AccountTest {
     @Test
     @DisplayName("deposit: rejects negative amounts or wrong currency")
     void depositRejectsInvalidInputs() {
-      assertAll(
-          () -> assertThrows(IllegalArgumentException.class,
+      assertAll(() -> assertThrows(IllegalArgumentException.class,
               () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
           () -> assertThrows(CurrencyMismatchException.class,
               () -> account.deposit(Money.of(100, "EUR"), "Wrong Currency")));
@@ -117,8 +115,7 @@ class AccountTest {
     @DisplayName("withdraw: rejects invalid inputs and enforces balance limits")
     void withdrawRejectsInvalidCases() {
       account.deposit(Money.of(100, "USD"), "Funding");
-      assertAll(
-          () -> assertThrows(InsufficientFundsException.class,
+      assertAll(() -> assertThrows(InsufficientFundsException.class,
               () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
           () -> assertThrows(IllegalArgumentException.class,
               () -> account.withdraw(Money.of(-50, "USD"), "Negative", false)));
@@ -165,8 +162,7 @@ class AccountTest {
 
       account.clearRealizedGainsForSymbol(AAPL);
 
-      assertAll(
-          () -> assertEquals(1, account.getRealizedGains().size()),
+      assertAll(() -> assertEquals(1, account.getRealizedGains().size()),
           () -> assertEquals(TSLA, account.getRealizedGains().get(0).symbol()));
     }
   }
@@ -184,8 +180,7 @@ class AccountTest {
 
       account.applyPositionResult(apple, pos);
 
-      assertAll(
-          () -> assertTrue(account.hasPosition(apple)),
+      assertAll(() -> assertTrue(account.hasPosition(apple)),
           () -> assertEquals(1, account.getPositionCount()),
           () -> assertEquals(pos, account.getPosition(apple).orElseThrow()));
     }
@@ -197,7 +192,8 @@ class AccountTest {
       Position acbPos = account.ensurePosition(apple, AssetType.STOCK);
       assertInstanceOf(AcbPosition.class, acbPos);
 
-      Account fifoAccount = new Account(AccountId.newId(), "FIFO", AccountType.CHEQUING, USD, PositionStrategy.FIFO);
+      Account fifoAccount = new Account(AccountId.newId(), "FIFO", AccountType.CHEQUING, USD,
+          PositionStrategy.FIFO);
       assertInstanceOf(FifoPosition.class, fifoAccount.ensurePosition(apple, AssetType.STOCK));
     }
 
@@ -221,12 +217,12 @@ class AccountTest {
     @DisplayName("beginReplay: resets all mutable state and enters REPLAYING state")
     void beginReplayResetsState() {
       account.deposit(Money.of(100, USD), "Initial");
-      account.recordRealizedGain(new AssetSymbol("AAPL"), Money.of(50, USD), Money.of(100, USD), Instant.now());
+      account.recordRealizedGain(new AssetSymbol("AAPL"), Money.of(50, USD), Money.of(100, USD),
+          Instant.now());
 
       account.beginReplay();
 
-      assertAll(
-          () -> assertTrue(account.isInReplayMode()),
+      assertAll(() -> assertTrue(account.isInReplayMode()),
           () -> assertTrue(account.getCashBalance().isZero()),
           () -> assertTrue(account.getRealizedGains().isEmpty()),
           () -> assertEquals(0, account.getPositionCount()));
@@ -243,8 +239,7 @@ class AccountTest {
     @DisplayName("close: successfully transitions to CLOSED and sets closeDate")
     void closeSucceedsWhenEmpty() {
       account.close();
-      assertAll(
-          () -> assertFalse(account.isActive()),
+      assertAll(() -> assertFalse(account.isActive()),
           () -> assertEquals(AccountLifecycleState.CLOSED, account.getState()),
           () -> assertNotNull(account.getCloseDate()));
     }
@@ -254,9 +249,7 @@ class AccountTest {
     void reopenTransitionsCorrectly() {
       account.close();
       account.reopen();
-      assertAll(
-          () -> assertTrue(account.isActive()),
-          () -> assertNull(account.getCloseDate()),
+      assertAll(() -> assertTrue(account.isActive()), () -> assertNull(account.getCloseDate()),
           () -> assertEquals(AccountLifecycleState.ACTIVE, account.getState()));
     }
 

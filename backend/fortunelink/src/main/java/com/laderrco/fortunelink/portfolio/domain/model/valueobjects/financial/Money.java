@@ -8,8 +8,6 @@ import com.laderrco.fortunelink.shared.enums.Rounding;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import org.jspecify.annotations.Nullable;
-
 public record Money(BigDecimal amount, Currency currency) implements Comparable<Money> {
   private static final int MONEY_PRECISION = Precision.getMoneyPrecision();
   private static final RoundingMode M_ROUNDING_MODE = Rounding.MONEY.getMode();
@@ -42,6 +40,10 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
 
   private static BigDecimal normalize(BigDecimal value) {
     return value.setScale(MONEY_PRECISION, M_ROUNDING_MODE);
+  }
+
+  public static Money of(int i, Currency usd) {
+    return new Money(BigDecimal.valueOf(i), usd);
   }
 
   public Money add(Money other) {
@@ -126,9 +128,5 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
     if (!this.currency.equals(otherCurrency)) {
       throw new CurrencyMismatchException(this.currency, otherCurrency, operation);
     }
-  }
-
-  public static Money of(int i, Currency usd) {
-    return new Money(BigDecimal.valueOf(i), usd);
   }
 }

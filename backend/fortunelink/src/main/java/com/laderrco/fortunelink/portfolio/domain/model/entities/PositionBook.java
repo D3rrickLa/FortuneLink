@@ -2,11 +2,6 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -14,10 +9,14 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 /**
- * Encapculsates the position ledger for an Account
- * is private pacakte, only Accoutn should construct or mutate this directly.
+ * Encapculsates the position ledger for an Account is private pacakte, only Accoutn should
+ * construct or mutate this directly.
  */
 final class PositionBook {
   private final Map<AssetSymbol, Position> positions;
@@ -42,10 +41,9 @@ final class PositionBook {
   }
 
   /**
-   * Apply the result from a TransactionApplier. If the pos closes out, it's auto
-   * removed.
-   * Callers never manipulate the map directly
-   * 
+   * Apply the result from a TransactionApplier. If the pos closes out, it's auto removed. Callers
+   * never manipulate the map directly
+   *
    * @param symbol
    * @param updated
    */
@@ -91,8 +89,7 @@ final class PositionBook {
   }
 
   Collection<Map.Entry<AssetSymbol, Position>> entries() {
-    return positions.entrySet().stream()
-        .map(e -> Map.entry(e.getKey(), e.getValue().copy()))
+    return positions.entrySet().stream().map(e -> Map.entry(e.getKey(), e.getValue().copy()))
         .toList();
   }
 
