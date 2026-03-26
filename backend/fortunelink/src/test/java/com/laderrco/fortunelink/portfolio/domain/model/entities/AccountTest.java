@@ -81,7 +81,7 @@ class AccountTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "  ", "\t"})
+    @ValueSource(strings = { "", "  ", "\t" })
     @DisplayName("constructor: throws exception for null or blank names")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
@@ -106,7 +106,7 @@ class AccountTest {
     @DisplayName("deposit: rejects negative or wrong currency")
     void depositRejectsInvalidInputs() {
       assertAll(() -> assertThrows(IllegalArgumentException.class,
-              () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
+          () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
 
           () -> assertThrows(CurrencyMismatchException.class,
               () -> account.deposit(Money.of(100, "EUR"), "Wrong Currency")));
@@ -128,7 +128,7 @@ class AccountTest {
       account.deposit(Money.of(100, "USD"), "Funding");
 
       assertAll(() -> assertThrows(InsufficientFundsException.class,
-              () -> account.withdraw(Money.of(200, "USD"), "Too much")),
+          () -> account.withdraw(Money.of(200, "USD"), "Too much")),
 
           () -> assertThrows(IllegalArgumentException.class,
               () -> account.withdraw(Money.of(-50, "USD"), "Negative")),
@@ -162,7 +162,7 @@ class AccountTest {
     @DisplayName("applyFee: rejects invalid inputs and insufficient funds")
     void applyFeeRejectsInvalidCases() {
       assertAll(() -> assertThrows(InsufficientFundsException.class,
-              () -> account.applyFee(Money.of(10, "USD"), "Fee")),
+          () -> account.applyFee(Money.of(10, "USD"), "Fee")),
 
           () -> assertThrows(IllegalArgumentException.class,
               () -> account.applyFee(Money.of(-10, "USD"), "Negative Fee")),
@@ -237,8 +237,8 @@ class AccountTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = AccountType.class, names = {"NON_REGISTERED_INVESTMENT", "MARGIN",
-        "TAXABLE_INVESTMENT"})
+    @EnumSource(value = AccountType.class, names = { "NON_REGISTERED_INVESTMENT", "MARGIN",
+        "TAXABLE_INVESTMENT" })
     @DisplayName("accountType: identifies types that require capital gains tracking")
     void accountTypeRequiresCapitalGainsTracking(AccountType type) {
       Account testAccount = new Account(accountId, "test", type, USD, strategy);
@@ -297,7 +297,7 @@ class AccountTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
+    @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
     @DisplayName("ensurePosition: throws exception for unsupported strategies")
     void unsupportedStrategies(PositionStrategy unsupported) {
       Account badAccount = new Account(accountId, "Bad", AccountType.CHEQUING, USD, unsupported);
@@ -355,7 +355,7 @@ class AccountTest {
       }
 
       @ParameterizedTest
-      @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
+      @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
       void testCreateEmptyPosition_Fails_OnUnsupportedStrategy(PositionStrategy strategy) {
         // GIVEN: An account with a strategy not covered by the switch (e.g.,
         // SPECIFIC_ID)
@@ -399,7 +399,8 @@ class AccountTest {
       account.deposit(Money.of(10, "USD"), "Leftover");
       assertThrows(IllegalStateException.class, () -> account.close());
 
-      account.resetCashToZero();
+      account.beginReplay();
+      account.endReplay();
 
       AssetSymbol symbol = new AssetSymbol("AAPL");
       Position pos = mock(AcbPosition.class);
@@ -413,7 +414,8 @@ class AccountTest {
     @Test
     @DisplayName("close: successfully closes account when empty")
     void closeSucceedsWhenAccountIsEmpty() {
-      account.resetCashToZero();
+      account.beginReplay();
+      account.endReplay();
 
       account.close();
 
@@ -425,6 +427,8 @@ class AccountTest {
     @DisplayName("reopen: handles valid and invalid scenarios")
     void reopenBehavior() {
       assertThrows(IllegalStateException.class, () -> account.reopen());
+      account.beginReplay();
+      account.endReplay();
 
       account.close();
       account.reopen();
@@ -452,7 +456,7 @@ class AccountTest {
     @NullSource
     @EmptySource
     @ParameterizedTest
-    @ValueSource(strings = {"  ", "\t", "\n"})
+    @ValueSource(strings = { "  ", "\t", "\n" })
     @DisplayName("updateName: rejects null, empty, or blank names")
     void updateNameFailsWithInvalidName(String invalidName) {
       assertThrows(IllegalArgumentException.class, () -> account.updateName(invalidName));
@@ -461,15 +465,18 @@ class AccountTest {
     @Test
     @DisplayName("positions: clears all positions")
     void clearAllPositionsSucceeds() {
-      account.clearAllPositions();
+      // REPLACEMENT: beginReplay() clears positions internally
+      account.beginReplay();
       assertEquals(0, account.getPositionCount());
+      account.endReplay();
     }
 
     @Test
     @DisplayName("cash: resets balance to zero")
     void resetCashToZeroSucceeds() {
-      account.resetCashToZero();
+      account.beginReplay();
       assertEquals(Money.zero("USD"), account.getCashBalance());
+      account.endReplay();
     }
 
     @Test
@@ -538,7 +545,7 @@ class AccountTest {
         Money wrongCurrency = Money.of(50, "EUR");
 
         assertAll(() -> assertTrue(account.hasSufficientCash(exactAmount),
-                "Should be true for exact balance"),
+            "Should be true for exact balance"),
             () -> assertFalse(account.hasSufficientCash(tooMuch),
                 "Should be false for insufficient balance"),
             () -> assertThrows(CurrencyMismatchException.class,
