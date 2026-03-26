@@ -1,7 +1,18 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.application.commands.*;
-import com.laderrco.fortunelink.portfolio.application.exceptions.*;
+import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeReopenedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
@@ -23,11 +34,12 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -61,13 +73,13 @@ public class PortfolioLifecycleService {
    * in the schema.sql file, we have/will have something like
    * CREATE UNIQUE INDEX idx_unique_active_portfolio on portfolios (user_id) WHERE
    * status = 'ACTIVE';
-   * 
+   *
    */
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     validate(command, validator::validate, "createPortfolio");
 
-    Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(), command.description(),
-        command.currency());
+    Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
+        command.description(), command.currency());
 
     if (command.createDefaultAccount()) {
       portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(), command.currency(),
@@ -84,25 +96,24 @@ public class PortfolioLifecycleService {
   }
 
   /**
-   * NOT_SUPPORTED ensures the class-level @Transactional is suspended.
-   * This allows the TransactionTemplate to commit and release the connection
-   * immediately after the write (P1), before we hit potentially slow external
-   * services.
+   * NOT_SUPPORTED ensures the class-level @Transactional is suspended. This allows the
+   * TransactionTemplate to commit and release the connection immediately after the write (P1),
+   * before we hit potentially slow external services.
    */
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     validate(command, validator::validate, "updatePortfolio");
 
     var writeResult = transactionTemplate.execute(status -> {
-      Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(), command.userId());
+      Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(),
+          command.userId());
 
       existing.updateDetails(command.name(), command.description());
       existing.updateDisplayCurrency(command.currency());
 
       Portfolio saved = portfolioRepository.save(existing);
 
-      List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId)
-          .toList();
+      List<AccountId> accountIds = saved.getAccounts().stream().map(Account::getAccountId).toList();
 
       return new UpdatePortfolioResult(saved, accountIds);
     });
@@ -135,7 +146,8 @@ public class PortfolioLifecycleService {
 
     try {
       quoteCache = marketDataService.getBatchQuotes(symbols);
-      totalValue = portfolioValuationService.calculateTotalValue(saved, saved.getDisplayCurrency(), quoteCache);
+      totalValue = portfolioValuationService.calculateTotalValue(saved, saved.getDisplayCurrency(),
+          quoteCache);
     } catch (Exception e) {
 
       log.warn("Market data unavailable for portfolio {}. Returning stale view.",
@@ -154,15 +166,14 @@ public class PortfolioLifecycleService {
   public void deletePortfolio(DeletePortfolioCommand command) {
     validate(command, validator::validate, "deletePortfolio");
 
-    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(), command.userId())
-        .orElseThrow(() -> new PortfolioNotFoundException("Portfolio not found"));
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
+        command.userId()).orElseThrow(() -> new PortfolioNotFoundException("Portfolio not found"));
 
     if (command.softDelete()) {
       try {
         // Handle Use Case #6: Bulk close if requested
         if (command.recursive()) {
-          boolean hasNonEmptyAccounts = portfolio.getAccounts().stream()
-              .filter(Account::isActive)
+          boolean hasNonEmptyAccounts = portfolio.getAccounts().stream().filter(Account::isActive)
               .anyMatch(acc -> acc.getPositionCount() > 0 || acc.getCashBalance().isPositive());
 
           if (hasNonEmptyAccounts) {
@@ -170,8 +181,7 @@ public class PortfolioLifecycleService {
                 "Recursive delete requires all accounts to have zero positions and zero cash balance.");
           }
 
-          portfolio.getAccounts().stream()
-              .filter(Account::isActive)
+          portfolio.getAccounts().stream().filter(Account::isActive)
               .forEach(acc -> portfolio.closeAccount(acc.getAccountId()));
         }
 
@@ -194,7 +204,8 @@ public class PortfolioLifecycleService {
   public AccountView createAccount(CreateAccountCommand command) {
     validate(command, validator::validate, "createAccount");
 
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     Account account = portfolio.createAccount(command.accountName(), command.accountType(),
         command.baseCurrency(), command.strategy());
 
@@ -215,7 +226,8 @@ public class PortfolioLifecycleService {
 
   public void reopenAccount(ReopenAccountCommand command) {
     validate(command, validator::validate, "reopenAccount");
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     try {
       portfolio.reopenAccount(command.accountId());
       portfolioRepository.save(portfolio);
@@ -227,7 +239,8 @@ public class PortfolioLifecycleService {
   // always soft deletes
   public void deleteAccount(DeleteAccountCommand command) {
     validate(command, validator::validate, "deleteAccount");
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     try {
       portfolio.closeAccount(command.accountId());
       portfolioRepository.save(portfolio);
@@ -247,9 +260,7 @@ public class PortfolioLifecycleService {
 
   private List<AccountView> buildAccountViews(Collection<Account> accounts,
       Map<AssetSymbol, MarketAssetQuote> quotes, Map<AccountId, Map<AssetSymbol, Money>> fees) {
-    return accounts.stream()
-        .map(account -> accountViewBuilder.build(account, quotes, fees
-            .getOrDefault(account.getAccountId(), Map.of())))
-        .toList();
+    return accounts.stream().map(account -> accountViewBuilder.build(account, quotes,
+        fees.getOrDefault(account.getAccountId(), Map.of()))).toList();
   }
 }

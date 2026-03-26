@@ -50,7 +50,7 @@ public class PositionRecalculationExecutor {
         // If you ever need full-account reconstruction, use the dedicated
         // replayFullAccount() path that resets cash to zero first.
         .filter(tx -> tx.transactionType().affectsHoldings())
-        .sorted(Comparator.comparing(tx -> tx.occurredAt())).toList();
+        .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
       account.clearPosition(symbol);
@@ -74,18 +74,15 @@ public class PositionRecalculationExecutor {
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(portfolioId, userId);
     Account account = portfolio.getAccount(accountId);
 
-    //    List<Transaction> allActive = transactionRepository
-    //        .findByAccountId(accountId)
-    //        .stream()
-    //        .filter(tx -> !tx.isExcluded())
-    //        .sorted(Comparator.comparing(tx -> tx.occurredAt().timestamp()))
-    //        .toList();
+    List<Transaction> allActive = transactionRepository.findByPortfolioIdAndUserIdAndAccountId(
+            portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
+        .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
       account.clearAllPositions();
       account.resetCashToZero();
       account.clearAllRealizedGains();
-      //      allActive.forEach(tx -> transactionRecordingService.replayFullTransaction(account, tx));
+      transactionRecordingService.replayFullTransaction(account, allActive);
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Full account replay failed for account {}", accountId, e);

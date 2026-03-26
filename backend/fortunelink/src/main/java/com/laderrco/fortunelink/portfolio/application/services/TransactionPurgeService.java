@@ -21,8 +21,8 @@ public class TransactionPurgeService {
   // @Value here istead of var because it can be 0 in unit testing + that
   // annotation only applies
   // when Spring resolves the property
-  public TransactionPurgeService(TransactionRepository transactionRepository,
-      @Value("${fortunelink.purge.excluded-transaction-retention-days:" + DEFAULT_RETENTION_DAYS
+  public TransactionPurgeService(TransactionRepository transactionRepository, @Value(
+      "${fortunelink.purge.excluded-transaction-retention-days:" + DEFAULT_RETENTION_DAYS
           + "}") int retentionDays) {
     this.transactionRepository = transactionRepository;
     this.retentionDays = retentionDays;
@@ -35,8 +35,8 @@ public class TransactionPurgeService {
       Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
       int deleted = transactionRepository.deleteAllExpiredTransactions(cutoff);
       if (deleted > 0) {
-        log.info("Purged {} excluded transactions (cutoff={}, retention={}d)",
-            deleted, cutoff, retentionDays);
+        log.info("Purged {} excluded transactions (cutoff={}, retention={}d)", deleted, cutoff,
+            retentionDays);
       }
     } catch (Exception e) {
       // Don't rethrow - let the scheduler continue running on future ticks.

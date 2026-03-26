@@ -1,9 +1,14 @@
 package com.laderrco.fortunelink.portfolio.application.validators;
 
-import com.laderrco.fortunelink.portfolio.application.commands.*;
+import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.HasPortfolioId;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -132,7 +137,7 @@ public class PortfolioLifecycleCommandValidator {
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
 
-    private void validatePortfolioAndUserIds(HasPortfolioId command, List<String> errors) {
+  private void validatePortfolioAndUserIds(HasPortfolioId command, List<String> errors) {
     if (command.portfolioId() == null) {
       errors.add("PortfolioId is required");
     }

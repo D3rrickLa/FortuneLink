@@ -32,8 +32,7 @@ public class TransactionQueryService {
   public TransactionView getTransaction(GetTransactionByIdQuery query) {
     Objects.requireNonNull(query, "GetTransactionByIdQuery cannot be null");
 
-    Transaction transaction = transactionRepository
-        .findByIdAndPortfolioIdAndUserIdAndAccountId(
+    Transaction transaction = transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
             query.transactionId(), query.portfolioId(), query.userId(), query.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(query.transactionId()));
 
@@ -43,7 +42,8 @@ public class TransactionQueryService {
   public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
     Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
-    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(), query.accountId());
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
+        query.accountId());
     validateDateRange(query.startDate(), query.endDate());
 
     boolean hasDateRange = query.startDate() != null && query.endDate() != null;
@@ -52,19 +52,19 @@ public class TransactionQueryService {
     // MVP limitation
     if (hasDateRange && hasSymbol) {
       throw new IllegalArgumentException(
-          "Cannot filter by both date range and symbol simultaneously. " +
-              "Provide either a date range or a symbol, not both.");
+          "Cannot filter by both date range and symbol simultaneously. "
+              + "Provide either a date range or a symbol, not both.");
     }
 
     Pageable pageable = query.toPageable();
 
     Page<Transaction> page;
     if (hasDateRange) {
-      page = transactionQueryRepository.findByAccountIdAndDateRange(
-          query.accountId(), query.startDate(), query.endDate(), pageable);
+      page = transactionQueryRepository.findByAccountIdAndDateRange(query.accountId(),
+          query.startDate(), query.endDate(), pageable);
     } else if (hasSymbol) {
-      page = transactionQueryRepository.findByAccountIdAndSymbol(
-          query.accountId(), query.symbol(), pageable);
+      page = transactionQueryRepository.findByAccountIdAndSymbol(query.accountId(), query.symbol(),
+          pageable);
     } else {
       page = transactionQueryRepository.findByAccountId(query.accountId(), pageable);
     }
@@ -73,12 +73,12 @@ public class TransactionQueryService {
   }
 
   /**
-   * Unbounded fetch for internal calculations only.
-   * NEVER expose this through a controller endpoint.
+   * Unbounded fetch for internal calculations only. NEVER expose this through a controller
+   * endpoint.
    * <p>
    * Used in PerformanceCalculationService - needs full transaction history to calc time-weighted
-   * returns. Additionally, used to calculate capital gains, and for planning. Basically,
-   * Anything that uses our Transactions (for returns, etc.) we call this.
+   * returns. Additionally, used to calculate capital gains, and for planning. Basically, Anything
+   * that uses our Transactions (for returns, etc.) we call this.
    */
   public List<Transaction> getTransactionsForCalculation(GetTransactionForCalculationQuery query) {
     Objects.requireNonNull(query, "GetTransactionForCalculationQuery cannot be null");
@@ -88,10 +88,12 @@ public class TransactionQueryService {
     Objects.requireNonNull(query.start(), "Start date cannot be null for calculation queries");
     Objects.requireNonNull(query.end(), "End date cannot be null for calculation queries");
 
-    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(), query.accountId());
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
+        query.accountId());
     validateDateRange(query.start(), query.end());
 
-    return transactionRepository.findByAccountIdAndDateRange(query.accountId(), query.start(), query.end());
+    return transactionRepository.findByAccountIdAndDateRange(query.accountId(), query.start(),
+        query.end());
   }
 
   private void validateDateRange(Instant start, Instant end) {

@@ -40,20 +40,23 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
   }
 
   @Override
-  public List<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start, Instant end) {
+  public List<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start,
+      Instant end) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'findByAccountIdAndDateRange'");
   }
 
   @Override
-  public Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id, PortfolioId portfolioId,
-      UserId userId, AccountId accountId) {
+  public Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id,
+      PortfolioId portfolioId, UserId userId, AccountId accountId) {
     // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'findByIdAndPortfolioIdAndUserIdAndAccountId'");
+    throw new UnsupportedOperationException(
+        "Unimplemented method 'findByIdAndPortfolioIdAndUserIdAndAccountId'");
   }
 
   @Override
-  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds) {
+  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(
+      List<AccountId> accountIds) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'sumBuyFeesByAccountAndSymbol'");
   }

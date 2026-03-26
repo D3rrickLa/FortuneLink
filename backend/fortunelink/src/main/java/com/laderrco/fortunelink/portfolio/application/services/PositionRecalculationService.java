@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import com.google.common.util.concurrent.Striped;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
-
 import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +21,7 @@ public class PositionRecalculationService {
   private final Striped<Lock> symbolLocks = Striped.lock(1024);
 
   /**
-   * Async listener that triggers after a transaction commit. Ensures
-   * excluded/restored flags are
+   * Async listener that triggers after a transaction commit. Ensures excluded/restored flags are
    * persisted before we replay them.
    */
   @Async("recalculationExecutor")
@@ -36,8 +34,8 @@ public class PositionRecalculationService {
 
     lock.lock();
     try {
-      executor.scheduleRecalculation(
-          event.portfolioId(), event.userId(), event.accountId(), event.symbol());
+      executor.scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(),
+          event.symbol());
     } catch (Exception e) {
       log.error("Recalculation failed for portfolioId={} accountId={} symbol={}",
           event.portfolioId(), event.accountId(), event.symbol().symbol(), e);

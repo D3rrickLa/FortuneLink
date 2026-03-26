@@ -82,14 +82,19 @@ public class TransactionCommandValidator {
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
 
+  // TODO: when bonds are fully supported, validate that an open position
+  // exists for assetSymbol before recording asset-level interest.
+  // Right now we accept the symbol on faith.
   public ValidationResult validate(RecordInterestCommand command) {
     Objects.requireNonNull(command);
     List<String> errors = new ArrayList<>();
 
     validateCommonIds(command, errors);
 
-    // TODO: confirm if interest needs the assetSymbol()
-    ValidationUtils.validateSymbol(command.assetSymbol(), errors);
+    // Only validate symbol if it's asset-level interest
+    if (command.isAssetInterest()) {
+      ValidationUtils.validateSymbol(command.assetSymbol(), errors);
+    }
     ValidationUtils.validateAmount(command.amount().amount(), errors);
     ValidationUtils.validateDate(command.transactionDate(), null, errors);
 

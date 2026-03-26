@@ -97,9 +97,9 @@ public interface TransactionRecordingService {
    * (e.g., migration or corruption recovery).</p>
    *
    * @param account The account to update.
-   * @param tx      The transaction to apply.
+   * @param history      The transactions to apply.
    * @implNote The caller MUST reset both positions and cash to zero before invoking; otherwise,
    * balances will be double-counted.
    */
-  void replayFullTransaction(Account account, Transaction tx);
+  void replayFullTransaction(Account account, List<Transaction> history);
 }

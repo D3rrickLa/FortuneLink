@@ -35,6 +35,7 @@ public class Account {
   private final Currency accountCurrency;
   private final PositionStrategy positionStrategy;
   private final Instant creationDate;
+  private LifecycleState state = LifecycleState.ACTIVE;
   private AccountType accountType;
   private String name;
   private HealthStatus healthStatus;
@@ -216,6 +217,30 @@ public class Account {
     return positions.computeIfAbsent(symbol, s -> createEmptyPosition(s, assetType));
   }
 
+  public void beginReplay() {
+    if (this.state == LifecycleState.CLOSED) {
+      throw new IllegalStateException("Cannot replay a closed account.");
+    }
+    this.state = LifecycleState.REPLAYING;
+
+    // The "Contract": Resetting state is now internal and guaranteed
+    this.cashBalance = Money.zero(this.accountCurrency);
+    this.positions.clear();
+  }
+
+  public void endReplay() {
+    if (this.state != LifecycleState.REPLAYING) {
+      throw new IllegalStateException("Account is not in replay mode.");
+    }
+    this.state = LifecycleState.ACTIVE;
+    // Optional: Trigger a validation check here to ensure
+    // the final state is sane before going live.
+  }
+
+  public boolean isInReplayMode() {
+    return this.state == LifecycleState.REPLAYING;
+  }
+
   // accounts should be closed via portfolio
   void close() {
     requireActive();
@@ -342,5 +367,11 @@ public class Account {
 
   private void touch() {
     this.lastUpdatedOn = Instant.now();
+  }
+
+  public enum LifecycleState {
+    ACTIVE,
+    REPLAYING,
+    CLOSED
   }
 }

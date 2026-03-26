@@ -31,8 +31,7 @@ public class PortfolioLoader {
 
   public Portfolio loadUserPortfolioWithGraph(PortfolioId portfolioId, UserId userId) {
     return portfolioRepository.findWithAccountsByIdAndUserId(portfolioId, userId)
-        .filter(p -> !p.isDeleted())
-        .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+        .filter(p -> !p.isDeleted()).orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
   }
 
   /**

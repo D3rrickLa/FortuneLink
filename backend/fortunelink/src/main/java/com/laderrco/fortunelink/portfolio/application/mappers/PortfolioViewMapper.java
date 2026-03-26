@@ -27,8 +27,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PortfolioViewMapper {
   /**
-   * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost
-   * basis is zero/null
+   * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost basis is zero/null
    * to avoid division by zero.
    */
   private static PercentageChange calculateReturnPercentage(Money gain, Money costBasis) {
@@ -46,8 +45,7 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Determines the cost basis methodology used by the position. Returns "ACB" for
-   * Canadian tax
+   * Determines the cost basis methodology used by the position. Returns "ACB" for Canadian tax
    * method or "FIFO" for US tax method.
    */
   private static String determineMethodology(Position position) {
@@ -58,12 +56,10 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Extracts the earliest acquisition date from the position. For ACB: would need
-   * to track
+   * Extracts the earliest acquisition date from the position. For ACB: would need to track
    * separately if you want this For FIFO: first lot's acquisition date
    * <p>
-   * NOTE: Your Position interface doesn't expose this yet. You may need to add
-   * this to the
+   * NOTE: Your Position interface doesn't expose this yet. You may need to add this to the
    * interface or track separately.
    */
   private static Instant extractFirstAcquiredDate(Position position) {
@@ -77,12 +73,10 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Extracts the most recent modification date. This would typically come from
-   * the aggregate root
+   * Extracts the most recent modification date. This would typically come from the aggregate root
    * or event sourcing.
    * <p>
-   * NOTE: Your Position interface doesn't expose this. Consider adding
-   * lastModifiedAt to Position
+   * NOTE: Your Position interface doesn't expose this. Consider adding lastModifiedAt to Position
    * interface or tracking at Account level.
    */
   private static Instant extractLastModifiedDate(Position position) {
@@ -90,20 +84,12 @@ public class PortfolioViewMapper {
   }
 
   public PortfolioView toNewPortfolioView(Portfolio portfolio) {
-    List<AccountView> accountViews = portfolio.getAccounts().stream()
-        .map(this::toNewAccountView)
+    List<AccountView> accountViews = portfolio.getAccounts().stream().map(this::toNewAccountView)
         .toList();
 
-    return new PortfolioView(
-        portfolio.getPortfolioId(),
-        portfolio.getUserId(),
-        portfolio.getName(),
-        portfolio.getDescription(),
-        accountViews,
-        Money.zero(portfolio.getDisplayCurrency()),
-        false,
-        portfolio.getCreatedAt(),
-        portfolio.getLastUpdatedAt());
+    return new PortfolioView(portfolio.getPortfolioId(), portfolio.getUserId(), portfolio.getName(),
+        portfolio.getDescription(), accountViews, Money.zero(portfolio.getDisplayCurrency()), false,
+        portfolio.getCreatedAt(), portfolio.getLastUpdatedAt());
   }
 
   public PortfolioView toPortfolioView(Portfolio portfolio, List<AccountView> accountViews,
@@ -138,8 +124,7 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Maps a position to its view with no fee data. Used for summary screens where
-   * tax data is not
+   * Maps a position to its view with no fee data. Used for summary screens where tax data is not
    * needed. totalFeesIncurred will be Price.zero.
    */
   public PositionView toPositionView(Position position, MarketAssetQuote quote) {
@@ -147,19 +132,15 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Maps a position to its view. * Fee Display Note: Following Canadian Tax Law
-   * (CRA), fees ARE
-   * included in the position's totalCostBasis. The feesForSymbol parameter is
-   * used strictly for
+   * Maps a position to its view. * Fee Display Note: Following Canadian Tax Law (CRA), fees ARE
+   * included in the position's totalCostBasis. The feesForSymbol parameter is used strictly for
    * breakdown/display purposes (transparency).
    * <p>
-   * UI contract: Holdings screen → totalCostBasis (already includes fees) Tax /
-   * ACB screen →
+   * UI contract: Holdings screen → totalCostBasis (already includes fees) Tax / ACB screen →
    * totalCostBasis (this IS the effective ACB)
    *
    * @param position      the position value object
-   * @param quote         current market quote (nullable — falls back to cost
-   *                      basis)
+   * @param quote         current market quote (nullable — falls back to cost basis)
    * @param feesForSymbol cumulative BUY fees for this symbol in account currency
    */
   public PositionView toPositionView(Position position, MarketAssetQuote quote,
@@ -169,8 +150,9 @@ public class PortfolioViewMapper {
 
     // Ensure fee currency matches — defensive check since this comes from external
     // computation
-    Money fees = (feesForSymbol != null && feesForSymbol.currency().equals(currency)) ? feesForSymbol
-        : Money.zero(currency);
+    Money fees =
+        (feesForSymbol != null && feesForSymbol.currency().equals(currency)) ? feesForSymbol
+            : Money.zero(currency);
 
     if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit()
         .isZero()) {
