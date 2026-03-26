@@ -34,6 +34,14 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
   }
 
   @Override
+  public List<Transaction> findByPortfolioIdAndUserIdAndAccountId(PortfolioId portfolioId,
+      UserId userId, AccountId accountId) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException(
+        "Unimplemented method 'findByPortfolioIdAndUserIdAndAccountId'");
+  }
+
+  @Override
   public List<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'findByAccountIdAndSymbol'");

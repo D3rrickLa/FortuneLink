@@ -6,7 +6,5 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 public record ReopenAccountCommand(
-    AccountId accountId,
-    PortfolioId portfolioId,
-    UserId userId) implements HasPortfolioId {
+    AccountId accountId, PortfolioId portfolioId, UserId userId) implements HasPortfolioId {
 }

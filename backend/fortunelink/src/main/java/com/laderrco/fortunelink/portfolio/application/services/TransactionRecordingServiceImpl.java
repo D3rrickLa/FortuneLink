@@ -240,21 +240,17 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public void replayFullTransaction(Account account, List<Transaction> history) {
-    if (history == null || history.isEmpty()) {
-      return;
-    }
-
-    account.beginReplay(); // resets state, cash, positions
+    account.beginReplay();
     try {
-      for (Transaction tx : history) {
-        if (tx.isExcluded()) {
-          continue;
+      if (history != null) {
+        for (Transaction tx : history) {
+          if (tx.isExcluded()) {
+            continue;
+          }
+          executeReplayStep(account, tx);
         }
-        executeReplayStep(account, tx);
       }
     } catch (Exception e) {
-      // Don't call endReplay() on failure — leave account in REPLAYING
-      // state so the caller knows it's dirty and can mark it stale
       throw e;
     }
     account.endReplay();
@@ -280,7 +276,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   private void applyPositionEffect(Account account, Transaction tx) {
-    if (tx.execution() == null && !tx.transactionType().affectsHoldings()) {
+    if (tx.execution() == null || !tx.transactionType().affectsHoldings()) {
       return;
     }
 

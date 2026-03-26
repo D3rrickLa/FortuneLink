@@ -51,12 +51,14 @@ public interface TransactionRepository {
 
   /**
    * FInd transactions from a portfolio id, user id, and account id.
+   *
    * @param portfolioId
    * @param userId
    * @param accountId
    * @return
    */
-  List<Transaction> findByPortfolioIdAndUserIdAndAccountId(PortfolioId portfolioId, UserId userId, AccountId accountId);
+  List<Transaction> findByPortfolioIdAndUserIdAndAccountId(PortfolioId portfolioId, UserId userId,
+      AccountId accountId);
 
   /**
    * Finds transactions for a specific asset symbol within an account.

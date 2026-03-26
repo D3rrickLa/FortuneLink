@@ -7,14 +7,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 
 public record RecordInterestCommand(
-    PortfolioId portfolioId,
-    UserId userId,
-    AccountId accountId,
-    String assetSymbol,
+    PortfolioId portfolioId, UserId userId, AccountId accountId, String assetSymbol,
     // can be nullable (when null, it means cash/account-level interest)
-    Money amount,
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    Money amount, Instant transactionDate, String notes) implements TransactionCommand {
   // Cash/account-level interest (HISA, savings)
   public static RecordInterestCommand cashInterest(PortfolioId portfolioId, UserId userId,
       AccountId accountId, Money amount, Instant date, String notes) {

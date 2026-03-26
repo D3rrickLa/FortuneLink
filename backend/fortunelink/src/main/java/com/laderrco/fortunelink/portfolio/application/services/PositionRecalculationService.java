@@ -29,8 +29,10 @@ public class PositionRecalculationService {
   public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
     Objects.requireNonNull(event, "PositionRecalculationRequestedEvent cannot be null");
 
-    String lockKey = event.accountId() + ":" + event.symbol().symbol();
-    Lock lock = symbolLocks.get(lockKey); // Gets the lock for this "stripe"
+    // Lock at account level, not symbol level
+    // A full replay and a partial replay must not run concurrently on same account
+    String lockKey = event.accountId().toString();
+    Lock lock = symbolLocks.get(lockKey);
 
     lock.lock();
     try {

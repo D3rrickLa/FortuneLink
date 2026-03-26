@@ -46,7 +46,7 @@ public class PositionRecalculationExecutor {
         .stream().filter(tx -> !tx.isExcluded())
         // EXPLICIT: only replay transactions that affect holdings.
         // Cash events (DEPOSIT, WITHDRAWAL, DIVIDEND, FEE, etc.) are
-        // intentionally excluded — cash state is already correct in DB.
+        // intentionally excluded. Cash state is already correct in DB.
         // If you ever need full-account reconstruction, use the dedicated
         // replayFullAccount() path that resets cash to zero first.
         .filter(tx -> tx.transactionType().affectsHoldings())
@@ -55,12 +55,20 @@ public class PositionRecalculationExecutor {
     try {
       account.clearPosition(symbol);
       account.clearRealizedGains(symbol);
-      active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
+      for (Transaction tx : active) {
+        try {
+          transactionRecordingService.replayTransaction(account, tx);
+        } catch (Exception e) {
+          log.error("replayTransaction failed for txId={} symbol={} accountId={}",
+              tx.transactionId(), symbol, accountId);
+          throw e;
+        }
+      }
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
       accountHealthService.markStale(portfolioId, userId, accountId); // mark it dirty
-      throw e; // let @Transactional roll back — don't persist partial state
+      throw e; // let @Transactional roll back, don't persist partial state
     }
 
     portfolioRepository.save(portfolio);
@@ -79,9 +87,7 @@ public class PositionRecalculationExecutor {
         .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
-      account.clearAllPositions();
-      account.resetCashToZero();
-      account.clearAllRealizedGains();
+      // don't need to clear pos, cash, and gains as internally it does that
       transactionRecordingService.replayFullTransaction(account, allActive);
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {

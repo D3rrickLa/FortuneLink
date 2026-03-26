@@ -5,9 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,8 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Transaction Purge Service Unit Tests")
@@ -45,7 +43,8 @@ class TransactionPurgeServiceTest {
       Instant expectedApprox = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
 
       // Check that the calculation is correct (within a 1-sec margin for execution time)
-      long diffSeconds = Math.abs(capturedCutoff.getEpochSecond() - expectedApprox.getEpochSecond());
+      long diffSeconds = Math.abs(
+          capturedCutoff.getEpochSecond() - expectedApprox.getEpochSecond());
       assert (diffSeconds < 2);
     }
 
@@ -68,11 +67,9 @@ class TransactionPurgeServiceTest {
     void purgeHandlesZeroDeletions() {
       purgeService = new TransactionPurgeService(transactionRepository, 365);
       // Repository returns 0 deleted rows
-      when(transactionRepository.deleteAllExpiredTransactions(any(Instant.class)))
-          .thenReturn(0);
+      when(transactionRepository.deleteAllExpiredTransactions(any(Instant.class))).thenReturn(0);
 
-      assertThatCode(() -> purgeService.purgeExpiredTransactions())
-          .doesNotThrowAnyException();
+      assertThatCode(() -> purgeService.purgeExpiredTransactions()).doesNotThrowAnyException();
 
       verify(transactionRepository).deleteAllExpiredTransactions(any(Instant.class));
     }
@@ -82,8 +79,7 @@ class TransactionPurgeServiceTest {
     void purgeHandlesPositiveDeletions() {
       purgeService = new TransactionPurgeService(transactionRepository, 365);
       // Repository returns 50 deleted rows
-      when(transactionRepository.deleteAllExpiredTransactions(any(Instant.class)))
-          .thenReturn(50);
+      when(transactionRepository.deleteAllExpiredTransactions(any(Instant.class))).thenReturn(50);
       purgeService.purgeExpiredTransactions();
 
       verify(transactionRepository).deleteAllExpiredTransactions(any(Instant.class));
@@ -99,12 +95,11 @@ class TransactionPurgeServiceTest {
       purgeService = new TransactionPurgeService(transactionRepository, 365);
 
       // Simulate a database failure
-      when(transactionRepository.deleteAllExpiredTransactions(any()))
-          .thenThrow(new RuntimeException("Database Connection Timeout"));
+      when(transactionRepository.deleteAllExpiredTransactions(any())).thenThrow(
+          new RuntimeException("Database Connection Timeout"));
 
       // The method should NOT throw an exception up to the caller
-      assertThatCode(() -> purgeService.purgeExpiredTransactions())
-          .doesNotThrowAnyException();
+      assertThatCode(() -> purgeService.purgeExpiredTransactions()).doesNotThrowAnyException();
 
       verify(transactionRepository).deleteAllExpiredTransactions(any());
     }

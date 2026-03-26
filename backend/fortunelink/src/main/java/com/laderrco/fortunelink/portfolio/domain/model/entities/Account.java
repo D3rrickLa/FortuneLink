@@ -35,14 +35,13 @@ public class Account {
   private final Currency accountCurrency;
   private final PositionStrategy positionStrategy;
   private final Instant creationDate;
-  private LifecycleState state = LifecycleState.ACTIVE;
   private AccountType accountType;
   private String name;
   private HealthStatus healthStatus;
   private Money cashBalance;
-  private Map<AssetSymbol, Position> positions;
+  private final Map<AssetSymbol, Position> positions;
   private List<RealizedGainRecord> realizedGains;
-  private boolean isActive;
+  private LifecycleState state;
   private Instant closeDate;
   private Instant lastUpdatedOn;
 
@@ -69,6 +68,7 @@ public class Account {
     this.cashBalance = null; // intentionally null: any arithmetic will
     // fail loudly rather than silently wrong
     this.healthStatus = null;
+    this.state = null;
   }
 
   public Account(AccountId accountId, String name, AccountType accountType,
@@ -93,7 +93,7 @@ public class Account {
     this.positions = new HashMap<>();
     this.realizedGains = new ArrayList<>();
     this.creationDate = Instant.now();
-    this.isActive = true;
+    this.state = LifecycleState.ACTIVE;
     this.closeDate = null;
     this.lastUpdatedOn = Instant.now();
   }
@@ -164,7 +164,9 @@ public class Account {
    */
   public void recordRealizedGain(AssetSymbol symbol, Money realizedGainLoss, Money costBasisSold,
       Instant occurredAt) {
-    requireActive();
+    if (this.state == LifecycleState.CLOSED) {
+      throw new AccountClosedException("Account " + accountId + " is closed");
+    }
     notNull(symbol, "symbol");
     notNull(realizedGainLoss, "realizedGainLoss");
     notNull(costBasisSold, "costBasisSold");
@@ -226,6 +228,7 @@ public class Account {
     // The "Contract": Resetting state is now internal and guaranteed
     this.cashBalance = Money.zero(this.accountCurrency);
     this.positions.clear();
+    this.realizedGains = new ArrayList<>();
   }
 
   public void endReplay() {
@@ -243,6 +246,10 @@ public class Account {
 
   // accounts should be closed via portfolio
   void close() {
+    if (this.state == LifecycleState.REPLAYING) {
+      throw new IllegalStateException("Cannot close account during replay");
+    }
+
     requireActive();
 
     if (!positions.isEmpty()) {
@@ -252,17 +259,16 @@ public class Account {
       throw new IllegalStateException("Cannot close account with cash balance");
     }
 
-    this.isActive = false;
+    this.state = LifecycleState.CLOSED;
     this.closeDate = Instant.now();
     touch();
   }
 
   void reopen() {
-    if (isActive) {
-      throw new IllegalStateException("Account is already active");
+    if (state != LifecycleState.CLOSED) {
+      throw new IllegalStateException("Can only reopen a closed account. Current state: " + state);
     }
-
-    this.isActive = true;
+    this.state = LifecycleState.ACTIVE;
     this.closeDate = null;
     touch();
   }
@@ -328,14 +334,8 @@ public class Account {
     touch();
   }
 
-  public void clearAllPositions() {
-    this.positions = new HashMap<>();
-    touch();
-  }
-
-  public void resetCashToZero() {
-    this.cashBalance = Money.zero(this.accountCurrency);
-    touch();
+  public boolean isActive() {
+    return this.state != LifecycleState.CLOSED;
   }
 
   private Position createEmptyPosition(AssetSymbol symbol, AssetType assetType) {
@@ -348,7 +348,7 @@ public class Account {
   }
 
   private void requireActive() {
-    if (!isActive) {
+    if (!isActive()) {
       throw new AccountClosedException("Account " + accountId + " is closed");
     }
   }
