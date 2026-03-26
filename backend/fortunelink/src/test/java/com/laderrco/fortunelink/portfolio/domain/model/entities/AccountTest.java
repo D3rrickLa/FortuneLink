@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -186,6 +187,14 @@ class AccountTest {
       account.recordRealizedGain(AAPL, Money.of("100", USD), Money.of("500", USD), Instant.now());
       account.recordRealizedGain(AAPL, Money.of("50", USD), Money.of("200", USD), Instant.now());
       account.recordRealizedGain(TSLA, Money.of("300", USD), Money.of("1000", USD), Instant.now());
+    }
+
+    @Test
+    @DisplayName("recordRealizedGain: throws exception when the lifecycle is CLOSED")
+    void recordRealizedGainThrosAccountClosedException() {
+      account.close();
+      assertThrows(AccountClosedException.class, ()->
+        account.recordRealizedGain(AAPL, Money.of("100", USD), Money.of("500", USD), Instant.now())); 
     }
 
     @Test
@@ -476,15 +485,44 @@ class AccountTest {
     void resetCashToZeroSucceeds() {
       account.beginReplay();
       assertEquals(Money.zero("USD"), account.getCashBalance());
+      assertThat(account.isInReplayMode()).isTrue();
       account.endReplay();
+      assertThat(account.isInReplayMode()).isFalse();
     }
 
     @Test
     @DisplayName("healthStatus: transitions correctly")
     void healthStatusTransitionsCorrectly() {
       account.markStale();
+      assertTrue(account.isStale());
       account.restoreHealth();
       assertFalse(account.isStale());
+    }
+
+    @Test
+    @DisplayName("beginReplay: throws exception when state is closed")
+    void beginReplayThrowsIllegalStateException() {
+      account.close();
+      assertThatThrownBy(() ->account.beginReplay())
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Cannot replay a closed account");
+    }
+
+    @Test
+    @DisplayName("endReplay: throws exception when state is not in replay")
+    void endReplayThrowsIllegalStateException() {
+      assertThatThrownBy(() ->account.endReplay())
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Account is not in replay mode");
+    }
+
+    @Test
+    @DisplayName("close: throws exception when state is in replay")
+    void closeThrowsExceptionWhenInReplay() {
+      account.beginReplay();
+      assertThatThrownBy(() ->account.close())
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Cannot close account during replay");
     }
   }
 

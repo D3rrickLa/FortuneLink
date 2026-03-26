@@ -221,7 +221,7 @@ public class Account {
 
   public void beginReplay() {
     if (this.state == LifecycleState.CLOSED) {
-      throw new IllegalStateException("Cannot replay a closed account.");
+      throw new IllegalStateException("Cannot replay a closed account");
     }
     this.state = LifecycleState.REPLAYING;
 
@@ -233,7 +233,7 @@ public class Account {
 
   public void endReplay() {
     if (this.state != LifecycleState.REPLAYING) {
-      throw new IllegalStateException("Account is not in replay mode.");
+      throw new IllegalStateException("Account is not in replay mode");
     }
     this.state = LifecycleState.ACTIVE;
     // Optional: Trigger a validation check here to ensure
