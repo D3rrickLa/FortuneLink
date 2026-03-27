@@ -274,6 +274,42 @@ class TransactionRecordingServiceImplTest {
   @Nested
   @DisplayName("Cash and Replay Operations")
   class CashAndReplayTests {
+    private static Stream<Arguments> provideCashImpactScenarios() {
+      // A position that actually has shares to sell
+      Position appleWithShares = AcbPosition.empty(AAPL, AssetType.STOCK, USD)
+          .buy(TEN, HUNDRED_USD_MONEY, NOW).getUpdatedPosition(); // Now has 10 shares
+
+      return Stream.of(
+          // BUY: Works with empty position
+          Arguments.of(TransactionType.BUY, CashImpact.OUT, ONE_THOUSAND_USD_MONEY.negate(),
+              AcbPosition.empty(AAPL, AssetType.STOCK, USD)),
+
+          // SELL: Needs a position that HAS shares, otherwise ACB math divides by zero
+          Arguments.of(TransactionType.SELL, CashImpact.IN, ONE_THOUSAND_USD_MONEY,
+              appleWithShares),
+
+          // SELL: But empty so should throw exception
+          // Arguments.of(TransactionType.SELL, CashImpact.IN, ONE_THOUSAND_USD_MONEY,
+          // AcbPosition.empty(AAPL, AssetType.STOCK, USD)),
+
+          // NONE: Works with empty
+          Arguments.of(TransactionType.DIVIDEND_REINVEST, CashImpact.NONE, Money.zero(USD),
+              AcbPosition.empty(AAPL, AssetType.STOCK, USD)));
+
+    }
+
+    private static Stream<Arguments> provideValidCashImpactScenarios() {
+      Position appleWithShares = AcbPosition.empty(AAPL, AssetType.STOCK, USD)
+          .buy(TEN, HUNDRED_USD_MONEY, NOW).getUpdatedPosition();
+
+      return Stream.of(
+          Arguments.of(TransactionType.BUY, CashImpact.OUT, ONE_THOUSAND_USD_MONEY.negate(),
+              AcbPosition.empty(AAPL, AssetType.STOCK, USD)),
+          Arguments.of(TransactionType.SELL, CashImpact.IN, ONE_THOUSAND_USD_MONEY, appleWithShares),
+          Arguments.of(TransactionType.DIVIDEND_REINVEST, CashImpact.NONE, Money.zero(USD),
+              AcbPosition.empty(AAPL, AssetType.STOCK, USD)));
+    }
+
     private static Stream<Arguments> provideInvalidReplayScenarios() {
       return Stream.of(
           // 1. Excluded -> Returns early (No exception, no account interaction)
@@ -323,25 +359,43 @@ class TransactionRecordingServiceImplTest {
       verify(account).withdraw(eq(HUNDRED_USD_MONEY), eq("WITHDRAWAL"), eq(false));
     }
 
-    @Test
-    @DisplayName("replayFullTransaction: processes transaction and ensures lifecycle methods are called")
-    void replayFullTransactionProcessesTxAndHandlesLifecycle() {
-      Money delta = ONE_THOUSAND_USD_MONEY.negate();
-      Transaction transaction = buildTx(TransactionType.BUY, HUNDRED_USD_PRICE, TEN, delta, null);
+    @ParameterizedTest
+    @MethodSource("provideCashImpactScenarios")
+    @DisplayName("replayFullTransaction: handles different cash impact types correctly")
+    void replayFullTransaction_HandlesAllCashImpacts(TransactionType type, CashImpact impact,
+        Money delta, Position startingPosition) {
+      Transaction tx = buildTx(type, HUNDRED_USD_PRICE, TEN, delta, null);
 
-      Position acb = AcbPosition.empty(AAPL, AssetType.STOCK, USD);
-      when(account.getPosition(eq(AAPL))).thenReturn(Optional.of(acb));
-
-      service.replayFullTransaction(account, List.of(transaction));
+      when(account.getPosition(eq(AAPL))).thenReturn(Optional.of(startingPosition));
+      service.replayFullTransaction(account, List.of(tx));
 
       InOrder inOrder = inOrder(account);
-
       inOrder.verify(account).beginReplay();
-      inOrder.verify(account).withdraw(eq(delta.abs()), contains("REPLAY BUY"), eq(true));
-      inOrder.verify(account).endReplay();
 
-      verify(account, times(1)).beginReplay();
-      verify(account, times(1)).endReplay();
+      switch (impact) {
+        case IN -> verify(account).deposit(eq(delta), contains("REPLAY"));
+        case OUT -> verify(account).withdraw(eq(delta.abs()), contains("REPLAY"), eq(true));
+        case NONE -> {
+          verify(account, never()).deposit(any(), anyString());
+          verify(account, never()).withdraw(any(), anyString(), anyBoolean());
+        }
+      }
+
+      inOrder.verify(account).endReplay();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideValidCashImpactScenarios")
+    void replayFullTransactionHandlesValidCashImpacts(TransactionType type, CashImpact impact, Money delta,
+        Position startingPosition) {
+      Transaction tx = buildTx(type, HUNDRED_USD_PRICE, TEN, delta, null);
+      when(account.getPosition(eq(AAPL))).thenReturn(Optional.of(startingPosition));
+
+      service.replayFullTransaction(account, List.of(tx));
+
+      // Assert successful completion and lifecycle
+      verify(account).beginReplay();
+      verify(account).endReplay();
     }
 
     @Test
@@ -359,11 +413,26 @@ class TransactionRecordingServiceImplTest {
     }
 
     @Test
+    @DisplayName("replayFullTransaction: throws IllegalStateException when selling from empty position")
+    void replayFullTransaction_ThrowsOnCorruptSellData() {
+      // Scenario: SELL transaction but the account has an empty position
+      Transaction tx = buildTx(TransactionType.SELL, HUNDRED_USD_PRICE, TEN, ONE_THOUSAND_USD_MONEY, null);
+      when(account.getPosition(eq(AAPL))).thenReturn(Optional.of(AcbPosition.empty(AAPL, AssetType.STOCK, USD)));
+
+      assertThatThrownBy(() -> service.replayFullTransaction(account, List.of(tx)))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("position is empty");
+
+      // Verification: Even on failure, finally block MUST run
+      verify(account).endReplay();
+    }
+
+    @Test
     @DisplayName("replayTransaction: execution is NOT NULL but affectsHoldings is FALSE (Chained)")
     void branch2_DoesNotAffectHoldings() {
       Transaction mockTx = mock(Transaction.class);
       TransactionType mockType = mock(TransactionType.class);
-      
+
       // STUB CHAINING:
       // 1st call: returns TRUE (to pass the replayTransaction guard)
       // 2nd call: returns FALSE (to trigger the return in applyPositionEffect)
@@ -455,6 +524,28 @@ class TransactionRecordingServiceImplTest {
       verify(account, never()).withdraw(any(), anyString(), anyBoolean());
       verify(account, never()).deposit(any(), anyString());
       verify(account, never()).ensurePosition(any(), any());
+    }
+
+    @Test
+    @DisplayName("executeReplayStep: skips position effect when affectsHoldings is false")
+    void executeReplayStep_SkipsPositionEffect() {
+      Transaction tx = mock(Transaction.class);
+      TransactionType type = mock(TransactionType.class);
+
+      when(tx.transactionType()).thenReturn(type);
+      when(type.affectsHoldings()).thenReturn(false); // The key for this test
+      when(type.cashImpact()).thenReturn(CashImpact.IN);
+      when(tx.cashDelta()).thenReturn(ONE_THOUSAND_USD_MONEY);
+      when(type.toString()).thenReturn("CASH_DEPOSIT");
+
+      service.replayFullTransaction(account, List.of(tx));
+
+      // Position logic should NEVER be touched
+      verify(account, never()).ensurePosition(any(), any());
+      verify(account, never()).getPosition(any());
+
+      // Cash logic SHOULD be touched
+      verify(account).deposit(eq(ONE_THOUSAND_USD_MONEY), contains("REPLAY CASH_DEPOSIT"));
     }
   }
 
