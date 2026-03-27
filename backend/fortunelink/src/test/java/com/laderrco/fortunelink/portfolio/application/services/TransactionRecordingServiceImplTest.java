@@ -174,6 +174,19 @@ class TransactionRecordingServiceImplTest {
     }
 
     @Test
+    @DisplayName("recordSell: throws IllegalStateException when symbol is not in account")
+    void recordSellThrowsWhenPositionMissing() {
+      when(account.getPosition(AAPL)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, List.of(), NOTES, NOW))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot sell: no open position for AAPL");
+
+      verify(account).getPosition(AAPL);
+      verify(account, never()).applyPositionResult(any(), any());
+    }
+
+    @Test
     @DisplayName("recordSell: full liquidation should result in exactly zero basis and quantity")
     void fullLiquidationResultsInZeroPosition() {
       // Arrange: 10.00 shares with a highly precise cost basis
@@ -546,6 +559,66 @@ class TransactionRecordingServiceImplTest {
 
       // Cash logic SHOULD be touched
       verify(account).deposit(eq(ONE_THOUSAND_USD_MONEY), contains("REPLAY CASH_DEPOSIT"));
+    }
+
+    @Test
+    @DisplayName("applyPositionEffect: verify the internal orElseThrow lambda message")
+    void applyPositionEffect_InternalLambda_Throws() {
+      Transaction sellTx = Transaction.builder()
+          .transactionId(TransactionId.newId())
+          .accountId(AccountId.newId())
+          .transactionType(TransactionType.SELL) // affectsHoldings = true
+          .execution(new TradeExecution(AAPL, TEN, HUNDRED_USD_PRICE))
+          .cashDelta(Money.of(1000, USD))
+          .fees(List.of())
+          .notes(NOTES)
+          .metadata(TransactionMetadata.manual(AssetType.STOCK))
+          .occurredAt(NOW)
+          .build();
+
+      when(account.getPosition(AAPL)).thenReturn(Optional.empty());
+      when(account.isInReplayMode()).thenReturn(false);
+
+      assertThatThrownBy(() -> service.replayTransaction(account, sellTx))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("SELL requires position for AAPL");
+    }
+  }
+
+  @Nested
+  @DisplayName("recordTransferIn Tests")
+  class TransferInTests {
+    @Test
+    @DisplayName("recordTransferIn: successfully deposits and returns transaction")
+    void recordTransferIn_Success() {
+      when(account.getAccountId()).thenReturn(AccountId.newId());
+
+      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, NOTES, NOW);
+
+      verify(account).deposit(eq(HUNDRED_USD_MONEY), eq("TRANSFER IN"));
+
+      assertThat(tx.transactionType()).isEqualTo(TransactionType.TRANSFER_IN);
+      assertThat(tx.cashDelta()).isEqualTo(HUNDRED_USD_MONEY);
+      assertThat(tx.notes()).isEqualTo(NOTES);
+      assertThat(tx.metadata().assetType()).isEqualTo(AssetType.CASH);
+    }
+  }
+
+  @Nested
+  @DisplayName("recordTransferOut Tests")
+  class TransferOutTests {
+    @Test
+    @DisplayName("recordTransferOut: successfully withdraws and returns negated transaction")
+    void recordTransferOut_Success() {
+      when(account.getAccountId()).thenReturn(AccountId.newId());
+
+      Transaction tx = service.recordTransferOut(account, HUNDRED_USD_MONEY, NOTES, NOW);
+
+      verify(account).withdraw(eq(HUNDRED_USD_MONEY), eq("TRANSFER OUT"), eq(false));
+
+      assertThat(tx.transactionType()).isEqualTo(TransactionType.TRANSFER_OUT);
+      assertThat(tx.cashDelta()).isEqualTo(HUNDRED_USD_MONEY.negate());
+      assertThat(tx.notes()).isEqualTo(NOTES);
     }
   }
 

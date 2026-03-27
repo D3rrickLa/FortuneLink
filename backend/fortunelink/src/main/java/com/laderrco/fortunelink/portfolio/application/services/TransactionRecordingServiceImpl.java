@@ -34,6 +34,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   private static final String REASON_SELL = "SELL ";
   private static final String REASON_DEPOSIT = "DEPOSIT";
   private static final String REASON_WITHDRAWAL = "WITHDRAWAL";
+  private static final String REASON_TRANSFER_IN = "TRANSFER IN";
+  private static final String REASON_TRANSFER_OUT = "TRANSFER OUT";
   private static final String REASON_FEE = "FEE: ";
   private static final String REASON_INTEREST = "INTEREST: ";
   private static final String REASON_DIVIDEND = "DIVIDEND: ";
@@ -218,12 +220,32 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
-    throw new UnsupportedOperationException("recordTransferIn not yet implemented");
+    validateIsActive(account);
+    validateCashInputs(account, amount, notes, date);
+    validateTransactionDate(date, account);
+
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.TRANSFER_IN)
+        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date)
+        .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
+
+    account.deposit(amount, REASON_TRANSFER_IN);
+    return tx;
   }
 
   @Override
   public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
-    throw new UnsupportedOperationException("recordTransferOut not yet implemented");
+    validateIsActive(account);
+    validateCashInputs(account, amount, notes, date);
+    validateTransactionDate(date, account);
+
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.TRANSFER_OUT)
+        .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt(date)
+        .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
+
+    account.withdraw(amount, REASON_TRANSFER_OUT, false);
+    return tx;
   }
 
   @Override
@@ -245,8 +267,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public void replayFullTransaction(Account account, List<Transaction> history) {
     account.beginReplay();
     try {
-      // NOTE: null here instead of outside, when beginReplay(), account sets flag, if skipped
-      // state of the account remains consistent, but we've bypass the expected operational flow
+      // NOTE: null here instead of outside, when beginReplay(), account sets flag, if
+      // skipped
+      // state of the account remains consistent, but we've bypass the expected
+      // operational flow
       if (history == null || history.isEmpty()) {
         return;
       }
@@ -319,7 +343,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       case IN -> account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
       // allowNegative = true is critical for replaying historical sequences
       case OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType(), true);
-      case NONE -> {/* No cash effect for DRIP/Split */ }
+      case NONE -> {
+        /* No cash effect for DRIP/Split */ }
     }
   }
 
