@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 
-// presents and maintains current state
 @Getter
 public class Account {
   private final AccountId accountId;
@@ -34,65 +33,56 @@ public class Account {
   private final PositionStrategy positionStrategy;
   private final Instant creationDate;
 
-  private AccountType accountType;
   private String name;
+  private AccountType accountType;
   private HealthStatus healthStatus;
-  private Money cashBalance;
   private AccountLifecycleState state;
   private Instant closeDate;
   private Instant lastUpdatedOn;
 
+  private Money cashBalance;
   private final PositionBook positionBook;
   private List<RealizedGainRecord> realizedGains;
 
+  // JPA hydration constructor only. Fields populated by persistence layer via reflection
   protected Account() {
     this.accountId = null;
+    this.accountCurrency = null;
     this.positionStrategy = null;
     this.creationDate = null;
-    this.accountCurrency = null;
     this.positionBook = new PositionBook(Map.of(), null, null);
     this.realizedGains = new ArrayList<>();
-    this.cashBalance = null;
-    this.healthStatus = null;
-    this.state = null;
   }
 
   public Account(AccountId accountId, String name, AccountType accountType,
       Currency accountCurrency, PositionStrategy positionStrategy) {
-    notNull(accountId, "accountId");
-    notNull(name, "name");
-    notNull(accountType, "accountType");
-    notNull(accountCurrency, "accountCurrency");
-    notNull(positionStrategy, "positionStrategy");
+    this.accountId = notNull(accountId, "accountId");
+    this.accountCurrency = notNull(accountCurrency, "accountCurrency");
+    this.positionStrategy = notNull(positionStrategy, "positionStrategy");
+    this.accountType = notNull(accountType, "accountType");
 
-    if (name.trim().isEmpty()) {
-      throw new DomainArgumentException("Account name cannot be empty");
-    }
+    updateName(name); // Validates and trims
 
-    this.accountId = accountId;
-    this.name = name.trim();
-    this.accountType = accountType;
-    this.accountCurrency = accountCurrency;
-    this.positionStrategy = positionStrategy;
     this.healthStatus = HealthStatus.HEALTHY;
+    this.state = AccountLifecycleState.ACTIVE;
     this.cashBalance = Money.zero(accountCurrency);
     this.positionBook = new PositionBook(accountCurrency, positionStrategy);
     this.realizedGains = new ArrayList<>();
     this.creationDate = Instant.now();
-    this.state = AccountLifecycleState.ACTIVE;
-    this.closeDate = null;
     this.lastUpdatedOn = Instant.now();
   }
+
+  // --- Cash Operations ---
 
   public void deposit(Money amount, String reason) {
     requireActive();
     validateCurrency(amount);
     validateReason(reason);
-    
+
     if (!amount.isPositive()) {
       throw new IllegalArgumentException("Deposit amount must be positive");
     }
-    
+
     cashBalance = cashBalance.add(amount);
     touch();
   }
@@ -101,36 +91,22 @@ public class Account {
     requireActive();
     validateCurrency(amount);
     validateReason(reason);
-    
-    if (amount.isNegative()) {
+
+    if (!amount.isPositive()) {
       throw new IllegalArgumentException("Withdrawal amount must be positive");
     }
-    
+
     if (!allowNegative && cashBalance.isLessThan(amount)) {
       throw new InsufficientFundsException(
           "Insufficient funds: required " + amount + ", available " + cashBalance);
     }
-    
+
     cashBalance = cashBalance.subtract(amount);
     touch();
   }
 
   public void applyFee(Money feeAmount, String description) {
-    requireActive();
-    validateCurrency(feeAmount);
-    validateReason(description);
-    
-    if (!feeAmount.isPositive()) {
-      throw new IllegalArgumentException("Fee must be positive");
-    }
-    
-    if (!hasSufficientCash(feeAmount)) {
-      throw new InsufficientFundsException(
-          "Insufficient cash to cover fee: required " + feeAmount + ", available " + cashBalance);
-    }
-    
-    this.cashBalance = cashBalance.subtract(feeAmount);
-    touch();
+    withdraw(feeAmount, description, false);
   }
 
   public boolean hasSufficientCash(Money requiredAmount) {
@@ -138,24 +114,15 @@ public class Account {
     return !cashBalance.isLessThan(requiredAmount);
   }
 
+  // --- Position Management ---
+
   public Position ensurePosition(AssetSymbol symbol, AssetType assetType) {
     return positionBook.ensurePosition(symbol, assetType);
   }
 
-  /**
-   * Replaces updatePosition, name reflects domain intent, not implementation
-   */
   public void applyPositionResult(AssetSymbol symbol, Position updated) {
     requireActive();
     positionBook.applyResult(symbol, updated);
-    touch();
-  }
-
-  /**
-   * Package-private: only used during surgical recalculation
-   */
-  void clearPositionForRecalculation(AssetSymbol symbol) {
-    positionBook.clearSymbol(symbol);
     touch();
   }
 
@@ -175,28 +142,16 @@ public class Account {
     return positionBook.entries();
   }
 
-  public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold,
-      Instant at) {
-    // NOTE: gains can be recorded during Replay. This ensures that if you ever need
-    // to rebuild your history from scratch, your realizedGains list stays in sync
-    // with your transaction history.
-    requireNotClosed();
+  // --- Gain Management ---
+
+  public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold, Instant at) {
+    requireActive();
     notNull(symbol, "symbol");
     notNull(gainLoss, "gainLoss");
     notNull(costBasisSold, "costBasisSold");
     notNull(at, "at");
 
     realizedGains.add(new RealizedGainRecord(symbol, gainLoss, costBasisSold, at));
-    touch();
-  }
-
-  /**
-   * Package-private: surgical recalculation only
-   */
-  void clearRealizedGainsForSymbol(AssetSymbol symbol) {
-    notNull(symbol, "symbol");
-
-    realizedGains.removeIf(g -> g.symbol().equals(symbol));
     touch();
   }
 
@@ -210,18 +165,19 @@ public class Account {
   }
 
   public Money getTotalRealizedGainLoss() {
-    return realizedGains.stream().map(RealizedGainRecord::realizedGainLoss)
+    return realizedGains.stream()
+        .map(RealizedGainRecord::realizedGainLoss)
         .reduce(Money.zero(accountCurrency), Money::add);
   }
 
-  /**
-   * Atomically enters replay mode and resets ALL mutable state. Callers no longer
-   * own the reset
-   * sequence — this contract is internal.
-   */
+  // --- Lifecycle Transitions ---
+
   public void beginReplay() {
     if (this.state == AccountLifecycleState.CLOSED) {
       throw new IllegalStateException("Cannot replay a closed account");
+    }
+    if (this.state == AccountLifecycleState.REPLAYING) {
+      throw new IllegalStateException("Account is already in replay mode");
     }
 
     this.state = AccountLifecycleState.REPLAYING;
@@ -234,25 +190,18 @@ public class Account {
     if (this.state != AccountLifecycleState.REPLAYING) {
       throw new IllegalStateException("Account is not in replay mode");
     }
-
     this.state = AccountLifecycleState.ACTIVE;
-  }
-
-  public boolean isInReplayMode() {
-    return this.state == AccountLifecycleState.REPLAYING;
   }
 
   void close() {
     if (this.state == AccountLifecycleState.REPLAYING) {
       throw new IllegalStateException("Cannot close account during replay");
     }
-
     requireActive();
 
     if (!positionBook.isEmpty()) {
       throw new IllegalStateException("Cannot close account with open positions");
     }
-
     if (cashBalance.isPositive()) {
       throw new IllegalStateException("Cannot close account with cash balance");
     }
@@ -264,16 +213,34 @@ public class Account {
 
   void reopen() {
     if (this.state != AccountLifecycleState.CLOSED) {
-      throw new IllegalStateException("Can only reopen a closed account. Current state: " + state);
+      throw new IllegalStateException("Can only reopen a closed account");
     }
-
     this.state = AccountLifecycleState.ACTIVE;
     this.closeDate = null;
     touch();
   }
 
-  public boolean isActive() {
-    return this.state != AccountLifecycleState.CLOSED;
+  // --- Maintenance & Recalculation (Internal Use) ---
+
+  void clearPositionForRecalculation(AssetSymbol symbol) {
+    positionBook.clearSymbol(symbol);
+    touch();
+  }
+
+  void clearRealizedGainsForSymbol(AssetSymbol symbol) {
+    notNull(symbol, "symbol");
+    realizedGains.removeIf(g -> g.symbol().equals(symbol));
+    touch();
+  }
+
+  // --- Metadata & Health Updates ---
+
+  public void updateName(String newName) {
+    if (newName == null || newName.trim().isEmpty()) {
+      throw new DomainArgumentException("Account name cannot be empty");
+    }
+    this.name = newName.trim();
+    touch();
   }
 
   public void markStale() {
@@ -284,29 +251,23 @@ public class Account {
     this.healthStatus = HealthStatus.HEALTHY;
   }
 
+  // --- Status Helpers ---
+
+  public boolean isActive() {
+    return this.state != AccountLifecycleState.CLOSED;
+  }
+
+  public boolean isInReplayMode() {
+    return this.state == AccountLifecycleState.REPLAYING;
+  }
+
   public boolean isStale() {
     return this.healthStatus == HealthStatus.STALE;
   }
 
-  public void updateName(String newName) {
-    if (newName == null || newName.trim().isEmpty()) {
-      throw new IllegalArgumentException("Account name cannot be empty");
-    }
-
-    this.name = newName.trim();
-    touch();
-  }
-
   private void requireActive() {
-    if (!isActive()) {
+    if (!isActive())
       throw new AccountClosedException("Account " + accountId + " is closed");
-    }
-  }
-
-  private void requireNotClosed() {
-    if (this.state == AccountLifecycleState.CLOSED) {
-      throw new AccountClosedException("Account " + accountId + " is closed");
-    }
   }
 
   private void validateCurrency(Money amount) {

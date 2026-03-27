@@ -97,10 +97,10 @@ class AccountTest {
     @Test
     void updateNameFailsWhenNullAndIsEmpty() {
       assertThatThrownBy(() -> account.updateName(null))
-          .isInstanceOf(IllegalArgumentException.class)
+          .isInstanceOf(DomainArgumentException.class)
           .hasMessageContaining("Account name cannot be empty");
       assertThatThrownBy(() -> account.updateName("   "))
-          .isInstanceOf(IllegalArgumentException.class)
+          .isInstanceOf(DomainArgumentException.class)
           .hasMessageContaining("Account name cannot be empty");
     }
   }
@@ -165,7 +165,7 @@ class AccountTest {
 
       assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES"))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Fee must be positive");
+          .hasMessageContaining("Withdrawal amount must be positive");
     }
 
     @Test
@@ -173,10 +173,7 @@ class AccountTest {
       Money feeAmount = Money.of(100, USD);
       account.deposit(Money.of(20, USD), "testing");
       assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES"))
-          .isInstanceOf(InsufficientFundsException.class)
-          .hasMessageContaining(
-              "Insufficient cash to cover fee: required " + feeAmount.toString() + ", available "
-                  + Money.of(20, USD).toString());
+          .isInstanceOf(InsufficientFundsException.class);
     }
   }
 
