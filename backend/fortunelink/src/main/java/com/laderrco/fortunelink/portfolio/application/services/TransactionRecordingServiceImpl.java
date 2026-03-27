@@ -243,14 +243,17 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public void replayFullTransaction(Account account, List<Transaction> history) {
-    // should we do (history == null) return; ?
     account.beginReplay();
     try {
-      if (history != null) {
-        for (Transaction tx : history) {
-          if (!tx.isExcluded()) {
-            executeReplayStep(account, tx);
-          }
+      // NOTE: null here instead of outside, when beginReplay(), account sets flag, if skipped
+      // state of the account remains consistent, but we've bypass the expected operational flow
+      if (history == null || history.isEmpty()) {
+        return;
+      }
+
+      for (Transaction tx : history) {
+        if (!tx.isExcluded()) {
+          executeReplayStep(account, tx);
         }
       }
     } finally {
@@ -316,8 +319,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       case IN -> account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
       // allowNegative = true is critical for replaying historical sequences
       case OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType(), true);
-      case NONE -> {
-        /* No cash effect for DRIP/Split */ }
+      case NONE -> {/* No cash effect for DRIP/Split */ }
     }
   }
 

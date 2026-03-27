@@ -7,6 +7,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.CashImpact;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
@@ -20,7 +21,10 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,12 +43,11 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionRecordingServiceImplTest {
+  @Mock
+  private Account account;
 
   @InjectMocks
   private TransactionRecordingServiceImpl service;
-
-  @Mock
-  private Account account;
 
   private static final AssetSymbol AAPL = new AssetSymbol("AAPL");
   private static final Currency USD = Currency.of("USD");
@@ -53,6 +56,7 @@ class TransactionRecordingServiceImplTest {
   private static final Quantity TEN = new Quantity(new BigDecimal("10"));
   private static final Price HUNDRED_USD_PRICE = new Price(new Money(new BigDecimal("100"), USD));
   private static final Money HUNDRED_USD_MONEY = new Money(new BigDecimal("100.00"), USD);
+  private static final Money ONE_THOUSAND_USD_MONEY = new Money(new BigDecimal("1000.00"), USD);
   private static final String NOTES = "Test transaction";
 
   @BeforeEach
@@ -270,6 +274,32 @@ class TransactionRecordingServiceImplTest {
   @Nested
   @DisplayName("Cash and Replay Operations")
   class CashAndReplayTests {
+    private static Stream<Arguments> provideInvalidReplayScenarios() {
+      return Stream.of(
+          // 1. Excluded -> Returns early (No exception, no account interaction)
+          Arguments.of(mockTx(true, true, true), false, null),
+
+          // 2. Already in Replay Mode -> Throws IllegalStateException
+          Arguments.of(mockTx(false, true, true), true, IllegalStateException.class),
+
+          // 3. Doesn't affect holdings -> Throws IllegalArgumentException
+          Arguments.of(mockTx(false, false, true), false, IllegalArgumentException.class),
+
+          // 4. Execution is Null -> Returns early in applyPositionEffect (No exception)
+          Arguments.of(mockTx(false, true, false), false, null));
+    }
+
+    // Helper to create the mock state for the parameter provider
+    private static Transaction mockTx(boolean excluded, boolean affectsHoldings, boolean hasExecution) {
+      Transaction tx = mock(Transaction.class);
+      TransactionType type = mock(TransactionType.class);
+      lenient().when(tx.isExcluded()).thenReturn(excluded);
+      lenient().when(tx.transactionType()).thenReturn(type);
+      lenient().when(type.affectsHoldings()).thenReturn(affectsHoldings);
+      lenient().when(tx.execution()).thenReturn(hasExecution ? mock(TradeExecution.class) : null);
+      return tx;
+    }
+
     @Test
     @DisplayName("recordDeposit: increase balance and verify positive cashDelta")
     void recordDepositSuccess() {
@@ -294,25 +324,76 @@ class TransactionRecordingServiceImplTest {
     }
 
     @Test
-    @DisplayName("replayFullTransaction: invoke begin and end replay on account")
-    void replayFullTransactionTriggersLifecycle() {
-      List<Transaction> history = List.of();
-      service.replayFullTransaction(account, history);
+    @DisplayName("replayFullTransaction: processes transaction and ensures lifecycle methods are called")
+    void replayFullTransactionProcessesTxAndHandlesLifecycle() {
+      Money delta = ONE_THOUSAND_USD_MONEY.negate();
+      Transaction transaction = buildTx(TransactionType.BUY, HUNDRED_USD_PRICE, TEN, delta, null);
 
-      verify(account).beginReplay();
-      verify(account).endReplay();
+      Position acb = AcbPosition.empty(AAPL, AssetType.STOCK, USD);
+      when(account.getPosition(eq(AAPL))).thenReturn(Optional.of(acb));
+
+      service.replayFullTransaction(account, List.of(transaction));
+
+      InOrder inOrder = inOrder(account);
+
+      inOrder.verify(account).beginReplay();
+      inOrder.verify(account).withdraw(eq(delta.abs()), contains("REPLAY BUY"), eq(true));
+      inOrder.verify(account).endReplay();
+
+      verify(account, times(1)).beginReplay();
+      verify(account, times(1)).endReplay();
     }
 
     @Test
-    @DisplayName("replayTransaction: throw IllegalStateException if called during full replay")
-    void replayTransactionFailsDuringFullReplay() {
-      when(account.isInReplayMode()).thenReturn(true);
-      Price price = Price.of("100", USD);
-      Money delta = Money.of(-1000, "USD");
-      Transaction tx = buildTx(TransactionType.BUY, price, TEN, delta, List.of());
+    @DisplayName("replayTransaction: successfully applies position effect for valid transaction")
+    void replayTransactionAppliesPositionEffect() {
+      Transaction tx = buildTx(TransactionType.BUY, HUNDRED_USD_PRICE, TEN, ONE_THOUSAND_USD_MONEY.negate(), null);
 
-      assertThatThrownBy(() -> service.replayTransaction(account, tx))
-          .isInstanceOf(IllegalStateException.class);
+      when(account.isInReplayMode()).thenReturn(false);
+      when(account.getPosition(AAPL)).thenReturn(Optional.of(AcbPosition.empty(AAPL, AssetType.STOCK, USD)));
+
+      service.replayTransaction(account, tx);
+
+      verify(account).getPosition(AAPL);
+      verify(account).applyPositionResult(eq(AAPL), any());
+    }
+
+    @Test
+    @DisplayName("replayTransaction: execution is NOT NULL but affectsHoldings is FALSE (Chained)")
+    void branch2_DoesNotAffectHoldings() {
+      Transaction mockTx = mock(Transaction.class);
+      TransactionType mockType = mock(TransactionType.class);
+      
+      // STUB CHAINING:
+      // 1st call: returns TRUE (to pass the replayTransaction guard)
+      // 2nd call: returns FALSE (to trigger the return in applyPositionEffect)
+      when(mockType.affectsHoldings()).thenReturn(true, false);
+      when(mockTx.isExcluded()).thenReturn(false);
+      when(mockTx.transactionType()).thenReturn(mockType);
+      when(mockTx.execution()).thenReturn(mock(TradeExecution.class));
+
+      service.replayTransaction(account, mockTx);
+
+      verify(account, never()).getPosition(any());
+      verify(mockType, times(2)).affectsHoldings();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideInvalidReplayScenarios")
+    @DisplayName("replayTransaction: should return early or throw for invalid inputs")
+    void replayTransactionEarlyExitScenarios(Transaction tx, boolean inReplayMode,
+        Class<? extends Throwable> expectedException) {
+      lenient().when(account.isInReplayMode()).thenReturn(inReplayMode);
+
+      if (expectedException != null) {
+        assertThatThrownBy(() -> service.replayTransaction(account, tx))
+            .isInstanceOf(expectedException);
+      } else {
+        service.replayTransaction(account, tx);
+
+        verify(account, never()).getPosition(any());
+        verify(account, never()).applyPositionResult(any(), any());
+      }
     }
   }
 
@@ -340,6 +421,15 @@ class TransactionRecordingServiceImplTest {
     }
 
     @Test
+    @DisplayName("recordReturnOfCapital: throw IllegalStateException when position is missing")
+    void recordROCThrowsWhenNoPosition() {
+      when(account.getPosition(AAPL)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> service.recordReturnOfCapital(account, AAPL, TEN, HUNDRED_USD_PRICE, NOTES, NOW))
+          .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     @DisplayName("replayFullTransaction: skip transactions marked as excluded")
     void replayFullTransactionFiltersExcluded() {
       Transaction excludedTx = mock(Transaction.class);
@@ -351,13 +441,20 @@ class TransactionRecordingServiceImplTest {
       verify(account, never()).withdraw(any(), any(), anyBoolean());
     }
 
-    @Test
-    @DisplayName("recordReturnOfCapital: throw IllegalStateException when position is missing")
-    void recordROCThrowsWhenNoPosition() {
-      when(account.getPosition(AAPL)).thenReturn(Optional.empty());
+    @ParameterizedTest
+    @NullSource
+    @EmptySource
+    @DisplayName("replayFullTransaction: handles null or empty history by still triggering lifecycle")
+    void replayFullTransactionHandlesNullOrEmptyReturningNothing(List<Transaction> history) {
+      service.replayFullTransaction(account, history);
 
-      assertThatThrownBy(() -> service.recordReturnOfCapital(account, AAPL, TEN, HUNDRED_USD_PRICE, NOTES, NOW))
-          .isInstanceOf(IllegalStateException.class);
+      InOrder inOrder = inOrder(account);
+      inOrder.verify(account).beginReplay();
+      inOrder.verify(account).endReplay();
+
+      verify(account, never()).withdraw(any(), anyString(), anyBoolean());
+      verify(account, never()).deposit(any(), anyString());
+      verify(account, never()).ensurePosition(any(), any());
     }
   }
 

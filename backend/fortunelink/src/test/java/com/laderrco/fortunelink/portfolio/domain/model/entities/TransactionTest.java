@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -178,6 +179,16 @@ public class TransactionTest {
               .build());
       assertThat(ex.getMessage()).contains("requires");
     }
+
+    @Test
+    @DisplayName("Transaction: throw exception if cashDelta sign is wrong for BUY")
+    void transactionThrowsOnWrongSign() {
+      assertThatThrownBy(() -> Transaction.builder()
+          .transactionType(TransactionType.BUY)
+          .cashDelta(Money.of(1000, USD)) // Wrong! Should be negative for a BUY
+          .execution(new TradeExecution(AAPL, Quantity.of(10), Price.of("100", USD)))
+          .build()).isInstanceOf(DomainArgumentException.class);
+    }
   }
 
   @Nested
@@ -208,7 +219,6 @@ public class TransactionTest {
   @Nested
   @DisplayName("Exclude and restore lifecycle")
   class ExcludeRestoreTests {
-
     private Transaction transaction;
 
     @BeforeEach
@@ -268,7 +278,7 @@ public class TransactionTest {
     @DisplayName("construction: throws on null symbol, zero quantity, or negative price")
     void throwsOnInvalidInputs() {
       assertAll(() -> assertThrows(DomainArgumentException.class,
-              () -> new TradeExecution(null, QTY10, P135)),
+          () -> new TradeExecution(null, QTY10, P135)),
           () -> assertThrows(IllegalArgumentException.class,
               () -> new TradeExecution(AAPL, QTY10, new Price(Money.of(-1.00, "USD")))),
           () -> assertThrows(IllegalArgumentException.class,
