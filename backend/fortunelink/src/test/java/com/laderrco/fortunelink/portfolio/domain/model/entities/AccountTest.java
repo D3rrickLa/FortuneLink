@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -8,6 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyByte;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
@@ -20,6 +25,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
@@ -75,11 +81,27 @@ class AccountTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "   ", "\t"})
+    @ValueSource(strings = { "", "   ", "\t" })
     @DisplayName("constructor: throws exception for null or blank names")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
           () -> new Account(accountId, invalidName, AccountType.CHEQUING, USD, strategy));
+    }
+
+    @Test
+    void updateName() {
+      account.updateName("New Name");
+      assertThat(account.getName()).isEqualTo("New Name");
+    }
+
+    @Test
+    void updateNameFailsWhenNullAndIsEmpty() {
+      assertThatThrownBy(() -> account.updateName(null))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Account name cannot be empty");
+      assertThatThrownBy(() -> account.updateName("   "))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Account name cannot be empty");
     }
   }
 
@@ -98,7 +120,7 @@ class AccountTest {
     @DisplayName("deposit: rejects negative amounts or wrong currency")
     void depositRejectsInvalidInputs() {
       assertAll(() -> assertThrows(IllegalArgumentException.class,
-              () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
+          () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
           () -> assertThrows(CurrencyMismatchException.class,
               () -> account.deposit(Money.of(100, "EUR"), "Wrong Currency")));
     }
@@ -116,7 +138,7 @@ class AccountTest {
     void withdrawRejectsInvalidCases() {
       account.deposit(Money.of(100, "USD"), "Funding");
       assertAll(() -> assertThrows(InsufficientFundsException.class,
-              () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
+          () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
           () -> assertThrows(IllegalArgumentException.class,
               () -> account.withdraw(Money.of(-50, "USD"), "Negative", false)));
     }
@@ -135,6 +157,26 @@ class AccountTest {
       account.deposit(Money.of(100, "USD"), "Funding");
       account.applyFee(Money.of(10, "USD"), "Brokerage Fee");
       assertEquals(Money.of(90, "USD"), account.getCashBalance());
+    }
+
+    @Test
+    void applyFeeFailsWhenFeeAmountNotPositive() {
+      Money feeAmount = Money.of(-1, USD);
+
+      assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES"))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Fee must be positive");
+    }
+
+    @Test
+    void applyFeeFailsWhenFeeAmountGreaterThanCashBalance() {
+      Money feeAmount = Money.of(100, USD);
+      account.deposit(Money.of(20, USD), "testing");
+      assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES"))
+          .isInstanceOf(InsufficientFundsException.class)
+          .hasMessageContaining(
+              "Insufficient cash to cover fee: required " + feeAmount.toString() + ", available "
+                  + Money.of(20, USD).toString());
     }
   }
 
@@ -165,6 +207,38 @@ class AccountTest {
       assertAll(() -> assertEquals(1, account.getRealizedGains().size()),
           () -> assertEquals(TSLA, account.getRealizedGains().get(0).symbol()));
     }
+
+    @Test
+    void failsWhenClosed() {
+      account.close();
+
+      assertThatThrownBy(() -> account.recordRealizedGain(AAPL, Money.of(100, USD), Money.of(500, USD), Instant.now()))
+          .isInstanceOf(AccountClosedException.class);
+    }
+
+    private AssetSymbol apple = new AssetSymbol("AAPL");
+    private AssetSymbol google = new AssetSymbol("GOOGL");
+
+    @Test
+    void getRealizedGainsFor_ShouldReturnOnlyMatchingRecords() {
+      // 1. Arrange: Add records to the account's internal list
+      // (If the list is private, you might need a 'recordGain' method to populate it)
+      RealizedGainRecord appleGain = new RealizedGainRecord(apple, Money.of(100, USD), Money.of(500, USD), Instant.now());
+      RealizedGainRecord googleGain = new RealizedGainRecord(google, Money.of(200, USD), Money.of(1000, USD), Instant.now());
+
+      account.recordRealizedGain(apple, Money.of(100, USD), Money.of(500, USD), Instant.now());
+      account.recordRealizedGain(google, Money.of(200, USD), Money.of(1000, USD), Instant.now());
+
+      // 2. Act
+      var results = account.getRealizedGainsFor(apple);
+
+      // 3. Assert
+      assertThat(results)
+          .as("Should only contain gains for the requested symbol")
+          .hasSize(1)
+          .containsExactly(appleGain)
+          .doesNotContain(googleGain);
+    }
   }
 
   @Nested
@@ -182,7 +256,8 @@ class AccountTest {
 
       assertAll(() -> assertTrue(account.hasPosition(apple)),
           () -> assertEquals(1, account.getPositionCount()),
-          () -> assertEquals(pos, account.getPosition(apple).orElseThrow()));
+          () -> assertEquals(pos, account.getPosition(apple).orElseThrow()),
+          () -> assertEquals(account.getRealizedGainsFor(apple).size(), 0));
     }
 
     @Test
@@ -212,7 +287,6 @@ class AccountTest {
   @Nested
   @DisplayName("Account Lifecycle: Replay and Closing")
   class LifecycleTests {
-
     @Test
     @DisplayName("beginReplay: resets all mutable state and enters REPLAYING state")
     void beginReplayResetsState() {
@@ -229,10 +303,54 @@ class AccountTest {
     }
 
     @Test
+    void depositFailsAsResaonIsNotGiven() {
+      assertThatThrownBy(() -> account.deposit(Money.of(100, USD), " "))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Reason/description cannot be empty");
+      assertThatThrownBy(() -> account.deposit(Money.of(100, USD), null))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Reason/description cannot be empty");
+    }
+
+    @Test
+    void beginReplayFailsWhenStateIsNotClosed() {
+      account.close();
+      assertThatThrownBy(() -> account.beginReplay())
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot replay a closed account");
+    }
+
+    @Test
+    void endReplaySuccessfullyEnds() {
+      account.beginReplay();
+      assertThat(account.isInReplayMode()).isTrue();
+      account.endReplay();
+      assertThat(account.getState()).isEqualTo(AccountLifecycleState.ACTIVE);
+      assertThat(account.isInReplayMode()).isFalse();
+
+      assertThatThrownBy(() -> account.endReplay())
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Account is not in replay mode");
+    }
+
+    @Test
     @DisplayName("close: fails if cash balance remains")
     void closeFailsWithCash() {
       account.deposit(Money.of(1, USD), "Dust");
       assertThrows(IllegalStateException.class, () -> account.close());
+    }
+
+    @Test
+    void closeFailWhenHasPosition() {
+      AssetSymbol apple = new AssetSymbol("AAPL");
+      Position pos = AcbPosition.empty(apple, AssetType.STOCK, USD)
+          .buy(Quantity.of(10), Money.of(150, "USD"), Instant.now()).getUpdatedPosition();
+
+      account.applyPositionResult(apple, pos);
+
+      assertThatThrownBy(() -> account.close())
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot close account with open positions");
     }
 
     @Test
@@ -245,6 +363,20 @@ class AccountTest {
     }
 
     @Test
+    @DisplayName("operations: prevent deposits/withdrawals when account is closed")
+    void failsWhenClosed() {
+      account.close();
+      assertThrows(AccountClosedException.class,
+          () -> account.deposit(Money.of(10, USD), "Too late"));
+
+      account.reopen();
+      account.beginReplay();
+      assertThatThrownBy(() -> account.close())
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot close account during replay");
+    }
+
+    @Test
     @DisplayName("reopen: transitions from CLOSED back to ACTIVE")
     void reopenTransitionsCorrectly() {
       account.close();
@@ -254,11 +386,9 @@ class AccountTest {
     }
 
     @Test
-    @DisplayName("operations: prevent deposits/withdrawals when account is closed")
-    void failsWhenClosed() {
-      account.close();
-      assertThrows(AccountClosedException.class,
-          () -> account.deposit(Money.of(10, USD), "Too late"));
+    void reopenFailsWhenStateIsNotClosed() {
+      assertThatThrownBy(() -> account.reopen()).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Can only reopen a closed account");
     }
   }
 

@@ -124,12 +124,12 @@ public class Account {
       throw new IllegalArgumentException("Fee must be positive");
     }
     
-    if (cashBalance.isLessThan(feeAmount)) {
+    if (!hasSufficientCash(feeAmount)) {
       throw new InsufficientFundsException(
           "Insufficient cash to cover fee: required " + feeAmount + ", available " + cashBalance);
     }
     
-    cashBalance = cashBalance.subtract(feeAmount);
+    this.cashBalance = cashBalance.subtract(feeAmount);
     touch();
   }
 
@@ -263,7 +263,7 @@ public class Account {
   }
 
   void reopen() {
-    if (state != AccountLifecycleState.CLOSED) {
+    if (this.state != AccountLifecycleState.CLOSED) {
       throw new IllegalStateException("Can only reopen a closed account. Current state: " + state);
     }
 

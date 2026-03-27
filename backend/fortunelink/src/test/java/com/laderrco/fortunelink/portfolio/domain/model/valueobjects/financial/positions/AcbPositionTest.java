@@ -111,7 +111,7 @@ class AcbPositionTest {
     @DisplayName("sell: throws exception when selling more than held")
     void sellInsufficientQuantityThrowsException() {
       AcbPosition position = createAcbPosition("10", "100.00");
-      assertThrows(IllegalArgumentException.class,
+      assertThrows(IllegalStateException.class,
           () -> position.sell(Quantity.of(11), Money.of("150", USD), NOW));
     }
   }

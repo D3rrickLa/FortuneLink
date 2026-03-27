@@ -17,9 +17,8 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-class MarketDataServiceTestDomainInterface {
+class MarketDataServiceDomainInterfaceTest {
   private final MarketDataService marketDataService = new MarketDataService() {
-
     @Override
     public Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols) {
       AssetSymbol aapl = new AssetSymbol("AAPL");
@@ -29,7 +28,6 @@ class MarketDataServiceTestDomainInterface {
             null, null, null, null, null, null, null, null, null);
 
         return Map.of(aapl, quote);
-
       }
 
       return Map.of();
@@ -49,7 +47,6 @@ class MarketDataServiceTestDomainInterface {
             "NASDAQ", Currency.USD, "Technology", "Apple is an apple company");
 
         return Optional.of(marketAssetInfo);
-
       }
 
       return Optional.empty();

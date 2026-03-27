@@ -26,8 +26,8 @@ class AcbPositionProjectorTest {
   private final AcbPositionProjector projector = new AcbPositionProjector(SYMBOL, TYPE, CAD);
 
   @Test
-  @DisplayName("project_success_accumulatesPositionStateCorrectly")
-  void testProject_success_accumulatesPositionStateCorrectly() {
+  @DisplayName("project: successfully accumulates acb position state")
+  void projectAccumulatesPositionStateCorrectly() {
     // 1. Arrange: Create a stream of events
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
         .occurredAt(Instant.parse("2023-01-01T10:00:00Z")).build();
@@ -43,6 +43,7 @@ class AcbPositionProjectorTest {
   }
 
   @Test
+  @DisplayName("project: failure when there is type mismatch")
   @Disabled("Unreachable via normal construction -> AcbPosition methods always return AcbPosition."
       + " Guard exists to catch future Position hierarchy changes or TransactionApplier regressions.")
   void testProject_fail_throwsOnTypeMismatch() {

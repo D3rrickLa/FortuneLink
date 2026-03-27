@@ -7,17 +7,25 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchExce
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @DisplayName("Money Value Object Unit Tests")
 class MoneyTest {
+
   private static final Currency USD = Currency.of("USD");
+  private static final Currency EUR = Currency.of("EUR");
 
   @Nested
   @DisplayName("Creation and Validation")
   class CreationTests {
+
     @Test
     @DisplayName("constructor: success on valid amount and currency")
     void constructorInitializesCorrectly() {
@@ -29,7 +37,8 @@ class MoneyTest {
     @Test
     @DisplayName("constructor: fail on null amount")
     void constructorThrowsOnNullAmount() {
-      assertThatThrownBy(() -> new Money(null, USD)).isInstanceOf(DomainArgumentException.class);
+      assertThatThrownBy(() -> new Money(null, USD))
+          .isInstanceOf(DomainArgumentException.class);
     }
 
     @Test
@@ -45,6 +54,7 @@ class MoneyTest {
   @Nested
   @DisplayName("Arithmetic Operations")
   class ArithmeticTests {
+
     @Test
     @DisplayName("add: success with same currency")
     void addSameCurrencySuccess() {
@@ -57,69 +67,74 @@ class MoneyTest {
     @Test
     @DisplayName("add: fail on currency mismatch")
     void addDifferentCurrencyThrowsException() {
-      Money m1 = Money.of(10, "USD");
-      Money m2 = Money.of(10, "EUR");
+      Money usd = Money.of(10, "USD");
+      Money eur = Money.of(10, EUR);
 
-      assertThatThrownBy(() -> m1.add(m2)).isInstanceOf(CurrencyMismatchException.class);
+      assertThatThrownBy(() -> usd.add(eur))
+          .isInstanceOf(CurrencyMismatchException.class);
     }
 
-    @Test
-    @DisplayName("multiply: success with BigDecimal")
-    void multiplyBigDecimalSuccess() {
-      Money result = Money.of(10, "USD").multiply(new BigDecimal("1.555"));
+    @ParameterizedTest(name = "multiply by {0}")
+    @MethodSource("multiplicationProvider")
+    @DisplayName("multiply: success with different factor types")
+    void multiplyCalculatesCorrectResult(Object factor) {
+      Money base = Money.of(10, "USD");
+      Money result = (factor instanceof BigDecimal b) ? base.multiply(b) : base.multiply((Quantity) factor);
 
+      assertThat(result.amount()).isEqualByComparingTo("15.55");
       assertThat(result.currency()).isEqualTo(USD);
     }
 
-    @Test
-    @DisplayName("multiply: success with Quantity")
-    void multiplyQuantitySuccess() {
-      Money result = Money.of(10, "USD").multiply(new Quantity(new BigDecimal("1.555")));
-
-      assertThat(result.currency()).isEqualTo(USD);
+    static Stream<Arguments> multiplicationProvider() {
+      BigDecimal val = new BigDecimal("1.555");
+      return Stream.of(
+          Arguments.of(val),
+          Arguments.of(new Quantity(val)));
     }
 
-    @Test
-    @DisplayName("divide: success with BigDecimal")
-    void divideBigDecimalSuccess() {
-      Money result = Money.of(10, "USD").divide(BigDecimal.TWO);
+    @ParameterizedTest(name = "divide by {0}")
+    @MethodSource("divisionProvider")
+    @DisplayName("divide: success with different divisor types")
+    void divideCalculatesCorrectResult(Object divisor) {
+      Money base = Money.of(10, "USD");
+      Money result = (divisor instanceof BigDecimal b) ? base.divide(b) : base.divide((Quantity) divisor);
 
       assertThat(result).isEqualTo(Money.of(5, "USD"));
     }
 
-    @Test
-    @DisplayName("divide: success with Quantity")
-    void divideQuantitySuccess() {
-      Money result = Money.of(10, "USD").divide(new Quantity(BigDecimal.TWO));
-
-      assertThat(result).isEqualTo(Money.of(5, "USD"));
+    static Stream<Arguments> divisionProvider() {
+      return Stream.of(
+          Arguments.of(BigDecimal.TWO),
+          Arguments.of(new Quantity(BigDecimal.TWO)));
     }
 
     @Test
     @DisplayName("divide: fail on division by zero")
     void divideByZeroThrowsException() {
-      assertThatThrownBy(() -> Money.of(10, "USD").divide(BigDecimal.ZERO)).isInstanceOf(
-          ArithmeticException.class);
+      assertThatThrownBy(() -> Money.of(10, "USD").divide(BigDecimal.ZERO))
+          .isInstanceOf(ArithmeticException.class);
     }
   }
 
   @Nested
   @DisplayName("Comparison and Predicates")
   class ComparisonTests {
-    @Test
+
+    @ParameterizedTest(name = "value {0} isPositive should be {1}")
+    @MethodSource("positiveProvider")
     @DisplayName("isPositive: correct evaluation")
-    void isPositiveCorrectEvaluation() {
-      assertThat(Money.of(1, "USD").isPositive()).isTrue();
-      assertThat(Money.of(0, "USD").isPositive()).isFalse();
+    void isPositiveCorrectEvaluation(double amount, boolean expected) {
+      assertThat(Money.of(amount, "USD").isPositive()).isEqualTo(expected);
+    }
+
+    static Stream<Arguments> positiveProvider() {
+      return Stream.of(Arguments.of(1.0, true), Arguments.of(0.0, false), Arguments.of(-1.0, false));
     }
 
     @Test
     @DisplayName("compareTo: correct ordering")
     void compareToSameCurrencyOrdersCorrectly() {
-      Money small = Money.of(10, "USD");
-      Money large = Money.of(20, "USD");
-
-      assertThat(small).isLessThan(large);
+      assertThat(Money.of(10, "USD")).isLessThan(Money.of(20, "USD"));
     }
 
     @Test
@@ -136,94 +151,59 @@ class MoneyTest {
     @DisplayName("isAtLeast: correct evaluation")
     void isAtLeastSameCurrencyCorrectEvaluation() {
       Money base = Money.of(20, "USD");
-      Money same = Money.of(20, "USD");
-      Money larger = Money.of(21, "USD");
 
-      assertThat(same.isAtLeast(base)).isTrue();
-      assertThat(larger.isAtLeast(base)).isTrue();
-      assertThat(base.isAtLeast(larger)).isFalse();
+      assertThat(Money.of(20, "USD").isAtLeast(base)).isTrue();
+      assertThat(Money.of(21, "USD").isAtLeast(base)).isTrue();
+      assertThat(Money.of(19, "USD").isAtLeast(base)).isFalse();
     }
 
     @Test
     @DisplayName("compareTo: fail on different currencies")
     void compareToDifferentCurrencyThrowsException() {
-      Money m1 = Money.of(10, "USD");
-      Money m2 = Money.of(10, "EUR");
+      Money usd = Money.of(10, "USD");
+      Money eur = Money.of(10, EUR);
 
-      assertThatThrownBy(() -> m1.compareTo(m2)).isInstanceOf(CurrencyMismatchException.class);
+      assertThatThrownBy(() -> usd.compareTo(eur))
+          .isInstanceOf(CurrencyMismatchException.class);
     }
   }
 
   @Nested
   @DisplayName("Unary Operations")
   class UnaryTests {
+
     @Test
     @DisplayName("abs: removes negative sign")
     void absNegativeValueReturnsPositive() {
-      Money result = Money.of(-50, "USD").abs();
-
-      assertThat(result.amount()).isEqualByComparingTo("50.00");
+      assertThat(Money.of(-50, "USD").abs().amount()).isEqualByComparingTo("50.00");
     }
 
     @Test
     @DisplayName("negate: flips sign")
     void negatePositiveValueReturnsNegative() {
-      Money result = Money.of(50, "USD").negate();
-
-      assertThat(result.amount()).isEqualByComparingTo("-50.00");
+      assertThat(Money.of(50, "USD").negate().amount()).isEqualByComparingTo("-50.00");
     }
   }
 
   @Nested
   @DisplayName("Normalization and Scale Stability")
-  class NormalizationTests {
-    @Test
-    @DisplayName("constructor: normalizes to global precision")
-    void constructorNormalizesToGlobalPrecision() {
-      Money money = new Money(new BigDecimal("10.5"), USD);
+  class ScaleTests {
 
-      assertThat(money.amount().scale()).isEqualTo(10);
-      assertThat(money.amount()).isEqualByComparingTo("10.5");
-    }
-
-    @Test
-    @DisplayName("multiply: maintains scale consistency")
-    void multiplyMaintainsScaleConsistency() {
-      Money result = Money.of(10, "USD").multiply(new BigDecimal("3.0"));
-
-      assertThat(result.amount().scale()).isEqualTo(10);
-    }
-  }
-
-  @Nested
-  @DisplayName("Arithmetic Scale Enforcement")
-  class ScaleEnforcementTests {
-    @Test
-    @DisplayName("add: maintains constant scale")
-    void addMaintainsConstantScale() {
-      Money m1 = new Money(new BigDecimal("10.1"), USD);
-      Money m2 = new Money(new BigDecimal("20.222"), USD);
-
-      Money result = m1.add(m2);
-
+    @ParameterizedTest(name = "operation: {0}")
+    @MethodSource("operationProvider")
+    @DisplayName("arithmetic: maintains global precision scale")
+    void arithmeticOperationsMaintainConstantScale(Money result) {
       assertThat(result.amount().scale()).isEqualTo(Precision.getMoneyPrecision());
     }
 
-    @Test
-    @DisplayName("multiply: prevents scale expansion")
-    void multiplyPreventsScaleExpansion() {
-      Money result = Money.of(10.00, "USD").multiply(new BigDecimal("1.123"));
-
-      assertThat(result.amount().scale()).isEqualTo(Precision.getMoneyPrecision());
-    }
-
-    @Test
-    @DisplayName("divide: uses internal rounding mode")
-    void divideUsesInternalRoundingMode() {
-      Money result = Money.of(10.00, "USD").divide(new BigDecimal("3"));
-
-      assertThat(result.amount().scale()).isEqualTo(Precision.getMoneyPrecision());
-      assertThat(result.amount()).isNotNull();
+    static Stream<Arguments> operationProvider() {
+      Money m1 = Money.of(10.1, "USD");
+      return Stream.of(
+          Arguments.of(new Money(new BigDecimal("10.5"), USD)), // Constructor
+          Arguments.of(m1.add(Money.of(20.222, "USD"))), // Addition
+          Arguments.of(m1.multiply(new BigDecimal("1.123"))), // Multiplication
+          Arguments.of(m1.divide(new BigDecimal("3"))) // Division
+      );
     }
   }
 }

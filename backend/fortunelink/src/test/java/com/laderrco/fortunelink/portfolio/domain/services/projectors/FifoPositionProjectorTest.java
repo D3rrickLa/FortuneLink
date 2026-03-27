@@ -24,8 +24,8 @@ public class FifoPositionProjectorTest {
   private final FifoPositionProjector projector = new FifoPositionProjector(SYMBOL, TYPE, CAD);
 
   @Test
-  @DisplayName("project_success_accumulatesPositionStateCorrectly")
-  void testProject_success_accumulatesPositionStateCorrectly() {
+  @DisplayName("project: successfully accumulates fifo position state")
+  void projectAccumulatesPositionStateCorrectly() {
     // 1. Arrange: Create a stream of events
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
         .occurredAt(Instant.parse("2023-01-01T10:00:00Z")).build();
@@ -41,10 +41,11 @@ public class FifoPositionProjectorTest {
   }
 
   @Test
+  @DisplayName("project: failure when there is type mismatch")
   @Disabled(
       "Unreachable via normal construction -> FifoPosition methods always return FifoPosition."
           + " Guard exists to catch future Position hierarchy changes or TransactionApplier regressions.")
-  void testProject_fail_throwsOnTypeMismatch() {
+  void ProjectThrowsOnTypeMismatch() {
     // To trigger: TransactionApplier.apply() would need to return a FifoPosition
     // from an FifoPosition input, which is structurally impossible given the
     // sealed interface + concrete implementations.

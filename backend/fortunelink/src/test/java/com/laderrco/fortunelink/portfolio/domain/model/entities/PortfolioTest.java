@@ -86,20 +86,17 @@ class PortfolioTest {
     void createNewFailsWithInvalidInputs() {
       assertThatThrownBy(
           () -> Portfolio.createNew(null, DEFAULT_NAME, "desc", DEFAULT_CURRENCY)).isInstanceOf(
-          DomainArgumentException.class);
+              DomainArgumentException.class);
 
       assertThatThrownBy(
           () -> Portfolio.createNew(userId, null, "desc", DEFAULT_CURRENCY)).isInstanceOf(
-          DomainArgumentException.class);
+              DomainArgumentException.class);
 
       assertThatThrownBy(() -> Portfolio.createNew(userId, DEFAULT_NAME, " ", null)).isInstanceOf(
           DomainArgumentException.class);
     }
   }
 
-  // =========================
-  // Account Management
-  // =========================
   @Nested
   @DisplayName("Account Management")
   class AccountManagementTests {
@@ -140,7 +137,8 @@ class PortfolioTest {
     void createAccountFailsWhenStrategyInvalid() {
       assertThatThrownBy(
           () -> portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-              PositionStrategy.FIFO)).isInstanceOf(IllegalArgumentException.class);
+              PositionStrategy.FIFO))
+          .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -186,20 +184,17 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = {"  ", "\t"})
+    @ValueSource(strings = { "  ", "\t" })
     @DisplayName("renameAccount: rejects invalid names")
     void renameAccountFailsWithInvalidName(String invalid) {
       Account account = createAccount(portfolio, "Test");
 
       assertThatThrownBy(
           () -> portfolio.renameAccount(account.getAccountId(), invalid)).isInstanceOf(
-          IllegalArgumentException.class);
+              IllegalArgumentException.class);
     }
   }
 
-  // =========================
-  // Lifecycle
-  // =========================
   @Nested
   @DisplayName("Lifecycle")
   class LifecycleTests {
@@ -263,13 +258,9 @@ class PortfolioTest {
     }
   }
 
-  // =========================
-  // Queries
-  // =========================
   @Nested
   @DisplayName("Queries")
   class QueryTests {
-
     private Portfolio portfolio;
 
     @BeforeEach
