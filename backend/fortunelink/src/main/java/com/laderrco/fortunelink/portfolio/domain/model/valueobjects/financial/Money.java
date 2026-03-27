@@ -15,7 +15,7 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
   public Money {
     notNull(amount, "amount");
     notNull(currency, "currency");
-    amount = normalize(amount); // clamp - don't throw on extra scale
+    amount = normalize(amount); // clamp, don't throw on extra scale
   }
 
   public static Money of(BigDecimal value, String currency) {

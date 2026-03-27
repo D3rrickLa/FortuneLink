@@ -48,8 +48,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// TODO: Refactor this and use the exceptions, AccountNotEmptyException.java not used
-// + general cleanup
 @Service
 @Transactional
 @RequiredArgsConstructor

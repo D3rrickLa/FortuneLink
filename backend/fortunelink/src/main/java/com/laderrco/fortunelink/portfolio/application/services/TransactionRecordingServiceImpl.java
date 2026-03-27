@@ -95,7 +95,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -147,7 +148,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_INTEREST + symbol.symbol());
     return tx;
@@ -243,17 +245,23 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     account.beginReplay();
     try {
       if (history != null) {
-        for (Transaction tx : history) {
-          if (tx.isExcluded()) {
-            continue;
-          }
-          executeReplayStep(account, tx);
-        }
+        history.stream()
+            .filter(tx -> !tx.isExcluded())
+            .forEach(tx -> executeReplayStep(account, tx));
+        // NOTE: the forEach labda loses tranction-level context in stack trace. If
+        // executeReplaySteps throws, we don't know which id did it, lambda eats log. We
+        // can consider a for loop, but for now we stil this this impelmentation
+        /*
+         * for (Transaction tx : history) {
+         * if (!tx.isExcluded()) {
+         * executeReplayStep(account, tx);
+         * }
+         * }
+         */
       }
-    } catch (Exception e) {
-      throw e;
+    } finally {
+      account.endReplay();
     }
-    account.endReplay();
   }
 
   @Override
@@ -281,7 +289,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     AssetSymbol symbol = tx.execution().asset();
-    AssetType type = tx.metadata() != null ? tx.metadata().assetType() : AssetType.STOCK;
+    AssetType type = tx.metadata().assetType();
 
     if (tx.transactionType() == TransactionType.BUY
         || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
@@ -289,7 +297,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     }
 
     Position current = account.getPosition(symbol).orElseThrow(
-        () -> new IllegalStateException(tx.transactionType() + " requires position for " + symbol));
+        () -> new IllegalStateException(tx.transactionType() + " requires position for " + symbol.symbol()));
 
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
     account.applyPositionResult(symbol, result.newPosition());
@@ -314,7 +322,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       case IN -> account.deposit(tx.cashDelta(), "REPLAY " + tx.transactionType());
       // allowNegative = true is critical for replaying historical sequences
       case OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType(), true);
-      case NONE -> { /* No cash effect for DRIP/Split */ }
+      case NONE -> {
+        /* No cash effect for DRIP/Split */ }
     }
   }
 
