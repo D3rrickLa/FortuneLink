@@ -46,7 +46,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateTransactionDate(date, account);
 
-    List<Fee> feeList = fees != null ? fees : List.of();
+    List<Fee> feeList = getFeeList(fees);
     Money gross = price.calculateValue(quantity);
     Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
     Money cashRequired = gross.add(totalFees);
@@ -64,7 +64,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .build();
 
     applyPositionEffect(account, tx);
-    account.withdraw(cashRequired, REASON_BUY + symbol, false);
+    account.withdraw(cashRequired, REASON_BUY + symbol.symbol(), false);
     return tx;
   }
 
@@ -161,7 +161,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateTransactionDate(date, account);
-    // NOTE: this and Sell have same signatures
+    // NOTE: this and Sell have same signatures, maybe DRY it
     Position existingPosition = account.getPosition(symbol).orElseThrow(
         () -> new IllegalStateException(
             "Cannot apply ROC: no open position for " + symbol.symbol()));
@@ -199,7 +199,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
           String.format("Cannot sell %s. Position only holds: %s", quantity,
               existingPosition.totalQuantity()));
     }
-    List<Fee> feeList = fees != null ? fees : List.of();
+
+    List<Fee> feeList = getFeeList(fees);
     Money gross = price.calculateValue(quantity);
     Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
     Money cashDelta = gross.subtract(totalFees);
@@ -242,22 +243,15 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public void replayFullTransaction(Account account, List<Transaction> history) {
+    // should we do (history == null) return; ?
     account.beginReplay();
     try {
       if (history != null) {
-        history.stream()
-            .filter(tx -> !tx.isExcluded())
-            .forEach(tx -> executeReplayStep(account, tx));
-        // NOTE: the forEach labda loses tranction-level context in stack trace. If
-        // executeReplaySteps throws, we don't know which id did it, lambda eats log. We
-        // can consider a for loop, but for now we stil this this impelmentation
-        /*
-         * for (Transaction tx : history) {
-         * if (!tx.isExcluded()) {
-         * executeReplayStep(account, tx);
-         * }
-         * }
-         */
+        for (Transaction tx : history) {
+          if (!tx.isExcluded()) {
+            executeReplayStep(account, tx);
+          }
+        }
       }
     } finally {
       account.endReplay();
@@ -325,6 +319,11 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       case NONE -> {
         /* No cash effect for DRIP/Split */ }
     }
+  }
+
+  private List<Fee> getFeeList(List<Fee> fees) {
+    List<Fee> feeList = fees != null ? fees : List.of();
+    return feeList;
   }
 
   private void validateIsActive(Account account) {
