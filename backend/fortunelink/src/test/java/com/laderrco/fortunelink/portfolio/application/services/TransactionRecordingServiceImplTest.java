@@ -95,6 +95,17 @@ class TransactionRecordingServiceImplTest {
               new BigDecimal("1005.00")));
     }
 
+    private static Stream<Arguments> sellFeeProvider() {
+      return Stream.of(
+          Arguments.of(Named.of("No Fees", null), new BigDecimal("1000.00")),
+          Arguments.of(Named.of("With $10 Fee", List.of(Fee.of(FeeType.COMMISSION, Money.of(10, USD), NOW))),
+              new BigDecimal("990.00")),
+          Arguments.of(Named.of("Multiple Fees ($15 total)",
+              List.of(Fee.of(FeeType.BROKERAGE, Money.of(10, USD), NOW),
+                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))),
+              new BigDecimal("985.00")));
+    }
+
     @ParameterizedTest
     @MethodSource("buyFeeProvider")
     @DisplayName("recordBuy: withdraw total cost including fees")
@@ -115,20 +126,6 @@ class TransactionRecordingServiceImplTest {
     }
 
     @Test
-    @DisplayName("recordBuy: withdraw total cost and ensure position is created, no-fees")
-    void recordBuySuccessInitializesPositionFeeLess() {
-      when(account.hasSufficientCash(any())).thenReturn(true);
-      Position mockPos = new AcbPosition(AAPL, AssetType.STOCK, USD, TEN, HUNDRED_USD_MONEY, NOW, NOW);
-      when(account.getPosition(AAPL)).thenReturn(Optional.of(mockPos));
-
-      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW);
-
-      verify(account).ensurePosition(AAPL, AssetType.STOCK);
-      verify(account).withdraw(eq(new Money(new BigDecimal("1000.00"), USD)), contains("BUY AAPL"), eq(false));
-      verify(account).applyPositionResult(eq(AAPL), any());
-    }
-
-    @Test
     @DisplayName("recordBuy: throw InsufficientFundsException and skip mutation when cash is low")
     void recordBuyInsufficientFundsFailsGracefully() {
       when(account.hasSufficientCash(any())).thenReturn(false);
@@ -142,17 +139,60 @@ class TransactionRecordingServiceImplTest {
       verify(account, never()).applyPositionResult(any(), any());
     }
 
-    @Test
-    @DisplayName("recordSell: deposit net proceeds and record realized gain")
-    void recordSellSuccessCalculatesProceedsAndGain() {
-      Position existingPos = new AcbPosition(AAPL, AssetType.STOCK, USD, TEN, new Money(new BigDecimal("500.00"), USD),
-          CREATION_DATE, NOW);
+    @ParameterizedTest
+    @MethodSource("sellFeeProvider")
+    @DisplayName("recordSell: deposit net proceeds and record correct realized gain")
+    void recordSellSuccessCalculatesProceedsAndGain(List<Fee> fees, BigDecimal expectedNetDeposit) {
+      // 10 shares @ $50 cost basis ($500 total cost)
+      BigDecimal initialCostBasis = new BigDecimal("500.00");
+      Position existingPos = new AcbPosition(AAPL, AssetType.STOCK, USD, TEN,
+          new Money(initialCostBasis, USD), CREATION_DATE, NOW);
+
       when(account.getPosition(AAPL)).thenReturn(Optional.of(existingPos));
+      when(account.getAccountCurrency()).thenReturn(USD);
+
+      // Selling 10 shares @ $100 ($1000 gross)
+      service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW);
+
+      // Calculate expected gain: Net Proceeds - Cost Basis
+      BigDecimal expectedGain = expectedNetDeposit.subtract(initialCostBasis);
+
+      verify(account).recordRealizedGain(eq(AAPL), any(Money.class), any(Money.class), eq(NOW));
+      verify(account).deposit(
+          argThat(m -> m.amount().compareTo(expectedNetDeposit) == 0),
+          contains(AAPL.symbol()));
+
+      verify(account).recordRealizedGain(
+          eq(AAPL),
+          argThat(m -> m.amount().compareTo(expectedGain) == 0), // Dynamic gain check
+          argThat(m -> m.amount().compareTo(initialCostBasis) == 0), // Basis Sold
+          eq(NOW));
+    }
+
+    @Test
+    @DisplayName("recordSell: full liquidation should result in exactly zero basis and quantity")
+    void fullLiquidationResultsInZeroPosition() {
+      // Arrange: 10.00 shares with a highly precise cost basis
+      BigDecimal weirdBasis = new BigDecimal("500.123456789");
+      Position existingPos = new AcbPosition(AAPL, AssetType.STOCK, USD, TEN,
+          new Money(weirdBasis, USD), CREATION_DATE, NOW);
+
+      when(account.getPosition(AAPL)).thenReturn(Optional.of(existingPos));
+      when(account.getAccountCurrency()).thenReturn(USD);
 
       service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW);
 
-      verify(account).deposit(eq(new Money(new BigDecimal("1000.00"), USD)), contains("SELL AAPL"));
-      verify(account).recordRealizedGain(eq(AAPL), any(Money.class), any(Money.class), eq(NOW));
+      // Verify the new position state is absolute zero
+      verify(account).applyPositionResult(eq(AAPL), argThat(pos -> pos.totalQuantity().isZero() &&
+          pos.totalCostBasis().amount().compareTo(BigDecimal.ZERO) == 0));
+
+      // Verify the gain is exactly (1000.00 - 500.123456789)
+      BigDecimal expectedGain = new BigDecimal("1000.00").subtract(weirdBasis);
+      verify(account).recordRealizedGain(
+          eq(AAPL),
+          argThat(m -> m.amount().compareTo(expectedGain) == 0),
+          argThat(m -> m.amount().compareTo(weirdBasis) == 0),
+          eq(NOW));
     }
 
     @Test

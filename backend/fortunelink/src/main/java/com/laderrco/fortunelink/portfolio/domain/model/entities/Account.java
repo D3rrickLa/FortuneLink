@@ -88,9 +88,11 @@ public class Account {
     requireActive();
     validateCurrency(amount);
     validateReason(reason);
+    
     if (!amount.isPositive()) {
       throw new IllegalArgumentException("Deposit amount must be positive");
     }
+    
     cashBalance = cashBalance.add(amount);
     touch();
   }
@@ -99,13 +101,16 @@ public class Account {
     requireActive();
     validateCurrency(amount);
     validateReason(reason);
+    
     if (amount.isNegative()) {
       throw new IllegalArgumentException("Withdrawal amount must be positive");
     }
+    
     if (!allowNegative && cashBalance.isLessThan(amount)) {
       throw new InsufficientFundsException(
           "Insufficient funds: required " + amount + ", available " + cashBalance);
     }
+    
     cashBalance = cashBalance.subtract(amount);
     touch();
   }
@@ -114,13 +119,16 @@ public class Account {
     requireActive();
     validateCurrency(feeAmount);
     validateReason(description);
+    
     if (!feeAmount.isPositive()) {
       throw new IllegalArgumentException("Fee must be positive");
     }
+    
     if (cashBalance.isLessThan(feeAmount)) {
       throw new InsufficientFundsException(
           "Insufficient cash to cover fee: required " + feeAmount + ", available " + cashBalance);
     }
+    
     cashBalance = cashBalance.subtract(feeAmount);
     touch();
   }
@@ -169,11 +177,15 @@ public class Account {
 
   public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold,
       Instant at) {
-    requireNotClosed(); // gains can be recorded during replay
+    // NOTE: gains can be recorded during Replay. This ensures that if you ever need
+    // to rebuild your history from scratch, your realizedGains list stays in sync
+    // with your transaction history.
+    requireNotClosed();
     notNull(symbol, "symbol");
     notNull(gainLoss, "gainLoss");
     notNull(costBasisSold, "costBasisSold");
     notNull(at, "at");
+
     realizedGains.add(new RealizedGainRecord(symbol, gainLoss, costBasisSold, at));
     touch();
   }
@@ -183,6 +195,7 @@ public class Account {
    */
   void clearRealizedGainsForSymbol(AssetSymbol symbol) {
     notNull(symbol, "symbol");
+
     realizedGains.removeIf(g -> g.symbol().equals(symbol));
     touch();
   }
@@ -202,13 +215,15 @@ public class Account {
   }
 
   /**
-   * Atomically enters replay mode and resets ALL mutable state. Callers no longer own the reset
+   * Atomically enters replay mode and resets ALL mutable state. Callers no longer
+   * own the reset
    * sequence — this contract is internal.
    */
   public void beginReplay() {
     if (this.state == AccountLifecycleState.CLOSED) {
       throw new IllegalStateException("Cannot replay a closed account");
     }
+
     this.state = AccountLifecycleState.REPLAYING;
     this.cashBalance = Money.zero(this.accountCurrency);
     this.positionBook.clearAll();
@@ -219,6 +234,7 @@ public class Account {
     if (this.state != AccountLifecycleState.REPLAYING) {
       throw new IllegalStateException("Account is not in replay mode");
     }
+
     this.state = AccountLifecycleState.ACTIVE;
   }
 
@@ -230,13 +246,17 @@ public class Account {
     if (this.state == AccountLifecycleState.REPLAYING) {
       throw new IllegalStateException("Cannot close account during replay");
     }
+
     requireActive();
+
     if (!positionBook.isEmpty()) {
       throw new IllegalStateException("Cannot close account with open positions");
     }
+
     if (cashBalance.isPositive()) {
       throw new IllegalStateException("Cannot close account with cash balance");
     }
+
     this.state = AccountLifecycleState.CLOSED;
     this.closeDate = Instant.now();
     touch();
@@ -246,6 +266,7 @@ public class Account {
     if (state != AccountLifecycleState.CLOSED) {
       throw new IllegalStateException("Can only reopen a closed account. Current state: " + state);
     }
+
     this.state = AccountLifecycleState.ACTIVE;
     this.closeDate = null;
     touch();
@@ -271,6 +292,7 @@ public class Account {
     if (newName == null || newName.trim().isEmpty()) {
       throw new IllegalArgumentException("Account name cannot be empty");
     }
+
     this.name = newName.trim();
     touch();
   }
