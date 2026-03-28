@@ -36,4 +36,8 @@ public record Price(Money pricePerUnit) {
   public BigDecimal amount() {
     return pricePerUnit.amount();
   }
+
+  public boolean isZero() {
+    return pricePerUnit.isZero();
+  }
 }
