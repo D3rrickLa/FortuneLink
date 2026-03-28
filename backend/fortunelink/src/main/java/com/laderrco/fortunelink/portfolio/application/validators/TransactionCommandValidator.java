@@ -127,14 +127,27 @@ public class TransactionCommandValidator {
   }
 
   public ValidationResult validate(RecordSplitCommand command) {
-    Objects.requireNonNull(command);
+    Objects.requireNonNull(command, "Command cannot be null");
     List<String> errors = new ArrayList<>();
 
     validateCommonIds(command, errors);
+
     ValidationUtils.validateSymbol(command.symbol(), errors);
-    if (command.ratio() == null || command.ratio().numerator() <= 0) {
-      errors.add("Ratio, invalid split ratio");
+
+    if (command.ratio() == null) {
+      errors.add("Ratio: Split ratio is required");
+    } else {
+      // Guard against the 1:1 No-Op
+      if (command.ratio().numerator() == command.ratio().denominator()) {
+        errors.add("Ratio: A 1:1 split is a no-op and is not permitted");
+      }
+      // Basic ratio check (though constructor handles <= 0, we check for
+      // null/integrity)
+      if (command.ratio().numerator() <= 0 || command.ratio().denominator() <= 0) {
+        errors.add("Ratio: Split ratio must contain positive integers");
+      }
     }
+
     ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);

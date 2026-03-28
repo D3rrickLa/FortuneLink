@@ -155,23 +155,44 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public Transaction recordSplit(Account account, AssetSymbol symbol, Ratio ratio, String notes, Instant date) {
-    // the implementation builds a SPLIT transaction with cashDelta = zero and split
-    // = ratio, then calls applyPositionEffect.
-    // Transaction tx = Transaction.builder()
-    //     .transactionType(TransactionType.SPLIT)
-    //     .accountId(account.getAccountId())
-    //     .execution(new TradeExecution(symbol, null, null))
-    //     .split(ratio)
-    //     .cashDelta(Money.zero(account.getAccountCurrency())) // Splits are non-cash events
-    //     .occurredAt(date)
-    //     .notes(notes)
-    //     .build();
+    validateIsActive(account);
+    Objects.requireNonNull(symbol, "symbol cannot be null");
+    Objects.requireNonNull(ratio, "ratio cannot be null");
+    Objects.requireNonNull(notes, "notes cannot be null");
+    Objects.requireNonNull(date, "date cannot be null");
+    validateTransactionDate(date, account);
 
-    // // // The applier will handle the math: New Quantity = Old Quantity * (Ratio
-    // // // Numerator / Ratio Denominator)
-    // positionApplier.apply(account, tx);
-    // return tx;
-    throw new UnsupportedOperationException("Not yet implemented");
+    Position existingPosition = account.getPosition(symbol).orElseThrow(
+        () -> new IllegalStateException("Cannot apply split: no open position found for " + symbol.symbol()));
+
+    // TradeExecution is structurally required by TransactionType.SPLIT
+    // (requiresExecution = true), but TransactionApplier.apply() ignores it
+    // entirely for splits, only tx.split() drives the math.
+    //
+    // Convention: encode ratio.numerator() as the quantity so the transaction
+    // record is human-readable in an audit log (a 3:1 split shows qty=3).
+    // Price is zero because no cash changes hands and Price permits zero.
+    //
+    // validateTradeConsistency() passes because cashImpact=NONE always expects
+    // Money.zero, which matches our cashDelta.
+    Transaction tx = Transaction.builder()
+        .transactionId(TransactionId.newId())
+        .accountId(account.getAccountId())
+        .transactionType(TransactionType.SPLIT)
+        .execution(new TradeExecution(
+            symbol,
+            Quantity.of((double) ratio.numerator()), // structural placeholder — see above
+            Price.zero(account.getAccountCurrency()))) // zero price is valid; no cash event
+        .split(ratio)
+        .cashDelta(Money.zero(account.getAccountCurrency()))
+        .fees(List.of())
+        .notes(notes)
+        .occurredAt(date)
+        .metadata(TransactionMetadata.manual(existingPosition.type()))
+        .build();
+
+    applyPositionEffect(account, tx);
+    return tx;
   }
 
   @Override

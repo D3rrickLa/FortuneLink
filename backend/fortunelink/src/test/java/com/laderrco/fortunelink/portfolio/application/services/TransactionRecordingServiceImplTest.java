@@ -7,6 +7,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.CashImpact;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -134,6 +137,43 @@ class TransactionRecordingServiceImplTest {
   @Nested
   @DisplayName("Trade Operations (Buy/Sell)")
   class TradeOperationsTests {
+    private static Stream<Arguments> buyFeeProvider() {
+      return Stream.of(
+          Arguments.of(Named.of("Null Fees", null), new BigDecimal("1000.00")),
+          Arguments.of(Named.of("Empty Fees", List.of()), new BigDecimal("1000.00")),
+          Arguments.of(Named.of("With $5 Fee", List.of(Fee.of(FeeType.BROKERAGE, Money.of(5, USD), NOW))),
+              new BigDecimal("1005.00")));
+    }
+
+    private static Stream<Arguments> sellFeeProvider() {
+      return Stream.of(
+          Arguments.of(Named.of("No Fees", null), new BigDecimal("1000.00")),
+          Arguments.of(Named.of("With $10 Fee", List.of(Fee.of(FeeType.COMMISSION, Money.of(10, USD), NOW))),
+              new BigDecimal("990.00")),
+          Arguments.of(Named.of("Multiple Fees ($15 total)",
+              List.of(Fee.of(FeeType.BROKERAGE, Money.of(10, USD), NOW),
+                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))),
+              new BigDecimal("985.00")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("buyFeeProvider")
+    @DisplayName("recordBuy: withdraw total cost including fees")
+    void recordBuySuccessInitializesPosition(List<Fee> fees, BigDecimal expectedTotal) {
+      Position mockPos = new AcbPosition(AAPL, AssetType.STOCK, USD, TEN, HUNDRED_USD_MONEY, NOW, NOW);
+      when(account.hasSufficientCash(any())).thenReturn(true);
+      when(account.getPosition(AAPL)).thenReturn(Optional.of(mockPos));
+
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW);
+
+      verify(account).ensurePosition(AAPL, AssetType.STOCK);
+      verify(account, atLeastOnce()).withdraw(
+          argThat(money -> money.amount().compareTo(expectedTotal) == 0),
+          contains("BUY " + AAPL.symbol()),
+          eq(false));
+
+      verify(account).applyPositionResult(eq(AAPL), any());
+    }
 
     @Test
     @DisplayName("recordBuy: handle insufficient funds and skip mutations")
@@ -146,6 +186,32 @@ class TransactionRecordingServiceImplTest {
           .isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).applyPositionResult(any(), any());
+    }
+
+    @ParameterizedTest
+    @MethodSource("sellFeeProvider")
+    @DisplayName("recordSell: deposit net proceeds and record correct realized gain")
+    void recordSellSuccessCalculatesProceedsAndGain(List<Fee> fees, BigDecimal expectedNetDeposit) {
+      BigDecimal initialCostBasis = new BigDecimal("500.00");
+      Position existingPos = new AcbPosition(AAPL, AssetType.STOCK, USD, TEN,
+          new Money(initialCostBasis, USD), CREATION_DATE, NOW);
+
+      when(account.getPosition(AAPL)).thenReturn(Optional.of(existingPos));
+      when(account.getAccountCurrency()).thenReturn(USD);
+
+      service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW);
+
+      BigDecimal expectedGain = expectedNetDeposit.subtract(initialCostBasis);
+
+      verify(account).recordRealizedGain(eq(AAPL), any(Money.class), any(Money.class), eq(NOW));
+      verify(account).deposit(
+          argThat(m -> m.amount().compareTo(expectedNetDeposit) == 0),
+          contains(AAPL.symbol()));
+
+      verify(account).recordRealizedGain(eq(AAPL), argThat(m -> m.amount().compareTo(expectedGain) == 0), // Dynamic
+                                                                                                          // gain check
+          argThat(m -> m.amount().compareTo(initialCostBasis) == 0), // Basis Sold
+          eq(NOW));
     }
 
     @Test
@@ -177,6 +243,15 @@ class TransactionRecordingServiceImplTest {
   @DisplayName("Corporate Actions")
   class CorporateActionTests {
     @Test
+    @DisplayName("recordDividend: deposit cash and store symbol in metadata")
+    void recordDividendCashSuccess() {
+      Transaction tx = service.recordDividend(account, AAPL, HUNDRED_USD_MONEY, NOTES, NOW);
+
+      assertThat(tx.metadata().get("symbol")).isEqualTo("AAPL");
+      verify(account, atLeastOnce()).deposit(eq(HUNDRED_USD_MONEY), contains("DIVIDEND: AAPL"));
+    }
+
+    @Test
     @DisplayName("recordDividendReinvestment: update position with zero cash impact")
     void recordDRIPNoCashImpact() {
       when(account.getPosition(AAPL)).thenReturn(Optional.of(AcbPosition.empty(AAPL, AssetType.STOCK, USD)));
@@ -185,6 +260,21 @@ class TransactionRecordingServiceImplTest {
       assertThat(tx.cashDelta().isZero()).isTrue();
       verify(account, never()).deposit(any(), any());
       verify(account).applyPositionResult(eq(AAPL), any());
+    }
+
+    @Test
+    @DisplayName("recordReturnOfCapital: record excess gain when ROC exceeds cost basis")
+    void recordROCRecordsCapitalGainOnExcess() {
+      Money lowBasis = new Money(new BigDecimal("10.00"), USD);
+      Quantity ONE = Quantity.of(1);
+      Position existingPos = new AcbPosition(AAPL, AssetType.STOCK, USD, ONE, lowBasis, CREATION_DATE, NOW);
+      when(account.getPosition(AAPL)).thenReturn(Optional.of(existingPos));
+
+      service.recordReturnOfCapital(account, AAPL, ONE, HUNDRED_USD_PRICE, NOTES, NOW);
+
+      verify(account).recordRealizedGain(eq(AAPL), argThat(m -> m.amount().compareTo(new BigDecimal("90")) == 0),
+          argThat(m -> m.amount().compareTo(BigDecimal.ZERO) == 0),
+          eq(NOW));
     }
 
     @Test
@@ -197,12 +287,45 @@ class TransactionRecordingServiceImplTest {
           () -> service.recordReturnOfCapital(account, AAPL, Quantity.of(5), HUNDRED_USD_PRICE, NOTES, NOW))
           .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    @DisplayName("recordReturnOfCapital: throw IllegalStateException when position is missing")
+    void recordROCThrowsWhenNoPosition() {
+      when(account.getPosition(AAPL)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> service.recordReturnOfCapital(account, AAPL, TEN, HUNDRED_USD_PRICE, NOTES, NOW))
+          .isInstanceOf(IllegalStateException.class);
+    }
   }
 
   @Nested
   @DisplayName("Replay Mechanism")
   class ReplayTests {
     private static final Money THOUSAND_USD_MONEY = Money.of(1000, USD);
+
+    private static Stream<Arguments> provideCashImpactScenarios() {
+      // A position that actually has shares to sell
+      Position appleWithShares = AcbPosition.empty(AAPL, AssetType.STOCK, USD)
+          .buy(TEN, HUNDRED_USD_MONEY, NOW).getUpdatedPosition(); // Now has 10 shares
+
+      return Stream.of(
+          // BUY: Works with empty position
+          Arguments.of(TransactionType.BUY, CashImpact.OUT, THOUSAND_USD_MONEY.negate(),
+              AcbPosition.empty(AAPL, AssetType.STOCK, USD)),
+
+          // SELL: Needs a position that HAS shares, otherwise ACB math divides by zero
+          Arguments.of(TransactionType.SELL, CashImpact.IN, THOUSAND_USD_MONEY,
+              appleWithShares),
+
+          // SELL: But empty so should throw exception
+          // Arguments.of(TransactionType.SELL, CashImpact.IN, ONE_THOUSAND_USD_MONEY,
+          // AcbPosition.empty(AAPL, AssetType.STOCK, USD)),
+
+          // NONE: Works with empty
+          Arguments.of(TransactionType.DIVIDEND_REINVEST, CashImpact.NONE, Money.zero(USD),
+              AcbPosition.empty(AAPL, AssetType.STOCK, USD)));
+
+    }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("provideReplayGuardScenarios")
@@ -222,6 +345,31 @@ class TransactionRecordingServiceImplTest {
           Arguments.of("Excluded Transaction", mockTx(true, true), false, null),
           Arguments.of("Already in Replay Mode", mockTx(false, true), true, IllegalStateException.class),
           Arguments.of("Cash only Type", mockTx(false, false), false, IllegalArgumentException.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideCashImpactScenarios")
+    @DisplayName("replayFullTransaction: handles different cash impact types correctly")
+    void replayFullTransaction_HandlesAllCashImpacts(TransactionType type, CashImpact impact,
+        Money delta, Position startingPosition) {
+      Transaction tx = buildTx(type, HUNDRED_USD_PRICE, TEN, delta);
+
+      when(account.getPosition(eq(AAPL))).thenReturn(Optional.of(startingPosition));
+      service.replayFullTransaction(account, List.of(tx));
+
+      InOrder inOrder = inOrder(account);
+      inOrder.verify(account).beginReplay();
+
+      switch (impact) {
+        case IN -> verify(account).deposit(eq(delta), contains("REPLAY"));
+        case OUT -> verify(account).withdraw(eq(delta.abs()), contains("REPLAY"), eq(true));
+        case NONE -> {
+          verify(account, never()).deposit(any(), anyString());
+          verify(account, never()).withdraw(any(), anyString(), anyBoolean());
+        }
+      }
+
+      inOrder.verify(account).endReplay();
     }
 
     @Test
