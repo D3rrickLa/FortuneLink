@@ -1,19 +1,13 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import java.time.Instant;
+
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import java.time.Instant;
-import java.util.List;
 
-public record RecordDepositCommand(
-		PortfolioId portfolioId,
-		UserId userId,
-		AccountId accountId,
-		Money amount,
-		List<Fee> fees,
-		Instant transactionDate,
-		String notes) implements TransactionCommand {
+public record RecordTransferOutCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount,
+    String notes, Instant transactionDate) implements TransactionCommand {
+
 }

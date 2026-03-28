@@ -2,16 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.validators;
 
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.*;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import java.util.ArrayList;
@@ -135,6 +126,20 @@ public class TransactionCommandValidator {
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
 
+  public ValidationResult validate(RecordSplitCommand command) {
+    Objects.requireNonNull(command);
+    List<String> errors = new ArrayList<>();
+
+    validateCommonIds(command, errors);
+    ValidationUtils.validateSymbol(command.symbol(), errors);
+    if (command.ratio() == null || command.ratio().numerator() <= 0) {
+      errors.add("Ratio, invalid split ratio");
+    }
+    ValidationUtils.validateDate(command.transactionDate(), null, errors);
+
+    return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+  }
+
   public ValidationResult validate(RecordReturnOfCaptialCommand command) {
     Objects.requireNonNull(command);
     List<String> errors = new ArrayList<>();
@@ -183,6 +188,28 @@ public class TransactionCommandValidator {
     if (command.transactionId() == null) {
       errors.add("TransactionId is required");
     }
+
+    return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+  }
+
+  public ValidationResult validate(RecordTransferInCommand command) {
+    Objects.requireNonNull(command);
+    List<String> errors = new ArrayList<>();
+
+    validateCommonIds(command, errors);
+    ValidationUtils.validateAmount(command.amount().amount(), errors);
+    ValidationUtils.validateDate(command.transactionDate(), null, errors);
+
+    return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+  }
+
+  public ValidationResult validate(RecordTransferOutCommand command) {
+    Objects.requireNonNull(command);
+    List<String> errors = new ArrayList<>();
+
+    validateCommonIds(command, errors);
+    ValidationUtils.validateAmount(command.amount().amount(), errors);
+    ValidationUtils.validateDate(command.transactionDate(), null, errors);
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }

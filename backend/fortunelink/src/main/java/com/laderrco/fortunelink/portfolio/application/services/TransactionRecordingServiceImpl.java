@@ -9,11 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -155,6 +151,27 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     account.deposit(amount, REASON_INTEREST + symbol.symbol());
     return tx;
+  }
+
+  @Override
+  public Transaction recordSplit(Account account, AssetSymbol symbol, Ratio ratio, String notes, Instant date) {
+    // the implementation builds a SPLIT transaction with cashDelta = zero and split
+    // = ratio, then calls applyPositionEffect.
+    // Transaction tx = Transaction.builder()
+    //     .transactionType(TransactionType.SPLIT)
+    //     .accountId(account.getAccountId())
+    //     .execution(new TradeExecution(symbol, null, null))
+    //     .split(ratio)
+    //     .cashDelta(Money.zero(account.getAccountCurrency())) // Splits are non-cash events
+    //     .occurredAt(date)
+    //     .notes(notes)
+    //     .build();
+
+    // // // The applier will handle the math: New Quantity = Old Quantity * (Ratio
+    // // // Numerator / Ratio Denominator)
+    // positionApplier.apply(account, tx);
+    // return tx;
+    throw new UnsupportedOperationException("Not yet implemented");
   }
 
   @Override

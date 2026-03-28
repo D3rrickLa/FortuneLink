@@ -1,14 +1,35 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.HasPortfolioId;
+import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Function;
 
 public class ValidationUtils {
   private ValidationUtils() {
+  }
+
+  public static <T> void validate(T command, Function<T, ValidationResult> fn, String method) {
+    ValidationResult result = fn.apply(command);
+    if (!result.isValid()) {
+      throw new InvalidCommandException("Invalid " + method + " command", result.errors());
+    }
+  }
+
+  public static void validatePortfolioAndUserIds(HasPortfolioId command, List<String> errors) {
+    if (command.portfolioId() == null) {
+      errors.add("PortfolioId is required");
+    }
+
+    if (command.userId() == null) {
+      errors.add("UserId is required");
+    }
   }
 
   public static void validateAmount(BigDecimal amount, List<String> errors) {

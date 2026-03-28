@@ -1,6 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands;
 
-import com.laderrco.fortunelink.portfolio.application.commands.records.TransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.IdentifiedTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
@@ -19,5 +19,5 @@ public record ExcludeTransactionCommand(
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,
-    String reason) implements TransactionCommand {
+    String reason) implements IdentifiedTransactionCommand {
 }

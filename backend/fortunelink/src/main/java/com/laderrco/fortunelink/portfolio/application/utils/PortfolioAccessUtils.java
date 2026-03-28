@@ -7,8 +7,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 public class PortfolioAccessUtils {
+  private PortfolioAccessUtils() {
+
+  }
+
   public static Set<AssetSymbol> extractSymbols(Portfolio portfolio) {
     return portfolio.getAccounts().stream()
         .flatMap(account -> account.getPositionEntries().stream().map(Map.Entry::getKey))
