@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -20,13 +21,11 @@ public record RecordDividendReinvestmentCommand(
     AccountId accountId,
     String assetSymbol,
     DripExecution execution,
-    String notes,
-    // encapsulates the trade details
-    Instant transactionDate) implements TransactionCommand {
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
 
-  public record DripExecution(
-      Quantity sharesPurchased, Price pricePerShare // explicit, not derived
-  ) {
+  // price is  explicit, not derived
+  public record DripExecution(Quantity sharesPurchased, Price pricePerShare ) {
     public Money totalCost() {
       return pricePerShare.pricePerUnit().multiply(sharesPurchased.amount());
     }

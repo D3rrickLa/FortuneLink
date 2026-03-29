@@ -11,6 +11,8 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotF
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.IdentifiedTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.PortfolioContext;
 import com.laderrco.fortunelink.portfolio.application.validators.TransactionCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;

@@ -1,7 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.HasPortfolioId;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasPortfolioId;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;

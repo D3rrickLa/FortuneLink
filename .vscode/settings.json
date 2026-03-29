@@ -4,14 +4,6 @@
   "zenMode.hideLineNumbers": false,
   "java.format.settings.url": "backend/fortunelink/intellij-java-google-style.xml",
   "java.format.settings.profile": "GoogleStyle-Custom",
-  "java.completion.importOrder": [
-    "#",
-    "java",
-    "javax",
-    "org",
-    "com",
-    ""
-  ],
   "java.completion.favoriteStaticMembers": [],
   "java.sources.organizeImports.starThreshold": 5,
   "java.sources.organizeImports.staticStarThreshold": 3,

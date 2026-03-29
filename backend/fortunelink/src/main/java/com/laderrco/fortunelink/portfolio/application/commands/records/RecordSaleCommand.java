@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -19,8 +20,8 @@ public record RecordSaleCommand(
     Quantity quantity,
     Price price,
     List<Fee> fees,
-    String notes,
-    Instant transactionDate) implements TransactionCommand {
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
   public Money totalFees(Currency currency) {
     return Fee.totalInAccountCurrency(fees, currency);
   }

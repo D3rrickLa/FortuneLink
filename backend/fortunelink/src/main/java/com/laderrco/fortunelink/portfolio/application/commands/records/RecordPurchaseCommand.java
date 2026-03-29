@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -10,7 +11,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 import java.util.List;
-
 
 // String symbol is fine, we are just recording the name, not the entity
 // asset symbol - name
@@ -23,9 +23,8 @@ public record RecordPurchaseCommand(
     Quantity quantity,
     Price price,
     List<Fee> fees,
-    String notes,
-    Instant transactionDate
-    ) implements TransactionCommand {
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
   public Money totalFees(Currency currency) {
     return Fee.totalInAccountCurrency(fees, currency);
   }

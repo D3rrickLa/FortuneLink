@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Executable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -17,9 +16,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -80,12 +76,11 @@ class TransactionServiceTest {
   private static final UserId USER_ID = UserId.random();
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private static final AccountId ACCOUNT_ID = AccountId.newId();
-  private static final AssetSymbol SYMBOL_STR = new AssetSymbol("AAPL");
+  private static final String SYMBOL_STR = "AAPL";
   private static final String NOTES = "Test Note";
   private static final Instant NOW = Instant.now();
   private static final Currency USD = Currency.of("USD");
   private static final Money AMOUNT = new Money(new BigDecimal("100.00"), USD);
-  private TransactionId transactionId;
 
   @Mock
   private Portfolio portfolio;
@@ -98,7 +93,6 @@ class TransactionServiceTest {
 
   @BeforeEach
   void setUp() {
-    transactionId = TransactionId.newId();
     lenient().when(portfolioLoader.loadUserPortfolio(PORTFOLIO_ID, USER_ID)).thenReturn(portfolio);
     lenient().when(portfolio.getAccount(ACCOUNT_ID)).thenReturn(account);
     lenient().when(account.getAccountCurrency()).thenReturn(USD);
@@ -128,8 +122,9 @@ class TransactionServiceTest {
     @DisplayName("recordPurchase: success when asset exists")
     void recordPurchaseSuccess() {
       RecordPurchaseCommand command = createPurchaseCommand();
-      MarketAssetInfo info = new MarketAssetInfo(SYMBOL_STR, "APPLE", AssetType.STOCK, "NASDAQ", USD, "technology",
-          "description");
+      AssetSymbol symbol = new AssetSymbol(SYMBOL_STR);
+      MarketAssetInfo info = new MarketAssetInfo(symbol, "APPLE", AssetType.STOCK, 
+      "NASDAQ", USD, "technology","description");
 
       when(marketDataService.getAssetInfo(any())).thenReturn(Optional.of(info));
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any()))
@@ -156,8 +151,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordSale: throw InsufficientQuantityException when no position exists")
     void recordSaleThrowsWhenNoPosition() {
-      RecordSaleCommand command = new RecordSaleCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, NOTES, Quantity.of(0),
-          new Price(AMOUNT), List.of(), NOTES, NOW);
+      RecordSaleCommand command = new RecordSaleCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+          Quantity.of(0), new Price(AMOUNT), List.of(), NOW, NOTES);
       when(account.hasPosition(any())).thenReturn(false);
 
       assertThatThrownBy(() -> service.recordSale(command))
@@ -168,21 +163,11 @@ class TransactionServiceTest {
   @Nested
   @DisplayName("Cash Flow & Distributions")
   class CashFlowTests {
-
-    @ParameterizedTest
-    @MethodSource("cashCommandProvider")
-    @DisplayName("recordCashFlow: verify recording service is called correctly")
-    void recordCashFlowOperations(Object command, Executable recordingCall) {
-      // This is a conceptual example of how you'd parameterize the different cash
-      // methods
-      // In practice, since recordFn is a lambda, you'd test a few key ones:
-    }
-
     @Test
     @DisplayName("recordDeposit: verify success flow")
     void recordDepositSuccess() {
-      RecordDepositCommand cmd = new RecordDepositCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT, List.of(), NOTES,
-          NOW);
+      RecordDepositCommand cmd = new RecordDepositCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
+          List.of(), NOW, NOTES);
       when(transactionRecordingService.recordDeposit(eq(account), eq(AMOUNT), eq(NOTES), eq(NOW)))
           .thenReturn(transaction);
 
@@ -196,12 +181,18 @@ class TransactionServiceTest {
   @Nested
   @DisplayName("Exclusion and Restoration")
   class ExclusionTests {
+    private TransactionId transactionId;
+    
+    @BeforeEach
+    void setUp() {
+      transactionId = TransactionId.newId();
+    }
 
     @Test
     @DisplayName("excludeTransaction: throw exception when already excluded")
     void excludeTransactionThrowsWhenAlreadyExcluded() {
-      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(transactionId, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "reason");
+      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          transactionId, "reason");
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any()))
           .thenReturn(Optional.of(transaction));
       when(transaction.isExcluded()).thenReturn(true);
@@ -213,8 +204,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("excludeTransaction: publish event when holdings are affected")
     void excludeTransactionPublishesEvent() {
-      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(transactionId, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "reason");
+      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          transactionId, "reason");
       TradeExecution execution = mock(TradeExecution.class);
 
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any()))
@@ -232,7 +223,7 @@ class TransactionServiceTest {
 
   // --- Helper Methods ---
   private RecordPurchaseCommand createPurchaseCommand() {
-    return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR.symbol(),
-        Quantity.of(10), new Price(AMOUNT), List.of(), NOTES, NOW);
+    return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+        Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
   }
 }

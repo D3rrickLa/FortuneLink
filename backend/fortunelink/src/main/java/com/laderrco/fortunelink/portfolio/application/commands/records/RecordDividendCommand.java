@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -13,6 +14,6 @@ public record RecordDividendCommand(
     AccountId accountId,
     String assetSymbol,
     Money amount,
-    String notes,
-    Instant transactionDate) implements TransactionCommand {
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
 }

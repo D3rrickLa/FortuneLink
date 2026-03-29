@@ -27,7 +27,9 @@
     </value>
   </option>
   <option name="RIGHT_MARGIN" value="100" />
+  <option name="WRAP_ON_TYPING" value="1" />
   <option name="KEEP_BLANK_LINES_IN_CODE" value="2" />
+  <option name="KEEP_FIRST_COLUMN_COMMENT" value="false" />
   <option name="KEEP_CONTROL_STATEMENT_IN_ONE_LINE" value="false" />
   <option name="KEEP_BLANK_LINES_BEFORE_RBRACE" value="0" />
   <option name="BLANK_LINES_AFTER_CLASS_HEADER" value="0" />
@@ -609,4 +611,8 @@
       <option name="TAB_SIZE" value="2" />
     </indentOptions>
   </codeStyleSettings>
+  <EclipseXmlFormatterSettings>
+    <setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="100"/>
+    <setting id="org.eclipse.jdt.core.formatter.lineSplit" value="100"/>
+  </EclipseXmlFormatterSettings>
 </code_scheme>

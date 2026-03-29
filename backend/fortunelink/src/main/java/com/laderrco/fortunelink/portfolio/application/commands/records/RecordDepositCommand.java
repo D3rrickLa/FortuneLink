@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -14,7 +15,6 @@ public record RecordDepositCommand(
 		AccountId accountId,
 		Money amount,
 		List<Fee> fees,
-		String notes,
-		Instant transactionDate
-		) implements TransactionCommand {
+		Instant transactionDate,
+		String notes) implements AdditionalInfoTransactionCommand {
 }

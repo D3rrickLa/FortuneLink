@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -14,7 +15,7 @@ public record RecordReturnOfCaptialCommand(
     String assetSymbol,
     Price distributionPerUnit,
     Quantity heldQuantity,
-    String notes,
-    Instant transactionDate) implements TransactionCommand {
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
 
 }
