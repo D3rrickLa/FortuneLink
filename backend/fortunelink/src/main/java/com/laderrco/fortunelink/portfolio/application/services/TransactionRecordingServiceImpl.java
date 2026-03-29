@@ -98,7 +98,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -134,7 +135,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date))
         .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
-    account.withdraw(amount, REASON_FEE + amount.amount().toString(), false);
+    account.applyFee(amount, REASON_FEE + amount.amount().toString());
     return tx;
   }
 
@@ -150,7 +151,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_INTEREST + symbol.symbol());
     return tx;
@@ -348,13 +350,14 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     AssetSymbol symbol = tx.execution().asset();
     AssetType type = tx.metadata().assetType();
 
-    if (tx.transactionType() == TransactionType.BUY
-        || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
+    // BUY/DRIP: creation is valid and expected
+    if (tx.transactionType() == TransactionType.BUY || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
       account.ensurePosition(symbol, type);
     }
 
-    Position current = account.getPosition(symbol).orElseThrow(() -> new IllegalStateException(
-        tx.transactionType() + " requires position for " + symbol.symbol()));
+    // Everything else: position MUST already exist
+    Position current = account.getPosition(symbol).orElseThrow(
+        () -> new IllegalStateException(tx.transactionType() + " requires position for " + symbol.symbol()));
 
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
     account.applyPositionResult(symbol, result.newPosition());

@@ -114,8 +114,8 @@ public class Account {
 
   // --- Position Management ---
 
-  public Position ensurePosition(AssetSymbol symbol, AssetType assetType) {
-    return positionBook.ensurePosition(symbol, assetType);
+  public void ensurePosition(AssetSymbol symbol, AssetType assetType) {
+    positionBook.ensurePosition(symbol, assetType);
   }
 
   public void applyPositionResult(AssetSymbol symbol, Position updated) {

@@ -8,14 +8,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 
 /**
- * Bug 16 fix: removed the dead {@code fees} field.
- * <p>
- * The field was never passed to
- * {@code TransactionRecordingService.recordWithdrawal()}, which
- * accepts no fee parameter. Any caller that passed fees in silently had them
- * discarded, which is a
- * data loss bug. Withdrawals do not carry fees in this model — if a broker
- * charges a withdrawal
+ * Withdrawals do not carry fees in this model. If a broker charges a withdrawal
  * fee, record it as a separate FEE transaction.
  */
 public record RecordWithdrawalCommand(

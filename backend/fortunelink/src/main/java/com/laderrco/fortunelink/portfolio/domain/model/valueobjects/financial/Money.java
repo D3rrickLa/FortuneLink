@@ -26,20 +26,12 @@ public record Money(BigDecimal amount, Currency currency) implements Comparable<
     return new Money(new BigDecimal(String.valueOf(value)), Currency.of(currency));
   }
 
-  public static Money of(double value, Currency currency) {
-    return new Money(new BigDecimal(String.valueOf(value)), currency);
-  }
-
   public static Money of(String value, Currency currency) {
     return new Money(new BigDecimal(value), currency);
   }
 
   public static Money zero(Currency currency) {
     return new Money(BigDecimal.ZERO, currency);
-  }
-
-  public static Money zero(String currency) {
-    return zero(Currency.of(currency));
   }
 
   private static BigDecimal normalize(BigDecimal value) {

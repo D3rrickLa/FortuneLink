@@ -20,10 +20,6 @@ public record Price(Money pricePerUnit) {
     return new Price(new Money(amount, currency));
   }
 
-  public static Price of(double amount, Currency currency) {
-    return new Price(new Money(BigDecimal.valueOf(amount), currency));
-  }
-
   public static Price of(String amount, Currency currency) {
     return new Price(new Money(new BigDecimal(amount), currency));
   }

@@ -28,7 +28,7 @@ public class PositionBookTest {
 
   @ParameterizedTest
   @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
-  void ensurePosition_ShouldThrowException_WhenStrategyIsNotSupported(PositionStrategy unsupportedStrategy) {
+  void ensurePositionThrowExceptionWhenStrategyIsNotSupported(PositionStrategy unsupportedStrategy) {
     AssetSymbol symbol = new AssetSymbol("AAPL");
     AssetType type = AssetType.STOCK;
 

@@ -579,7 +579,7 @@ class TransactionRecordingServiceImplTest {
       Transaction tx = service.recordFee(account, feeAmt, NOTES, NOW);
 
       assertThat(tx.cashDelta().isNegative()).isTrue();
-      verify(account).withdraw(eq(feeAmt), contains("FEE: 15"), eq(false));
+      verify(account).applyFee(eq(feeAmt), contains("FEE: 15"));
     }
 
     @Test
