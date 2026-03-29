@@ -13,6 +13,6 @@ public record RecordDividendCommand(
     AccountId accountId,
     String assetSymbol,
     Money amount,
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    String notes,
+    Instant transactionDate) implements TransactionCommand {
 }

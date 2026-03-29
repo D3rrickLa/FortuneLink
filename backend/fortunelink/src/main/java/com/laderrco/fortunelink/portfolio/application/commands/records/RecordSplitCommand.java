@@ -13,6 +13,6 @@ public record RecordSplitCommand(
     AccountId accountId,
     String symbol,
     Ratio ratio, // e.g. Ratio(2, 1) for a 2-for-1 split
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    String notes,
+    Instant transactionDate) implements TransactionCommand {
 }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
@@ -23,13 +24,16 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.time.Instant;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.*;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @DisplayName("Account Tests")
 class AccountTest {
@@ -44,11 +48,7 @@ class AccountTest {
 
   @BeforeEach
   void setUp() {
-    account = new Account(
-        AccountId.newId(),
-        VALID_NAME,
-        AccountType.TAXABLE_INVESTMENT,
-        USD,
+    account = new Account(AccountId.newId(), VALID_NAME, AccountType.TAXABLE_INVESTMENT, USD,
         PositionStrategy.ACB);
   }
 
@@ -62,8 +62,7 @@ class AccountTest {
 
   private Position createPosition(AssetSymbol symbol, int qty, int price) {
     return AcbPosition.empty(symbol, AssetType.STOCK, USD)
-        .buy(Quantity.of(qty), usd(price), Instant.now())
-        .getUpdatedPosition();
+        .buy(Quantity.of(qty), usd(price), Instant.now()).getUpdatedPosition();
   }
 
   @Nested
@@ -72,37 +71,44 @@ class AccountTest {
     @Test
     @DisplayName("initializesCorrectly")
     void initializesCorrectly() {
-      assertAll(
-          () -> assertEquals(VALID_NAME, account.getName()),
-          () -> assertTrue(account.getCashBalance().isZero()),
-          () -> assertTrue(account.isActive()),
+      assertAll(() -> assertEquals(VALID_NAME, account.getName()),
+          () -> assertTrue(account.getCashBalance().isZero()), () -> assertTrue(account.isActive()),
           () -> assertEquals(0, account.getPositionCount()));
     }
 
     @ParameterizedTest(name = "invalidName: \"{0}\"")
     @NullSource
-    @ValueSource(strings = { "", " ", "\t" })
+    @ValueSource(strings = {"", " ", "\t"})
     @DisplayName("throwsForInvalidNames")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
-          () -> new Account(AccountId.newId(), invalidName,
-              AccountType.CHEQUING, USD, PositionStrategy.ACB));
+          () -> new Account(AccountId.newId(), invalidName, AccountType.CHEQUING, USD,
+              PositionStrategy.ACB));
     }
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = { "   " })
+    @ValueSource(strings = {"   "})
     @DisplayName("updateNameFailsForInvalidInput")
     void updateNameFailsForInvalidInput(String invalid) {
-      assertThatThrownBy(() -> account.updateName(invalid))
-          .isInstanceOf(DomainArgumentException.class)
-          .hasMessageContaining("Account name cannot be empty");
+      assertThatThrownBy(() -> account.updateName(invalid)).isInstanceOf(
+          DomainArgumentException.class).hasMessageContaining("Account name cannot be empty");
     }
   }
 
   @Nested
   @DisplayName("Cash Operations")
   class CashOperations {
+    static Stream<Arguments> invalidDeposits() {
+      return Stream.of(Arguments.of(Money.of(-100, "USD"), IllegalArgumentException.class),
+          Arguments.of(Money.of(100, "EUR"), CurrencyMismatchException.class));
+    }
+
+    static Stream<Arguments> invalidWithdrawals() {
+      return Stream.of(Arguments.of(Money.of(200, "USD"), InsufficientFundsException.class),
+          Arguments.of(Money.of(-50, "USD"), IllegalArgumentException.class));
+    }
+
     @Test
     @DisplayName("depositIncreasesBalance")
     void depositIncreasesBalance() {
@@ -115,12 +121,6 @@ class AccountTest {
     @MethodSource("invalidDeposits")
     void depositRejectsInvalidInputs(Money money, Class<?> exception) {
       assertThatThrownBy(() -> account.deposit(money, VALID_REASON)).isInstanceOf(exception);
-    }
-
-    static Stream<Arguments> invalidDeposits() {
-      return Stream.of(
-          Arguments.of(Money.of(-100, "USD"), IllegalArgumentException.class),
-          Arguments.of(Money.of(100, "EUR"), CurrencyMismatchException.class));
     }
 
     @Test
@@ -138,22 +138,17 @@ class AccountTest {
     void withdrawRejectsInvalidCases(Money money, Class<?> exception) {
       deposit(100);
 
-      assertThatThrownBy(() -> account.withdraw(money, VALID_REASON, false)).isInstanceOf(exception);
-    }
-
-    static Stream<Arguments> invalidWithdrawals() {
-      return Stream.of(
-          Arguments.of(Money.of(200, "USD"), InsufficientFundsException.class),
-          Arguments.of(Money.of(-50, "USD"), IllegalArgumentException.class));
+      assertThatThrownBy(() -> account.withdraw(money, VALID_REASON, false)).isInstanceOf(
+          exception);
     }
 
     @ParameterizedTest
     @DisplayName("rejectsInvalidDescriptions")
     @NullAndEmptySource
-    @ValueSource(strings = { "   " })
+    @ValueSource(strings = {"   "})
     void rejectsInvalidDescriptions(String reason) {
-      assertThatThrownBy(() -> account.deposit(usd(100), reason))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> account.deposit(usd(100), reason)).isInstanceOf(
+              IllegalArgumentException.class)
           .hasMessageContaining("Reason/description cannot be empty");
     }
   }
@@ -179,9 +174,7 @@ class AccountTest {
 
       var result = account.getRealizedGainsFor(AAPL);
 
-      assertThat(result)
-          .hasSize(1)
-          .allMatch(r -> r.symbol().equals(AAPL));
+      assertThat(result).hasSize(1).allMatch(r -> r.symbol().equals(AAPL));
     }
   }
 
@@ -195,8 +188,7 @@ class AccountTest {
 
       account.applyPositionResult(AAPL, pos);
 
-      assertAll(
-          () -> assertTrue(account.hasPosition(AAPL)),
+      assertAll(() -> assertTrue(account.hasPosition(AAPL)),
           () -> assertEquals(1, account.getPositionCount()));
     }
 
@@ -222,8 +214,7 @@ class AccountTest {
 
       account.beginReplay();
 
-      assertAll(
-          () -> assertTrue(account.isInReplayMode()),
+      assertAll(() -> assertTrue(account.isInReplayMode()),
           () -> assertTrue(account.getCashBalance().isZero()),
           () -> assertTrue(account.getRealizedGains().isEmpty()));
     }
@@ -240,8 +231,7 @@ class AccountTest {
     void closeSucceedsWhenEmpty() {
       account.close();
 
-      assertAll(
-          () -> assertFalse(account.isActive()),
+      assertAll(() -> assertFalse(account.isActive()),
           () -> assertEquals(AccountLifecycleState.CLOSED, account.getState()));
     }
   }

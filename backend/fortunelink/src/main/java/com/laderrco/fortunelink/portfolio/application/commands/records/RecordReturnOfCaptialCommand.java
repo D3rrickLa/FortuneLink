@@ -14,7 +14,7 @@ public record RecordReturnOfCaptialCommand(
     String assetSymbol,
     Price distributionPerUnit,
     Quantity heldQuantity,
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    String notes,
+    Instant transactionDate) implements TransactionCommand {
 
 }

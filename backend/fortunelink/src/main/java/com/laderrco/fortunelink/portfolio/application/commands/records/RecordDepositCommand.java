@@ -14,6 +14,7 @@ public record RecordDepositCommand(
 		AccountId accountId,
 		Money amount,
 		List<Fee> fees,
-		Instant transactionDate,
-		String notes) implements TransactionCommand {
+		String notes,
+		Instant transactionDate
+		) implements TransactionCommand {
 }

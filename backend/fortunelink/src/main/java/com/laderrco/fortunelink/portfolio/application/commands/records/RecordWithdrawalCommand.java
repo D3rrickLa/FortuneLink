@@ -20,8 +20,8 @@ public record RecordWithdrawalCommand(
     UserId userId,
     AccountId accountId,
     Money amount,
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    String notes,
+    Instant transactionDate) implements TransactionCommand {
 }
 
 

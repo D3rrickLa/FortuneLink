@@ -9,17 +9,17 @@ import java.time.Instant;
 public record RecordInterestCommand(
     PortfolioId portfolioId, UserId userId, AccountId accountId, String assetSymbol,
     // can be nullable (when null, it means cash/account-level interest)
-    Money amount, Instant transactionDate, String notes) implements TransactionCommand {
+    Money amount, String notes, Instant transactionDate) implements TransactionCommand {
   // Cash/account-level interest (HISA, savings)
   public static RecordInterestCommand cashInterest(PortfolioId portfolioId, UserId userId,
       AccountId accountId, Money amount, Instant date, String notes) {
-    return new RecordInterestCommand(portfolioId, userId, accountId, null, amount, date, notes);
+    return new RecordInterestCommand(portfolioId, userId, accountId, null, amount, notes, date);
   }
 
   // Asset-level interest (bond coupons)
   public static RecordInterestCommand assetInterest(PortfolioId portfolioId, UserId userId,
       AccountId accountId, String symbol, Money amount, Instant date, String notes) {
-    return new RecordInterestCommand(portfolioId, userId, accountId, symbol, amount, date, notes);
+    return new RecordInterestCommand(portfolioId, userId, accountId, symbol, amount, notes, date);
   }
 
   public boolean isAssetInterest() {

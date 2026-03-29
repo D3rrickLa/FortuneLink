@@ -10,5 +10,5 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 public record RecordTransferInCommand(PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount,
-    String notes, List<Fee> fees, Instant transactionDate) implements TransactionCommand {
+    List<Fee> fees, String notes, Instant transactionDate) implements TransactionCommand {
 }

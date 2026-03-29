@@ -23,8 +23,9 @@ public record RecordPurchaseCommand(
     Quantity quantity,
     Price price,
     List<Fee> fees,
-    Instant transactionDate,
-    String notes) implements TransactionCommand {
+    String notes,
+    Instant transactionDate
+    ) implements TransactionCommand {
   public Money totalFees(Currency currency) {
     return Fee.totalInAccountCurrency(fees, currency);
   }

@@ -6,8 +6,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 
+// just the total
 public record RecordFeeCommand(
-    PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount,
-    // just the total
-    Instant transactionDate, String notes) implements TransactionCommand {
+    PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount,String notes,
+    Instant transactionDate) implements TransactionCommand {
 }

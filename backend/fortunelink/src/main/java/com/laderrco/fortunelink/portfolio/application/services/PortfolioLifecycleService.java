@@ -58,18 +58,17 @@ public class PortfolioLifecycleService {
   }
 
   /**
-   * NOTE: lifecycle shouldn't call MarketDataService.
-   * Returns only what changed, portfolio metadata.
-   * Callers that need a full view should query PortfolioQueryService afterward.
-   * This is intentional: lifecycle services should not own read-side concerns.
+   * NOTE: lifecycle shouldn't call MarketDataService. Returns only what changed, portfolio
+   * metadata. Callers that need a full view should query PortfolioQueryService afterward. This is
+   * intentional: lifecycle services should not own read-side concerns.
    */
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "updatePortfolio");
 
     Portfolio saved = transactionTemplate.execute(status -> {
-      Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(
-          command.portfolioId(), command.userId());
+      Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(),
+          command.userId());
       existing.updateDetails(command.name(), command.description());
       existing.updateDisplayCurrency(command.currency());
       return portfolioRepository.save(existing);
@@ -87,9 +86,8 @@ public class PortfolioLifecycleService {
   public void deletePortfolio(DeletePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "deletePortfolio");
 
-    Portfolio portfolio = portfolioRepository
-        .findByIdAndUserId(command.portfolioId(), command.userId())
-        .orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
+    Portfolio portfolio = portfolioRepository.findByIdAndUserId(command.portfolioId(),
+        command.userId()).orElseThrow(() -> new PortfolioNotFoundException(command.portfolioId()));
 
     if (command.softDelete()) {
       softDelete(portfolio, command);
@@ -116,8 +114,7 @@ public class PortfolioLifecycleService {
   }
 
   private void closeAllEligibleAccounts(Portfolio portfolio) {
-    boolean hasNonEmptyAccounts = portfolio.getAccounts().stream()
-        .filter(Account::isActive)
+    boolean hasNonEmptyAccounts = portfolio.getAccounts().stream().filter(Account::isActive)
         .anyMatch(acc -> acc.getPositionCount() > 0 || acc.getCashBalance().isPositive());
 
     if (hasNonEmptyAccounts) {
@@ -125,8 +122,7 @@ public class PortfolioLifecycleService {
           "Recursive delete requires all accounts to have zero positions and zero cash balance.");
     }
 
-    portfolio.getAccounts().stream()
-        .filter(Account::isActive)
+    portfolio.getAccounts().stream().filter(Account::isActive)
         .forEach(acc -> portfolio.closeAccount(acc.getAccountId()));
   }
 }

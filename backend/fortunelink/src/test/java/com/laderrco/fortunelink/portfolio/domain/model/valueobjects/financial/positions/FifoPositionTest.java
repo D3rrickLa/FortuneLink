@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.p
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -81,22 +82,23 @@ class FifoPositionTest {
     void sellMultipleLotsConsumesInFifoOrder() {
       FifoPosition pos = createPosition(createLot("10", "100", T1), createLot("10", "200", T2));
 
-      var result = pos.sell(new Quantity(new BigDecimal("15")), Money.of(450, "USD"), Instant.now());
+      var result = pos.sell(new Quantity(new BigDecimal("15")), Money.of(450, "USD"),
+          Instant.now());
 
       assertThat(result.costBasisSold().amount()).isEqualByComparingTo("200");
       assertThat(result.newPosition().lots()).hasSize(1);
-      assertThat(result.newPosition().lots().getFirst().quantity().amount()).isEqualByComparingTo("5");
+      assertThat(result.newPosition().lots().getFirst().quantity().amount()).isEqualByComparingTo(
+          "5");
     }
 
     @Test
     @DisplayName("sell: preserves untouched subsequent lots")
     void sellPartialConsumptionPreservesTrailingLots() {
-      FifoPosition pos = createPosition(
-          createLot("10", "100", T1),
-          createLot("10", "200", T2),
+      FifoPosition pos = createPosition(createLot("10", "100", T1), createLot("10", "200", T2),
           createLot("10", "300", T3));
 
-      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)), Money.of(500, "USD"), Instant.now());
+      var result = pos.sell(new Quantity(BigDecimal.valueOf(15)), Money.of(500, "USD"),
+          Instant.now());
       FifoPosition updated = result.newPosition();
 
       assertThat(updated.lots()).hasSize(2);
@@ -127,7 +129,8 @@ class FifoPositionTest {
       FifoPosition pos = createPosition(createLot("10", "400", T1), createLot("10", "600", T1));
       Price rocPrice = Price.of(new BigDecimal("5"), USD);
 
-      var result = (ApplyResult.Adjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice, Quantity.of(20));
+      var result = (ApplyResult.Adjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice,
+          Quantity.of(20));
       FifoPosition updated = (FifoPosition) result.getUpdatedPosition();
 
       assertThat(updated.lots().get(0).costBasis().amount()).isEqualByComparingTo("360");
@@ -138,8 +141,8 @@ class FifoPositionTest {
     @DisplayName("applyReturnOfCapital: returns RocAdjustment when totalCostBasis is zero")
     void applyReturnOfCapitalReturnsRocAdjustmentWhenCostBasisIsZero() {
       Quantity heldQuantity = Quantity.of(30);
-      FifoPosition pos = new FifoPosition(SYMBOL, TYPE, CAD, List.of(new TaxLot(heldQuantity, Money.zero(CAD), T1)),
-          T1);
+      FifoPosition pos = new FifoPosition(SYMBOL, TYPE, CAD,
+          List.of(new TaxLot(heldQuantity, Money.zero(CAD), T1)), T1);
       Price rocPrice = Price.of("2", CAD);
 
       var result = pos.applyReturnOfCapital(rocPrice, heldQuantity);
@@ -155,7 +158,8 @@ class FifoPositionTest {
       FifoPosition pos = createPosition(createLot("10", "100", T1));
       Price rocPrice = Price.of(new BigDecimal("15"), USD);
 
-      var result = (ApplyResult.RocAdjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice, Quantity.of(10));
+      var result = (ApplyResult.RocAdjustment<FifoPosition>) pos.applyReturnOfCapital(rocPrice,
+          Quantity.of(10));
 
       assertThat(result.getUpdatedPosition().totalCostBasis().isZero()).isTrue();
       assertThat(result.excessCapitalGain().amount()).isEqualByComparingTo("50");
@@ -164,15 +168,17 @@ class FifoPositionTest {
     @Test
     @DisplayName("applyLotReduction: clamps last lot to zero when reduction exceeds basis")
     void applyLotReductionLastLotExcessClampsToZero() {
-      Money result = FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD), true, USD);
+      Money result = FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD),
+          true, USD);
       assertThat(result).isEqualTo(Money.zero(USD));
     }
 
     @Test
     @DisplayName("applyLotReduction: throws if intermediate lot would go negative")
     void applyLotReductionIntermediateLotExcessThrowsIllegalState() {
-      assertThatThrownBy(() -> FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD), false, USD))
-          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(
+          () -> FifoPosition.applyLotReduction(Money.of("0.01", USD), Money.of("0.03", USD), false,
+              USD)).isInstanceOf(IllegalStateException.class);
     }
   }
 

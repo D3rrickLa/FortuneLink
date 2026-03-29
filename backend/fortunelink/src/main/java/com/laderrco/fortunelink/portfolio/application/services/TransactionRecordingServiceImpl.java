@@ -9,7 +9,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -93,8 +98,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -146,15 +150,15 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, REASON_INTEREST + symbol.symbol());
     return tx;
   }
 
   @Override
-  public Transaction recordSplit(Account account, AssetSymbol symbol, Ratio ratio, String notes, Instant date) {
+  public Transaction recordSplit(Account account, AssetSymbol symbol, Ratio ratio, String notes,
+      Instant date) {
     validateIsActive(account);
     Objects.requireNonNull(symbol, "symbol cannot be null");
     Objects.requireNonNull(ratio, "ratio cannot be null");
@@ -163,7 +167,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateTransactionDate(date, account);
 
     Position existingPosition = account.getPosition(symbol).orElseThrow(
-        () -> new IllegalStateException("Cannot apply split: no open position found for " + symbol.symbol()));
+        () -> new IllegalStateException(
+            "Cannot apply split: no open position found for " + symbol.symbol()));
 
     // TradeExecution is structurally required by TransactionType.SPLIT
     // (requiresExecution = true), but TransactionApplier.apply() ignores it
@@ -175,20 +180,13 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     //
     // validateTradeConsistency() passes because cashImpact=NONE always expects
     // Money.zero, which matches our cashDelta.
-    Transaction tx = Transaction.builder()
-        .transactionId(TransactionId.newId())
-        .accountId(account.getAccountId())
-        .transactionType(TransactionType.SPLIT)
-        .execution(new TradeExecution(
-            symbol,
-            Quantity.of((double) ratio.numerator()), // structural placeholder — see above
-            Price.zero(account.getAccountCurrency()))) // zero price is valid; no cash event
-        .split(ratio)
-        .cashDelta(Money.zero(account.getAccountCurrency()))
-        .fees(List.of())
-        .notes(notes)
-        .occurredAt(date)
-        .metadata(TransactionMetadata.manual(existingPosition.type()))
+    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
+        .accountId(account.getAccountId()).transactionType(TransactionType.SPLIT).execution(
+            new TradeExecution(symbol, Quantity.of(ratio.numerator()),
+                // structural placeholder — see above
+                Price.zero(account.getAccountCurrency()))) // zero price is valid; no cash event
+        .split(ratio).cashDelta(Money.zero(account.getAccountCurrency())).fees(List.of())
+        .notes(notes).occurredAt(date).metadata(TransactionMetadata.manual(existingPosition.type()))
         .build();
 
     applyPositionEffect(account, tx);
@@ -355,8 +353,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       account.ensurePosition(symbol, type);
     }
 
-    Position current = account.getPosition(symbol).orElseThrow(
-        () -> new IllegalStateException(tx.transactionType() + " requires position for " + symbol.symbol()));
+    Position current = account.getPosition(symbol).orElseThrow(() -> new IllegalStateException(
+        tx.transactionType() + " requires position for " + symbol.symbol()));
 
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
     account.applyPositionResult(symbol, result.newPosition());
@@ -382,7 +380,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       // allowNegative = true is critical for replaying historical sequences
       case OUT -> account.withdraw(tx.cashDelta().abs(), "REPLAY " + tx.transactionType(), true);
       case NONE -> {
-        /* No cash effect for DRIP/Split */ }
+        /* No cash effect for DRIP/Split */
+      }
     }
   }
 

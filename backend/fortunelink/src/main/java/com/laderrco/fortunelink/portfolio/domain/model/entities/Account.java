@@ -32,16 +32,14 @@ public class Account {
   private final Currency accountCurrency;
   private final PositionStrategy positionStrategy;
   private final Instant creationDate;
-
+  private final PositionBook positionBook;
   private String name;
   private AccountType accountType;
   private HealthStatus healthStatus;
   private AccountLifecycleState state;
   private Instant closeDate;
   private Instant lastUpdatedOn;
-
   private Money cashBalance;
-  private final PositionBook positionBook;
   private List<RealizedGainRecord> realizedGains;
 
   // JPA hydration constructor only. Fields populated by persistence layer via reflection
@@ -144,7 +142,8 @@ public class Account {
 
   // --- Gain Management ---
 
-  public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold, Instant at) {
+  public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold,
+      Instant at) {
     requireActive();
     notNull(symbol, "symbol");
     notNull(gainLoss, "gainLoss");
@@ -165,8 +164,7 @@ public class Account {
   }
 
   public Money getTotalRealizedGainLoss() {
-    return realizedGains.stream()
-        .map(RealizedGainRecord::realizedGainLoss)
+    return realizedGains.stream().map(RealizedGainRecord::realizedGainLoss)
         .reduce(Money.zero(accountCurrency), Money::add);
   }
 
@@ -266,8 +264,9 @@ public class Account {
   }
 
   private void requireActive() {
-    if (!isActive())
+    if (!isActive()) {
       throw new AccountClosedException("Account " + accountId + " is closed");
+    }
   }
 
   private void validateCurrency(Money amount) {
