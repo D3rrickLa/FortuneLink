@@ -8,8 +8,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 
 /**
- * Withdrawals do not carry fees in this model. If a broker charges a withdrawal
- * fee, record it as a separate FEE transaction.
+ * Withdrawals do not carry fees in this model. If a broker charges a withdrawal fee, record it as a
+ * separate FEE transaction.
  */
 public record RecordWithdrawalCommand(
     PortfolioId portfolioId,

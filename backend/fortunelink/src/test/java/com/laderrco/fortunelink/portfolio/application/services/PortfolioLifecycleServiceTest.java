@@ -1,12 +1,18 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
@@ -14,6 +20,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
@@ -31,12 +38,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -77,9 +82,12 @@ class PortfolioLifecycleServiceTest {
   @BeforeEach
   void setUp() {
     // Validation passes by default
-    lenient().when(validator.validate(any(CreatePortfolioCommand.class))).thenReturn(ValidationResult.success());
-    lenient().when(validator.validate(any(UpdatePortfolioCommand.class))).thenReturn(ValidationResult.success());
-    lenient().when(validator.validate(any(DeletePortfolioCommand.class))).thenReturn(ValidationResult.success());
+    lenient().when(validator.validate(any(CreatePortfolioCommand.class)))
+        .thenReturn(ValidationResult.success());
+    lenient().when(validator.validate(any(UpdatePortfolioCommand.class)))
+        .thenReturn(ValidationResult.success());
+    lenient().when(validator.validate(any(DeletePortfolioCommand.class)))
+        .thenReturn(ValidationResult.success());
   }
 
   @Nested
@@ -138,15 +146,16 @@ class PortfolioLifecycleServiceTest {
     @Test
     @DisplayName("updatePortfolio: updates details and returns lightweight view")
     void updatesDetailsAndReturnsView() {
-      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "New Name", "New Desc",
-          USD);
+      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "New Name",
+          "New Desc", USD);
       Portfolio existingPortfolio = mock(Portfolio.class);
       PortfolioView expectedView = mock(PortfolioView.class);
 
       when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
         TransactionCallback<Portfolio> callback = invocation.getArgument(0);
 
-        when(portfolioLoader.loadUserPortfolioWithGraph(PORTFOLIO_ID, USER_ID)).thenReturn(existingPortfolio);
+        when(portfolioLoader.loadUserPortfolioWithGraph(PORTFOLIO_ID, USER_ID)).thenReturn(
+            existingPortfolio);
         when(portfolioRepository.save(existingPortfolio)).thenReturn(existingPortfolio);
 
         return callback.doInTransaction(null);
@@ -166,21 +175,22 @@ class PortfolioLifecycleServiceTest {
     @DisplayName("updatePortfolio: throws IllegalStateException when transaction returns null")
     void throwsExceptionOnNullTransactionResult() {
       when(transactionTemplate.execute(any())).thenReturn(null);
-      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "Name", "Desc", USD);
+      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "Name",
+          "Desc", USD);
 
-      assertThatThrownBy(() -> service.updatePortfolio(command))
-          .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Transaction failed");
+      assertThatThrownBy(() -> service.updatePortfolio(command)).isInstanceOf(
+          IllegalStateException.class).hasMessageContaining("Transaction failed");
     }
 
     @Test
     @DisplayName("updatePortfolio: ensures validation occurs before transaction")
     void validatesBeforeTransaction() {
-      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "Name", "Desc", USD);
+      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "Name",
+          "Desc", USD);
       when(validator.validate(command)).thenReturn(ValidationResult.failure("Invalid Name"));
 
-      assertThatThrownBy(() -> service.updatePortfolio(command))
-          .isInstanceOf(InvalidCommandException.class);
+      assertThatThrownBy(() -> service.updatePortfolio(command)).isInstanceOf(
+          InvalidCommandException.class);
 
       verifyNoInteractions(transactionTemplate);
     }
@@ -189,13 +199,32 @@ class PortfolioLifecycleServiceTest {
   @Nested
   @DisplayName("deletePortfolio Branching logic")
   class DeletePortfolioTests {
+    static Stream<Arguments> softDeleteExceptionProvider() {
+      return Stream.of(
+          // Source Exception -> Expected Message (or partial match)
+          Arguments.of(new PortfolioNotEmptyException("error"),
+              "close accounts first or use recursive delete"),
+          Arguments.of(new PortfolioAlreadyDeletedException("Already gone"), "Already gone"),
+          Arguments.of(new IllegalStateException("Bad state"), "Bad state"),
+          Arguments.of(new PortfolioDeletionException("Direct error"), "Direct error"));
+    }
+
+    static Stream<Arguments> recursiveDeleteAccountProvider() {
+      return Stream.of(Arguments.of(false, 1, Money.of(100, "USD"), "Success"),
+          Arguments.of(true, 0, Money.zero(Currency.USD), "Success"),
+          Arguments.of(true, 5, Money.zero(Currency.USD), "Failure"),
+          Arguments.of(true, 0, Money.of(50, "USD"), "Failure"));
+    }
+
     @Test
     @DisplayName("hard delete: calls delete directly on repository")
     void hardDeleteCallsRepository() {
       Portfolio portfolio = mock(Portfolio.class);
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
+          Optional.of(portfolio));
 
-      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false, false);
+      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false,
+          false);
       service.deletePortfolio(cmd);
 
       verify(portfolioRepository).delete(PORTFOLIO_ID);
@@ -208,15 +237,17 @@ class PortfolioLifecycleServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       Account account = mock(Account.class);
 
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
+          Optional.of(portfolio));
       when(portfolio.getAccounts()).thenReturn(List.of(account));
       when(account.isActive()).thenReturn(true);
       when(account.getCashBalance()).thenReturn(new Money(BigDecimal.TEN, USD));
 
-      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, true, true, true);
+      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, true, true,
+          true);
 
-      assertThatThrownBy(() -> service.deletePortfolio(cmd))
-          .isInstanceOf(PortfolioDeletionException.class)
+      assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
+          PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
     }
 
@@ -241,26 +272,18 @@ class PortfolioLifecycleServiceTest {
       verify(portfolioRepository).save(portfolio);
     }
 
-    static Stream<Arguments> softDeleteExceptionProvider() {
-      return Stream.of(
-          // Source Exception -> Expected Message (or partial match)
-          Arguments.of(new PortfolioNotEmptyException("error"), "close accounts first or use recursive delete"),
-          Arguments.of(new PortfolioAlreadyDeletedException("Already gone"), "Already gone"),
-          Arguments.of(new IllegalStateException("Bad state"), "Bad state"),
-          Arguments.of(new PortfolioDeletionException("Direct error"), "Direct error"));
-    }
-
     @ParameterizedTest
     @MethodSource("softDeleteExceptionProvider")
-    void deletePortfolio_SoftDelete_ShouldHandleExceptions(Exception thrownException, String expectedMessage) {
+    void deletePortfolioSoftDeleteShouldHandleExceptions(Exception thrownException, String expectedMessage) {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
-      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true, false);
+      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true,
+          false);
 
       Portfolio portfolio = mock(Portfolio.class);
 
-      when(portfolioRepository.findByIdAndUserId(portfolioId, userId))
-          .thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(
+          Optional.of(portfolio));
 
       doThrow(thrownException).when(portfolio).markAsDeleted(userId);
 
@@ -270,21 +293,14 @@ class PortfolioLifecycleServiceTest {
       assertTrue(ex.getMessage().contains(expectedMessage));
     }
 
-    static Stream<Arguments> recursiveDeleteAccountProvider() {
-      return Stream.of(
-          Arguments.of(false, 1, Money.of(100, "USD"), "Success"),
-          Arguments.of(true, 0, Money.zero(Currency.USD), "Success"),
-          Arguments.of(true, 5, Money.zero(Currency.USD), "Failure"),
-          Arguments.of(true, 0, Money.of(50, "USD"), "Failure"));
-    }
-
     @ParameterizedTest
     @MethodSource("recursiveDeleteAccountProvider")
-    void deletePortfolio_Recursive_TestsAccountEligibility(
-        boolean isActive, int positionCount, Money cashBalance, String expectedResult) {
+    void deletePortfolioRecursiveTestsAccountEligibility(boolean isActive, int positionCount,
+        Money cashBalance, String expectedResult) {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
-      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true, true);
+      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true,
+          true);
       Account mockAccount = mock(Account.class);
 
       when(mockAccount.isActive()).thenReturn(isActive);
@@ -299,8 +315,8 @@ class PortfolioLifecycleServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getAccounts()).thenReturn(List.of(mockAccount));
 
-      when(portfolioRepository.findByIdAndUserId(portfolioId, userId))
-          .thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(
+          Optional.of(portfolio));
 
       if ("Failure".equals(expectedResult)) {
         // If anyMatch is true, your code likely throws an exception downstream
@@ -310,6 +326,16 @@ class PortfolioLifecycleServiceTest {
         service.deletePortfolio(command);
         verify(portfolioRepository).save(portfolio);
       }
+    }
+
+    @Test
+    @DisplayName("deletePortfolio: throws exception when portfolio not found")
+    void deletePortfolioThrowsWhenPortfolioNotFound() {
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.empty());
+
+      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false,
+          false);
+      assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(PortfolioNotFoundException.class);
     }
   }
 }

@@ -15,5 +15,5 @@ public record AccountView(
     Currency baseCurrency,
     Money cashBalance,
     Money totalValue,
-    Instant createdDate) {
+    Instant creationDate) {
 }

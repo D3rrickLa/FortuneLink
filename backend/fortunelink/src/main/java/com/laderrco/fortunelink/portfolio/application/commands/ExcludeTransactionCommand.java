@@ -14,6 +14,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
  * actual money movement. Only ACB/position state is recalculated. This is INTENTIONAL - your
  * brokerage statement, not this app, is the source of truth for cash.
  */
-public record ExcludeTransactionCommand(PortfolioId portfolioId, UserId userId, AccountId accountId,
-    TransactionId transactionId, String reason) implements IdentifiedTransactionCommand {
+public record ExcludeTransactionCommand(
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    TransactionId transactionId,
+    String reason) implements IdentifiedTransactionCommand {
 }

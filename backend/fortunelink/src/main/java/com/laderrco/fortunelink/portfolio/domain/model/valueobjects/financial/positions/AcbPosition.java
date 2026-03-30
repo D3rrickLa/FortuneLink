@@ -50,37 +50,30 @@ public record AcbPosition(
   public ApplyResult.Sale<AcbPosition> sell(Quantity quantity, Money proceeds, Instant at) {
     // Domain invariant: cannot sell from an empty position
     if (totalQuantity.isZero()) {
-        throw new IllegalStateException(
-            String.format("Cannot sell %s of %s: position is empty", quantity.amount(), symbol.symbol())
-        );
+      throw new IllegalStateException(
+          String.format("Cannot sell %s of %s: position is empty", quantity.amount(),
+              symbol.symbol()));
     }
 
     // Domain invariant: cannot sell more than held
     if (quantity.compareTo(totalQuantity) > 0) {
-        throw new IllegalStateException(
-            String.format("Cannot sell %s of %s: only %s held",
-                quantity.amount(), symbol.symbol(), totalQuantity.amount())
-        );
+      throw new IllegalStateException(
+          String.format("Cannot sell %s of %s: only %s held", quantity.amount(), symbol.symbol(),
+              totalQuantity.amount()));
     }
 
     boolean isFullLiquidation = quantity.equals(totalQuantity);
-    Money costBasisSold = isFullLiquidation
-        ? totalCostBasis
-        : totalCostBasis.multiply(
-            quantity.amount().divide(totalQuantity.amount(),
-                Precision.DIVISION.getDecimalPlaces(),
-                Rounding.DIVISION.getMode()));
+    Money costBasisSold = isFullLiquidation ? totalCostBasis : totalCostBasis.multiply(
+        quantity.amount().divide(totalQuantity.amount(), Precision.DIVISION.getDecimalPlaces(),
+            Rounding.DIVISION.getMode()));
 
-    Money newCostBasis = isFullLiquidation
-        ? Money.zero(accountCurrency)
-        : totalCostBasis.subtract(costBasisSold);
+    Money newCostBasis =
+        isFullLiquidation ? Money.zero(accountCurrency) : totalCostBasis.subtract(costBasisSold);
 
     Money realizedGain = proceeds.subtract(costBasisSold);
 
-    AcbPosition updated = new AcbPosition(
-        symbol, type, accountCurrency,
-        totalQuantity.subtract(quantity),
-        newCostBasis, firstAcquiredAt, at);
+    AcbPosition updated = new AcbPosition(symbol, type, accountCurrency,
+        totalQuantity.subtract(quantity), newCostBasis, firstAcquiredAt, at);
 
     return new ApplyResult.Sale<>(updated, costBasisSold, realizedGain);
   }

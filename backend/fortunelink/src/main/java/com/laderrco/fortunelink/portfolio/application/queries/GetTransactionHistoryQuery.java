@@ -40,7 +40,7 @@ public record GetTransactionHistoryQuery(
     return PageRequest.of(page, size, Sort.by("occurredAt").descending());
   }
 
-  private void validatePagination(int page, int size) {
+    private void validatePagination(int page, int size) {
     if (page < 0) {
       throw new IllegalArgumentException("Page cannot be negative: " + page);
     }

@@ -46,8 +46,9 @@ public abstract class BasePositionProjector<P extends Position> implements
 
   private void checkInstance(Position next) {
     if (!positionClass.isInstance(next)) {
-      throw new IllegalStateException(String.format("%s received unexpected position type: %s",
-          this.getClass().getSimpleName(), next.getClass().getSimpleName()));
+      throw new IllegalStateException(
+          String.format("%s received unexpected position type: %s", this.getClass().getSimpleName(),
+              next.getClass().getSimpleName()));
     }
   }
 }

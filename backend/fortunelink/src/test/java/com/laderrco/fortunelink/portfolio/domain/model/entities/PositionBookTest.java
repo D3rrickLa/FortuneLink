@@ -2,15 +2,14 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 public class PositionBookTest {
   private static final Currency USD = Currency.USD;
@@ -22,20 +21,21 @@ public class PositionBookTest {
 
     PositionBook pos = new PositionBook(USD, PositionStrategy.ACB);
 
-    assertThatThrownBy(() -> pos.applyResult(symbol, acb))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> pos.applyResult(symbol, acb)).isInstanceOf(
+        IllegalArgumentException.class);
   }
 
   @ParameterizedTest
-  @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
-  void ensurePositionThrowExceptionWhenStrategyIsNotSupported(PositionStrategy unsupportedStrategy) {
+  @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
+  void ensurePositionThrowExceptionWhenStrategyIsNotSupported(
+      PositionStrategy unsupportedStrategy) {
     AssetSymbol symbol = new AssetSymbol("AAPL");
     AssetType type = AssetType.STOCK;
 
     PositionBook posBook = new PositionBook(USD, unsupportedStrategy);
 
-    assertThatThrownBy(() -> posBook.ensurePosition(symbol, type))
-        .isInstanceOf(IllegalArgumentException.class)
+    assertThatThrownBy(() -> posBook.ensurePosition(symbol, type)).isInstanceOf(
+            IllegalArgumentException.class)
         .hasMessageContaining(unsupportedStrategy.name() + " not supported");
   }
 }

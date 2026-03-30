@@ -98,8 +98,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -151,8 +150,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, REASON_INTEREST + symbol.symbol());
     return tx;
@@ -183,10 +181,10 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     // validateTradeConsistency() passes because cashImpact=NONE always expects
     // Money.zero, which matches our cashDelta.
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
-        .accountId(account.getAccountId()).transactionType(TransactionType.SPLIT).execution(
-            new TradeExecution(symbol, Quantity.of(ratio.numerator()),
-                // structural placeholder — see above
-                Price.zero(account.getAccountCurrency()))) // zero price is valid; no cash event
+        .accountId(account.getAccountId()).transactionType(TransactionType.SPLIT)
+        .execution(new TradeExecution(symbol, Quantity.of(ratio.numerator()),
+            // structural placeholder — see above
+            Price.zero(account.getAccountCurrency()))) // zero price is valid; no cash event
         .split(ratio).cashDelta(Money.zero(account.getAccountCurrency())).fees(List.of())
         .notes(notes).occurredAt(date).metadata(TransactionMetadata.manual(existingPosition.type()))
         .build();
@@ -351,13 +349,14 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     AssetType type = tx.metadata().assetType();
 
     // BUY/DRIP: creation is valid and expected
-    if (tx.transactionType() == TransactionType.BUY || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
+    if (tx.transactionType() == TransactionType.BUY
+        || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
       account.ensurePosition(symbol, type);
     }
 
     // Everything else: position MUST already exist
-    Position current = account.getPosition(symbol).orElseThrow(
-        () -> new IllegalStateException(tx.transactionType() + " requires position for " + symbol.symbol()));
+    Position current = account.getPosition(symbol).orElseThrow(() -> new IllegalStateException(
+        tx.transactionType() + " requires position for " + symbol.symbol()));
 
     ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);
     account.applyPositionResult(symbol, result.newPosition());
@@ -420,7 +419,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     List<String> errors = new ArrayList<>();
     ValidationUtils.validateDate(date, account.getCreationDate(), errors);
     if (!errors.isEmpty()) {
-      throw new IllegalArgumentException(errors.get(0));
+      throw new IllegalArgumentException(errors.getFirst());
     }
   }
 }

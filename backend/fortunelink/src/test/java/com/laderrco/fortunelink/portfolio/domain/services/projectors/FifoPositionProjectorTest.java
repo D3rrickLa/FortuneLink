@@ -2,9 +2,9 @@ package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.ArgumentMatchers.any;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
@@ -71,8 +71,7 @@ public class FifoPositionProjectorTest {
       ApplyResult<Position> resultWithWrongType = new ApplyResult.Adjustment<>(wrongPosition);
 
       // 3. Setup the static mock to return our real record
-      utilities.when(() -> TransactionApplier.apply(any(), any()))
-          .thenReturn(resultWithWrongType);
+      utilities.when(() -> TransactionApplier.apply(any(), any())).thenReturn(resultWithWrongType);
 
       // 4. Act & Assert
       // This will trigger checkInstance(wrongPosition) inside the loop

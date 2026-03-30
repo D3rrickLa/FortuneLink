@@ -29,14 +29,16 @@ public class PortfolioViewMapper {
   /**
    * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost basis is zero/null
    * to avoid division by zero.
+   * 
+   * @implNote: PercentageChange stores decimal form: 0.10 = 10%.  Do NOT multiply by 100 here,
+   * toPercent() does that
    */
   private static PercentageChange calculateReturnPercentage(Money gain, Money costBasis) {
     if (costBasis == null || costBasis.isZero()) {
       return new PercentageChange(BigDecimal.ZERO);
     }
 
-    // PercentageChange stores decimal form: 0.10 = 10%
-    // Do NOT multiply by 100 here - toPercent() does that
+
     BigDecimal decimalValue = gain.amount()
         .divide(costBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(),
             Rounding.PERCENTAGE.getMode());
@@ -136,7 +138,7 @@ public class PortfolioViewMapper {
    * included in the position's totalCostBasis. The feesForSymbol parameter is used strictly for
    * breakdown/display purposes (transparency).
    * <p>
-   * UI contract: Holdings screen → totalCostBasis (already includes fees) Tax / ACB screen →
+   * UI contract: Holdings screen -> totalCostBasis (already includes fees) Tax / ACB screen ->
    * totalCostBasis (this IS the effective ACB)
    *
    * @param position      the position value object
@@ -148,7 +150,7 @@ public class PortfolioViewMapper {
     AssetSymbol symbol = position.symbol();
     Currency currency = position.accountCurrency();
 
-    // Ensure fee currency matches — defensive check since this comes from external
+    // Ensure fee currency matches. Defensive check since this comes from external
     // computation
     Money fees =
         (feesForSymbol != null && feesForSymbol.currency().equals(currency)) ? feesForSymbol

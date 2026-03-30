@@ -16,19 +16,13 @@ public record PositionView(
     AssetType assetType,
     Quantity quantity,
     Price totalCostBasis,
-    // Price is correct — always non-negative
     Price averageCostPerUnit,
-    // Price is correct — always non-negative
     Money totalFeesIncurred,
-    // Money is correct — always non-negative, but not a "price"
     Price currentPrice,
-    // Price is correct
     Money marketValue,
-    // Money is correct — always non-negative
     Money unrealizedPnL,
-    // Money is correct — SIGNED, can be negative
     PercentageChange returnPercentage,
     String costBasisMethod,
-    Instant firstAcquired,
+    Instant firstAcquiredDate,
     Instant lastModified) {
 }

@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import org.springframework.stereotype.Service;
-
 import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
@@ -16,9 +14,9 @@ import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 // moving some of the account stuff from portfolio service to here for 
 // beter maintainablilty

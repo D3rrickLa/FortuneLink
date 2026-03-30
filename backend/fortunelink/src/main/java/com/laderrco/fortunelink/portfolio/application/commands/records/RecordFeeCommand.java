@@ -9,6 +9,10 @@ import java.time.Instant;
 
 // just the total
 public record RecordFeeCommand(
-    PortfolioId portfolioId, UserId userId, AccountId accountId, Money amount, Instant transactionDate, String notes)
-    implements AdditionalInfoTransactionCommand {
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    Money amount,
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
 }

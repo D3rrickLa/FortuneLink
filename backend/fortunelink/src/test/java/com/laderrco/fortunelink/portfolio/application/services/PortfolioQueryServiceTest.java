@@ -140,7 +140,7 @@ public class PortfolioQueryServiceTest {
 
   private PortfolioView buildPortfolioView(PortfolioId portfolioId, UserId userId) {
     return PortfolioView.builder().portfolioId(portfolioId).userId(userId).name("Test")
-        .accounts(List.of()).totalValue(Money.zero(CAD)).createDate(Instant.now())
+        .accounts(List.of()).totalValue(Money.zero(CAD)).creationDate(Instant.now())
         .lastUpdated(Instant.now()).build();
   }
 

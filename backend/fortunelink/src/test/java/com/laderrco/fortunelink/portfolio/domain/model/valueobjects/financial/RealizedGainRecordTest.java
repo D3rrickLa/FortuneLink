@@ -2,12 +2,10 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.time.Instant;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 public class RealizedGainRecordTest {
   private static final AssetSymbol SYMBOL = new AssetSymbol("AAPL");

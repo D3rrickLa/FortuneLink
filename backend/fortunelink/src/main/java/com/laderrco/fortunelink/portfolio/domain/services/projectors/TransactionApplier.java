@@ -10,8 +10,7 @@ public final class TransactionApplier {
   }
 
   /**
-   * Routes a transaction to the correct position update logic. This is the single
-   * source of truth
+   * Routes a transaction to the correct position update logic. This is the single source of truth
    * for applying transactions to positions.
    */
   public static ApplyResult<? extends Position> apply(Position position, Transaction tx) {
@@ -31,11 +30,9 @@ public final class TransactionApplier {
 
   /**
    * Records a sale of assets from this position.
-   * 
+   *
    * @param quantity The amount of the asset to sell.
-   * 
-   * @param proceeds The NET proceeds received (Gross - Fees). MUST be a positive
-   *                 absolute value.
+   * @param proceeds The NET proceeds received (Gross - Fees). MUST be a positive absolute value.
    * @param at       The timestamp of the sale.
    */
   private static ApplyResult<? extends Position> applySell(Position p, Transaction tx) {

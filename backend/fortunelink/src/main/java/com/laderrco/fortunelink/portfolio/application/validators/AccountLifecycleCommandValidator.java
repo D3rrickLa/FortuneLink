@@ -1,16 +1,14 @@
 package com.laderrco.fortunelink.portfolio.application.validators;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-import org.springframework.stereotype.Component;
-
 import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import org.springframework.stereotype.Component;
 
 @Component
 public class AccountLifecycleCommandValidator {

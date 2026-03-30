@@ -3,7 +3,12 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertNull;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
@@ -47,8 +52,7 @@ class AccountTest {
   void setUp() {
     accountId = AccountId.newId();
     strategy = PositionStrategy.ACB;
-    account = new Account(accountId, VALID_NAME, AccountType.TAXABLE_INVESTMENT, USD,
-        strategy);
+    account = new Account(accountId, VALID_NAME, AccountType.TAXABLE_INVESTMENT, USD, strategy);
   }
 
   @Nested
@@ -69,15 +73,14 @@ class AccountTest {
     @DisplayName("protectedConstructor: maintains partially invalid state for JPA hydration")
     void protectedConstructorState() {
       Account jpaAccount = new Account();
-      assertAll(
-          () -> assertNull(jpaAccount.getAccountId()),
+      assertAll(() -> assertNull(jpaAccount.getAccountId()),
           () -> assertNotNull(jpaAccount.getPositionBook(), "PositionBook must be initialized"),
           () -> assertNull(jpaAccount.getAccountCurrency()));
     }
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "   ", "\t" })
+    @ValueSource(strings = {"", "   ", "\t"})
     @DisplayName("constructor: throws exception for null or blank names")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
@@ -92,12 +95,10 @@ class AccountTest {
 
     @Test
     void updateNameFailsWhenNullAndIsEmpty() {
-      assertThatThrownBy(() -> account.updateName(null))
-          .isInstanceOf(DomainArgumentException.class)
+      assertThatThrownBy(() -> account.updateName(null)).isInstanceOf(DomainArgumentException.class)
           .hasMessageContaining("Account name cannot be empty");
-      assertThatThrownBy(() -> account.updateName("   "))
-          .isInstanceOf(DomainArgumentException.class)
-          .hasMessageContaining("Account name cannot be empty");
+      assertThatThrownBy(() -> account.updateName("   ")).isInstanceOf(
+          DomainArgumentException.class).hasMessageContaining("Account name cannot be empty");
     }
   }
 
@@ -116,7 +117,7 @@ class AccountTest {
     @DisplayName("deposit: rejects negative amounts or wrong currency")
     void depositRejectsInvalidInputs() {
       assertAll(() -> assertThrows(IllegalArgumentException.class,
-          () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
+              () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
           () -> assertThrows(CurrencyMismatchException.class,
               () -> account.deposit(Money.of(100, "EUR"), "Wrong Currency")));
     }
@@ -135,7 +136,7 @@ class AccountTest {
     void withdrawRejectsInvalidCases() {
       account.deposit(Money.of(100, "USD"), "Funding");
       assertAll(() -> assertThrows(InsufficientFundsException.class,
-          () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
+              () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
           () -> assertThat(account.hasSufficientCash(Money.of(2000, USD))).isFalse(),
           () -> assertThrows(IllegalArgumentException.class,
               () -> account.withdraw(Money.of(-50, "USD"), "Negative", false)));
@@ -161,8 +162,8 @@ class AccountTest {
     void applyFeeFailsWhenFeeAmountNotPositive() {
       Money feeAmount = Money.of(-1, USD);
 
-      assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES"))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES")).isInstanceOf(
+              IllegalArgumentException.class)
           .hasMessageContaining("Withdrawal amount must be positive");
     }
 
@@ -170,8 +171,8 @@ class AccountTest {
     void applyFeeFailsWhenFeeAmountGreaterThanCashBalance() {
       Money feeAmount = Money.of(100, USD);
       account.deposit(Money.of(20, USD), "testing");
-      assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES"))
-          .isInstanceOf(InsufficientFundsException.class);
+      assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES")).isInstanceOf(
+          InsufficientFundsException.class);
     }
   }
 
@@ -179,6 +180,8 @@ class AccountTest {
   @DisplayName("Realized Gains and History")
   class RealizedGainsTests {
     private final AssetSymbol AAPL = new AssetSymbol("AAPL");
+    private final AssetSymbol apple = new AssetSymbol("AAPL");
+    private final AssetSymbol google = new AssetSymbol("GOOGL");
 
     @Test
     @DisplayName("recordRealizedGain: records gain and calculates total correctly")
@@ -207,21 +210,19 @@ class AccountTest {
     void failsWhenClosed() {
       account.close();
 
-      assertThatThrownBy(() -> account.recordRealizedGain(AAPL, Money.of(100, USD), Money.of(500, USD), Instant.now()))
-          .isInstanceOf(AccountClosedException.class);
+      assertThatThrownBy(
+          () -> account.recordRealizedGain(AAPL, Money.of(100, USD), Money.of(500, USD),
+              Instant.now())).isInstanceOf(AccountClosedException.class);
     }
-
-    private AssetSymbol apple = new AssetSymbol("AAPL");
-    private AssetSymbol google = new AssetSymbol("GOOGL");
 
     @Test
     void getRealizedGainsFor_ShouldReturnOnlyMatchingRecords() {
       // 1. Arrange: Add records to the account's internal list
       // (If the list is private, you might need a 'recordGain' method to populate it)
-      RealizedGainRecord appleGain = new RealizedGainRecord(apple, Money.of(100, USD), Money.of(500, USD),
-          Instant.now());
-      RealizedGainRecord googleGain = new RealizedGainRecord(google, Money.of(200, USD), Money.of(1000, USD),
-          Instant.now());
+      RealizedGainRecord appleGain = new RealizedGainRecord(apple, Money.of(100, USD),
+          Money.of(500, USD), Instant.now());
+      RealizedGainRecord googleGain = new RealizedGainRecord(google, Money.of(200, USD),
+          Money.of(1000, USD), Instant.now());
 
       account.recordRealizedGain(apple, Money.of(100, USD), Money.of(500, USD), Instant.now());
       account.recordRealizedGain(google, Money.of(200, USD), Money.of(1000, USD), Instant.now());
@@ -230,11 +231,8 @@ class AccountTest {
       var results = account.getRealizedGainsFor(apple);
 
       // 3. Assert
-      assertThat(results)
-          .as("Should only contain gains for the requested symbol")
-          .hasSize(1)
-          .containsExactly(appleGain)
-          .doesNotContain(googleGain);
+      assertThat(results).as("Should only contain gains for the requested symbol").hasSize(1)
+          .containsExactly(appleGain).doesNotContain(googleGain);
     }
   }
 
@@ -251,8 +249,7 @@ class AccountTest {
 
       account.applyPositionResult(apple, pos);
 
-      assertAll(
-          () -> assertTrue(account.hasPosition(apple)),
+      assertAll(() -> assertTrue(account.hasPosition(apple)),
           () -> assertEquals(1, account.getPositionCount()),
           () -> assertEquals(pos, account.getPosition(apple).orElseThrow()),
           () -> assertEquals(account.getRealizedGainsFor(apple).size(), 0),
@@ -291,27 +288,25 @@ class AccountTest {
 
     @Test
     void depositFailsAsResaonIsNotGiven() {
-      assertThatThrownBy(() -> account.deposit(Money.of(100, USD), " "))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> account.deposit(Money.of(100, USD), " ")).isInstanceOf(
+              IllegalArgumentException.class)
           .hasMessageContaining("Reason/description cannot be empty");
-      assertThatThrownBy(() -> account.deposit(Money.of(100, USD), null))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(() -> account.deposit(Money.of(100, USD), null)).isInstanceOf(
+              IllegalArgumentException.class)
           .hasMessageContaining("Reason/description cannot be empty");
     }
 
     @Test
     void beginReplayFailsWhenStateIsNotClosed() {
       account.close();
-      assertThatThrownBy(() -> account.beginReplay())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> account.beginReplay()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot replay a closed account");
     }
 
     @Test
     void beginReplayFailsWhenReplayingAlready() {
       account.beginReplay();
-      assertThatThrownBy(() -> account.beginReplay())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> account.beginReplay()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Account is already in replay mode");
     }
 
@@ -323,8 +318,7 @@ class AccountTest {
       assertThat(account.getState()).isEqualTo(AccountLifecycleState.ACTIVE);
       assertThat(account.isInReplayMode()).isFalse();
 
-      assertThatThrownBy(() -> account.endReplay())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> account.endReplay()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Account is not in replay mode");
     }
 
@@ -343,8 +337,7 @@ class AccountTest {
 
       account.applyPositionResult(apple, pos);
 
-      assertThatThrownBy(() -> account.close())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> account.close()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot close account with open positions");
     }
 
@@ -361,13 +354,12 @@ class AccountTest {
     @DisplayName("operations: prevent deposits/withdrawals when account is closed")
     void failsWhenClosed() {
       account.close();
-      assertThatThrownBy(() -> account.deposit(Money.of(10, USD), "Too late"))
-          .isInstanceOf(AccountClosedException.class);
+      assertThatThrownBy(() -> account.deposit(Money.of(10, USD), "Too late")).isInstanceOf(
+          AccountClosedException.class);
 
       account.reopen();
       account.beginReplay();
-      assertThatThrownBy(() -> account.close())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> account.close()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot close account during replay");
     }
 
@@ -407,7 +399,7 @@ class AccountTest {
     }
 
     @Test
-    @DisplayName("ensurePosition: creates position when symbol not found") 
+    @DisplayName("ensurePosition: creates position when symbol not found")
     void ensurePositionCreatesPositionEmpty() {
       account.ensurePosition(AAPL, AssetType.STOCK);
       assertThat(account.getPositionCount()).isEqualTo(1);

@@ -12,8 +12,7 @@ import java.time.Instant;
 /**
  * Records a DRIP reinvestment. IMPORTANT: Do NOT also call recordDividend() for the same event.
  * DIVIDEND_REINVEST is self-contained - no cash lands in the account. Recording both will cause
- * replayFullAccount() to overstate cash.
- * NOTE: swtich notes to be the last thing, it's optional
+ * replayFullAccount() to overstate cash. NOTE: swtich notes to be the last thing, it's optional
  */
 public record RecordDividendReinvestmentCommand(
     PortfolioId portfolioId,
@@ -24,8 +23,8 @@ public record RecordDividendReinvestmentCommand(
     Instant transactionDate,
     String notes) implements AdditionalInfoTransactionCommand {
 
-  // price is  explicit, not derived
-  public record DripExecution(Quantity sharesPurchased, Price pricePerShare ) {
+  // price is explicit, not derived
+  public record DripExecution(Quantity sharesPurchased, Price pricePerShare) {
     public Money totalCost() {
       return pricePerShare.pricePerUnit().multiply(sharesPurchased.amount());
     }

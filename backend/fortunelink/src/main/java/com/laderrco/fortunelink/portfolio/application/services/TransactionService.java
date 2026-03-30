@@ -2,7 +2,18 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.*;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSplitCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferOutCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
@@ -59,10 +70,8 @@ public class TransactionService {
       MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbol)
           .orElseThrow(() -> new AssetNotFoundException("Unknown symbol: " + command.symbol()));
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
-      return transactionRecordingService.recordBuy(
-          ctx.account(), symbol, assetInfo.type(),
-          command.quantity(), price, command.fees(),
-          command.notes(), command.transactionDate());
+      return transactionRecordingService.recordBuy(ctx.account(), symbol, assetInfo.type(),
+          command.quantity(), price, command.fees(), command.notes(), command.transactionDate());
     });
   }
 
@@ -73,51 +82,50 @@ public class TransactionService {
         throw new InsufficientQuantityException("No position found for: " + command.symbol());
       }
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
-      return transactionRecordingService.recordSell(
-          ctx.account(), symbol, command.quantity(),
+      return transactionRecordingService.recordSell(ctx.account(), symbol, command.quantity(),
           price, command.fees(), command.notes(), command.transactionDate());
     });
   }
 
   public TransactionView recordDeposit(RecordDepositCommand command) {
-    return execute(command, validator::validate, "recordDeposit", ctx -> transactionRecordingService.recordDeposit(
-        ctx.account(), command.amount(), command.notes(), command.transactionDate()));
+    return execute(command, validator::validate, "recordDeposit",
+        ctx -> transactionRecordingService.recordDeposit(ctx.account(), command.amount(),
+            command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordWithdrawal(RecordWithdrawalCommand command) {
     return execute(command, validator::validate, "recordWithdrawal",
-        ctx -> transactionRecordingService.recordWithdrawal(
-            ctx.account(), command.amount(), command.notes(), command.transactionDate()));
+        ctx -> transactionRecordingService.recordWithdrawal(ctx.account(), command.amount(),
+            command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordFee(RecordFeeCommand command) {
-    return execute(command, validator::validate, "recordFee", ctx -> transactionRecordingService.recordFee(
-        ctx.account(), command.amount(), command.notes(), command.transactionDate()));
+    return execute(command, validator::validate, "recordFee",
+        ctx -> transactionRecordingService.recordFee(ctx.account(), command.amount(),
+            command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol = command.isAssetInterest()
-          ? new AssetSymbol(command.assetSymbol())
-          : null;
-      return transactionRecordingService.recordInterest(
-          ctx.account(), symbol, command.amount(),
+      AssetSymbol symbol =
+          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
   }
 
   public TransactionView recordDividend(RecordDividendCommand command) {
-    return execute(command, validator::validate, "recordDividend", ctx -> transactionRecordingService.recordDividend(
-        ctx.account(), new AssetSymbol(command.assetSymbol()),
-        command.amount(), command.notes(), command.transactionDate()));
+    return execute(command, validator::validate, "recordDividend",
+        ctx -> transactionRecordingService.recordDividend(ctx.account(),
+            new AssetSymbol(command.assetSymbol()), command.amount(), command.notes(),
+            command.transactionDate()));
   }
 
   public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
     return execute(command, validator::validate, "recordDividendReinvestment",
-        ctx -> transactionRecordingService.recordDividendReinvestment(
-            ctx.account(), new AssetSymbol(command.assetSymbol()),
-            command.execution().sharesPurchased(), command.execution().pricePerShare(),
-            command.notes(), command.transactionDate()));
+        ctx -> transactionRecordingService.recordDividendReinvestment(ctx.account(),
+            new AssetSymbol(command.assetSymbol()), command.execution().sharesPurchased(),
+            command.execution().pricePerShare(), command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordSplit(RecordSplitCommand command) {
@@ -125,7 +133,8 @@ public class TransactionService {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
       // A split must have an existing position to act upon
       if (!ctx.account().hasPosition(symbol)) {
-        throw new InsufficientQuantityException("Cannot split a non-existent position: " + command.symbol());
+        throw new InsufficientQuantityException(
+            "Cannot split a non-existent position: " + command.symbol());
       }
 
       return transactionRecordingService.recordSplit(ctx.account(), symbol, command.ratio(),
@@ -135,22 +144,21 @@ public class TransactionService {
 
   public TransactionView recordReturnOfCapital(RecordReturnOfCaptialCommand command) {
     return execute(command, validator::validate, "recordReturnOfCapital",
-        ctx -> transactionRecordingService.recordReturnOfCapital(
-            ctx.account(), new AssetSymbol(command.assetSymbol()),
-            command.heldQuantity(), command.distributionPerUnit(),
-            command.notes(), command.transactionDate()));
+        ctx -> transactionRecordingService.recordReturnOfCapital(ctx.account(),
+            new AssetSymbol(command.assetSymbol()), command.heldQuantity(),
+            command.distributionPerUnit(), command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordTransferIn(RecordTransferInCommand command) {
     return execute(command, validator::validate, "recordTransferIn",
-        ctx -> transactionRecordingService.recordTransferIn(
-            ctx.account(), command.amount(), command.notes(), command.transactionDate()));
+        ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(),
+            command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordTransferOut(RecordTransferOutCommand command) {
     return execute(command, validator::validate, "recordTransferOut",
-        ctx -> transactionRecordingService.recordTransferOut(
-            ctx.account(), command.amount(), command.notes(), command.transactionDate()));
+        ctx -> transactionRecordingService.recordTransferOut(ctx.account(), command.amount(),
+            command.notes(), command.transactionDate()));
   }
 
   public TransactionView excludeTransaction(ExcludeTransactionCommand command) {
@@ -181,8 +189,9 @@ public class TransactionService {
   // Private infrastructure
   // -------------------------------------------------------------------------
 
-  private <C extends TransactionCommand> TransactionView execute(C command, Function<C, ValidationResult> validationFn,
-      String operationName, Function<PortfolioContext, Transaction> recordFn) {
+  private <C extends TransactionCommand> TransactionView execute(C command,
+      Function<C, ValidationResult> validationFn, String operationName,
+      Function<PortfolioContext, Transaction> recordFn) {
 
     ValidationUtils.validate(command, validationFn, operationName);
     PortfolioContext ctx = getPortfolioContext(command);
@@ -192,7 +201,8 @@ public class TransactionService {
   }
 
   private PortfolioContext getPortfolioContext(TransactionCommand command) {
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     Account account = portfolio.getAccount(command.accountId());
     return new PortfolioContext(portfolio, account);
   }
@@ -203,18 +213,16 @@ public class TransactionService {
   }
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
-    return transactionRepository
-        .findByIdAndPortfolioIdAndUserIdAndAccountId(
-            command.transactionId(), command.portfolioId(),
-            command.userId(), command.accountId())
+    return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 
   private void publishRecalculationIfRequired(Transaction tx, TransactionCommand command) {
     if (tx.transactionType().affectsHoldings() && tx.execution() != null) {
-      eventPublisher.publishEvent(new PositionRecalculationRequestedEvent(
-          command.portfolioId(), command.userId(),
-          command.accountId(), tx.execution().asset()));
+      eventPublisher.publishEvent(
+          new PositionRecalculationRequestedEvent(command.portfolioId(), command.userId(),
+              command.accountId(), tx.execution().asset()));
     }
   }
 
