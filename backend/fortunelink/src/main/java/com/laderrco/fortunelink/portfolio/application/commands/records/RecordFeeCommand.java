@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -13,6 +14,7 @@ public record RecordFeeCommand(
     UserId userId,
     AccountId accountId,
     Money amount,
+    FeeType feeType,
     Instant transactionDate,
     String notes) implements AdditionalInfoTransactionCommand {
 }

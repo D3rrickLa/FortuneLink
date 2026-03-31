@@ -1,9 +1,10 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -140,6 +142,67 @@ class PositionRecalculationExecutorTest {
 
       verify(accountHealthService).markStale(P_ID, U_ID, A_ID);
       verify(portfolioRepository, never()).save(any());
+    }
+  }
+
+  @Nested
+  @DisplayName("Filtering Logic: Transaction Exclusion and Type Filtering")
+  class FilteringTests {
+
+    @Test
+    @DisplayName("scheduleRecalculation: should filter out excluded transactions and non-holding types")
+    void scheduleRecalculation_shouldOnlyReplayValidHoldingTransactions() {
+      Transaction validTx = mock(Transaction.class);
+      when(validTx.isExcluded()).thenReturn(false);
+      TransactionType holdingType = mock(TransactionType.class);
+      when(holdingType.affectsHoldings()).thenReturn(true);
+      when(validTx.transactionType()).thenReturn(holdingType);
+      
+      Transaction excludedTx = mock(Transaction.class);
+      when(excludedTx.isExcluded()).thenReturn(true);
+
+      Transaction nonHoldingTx = mock(Transaction.class);
+      when(nonHoldingTx.isExcluded()).thenReturn(false);
+      TransactionType cashType = mock(TransactionType.class);
+      when(cashType.affectsHoldings()).thenReturn(false);
+      when(nonHoldingTx.transactionType()).thenReturn(cashType);
+
+      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL))
+          .thenReturn(List.of(validTx, excludedTx, nonHoldingTx));
+
+      executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL);
+
+      verify(transactionRecordingService, times(1)).replayTransaction(any(), eq(validTx));
+      verify(transactionRecordingService, never()).replayTransaction(any(), eq(excludedTx));
+      verify(transactionRecordingService, never()).replayTransaction(any(), eq(nonHoldingTx));
+    }
+
+    @Test
+    @DisplayName("replayFullAccount: should filter out excluded transactions but include all types")
+    void replayFullAccount_shouldFilterExcludedButIncludeCashEvents() {
+      Transaction cashTx = mock(Transaction.class);
+      when(cashTx.isExcluded()).thenReturn(false);
+      when(cashTx.occurredAt()).thenReturn(Instant.now().minusSeconds(10));
+
+      Transaction holdingTx = mock(Transaction.class);
+      when(holdingTx.isExcluded()).thenReturn(false);
+      when(holdingTx.occurredAt()).thenReturn(Instant.now());
+
+      Transaction excludedTx = mock(Transaction.class);
+      when(excludedTx.isExcluded()).thenReturn(true);
+
+      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(P_ID, U_ID, A_ID))
+          .thenReturn(List.of(cashTx, holdingTx, excludedTx));
+
+      executor.replayFullAccount(P_ID, U_ID, A_ID);
+
+      @SuppressWarnings("unchecked")
+      ArgumentCaptor<List<Transaction>> listCaptor = ArgumentCaptor.forClass(List.class);
+      verify(transactionRecordingService).replayFullTransaction(eq(account), listCaptor.capture());
+
+      List<Transaction> capturedList = listCaptor.getValue();
+      assertEquals(2, capturedList.size(), "Should include both cash and holding transactions");
+      assertFalse(capturedList.contains(excludedTx), "Should not contain excluded transaction");
     }
   }
 }

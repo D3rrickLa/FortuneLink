@@ -102,7 +102,7 @@ public class TransactionService {
   public TransactionView recordFee(RecordFeeCommand command) {
     return execute(command, validator::validate, "recordFee",
         ctx -> transactionRecordingService.recordFee(ctx.account(), command.amount(),
-            command.notes(), command.transactionDate()));
+            command.feeType(), command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordInterest(RecordInterestCommand command) {

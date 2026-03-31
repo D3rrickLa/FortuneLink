@@ -82,9 +82,13 @@ public class ValidationUtils {
   }
 
   public static boolean isValidCurrency(String code) {
+    if (code == null || code.isBlank()) {
+      return false;
+    }
+
     try {
-      Currency.of(code);
-      return true;
+      return Currency.getAvailableCurrencies().stream()
+          .anyMatch(c -> c.getCode().equals(code.toUpperCase()));
     } catch (IllegalArgumentException e) {
       return false;
     }

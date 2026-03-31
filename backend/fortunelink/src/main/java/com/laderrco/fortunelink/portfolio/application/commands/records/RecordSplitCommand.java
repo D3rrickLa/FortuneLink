@@ -7,8 +7,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 
+// e.g. Ratio(2, 1) for a 2-for-1 split
 public record RecordSplitCommand(
     PortfolioId portfolioId, UserId userId, AccountId accountId, String symbol, Ratio ratio,
-    // e.g. Ratio(2, 1) for a 2-for-1 split
     Instant transactionDate, String notes) implements AdditionalInfoTransactionCommand {
 }

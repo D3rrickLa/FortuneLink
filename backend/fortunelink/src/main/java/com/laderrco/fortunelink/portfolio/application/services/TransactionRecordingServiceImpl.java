@@ -8,6 +8,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -98,7 +99,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -124,15 +126,17 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   @Override
-  public Transaction recordFee(Account account, Money amount, String notes, Instant date) {
+  public Transaction recordFee(Account account, Money amount, FeeType feeType, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
     validateTransactionDate(date, account);
+    Objects.requireNonNull(feeType, "feeType cannot be null");
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.FEE)
         .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date))
-        .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
+        .metadata(TransactionMetadata.manual(AssetType.CASH).with(TransactionMetadata.KEY_FEE_TYPE, feeType.name()))
+        .build();
 
     account.applyFee(amount, REASON_FEE + amount.amount().toString());
     return tx;
@@ -150,7 +154,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_INTEREST + symbol.symbol());
     return tx;

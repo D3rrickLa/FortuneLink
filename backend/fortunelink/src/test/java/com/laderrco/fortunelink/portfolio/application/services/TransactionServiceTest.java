@@ -43,6 +43,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.TradeExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
@@ -299,12 +300,12 @@ class TransactionServiceTest {
     @DisplayName("recordFee: verify success flow")
     void recordFeeSuccess() {
       RecordFeeCommand command = new RecordFeeCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
-          NOW, NOTES);
+          FeeType.ACCOUNT_MAINTENANCE, NOW, NOTES);
 
       service.recordFee(command);
 
       verify(transactionRecordingService).recordFee(any(), eq(command.amount()),
-          eq(command.notes()), eq(command.transactionDate()));
+          any(), eq(command.notes()), eq(command.transactionDate()));
     }
 
     @Test

@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PortfolioLifecycleCommandValidator {
+  private static final int PORTFOLIO_NAME_LENGTH = 100;
+  private static final int DESCRIPTION_NAME_LENGTH = 500;
+
   public ValidationResult validate(CreatePortfolioCommand command) {
     Objects.requireNonNull(command);
     List<String> errors = new ArrayList<>();
@@ -19,9 +22,7 @@ public class PortfolioLifecycleCommandValidator {
       errors.add("UserId is required");
     }
 
-    if (command.name() == null) {
-      errors.add("Portfolio name is required");
-    }
+    validatePortfoliotName(command.name(), errors);
 
     if (command.currency() == null) {
       errors.add("Currency is required");
@@ -39,10 +40,16 @@ public class PortfolioLifecycleCommandValidator {
     List<String> errors = new ArrayList<>();
 
     ValidationUtils.validatePortfolioAndUserIds(command, errors);
+    validatePortfoliotName(command.name(), errors);
 
-    if (command.name() == null) {
-      errors.add("Portfolio name is required");
+    if (command.description() != null && command.description().length() > DESCRIPTION_NAME_LENGTH) {
+        errors.add("Description must be 500 characters or less");
     }
+
+    if (command.currency() != null && !ValidationUtils.isValidCurrency(command.currency().getCode())) {
+        errors.add("Invalid currency code");
+    }
+
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
@@ -58,5 +65,13 @@ public class PortfolioLifecycleCommandValidator {
     }
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+  }
+
+  private void validatePortfoliotName(String name, List<String> errors) {
+    if (name == null || name.trim().isEmpty()) {
+      errors.add("Portfolio name is required");
+    } else if (name.length() > PORTFOLIO_NAME_LENGTH) {
+      errors.add("Portfolio name must be 100 characters or less");
+    }
   }
 }

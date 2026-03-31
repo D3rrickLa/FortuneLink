@@ -576,7 +576,7 @@ class TransactionRecordingServiceImplTest {
     @DisplayName("recordFee: withdraw amount and verify negative cash delta")
     void recordFeeSuccess() {
       Money feeAmt = Money.of(15, USD);
-      Transaction tx = service.recordFee(account, feeAmt, NOTES, NOW);
+      Transaction tx = service.recordFee(account, feeAmt, FeeType.ACCOUNT_MAINTENANCE, NOTES, NOW);
 
       assertThat(tx.cashDelta().isNegative()).isTrue();
       verify(account).applyFee(eq(feeAmt), contains("FEE: 15"));

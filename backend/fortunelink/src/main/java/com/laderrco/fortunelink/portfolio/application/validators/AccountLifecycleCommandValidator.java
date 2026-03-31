@@ -5,6 +5,8 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountComm
 import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasAccountId;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,21 +21,25 @@ public class AccountLifecycleCommandValidator {
     List<String> errors = new ArrayList<>();
 
     ValidationUtils.validatePortfolioAndUserIds(command, errors);
-
-    if (command.accountName() == null || command.accountName().trim().isEmpty()) {
-      errors.add("Account name is required");
-    } else if (command.accountName().length() > ACCOUNT_NAME_LENGTH) {
-      errors.add("Account name must be 100 characters or less");
-    }
+    validateAccountName(command.accountName(), errors);
 
     if (command.accountType() == null) {
       errors.add("Account type is required");
     }
 
+    if (command.strategy() == null) {
+      errors.add("Strategy is required");
+    }
+
     if (command.baseCurrency() == null) {
       errors.add("Base currency is required");
-    } else if (!ValidationUtils.isValidCurrency(command.baseCurrency().getCode())) {
-      errors.add("Invalid currency code");
+    } else {
+
+      boolean isValid = ValidationUtils.isValidCurrency(command.baseCurrency().getCode());
+
+      if (!isValid) {
+        errors.add("Invalid currency code");
+      }
     }
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
@@ -44,16 +50,8 @@ public class AccountLifecycleCommandValidator {
     List<String> errors = new ArrayList<>();
 
     ValidationUtils.validatePortfolioAndUserIds(command, errors);
-
-    if (command.accountId() == null) {
-      errors.add("AccountId is required");
-    }
-
-    if (command.accountName() == null || command.accountName().trim().isEmpty()) {
-      errors.add("Account name is required");
-    } else if (command.accountName().length() > ACCOUNT_NAME_LENGTH) {
-      errors.add("Account name must be 100 characters or less");
-    }
+    validateAccountId(command, errors);
+    validateAccountName(command.accountName(), errors);
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
@@ -63,10 +61,7 @@ public class AccountLifecycleCommandValidator {
     List<String> errors = new ArrayList<>();
 
     ValidationUtils.validatePortfolioAndUserIds(command, errors);
-
-    if (command.accountId() == null) {
-      errors.add("AccountId is required");
-    }
+    validateAccountId(command, errors);
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
@@ -76,11 +71,22 @@ public class AccountLifecycleCommandValidator {
     List<String> errors = new ArrayList<>();
 
     ValidationUtils.validatePortfolioAndUserIds(command, errors);
+    validateAccountId(command, errors);
 
+    return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+  }
+
+  private void validateAccountId(HasAccountId command, List<String> errors) {
     if (command.accountId() == null) {
       errors.add("AccountId is required");
     }
+  }
 
-    return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+  private void validateAccountName(String name, List<String> errors) {
+    if (name == null || name.trim().isEmpty()) {
+      errors.add("Account name is required");
+    } else if (name.length() > ACCOUNT_NAME_LENGTH) {
+      errors.add("Account name must be 100 characters or less");
+    }
   }
 }

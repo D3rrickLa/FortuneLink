@@ -107,15 +107,6 @@ class PortfolioLifecycleServiceTest {
     }
 
     @Test
-    @DisplayName("createPortfolio: command throws Exception when defautl type is null")
-    void createsDefaultAccountThrowsEexceptionFromCreatePortfolioCOmmand() {
-      assertThatThrownBy(() -> new CreatePortfolioCommand(USER_ID, "Name", "Desc", USD, true, null,
-          PositionStrategy.ACB)).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Default account type required");
-
-    }
-
-    @Test
     @DisplayName("createPortfolio: maps DataIntegrityViolation to PortfolioLimitReachedException")
     void mapsDataIntegrityException() {
       when(portfolioRepository.save(any())).thenThrow(

@@ -1,5 +1,8 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -19,6 +22,12 @@ public class Currency {
 
   public static Currency of(String locale) {
     return new Currency(locale);
+  }
+
+  public static Set<Currency> getAvailableCurrencies() {
+    return java.util.Currency.getAvailableCurrencies().stream()
+    .map(c -> new Currency(c.getCurrencyCode()))
+    .collect(Collectors.toSet());
   }
 
   // i.e. USD

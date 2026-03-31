@@ -10,17 +10,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Carries auditing information, source tracking, and exclusion status for a transaction.
+ * Carries auditing information, source tracking, and exclusion status for a
+ * transaction.
  * <p>
- * This record uses an optional {@link ExclusionRecord} to handle the lifecycle of transactions that
+ * This record uses an optional {@link ExclusionRecord} to handle the lifecycle
+ * of transactions that
  * are hidden from portfolio performance or balance calculations.
  * </p>
  *
  * @param assetType      The category of asset (STOCK, CRYPTO, etc.).
- * @param source         The origin of the data (e.g., "MANUAL", "CSV_IMPORT", "API").
- * @param exclusion      Details regarding why and when this transaction was excluded, if
+ * @param source         The origin of the data (e.g., "MANUAL", "CSV_IMPORT",
+ *                       "API").
+ * @param exclusion      Details regarding why and when this transaction was
+ *                       excluded, if
  *                       applicable.
- * @param additionalData Extensible key-value pairs for vendor-specific or custom identifiers.
+ * @param additionalData Extensible key-value pairs for vendor-specific or
+ *                       custom identifiers.
  */
 public record TransactionMetadata(
     AssetType assetType,
@@ -28,7 +33,7 @@ public record TransactionMetadata(
     ExclusionRecord exclusion,
     Map<String, String> additionalData) {
   public static final String KEY_SYMBOL = "symbol";
-
+  public static final String KEY_FEE_TYPE = "feeType";
 
   public TransactionMetadata {
     notNull(assetType, "AssetType");
@@ -52,7 +57,8 @@ public record TransactionMetadata(
   }
 
   /**
-   * Marks the transaction as excluded. * @throws IllegalStateException if the transaction is
+   * Marks the transaction as excluded. * @throws IllegalStateException if the
+   * transaction is
    * already excluded.
    */
   public TransactionMetadata markAsExcluded(UserId userId, String reason) {
@@ -64,7 +70,8 @@ public record TransactionMetadata(
   }
 
   /**
-   * Restores a transaction to an active state by removing the exclusion record. * @throws
+   * Restores a transaction to an active state by removing the exclusion record.
+   * * @throws
    * IllegalStateException if the transaction is not currently excluded.
    */
   public TransactionMetadata restore() {
@@ -120,7 +127,8 @@ public record TransactionMetadata(
   }
 
   /**
-   * Audit record representing the "Who, When, and Why" of a transaction's exclusion.
+   * Audit record representing the "Who, When, and Why" of a transaction's
+   * exclusion.
    */
   public record ExclusionRecord(Instant occurredAt, UserId by, String reason) {
     public ExclusionRecord {
