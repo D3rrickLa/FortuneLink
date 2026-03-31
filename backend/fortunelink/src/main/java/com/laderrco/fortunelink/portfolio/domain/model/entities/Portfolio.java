@@ -18,12 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
 
 // so we are going to actually add back a 'currency preference'
 // it is only meant to be used to display your aggregate data
 // in one currency
-@Getter
 public class Portfolio {
   private final PortfolioId portfolioId;
   private final UserId userId;
@@ -64,13 +62,13 @@ public class Portfolio {
       Currency displayCurrency) {
     Instant now = Instant.now();
     String cleanDesc = description == null ? "" : description;
-    return new Portfolio(PortfolioId.newId(), // ← Generated ID
-        userId, name, cleanDesc, new HashMap<>(), // ← Empty accounts
-        displayCurrency, false, // ← Not deleted
-        null, // ← No deletion date
-        null, // ← No deleter
-        now, // ← Creation timestamp
-        now // ← Last updated
+    return new Portfolio(PortfolioId.newId(), // <- Generated ID
+        userId, name, cleanDesc, new HashMap<>(), // <- Empty accounts
+        displayCurrency, false, // <- Not deleted
+        null, // <- No deletion date
+        null, // <- No deleter
+        now, // <- Creation timestamp
+        now // <- Last updated
     );
   }
 
@@ -113,6 +111,7 @@ public class Portfolio {
     return account;
   }
 
+  // Check if new name conflicts with another account
   public void renameAccount(AccountId accountId, String newName) {
     notNull(accountId, "accountId");
 
@@ -122,7 +121,6 @@ public class Portfolio {
 
     Account account = getAccount(accountId);
 
-    // Check if new name conflicts with another account
     // 1. If the name is exactly the same, just exit early (Success)
     if (account.getName().equalsIgnoreCase(newName)) {
       return;
@@ -257,9 +255,7 @@ public class Portfolio {
 
   public List<Account> findAccountsByType(AccountType type) {
     notNull(type, "type");
-
     return accounts.values().stream().filter(a -> a.getAccountType().equals(type)).toList();
-
   }
 
   public Collection<Account> getAccounts() {
@@ -278,6 +274,47 @@ public class Portfolio {
     return this.userId.equals(userId);
   }
 
+  // -- Getters ---
+  public PortfolioId getPortfolioId() {
+    return portfolioId;
+  }
+
+  public UserId getUserId() {
+    return userId;
+  }
+
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public Currency getDisplayCurrency() {
+    return displayCurrency;
+  }
+
+  public boolean isDeleted() {
+    return deleted;
+  }
+
+  public Instant getDeletedOn() {
+    return deletedOn;
+  }
+
+  public UserId getDeletedBy() {
+    return deletedBy;
+  }
+
+  public Instant getLastUpdatedAt() {
+    return lastUpdatedAt;
+  }
+
   private boolean accountNameExists(String name) {
     return accounts.values().stream().anyMatch(a -> a.getName().equalsIgnoreCase(name));
   }
@@ -285,5 +322,4 @@ public class Portfolio {
   private void touch() {
     this.lastUpdatedAt = Instant.now();
   }
-
 }

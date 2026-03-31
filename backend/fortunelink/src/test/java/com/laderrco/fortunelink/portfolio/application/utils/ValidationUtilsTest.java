@@ -163,7 +163,6 @@ class ValidationUtilsTest {
   @Nested
   @DisplayName("validateSymbol: String Format Validation")
   class SymbolValidationTests {
-
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = { "", "  ", "invalidsymbol!", "THISSYMBOLISTOOLONGFORTHEREGEX" })
@@ -188,12 +187,13 @@ class ValidationUtilsTest {
   @DisplayName("isValidCurrency: Boolean Check")
   class CurrencyValidationTests {
     @ParameterizedTest
-    @CsvSource({
+    @CsvSource(value = {
         "USD, true",
         "EUR, true",
         "INVALID, false",
-        ", false" // This often represents a null/empty string in CSV source
-    })
+        "null, false",
+        "' ', false" // This often represents a null/empty string in CSV source
+    }, nullValues = "null")
     @DisplayName("isValidCurrency: should return correct boolean for currency codes including nulls")
     void isValidCurrencyshouldReturnExpectedResult(String code, boolean expected) {
       // If the library interprets the empty CSV column as null,

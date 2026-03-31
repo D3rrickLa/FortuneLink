@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasPortfolioId;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
@@ -87,8 +86,9 @@ public class ValidationUtils {
     }
 
     try {
-      return Currency.getAvailableCurrencies().stream()
-          .anyMatch(c -> c.getCode().equals(code.toUpperCase()));
+      // More efficient: directly try to let the JDK validate the ISO code
+      java.util.Currency.getInstance(code.toUpperCase());
+      return true;
     } catch (IllegalArgumentException e) {
       return false;
     }

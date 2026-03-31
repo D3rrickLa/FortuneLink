@@ -5,6 +5,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 /**
+ * @implNote: We need an DB, this barely change so we should store it and not waste tokens
  * Represents metadata for a tradable asset within the market system. This includes core
  * identifiers, classification, and descriptive information used for market analysis and portfolio
  * tracking.

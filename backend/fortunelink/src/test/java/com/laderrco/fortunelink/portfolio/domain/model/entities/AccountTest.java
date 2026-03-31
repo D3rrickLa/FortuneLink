@@ -14,10 +14,7 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedExcepti
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -66,7 +63,11 @@ class AccountTest {
           () -> assertTrue(account.getCashBalance().isZero()), () -> assertTrue(account.isActive()),
           () -> assertEquals(0, account.getPositionCount()),
           () -> assertEquals(AccountLifecycleState.ACTIVE, account.getState()),
-          () -> assertTrue(account.getAccountType().requiresCapitalGainsTracking()));
+          () -> assertTrue(account.getAccountType().requiresCapitalGainsTracking()),
+          () -> assertEquals(account.getPositionStrategy(), PositionStrategy.ACB),
+          () -> assertNotNull(account.getCreationDate()),
+          () -> assertEquals(account.getLastUpdatedOn(), account.getCreationDate()),
+          () -> assertTrue(account.getHealthStatus().equals(HealthStatus.HEALTHY)));
     }
 
     @Test
@@ -80,7 +81,7 @@ class AccountTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "   ", "\t"})
+    @ValueSource(strings = { "", "   ", "\t" })
     @DisplayName("constructor: throws exception for null or blank names")
     void throwsForInvalidNames(String invalidName) {
       assertThrows(DomainArgumentException.class,
@@ -117,7 +118,7 @@ class AccountTest {
     @DisplayName("deposit: rejects negative amounts or wrong currency")
     void depositRejectsInvalidInputs() {
       assertAll(() -> assertThrows(IllegalArgumentException.class,
-              () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
+          () -> account.deposit(Money.of(-100, "USD"), "Invalid")),
           () -> assertThrows(CurrencyMismatchException.class,
               () -> account.deposit(Money.of(100, "EUR"), "Wrong Currency")));
     }
@@ -136,7 +137,7 @@ class AccountTest {
     void withdrawRejectsInvalidCases() {
       account.deposit(Money.of(100, "USD"), "Funding");
       assertAll(() -> assertThrows(InsufficientFundsException.class,
-              () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
+          () -> account.withdraw(Money.of(200, "USD"), "Too much", false)),
           () -> assertThat(account.hasSufficientCash(Money.of(2000, USD))).isFalse(),
           () -> assertThrows(IllegalArgumentException.class,
               () -> account.withdraw(Money.of(-50, "USD"), "Negative", false)));
@@ -163,7 +164,7 @@ class AccountTest {
       Money feeAmount = Money.of(-1, USD);
 
       assertThatThrownBy(() -> account.applyFee(feeAmount, "NOTES")).isInstanceOf(
-              IllegalArgumentException.class)
+          IllegalArgumentException.class)
           .hasMessageContaining("Withdrawal amount must be positive");
     }
 
@@ -212,7 +213,8 @@ class AccountTest {
 
       assertThatThrownBy(
           () -> account.recordRealizedGain(AAPL, Money.of(100, USD), Money.of(500, USD),
-              Instant.now())).isInstanceOf(AccountClosedException.class);
+              Instant.now()))
+          .isInstanceOf(AccountClosedException.class);
     }
 
     @Test
@@ -289,10 +291,10 @@ class AccountTest {
     @Test
     void depositFailsAsResaonIsNotGiven() {
       assertThatThrownBy(() -> account.deposit(Money.of(100, USD), " ")).isInstanceOf(
-              IllegalArgumentException.class)
+          IllegalArgumentException.class)
           .hasMessageContaining("Reason/description cannot be empty");
       assertThatThrownBy(() -> account.deposit(Money.of(100, USD), null)).isInstanceOf(
-              IllegalArgumentException.class)
+          IllegalArgumentException.class)
           .hasMessageContaining("Reason/description cannot be empty");
     }
 

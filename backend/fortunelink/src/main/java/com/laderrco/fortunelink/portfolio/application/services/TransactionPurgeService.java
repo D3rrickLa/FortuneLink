@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -16,15 +17,17 @@ public class TransactionPurgeService {
   private static final int DEFAULT_RETENTION_DAYS = 365;
 
   private final TransactionRepository transactionRepository;
+  private final MarketAssetInfoRepository infoRepository;
   private final int retentionDays;
 
   // @Value here istead of var because it can be 0 in unit testing + that
   // annotation only applies
   // when Spring resolves the property
-  public TransactionPurgeService(TransactionRepository transactionRepository, @Value(
-      "${fortunelink.purge.excluded-transaction-retention-days:" + DEFAULT_RETENTION_DAYS
+  public TransactionPurgeService(TransactionRepository transactionRepository, MarketAssetInfoRepository infoRepository,
+      @Value("${fortunelink.purge.excluded-transaction-retention-days:" + DEFAULT_RETENTION_DAYS
           + "}") int retentionDays) {
     this.transactionRepository = transactionRepository;
+    this.infoRepository = infoRepository;
     this.retentionDays = retentionDays;
   }
 
@@ -43,5 +46,11 @@ public class TransactionPurgeService {
       // In production you'd fire an alert here.
       log.error("Transaction purge failed - manual review required", e);
     }
+  }
+
+  @Scheduled(cron = "0 0 3 * * SUN") // 3am Sunday
+  @Transactional
+  public void purgeExpiredAssetInfo() {
+    infoRepository.deleteExpired();
   }
 }

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
+ * @implNote we DON'T DB the info gathered here. price data in a DB will bloat
  * Represents a real-time or delayed price snapshot for a tradable asset. This record encapsulates
  * the current market state, including daily price action, volatility (high/low), and valuation
  * metrics like market capitalization and volume.

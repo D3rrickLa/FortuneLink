@@ -24,9 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
 
-@Getter
 public class Account {
   private final AccountId accountId;
   private final Currency accountCurrency;
@@ -42,7 +40,8 @@ public class Account {
   private Money cashBalance;
   private List<RealizedGainRecord> realizedGains;
 
-  // JPA hydration constructor only. Fields populated by persistence layer via reflection
+  // JPA hydration constructor only. Fields populated by persistence layer via
+  // reflection
   protected Account() {
     this.accountId = null;
     this.accountCurrency = null;
@@ -247,6 +246,55 @@ public class Account {
 
   public void restoreHealth() {
     this.healthStatus = HealthStatus.HEALTHY;
+  }
+
+  // --- Getters ---
+  public AccountId getAccountId() {
+    return accountId;
+  }
+
+  public Currency getAccountCurrency() {
+    return accountCurrency;
+  }
+
+  public PositionStrategy getPositionStrategy() {
+    return positionStrategy;
+  }
+
+  public Instant getCreationDate() {
+    return creationDate;
+  }
+
+  public PositionBook getPositionBook() {
+    return positionBook;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public AccountType getAccountType() {
+    return accountType;
+  }
+
+  public HealthStatus getHealthStatus() {
+    return healthStatus;
+  }
+
+  public AccountLifecycleState getState() {
+    return state;
+  }
+
+  public Instant getCloseDate() {
+    return closeDate;
+  }
+
+  public Instant getLastUpdatedOn() {
+    return lastUpdatedOn;
+  }
+
+  public Money getCashBalance() {
+    return cashBalance;
   }
 
   // --- Status Helpers ---

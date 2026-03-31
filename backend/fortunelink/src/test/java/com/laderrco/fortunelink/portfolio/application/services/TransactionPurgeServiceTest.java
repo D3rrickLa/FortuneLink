@@ -2,9 +2,9 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,6 +21,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class TransactionPurgeServiceTest {
 
   @Mock
+  private MarketAssetInfoRepository infoRepository;
+
+  @Mock
   private TransactionRepository transactionRepository;
 
   private TransactionPurgeService purgeService;
@@ -32,7 +35,7 @@ class TransactionPurgeServiceTest {
     @DisplayName("purgeExpiredTransactions: calculates correct cutoff for 30 day retention")
     void purgeCalculatesCorrectCutoff() {
       int retentionDays = 30;
-      purgeService = new TransactionPurgeService(transactionRepository, retentionDays);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, retentionDays);
 
       purgeService.purgeExpiredTransactions();
 
@@ -42,7 +45,8 @@ class TransactionPurgeServiceTest {
       Instant capturedCutoff = cutoffCaptor.getValue();
       Instant expectedApprox = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
 
-      // Check that the calculation is correct (within a 1-sec margin for execution time)
+      // Check that the calculation is correct (within a 1-sec margin for execution
+      // time)
       long diffSeconds = Math.abs(
           capturedCutoff.getEpochSecond() - expectedApprox.getEpochSecond());
       assert (diffSeconds < 2);
@@ -51,7 +55,7 @@ class TransactionPurgeServiceTest {
     @Test
     @DisplayName("purgeExpiredTransactions: calls repository even when retention is 0")
     void purgeWorksWithZeroRetention() {
-      purgeService = new TransactionPurgeService(transactionRepository, 0);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, 0);
 
       purgeService.purgeExpiredTransactions();
 
@@ -65,7 +69,7 @@ class TransactionPurgeServiceTest {
     @Test
     @DisplayName("purgeExpiredTransactions: handles zero deletions without error")
     void purgeHandlesZeroDeletions() {
-      purgeService = new TransactionPurgeService(transactionRepository, 365);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, 365);
       // Repository returns 0 deleted rows
       when(transactionRepository.deleteAllExpiredTransactions(any(Instant.class))).thenReturn(0);
 
@@ -77,7 +81,7 @@ class TransactionPurgeServiceTest {
     @Test
     @DisplayName("purgeExpiredTransactions: handles positive deletions successfully")
     void purgeHandlesPositiveDeletions() {
-      purgeService = new TransactionPurgeService(transactionRepository, 365);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, 365);
       // Repository returns 50 deleted rows
       when(transactionRepository.deleteAllExpiredTransactions(any(Instant.class))).thenReturn(50);
       purgeService.purgeExpiredTransactions();
@@ -87,12 +91,26 @@ class TransactionPurgeServiceTest {
   }
 
   @Nested
+  @DisplayName("Market Info Purge Test")
+  public class MarketInfoPurgeTests {
+    @Test
+    @DisplayName("purgeExpiredAssetInfo: success")
+    void purgeExpiredAssetInfoSuccess() {
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, 365);
+
+      purgeService.purgeExpiredAssetInfo();
+
+      verify(infoRepository).deleteExpired();
+    }
+  }
+
+  @Nested
   @DisplayName("Error Handling and Resilience")
   class ErrorHandlingTests {
     @Test
     @DisplayName("purgeExpiredTransactions: suppresses exceptions to keep scheduler alive")
     void purgeHandlesRepositoryExceptionGracefully() {
-      purgeService = new TransactionPurgeService(transactionRepository, 365);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, 365);
 
       // Simulate a database failure
       when(transactionRepository.deleteAllExpiredTransactions(any())).thenThrow(
@@ -107,7 +125,7 @@ class TransactionPurgeServiceTest {
     @Test
     @DisplayName("purgeExpiredTransactions: skip info logging when nothing is deleted")
     void purgeSkipsLoggingWhenNoDeletions() {
-      purgeService = new TransactionPurgeService(transactionRepository, 365);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, 365);
       when(transactionRepository.deleteAllExpiredTransactions(any())).thenReturn(0);
 
       purgeService.purgeExpiredTransactions();

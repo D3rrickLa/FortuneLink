@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -157,6 +158,25 @@ public class TransactionTest {
   }
 
   @Nested
+  @DisplayName("Builder test")
+  public class BuilderTest {
+    @Test
+    @DisplayName("builder: builds transaction")
+    void builderBuilds() {
+      Fee fee = Fee.of(FeeType.ACCOUNT_MAINTENANCE, Money.of(1, USD), Instant.now());
+      Transaction tx = Transaction.builder().transactionId(TransactionId.newId()).accountId(AccountId.newId())
+          .transactionType(TransactionType.BUY).execution(buyExecution())
+          .cashDelta(Money.of(-1351, "USD")).fee(fee).notes("test note")
+          .relatedTransactionId(TransactionId.newId())
+          .occurredAt(Instant.now()).metadata(TransactionMetadata.manual(AssetType.STOCK)).build();
+
+      assertNotNull(tx);
+      assertEquals(fee, tx.fees().getFirst());
+    }
+
+  }
+
+  @Nested
   @DisplayName("Cash delta consistency (validateTradeConsistency)")
   class CashDeltaConsistencyTests {
     @Test
@@ -277,7 +297,7 @@ public class TransactionTest {
     @DisplayName("construction: throws on null symbol, zero quantity, or negative price")
     void throwsOnInvalidInputs() {
       assertAll(() -> assertThrows(DomainArgumentException.class,
-              () -> new TradeExecution(null, QTY10, P135)),
+          () -> new TradeExecution(null, QTY10, P135)),
           () -> assertThrows(IllegalArgumentException.class,
               () -> new TradeExecution(AAPL, QTY10, new Price(Money.of(-1.00, "USD")))),
           () -> assertThrows(IllegalArgumentException.class,
