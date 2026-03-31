@@ -25,12 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+// NOTE: The variables AccountId, Currency, PositionStrategy, creationDate, and PositionBook
+// were initially private final, but now just private, still effectively final because no setters
+// this was done becuase of the new reconstitution method 
 public class Account {
-  private final AccountId accountId;
-  private final Currency accountCurrency;
-  private final PositionStrategy positionStrategy;
-  private final Instant creationDate;
-  private final PositionBook positionBook;
+  private AccountId accountId;
+  private Currency accountCurrency;
+  private PositionStrategy positionStrategy;
+  private Instant creationDate;
+  private PositionBook positionBook;
   private String name;
   private AccountType accountType;
   private HealthStatus healthStatus;
@@ -67,6 +70,40 @@ public class Account {
     this.realizedGains = new ArrayList<>();
     this.creationDate = Instant.now();
     this.lastUpdatedOn = Instant.now();
+  }
+
+  void initFromPersistence(
+      AccountId accountId,
+      String name,
+      AccountType accountType,
+      Currency accountCurrency,
+      PositionStrategy positionStrategy,
+      HealthStatus healthStatus,
+      AccountLifecycleState state,
+      Instant closeDate,
+      Instant creationDate,
+      Instant lastUpdatedOn,
+      Money cashBalance,
+      Map<AssetSymbol, Position> positions,
+      List<RealizedGainRecord> realizedGains) {
+        
+    this.accountId = notNull(accountId, "accountId");
+    this.accountCurrency = notNull(accountCurrency, "accountCurrency");
+    this.positionStrategy = notNull(positionStrategy, "positionStrategy");
+    this.creationDate = notNull(creationDate, "creationDate");
+
+    this.name = name;
+    this.accountType = accountType;
+    this.healthStatus = healthStatus;
+    this.state = state;
+    this.closeDate = closeDate;
+    this.lastUpdatedOn = lastUpdatedOn;
+    this.cashBalance = cashBalance;
+    this.realizedGains = new ArrayList<>(realizedGains);
+
+    // PositionBook has a package-private constructor that accepts an existing map.
+    // Both Account and PositionBook are in the same package so this is legal.
+    this.positionBook = new PositionBook(positions, accountCurrency, positionStrategy);
   }
 
   // --- Cash Operations ---
@@ -331,5 +368,46 @@ public class Account {
 
   private void touch() {
     this.lastUpdatedOn = Instant.now();
+  }
+
+  /*
+   * -----------------------------------------------------------------------
+   * The infrastructure mapper (Option B) lives in a different package and
+   * cannot reach the package-private PositionBook constructor. This factory
+   * is the single, explicit seam between persistence and domain.
+   *
+   * Rules:
+   * - Only the infrastructure mapper should call this.
+   * - No validation shortcuts — every invariant is re-applied via the
+   * normal field assignments so the object is safe to use immediately.
+   * - Positions are injected directly into PositionBook via the
+   * package-private map-accepting constructor that already exists.
+   * -----------------------------------------------------------------------
+   */
+  public static Account reconstitute(
+      AccountId accountId,
+      String name,
+      AccountType accountType,
+      Currency accountCurrency,
+      PositionStrategy positionStrategy,
+      HealthStatus healthStatus,
+      AccountLifecycleState state,
+      Instant closeDate,
+      Instant creationDate,
+      Instant lastUpdatedOn,
+      Money cashBalance,
+      Map<AssetSymbol, Position> positions, // from PositionJpaEntity rows
+      List<RealizedGainRecord> realizedGains) { // from RealizedGainJpaEntity rows
+
+    Account account = new Account(); // uses the protected no-arg JPA ctor
+
+    // Reflective setters are fragile across refactors; we use package-private
+    // field assignment via a dedicated internal init method instead.
+    account.initFromPersistence(
+        accountId, name, accountType, accountCurrency, positionStrategy,
+        healthStatus, state, closeDate, creationDate, lastUpdatedOn,
+        cashBalance, positions, realizedGains);
+
+    return account;
   }
 }
