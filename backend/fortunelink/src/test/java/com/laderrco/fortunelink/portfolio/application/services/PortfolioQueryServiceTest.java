@@ -109,7 +109,7 @@ public class PortfolioQueryServiceTest {
     Account account = new Account(accountId, "Test Account", AccountType.TFSA, CAD,
         PositionStrategy.ACB);
 
-    // Wire up positions entries via spy if symbols present — avoids
+    // Wire up positions entries via spy if symbols present, avoids
     // fighting Hibernate-managed maps directly in unit tests.
     if (!symbols.isEmpty()) {
       Account spy = org.mockito.Mockito.spy(account);
@@ -272,7 +272,7 @@ public class PortfolioQueryServiceTest {
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
-      // Verify the correct fee breakdown map was passed — not an empty map
+      // Verify the correct fee breakdown map was passed, not an empty map
       verify(accountViewBuilder).build(eq(account), eq(quotes), eq(Map.of(aapl, feeAmount)));
     }
 
@@ -324,7 +324,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result.isEmpty()).isTrue();
 
-      // Nothing to fetch — guard must prevent market data call
+      // Nothing to fetch, guard must prevent market data call
       verifyNoInteractions(marketDataService, portfolioValuationService);
     }
 

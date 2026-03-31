@@ -21,7 +21,6 @@ public class AccountViewBuilder {
 
   public AccountView build(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache,
       Map<AssetSymbol, Money> feeBreakdownBySymbol) {
-
     List<PositionView> positionViews = account.getPositionEntries().stream().map(entry -> {
       AssetSymbol symbol = entry.getKey();
 

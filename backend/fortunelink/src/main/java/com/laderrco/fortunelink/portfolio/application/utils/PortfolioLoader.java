@@ -37,7 +37,7 @@ public class PortfolioLoader {
   /**
    * Loads all active portfolios for a user. Mirrors loadUserPortfolio() semantics: deleted
    * portfolios are excluded at the query level. Returns empty list (not an exception) when the user
-   * has no active portfolios — that's a valid state, not an error.
+   * has no active portfolios, that's a valid state, not an error.
    */
   public List<Portfolio> loadAllUserPortfolios(UserId userId) {
     return portfolioRepository.findAllActiveByUserId(userId);
@@ -67,8 +67,8 @@ public class PortfolioLoader {
   public void validatePortfolioAndAccountOwnership(PortfolioId portfolioId, UserId userId,
       AccountId accountId) {
     if (!portfolioRepository.existsByIdAndUserIdAndAccountId(portfolioId, userId, accountId)) {
-      throw new PortfolioNotFoundException(
-          portfolioId); // intentionally vague — don't leak structure
+      // intentionally vague, don't leak structure
+      throw new PortfolioNotFoundException(portfolioId); 
     }
   }
 }

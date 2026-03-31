@@ -184,7 +184,7 @@ public class Portfolio {
       throw new PortfolioAlreadyDeletedException("Portfolio is already deleted");
     }
 
-    // Check only ACTIVE accounts — closed accounts don't block deletion
+    // Check only ACTIVE accounts, closed accounts don't block deletion
     boolean hasActiveAccounts = accounts.values().stream().anyMatch(Account::isActive);
     if (hasActiveAccounts) {
       long activeCount = accounts.values().stream().filter(Account::isActive).count();

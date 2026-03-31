@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Internal domain interface — not part of the public API.
+ * Internal domain interface, not part of the public API.
  * <p>
  * Position mutations are intentionally public to satisfy Java's sealed interface constraints, but
  * ALL callers MUST go through {@link TransactionApplier#apply(Position, Transaction)}.

@@ -183,7 +183,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.SPLIT)
         .execution(new TradeExecution(symbol, Quantity.of(ratio.numerator()),
-            // structural placeholder — see above
+            // structural placeholder, see above
             Price.zero(account.getAccountCurrency()))) // zero price is valid; no cash event
         .split(ratio).cashDelta(Money.zero(account.getAccountCurrency())).fees(List.of())
         .notes(notes).occurredAt(date).metadata(TransactionMetadata.manual(existingPosition.type()))

@@ -247,7 +247,7 @@ class PortfolioLifecycleServiceTest {
           true);
 
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-          PortfolioDeletionException.class)
+              PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
     }
 
@@ -274,7 +274,8 @@ class PortfolioLifecycleServiceTest {
 
     @ParameterizedTest
     @MethodSource("softDeleteExceptionProvider")
-    void deletePortfolioSoftDeleteShouldHandleExceptions(Exception thrownException, String expectedMessage) {
+    void deletePortfolioSoftDeleteShouldHandleExceptions(Exception thrownException,
+        String expectedMessage) {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
       DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true,
@@ -331,11 +332,13 @@ class PortfolioLifecycleServiceTest {
     @Test
     @DisplayName("deletePortfolio: throws exception when portfolio not found")
     void deletePortfolioThrowsWhenPortfolioNotFound() {
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.empty());
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
+          Optional.empty());
 
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false,
           false);
-      assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(PortfolioNotFoundException.class);
+      assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
+          PortfolioNotFoundException.class);
     }
   }
 }

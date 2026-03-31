@@ -9,5 +9,6 @@
   "java.sources.organizeImports.staticStarThreshold": 3,
   "editor.rulers": [
     100
-  ]
+  ],
+  "java.debug.settings.onBuildFailureProceed": true
 }

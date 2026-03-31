@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.domain.exceptions;
+package com.laderrco.fortunelink.portfolio.infrastructure.exceptions;
 
 public class MarketDataException extends RuntimeException {
   public MarketDataException(String message) {

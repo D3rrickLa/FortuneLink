@@ -30,3 +30,7 @@
 
 —Design GapPerformanceCalculationService not implemented⚪ Post-MVP—Design 
 GapAssetAllocationService not implemented⚪ Post-MVP—Design GapLiability/Loan context not started⚪ Post-MVP—LowAcbPosition.firstAcquiredAt not surfaced in mapper⚪ Open
+
+---
+NOTE ABOUT AI AND UNIT TESTING: They can test trival things, but for more exploratory issues - IRL
+We still need the human 'touch' to ifnd and debug

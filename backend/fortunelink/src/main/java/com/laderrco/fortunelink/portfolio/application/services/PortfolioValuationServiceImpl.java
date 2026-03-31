@@ -91,7 +91,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
 
   /**
    * Calculates the market value of all non-cash positions in an account. Cash positions
-   * (AssetType.CASH) are excluded — they're captured via account.getCashBalance() in
+   * (AssetType.CASH) are excluded, they're captured via account.getCashBalance() in
    * calculateAccountValue().
    */
   @Override

@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Handles account and position-level read operations.
  * <p>
- * Responsibility boundary: everything inside an account — positions, individual assets,
+ * Responsibility boundary: everything inside an account, positions, individual assets,
  * account-level totals. Portfolio identity and aggregate-level metrics (net worth, performance,
  * allocation) belong in PortfolioQueryService.
  * <p>

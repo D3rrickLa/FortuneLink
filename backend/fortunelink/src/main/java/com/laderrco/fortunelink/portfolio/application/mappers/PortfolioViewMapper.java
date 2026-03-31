@@ -29,7 +29,7 @@ public class PortfolioViewMapper {
   /**
    * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost basis is zero/null
    * to avoid division by zero.
-   * 
+   *
    * @implNote: PercentageChange stores decimal form: 0.10 = 10%.  Do NOT multiply by 100 here,
    * toPercent() does that
    */
@@ -37,7 +37,6 @@ public class PortfolioViewMapper {
     if (costBasis == null || costBasis.isZero()) {
       return new PercentageChange(BigDecimal.ZERO);
     }
-
 
     BigDecimal decimalValue = gain.amount()
         .divide(costBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(),
@@ -142,7 +141,7 @@ public class PortfolioViewMapper {
    * totalCostBasis (this IS the effective ACB)
    *
    * @param position      the position value object
-   * @param quote         current market quote (nullable — falls back to cost basis)
+   * @param quote         current market quote (nullable, falls back to cost basis)
    * @param feesForSymbol cumulative BUY fees for this symbol in account currency
    */
   public PositionView toPositionView(Position position, MarketAssetQuote quote,

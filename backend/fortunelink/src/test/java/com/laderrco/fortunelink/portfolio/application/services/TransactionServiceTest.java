@@ -60,7 +60,6 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -313,8 +312,8 @@ class TransactionServiceTest {
     void recordInterestSuccessCashInterest() {
       RecordInterestCommand command = RecordInterestCommand.cashInterest(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID, usd(5), NOW, "Interest");
-      RecordInterestCommand command2 = new RecordInterestCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "", usd(5), NOW,
-          "INTEREST");
+      RecordInterestCommand command2 = new RecordInterestCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          "", usd(5), NOW, "INTEREST");
       service.recordInterest(command);
 
       verify(transactionRecordingService).recordInterest(any(), any(), eq(command.amount()),
@@ -532,7 +531,8 @@ class TransactionServiceTest {
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(),
           any())).thenReturn(Optional.empty());
 
-      assertThatThrownBy(() -> service.excludeTransaction(cmd)).isInstanceOf(TransactionNotFoundException.class);
+      assertThatThrownBy(() -> service.excludeTransaction(cmd)).isInstanceOf(
+          TransactionNotFoundException.class);
     }
 
     @Test
