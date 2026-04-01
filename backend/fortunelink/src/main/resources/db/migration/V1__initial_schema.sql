@@ -17,7 +17,7 @@
 -- ============================================================
 CREATE TABLE portfolios (
     id                      UUID            PRIMARY KEY,
-    user_id                 UUID            NOT NULL UNIQUE, -- one active portfolio per user (MVP)
+    user_id                 UUID            NOT NULL, -- one active portfolio per user (MVP)
     name                    VARCHAR(255)    NOT NULL,
     description             VARCHAR(500),
     display_currency_code   VARCHAR(3)      NOT NULL,        -- ISO-4217: CAD, USD, etc.

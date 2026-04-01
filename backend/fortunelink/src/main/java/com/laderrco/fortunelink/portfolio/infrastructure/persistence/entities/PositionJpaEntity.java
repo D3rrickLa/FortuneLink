@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 public class PositionJpaEntity {
 
   @Id
-  @Column(columnDefinition = "uuid", name = "primary_id", updatable = false, nullable = false)
+  @Column(name = "id", columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -41,7 +41,7 @@ public class PositionJpaEntity {
   private String identifierType;
 
   /** Ticker or currency code, maps to {@code AssetSymbol.symbol()}. */
-  @Column(name = "symbol", nullable = false, length = 100)
+  @Column(name = "symbol", nullable = false, length = 20) // match SQL
   private String symbol;
 
   @Column(name = "asset_type", length = 50)
@@ -56,7 +56,7 @@ public class PositionJpaEntity {
   @Column(name = "cost_basis_currency", nullable = false, length = 3)
   private String costBasisCurrency; // AcbPosition.totalCostBasis.currency
 
-  @Column(name = "acquired_date_at", nullable = false)
+  @Column(name = "first_acquired_at", nullable = false)
   private Instant acquiredDate; // AcbPosition.firstAcquiredAt
 
   @Column(name = "last_modified_at") // added in V3

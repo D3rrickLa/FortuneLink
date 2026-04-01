@@ -83,7 +83,7 @@ public class AccountJpaEntity {
    * which would delete historical gains when the collection is rebuilt.
    */
   @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
-      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.EAGER)
+      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
   private List<RealizedGainJpaEntity> realizedGains = new ArrayList<>();
 
   // -------------------------------------------------------------------------

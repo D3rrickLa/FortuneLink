@@ -146,18 +146,29 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordInterest(Account account, AssetSymbol symbol, Money amount, String notes,
       Instant date) {
     validateIsActive(account);
-    Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
     validateTransactionDate(date, account);
 
-    Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
-        .accountId(account.getAccountId()).transactionType(TransactionType.INTEREST)
-        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
-            TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+    TransactionMetadata metadata = TransactionMetadata.manual(AssetType.CASH);
+    if (symbol != null) {
+      metadata = metadata.with(TransactionMetadata.KEY_SYMBOL, symbol.symbol());
+    }
+
+    Transaction tx = Transaction.builder()
+        .transactionId(TransactionId.newId())
+        .accountId(account.getAccountId())
+        .transactionType(TransactionType.INTEREST)
+        .cashDelta(amount)
+        .fees(List.of())
+        .notes(notes)
+        .occurredAt(date)
+        .metadata(metadata)
         .build();
 
-    account.deposit(amount, REASON_INTEREST + symbol.symbol());
+    String reason = symbol != null
+        ? REASON_INTEREST + symbol.symbol()
+        : REASON_INTEREST + "CASH";
+    account.deposit(amount, reason);
     return tx;
   }
 

@@ -93,8 +93,10 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public List<Transaction> findByPortfolioIdAndUserIdAndAccountId(
       PortfolioId portfolioId, UserId userId, AccountId accountId) {
-    return jpaRepository.findByPortfolioIdAndAccountId(
+        // NOTE: this might be wrong, the toString() returns a class description, not the uuid
+    return jpaRepository.findByPortfolioIdAndUserIdAndAccountId(
         UUID.fromString(portfolioId.toString()),
+        UUID.fromString(userId.toString()),
         UUID.fromString(accountId.toString()))
         .stream()
         .map(mapper::toDomain)

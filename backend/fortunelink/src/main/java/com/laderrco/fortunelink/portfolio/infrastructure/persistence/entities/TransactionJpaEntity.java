@@ -60,16 +60,16 @@ public class TransactionJpaEntity {
   // -------------------------------------------------------------------------
 
   /** AssetSymbol.symbol() — null for DEPOSIT, WITHDRAWAL, FEE, etc. */
-  @Column(name = "primary_id", length = 100)
+  @Column(name = "execution_symbol", length = 100)
   private String executionSymbol;
 
-  @Column(name = "quantity", precision = 20, scale = 8)
+  @Column(name = "execution_quantity", precision = 20, scale = 8)
   private BigDecimal executionQuantity;
 
-  @Column(name = "price_amount", precision = 20, scale = 10)
+  @Column(name = "execution_price_amount", precision = 20, scale = 10)
   private BigDecimal executionPriceAmount;
 
-  @Column(name = "price_currency", length = 3)
+  @Column(name = "execution_price_currency", length = 3)
   private String executionPriceCurrency;
 
   /**
@@ -86,16 +86,15 @@ public class TransactionJpaEntity {
   @Column(name = "split_denominator")
   private Integer splitDenominator;
 
-  @Column(name = "cash_delta_amount", precision = 20, scale = 10)
+  @Column(name = "cash_delta_amount", precision = 20, scale = 10, nullable = false)
   private BigDecimal cashDeltaAmount;
 
-  @Column(name = "cash_delta_currency", length = 3)
+  @Column(name = "cash_delta_currency", length = 3, nullable = false)
   private String cashDeltaCurrency;
 
   @Column(name = "metadata_source", nullable = false, length = 50)
   private String metadataSource;
 
-  // Exclusion lifecycle (columns added in V3)
   @Column(name = "excluded", nullable = false)
   private boolean excluded;
 
@@ -114,17 +113,17 @@ public class TransactionJpaEntity {
    * {@code StringMapConverter} serialises Map&lt;String,String&gt; ↔ JSON text.
    */
   @Convert(converter = StringMapConverter.class)
-  @Column(name = "metadata", columnDefinition = "jsonb")
+  @Column(name = "additional_data", columnDefinition = "jsonb")
   private Map<String, String> additionalData = new HashMap<>();
 
   @Column(name = "notes", columnDefinition = "text")
   private String notes;
 
-  @Column(name = "transaction_date", nullable = false)
+  @Column(name = "occurred_at", nullable = false)
   private Instant occurredAt;
 
-  @Column(name = "created_date", nullable = false, updatable = false)
-  private Instant createdDate;
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt;
 
   /** Self-referential link for reversals / paired trades. */
   @Column(name = "related_transaction_id", columnDefinition = "uuid")
@@ -169,7 +168,7 @@ public class TransactionJpaEntity {
     e.notes = notes;
     e.occurredAt = occurredAt;
     e.relatedTransactionId = relatedTransactionId;
-    e.createdDate = Instant.now();
+    e.createdAt = Instant.now();
     return e;
   }
 

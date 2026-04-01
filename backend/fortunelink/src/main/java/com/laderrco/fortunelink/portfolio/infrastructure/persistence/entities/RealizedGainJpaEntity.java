@@ -25,10 +25,10 @@ public class RealizedGainJpaEntity {
   @Column(name = "symbol", nullable = false, length = 20)
   private String symbol;
 
-  @Column(name = "realized_gain_loss_amount", nullable = false, precision = 20, scale = 10)
+  @Column(name = "gain_loss_amount", nullable = false, precision = 20, scale = 10)
   private BigDecimal gainLossAmount;
 
-  @Column(name = "realized_gain_loss_currency", nullable = false, length = 3)
+  @Column(name = "gain_loss_currency", nullable = false, length = 3)
   private String gainLossCurrency;
 
   @Column(name = "cost_basis_sold_amount", nullable = false, precision = 20, scale = 10)

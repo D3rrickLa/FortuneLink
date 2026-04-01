@@ -149,3 +149,9 @@ Striped<Lock> in PositionRecalculationService: the striped lock on accountId is 
 Summary Table
 #SeverityFileIssue1🔴 Critical4 JPA entitiesWrong @Id/@Version import (Spring Data vs JPA)2🔴 CriticalV3 migrationSingle underscore — migration never runs3🔴 CriticalFeeJpaEntityaccount_amount* columns missing from all migrations4🔴 CriticalJpaTransactionRepositoryJPQL uses wrong entity names and non-existent relationships5🔴 CriticalRedisCacheConfig + serializersJackson 2 vs Jackson 3 mixing6🔴 CriticalMarketDataServiceImplMissing @Service, @Value on final fields broken7🔴 CriticalJpaTransactionRepositorydeleteAllExpiredTransactions deletes all transactions8🔴 CriticalFortunelinkApplicationmain not public9🔴 CriticalMarketDataServiceImpl@Cacheable names broken, typo in property key10🟡 SignificantPortfolioDomainMapperUUID churn on realized gains — mass DELETE/INSERT every save11🟡 SignificantV1 migration + entitiesNUMERIC(20,2) vs scale 10 — silent financial rounding12🟡 SignificantTransactionDomainMapperNPE on cashDelta for pre-V3 rows13🟡 SignificantTransactionRecordingServiceImplrecordInterest rejects null symbol, contradicts interface14🟡 SignificantPortfolioDomainMapperUnsupportedOperationException on FifoPosition during save15🟡 SignificantPortfolioRepositoryImplUnnecessary eager load on every save
 Fix the 9 critical ones before touching anything else — half of them will prevent the application from starting at all.
+
+
+
+----
+SO I am pretty sure we have different amounts/limits from the SQL file compare to what we have 
+in code, we might want to have a 'global Enum file for this'

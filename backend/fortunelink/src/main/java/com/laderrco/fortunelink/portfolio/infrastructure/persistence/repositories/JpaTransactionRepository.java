@@ -37,6 +37,18 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   Page<TransactionJpaEntity> findByAccountIdAndExecutionSymbol(UUID accountId, String symbol, Pageable pageable);
 
   // --- Custom Queries ---
+  @Query("""
+      SELECT t FROM TransactionJpaEntity t
+      JOIN PortfolioJpaEntity p ON p.id = t.portfolioId
+      WHERE t.portfolioId = :portfolioId
+        AND p.userId = :userId
+        AND t.accountId = :accountId
+      """)
+  List<TransactionJpaEntity> findByPortfolioIdAndUserIdAndAccountId(
+      @Param("portfolioId") UUID portfolioId,
+      @Param("userId") UUID userId,
+      @Param("accountId") UUID accountId);
+
   /**
    * Used in the 'save' logic to find the denormalized portfolioId when it's not
    * provided.

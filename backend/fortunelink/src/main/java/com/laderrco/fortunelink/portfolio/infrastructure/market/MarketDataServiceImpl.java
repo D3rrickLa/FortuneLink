@@ -73,7 +73,7 @@ public class MarketDataServiceImpl implements MarketDataService {
   }
 
   @Override
-  @Cacheable(value = "${fortunelink.cache.key-prefix.prices}", key = "#symbol.symbol()", unless = "#result == null")
+  @Cacheable(value = "${fortunelink.cache.key-prefix.historical}", key = "#symbol.symbol()", unless = "#result == null")
   public Optional<MarketAssetQuote> getHistoricalQuote(AssetSymbol symbol, Instant date) {
     return provider.fetchHistoricalQuote(symbol, date);
   }

@@ -38,10 +38,10 @@ public class FeeJpaEntity {
   private String feeType; // FeeType enum name
 
   // Native amount — the currency the fee was charged in
-  @Column(name = "fee_amount", nullable = false, precision = 20, scale = 10)
+  @Column(name = "native_amount", nullable = false, precision = 20, scale = 10)
   private BigDecimal nativeAmount;
 
-  @Column(name = "fee_currency", nullable = false, length = 3)
+  @Column(name = "navtive_currency", nullable = false, length = 3)
   private String nativeCurrency;
 
   // Account amount — post-conversion (null if same currency as account)
@@ -52,19 +52,19 @@ public class FeeJpaEntity {
   private String accountAmountCurrency;
 
   // Exchange rate components (null if no conversion was needed)
-  @Column(name = "rate", precision = 20, scale = 10)
+  @Column(name = "exchange_rate", precision = 20, scale = 10)
   private BigDecimal exchangeRate;
 
-  @Column(name = "from_currency", length = 3)
+  @Column(name = "rate_from_currency", length = 3)
   private String fromCurrency;
 
-  @Column(name = "to_currency", length = 3)
+  @Column(name = "rate_to_currency", length = 3)
   private String toCurrency;
 
   @Column(name = "exchange_rate_date")
   private Instant exchangeRateDate;
 
-  @Column(name = "fee_date", nullable = false)
+  @Column(name = "occurred_at", nullable = false)
   private Instant occurredAt;
 
   @Version
