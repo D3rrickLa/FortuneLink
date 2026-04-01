@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
+import org.hibernate.annotations.BatchSize;
+
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.converters.StringMapConverter;
 
 import jakarta.persistence.*;
@@ -134,7 +136,8 @@ public class TransactionJpaEntity {
   private int version;
 
   // fees are always needed with the transaction
-  @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+  @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  @BatchSize(size = 50) // Hibernate batch fetching, avoids N+1 for display
   private List<FeeJpaEntity> fees = new ArrayList<>();
 
   public static TransactionJpaEntity create(UUID id, UUID portfolioId, UUID accountId,

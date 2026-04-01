@@ -73,15 +73,9 @@ public class AccountJpaEntity {
   @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
   private List<PositionJpaEntity> positions = new ArrayList<>();
 
-  /**
-   * Realized gains are append-only in the domain. orphanRemoval = false is
-   * intentional:
-   * we never want Hibernate to cascade-delete a gain record when the collection
-   * is not fully present. All deletions happen only via the scheduled purge.
-   *
-   * CASCADE PERSIST + MERGE only — NOT ALL — because "all" includes REMOVE,
-   * which would delete historical gains when the collection is rebuilt.
-   */
+  // if a single portoflio lods like 3 years of active trading, that's 100+
+  // records, each time they open the portfolio page, each one is 'loaded', LAZY
+  // to solve this
   @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
       CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
   private List<RealizedGainJpaEntity> realizedGains = new ArrayList<>();
