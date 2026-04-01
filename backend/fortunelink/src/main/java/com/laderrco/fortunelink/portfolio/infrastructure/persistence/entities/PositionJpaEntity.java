@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Version;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Maps the {@code assets} table to domain {@code AcbPosition} (MVP) or
@@ -24,6 +25,7 @@ import lombok.Getter;
 @Entity
 @Getter
 @Table(name = "assets")
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class PositionJpaEntity {
 
   @Id
@@ -71,27 +73,12 @@ public class PositionJpaEntity {
   private int version;
 
   // -------------------------------------------------------------------------
-  // JPA
-  // -------------------------------------------------------------------------
-
-  protected PositionJpaEntity() {
-  }
-
-  // -------------------------------------------------------------------------
   // Factory
   // -------------------------------------------------------------------------
 
-  public static PositionJpaEntity create(
-      UUID id,
-      AccountJpaEntity account,
-      String identifierType,
-      String symbol,
-      String assetType,
-      BigDecimal quantity,
-      BigDecimal costBasisAmount,
-      String costBasisCurrency,
-      Instant acquiredDate,
-      Instant lastModifiedAt) {
+  public static PositionJpaEntity create(UUID id, AccountJpaEntity account, String identifierType,
+      String symbol, String assetType, BigDecimal quantity, BigDecimal costBasisAmount,
+      String costBasisCurrency, Instant acquiredDate, Instant lastModifiedAt) {
 
     PositionJpaEntity e = new PositionJpaEntity();
     e.id = id;

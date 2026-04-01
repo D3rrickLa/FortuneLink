@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Version;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Pure persistence model for the {@code Portfolio} aggregate root.
@@ -19,6 +20,7 @@ import lombok.Getter;
 @Entity
 @Getter
 @Table(name = "portfolios")
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class PortfolioJpaEntity {
 
   @Id
@@ -68,26 +70,11 @@ public class PortfolioJpaEntity {
   private List<AccountJpaEntity> accounts = new ArrayList<>();
 
   // -------------------------------------------------------------------------
-  // JPA
+  // Factory, called by the domain mapper when persisting a new Portfolio
   // -------------------------------------------------------------------------
 
-  protected PortfolioJpaEntity() {
-  }
-
-  // -------------------------------------------------------------------------
-  // Factory — called by the domain mapper when persisting a new Portfolio
-  // -------------------------------------------------------------------------
-
-  public static PortfolioJpaEntity create(
-      UUID id,
-      UUID userId,
-      String name,
-      String description,
-      String displayCurrencyCode,
-      boolean deleted,
-      Instant deletedAt,
-      UUID deletedBy,
-      Instant createdAt,
+  public static PortfolioJpaEntity create(UUID id, UUID userId, String name, String description,
+      String displayCurrencyCode, boolean deleted, Instant deletedAt, UUID deletedBy, Instant createdAt,
       Instant updatedAt) {
 
     PortfolioJpaEntity e = new PortfolioJpaEntity();
@@ -105,7 +92,7 @@ public class PortfolioJpaEntity {
   }
 
   // -------------------------------------------------------------------------
-  // Mutation helpers — mapper calls these during an update
+  // Mutation helpers, mapper calls these during an update
   // -------------------------------------------------------------------------
 
   public void update(
@@ -138,7 +125,7 @@ public class PortfolioJpaEntity {
     for (AccountJpaEntity a : incoming) {
       AccountJpaEntity current = existing.get(a.getId());
       if (current != null) {
-        current.applyFrom(a); // in-place update — Hibernate tracks the managed instance
+        current.applyFrom(a); // in-place update , Hibernate tracks the managed instance
         merged.add(current);
       } else {
         a.setPortfolio(this);
@@ -160,7 +147,7 @@ public class PortfolioJpaEntity {
   }
 
   // -------------------------------------------------------------------------
-  // Getters — read-only for mapper use
+  // Getters, read-only for mapper use
   // -------------------------------------------------------------------------
   public List<AccountJpaEntity> getAccounts() {
     return Collections.unmodifiableList(accounts);

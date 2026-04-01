@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
@@ -8,6 +9,7 @@ import org.springframework.data.annotation.Version;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Persistence model for {@code Account}.
@@ -19,6 +21,7 @@ import lombok.Getter;
 @Entity
 @Getter
 @Table(name = "accounts")
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class AccountJpaEntity {
 
   @Id
@@ -92,31 +95,13 @@ public class AccountJpaEntity {
   // TransactionRepository to avoid pulling the entire history on every load.
 
   // -------------------------------------------------------------------------
-  // JPA
-  // -------------------------------------------------------------------------
-
-  protected AccountJpaEntity() {
-  }
-
-  // -------------------------------------------------------------------------
   // Factory
   // -------------------------------------------------------------------------
 
-  public static AccountJpaEntity create(
-      UUID id,
-      PortfolioJpaEntity portfolio,
-      String name,
-      String accountType,
-      String baseCurrencyCode,
-      String positionStrategy,
-      String healthStatus,
-      String lifecycleState,
-      java.math.BigDecimal cashBalanceAmount,
-      String cashBalanceCurrency,
-      boolean active,
-      Instant closedDate,
-      Instant createdDate,
-      Instant lastUpdatedOn) {
+  public static AccountJpaEntity create(UUID id, PortfolioJpaEntity portfolio, String name,
+      String accountType, String baseCurrencyCode, String positionStrategy, String healthStatus, String lifecycleState,
+      BigDecimal cashBalanceAmount, String cashBalanceCurrency, boolean active,
+      Instant closedDate, Instant createdDate, Instant lastUpdatedOn) {
 
     AccountJpaEntity e = new AccountJpaEntity();
     e.id = id;

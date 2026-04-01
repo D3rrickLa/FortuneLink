@@ -30,14 +30,15 @@ import lombok.RequiredArgsConstructor;
 @Repository
 @RequiredArgsConstructor
 public class PortfolioRepositoryImpl implements PortfolioRepository {
-
-  private final JpaPortfolioRepository jpaRepo;
+  private final JpaPortfolioRepository jpaRepository;
   private final PortfolioDomainMapper mapper;
 
-  // -------------------------------------------------------------------------
-  // Write
-  // -------------------------------------------------------------------------
-
+  /*
+   * Warning about the save strategy. It loads the managed JPA entity before every
+   * save so Hibernate's dirty-checking works correctly. That's one extra query
+   * per write. For an MVP with low write volume this is fine. If you're ever
+   * doing bulk imports you'll want a different path
+   */
   @Override
   public Portfolio save(Portfolio domain) {
     Objects.requireNonNull(domain, "Portfolio cannot be null");
@@ -46,12 +47,12 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
 
     // Load the managed entity to support in-place update.
     // findWithAccountsByIdAndUserId uses an @EntityGraph so positions and
-    // gains are already in the session — no lazy-load surprises.
-    Optional<PortfolioJpaEntity> existing = jpaRepo.findWithAccountsByIdAndUserId(
+    // gains are already in the session, no lazy-load surprises.
+    Optional<PortfolioJpaEntity> existing = jpaRepository.findWithAccountsByIdAndUserId(
         id, UUID.fromString(domain.getUserId().toString()));
 
     PortfolioJpaEntity entity = mapper.toEntity(domain, existing.orElse(null));
-    PortfolioJpaEntity saved = jpaRepo.save(entity);
+    PortfolioJpaEntity saved = jpaRepository.save(entity);
 
     return mapper.toDomain(saved);
   }
@@ -59,16 +60,12 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
   @Override
   public void delete(PortfolioId id) {
     Objects.requireNonNull(id, "PortfolioId cannot be null");
-    jpaRepo.deleteById(UUID.fromString(id.toString()));
+    jpaRepository.deleteById(UUID.fromString(id.toString()));
   }
-
-  // -------------------------------------------------------------------------
-  // Read
-  // -------------------------------------------------------------------------
 
   @Override
   public Optional<Portfolio> findByIdAndUserId(PortfolioId id, UserId userId) {
-    return jpaRepo
+    return jpaRepository
         .findWithAccountsByIdAndUserId(
             UUID.fromString(id.toString()),
             UUID.fromString(userId.toString()))
@@ -78,7 +75,7 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
   @Override
   public List<Portfolio> findAllActiveByUserId(UserId userId) {
     // Spring Data query — see JpaPortfolioRepository for the @Query definition.
-    return jpaRepo
+    return jpaRepository
         .findAllActiveByUserId(UUID.fromString(userId.toString()))
         .stream()
         .map(mapper::toDomain)
@@ -87,32 +84,28 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @Override
   public Optional<Portfolio> findWithAccountsByIdAndUserId(PortfolioId id, UserId userId) {
-    return jpaRepo
+    return jpaRepository
         .findWithAccountsByIdAndUserId(
             UUID.fromString(id.toString()),
             UUID.fromString(userId.toString()))
         .map(mapper::toDomain);
   }
 
-  // -------------------------------------------------------------------------
-  // Existence checks (lightweight — no mapping needed)
-  // -------------------------------------------------------------------------
-
   @Override
   public boolean existsActiveByUserId(UserId userId) {
-    return jpaRepo.existsActiveByUserId(UUID.fromString(userId.toString()));
+    return jpaRepository.existsActiveByUserId(UUID.fromString(userId.toString()));
   }
 
   @Override
   public boolean existsByIdAndUserId(PortfolioId id, UserId userId) {
-    return jpaRepo.existsByIdAndUserId(
+    return jpaRepository.existsByIdAndUserId(
         UUID.fromString(id.toString()),
         UUID.fromString(userId.toString()));
   }
 
   @Override
   public boolean existsByPortfolioIdAndAccountId(PortfolioId portfolioId, AccountId accountId) {
-    return jpaRepo.existsByIdAndAccountId(
+    return jpaRepository.existsByIdAndAccountId(
         UUID.fromString(portfolioId.toString()),
         UUID.fromString(accountId.toString()));
   }
@@ -120,7 +113,7 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
   @Override
   public boolean existsByIdAndUserIdAndAccountId(PortfolioId portfolioId, UserId userId,
       AccountId accountId) {
-    return jpaRepo.existsByIdAndUserIdAndAccountId(
+    return jpaRepository.existsByIdAndUserIdAndAccountId(
         UUID.fromString(portfolioId.toString()),
         UUID.fromString(userId.toString()),
         UUID.fromString(accountId.toString()));
@@ -128,6 +121,6 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @Override
   public Long countByUserId(UserId userId) {
-    return jpaRepo.countActiveByUserId(UUID.fromString(userId.toString()));
+    return jpaRepository.countActiveByUserId(UUID.fromString(userId.toString()));
   }
 }

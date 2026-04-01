@@ -13,10 +13,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Data
 @Table(name = "market_asset_info")
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class MarketAssetInfoJpaEntity {
 
   @Id
@@ -47,12 +49,8 @@ public class MarketAssetInfoJpaEntity {
   @Column(name = "expires_at", nullable = false)
   private Instant expiresAt;
 
-  // JPA-only constructor
-  protected MarketAssetInfoJpaEntity() {
-  }
 
-  // ... getters, a static factory from(MarketAssetInfo), and a toDomain() method
-  public MarketAssetInfo toDomainObject() {
+  public MarketAssetInfo toDomain() {
     return new MarketAssetInfo(
         new AssetSymbol(symbol),
         name,
@@ -61,5 +59,19 @@ public class MarketAssetInfoJpaEntity {
         Currency.of(tradingCurrency),
         sector,
         description);
+  }
+
+  public static MarketAssetInfoJpaEntity from(MarketAssetInfo info, long ttlSeconds) {
+    MarketAssetInfoJpaEntity e = new MarketAssetInfoJpaEntity();
+    e.symbol = info.symbol().symbol();
+    e.name = info.name();
+    e.assetType = info.type().name();
+    e.exchange = info.exchange();
+    e.tradingCurrency = info.tradingCurrency().getCode();
+    e.sector = info.sector();
+    e.description = info.description();
+    e.fetchedAt = Instant.now();
+    e.expiresAt = Instant.now().plusSeconds(ttlSeconds);
+    return e;
   }
 }

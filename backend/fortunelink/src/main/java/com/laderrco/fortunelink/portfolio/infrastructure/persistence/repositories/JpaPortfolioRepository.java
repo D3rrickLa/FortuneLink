@@ -20,11 +20,6 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity, UUID> {
-
-  // -------------------------------------------------------------------------
-  // Full graph load — ownership-scoped
-  // -------------------------------------------------------------------------
-
   /**
    * Fetches the portfolio with its complete account graph (accounts → positions
    * + realized gains). Used for both reads and writes so Hibernate tracks the
@@ -35,13 +30,7 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
       "accounts.positions",
       "accounts.realizedGains"
   })
-  Optional<PortfolioJpaEntity> findWithAccountsByIdAndUserId(
-      @Param("id") UUID id,
-      @Param("userId") UUID userId);
-
-  // -------------------------------------------------------------------------
-  // Collection reads
-  // -------------------------------------------------------------------------
+  Optional<PortfolioJpaEntity> findWithAccountsByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
   /**
    * Returns all non-deleted portfolios for a user.
@@ -58,10 +47,6 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
         AND p.deleted = false
       """)
   List<PortfolioJpaEntity> findAllActiveByUserId(@Param("userId") UUID userId);
-
-  // -------------------------------------------------------------------------
-  // Existence checks — intentionally lightweight (no @EntityGraph)
-  // -------------------------------------------------------------------------
 
   @Query("""
       SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END

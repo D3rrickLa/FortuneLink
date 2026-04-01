@@ -138,8 +138,8 @@ management:
 # ============================================
 logging:
   level:
-    "com.fortunelink": INFO
-    "org.springframework.cache": INFO
-    "io.lettuce.core": INFO
-    "org.hibernate.SQL": ERROR
-    "org.hibernate.type.descriptor.sql": ERROR
+    "[com.fortunelink]": INFO
+    "[org.springframework.cache]": INFO
+    "[io.lettuce.core]": INFO
+    "[org.hibernate.SQL]": ERROR
+    "[org.hibernate.type.descriptor.sql]": ERROR

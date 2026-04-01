@@ -8,10 +8,12 @@ import org.springframework.data.annotation.Id;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
 @Table(name = "realized_gains")
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class RealizedGainJpaEntity {
 
   @Id
@@ -40,18 +42,9 @@ public class RealizedGainJpaEntity {
   @Column(name = "occurred_at", nullable = false)
   private Instant occurredAt;
 
-  protected RealizedGainJpaEntity() {
-  }
-
-  public static RealizedGainJpaEntity create(
-      UUID id,
-      AccountJpaEntity account,
-      String symbol,
-      BigDecimal gainLossAmount,
-      String gainLossCurrency,
-      BigDecimal costBasisSoldAmount,
-      String costBasisSoldCurrency,
-      Instant occurredAt) {
+  public static RealizedGainJpaEntity create(UUID id, AccountJpaEntity account, String symbol,
+      BigDecimal gainLossAmount, String gainLossCurrency, BigDecimal costBasisSoldAmount,
+      String costBasisSoldCurrency, Instant occurredAt) {
 
     RealizedGainJpaEntity e = new RealizedGainJpaEntity();
     e.id = id;

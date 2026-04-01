@@ -28,9 +28,9 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.Re
  * <p>
  * Mapping direction conventions:
  * <ul>
- * <li>{@code toDomain} — JPA entity graph → domain object (used during
+ * <li>{@code toDomain} -> JPA entity graph -> domain object (used during
  * reads)</li>
- * <li>{@code toEntity} — domain object → JPA entity graph (used during
+ * <li>{@code toEntity} -> domain object -> JPA entity graph (used during
  * writes)</li>
  * </ul>
  *
