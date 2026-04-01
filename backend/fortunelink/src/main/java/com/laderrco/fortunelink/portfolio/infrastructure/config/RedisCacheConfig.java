@@ -34,6 +34,8 @@ import tools.jackson.databind.module.SimpleModule;
 @Configuration
 @EnableCaching
 public class RedisCacheConfig {
+
+  // --- TTL Values ---
   @Value("${fortunelink.cache.ttl.current-prices}")
   private long currentPricesTtl;
 
@@ -46,10 +48,19 @@ public class RedisCacheConfig {
   @Value("${fortunelink.cache.ttl.trading-currency}")
   private long tradingCurrencyTtl;
 
-  /**
-   * Custom ObjectMapper for Redis serialization.
-   * Handles LocalDateTime, BigDecimal, and other domain types.
-   */
+  // --- Cache Names (Prefixes) ---
+  @Value("${fortunelink.cache.key-prefix.prices}")
+  private String pricesCacheName;
+
+  @Value("${fortunelink.cache.key-prefix.historical}")
+  private String historicalCacheName;
+
+  @Value("${fortunelink.cache.key-prefix.asset-info}")
+  private String assetInfoCacheName;
+
+  @Value("${fortunelink.cache.key-prefix.currency}")
+  private String currencyCacheName;
+
   @Bean("redisCacheObjectMapper")
   public ObjectMapper redisCacheObjectMapper() {
     SimpleModule module = new SimpleModule()
@@ -60,13 +71,9 @@ public class RedisCacheConfig {
 
     return JsonMapper.builder()
         .addModule(module)
-
-        // Visibility (Jackson 3 style)
         .changeDefaultVisibility(vc -> vc.withFieldVisibility(JsonAutoDetect.Visibility.ANY))
         .changeDefaultVisibility(vc -> vc.withGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .changeDefaultVisibility(vc -> vc.withIsGetterVisibility(JsonAutoDetect.Visibility.NONE))
-
-        // Safer deserialization
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .activateDefaultTyping(
             BasicPolymorphicTypeValidator.builder().build(),
@@ -74,21 +81,16 @@ public class RedisCacheConfig {
         .build();
   }
 
-  /**
-   * Main cache manager with multiple cache configurations.
-   */
   @Bean
   public CacheManager cacheManager(RedisConnectionFactory connectionFactory,
       @Qualifier("redisCacheObjectMapper") ObjectMapper objectMapper) {
 
     StringRedisSerializer keySerializer = new StringRedisSerializer();
-    GenericJacksonJsonRedisSerializer genericValueSerializer = new GenericJacksonJsonRedisSerializer(
-        objectMapper);
+    GenericJacksonJsonRedisSerializer genericValueSerializer = new GenericJacksonJsonRedisSerializer(objectMapper);
 
     JacksonJsonRedisSerializer<MarketAssetQuote> moneySerializer = new JacksonJsonRedisSerializer<>(
         objectMapper, MarketAssetQuote.class);
 
-    // Typed serializer for MarketAssetInfo (with custom deserializer in ObjectMapper)
     JacksonJsonRedisSerializer<MarketAssetInfo> marketAssetInfoSerializer = new JacksonJsonRedisSerializer<>(
         objectMapper, MarketAssetInfo.class);
 
@@ -96,15 +98,16 @@ public class RedisCacheConfig {
 
     Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
 
-    cacheConfigs.put("current-prices", defaultConfig.entryTtl(Duration.ofSeconds(currentPricesTtl))
+    // Map the property-driven names to their specific TTLs and Serializers
+    cacheConfigs.put(pricesCacheName, defaultConfig.entryTtl(Duration.ofSeconds(currentPricesTtl))
         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(moneySerializer)));
 
-    cacheConfigs.put("historical-prices", defaultConfig.entryTtl(Duration.ofSeconds(historicalPricesTtl)));
+    cacheConfigs.put(historicalCacheName, defaultConfig.entryTtl(Duration.ofSeconds(historicalPricesTtl)));
 
-    cacheConfigs.put("asset-info", defaultConfig.entryTtl(Duration.ofSeconds(assetInfoTtl))
+    cacheConfigs.put(assetInfoCacheName, defaultConfig.entryTtl(Duration.ofSeconds(assetInfoTtl))
         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(marketAssetInfoSerializer)));
 
-    cacheConfigs.put("trading-currency", defaultConfig.entryTtl(Duration.ofSeconds(tradingCurrencyTtl)));
+    cacheConfigs.put(currencyCacheName, defaultConfig.entryTtl(Duration.ofSeconds(tradingCurrencyTtl)));
 
     return RedisCacheManager.builder(connectionFactory)
         .cacheDefaults(defaultConfig)
@@ -115,10 +118,9 @@ public class RedisCacheConfig {
 
   private RedisCacheConfiguration getDefaultConfig(StringRedisSerializer keySerializer,
       GenericJacksonJsonRedisSerializer genericValueSerializer) {
-    RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+    return RedisCacheConfiguration.defaultCacheConfig()
         .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(keySerializer))
         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(genericValueSerializer))
         .disableCachingNullValues();
-    return defaultConfig;
   }
 }
