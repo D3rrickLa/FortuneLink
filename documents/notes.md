@@ -1,6 +1,6 @@
 # Project Issue Tracker
 
-1. Wrong @Id and @Version import in four JPA entities
+**1. Wrong @Id and @Version import in four JPA entities**
 This is the most insidious bug in the whole file. Four entities import the Spring Data annotation instead of the JPA one:
 java// WRONG — Spring Data annotation, Hibernate ignores it
 import org.springframework.data.annotation.Id;
@@ -14,21 +14,24 @@ Affected files: `FeeJpaEntity`, `PositionJpaEntity`, `RealizedGainJpaEntity`, `M
 
 ---
 
-**2. V3 migration will never run — filename uses single underscore**
 ```
+**2. V3 migration will never run — filename uses single underscore**
 V3_alighn_schema_with_domain_model.sql   ← wrong, plus a typo
 Flyway's naming convention requires double underscores: V{version}__{description}.sql. With a single underscore Flyway cannot parse the version number and silently skips the file. Every column added in V3 — lifecycle_state, health_status, position_strategy, cash_delta_amount, cash_delta_currency, excluded, realized_gains table — does not exist in the database. Your application will throw column-not-found errors the first time any of those paths execute.
 Rename to: V3__align_schema_with_domain_model.sql
 
-3. account_amount and account_amount_currency columns exist in FeeJpaEntity but in no migration
+**3. account_amount and account_amount_currency columns exist in FeeJpaEntity but in no migration**
+```
 java@Column(name = "account_amount", precision = 20, scale = 10)
 private BigDecimal accountAmount;
 
 @Column(name = "account_amount_currency", length = 3)
 private String accountAmountCurrency;
+```
 These columns appear in none of your three migration files. With ddl-auto: validate, Hibernate will throw SchemaManagementException at startup because it cannot find these columns in transaction_fees. Add them to V3 (or a V4).
 
-4. Broken JPQL in JpaTransactionRepository — two queries that will never work
+**4. Broken JPQL in JpaTransactionRepository — two queries that will never work**
+```
 java// WRONG — entity is named AccountJpaEntity, not AccountEntity
 @Query("SELECT a.portfolio.id FROM AccountEntity a WHERE a.id = :accountId")
 UUID findPortfolioIdByAccountId(@Param("accountId") UUID accountId);
@@ -44,6 +47,7 @@ java// WRONG — multiple problems (see below)
       AND t.metadata.exclusion IS NULL
     """)
 List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(...);
+```
 The second query has five separate problems:
 
 Entity is TransactionJpaEntity, not Transaction

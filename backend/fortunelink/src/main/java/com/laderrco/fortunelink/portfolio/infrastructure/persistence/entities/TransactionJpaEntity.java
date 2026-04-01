@@ -4,9 +4,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Version;
-
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.converters.StringMapConverter;
 
 import jakarta.persistence.*;

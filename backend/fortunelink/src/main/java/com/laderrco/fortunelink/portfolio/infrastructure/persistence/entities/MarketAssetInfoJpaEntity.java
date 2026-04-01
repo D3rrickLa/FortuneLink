@@ -2,16 +2,12 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
 import java.time.Instant;
 
-import org.springframework.data.annotation.Id;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -49,6 +45,9 @@ public class MarketAssetInfoJpaEntity {
   @Column(name = "expires_at", nullable = false)
   private Instant expiresAt;
 
+  @Version
+  @Column(name = "version", nullable = false)
+  private int version;
 
   public MarketAssetInfo toDomain() {
     return new MarketAssetInfo(

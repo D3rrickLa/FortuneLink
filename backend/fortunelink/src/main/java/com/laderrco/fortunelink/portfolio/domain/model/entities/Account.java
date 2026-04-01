@@ -186,7 +186,7 @@ public class Account {
     notNull(costBasisSold, "costBasisSold");
     notNull(at, "at");
 
-    realizedGains.add(new RealizedGainRecord(symbol, gainLoss, costBasisSold, at));
+    realizedGains.add(RealizedGainRecord.of(symbol, gainLoss, costBasisSold, at));
     touch();
   }
 

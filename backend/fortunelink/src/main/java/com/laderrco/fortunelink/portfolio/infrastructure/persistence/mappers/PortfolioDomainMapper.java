@@ -283,7 +283,7 @@ public class PortfolioDomainMapper {
   // =========================================================================
 
   private RealizedGainRecord realizedGainToDomain(RealizedGainJpaEntity ge) {
-    return new RealizedGainRecord(
+    return RealizedGainRecord.of(
         new AssetSymbol(ge.getSymbol()),
         new Money(ge.getGainLossAmount(), Currency.of(ge.getGainLossCurrency())),
         new Money(ge.getCostBasisSoldAmount(), Currency.of(ge.getCostBasisSoldCurrency())),

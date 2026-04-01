@@ -43,27 +43,27 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
    * provided.
    * Assumes a relationship exists between Account and Portfolio.
    */
-  @Query("SELECT a.portfolio.id FROM AccountEntity a WHERE a.id = :accountId")
+  @Query("SELECT a.portfolio.id FROM AccountJpaEntity a WHERE a.id = :accountId")
   UUID findPortfolioIdByAccountId(@Param("accountId") UUID accountId);
 
   @Query("""
-      SELECT t.account.id as accountId,
-             t.execution.asset as symbol,
-             SUM(f.accountAmount.amount) as totalFees,
-             t.account.base_currency as currency
-      FROM Transaction t
+      SELECT t.accountId          as accountId,
+             t.executionSymbol    as symbol,
+             SUM(f.nativeAmount)  as totalFees,
+             t.cashDeltaCurrency  as currency
+      FROM TransactionJpaEntity t
       JOIN t.fees f
-      WHERE t.account.id IN :accountIds
+      WHERE t.accountId IN :accountIds
         AND t.transactionType = 'BUY'
-        AND t.metadata.exclusion IS NULL
-      GROUP BY t.account.id, t.execution.asset
+        AND t.excluded = false
+        AND t.executionSymbol IS NOT NULL
+      GROUP BY t.accountId, t.executionSymbol, t.cashDeltaCurrency
       """)
   List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(@Param("accountIds") List<UUID> accountIds);
 
   // --- Deletion Logic ---
   @Modifying
-  @Query("DELETE FROM Transaction t " + "WHERE t.account.id = :accountId " + "AND t.excluded = true "
-      + "AND t.metadata.excludedAt < :cutoff")
+  @Query("DELETE FROM TransactionJpaEntity t WHERE t.accountId = :accountId AND t.excluded = true AND t.excludedAt < :cutoff")
   int deleteExpiredTransactions(@Param("accountId") UUID accountId, @Param("cutoff") Instant cutoff);
 
   @Modifying

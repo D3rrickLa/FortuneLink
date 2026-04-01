@@ -21,7 +21,7 @@ public class RealizedGainRecordTest {
   void testIsGain() {
     Money RGL = Money.of(30, USD_CURRENCY);
     Money CBS = Money.of(300, USD_CURRENCY);
-    RealizedGainRecord record = new RealizedGainRecord(SYMBOL, RGL, CBS, now);
+    RealizedGainRecord record = RealizedGainRecord.of(SYMBOL, RGL, CBS, now);
     assertThat(record.isGain()).isTrue();
     assertThat(record.isLoss()).isFalse();
   }
@@ -30,7 +30,7 @@ public class RealizedGainRecordTest {
   void testIsLoss() {
     Money RGL = Money.of(-30, USD_CURRENCY);
     Money CBS = Money.of(300, USD_CURRENCY);
-    RealizedGainRecord record = new RealizedGainRecord(SYMBOL, RGL, CBS, now);
+    RealizedGainRecord record = RealizedGainRecord.of(SYMBOL, RGL, CBS, now);
     assertThat(record.isGain()).isFalse();
     assertThat(record.isLoss()).isTrue();
   }

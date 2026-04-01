@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
@@ -20,6 +21,7 @@ import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import lombok.RequiredArgsConstructor;
 
 // NOTE: Probably rename this to MarketDataServiceImpl.java
+@Service
 @RequiredArgsConstructor
 public class MarketDataServiceImpl implements MarketDataService {
   private static Logger log = LoggerFactory.getLogger(MarketDataServiceImpl.class);
@@ -77,7 +79,7 @@ public class MarketDataServiceImpl implements MarketDataService {
   }
 
   @Override
-  @Cacheable(value = "${fortuneline.cache.key-prefix.asset-info}", key = "#symbol.symbol()", unless = "#result == null")
+  @Cacheable(value = "${fortunelink.cache.key-prefix.asset-info}", key = "#symbol.symbol()", unless = "#result == null")
   public Optional<MarketAssetInfo> getAssetInfo(AssetSymbol symbol) {
     Optional<MarketAssetInfo> cached = infoRepository.findBySymbol(symbol);
     if (cached.isPresent()) {

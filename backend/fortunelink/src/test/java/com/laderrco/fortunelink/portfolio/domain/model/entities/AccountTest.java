@@ -221,9 +221,9 @@ class AccountTest {
     void getRealizedGainsFor_ShouldReturnOnlyMatchingRecords() {
       // 1. Arrange: Add records to the account's internal list
       // (If the list is private, you might need a 'recordGain' method to populate it)
-      RealizedGainRecord appleGain = new RealizedGainRecord(apple, Money.of(100, USD),
+      RealizedGainRecord appleGain = RealizedGainRecord.of(apple, Money.of(100, USD),
           Money.of(500, USD), Instant.now());
-      RealizedGainRecord googleGain = new RealizedGainRecord(google, Money.of(200, USD),
+      RealizedGainRecord googleGain = RealizedGainRecord.of(google, Money.of(200, USD),
           Money.of(1000, USD), Instant.now());
 
       account.recordRealizedGain(apple, Money.of(100, USD), Money.of(500, USD), Instant.now());
