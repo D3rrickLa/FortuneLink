@@ -1,11 +1,13 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.google.common.util.concurrent.Striped;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
 import java.util.Objects;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -18,10 +20,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class PositionRecalculationService {
   private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
   private final PositionRecalculationExecutor executor;
-  private final Striped<Lock> symbolLocks = Striped.lock(1024);
+  private final RedissonClient redisson; // Injected by Spring Boot Starter
 
   /**
-   * Async listener that triggers after a transaction commit. Ensures excluded/restored flags are
+   * Async listener that triggers after a transaction commit. Ensures
+   * excluded/restored flags are
    * persisted before we replay them.
    */
   @Async("recalculationExecutor")
@@ -31,18 +34,24 @@ public class PositionRecalculationService {
 
     // Lock at account level, not symbol level
     // A full replay and a partial replay must not run concurrently on same account
-    String lockKey = event.accountId().toString();
-    Lock lock = symbolLocks.get(lockKey);
+    String lockKey = String.format("lock:position:%s:%s", event.accountId().id().toString(), event.symbol().symbol());
+    RLock lock = redisson.getLock(lockKey);
 
-    lock.lock();
     try {
-      executor.scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(),
-          event.symbol());
-    } catch (Exception e) {
+      // Attempt to acquire lock for 10s, lease for 30s
+      if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
+        try {
+          executor.scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(),
+              event.symbol());
+        } finally {
+          lock.unlock();
+        }
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       log.error("Recalculation failed for portfolioId={} accountId={} symbol={}",
           event.portfolioId(), event.accountId(), event.symbol().symbol(), e);
-    } finally {
-      lock.unlock(); // No map.remove() needed!
+      throw new RuntimeException("Interrupted while waiting for position lock", e);
     }
   }
 }
