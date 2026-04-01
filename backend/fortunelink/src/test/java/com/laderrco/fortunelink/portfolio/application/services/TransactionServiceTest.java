@@ -83,6 +83,7 @@ class TransactionServiceTest {
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private static final AccountId ACCOUNT_ID = AccountId.newId();
   private static final String SYMBOL_STR = "AAPL";
+  private static final AssetType ASSET_TYPE = AssetType.STOCK;
   private static final String NOTES = "Test Note";
   private static final Instant NOW = Instant.now();
   private static final Currency USD = Currency.of("USD");
@@ -155,7 +156,7 @@ class TransactionServiceTest {
 
   // --- Helper Methods ---
   private RecordPurchaseCommand createPurchaseCommand() {
-    return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, Quantity.of(10),
+    return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE, Quantity.of(10),
         new Price(AMOUNT), List.of(), NOW, NOTES);
   }
 
@@ -194,7 +195,7 @@ class TransactionServiceTest {
       Money AMOUNT = new Money(new BigDecimal("100.00"), CAD);
       Price shopPriceToUsd = new Price(Money.of(75, USD));
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
+          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
       MarketAssetInfo info = new MarketAssetInfo(symbol, "SHOPIFY", AssetType.STOCK, "NASDAQ", CAD,
           "technology", "description");
 
@@ -274,8 +275,7 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordDeposit: verify success flow")
     void recordDepositSuccess() {
-      RecordDepositCommand cmd = new RecordDepositCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
-          List.of(), NOW, NOTES);
+      RecordDepositCommand cmd = new RecordDepositCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT, NOW, NOTES);
       when(transactionRecordingService.recordDeposit(eq(account), eq(AMOUNT), eq(NOTES),
           eq(NOW))).thenReturn(transaction);
 

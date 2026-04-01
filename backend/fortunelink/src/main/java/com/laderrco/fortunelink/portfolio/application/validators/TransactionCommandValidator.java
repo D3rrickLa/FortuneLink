@@ -32,6 +32,9 @@ public class TransactionCommandValidator {
   public ValidationResult validate(RecordPurchaseCommand command) {
     return validateCommand(command, errors -> {
       ValidationUtils.validateSymbol(command.symbol(), errors);
+      if (command.assetType() == null) {
+        errors.add("Asset type is null");
+      }
       ValidationUtils.validateQuantity(command.quantity(), errors);
       ValidationUtils.validateAmount(command.price().amount(), errors);
       validateFees(command.fees(), errors);
@@ -52,7 +55,6 @@ public class TransactionCommandValidator {
   public ValidationResult validate(RecordDepositCommand command) {
     return validateCommand(command, errors -> {
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      validateFees(command.fees(), errors);
       ValidationUtils.validateDate(command.transactionDate(), null, errors);
     });
   }

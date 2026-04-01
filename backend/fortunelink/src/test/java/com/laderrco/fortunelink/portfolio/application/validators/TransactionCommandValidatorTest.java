@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.*;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
@@ -68,6 +69,7 @@ class TransactionCommandValidatorTest {
       RecordPurchaseCommand command = new RecordPurchaseCommand(
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
           "AAPL",
+          AssetType.STOCK,
           Quantity.of(1),
           new Price(validMoney()),
           validFees(),
@@ -114,7 +116,6 @@ class TransactionCommandValidatorTest {
       RecordDepositCommand command = new RecordDepositCommand(
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
           new Money(BigDecimal.ZERO, USD),
-          validFees(),
           NOW,
           null);
 
@@ -394,7 +395,6 @@ class TransactionCommandValidatorTest {
       RecordDepositCommand command = new RecordDepositCommand(
           null, USER_ID, ACCOUNT_ID,
           validMoney(),
-          validFees(),
           NOW,
           null);
 
@@ -409,7 +409,6 @@ class TransactionCommandValidatorTest {
       RecordDepositCommand command = new RecordDepositCommand(
           null, null, null,
           validMoney(),
-          validFees(),
           NOW,
           null);
 
