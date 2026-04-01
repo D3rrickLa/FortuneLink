@@ -17,11 +17,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
+
+import java.sql.SQLException;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -32,9 +33,7 @@ public class PortfolioLifecycleService {
   private final PortfolioRepository portfolioRepository;
   private final PortfolioViewMapper portfolioViewMapper;
 
-
   private final PortfolioLifecycleCommandValidator validator;
-  private final TransactionTemplate transactionTemplate;
   private final PortfolioLoader portfolioLoader;
 
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
@@ -52,34 +51,21 @@ public class PortfolioLifecycleService {
     try {
       savedPortfolio = portfolioRepository.save(portfolio);
     } catch (DataIntegrityViolationException e) {
-      throw new PortfolioLimitReachedException("Portfolio already exists for this user");
+      if (e.getCause() instanceof SQLException psql && "23505".equals(psql.getSQLState())) {
+        throw new PortfolioLimitReachedException("Portfolio already exists for this user");
+      }
+      throw e; // re-throw everything else
     }
     return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
   }
 
-  /**
-   * NOTE: lifecycle shouldn't call MarketDataService. Returns only what changed, portfolio
-   * metadata. Callers that need a full view should query PortfolioQueryService afterward. This is
-   * intentional: lifecycle services should not own read-side concerns.
-   */
-  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @Transactional
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "updatePortfolio");
-
-    Portfolio saved = transactionTemplate.execute(status -> {
-      Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(),
-          command.userId());
-      existing.updateDetails(command.name(), command.description());
-      existing.updateDisplayCurrency(command.currency());
-      return portfolioRepository.save(existing);
-    });
-
-    if (saved == null) {
-      throw new IllegalStateException("Transaction failed for: " + command.portfolioId());
-    }
-
-    // Return a lightweight view, no market data, no fees.
-    // If the caller needs a full portfolio view, they call PortfolioQueryService.
+    Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(), command.userId());
+    existing.updateDetails(command.name(), command.description());
+    existing.updateDisplayCurrency(command.currency());
+    Portfolio saved = portfolioRepository.save(existing);
     return portfolioViewMapper.toNewPortfolioView(saved);
   }
 

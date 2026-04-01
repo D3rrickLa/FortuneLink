@@ -15,7 +15,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTra
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferOutCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
@@ -32,17 +31,18 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
-import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,17 +60,21 @@ public class TransactionService {
   private final TransactionCommandValidator validator;
   private final ApplicationEventPublisher eventPublisher;
   private final PortfolioLoader portfolioLoader;
-  private final MarketDataService marketDataService;
   private final ExchangeRateService exchangeRateService;
   private final TransactionRecordingService transactionRecordingService;
 
+  @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
     return execute(command, validator::validate, "recordPurchase", ctx -> {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
-      MarketAssetInfo assetInfo = marketDataService.getAssetInfo(symbol)
-          .orElseThrow(() -> new AssetNotFoundException("Unknown symbol: " + command.symbol()));
+
+      // way to balance it, to aboivd market data service
+      // will need to change command.assetType() basck to this
+      // MarketAssetInfo info = infoRepository.findBySymbol(symbol)
+      // .orElseGet(() -> marketDataService.getAssetInfo(symbol)
+      // .orElseThrow(() -> new AssetNotFoundException(symbol.symbol())));
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
-      return transactionRecordingService.recordBuy(ctx.account(), symbol, assetInfo.type(),
+      return transactionRecordingService.recordBuy(ctx.account(), symbol, command.assetType(),
           command.quantity(), price, command.fees(), command.notes(), command.transactionDate());
     });
   }
