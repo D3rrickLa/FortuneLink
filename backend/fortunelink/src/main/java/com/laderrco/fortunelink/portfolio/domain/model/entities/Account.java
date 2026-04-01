@@ -370,20 +370,6 @@ public class Account {
     this.lastUpdatedOn = Instant.now();
   }
 
-  /*
-   * -----------------------------------------------------------------------
-   * The infrastructure mapper (Option B) lives in a different package and
-   * cannot reach the package-private PositionBook constructor. This factory
-   * is the single, explicit seam between persistence and domain.
-   *
-   * Rules:
-   * - Only the infrastructure mapper should call this.
-   * - No validation shortcuts — every invariant is re-applied via the
-   * normal field assignments so the object is safe to use immediately.
-   * - Positions are injected directly into PositionBook via the
-   * package-private map-accepting constructor that already exists.
-   * -----------------------------------------------------------------------
-   */
   public static Account reconstitute(
       AccountId accountId,
       String name,

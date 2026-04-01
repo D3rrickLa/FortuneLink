@@ -30,10 +30,10 @@ public class MarketDataServiceImpl implements MarketDataService {
   private final CacheManager cacheManager;
 
   @Value("${fortunelink.cache.key-prefix.prices}")
-  private final String cacheKeyPrefix;
+  private String cacheKeyPrefix;
 
   @Value("${fortunelink.cache.ttl.current-prices}")
-  private final long quoteTtl;
+  private long quoteTtl;
 
   /*
    * Quotes are provided, Redis should hanle them. We don't add DB caching here

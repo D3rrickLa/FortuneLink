@@ -21,12 +21,12 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Getter
-@Table(name = "assets")
+@Table(name = "positions")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class PositionJpaEntity {
 
   @Id
-  @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+  @Column(columnDefinition = "uuid", name = "primary_id", updatable = false, nullable = false)
   private UUID id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -40,8 +40,8 @@ public class PositionJpaEntity {
   @Column(name = "identifier_type", nullable = false, length = 50)
   private String identifierType;
 
-  /** Ticker or currency code — maps to {@code AssetSymbol.symbol()}. */
-  @Column(name = "primary_id", nullable = false, length = 100)
+  /** Ticker or currency code, maps to {@code AssetSymbol.symbol()}. */
+  @Column(name = "symbol", nullable = false, length = 100)
   private String symbol;
 
   @Column(name = "asset_type", length = 50)
@@ -56,14 +56,11 @@ public class PositionJpaEntity {
   @Column(name = "cost_basis_currency", nullable = false, length = 3)
   private String costBasisCurrency; // AcbPosition.totalCostBasis.currency
 
-  @Column(name = "acquired_date", nullable = false)
+  @Column(name = "acquired_date_at", nullable = false)
   private Instant acquiredDate; // AcbPosition.firstAcquiredAt
 
   @Column(name = "last_modified_at") // added in V3
   private Instant lastModifiedAt; // AcbPosition.lastModifiedAt
-
-  @Column(name = "last_system_interaction", nullable = false)
-  private Instant lastSystemInteraction;
 
   @Version
   @Column(name = "version", nullable = false)
@@ -88,7 +85,6 @@ public class PositionJpaEntity {
     e.costBasisCurrency = costBasisCurrency;
     e.acquiredDate = acquiredDate;
     e.lastModifiedAt = lastModifiedAt;
-    e.lastSystemInteraction = lastModifiedAt != null ? lastModifiedAt : Instant.now();
     return e;
   }
 
@@ -100,7 +96,6 @@ public class PositionJpaEntity {
     this.costBasisCurrency = source.costBasisCurrency;
     this.acquiredDate = source.acquiredDate;
     this.lastModifiedAt = source.lastModifiedAt;
-    this.lastSystemInteraction = source.lastSystemInteraction;
   }
 
   void setAccount(AccountJpaEntity account) {

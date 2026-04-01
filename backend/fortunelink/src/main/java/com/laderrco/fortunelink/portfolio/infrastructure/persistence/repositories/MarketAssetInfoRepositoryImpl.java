@@ -23,7 +23,7 @@ public class MarketAssetInfoRepositoryImpl implements MarketAssetInfoRepository 
   private final JpaMarketAssetInfoRepository jpaRepo;
 
   @Value("${fortunelink.cache.ttl.asset-info}")
-  private final long ttlSeconds;
+  private long ttlSeconds;
 
   @Override
   public Optional<MarketAssetInfo> findBySymbol(AssetSymbol symbol) {

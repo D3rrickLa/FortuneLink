@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @Table(name = "accounts")
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class AccountJpaEntity {
 
   @Id
@@ -33,31 +33,25 @@ public class AccountJpaEntity {
   private String name;
 
   @Column(name = "account_type", nullable = false, length = 50)
-  private String accountType; // AccountType enum name
+  private String accountType;
 
-  @Column(name = "base_currency", nullable = false, length = 3)
+  @Column(name = "base_currency_code", nullable = false, length = 3)
   private String baseCurrencyCode;
 
   @Column(name = "position_strategy", nullable = false, length = 30)
-  private String positionStrategy; // PositionStrategy enum name — added in V3
+  private String positionStrategy;
 
   @Column(name = "health_status", nullable = false, length = 20)
-  private String healthStatus; // HealthStatus enum name — added in V3
+  private String healthStatus;
 
   @Column(name = "lifecycle_state", nullable = false, length = 20)
-  private String lifecycleState; // AccountLifecycleState enum name — added in V3
+  private String lifecycleState;
 
-  // Money fields inlined — amounts stored separately per DB column.
-  // We do NOT use @Embedded here because the column names differ from
-  // MoneyEmbeddable defaults and having explicit columns is clearer.
   @Column(name = "cash_balance_amount", nullable = false, precision = 20, scale = 10)
-  private java.math.BigDecimal cashBalanceAmount;
+  private BigDecimal cashBalanceAmount;
 
   @Column(name = "cash_balance_currency", nullable = false, length = 3)
   private String cashBalanceCurrency;
-
-  @Column(name = "is_active", nullable = false)
-  private boolean active; // legacy column; kept for queries that still use it
 
   @Column(name = "closed_date")
   private Instant closedDate;
@@ -65,7 +59,7 @@ public class AccountJpaEntity {
   @Column(name = "created_date", nullable = false, updatable = false)
   private Instant createdDate;
 
-  @Column(name = "last_system_interaction", nullable = false)
+  @Column(name = "last_updated_on", nullable = false)
   private Instant lastUpdatedOn;
 
   @Version
@@ -76,28 +70,29 @@ public class AccountJpaEntity {
   // Relationships
   // -------------------------------------------------------------------------
 
-  /**
-   * Current open positions. Loaded eagerly because the domain always
-   * reconstructs the full PositionBook when an Account is loaded.
-   * If this becomes a performance issue, profile first — lazy-loading
-   * positions causes N+1 on every portfolio read anyway.
-   */
   @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
   private List<PositionJpaEntity> positions = new ArrayList<>();
 
-  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+  /**
+   * Realized gains are append-only in the domain. orphanRemoval = false is
+   * intentional:
+   * we never want Hibernate to cascade-delete a gain record when the collection
+   * is not fully present. All deletions happen only via the scheduled purge.
+   *
+   * CASCADE PERSIST + MERGE only — NOT ALL — because "all" includes REMOVE,
+   * which would delete historical gains when the collection is rebuilt.
+   */
+  @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
+      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.EAGER)
   private List<RealizedGainJpaEntity> realizedGains = new ArrayList<>();
-
-  // Transactions are NOT eagerly loaded — they're fetched separately via
-  // TransactionRepository to avoid pulling the entire history on every load.
 
   // -------------------------------------------------------------------------
   // Factory
   // -------------------------------------------------------------------------
 
   public static AccountJpaEntity create(UUID id, PortfolioJpaEntity portfolio, String name,
-      String accountType, String baseCurrencyCode, String positionStrategy, String healthStatus, String lifecycleState,
-      BigDecimal cashBalanceAmount, String cashBalanceCurrency, boolean active,
+      String accountType, String baseCurrencyCode, String positionStrategy, String healthStatus,
+      String lifecycleState, BigDecimal cashBalanceAmount, String cashBalanceCurrency,
       Instant closedDate, Instant createdDate, Instant lastUpdatedOn) {
 
     AccountJpaEntity e = new AccountJpaEntity();
@@ -111,7 +106,6 @@ public class AccountJpaEntity {
     e.lifecycleState = lifecycleState;
     e.cashBalanceAmount = cashBalanceAmount;
     e.cashBalanceCurrency = cashBalanceCurrency;
-    e.active = active;
     e.closedDate = closedDate;
     e.createdDate = createdDate;
     e.lastUpdatedOn = lastUpdatedOn;
@@ -119,7 +113,7 @@ public class AccountJpaEntity {
   }
 
   // -------------------------------------------------------------------------
-  // In-place update — called by PortfolioJpaEntity.replaceAccounts()
+  // In-place update
   // -------------------------------------------------------------------------
 
   public void applyFrom(AccountJpaEntity source) {
@@ -130,11 +124,13 @@ public class AccountJpaEntity {
     this.lifecycleState = source.lifecycleState;
     this.cashBalanceAmount = source.cashBalanceAmount;
     this.cashBalanceCurrency = source.cashBalanceCurrency;
-    this.active = source.active;
     this.closedDate = source.closedDate;
     this.lastUpdatedOn = source.lastUpdatedOn;
     replacePositions(source.positions);
-    replaceRealizedGains(source.realizedGains);
+    // NOTE: realized gains are NOT replaced here, use addNewRealizedGains instead.
+    // Calling replacePositions is safe because positions are fully rebuilt by
+    // PositionRecalculationService. Gains are append-only and must never be
+    // cleared.
   }
 
   public void replacePositions(List<PositionJpaEntity> incoming) {
@@ -155,11 +151,17 @@ public class AccountJpaEntity {
     }
   }
 
-  public void replaceRealizedGains(List<RealizedGainJpaEntity> incoming) {
-    // Realized gains are append-only; the account mapper reconstructs
-    // the full list from domain state on every save. Clear and re-add.
-    this.realizedGains.clear();
-    for (RealizedGainJpaEntity g : incoming) {
+  /**
+   * Appends only NEW realized gain rows, those whose UUID does not already exist
+   * in the persisted collection. This is the correct operation for append-only
+   * domain data. Never call clear() on realizedGains.
+   *
+   * <p>
+   * The mapper is responsible for diffing domain IDs vs persisted IDs and
+   * passing only the delta here.
+   */
+  public void addNewRealizedGains(List<RealizedGainJpaEntity> newGains) {
+    for (RealizedGainJpaEntity g : newGains) {
       g.setAccount(this);
       this.realizedGains.add(g);
     }
@@ -177,7 +179,6 @@ public class AccountJpaEntity {
     return Collections.unmodifiableList(realizedGains);
   }
 
-  // Package-private — only PortfolioJpaEntity.replaceAccounts() needs this
   void setPortfolio(PortfolioJpaEntity portfolio) {
     this.portfolio = portfolio;
   }

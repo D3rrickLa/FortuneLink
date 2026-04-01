@@ -16,7 +16,6 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobject
 
 import lombok.RequiredArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
@@ -31,40 +30,46 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   private final TransactionDomainMapper mapper;
 
   /**
-   * Persists a transaction.
+   * Saves a transaction.
+   *
    * <p>
-   * If the transaction already exists (same UUID), only exclusion state is
-   * updated — all other fields are immutable by design. This avoids a full
-   * re-insert of fee rows on every exclude/restore operation.
-   * 
-   * NOTE: the findPortfolioIdByAccountId query crosses from the transaction
-   * table into the account/portfolio tables. This works but you should add
-   * a @Query annotation to JpaTransactionRepository that joins through
-   * AccountJpaEntity, already done in the delivered JpaTransactionRepository.
-   * Make sure AccountJpaEntity is visible to JPQL in that context, which it will
-   * be since both are in the same persistence unit.
+   * <b>New transactions (insert path):</b> The portfolioId from the caller is
+   * used
+   * directly as the denormalized FK column. No secondary lookup is fired.
+   *
+   * <p>
+   * <b>Existing transactions (exclusion/restore path):</b> The managed JPA entity
+   * is
+   * fetched by primary key, then only the exclusion state columns are updated
+   * in-place.
+   * The portfolioId is already on the managed entity from the original insert.
+   *
+   * <p>
+   * <b>Why portfolioId is required even for updates:</b> The interface contract
+   * is
+   * uniform. The caller always has it available (from the command), so requiring
+   * it here
+   * prevents future callers from accidentally triggering the old lookup pattern.
    */
   @Override
-  public Transaction save(Transaction domain) {
+  public Transaction save(Transaction domain, PortfolioId portfolioId) {
     Objects.requireNonNull(domain, "Transaction cannot be null");
+    Objects.requireNonNull(portfolioId, "PortfolioId cannot be null — callers must always supply it");
 
     UUID id = UUID.fromString(domain.transactionId().toString());
-
     Optional<TransactionJpaEntity> existing = jpaRepository.findById(id);
     TransactionJpaEntity entity;
 
     if (existing.isPresent()) {
-      // Only exclusion state can change post-creation
+      // Exclusion / restore path: only mutation allowed post-creation.
+      // portfolioId is already persisted on the managed row — no update needed.
       entity = existing.get();
       mapper.applyExclusionState(domain, entity);
     } else {
-      // New transaction, need portfolio ID for the denormalized column.
-      // The caller must have loaded the portfolio context, so we derive
-      // it from the TransactionMetadata or require the caller to pass it.
-      // For now we look it up via account ownership query.
-      UUID portfolioId = jpaRepository.findPortfolioIdByAccountId(
-          UUID.fromString(domain.accountId().toString()));
-      entity = mapper.toEntity(domain, portfolioId);
+      // New transaction insert. Use the caller-supplied portfolioId directly.
+      // Previously this fired: jpaRepository.findPortfolioIdByAccountId(accountId)
+      // — an unnecessary extra query on every single transaction record.
+      entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()));
     }
 
     TransactionJpaEntity saved = jpaRepository.save(entity);
@@ -88,8 +93,8 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public List<Transaction> findByPortfolioIdAndUserIdAndAccountId(
       PortfolioId portfolioId, UserId userId, AccountId accountId) {
-
-    return jpaRepository.findByPortfolioIdAndAccountId(UUID.fromString(portfolioId.toString()),
+    return jpaRepository.findByPortfolioIdAndAccountId(
+        UUID.fromString(portfolioId.toString()),
         UUID.fromString(accountId.toString()))
         .stream()
         .map(mapper::toDomain)
@@ -98,7 +103,7 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
 
   @Override
   public List<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol) {
-    return jpaRepository.findByAccountIdAndSymbol(
+    return jpaRepository.findByAccountIdAndExecutionSymbol(
         UUID.fromString(accountId.toString()),
         symbol.symbol())
         .stream()
@@ -107,8 +112,8 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   }
 
   @Override
-  public List<Transaction> findByAccountIdAndDateRange(AccountId accountId,
-      Instant start, Instant end) {
+  public List<Transaction> findByAccountIdAndDateRange(
+      AccountId accountId, Instant start, Instant end) {
     return jpaRepository.findByAccountIdAndOccurredAtBetween(
         UUID.fromString(accountId.toString()), start, end)
         .stream()
@@ -119,7 +124,6 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(
       TransactionId id, PortfolioId portfolioId, UserId userId, AccountId accountId) {
-
     return jpaRepository.findByIdAndPortfolioIdAndAccountId(
         UUID.fromString(id.toString()),
         UUID.fromString(portfolioId.toString()),
@@ -127,13 +131,6 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
         .map(mapper::toDomain);
   }
 
-  /**
-   * Aggregates BUY fees by account and symbol for the fee display breakdown.
-   * <p>
-   * This uses a JPQL projection query rather than loading all transactions —
-   * N transactions → 1 aggregate query. The result is grouped in Java because
-   * returning a nested Map directly from JPQL requires a custom result class.
-   */
   @Override
   public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(
       List<AccountId> accountIds) {
@@ -149,15 +146,9 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
 
     Map<AccountId, Map<AssetSymbol, Money>> result = new LinkedHashMap<>();
     for (FeeAggregationResult row : rows) {
-      UUID accountUuid = row.getAccountId();
-      String symbol = row.getSymbol();
-      BigDecimal amount = row.getTotalFees();
-      String currency = row.getCurrency();
-
-      AccountId accountId = AccountId.fromString(accountUuid.toString());
-      AssetSymbol assetSymbol = new AssetSymbol(symbol);
-      Money fee = new Money(amount, Currency.of(currency));
-
+      AccountId accountId = AccountId.fromString(row.getAccountId().toString());
+      AssetSymbol assetSymbol = new AssetSymbol(row.getSymbol());
+      Money fee = new Money(row.getTotalFees(), Currency.of(row.getCurrency()));
       result.computeIfAbsent(accountId, k -> new LinkedHashMap<>())
           .merge(assetSymbol, fee, Money::add);
     }
@@ -165,8 +156,9 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   }
 
   // =========================================================================
-  // TransactionQueryRepository (paginated reads, application layer interface)
+  // TransactionQueryRepository (paginated reads)
   // =========================================================================
+
   @Override
   public Page<Transaction> findByAccountId(AccountId accountId, Pageable pageable) {
     return jpaRepository.findByAccountId(UUID.fromString(accountId.toString()), pageable)
@@ -174,18 +166,18 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   }
 
   @Override
-  public Page<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start, Instant end,
-      Pageable pageable) {
+  public Page<Transaction> findByAccountIdAndDateRange(
+      AccountId accountId, Instant start, Instant end, Pageable pageable) {
     return jpaRepository.findByAccountIdAndOccurredAtBetween(
         UUID.fromString(accountId.toString()), start, end, pageable)
         .map(mapper::toDomain);
   }
 
   @Override
-  public Page<Transaction> findByAccountIdAndSymbol(AccountId accountId,
-      AssetSymbol symbol,
-      Pageable pageable) {
-    return jpaRepository.findByAccountIdAndSymbol(
+  public Page<Transaction> findByAccountIdAndSymbol(
+      AccountId accountId, AssetSymbol symbol, Pageable pageable) {
+    // Uses corrected method name: findByAccountIdAndExecutionSymbol
+    return jpaRepository.findByAccountIdAndExecutionSymbol(
         UUID.fromString(accountId.toString()), symbol.symbol(), pageable)
         .map(mapper::toDomain);
   }

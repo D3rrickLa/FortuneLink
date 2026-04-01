@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
@@ -24,6 +25,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,9 +41,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class AccountTest {
   private static final Currency USD = Currency.of("USD");
   private static final String VALID_NAME = "Main Investment";
-  // private static final String VALID_REASON = "Test Reason";
   private static final AssetSymbol AAPL = new AssetSymbol("AAPL");
-  // private static final AssetSymbol GOOGL = new AssetSymbol("GOOGL");
 
   private Account account;
   private AccountId accountId;
@@ -100,6 +102,39 @@ class AccountTest {
           .hasMessageContaining("Account name cannot be empty");
       assertThatThrownBy(() -> account.updateName("   ")).isInstanceOf(
           DomainArgumentException.class).hasMessageContaining("Account name cannot be empty");
+    }
+
+    @Test
+    @DisplayName("reconstitute: should correctly map all fields into a new Account instance")
+    void reconstituteShouldMapAllFieldsCorrectly() {
+      AccountId accountId = AccountId.newId();
+      String name = "Retirement Fund";
+      AccountType type = AccountType.RESP;
+      Currency currency = Currency.of("USD");
+      PositionStrategy strategy = PositionStrategy.FIFO;
+      HealthStatus health = HealthStatus.HEALTHY;
+      AccountLifecycleState state = AccountLifecycleState.ACTIVE;
+      Instant now = Instant.now();
+      Money balance = Money.of(1000, currency);
+
+      // Create some sample nested data
+      AssetSymbol apple = new AssetSymbol("AAPL");
+      Map<AssetSymbol, Position> positions = Map.of(apple, mock(AcbPosition.class));
+      List<RealizedGainRecord> gains = List.of(
+          RealizedGainRecord.of(apple, Money.of(50, currency), Money.of(200, currency), now));
+
+      Account account = Account.reconstitute(
+          accountId, name, type, currency, strategy, health,
+          state, null, now, now, balance, positions, gains);
+
+      assertThat(account).isNotNull();
+      assertThat(account.getAccountId()).isEqualTo(accountId);
+      assertThat(account.getAccountCurrency()).isEqualTo(currency);
+      assertThat(account.getCashBalance()).isEqualTo(balance);
+
+      assertThat(account.getRealizedGainsFor(apple))
+          .usingRecursiveFieldByFieldElementComparator()
+          .containsExactlyElementsOf(gains);
     }
   }
 
@@ -218,23 +253,30 @@ class AccountTest {
     }
 
     @Test
-    void getRealizedGainsFor_ShouldReturnOnlyMatchingRecords() {
-      // 1. Arrange: Add records to the account's internal list
-      // (If the list is private, you might need a 'recordGain' method to populate it)
+    void getRealizedGainsForShouldReturnOnlyMatchingRecords() {
+      // 1. Capture a single point in time
+      Instant now = Instant.now();
+
+      // 2. Use that same instant for BOTH the expected record and the action
       RealizedGainRecord appleGain = RealizedGainRecord.of(apple, Money.of(100, USD),
-          Money.of(500, USD), Instant.now());
+          Money.of(500, USD), now);
+
+      // We don't necessarily need 'now' for Google since we aren't asserting its
+      // exact content
       RealizedGainRecord googleGain = RealizedGainRecord.of(google, Money.of(200, USD),
-          Money.of(1000, USD), Instant.now());
+          Money.of(1000, USD), now);
 
-      account.recordRealizedGain(apple, Money.of(100, USD), Money.of(500, USD), Instant.now());
-      account.recordRealizedGain(google, Money.of(200, USD), Money.of(1000, USD), Instant.now());
+      // 3. Pass the SAME 'now' into the method
+      account.recordRealizedGain(apple, Money.of(100, USD), Money.of(500, USD), now);
+      account.recordRealizedGain(google, Money.of(200, USD), Money.of(1000, USD), now);
 
-      // 2. Act
       var results = account.getRealizedGainsFor(apple);
 
-      // 3. Assert
-      assertThat(results).as("Should only contain gains for the requested symbol").hasSize(1)
-          .containsExactly(appleGain).doesNotContain(googleGain);
+      assertThat(results).as("Should only contain gains for the requested symbol")
+          .hasSize(1)
+          .usingRecursiveFieldByFieldElementComparatorIgnoringFields("id")
+          .containsExactly(appleGain)
+          .doesNotContain(googleGain);
     }
   }
 

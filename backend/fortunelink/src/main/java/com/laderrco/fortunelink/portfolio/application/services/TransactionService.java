@@ -107,8 +107,7 @@ public class TransactionService {
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol =
-          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      AssetSymbol symbol = command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
       return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
@@ -131,12 +130,10 @@ public class TransactionService {
   public TransactionView recordSplit(RecordSplitCommand command) {
     return execute(command, validator::validate, "recordSplit", ctx -> {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
-      // A split must have an existing position to act upon
       if (!ctx.account().hasPosition(symbol)) {
         throw new InsufficientQuantityException(
             "Cannot split a non-existent position: " + command.symbol());
       }
-
       return transactionRecordingService.recordSplit(ctx.account(), symbol, command.ratio(),
           command.notes(), command.transactionDate());
     });
@@ -168,7 +165,8 @@ public class TransactionService {
       throw new InvalidTransactionException("Transaction already excluded");
     }
     Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
-    transactionRepository.save(excluded);
+    // portfolioId from command, no secondary lookup needed
+    transactionRepository.save(excluded, command.portfolioId());
     publishRecalculationIfRequired(existing, command);
     return transactionViewMapper.toTransactionView(excluded);
   }
@@ -180,7 +178,8 @@ public class TransactionService {
       throw new InvalidTransactionException("Transaction is not excluded");
     }
     Transaction restored = existing.restore();
-    transactionRepository.save(restored);
+    // portfolioId from command — no secondary lookup needed
+    transactionRepository.save(restored, command.portfolioId());
     publishRecalculationIfRequired(existing, command);
     return transactionViewMapper.toTransactionView(restored);
   }
@@ -189,8 +188,10 @@ public class TransactionService {
   // Private infrastructure
   // -------------------------------------------------------------------------
 
-  private <C extends TransactionCommand> TransactionView execute(C command,
-      Function<C, ValidationResult> validationFn, String operationName,
+  private <C extends TransactionCommand> TransactionView execute(
+      C command,
+      Function<C, ValidationResult> validationFn,
+      String operationName,
       Function<PortfolioContext, Transaction> recordFn) {
 
     ValidationUtils.validate(command, validationFn, operationName);
@@ -201,20 +202,25 @@ public class TransactionService {
   }
 
   private PortfolioContext getPortfolioContext(TransactionCommand command) {
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
-        command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
     Account account = portfolio.getAccount(command.accountId());
     return new PortfolioContext(portfolio, account);
   }
 
+  /**
+   * Persists both the portfolio aggregate and the new transaction.
+   * The portfolioId is taken directly from the in-memory context — no DB lookup.
+   */
   private void persistChanges(PortfolioContext ctx, Transaction tx) {
     portfolioRepository.save(ctx.portfolio());
-    transactionRepository.save(tx);
+    // Pass portfolioId from context, eliminates the findPortfolioIdByAccountId
+    // secondary query that previously fired on every single transaction insert.
+    transactionRepository.save(tx, ctx.portfolio().getPortfolioId());
   }
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
     return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+        command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 

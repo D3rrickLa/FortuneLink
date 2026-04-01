@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -76,13 +77,6 @@ public class PortfolioDomainMapper {
   // Portfolio — toEntity (new or update)
   // =========================================================================
 
-  /**
-   * Converts a domain {@code Portfolio} to a JPA entity graph ready to save.
-   * <p>
-   * For updates, pass the {@code existing} JPA entity so that Hibernate
-   * tracks the managed instance rather than creating a detached clone.
-   * For inserts, pass {@code null} and a fresh entity will be created.
-   */
   public PortfolioJpaEntity toEntity(Portfolio domain, PortfolioJpaEntity existing) {
     Objects.requireNonNull(domain, "Portfolio domain object cannot be null");
 
@@ -115,10 +109,8 @@ public class PortfolioDomainMapper {
       entity = existing;
     }
 
-    // Build account JPA entities
     List<AccountJpaEntity> accountEntities = new ArrayList<>();
     for (Account account : domain.getAccounts()) {
-      // Find the matching existing entity (if present) to allow in-place update
       AccountJpaEntity existingAccount = existing == null ? null
           : existing.getAccounts().stream()
               .filter(ae -> ae.getId().equals(UUID.fromString(account.getAccountId().toString())))
@@ -133,18 +125,19 @@ public class PortfolioDomainMapper {
   }
 
   // =========================================================================
-  // Account — toDomain (package-accessible for AccountDomainMapper)
+  // Account — toDomain
   // =========================================================================
 
   Account accountToDomain(AccountJpaEntity ae) {
-    // Build position map
     Map<AssetSymbol, Position> positionMap = new LinkedHashMap<>();
     for (PositionJpaEntity pe : ae.getPositions()) {
       AcbPosition pos = positionToDomain(pe, ae.getBaseCurrencyCode());
       positionMap.put(pos.symbol(), pos);
     }
 
-    // Build realized gains list
+    // Use reconstitute() so the stable DB UUID flows into the domain record.
+    // This is what allows the mapper to diff on save and skip re-inserting existing
+    // gains.
     List<RealizedGainRecord> gains = new ArrayList<>();
     for (RealizedGainJpaEntity ge : ae.getRealizedGains()) {
       gains.add(realizedGainToDomain(ge));
@@ -176,8 +169,6 @@ public class PortfolioDomainMapper {
   AccountJpaEntity accountToEntity(Account domain, PortfolioJpaEntity portfolioEntity,
       AccountJpaEntity existing) {
 
-    boolean active = domain.getState() != AccountLifecycleState.CLOSED;
-
     AccountJpaEntity entity;
     if (existing == null) {
       entity = AccountJpaEntity.create(
@@ -191,12 +182,10 @@ public class PortfolioDomainMapper {
           domain.getState().name(),
           domain.getCashBalance().amount(),
           domain.getCashBalance().currency().getCode(),
-          active,
           domain.getCloseDate(),
           domain.getCreationDate(),
           domain.getLastUpdatedOn());
     } else {
-      // applyFrom updates all mutable fields in-place
       AccountJpaEntity updated = AccountJpaEntity.create(
           existing.getId(),
           portfolioEntity,
@@ -208,7 +197,6 @@ public class PortfolioDomainMapper {
           domain.getState().name(),
           domain.getCashBalance().amount(),
           domain.getCashBalance().currency().getCode(),
-          active,
           domain.getCloseDate(),
           domain.getCreationDate(),
           domain.getLastUpdatedOn());
@@ -216,26 +204,40 @@ public class PortfolioDomainMapper {
       entity = existing;
     }
 
-    // Positions
+    // Positions — full replace is correct here because positions are always
+    // fully rebuilt from transactions by PositionRecalculationService.
     List<PositionJpaEntity> positionEntities = new ArrayList<>();
     for (Map.Entry<AssetSymbol, Position> entry : domain.getPositionEntries()) {
       AssetSymbol sym = entry.getKey();
       Position pos = entry.getValue();
-
-      // Find existing row by symbol to preserve its UUID and avoid delete/insert
-      // churn
       UUID posId = findExistingPositionId(existing, sym.symbol());
-      positionEntities.add(positionToEntity(posId != null ? posId : UUID.randomUUID(),
-          entity, pos));
+      positionEntities.add(positionToEntity(posId != null ? posId : UUID.randomUUID(), entity, pos));
     }
     entity.replacePositions(positionEntities);
 
-    // Realized gains — full replace (append-only in domain, idempotent here)
-    List<RealizedGainJpaEntity> gainEntities = new ArrayList<>();
+    // Realized gains — append-only. NEVER clear and re-insert.
+    //
+    // 1. Collect the UUIDs that are already persisted in the DB.
+    // 2. Filter domain gains to only those not yet persisted.
+    // 3. Append only the delta.
+    //
+    // This works because RealizedGainRecord carries a stable UUID generated at
+    // the moment Account.recordRealizedGain() is called, and reconstituted from
+    // the DB row UUID when the account is loaded. The IDs are stable across saves.
+    Set<UUID> persistedGainIds = existing == null
+        ? Collections.emptySet()
+        : existing.getRealizedGains().stream()
+            .map(RealizedGainJpaEntity::getId)
+            .collect(Collectors.toSet());
+
+    List<RealizedGainJpaEntity> newGainEntities = new ArrayList<>();
     for (RealizedGainRecord rg : domain.getRealizedGains()) {
-      gainEntities.add(realizedGainToEntity(UUID.randomUUID(), entity, rg));
+      if (!persistedGainIds.contains(rg.id())) {
+        // Use rg.id() — NOT UUID.randomUUID() — so the ID is stable across saves.
+        newGainEntities.add(realizedGainToEntity(rg.id(), entity, rg));
+      }
     }
-    entity.replaceRealizedGains(gainEntities);
+    entity.addNewRealizedGains(newGainEntities);
 
     return entity;
   }
@@ -258,7 +260,6 @@ public class PortfolioDomainMapper {
 
   private PositionJpaEntity positionToEntity(UUID id, AccountJpaEntity accountEntity,
       Position position) {
-    // MVP: AcbPosition only. When FIFO is added, pattern-match on type.
     if (!(position instanceof AcbPosition acb)) {
       throw new UnsupportedOperationException(
           "Only AcbPosition supported at this time. Got: "
@@ -282,16 +283,29 @@ public class PortfolioDomainMapper {
   // RealizedGain helpers
   // =========================================================================
 
+  /**
+   * Reconstitutes a domain record from a DB row, threading the stable UUID
+   * through.
+   * This must use RealizedGainRecord.reconstitute() — NOT of() — so the ID
+   * matches
+   * the persisted row and the mapper can skip re-inserting on the next save.
+   */
   private RealizedGainRecord realizedGainToDomain(RealizedGainJpaEntity ge) {
-    return RealizedGainRecord.of(
+    return RealizedGainRecord.reconstitute(
+        ge.getId(), // stable DB row UUID — critical for the append-only diff in toEntity
         new AssetSymbol(ge.getSymbol()),
         new Money(ge.getGainLossAmount(), Currency.of(ge.getGainLossCurrency())),
         new Money(ge.getCostBasisSoldAmount(), Currency.of(ge.getCostBasisSoldCurrency())),
         ge.getOccurredAt());
   }
 
-  private RealizedGainJpaEntity realizedGainToEntity(UUID id, AccountJpaEntity accountEntity,
-      RealizedGainRecord rg) {
+  /**
+   * Converts a domain realized gain to a JPA entity for persistence.
+   * The id parameter MUST be rg.id() — it is passed explicitly to make it
+   * impossible to accidentally pass UUID.randomUUID() here again.
+   */
+  private RealizedGainJpaEntity realizedGainToEntity(
+      UUID id, AccountJpaEntity accountEntity, RealizedGainRecord rg) {
     return RealizedGainJpaEntity.create(
         id,
         accountEntity,
@@ -307,12 +321,6 @@ public class PortfolioDomainMapper {
   // Private utilities
   // =========================================================================
 
-  /**
-   * Maps {@code AssetType} → the {@code identifier_type} discriminator used in V1
-   * schema.
-   * MARKET covers stocks, ETFs, bonds. CRYPTO is its own discriminator. CASH for
-   * cash.
-   */
   private static String resolveIdentifierType(AssetType type) {
     return switch (type) {
       case CRYPTO -> "CRYPTO";
@@ -321,10 +329,6 @@ public class PortfolioDomainMapper {
     };
   }
 
-  /**
-   * Finds the UUID of an existing {@code PositionJpaEntity} row by symbol so we
-   * can reuse it on update (avoids unnecessary DELETE + INSERT in Hibernate).
-   */
   private static UUID findExistingPositionId(AccountJpaEntity existing, String symbol) {
     if (existing == null)
       return null;

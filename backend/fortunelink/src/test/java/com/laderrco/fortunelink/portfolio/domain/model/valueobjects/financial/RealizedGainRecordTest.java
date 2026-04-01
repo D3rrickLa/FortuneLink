@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.time.Instant;
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,5 +35,14 @@ public class RealizedGainRecordTest {
     RealizedGainRecord record = RealizedGainRecord.of(SYMBOL, RGL, CBS, now);
     assertThat(record.isGain()).isFalse();
     assertThat(record.isLoss()).isTrue();
+  }
+
+  @Test
+  void testReconstitute() {
+    RealizedGainRecord record = RealizedGainRecord.reconstitute(UUID.randomUUID(), SYMBOL, Money.zero(USD_CURRENCY),
+        Money.zero(USD_CURRENCY), now);
+
+    assertThat(record.symbol()).isEqualTo(SYMBOL);
+    assertThat(record.occurredAt()).isEqualTo(now);
   }
 }

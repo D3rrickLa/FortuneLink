@@ -16,14 +16,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-// we would need to change this to the Entity version
 @Repository
 public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEntity, UUID> {
 
   // --- Find Methods (List) ---
   List<TransactionJpaEntity> findByPortfolioIdAndAccountId(UUID portfolioId, UUID accountId);
 
-  List<TransactionJpaEntity> findByAccountIdAndSymbol(UUID accountId, String symbol);
+  List<TransactionJpaEntity> findByAccountIdAndExecutionSymbol(UUID accountId, String symbol);
 
   List<TransactionJpaEntity> findByAccountIdAndOccurredAtBetween(UUID accountId, Instant start, Instant end);
 
@@ -35,7 +34,7 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   Page<TransactionJpaEntity> findByAccountIdAndOccurredAtBetween(UUID accountId, Instant start, Instant end,
       Pageable pageable);
 
-  Page<TransactionJpaEntity> findByAccountIdAndSymbol(UUID accountId, String symbol, Pageable pageable);
+  Page<TransactionJpaEntity> findByAccountIdAndExecutionSymbol(UUID accountId, String symbol, Pageable pageable);
 
   // --- Custom Queries ---
   /**

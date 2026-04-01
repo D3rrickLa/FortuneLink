@@ -118,6 +118,7 @@ class TransactionServiceTest {
 
   @BeforeEach
   void setUp() {
+    lenient().when(portfolio.getPortfolioId()).thenReturn(PORTFOLIO_ID);
     lenient().when(portfolioLoader.loadUserPortfolio(PORTFOLIO_ID, USER_ID)).thenReturn(portfolio);
     lenient().when(portfolio.getAccount(ACCOUNT_ID)).thenReturn(account);
     lenient().when(account.getAccountCurrency()).thenReturn(USD);
@@ -182,7 +183,7 @@ class TransactionServiceTest {
 
       assertThat(result).isEqualTo(transactionView);
       verify(portfolioRepository).save(portfolio);
-      verify(transactionRepository).save(transaction);
+      verify(transactionRepository).save(transaction, portfolio.getPortfolioId());
     }
 
     @Test
@@ -208,7 +209,7 @@ class TransactionServiceTest {
       assertThat(result).isEqualTo(transactionView);
       assertThat(command.totalFees(CAD)).isEqualTo(Money.zero(CAD));
       verify(portfolioRepository).save(portfolio);
-      verify(transactionRepository).save(transaction);
+      verify(transactionRepository).save(transaction, portfolio.getPortfolioId());
       verify(exchangeRateService).convertToPrice(AMOUNT, USD);
     }
 
@@ -238,7 +239,7 @@ class TransactionServiceTest {
       assertThat(result).isEqualTo(transactionView);
       assertThat(command.totalFees(USD)).isEqualTo(Money.zero(USD));
       verify(portfolioRepository).save(portfolio);
-      verify(transactionRepository).save(transaction);
+      verify(transactionRepository).save(transaction, portfolio.getPortfolioId());
     }
 
     @Test
@@ -281,7 +282,7 @@ class TransactionServiceTest {
       service.recordDeposit(cmd);
 
       verify(transactionRecordingService).recordDeposit(any(), any(), any(), any());
-      verify(transactionRepository).save(transaction);
+      verify(transactionRepository).save(transaction, portfolio.getPortfolioId());
     }
 
     @Test
@@ -448,7 +449,7 @@ class TransactionServiceTest {
 
       TransactionView result = service.restoreTransaction(command);
 
-      verify(transactionRepository).save(restored);
+      verify(transactionRepository).save(restored, PORTFOLIO_ID);
       verify(eventPublisher).publishEvent(any(PositionRecalculationRequestedEvent.class));
       verify(transactionViewMapper).toTransactionView(restored);
       assertNotNull(result);
@@ -473,7 +474,7 @@ class TransactionServiceTest {
         service.restoreTransaction(command);
       });
 
-      verify(transactionRepository, never()).save(any());
+      verify(transactionRepository, never()).save(any(), any());
       verify(eventPublisher, never()).publishEvent(any());
     }
 

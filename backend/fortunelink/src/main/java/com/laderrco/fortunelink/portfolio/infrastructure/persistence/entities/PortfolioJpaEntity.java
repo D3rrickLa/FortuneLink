@@ -27,17 +27,17 @@ public class PortfolioJpaEntity {
   @Column(name = "user_id", nullable = false, unique = true)
   private UUID userId;
 
-  @Column(name = "portfolio_name", nullable = false, length = 255)
+  @Column(name = "name", nullable = false, length = 255)
   private String name;
 
-  @Column(name = "portfolio_description", length = 255)
+  @Column(name = "description", length = 255)
   private String description;
 
   /**
    * ISO-4217 code of the display currency preference (e.g. "CAD", "USD").
    * Reconstructed into a {@code Currency} domain object by the mapper.
    */
-  @Column(name = "portfolio_currency_preference", nullable = false, length = 3)
+  @Column(name = "display_currency_code", nullable = false, length = 3)
   private String displayCurrencyCode;
 
   @Column(name = "deleted", nullable = false)
