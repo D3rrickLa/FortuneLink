@@ -51,6 +51,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -73,6 +74,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,6 +108,8 @@ class TransactionServiceTest {
   private ExchangeRateService exchangeRateService;
   @Mock
   private TransactionRecordingService transactionRecordingService;
+  @Mock
+  private CacheManager cacheManager;
   @InjectMocks
   private TransactionService service;
   @Mock
@@ -156,8 +160,8 @@ class TransactionServiceTest {
 
   // --- Helper Methods ---
   private RecordPurchaseCommand createPurchaseCommand() {
-    return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE, Quantity.of(10),
-        new Price(AMOUNT), List.of(), NOW, NOTES);
+    return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE,
+        Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
   }
 
   private Money usd(double amount) {
@@ -275,7 +279,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordDeposit: verify success flow")
     void recordDepositSuccess() {
-      RecordDepositCommand cmd = new RecordDepositCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT, NOW, NOTES);
+      RecordDepositCommand cmd = new RecordDepositCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
+          NOW, NOTES);
       when(transactionRecordingService.recordDeposit(eq(account), eq(AMOUNT), eq(NOTES),
           eq(NOW))).thenReturn(transaction);
 
@@ -291,6 +296,14 @@ class TransactionServiceTest {
       RecordWithdrawalCommand command = new RecordWithdrawalCommand(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID, AMOUNT, NOW, NOTES);
 
+      Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.WITHDRAWAL)
+          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
+              TransactionMetadata.manual(AssetType.BOND)).build();
+
+      when(transactionRecordingService.recordWithdrawal(any(), any(), any(), any()))
+          .thenReturn(dummyTx);
+
       service.recordWithdrawal(command);
 
       verify(transactionRecordingService).recordWithdrawal(any(), eq(command.amount()),
@@ -303,10 +316,17 @@ class TransactionServiceTest {
       RecordFeeCommand command = new RecordFeeCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
           FeeType.ACCOUNT_MAINTENANCE, NOW, NOTES);
 
+      Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.FEE)
+          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
+              TransactionMetadata.manual(AssetType.BOND)).build();
+
+      when(transactionRecordingService.recordFee(any(), any(), any(), any(), any()))
+          .thenReturn(dummyTx);
       service.recordFee(command);
 
-      verify(transactionRecordingService).recordFee(any(), eq(command.amount()),
-          any(), eq(command.notes()), eq(command.transactionDate()));
+      verify(transactionRecordingService).recordFee(any(), eq(command.amount()), any(),
+          eq(command.notes()), eq(command.transactionDate()));
     }
 
     @Test
@@ -316,13 +336,21 @@ class TransactionServiceTest {
           ACCOUNT_ID, usd(5), NOW, "Interest");
       RecordInterestCommand command2 = new RecordInterestCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
           "", usd(5), NOW, "INTEREST");
+
+      Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST)
+          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
+              TransactionMetadata.manual(AssetType.BOND)).build();
+
+      when(transactionRecordingService.recordInterest(any(), any(), any(), any(), any()))
+          .thenReturn(dummyTx);
+
       service.recordInterest(command);
 
       verify(transactionRecordingService).recordInterest(any(), any(), eq(command.amount()),
           eq(command.notes()), eq(command.transactionDate()));
       assertThat(command.isAssetInterest()).isFalse();
       assertThat(command2.isAssetInterest()).isFalse();
-
     }
 
     @Test
@@ -330,6 +358,14 @@ class TransactionServiceTest {
     void recordInterestSuccessAssetInterest() {
       RecordInterestCommand command = RecordInterestCommand.assetInterest(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID, "CAD.3TBILL", usd(15), NOW, "3 month GIC");
+
+      Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST)
+          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
+              TransactionMetadata.manual(AssetType.BOND)).build();
+
+      when(transactionRecordingService.recordInterest(any(), any(), any(), any(), any()))
+          .thenReturn(dummyTx);
 
       service.recordInterest(command);
 
@@ -343,6 +379,13 @@ class TransactionServiceTest {
     void recordDividendSuccess() {
       RecordDividendCommand command = new RecordDividendCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
           "AAPL", usd(10), NOW, "Interest");
+      Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND)
+          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
+              TransactionMetadata.manual(AssetType.BOND)).build();
+
+      when(transactionRecordingService.recordDividend(any(), any(), any(), any(), any()))
+          .thenReturn(dummyTx);
 
       service.recordDividend(command);
 

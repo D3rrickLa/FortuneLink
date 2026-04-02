@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
@@ -154,22 +156,29 @@ class PortfolioValuationServiceTest {
     @Test
     @DisplayName("calculateTotalValue: aggregates by currency before converting")
     void calculateTotalValueGroupsByCurrency() {
-      // Setup: 2 USD accounts, 1 CAD account
+      Portfolio portfolio = mock(Portfolio.class);
       Account usdAcc1 = createMockAccount(USD, HUNDRED_USD, Map.of());
       Account usdAcc2 = createMockAccount(USD, HUNDRED_USD, Map.of());
       Account cadAcc = createMockAccount(CAD, HUNDRED_CAD, Map.of());
 
-      Portfolio portfolio = mock(Portfolio.class);
+      List.of(usdAcc1, usdAcc2, cadAcc)
+          .forEach(acc -> when(acc.getState()).thenReturn(AccountLifecycleState.ACTIVE));
+
+      // Ensure the valuation of the accounts themselves doesn't return null
+      when(valuationService.calculateAccountValue(usdAcc1, Map.of())).thenReturn(HUNDRED_USD);
+      when(valuationService.calculateAccountValue(usdAcc2, Map.of())).thenReturn(HUNDRED_USD);
+      when(valuationService.calculateAccountValue(cadAcc, Map.of())).thenReturn(HUNDRED_CAD);
       when(portfolio.getAccounts()).thenReturn(List.of(usdAcc1, usdAcc2, cadAcc));
 
-      when(exchangeRateService.convert(Money.of(200, "USD"), USD)).thenReturn(Money.of(200, "USD"));
-      when(exchangeRateService.convert(Money.of(100, "CAD"), USD)).thenReturn(Money.of(75, "USD"));
+      when(exchangeRateService.convert(argThat(m -> m != null && m.amount().intValue() == 200),
+          eq(USD))).thenReturn(Money.of(200, "USD"));
+      when(exchangeRateService.convert(argThat(m -> m != null && m.amount().intValue() == 100),
+          eq(USD))).thenReturn(Money.of(75, "USD"));
 
       Money total = valuationService.calculateTotalValue(portfolio, USD, Map.of());
 
-      assertThat(total).isEqualTo(Money.of(275, "USD"));
-      // Verify convert was called only twice (once for the USD sum, once for CAD)
       verify(exchangeRateService, times(2)).convert(any(), eq(USD));
+      assertThat(total).isEqualTo(Money.of(275, "USD"));
     }
   }
 

@@ -1,24 +1,29 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
  * Maps the {@code transaction_fees} table.
  * <p>
- * The domain {@code Fee} record supports multi-currency: it carries both a
- * {@code nativeAmount} (original currency) and an {@code accountAmount}
- * (converted to account currency) plus the {@code ExchangeRate} used.
- * All three are persisted here so they can be reconstructed exactly.
+ * The domain {@code Fee} record supports multi-currency: it carries both a {@code nativeAmount}
+ * (original currency) and an {@code accountAmount} (converted to account currency) plus the
+ * {@code ExchangeRate} used. All three are persisted here so they can be reconstructed exactly.
  * <p>
- * {@code FeeMetadata} key/value pairs are NOT persisted separately — they
- * are rarely needed after recording and can be reconstructed from the
- * {@code additionalData} JSONB on {@code TransactionJpaEntity} if required.
+ * {@code FeeMetadata} key/value pairs are NOT persisted separately — they are rarely needed after
+ * recording and can be reconstructed from the {@code additionalData} JSONB on
+ * {@code TransactionJpaEntity} if required.
  */
 @Entity
 @Getter
@@ -73,8 +78,8 @@ public class FeeJpaEntity {
 
   public static FeeJpaEntity create(UUID id, TransactionJpaEntity transaction, String feeType,
       BigDecimal nativeAmount, String nativeCurrency, BigDecimal accountAmount,
-      String accountAmountCurrency, BigDecimal exchangeRate, String fromCurrency,
-      String toCurrency, Instant exchangeRateDate, Instant occurredAt) {
+      String accountAmountCurrency, BigDecimal exchangeRate, String fromCurrency, String toCurrency,
+      Instant exchangeRateDate, Instant occurredAt) {
 
     FeeJpaEntity e = new FeeJpaEntity();
     e.id = id;

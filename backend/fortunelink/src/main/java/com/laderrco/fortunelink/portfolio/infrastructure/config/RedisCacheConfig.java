@@ -1,9 +1,16 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.CurrencyDeserializer;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.CurrencySerializer;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.MarketAssetInfoDeserializer;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.MarketAssetInfoSerializer;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
@@ -13,17 +20,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.*;
-
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.CurrencyDeserializer;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.CurrencySerializer;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.MarketAssetInfoDeserializer;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.serialization.MarketAssetInfoSerializer;
-
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import tools.jackson.databind.DefaultTyping;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;
@@ -69,22 +69,19 @@ public class RedisCacheConfig {
 
   @Bean("redisCacheObjectMapper")
   public ObjectMapper redisCacheObjectMapper() {
-    SimpleModule module = new SimpleModule()
-        .addSerializer(MarketAssetInfo.class, new MarketAssetInfoSerializer())
+    SimpleModule module = new SimpleModule().addSerializer(MarketAssetInfo.class,
+            new MarketAssetInfoSerializer())
         .addDeserializer(MarketAssetInfo.class, new MarketAssetInfoDeserializer())
         .addSerializer(Currency.class, new CurrencySerializer())
         .addDeserializer(Currency.class, new CurrencyDeserializer());
 
-    return JsonMapper.builder()
-        .addModule(module)
+    return JsonMapper.builder().addModule(module)
         .changeDefaultVisibility(vc -> vc.withFieldVisibility(JsonAutoDetect.Visibility.ANY))
         .changeDefaultVisibility(vc -> vc.withGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .changeDefaultVisibility(vc -> vc.withIsGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .activateDefaultTyping(
-            BasicPolymorphicTypeValidator.builder().build(),
-            DefaultTyping.NON_FINAL)
-        .build();
+        .activateDefaultTyping(BasicPolymorphicTypeValidator.builder().build(),
+            DefaultTyping.NON_FINAL).build();
   }
 
   @Bean
@@ -92,7 +89,8 @@ public class RedisCacheConfig {
       @Qualifier("redisCacheObjectMapper") ObjectMapper objectMapper) {
 
     StringRedisSerializer keySerializer = new StringRedisSerializer();
-    GenericJacksonJsonRedisSerializer genericValueSerializer = new GenericJacksonJsonRedisSerializer(objectMapper);
+    GenericJacksonJsonRedisSerializer genericValueSerializer = new GenericJacksonJsonRedisSerializer(
+        objectMapper);
 
     JacksonJsonRedisSerializer<MarketAssetQuote> moneySerializer = new JacksonJsonRedisSerializer<>(
         objectMapper, MarketAssetQuote.class);
@@ -106,29 +104,31 @@ public class RedisCacheConfig {
 
     // Map the property-driven names to their specific TTLs and Serializers
     cacheConfigs.put(pricesCacheName, defaultConfig.entryTtl(Duration.ofSeconds(currentPricesTtl))
-        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(moneySerializer)));
+        .serializeValuesWith(
+            RedisSerializationContext.SerializationPair.fromSerializer(moneySerializer)));
 
-    cacheConfigs.put(historicalCacheName, defaultConfig.entryTtl(Duration.ofSeconds(historicalPricesTtl)));
+    cacheConfigs.put(historicalCacheName,
+        defaultConfig.entryTtl(Duration.ofSeconds(historicalPricesTtl)));
 
     cacheConfigs.put(assetInfoCacheName, defaultConfig.entryTtl(Duration.ofSeconds(assetInfoTtl))
-        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(marketAssetInfoSerializer)));
+        .serializeValuesWith(
+            RedisSerializationContext.SerializationPair.fromSerializer(marketAssetInfoSerializer)));
 
-    cacheConfigs.put(currencyCacheName, defaultConfig.entryTtl(Duration.ofSeconds(tradingCurrencyTtl)));
+    cacheConfigs.put(currencyCacheName,
+        defaultConfig.entryTtl(Duration.ofSeconds(tradingCurrencyTtl)));
 
     cacheConfigs.put(buyFeesCacheName, defaultConfig.entryTtl(Duration.ofSeconds(buyFeesTtl)));
 
-    return RedisCacheManager.builder(connectionFactory)
-        .cacheDefaults(defaultConfig)
-        .withInitialCacheConfigurations(cacheConfigs)
-        .transactionAware()
-        .build();
+    return RedisCacheManager.builder(connectionFactory).cacheDefaults(defaultConfig)
+        .withInitialCacheConfigurations(cacheConfigs).transactionAware().build();
   }
 
   private RedisCacheConfiguration getDefaultConfig(StringRedisSerializer keySerializer,
       GenericJacksonJsonRedisSerializer genericValueSerializer) {
-    return RedisCacheConfiguration.defaultCacheConfig()
-        .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(keySerializer))
-        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(genericValueSerializer))
+    return RedisCacheConfiguration.defaultCacheConfig().serializeKeysWith(
+            RedisSerializationContext.SerializationPair.fromSerializer(keySerializer))
+        .serializeValuesWith(
+            RedisSerializationContext.SerializationPair.fromSerializer(genericValueSerializer))
         .disableCachingNullValues();
   }
 }

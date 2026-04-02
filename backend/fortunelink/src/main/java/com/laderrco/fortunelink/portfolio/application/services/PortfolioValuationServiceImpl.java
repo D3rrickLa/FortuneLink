@@ -21,8 +21,7 @@ import org.springframework.stereotype.Service;
 /**
  * Pure math implementation of PortfolioValuationService.
  * <p>
- * Never calls MarketDataService. All quotes are pre-fetched by the calling
- * application service and
+ * Never calls MarketDataService. All quotes are pre-fetched by the calling application service and
  * passed in via quoteCache.
  */
 @Service
@@ -31,8 +30,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
   private final ExchangeRateService exchangeRateService;
 
   /**
-   * Sums all account values, converting each to the target display currency. Each
-   * account may trade
+   * Sums all account values, converting each to the target display currency. Each account may trade
    * in a different base currency (e.g. CAD TFSA + USD brokerage).
    */
   @Override
@@ -46,22 +44,17 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
       return Money.zero(targetCurrency);
     }
 
-    // OLD we are doing conversions with each account, this is ineffective. Instead,
-    // for each
-    // 'diff' currency, we will add, then convert once
-    // return portfolio.getAccounts().stream()
-    // .map(account -> calculateAccountValue(account, quoteCache))
-    // .map(accountValue -> exchangeRateService.convert(accountValue,
-    // targetCurrency))
-    // .reduce(Money::add).orElse(Money.zero(targetCurrency));
-
     Map<Currency, Money> totalsByCurrency = new HashMap<>();
 
-    // We use merge here as it will hadd if present, and not when absent
-    portfolio.getAccounts().stream().filter(account -> account.getState() == AccountLifecycleState.ACTIVE)
-        .forEach(account -> {
+    // We are merging all the same 'different' currencies together and then doing the exchange all
+    // at once on like the few different currencies. this is more efficient than looping through
+    // each account and converting
+    portfolio.getAccounts().stream()
+        .filter(account -> account.getState() == AccountLifecycleState.ACTIVE).forEach(account -> {
           Money value = calculateAccountValue(account, quoteCache);
-          totalsByCurrency.merge(account.getAccountCurrency(), value, Money::add);
+          if (value != null) {
+            totalsByCurrency.merge(account.getAccountCurrency(), value, Money::add);
+          }
         });
 
     return totalsByCurrency.values().stream()
@@ -70,14 +63,11 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
   }
 
   /**
-   * Calculates total account value in the account's own base currency. =
-   * positions market value +
+   * Calculates total account value in the account's own base currency. = positions market value +
    * cash balance
    * <p>
-   * Falls back to cost basis when no quote is available for a position. This is
-   * intentional:
-   * stale/unavailable data shows cost basis rather than zero, which is less
-   * misleading for the
+   * Falls back to cost basis when no quote is available for a position. This is intentional:
+   * stale/unavailable data shows cost basis rather than zero, which is less misleading for the
    * user.
    */
   @Override
@@ -97,10 +87,8 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
   }
 
   /**
-   * Calculates the market value of all non-cash positions in an account. Cash
-   * positions
-   * (AssetType.CASH) are excluded, they're captured via account.getCashBalance()
-   * in
+   * Calculates the market value of all non-cash positions in an account. Cash positions
+   * (AssetType.CASH) are excluded, they're captured via account.getCashBalance() in
    * calculateAccountValue().
    */
   @Override
@@ -114,17 +102,14 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
     return account.getPositionEntries().stream()
         .filter(entry -> entry.getValue().type() != AssetType.CASH) // cash tracked separately
         .map(pos -> resolvePositionValue(pos.getValue(), quoteCache.get(pos.getKey()),
-            accountCurrency))
-        .reduce(Money::add).orElse(Money.zero(accountCurrency));
+            accountCurrency)).reduce(Money::add).orElse(Money.zero(accountCurrency));
   }
 
   /**
    * Resolves the current market value of a single position.
    * <p>
-   * If no quote is available (symbol not in cache, API was down, etc.), falls
-   * back to cost basis.
-   * This is a deliberate trade-off: cost basis is a known real number, whereas
-   * showing $0 would be
+   * If no quote is available (symbol not in cache, API was down, etc.), falls back to cost basis.
+   * This is a deliberate trade-off: cost basis is a known real number, whereas showing $0 would be
    * actively wrong.
    */
   private Money resolvePositionValue(Position position, MarketAssetQuote quote,

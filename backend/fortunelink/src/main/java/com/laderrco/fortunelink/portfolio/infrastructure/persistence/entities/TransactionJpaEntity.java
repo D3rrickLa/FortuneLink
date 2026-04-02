@@ -1,16 +1,26 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.converters.StringMapConverter;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.*;
-
-import org.hibernate.annotations.BatchSize;
-
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.converters.StringMapConverter;
-
-import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 /**
  * Persistence model for the {@code Transaction} domain record.
@@ -61,7 +71,9 @@ public class TransactionJpaEntity {
   // TradeExecution (flattened, all nullable — absent for non-trade types)
   // -------------------------------------------------------------------------
 
-  /** AssetSymbol.symbol() — null for DEPOSIT, WITHDRAWAL, FEE, etc. */
+  /**
+   * AssetSymbol.symbol() — null for DEPOSIT, WITHDRAWAL, FEE, etc.
+   */
   @Column(name = "execution_symbol", length = 100)
   private String executionSymbol;
 
@@ -75,8 +87,8 @@ public class TransactionJpaEntity {
   private String executionPriceCurrency;
 
   /**
-   * AssetType from TradeExecution / TransactionMetadata.
-   * Stored as the V1 {@code asset_type} column.
+   * AssetType from TradeExecution / TransactionMetadata. Stored as the V1 {@code asset_type}
+   * column.
    */
   @Column(name = "asset_type", length = 50)
   private String assetType;
@@ -110,9 +122,9 @@ public class TransactionJpaEntity {
   private String excludedReason;
 
   /**
-   * TransactionMetadata.additionalData — free-form key/value pairs.
-   * Stored as JSONB. The V1 {@code metadata} column already exists for this.
-   * {@code StringMapConverter} serialises Map&lt;String,String&gt; ↔ JSON text.
+   * TransactionMetadata.additionalData — free-form key/value pairs. Stored as JSONB. The V1
+   * {@code metadata} column already exists for this. {@code StringMapConverter} serialises
+   * Map&lt;String,String&gt; ↔ JSON text.
    */
   @Convert(converter = StringMapConverter.class)
   @Column(name = "additional_data", columnDefinition = "jsonb")
@@ -127,7 +139,9 @@ public class TransactionJpaEntity {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
-  /** Self-referential link for reversals / paired trades. */
+  /**
+   * Self-referential link for reversals / paired trades.
+   */
   @Column(name = "related_transaction_id", columnDefinition = "uuid")
   private UUID relatedTransactionId;
 
@@ -145,8 +159,8 @@ public class TransactionJpaEntity {
       BigDecimal executionPriceAmount, String executionPriceCurrency, String assetType,
       Integer splitNumerator, Integer splitDenominator, BigDecimal cashDeltaAmount,
       String cashDeltaCurrency, String metadataSource, boolean excluded, Instant excludedAt,
-      UUID excludedBy, String excludedReason, Map<String, String> additionalData,
-      String notes, Instant occurredAt, UUID relatedTransactionId) {
+      UUID excludedBy, String excludedReason, Map<String, String> additionalData, String notes,
+      Instant occurredAt, UUID relatedTransactionId) {
 
     TransactionJpaEntity e = new TransactionJpaEntity();
     e.id = id;
@@ -180,12 +194,12 @@ public class TransactionJpaEntity {
   // -------------------------------------------------------------------------
 
   /**
-   * Applies exclusion state from an updated domain record.
-   * Transactions are immutable in the domain — only exclusion metadata changes
-   * post-creation, so this is the only mutable operation on this entity.
+   * Applies exclusion state from an updated domain record. Transactions are immutable in the domain
+   * — only exclusion metadata changes post-creation, so this is the only mutable operation on this
+   * entity.
    */
-  public void applyExclusionState(boolean excluded, Instant excludedAt,
-      UUID excludedBy, String excludedReason) {
+  public void applyExclusionState(boolean excluded, Instant excludedAt, UUID excludedBy,
+      String excludedReason) {
     this.excluded = excluded;
     this.excludedAt = excludedAt;
     this.excludedBy = excludedBy;

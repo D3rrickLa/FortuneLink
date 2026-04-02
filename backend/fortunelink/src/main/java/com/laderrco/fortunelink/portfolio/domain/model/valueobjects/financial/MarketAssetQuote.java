@@ -5,11 +5,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * @implNote we DON'T DB the info gathered here. price data in a DB will bloat
- * Represents a real-time or delayed price snapshot for a tradable asset. This record encapsulates
- * the current market state, including daily price action, volatility (high/low), and valuation
- * metrics like market capitalization and volume.
- *
  * @param symbol        The unique ticker symbol of the asset.
  * @param currentPrice  The most recent traded price in the market.
  * @param openPrice     The price at which the asset first traded during the current session.
@@ -23,6 +18,10 @@ import java.time.Instant;
  * @param volume        The total number of units or shares traded during the current session.
  * @param source        The provider or data vendor from which the quote was retrieved.
  * @param timestamp     The specific moment in time when this price snapshot was captured.
+ * @implNote we DON'T DB the info gathered here. price data in a DB will bloat Represents a
+ * real-time or delayed price snapshot for a tradable asset. This record encapsulates the current
+ * market state, including daily price action, volatility (high/low), and valuation metrics like
+ * market capitalization and volume.
  */
 public record MarketAssetQuote(
     AssetSymbol symbol,

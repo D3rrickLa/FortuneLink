@@ -25,7 +25,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
@@ -435,8 +434,10 @@ class PortfolioViewMapperTest {
 
     @Test
     @DisplayName("calculateReturnPercentage: reflection on if branch")
-    void calculateReturnPercentageTestingBranches() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-      Method method = mapper.getClass().getDeclaredMethod("calculateReturnPercentage", Money.class, Money.class);
+    void calculateReturnPercentageTestingBranches()
+        throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+      Method method = mapper.getClass()
+          .getDeclaredMethod("calculateReturnPercentage", Money.class, Money.class);
       method.setAccessible(true);
 
       var result = method.invoke(mapper, null, null);

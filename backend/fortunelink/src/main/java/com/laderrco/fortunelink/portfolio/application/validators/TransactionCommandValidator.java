@@ -17,12 +17,10 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWit
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
-
 import org.springframework.stereotype.Component;
 
 @Component
@@ -105,7 +103,7 @@ public class TransactionCommandValidator {
       ValidationUtils.validateSymbol(command.symbol(), errors);
       if (command.ratio() == null) {
         errors.add("Split ratio is required");
-      }else if (command.ratio().numerator() == command.ratio().denominator()) {
+      } else if (command.ratio().numerator() == command.ratio().denominator()) {
         errors.add("Ratio: A 1:1 split is a no-op and is not permitted");
       }
       ValidationUtils.validateDate(command.transactionDate(), null, errors);
@@ -133,8 +131,9 @@ public class TransactionCommandValidator {
 
   public ValidationResult validate(ExcludeTransactionCommand command) {
     return validateCommand(command, errors -> {
-      if (command.transactionId() == null)
+      if (command.transactionId() == null) {
         errors.add("TransactionId is required");
+      }
       validateStringLength(command.reason(), errors);
     });
   }
@@ -171,12 +170,15 @@ public class TransactionCommandValidator {
   }
 
   private void validateCommonIds(TransactionCommand command, List<String> errors) {
-    if (command.portfolioId() == null)
+    if (command.portfolioId() == null) {
       errors.add("PortfolioId is required");
-    if (command.userId() == null)
+    }
+    if (command.userId() == null) {
       errors.add("UserId is required");
-    if (command.accountId() == null)
+    }
+    if (command.accountId() == null) {
       errors.add("AccountId is required");
+    }
   }
 
   private void validateFees(List<Fee> fees, List<String> errors) {

@@ -72,21 +72,31 @@ public class Account {
     this.lastUpdatedOn = Instant.now();
   }
 
-  void initFromPersistence(
-      AccountId accountId,
-      String name,
-      AccountType accountType,
-      Currency accountCurrency,
-      PositionStrategy positionStrategy,
-      HealthStatus healthStatus,
-      AccountLifecycleState state,
-      Instant closeDate,
-      Instant creationDate,
-      Instant lastUpdatedOn,
-      Money cashBalance,
-      Map<AssetSymbol, Position> positions,
+  public static Account reconstitute(AccountId accountId, String name, AccountType accountType,
+      Currency accountCurrency, PositionStrategy positionStrategy, HealthStatus healthStatus,
+      AccountLifecycleState state, Instant closeDate, Instant creationDate, Instant lastUpdatedOn,
+      Money cashBalance, Map<AssetSymbol, Position> positions, // from PositionJpaEntity rows
+      List<RealizedGainRecord> realizedGains) { // from RealizedGainJpaEntity rows
+
+    Account account = new Account(); // uses the protected no-arg JPA ctor
+
+    // Reflective setters are fragile across refactors; we use package-private
+    // field assignment via a dedicated internal init method instead.
+    account.initFromPersistence(accountId, name, accountType, accountCurrency, positionStrategy,
+        healthStatus, state, closeDate, creationDate, lastUpdatedOn, cashBalance, positions,
+        realizedGains);
+
+    return account;
+  }
+
+  // --- Cash Operations ---
+
+  void initFromPersistence(AccountId accountId, String name, AccountType accountType,
+      Currency accountCurrency, PositionStrategy positionStrategy, HealthStatus healthStatus,
+      AccountLifecycleState state, Instant closeDate, Instant creationDate, Instant lastUpdatedOn,
+      Money cashBalance, Map<AssetSymbol, Position> positions,
       List<RealizedGainRecord> realizedGains) {
-        
+
     this.accountId = notNull(accountId, "accountId");
     this.accountCurrency = notNull(accountCurrency, "accountCurrency");
     this.positionStrategy = notNull(positionStrategy, "positionStrategy");
@@ -105,8 +115,6 @@ public class Account {
     // Both Account and PositionBook are in the same package so this is legal.
     this.positionBook = new PositionBook(positions, accountCurrency, positionStrategy);
   }
-
-  // --- Cash Operations ---
 
   public void deposit(Money amount, String reason) {
     requireActive();
@@ -143,12 +151,12 @@ public class Account {
     withdraw(feeAmount, description, false);
   }
 
+  // --- Position Management ---
+
   public boolean hasSufficientCash(Money requiredAmount) {
     validateCurrency(requiredAmount);
     return !cashBalance.isLessThan(requiredAmount);
   }
-
-  // --- Position Management ---
 
   public void ensurePosition(AssetSymbol symbol, AssetType assetType) {
     positionBook.ensurePosition(symbol, assetType);
@@ -172,11 +180,11 @@ public class Account {
     return positionBook.size();
   }
 
+  // --- Gain Management ---
+
   public Collection<Map.Entry<AssetSymbol, Position>> getPositionEntries() {
     return positionBook.entries();
   }
-
-  // --- Gain Management ---
 
   public void recordRealizedGain(AssetSymbol symbol, Money gainLoss, Money costBasisSold,
       Instant at) {
@@ -199,12 +207,12 @@ public class Account {
     return realizedGains.stream().filter(r -> r.symbol().equals(symbol)).toList();
   }
 
+  // --- Lifecycle Transitions ---
+
   public Money getTotalRealizedGainLoss() {
     return realizedGains.stream().map(RealizedGainRecord::realizedGainLoss)
         .reduce(Money.zero(accountCurrency), Money::add);
   }
-
-  // --- Lifecycle Transitions ---
 
   public void beginReplay() {
     if (this.state == AccountLifecycleState.CLOSED) {
@@ -245,6 +253,8 @@ public class Account {
     touch();
   }
 
+  // --- Maintenance & Recalculation (Internal Use) ---
+
   void reopen() {
     if (this.state != AccountLifecycleState.CLOSED) {
       throw new IllegalStateException("Can only reopen a closed account");
@@ -254,20 +264,18 @@ public class Account {
     touch();
   }
 
-  // --- Maintenance & Recalculation (Internal Use) ---
-
   public void clearPositionForRecalculation(AssetSymbol symbol) {
     positionBook.clearSymbol(symbol);
     touch();
   }
+
+  // --- Metadata & Health Updates ---
 
   public void clearRealizedGainsForSymbol(AssetSymbol symbol) {
     notNull(symbol, "symbol");
     realizedGains.removeIf(g -> g.symbol().equals(symbol));
     touch();
   }
-
-  // --- Metadata & Health Updates ---
 
   public void updateName(String newName) {
     if (newName == null || newName.trim().isEmpty()) {
@@ -330,11 +338,11 @@ public class Account {
     return lastUpdatedOn;
   }
 
+  // --- Status Helpers ---
+
   public Money getCashBalance() {
     return cashBalance;
   }
-
-  // --- Status Helpers ---
 
   public boolean isActive() {
     return this.state != AccountLifecycleState.CLOSED;
@@ -368,32 +376,5 @@ public class Account {
 
   private void touch() {
     this.lastUpdatedOn = Instant.now();
-  }
-
-  public static Account reconstitute(
-      AccountId accountId,
-      String name,
-      AccountType accountType,
-      Currency accountCurrency,
-      PositionStrategy positionStrategy,
-      HealthStatus healthStatus,
-      AccountLifecycleState state,
-      Instant closeDate,
-      Instant creationDate,
-      Instant lastUpdatedOn,
-      Money cashBalance,
-      Map<AssetSymbol, Position> positions, // from PositionJpaEntity rows
-      List<RealizedGainRecord> realizedGains) { // from RealizedGainJpaEntity rows
-
-    Account account = new Account(); // uses the protected no-arg JPA ctor
-
-    // Reflective setters are fragile across refactors; we use package-private
-    // field assignment via a dedicated internal init method instead.
-    account.initFromPersistence(
-        accountId, name, accountType, accountCurrency, positionStrategy,
-        healthStatus, state, closeDate, creationDate, lastUpdatedOn,
-        cashBalance, positions, realizedGains);
-
-    return account;
   }
 }

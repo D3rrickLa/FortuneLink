@@ -6,12 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
@@ -19,7 +19,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
@@ -54,8 +53,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PortfolioLifecycleService Unit Tests")
@@ -71,8 +68,7 @@ class PortfolioLifecycleServiceTest {
   private PortfolioViewMapper portfolioViewMapper;
   @Mock
   private PortfolioLifecycleCommandValidator validator;
-  @Mock
-  private TransactionTemplate transactionTemplate;
+
   @Mock
   private PortfolioLoader portfolioLoader;
 
@@ -107,7 +103,7 @@ class PortfolioLifecycleServiceTest {
     }
 
     @Test
-    @DisplayName("createPortfolio: maps DataIntegrityViolation to PortfolioLimitReachedException")
+    @DisplayName("createPortfolio: throws DataIntegrityViolation when create portfolio > 1")
     void mapsDataIntegrityException() {
       when(portfolioRepository.save(any())).thenThrow(
           new DataIntegrityViolationException("Unique constraint"));
@@ -116,7 +112,7 @@ class PortfolioLifecycleServiceTest {
           false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-          PortfolioLimitReachedException.class);
+          DataIntegrityViolationException.class);
     }
 
     @Test
@@ -139,42 +135,21 @@ class PortfolioLifecycleServiceTest {
     void updatesDetailsAndReturnsView() {
       UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "New Name",
           "New Desc", USD);
-      Portfolio existingPortfolio = mock(Portfolio.class);
-      PortfolioView expectedView = mock(PortfolioView.class);
+      Portfolio existingPortfolio = Portfolio.createNew(USER_ID, "TFSA", "MY TFSA", USD);
 
-      when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
-        TransactionCallback<Portfolio> callback = invocation.getArgument(0);
+      when(portfolioLoader.loadUserPortfolioWithGraph(eq(PORTFOLIO_ID), eq(USER_ID))).thenReturn(
+          existingPortfolio);
 
-        when(portfolioLoader.loadUserPortfolioWithGraph(PORTFOLIO_ID, USER_ID)).thenReturn(
-            existingPortfolio);
-        when(portfolioRepository.save(existingPortfolio)).thenReturn(existingPortfolio);
+      service.updatePortfolio(command);
 
-        return callback.doInTransaction(null);
-      });
-
-      when(portfolioViewMapper.toNewPortfolioView(existingPortfolio)).thenReturn(expectedView);
-
-      PortfolioView result = service.updatePortfolio(command);
-
-      verify(existingPortfolio).updateDetails("New Name", "New Desc");
-      verify(existingPortfolio).updateDisplayCurrency(USD);
       verify(portfolioRepository).save(existingPortfolio);
-      assertThat(result).isEqualTo(expectedView);
+      assertThat(existingPortfolio.getDescription()).isEqualTo(command.description());
+      assertThat(existingPortfolio.getName()).isEqualTo(command.name());
+      assertThat(existingPortfolio.getDisplayCurrency()).isEqualTo(command.currency());
     }
 
     @Test
-    @DisplayName("updatePortfolio: throws IllegalStateException when transaction returns null")
-    void throwsExceptionOnNullTransactionResult() {
-      when(transactionTemplate.execute(any())).thenReturn(null);
-      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "Name",
-          "Desc", USD);
-
-      assertThatThrownBy(() -> service.updatePortfolio(command)).isInstanceOf(
-          IllegalStateException.class).hasMessageContaining("Transaction failed");
-    }
-
-    @Test
-    @DisplayName("updatePortfolio: ensures validation occurs before transaction")
+    @DisplayName("updatePortfolio: ensures validation occurs before updating")
     void validatesBeforeTransaction() {
       UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "Name",
           "Desc", USD);
@@ -182,8 +157,6 @@ class PortfolioLifecycleServiceTest {
 
       assertThatThrownBy(() -> service.updatePortfolio(command)).isInstanceOf(
           InvalidCommandException.class);
-
-      verifyNoInteractions(transactionTemplate);
     }
   }
 

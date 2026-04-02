@@ -44,7 +44,6 @@ import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
@@ -81,10 +80,8 @@ public class TransactionService {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
       AssetType resolvedType = resolveAssetType(symbol, command.assetType());
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
-      return transactionRecordingService.recordBuy(
-          ctx.account(), symbol, resolvedType,
-          command.quantity(), price, command.fees(),
-          command.notes(), command.transactionDate());
+      return transactionRecordingService.recordBuy(ctx.account(), symbol, resolvedType,
+          command.quantity(), price, command.fees(), command.notes(), command.transactionDate());
     });
   }
 
@@ -120,7 +117,8 @@ public class TransactionService {
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol = command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      AssetSymbol symbol =
+          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
       return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
@@ -211,10 +209,8 @@ public class TransactionService {
   // Private infrastructure
   // -------------------------------------------------------------------------
 
-  private <C extends TransactionCommand> TransactionView execute(
-      C command,
-      Function<C, ValidationResult> validationFn,
-      String operationName,
+  private <C extends TransactionCommand> TransactionView execute(C command,
+      Function<C, ValidationResult> validationFn, String operationName,
       Function<PortfolioContext, Transaction> recordFn) {
 
     ValidationUtils.validate(command, validationFn, operationName);
@@ -225,14 +221,15 @@ public class TransactionService {
   }
 
   private PortfolioContext getPortfolioContext(TransactionCommand command) {
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(command.portfolioId(),
+        command.userId());
     Account account = portfolio.getAccount(command.accountId());
     return new PortfolioContext(portfolio, account);
   }
 
   /**
-   * Persists both the portfolio aggregate and the new transaction.
-   * The portfolioId is taken directly from the in-memory context — no DB lookup.
+   * Persists both the portfolio aggregate and the new transaction. The portfolioId is taken
+   * directly from the in-memory context — no DB lookup.
    */
   private void persistChanges(PortfolioContext ctx, Transaction tx) {
     portfolioRepository.save(ctx.portfolio());
@@ -249,7 +246,7 @@ public class TransactionService {
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
     return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-        command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 
@@ -269,17 +266,14 @@ public class TransactionService {
   }
 
   /**
-   * Resolution order:
-   * 1. DB/cache, authoritative for known symbols
-   * 2. Client hint, trusted only when structurally valid (not CASH, not null)
-   * 3. STOCK, safe fallback of last resort
-   *
-   * A client claiming AAPL is CRYPTO will be corrected once the symbol
-   * is seeded into market_asset_info. Until then, their hint is used.
+   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client hint, trusted only
+   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last resort
+   * <p>
+   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded into
+   * market_asset_info. Until then, their hint is used.
    */
   private AssetType resolveAssetType(AssetSymbol symbol, AssetType clientHint) {
-    return infoRepository.findBySymbol(symbol)
-        .map(MarketAssetInfo::type)
+    return infoRepository.findBySymbol(symbol).map(MarketAssetInfo::type)
         .orElseGet(() -> sanitizeAssetTypeHint(clientHint));
   }
 

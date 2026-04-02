@@ -1,24 +1,27 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.market;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
-
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -40,12 +43,11 @@ public class MarketDataServiceImpl implements MarketDataService {
    */
   @Override
   public Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols) {
-    if (symbols.isEmpty())
+    if (symbols.isEmpty()) {
       return Map.of();
+    }
 
-    List<String> keys = symbols.stream()
-        .map(s -> cacheKeyPrefix + s.symbol())
-        .toList();
+    List<String> keys = symbols.stream().map(s -> cacheKeyPrefix + s.symbol()).toList();
 
     List<MarketAssetQuote> values = redisTemplate.opsForValue().multiGet(keys);
 
@@ -121,8 +123,9 @@ public class MarketDataServiceImpl implements MarketDataService {
   // so it doesn't need @Cacheable (Redis) unless you want a two-tier cache.
   @Override
   public Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(Set<AssetSymbol> symbols) {
-    if (symbols.isEmpty())
+    if (symbols.isEmpty()) {
       return Map.of();
+    }
 
     Map<AssetSymbol, MarketAssetInfo> result = new HashMap<>(infoRepository.findBySymbols(symbols));
     Set<AssetSymbol> misses = new HashSet<>(symbols);

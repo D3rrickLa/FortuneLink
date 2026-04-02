@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.config.serialization;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.DeserializationContext;

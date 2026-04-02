@@ -14,14 +14,11 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Service responsible for recording financial transactions and updating the
- * state of an
+ * Service responsible for recording financial transactions and updating the state of an
  * {@link Account} aggregate. *
  * <p>
- * Each recording method handles the domain logic for a specific transaction
- * type, ensuring that
- * both the {@link Transaction} record is created and the internal account state
- * (positions and
+ * Each recording method handles the domain logic for a specific transaction type, ensuring that
+ * both the {@link Transaction} record is created and the internal account state (positions and
  * cash) is updated accordingly.
  * </p>
  */
@@ -75,8 +72,7 @@ public interface TransactionRecordingService {
    * Records a stock split and adjusts the position quantity accordingly.
    * <p>
    * Cash is never affected by a split. The position quantity is scaled by
-   * {@code ratio.numerator() / ratio.denominator()} (e.g., 2:1 doubles the
-   * shares). Cost basis per
+   * {@code ratio.numerator() / ratio.denominator()} (e.g., 2:1 doubles the shares). Cost basis per
    * unit is adjusted automatically; total cost basis is unchanged.
    *
    * @param account the account holding the position
@@ -113,15 +109,13 @@ public interface TransactionRecordingService {
    *
    * @param account The account to update.
    * @param tx      The transaction to apply.
-   * @implNote The caller must invoke {@code account.clearPosition(symbol)} prior
-   *           to this method to
-   *           ensure idempotency.
+   * @implNote The caller must invoke {@code account.clearPosition(symbol)} prior to this method to
+   * ensure idempotency.
    */
   void replayTransaction(Account account, Transaction tx);
 
   /**
-   * Performs a full replay of an existing transaction, affecting both position
-   * and cash balances.
+   * Performs a full replay of an existing transaction, affecting both position and cash balances.
    * <p>
    * <b>Warning:</b> This should only be used for full account reconstruction
    * (e.g., migration or corruption recovery).
@@ -129,9 +123,8 @@ public interface TransactionRecordingService {
    *
    * @param account The account to update.
    * @param history The transactions to apply.
-   * @implNote The caller MUST reset both positions and cash to zero before
-   *           invoking; otherwise,
-   *           balances will be double-counted.
+   * @implNote The caller MUST reset both positions and cash to zero before invoking; otherwise,
+   * balances will be double-counted.
    */
   void replayFullTransaction(Account account, List<Transaction> history);
 }

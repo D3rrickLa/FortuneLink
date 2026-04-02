@@ -16,10 +16,8 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyExc
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-import lombok.RequiredArgsConstructor;
-
 import java.sql.SQLException;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,7 +59,8 @@ public class PortfolioLifecycleService {
 
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "updatePortfolio");
-    Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(), command.userId());
+    Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(),
+        command.userId());
     existing.updateDetails(command.name(), command.description());
     existing.updateDisplayCurrency(command.currency());
     Portfolio saved = portfolioRepository.save(existing);

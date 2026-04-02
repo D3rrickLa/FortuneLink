@@ -1,13 +1,15 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import java.time.Instant;
-
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.time.Instant;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -49,17 +51,6 @@ public class MarketAssetInfoJpaEntity {
   @Column(name = "version", nullable = false)
   private int version;
 
-  public MarketAssetInfo toDomain() {
-    return new MarketAssetInfo(
-        new AssetSymbol(symbol),
-        name,
-        AssetType.valueOf(assetType),
-        exchange,
-        Currency.of(tradingCurrency),
-        sector,
-        description);
-  }
-
   public static MarketAssetInfoJpaEntity from(MarketAssetInfo info, long ttlSeconds) {
     MarketAssetInfoJpaEntity e = new MarketAssetInfoJpaEntity();
     e.symbol = info.symbol().symbol();
@@ -72,5 +63,10 @@ public class MarketAssetInfoJpaEntity {
     e.fetchedAt = Instant.now();
     e.expiresAt = Instant.now().plusSeconds(ttlSeconds);
     return e;
+  }
+
+  public MarketAssetInfo toDomain() {
+    return new MarketAssetInfo(new AssetSymbol(symbol), name, AssetType.valueOf(assetType),
+        exchange, Currency.of(tradingCurrency), sector, description);
   }
 }

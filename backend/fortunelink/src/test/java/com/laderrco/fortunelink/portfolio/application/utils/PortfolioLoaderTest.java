@@ -4,9 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,14 +22,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 
 @ExtendWith(MockitoExtension.class)
 class PortfolioLoaderTest {
@@ -62,13 +60,15 @@ class PortfolioLoaderTest {
       when(portfolioRepository.findByIdAndUserId(P_ID, U_ID)).thenReturn(Optional.of(portfolio));
       when(portfolio.isDeleted()).thenReturn(true);
 
-      assertThrows(PortfolioNotFoundException.class, () -> portfolioLoader.loadUserPortfolio(P_ID, U_ID));
+      assertThrows(PortfolioNotFoundException.class,
+          () -> portfolioLoader.loadUserPortfolio(P_ID, U_ID));
     }
 
     @Test
     @DisplayName("loadUserPortfolioWithGraph: should return portfolio with relations when not deleted")
     void loadUserPortfolioWithGraph_shouldReturnPortfolio() {
-      when(portfolioRepository.findWithAccountsByIdAndUserId(P_ID, U_ID)).thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findWithAccountsByIdAndUserId(P_ID, U_ID)).thenReturn(
+          Optional.of(portfolio));
       when(portfolio.isDeleted()).thenReturn(false);
 
       Portfolio result = portfolioLoader.loadUserPortfolioWithGraph(P_ID, U_ID);
@@ -103,7 +103,8 @@ class PortfolioLoaderTest {
     void validateOwnership_shouldThrowWhenNotFound() {
       when(portfolioRepository.existsByIdAndUserId(P_ID, U_ID)).thenReturn(false);
 
-      assertThrows(PortfolioNotFoundException.class, () -> portfolioLoader.validateOwnership(P_ID, U_ID));
+      assertThrows(PortfolioNotFoundException.class,
+          () -> portfolioLoader.validateOwnership(P_ID, U_ID));
     }
 
     @Test
@@ -129,18 +130,18 @@ class PortfolioLoaderTest {
   @DisplayName("Common Edge Cases: Parameterized missing data")
   class EdgeCaseTests {
     @ParameterizedTest
-    @CsvSource({
-        "loadUserPortfolio",
-        "loadUserPortfolioWithGraph"
-    })
+    @CsvSource({"loadUserPortfolio", "loadUserPortfolioWithGraph"})
     @DisplayName("loadingMethods: should throw PortfolioNotFoundException when repository returns empty")
     void loadingMethods_shouldThrowWhenEmpty(String methodName) {
       if (methodName.equals("loadUserPortfolio")) {
         when(portfolioRepository.findByIdAndUserId(P_ID, U_ID)).thenReturn(Optional.empty());
-        assertThrows(PortfolioNotFoundException.class, () -> portfolioLoader.loadUserPortfolio(P_ID, U_ID));
+        assertThrows(PortfolioNotFoundException.class,
+            () -> portfolioLoader.loadUserPortfolio(P_ID, U_ID));
       } else {
-        when(portfolioRepository.findWithAccountsByIdAndUserId(P_ID, U_ID)).thenReturn(Optional.empty());
-        assertThrows(PortfolioNotFoundException.class, () -> portfolioLoader.loadUserPortfolioWithGraph(P_ID, U_ID));
+        when(portfolioRepository.findWithAccountsByIdAndUserId(P_ID, U_ID)).thenReturn(
+            Optional.empty());
+        assertThrows(PortfolioNotFoundException.class,
+            () -> portfolioLoader.loadUserPortfolioWithGraph(P_ID, U_ID));
       }
     }
   }

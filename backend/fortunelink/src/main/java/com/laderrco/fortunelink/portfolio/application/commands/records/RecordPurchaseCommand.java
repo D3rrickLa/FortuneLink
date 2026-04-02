@@ -10,20 +10,18 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
-import lombok.Builder;
-
 import java.time.Instant;
 import java.util.List;
+import lombok.Builder;
 
 // String symbol is fine, we are just recording the name, not the entity
 // asset symbol - name
 // asset entity - your identifier calss, the acutal holding
 
 /**
- * @param assetType Client-supplied type hint. Used only when the symbol is not yet cached
- * in market_asset_info. The service validates and sanitizes this value —
- * never pass it directly to domain logic.
+ * @param assetType Client-supplied type hint. Used only when the symbol is not yet cached in
+ *                  market_asset_info. The service validates and sanitizes this value — never pass
+ *                  it directly to domain logic.
  */
 @Builder
 public record RecordPurchaseCommand(

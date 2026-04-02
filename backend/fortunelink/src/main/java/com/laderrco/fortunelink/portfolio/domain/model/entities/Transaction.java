@@ -21,31 +21,23 @@ import java.util.List;
 /**
  * Represents an immutable record of a financial event within an account.
  * <p>
- * This is the "source of truth" used to reconstruct account balances and
- * portfolio positions. It
- * enforces strict invariants between the transaction type, trade execution
- * details, and the
+ * This is the "source of truth" used to reconstruct account balances and portfolio positions. It
+ * enforces strict invariants between the transaction type, trade execution details, and the
  * resulting impact on cash (cashDelta).
  * </p>
  *
  * @param transactionId        Unique identifier for this transaction.
  * @param accountId            The account to which this transaction belongs.
- * @param transactionType      The nature of the event (e.g., BUY, SELL,
- *                             DIVIDEND, SPLIT).
- * @param execution            Details of the asset trade (required for
- *                             trade-based types).
+ * @param transactionType      The nature of the event (e.g., BUY, SELL, DIVIDEND, SPLIT).
+ * @param execution            Details of the asset trade (required for trade-based types).
  * @param split                Ratio details (required for stock splits).
- * @param cashDelta            The net change in account cash ('+' for inflows,
- *                             '-' for outflows).
- * @param fees                 A list of charges associated with this
- *                             transaction.
+ * @param cashDelta            The net change in account cash ('+' for inflows, '-' for outflows).
+ * @param fees                 A list of charges associated with this transaction.
  * @param notes                User or system-generated remarks.
  * @param occurredAt           The date and time the transaction took place.
- * @param relatedTransactionId Reference to another transaction (e.g., for
- *                             reversals or linked
+ * @param relatedTransactionId Reference to another transaction (e.g., for reversals or linked
  *                             trades).
- * @param metadata             Audit data, source tracking, and exclusion
- *                             status.
+ * @param metadata             Audit data, source tracking, and exclusion status.
  */
 public record Transaction(
     TransactionId transactionId,
@@ -122,8 +114,7 @@ public record Transaction(
   }
 
   /**
-   * Sums all fees associated with this transaction in the currency of the
-   * cashDelta.
+   * Sums all fees associated with this transaction in the currency of the cashDelta.
    */
   public Money totalFeesInAccountCurrency() {
     return Fee.totalInAccountCurrency(fees, cashDelta.currency());
@@ -231,18 +222,8 @@ public record Transaction(
     }
 
     public Transaction build() {
-      return new Transaction(
-          transactionId,
-          accountId,
-          transactionType,
-          execution,
-          split,
-          cashDelta,
-          fees,
-          notes,
-          occurredAt,
-          relatedTransactionId,
-          metadata);
+      return new Transaction(transactionId, accountId, transactionType, execution, split, cashDelta,
+          fees, notes, occurredAt, relatedTransactionId, metadata);
     }
   }
 }

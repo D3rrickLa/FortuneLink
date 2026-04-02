@@ -23,15 +23,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RedissonClient;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Position Recalculation Service Unit Tests")
 public class PositionRecalculationServiceTest {
-
   private final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private final UserId USER_ID = UserId.random();
   private final AccountId ACCOUNT_ID = AccountId.newId();
   private final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
+
+  @Mock
+  private RedissonClient redissonClient;
   @Mock
   private PositionRecalculationExecutor executor;
   @InjectMocks

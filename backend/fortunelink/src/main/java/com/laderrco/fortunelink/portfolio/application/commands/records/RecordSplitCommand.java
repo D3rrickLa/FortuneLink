@@ -9,6 +9,11 @@ import java.time.Instant;
 
 // e.g. Ratio(2, 1) for a 2-for-1 split
 public record RecordSplitCommand(
-    PortfolioId portfolioId, UserId userId, AccountId accountId, String symbol, Ratio ratio,
-    Instant transactionDate, String notes) implements AdditionalInfoTransactionCommand {
+    PortfolioId portfolioId,
+    UserId userId,
+    AccountId accountId,
+    String symbol,
+    Ratio ratio,
+    Instant transactionDate,
+    String notes) implements AdditionalInfoTransactionCommand {
 }

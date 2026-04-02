@@ -1,22 +1,19 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.embeddables;
 
-import java.math.BigDecimal;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import java.math.BigDecimal;
 
 /**
  * JPA-side representation of {@code Money}.
  * <p>
  * Domain {@code Money} is a pure record with a custom {@code Currency} wrapper
- * 
- * it cannot be annotated with {@code @Embeddable}. This class lives entirely
- * in the infrastructure layer and is converted to/from {@code Money} by the
- * domain mappers.
  * <p>
- * Column names are intentionally generic ({@code _amount} / {@code _currency})
- * so that {@code @AttributeOverride} at the entity level provides the real
- * names.
+ * it cannot be annotated with {@code @Embeddable}. This class lives entirely in the infrastructure
+ * layer and is converted to/from {@code Money} by the domain mappers.
+ * <p>
+ * Column names are intentionally generic ({@code _amount} / {@code _currency}) so that
+ * {@code @AttributeOverride} at the entity level provides the real names.
  *
  * <pre>
  * // Usage example in an entity:

@@ -6,7 +6,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountComm
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasAccountId;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

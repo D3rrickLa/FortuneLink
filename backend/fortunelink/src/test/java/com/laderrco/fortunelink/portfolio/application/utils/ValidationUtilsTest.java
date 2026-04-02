@@ -1,8 +1,19 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasPortfolioId;
+import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -16,13 +27,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasPortfolioId;
-import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 class ValidationUtilsTest {
   @Nested
@@ -94,7 +98,7 @@ class ValidationUtilsTest {
   class AmountValidationTests {
 
     @ParameterizedTest
-    @ValueSource(strings = { "-1.0", "0.0" })
+    @ValueSource(strings = {"-1.0", "0.0"})
     @DisplayName("validateAmount: should add error for non-positive amounts")
     void validateAmountshouldRejectNonPositive(String amountStr) {
       List<String> errors = new ArrayList<>();
@@ -165,7 +169,7 @@ class ValidationUtilsTest {
   class SymbolValidationTests {
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "  ", "invalidsymbol!", "THISSYMBOLISTOOLONGFORTHEREGEX" })
+    @ValueSource(strings = {"", "  ", "invalidsymbol!", "THISSYMBOLISTOOLONGFORTHEREGEX"})
     @DisplayName("validateSymbol: should reject null, empty, or malformed symbols")
     void validateSymbolshouldRejectInvalidFormats(String symbol) {
       List<String> errors = new ArrayList<>();
@@ -174,7 +178,7 @@ class ValidationUtilsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "AAPL", "BTC.USD", "GOOG-123", "005930.KS" })
+    @ValueSource(strings = {"AAPL", "BTC.USD", "GOOG-123", "005930.KS"})
     @DisplayName("validateSymbol: should accept valid alphanumeric and allowed character formats")
     void validateSymbolshouldAcceptValidFormats(String symbol) {
       List<String> errors = new ArrayList<>();
@@ -187,12 +191,8 @@ class ValidationUtilsTest {
   @DisplayName("isValidCurrency: Boolean Check")
   class CurrencyValidationTests {
     @ParameterizedTest
-    @CsvSource(value = {
-        "USD, true",
-        "EUR, true",
-        "INVALID, false",
-        "null, false",
-        "' ', false" // This often represents a null/empty string in CSV source
+    @CsvSource(value = {"USD, true", "EUR, true", "INVALID, false", "null, false", "' ', false"
+        // This often represents a null/empty string in CSV source
     }, nullValues = "null")
     @DisplayName("isValidCurrency: should return correct boolean for currency codes including nulls")
     void isValidCurrencyshouldReturnExpectedResult(String code, boolean expected) {

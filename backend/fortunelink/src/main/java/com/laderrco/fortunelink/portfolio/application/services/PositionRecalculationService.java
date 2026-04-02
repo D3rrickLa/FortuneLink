@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculatio
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
@@ -23,8 +22,7 @@ public class PositionRecalculationService {
   private final RedissonClient redisson; // Injected by Spring Boot Starter
 
   /**
-   * Async listener that triggers after a transaction commit. Ensures
-   * excluded/restored flags are
+   * Async listener that triggers after a transaction commit. Ensures excluded/restored flags are
    * persisted before we replay them.
    */
   @Async("recalculationExecutor")

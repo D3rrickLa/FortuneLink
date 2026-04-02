@@ -1,23 +1,29 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Maps the {@code assets} table to domain {@code AcbPosition} (MVP) or
- * {@code FifoPosition} (future) via the mapper.
+ * Maps the {@code assets} table to domain {@code AcbPosition} (MVP) or {@code FifoPosition}
+ * (future) via the mapper.
  * <p>
- * For the ACB MVP, each row represents the aggregate state of one symbol
- * inside one account: total quantity, total cost basis, and acquisition date.
+ * For the ACB MVP, each row represents the aggregate state of one symbol inside one account: total
+ * quantity, total cost basis, and acquisition date.
  * <p>
- * FIFO with tax lots would require a separate {@code tax_lots} table.
- * The {@code identifier_type} discriminator column is kept to stay compatible
- * with the V1 schema and support future polymorphism.
+ * FIFO with tax lots would require a separate {@code tax_lots} table. The {@code identifier_type}
+ * discriminator column is kept to stay compatible with the V1 schema and support future
+ * polymorphism.
  */
 @Entity
 @Getter
@@ -34,13 +40,14 @@ public class PositionJpaEntity {
   private AccountJpaEntity account;
 
   /**
-   * Discriminator: 'MARKET', 'CRYPTO', or 'CASH'.
-   * Derived from {@code AssetType} during mapping.
+   * Discriminator: 'MARKET', 'CRYPTO', or 'CASH'. Derived from {@code AssetType} during mapping.
    */
   @Column(name = "identifier_type", nullable = false, length = 50)
   private String identifierType;
 
-  /** Ticker or currency code, maps to {@code AssetSymbol.symbol()}. */
+  /**
+   * Ticker or currency code, maps to {@code AssetSymbol.symbol()}.
+   */
   @Column(name = "symbol", nullable = false, length = 20) // match SQL
   private String symbol;
 

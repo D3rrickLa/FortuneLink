@@ -1,20 +1,31 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
-import java.util.*;
-
-import org.springframework.data.domain.Persistable;
-
-import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 /**
  * Pure persistence model for the {@code Portfolio} aggregate root.
  * <p>
- * Zero domain logic lives here. No business methods, no invariant checks.
- * The only responsibility is mapping columns -> Java fields and managing
- * the JPA relationship graph.
+ * Zero domain logic lives here. No business methods, no invariant checks. The only responsibility
+ * is mapping columns -> Java fields and managing the JPA relationship graph.
  */
 @Entity
 @Getter
@@ -36,8 +47,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   private String description;
 
   /**
-   * ISO-4217 code of the display currency preference (e.g. "CAD", "USD").
-   * Reconstructed into a {@code Currency} domain object by the mapper.
+   * ISO-4217 code of the display currency preference (e.g. "CAD", "USD"). Reconstructed into a
+   * {@code Currency} domain object by the mapper.
    */
   @Column(name = "display_currency_code", nullable = false, length = 3)
   private String displayCurrencyCode;
@@ -62,8 +73,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   private Long version;
 
   /**
-   * LAZY by default. Load eagerly only when you need accounts in the same
-   * request (use the {@code @EntityGraph} on the repo for that).
+   * LAZY by default. Load eagerly only when you need accounts in the same request (use the
+   * {@code @EntityGraph} on the repo for that).
    */
   @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   private List<AccountJpaEntity> accounts = new ArrayList<>();
@@ -73,8 +84,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   // -------------------------------------------------------------------------
 
   public static PortfolioJpaEntity create(UUID id, UUID userId, String name, String description,
-      String displayCurrencyCode, boolean deleted, Instant deletedAt, UUID deletedBy, Instant createdAt,
-      Instant updatedAt) {
+      String displayCurrencyCode, boolean deleted, Instant deletedAt, UUID deletedBy,
+      Instant createdAt, Instant updatedAt) {
 
     PortfolioJpaEntity e = new PortfolioJpaEntity();
     e.id = id;
@@ -94,14 +105,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   // Mutation helpers, mapper calls these during an update
   // -------------------------------------------------------------------------
 
-  public void update(
-      String name,
-      String description,
-      String displayCurrencyCode,
-      boolean deleted,
-      Instant deletedAt,
-      UUID deletedBy,
-      Instant updatedAt) {
+  public void update(String name, String description, String displayCurrencyCode, boolean deleted,
+      Instant deletedAt, UUID deletedBy, Instant updatedAt) {
 
     this.name = name;
     this.description = description;
@@ -134,14 +139,16 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
 
     // Remove accounts that no longer exist in the domain
     Set<UUID> incomingIds = new HashSet<>();
-    for (AccountJpaEntity a : incoming)
+    for (AccountJpaEntity a : incoming) {
       incomingIds.add(a.getId());
+    }
     this.accounts.removeIf(a -> !incomingIds.contains(a.getId()));
 
     // Add new ones
     for (AccountJpaEntity a : merged) {
-      if (!this.accounts.contains(a))
+      if (!this.accounts.contains(a)) {
         this.accounts.add(a);
+      }
     }
   }
 

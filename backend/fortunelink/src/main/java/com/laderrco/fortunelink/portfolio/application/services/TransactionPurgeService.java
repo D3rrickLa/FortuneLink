@@ -23,9 +23,10 @@ public class TransactionPurgeService {
   // @Value here istead of var because it can be 0 in unit testing + that
   // annotation only applies
   // when Spring resolves the property
-  public TransactionPurgeService(TransactionRepository transactionRepository, MarketAssetInfoRepository infoRepository,
-      @Value("${fortunelink.purge.excluded-transaction-retention-days:" + DEFAULT_RETENTION_DAYS
-          + "}") int retentionDays) {
+  public TransactionPurgeService(TransactionRepository transactionRepository,
+      MarketAssetInfoRepository infoRepository, @Value(
+          "${fortunelink.purge.excluded-transaction-retention-days:" + DEFAULT_RETENTION_DAYS
+              + "}") int retentionDays) {
     this.transactionRepository = transactionRepository;
     this.infoRepository = infoRepository;
     this.retentionDays = retentionDays;

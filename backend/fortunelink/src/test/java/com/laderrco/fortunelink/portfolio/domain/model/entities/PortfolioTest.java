@@ -71,8 +71,7 @@ class PortfolioTest {
           () -> assertEquals(DEFAULT_NAME, portfolio.getName()),
           () -> assertEquals(DEFAULT_DESC, portfolio.getDescription()),
           () -> assertEquals(DEFAULT_CURRENCY, portfolio.getDisplayCurrency()),
-          () -> assertFalse(portfolio.isDeleted()),
-          () -> assertNull(portfolio.getDeletedBy()),
+          () -> assertFalse(portfolio.isDeleted()), () -> assertNull(portfolio.getDeletedBy()),
           () -> assertNull(portfolio.getDeletedOn()),
           () -> assertTrue(portfolio.getAccounts().isEmpty()));
     }
@@ -90,11 +89,11 @@ class PortfolioTest {
     void createNewFailsWithInvalidInputs() {
       assertThatThrownBy(
           () -> Portfolio.createNew(null, DEFAULT_NAME, "desc", DEFAULT_CURRENCY)).isInstanceOf(
-              DomainArgumentException.class);
+          DomainArgumentException.class);
 
       assertThatThrownBy(
           () -> Portfolio.createNew(userId, null, "desc", DEFAULT_CURRENCY)).isInstanceOf(
-              DomainArgumentException.class);
+          DomainArgumentException.class);
 
       assertThatThrownBy(() -> Portfolio.createNew(userId, DEFAULT_NAME, " ", null)).isInstanceOf(
           DomainArgumentException.class);
@@ -141,8 +140,7 @@ class PortfolioTest {
     void createAccountFailsWhenStrategyInvalid() {
       assertThatThrownBy(
           () -> portfolio.createAccount("Test", AccountType.TAXABLE_INVESTMENT, Currency.USD,
-              PositionStrategy.FIFO))
-          .isInstanceOf(IllegalArgumentException.class);
+              PositionStrategy.FIFO)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -205,14 +203,14 @@ class PortfolioTest {
     @ParameterizedTest
     @NullSource
     @EmptySource
-    @ValueSource(strings = { "  ", "\t" })
+    @ValueSource(strings = {"  ", "\t"})
     @DisplayName("renameAccount: rejects invalid names")
     void renameAccountFailsWithInvalidName(String invalid) {
       Account account = createAccount(portfolio, "Test");
 
       assertThatThrownBy(
           () -> portfolio.renameAccount(account.getAccountId(), invalid)).isInstanceOf(
-              IllegalArgumentException.class);
+          IllegalArgumentException.class);
     }
   }
 
@@ -251,16 +249,14 @@ class PortfolioTest {
     void markAsDeletedFailsAlreadyDelete() {
       portfolio.markAsDeleted(userId);
       assertThatThrownBy(() -> portfolio.markAsDeleted(userId)).isInstanceOf(
-          PortfolioAlreadyDeletedException.class)
-          .hasMessage("Portfolio is already deleted");
+          PortfolioAlreadyDeletedException.class).hasMessage("Portfolio is already deleted");
     }
 
     @Test
     @DisplayName("restore: throws exeception not deleted")
     void restoreFailsWhenNotDeletedAlready() {
 
-      assertThatThrownBy(() -> portfolio.restore())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> portfolio.restore()).isInstanceOf(IllegalStateException.class)
           .hasMessage("Portfolio is not deleted");
 
     }
@@ -282,8 +278,7 @@ class PortfolioTest {
       portfolio.updateDetails("New", "Desc ");
 
       assertAll(() -> assertEquals("New", portfolio.getName()),
-          () -> assertEquals("Desc", portfolio.getDescription()),
-          () -> {
+          () -> assertEquals("Desc", portfolio.getDescription()), () -> {
             portfolio.updateDetails("name", "  ");
             assertEquals("", portfolio.getDescription());
           });
@@ -343,17 +338,17 @@ class PortfolioTest {
     @Test
     @DisplayName("createAccount: throws exception when account name blank")
     void createAccountThrowsWhenNameEmpty() {
-      assertThatThrownBy(() -> createAccount(portfolio, "    "))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Account name cannot be empty");
+      assertThatThrownBy(() -> createAccount(portfolio, "    ")).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("Account name cannot be empty");
     }
 
     @Test
     @DisplayName("createAccount: throws exception when account uses same name")
     void createAccountThrowsWhenNameAlreadyInUse() {
       Account savings = createAccount(portfolio, "Savings");
-      assertThatThrownBy(() -> portfolio.renameAccount(savings.getAccountId(), "Checking"))
-          .isInstanceOf(IllegalArgumentException.class)
+      assertThatThrownBy(
+          () -> portfolio.renameAccount(savings.getAccountId(), "Checking")).isInstanceOf(
+              IllegalArgumentException.class)
           .hasMessageContaining("Account name already exists: Checking");
     }
   }
@@ -388,9 +383,8 @@ class PortfolioTest {
     void reportRecalculationFailure_AccountNotFound() {
       AccountId unknownId = AccountId.newId();
 
-      assertThatThrownBy(() -> portfolio.reportRecalculationFailure(unknownId))
-          .isInstanceOf(AccountNotFoundException.class)
-          .hasMessageContaining(unknownId.toString());
+      assertThatThrownBy(() -> portfolio.reportRecalculationFailure(unknownId)).isInstanceOf(
+          AccountNotFoundException.class).hasMessageContaining(unknownId.toString());
     }
 
     @Test
@@ -426,8 +420,8 @@ class PortfolioTest {
     void reportRecalculationSuccess_AccountNotFound() {
       AccountId unknownId = AccountId.newId();
 
-      assertThatThrownBy(() -> portfolio.reportRecalculationSuccess(unknownId))
-          .isInstanceOf(AccountNotFoundException.class);
+      assertThatThrownBy(() -> portfolio.reportRecalculationSuccess(unknownId)).isInstanceOf(
+          AccountNotFoundException.class);
     }
   }
 }

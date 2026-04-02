@@ -2,7 +2,8 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
@@ -35,7 +36,8 @@ class TransactionPurgeServiceTest {
     @DisplayName("purgeExpiredTransactions: calculates correct cutoff for 30 day retention")
     void purgeCalculatesCorrectCutoff() {
       int retentionDays = 30;
-      purgeService = new TransactionPurgeService(transactionRepository, infoRepository, retentionDays);
+      purgeService = new TransactionPurgeService(transactionRepository, infoRepository,
+          retentionDays);
 
       purgeService.purgeExpiredTransactions();
 

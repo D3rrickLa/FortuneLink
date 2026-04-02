@@ -68,7 +68,7 @@ public class PortfolioLoader {
       AccountId accountId) {
     if (!portfolioRepository.existsByIdAndUserIdAndAccountId(portfolioId, userId, accountId)) {
       // intentionally vague, don't leak structure
-      throw new PortfolioNotFoundException(portfolioId); 
+      throw new PortfolioNotFoundException(portfolioId);
     }
   }
 }

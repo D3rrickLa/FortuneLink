@@ -4,14 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
@@ -22,10 +14,15 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AccountLifecycleCommandValidatorTest {
-
-  private AccountLifecycleCommandValidator validator;
 
   // Constants for testing
   private static final String VALID_NAME = "Standard Investment Account";
@@ -36,6 +33,7 @@ class AccountLifecycleCommandValidatorTest {
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private static final UserId USER_ID = UserId.random();
   private static final AccountId ACCOUNT_ID = AccountId.newId();
+  private AccountLifecycleCommandValidator validator;
 
   @BeforeEach
   void setUp() {
@@ -55,11 +53,11 @@ class AccountLifecycleCommandValidatorTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "   ", LONG_NAME })
+    @ValueSource(strings = {"", "   ", LONG_NAME})
     @DisplayName("validate: failure on invalid account names")
     void validateFailureOnInvalidNames(String invalidName) {
-      var command = new CreateAccountCommand(
-          PORTFOLIO_ID, USER_ID, invalidName, AccountType.CHEQUING, PositionStrategy.ACB, Currency.of("USD"));
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, invalidName,
+          AccountType.CHEQUING, PositionStrategy.ACB, Currency.of("USD"));
 
       ValidationResult result = validator.validate(command);
 
@@ -70,8 +68,8 @@ class AccountLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: success with exactly 100 character name")
     void validateSuccessWithBoundaryNameLength() {
-      var command = new CreateAccountCommand(
-          PORTFOLIO_ID, USER_ID, NAME_100_CHARS, AccountType.CHEQUING, PositionStrategy.ACB, Currency.of("USD"));
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, NAME_100_CHARS,
+          AccountType.CHEQUING, PositionStrategy.ACB, Currency.of("USD"));
       assertThat(validator.validate(command).isValid()).isTrue();
     }
 
@@ -82,28 +80,25 @@ class AccountLifecycleCommandValidatorTest {
 
       ValidationResult result = validator.validate(command);
 
-      assertThat(result.errors()).contains(
-          "Account type is required",
-          "Strategy is required",
+      assertThat(result.errors()).contains("Account type is required", "Strategy is required",
           "Base currency is required");
     }
 
     @Test
     @DisplayName("validate: should report only missing error when currency is null")
     void validateReportsOnlyMissingWhenNull() {
-      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, AccountType.CHEQUING,
-          PositionStrategy.ACB, null);
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME,
+          AccountType.CHEQUING, PositionStrategy.ACB, null);
 
       ValidationResult result = validator.validate(command);
 
-      assertThat(result.errors())
-          .containsOnlyOnce("Base currency is required")
+      assertThat(result.errors()).containsOnlyOnce("Base currency is required")
           .doesNotContain("Invalid currency code");
     }
 
     private CreateAccountCommand createValidCommand() {
-      return new CreateAccountCommand(
-          PORTFOLIO_ID, USER_ID, VALID_NAME, AccountType.MARGIN, PositionStrategy.ACB, Currency.of("USD"));
+      return new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, AccountType.MARGIN,
+          PositionStrategy.ACB, Currency.of("USD"));
     }
   }
 
@@ -129,7 +124,7 @@ class AccountLifecycleCommandValidatorTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "   " })
+    @ValueSource(strings = {"", "   "})
     @DisplayName("validate: failure on invalid names during update")
     void validateFailureOnInvalidNames(String invalidName) {
       var command = new UpdateAccountCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, invalidName);
@@ -211,13 +206,8 @@ class AccountLifecycleCommandValidatorTest {
       // This ensures ValidationUtils.isValidCurrency("JUNK_CODE") is called
       when(invalidCurrency.getCode()).thenReturn("JUNK_CODE");
 
-      var command = new CreateAccountCommand(
-          PORTFOLIO_ID,
-          USER_ID,
-          VALID_NAME,
-          AccountType.RESP,
-          PositionStrategy.ACB,
-          invalidCurrency);
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, AccountType.RESP,
+          PositionStrategy.ACB, invalidCurrency);
 
       ValidationResult result = validator.validate(command);
 

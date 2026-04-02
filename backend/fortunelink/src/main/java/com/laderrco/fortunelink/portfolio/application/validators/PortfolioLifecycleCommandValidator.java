@@ -43,13 +43,13 @@ public class PortfolioLifecycleCommandValidator {
     validatePortfoliotName(command.name(), errors);
 
     if (command.description() != null && command.description().length() > DESCRIPTION_NAME_LENGTH) {
-        errors.add("Description must be 500 characters or less");
+      errors.add("Description must be 500 characters or less");
     }
 
-    if (command.currency() != null && !ValidationUtils.isValidCurrency(command.currency().getCode())) {
-        errors.add("Invalid currency code");
+    if (command.currency() != null && !ValidationUtils.isValidCurrency(
+        command.currency().getCode())) {
+      errors.add("Invalid currency code");
     }
-
 
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }

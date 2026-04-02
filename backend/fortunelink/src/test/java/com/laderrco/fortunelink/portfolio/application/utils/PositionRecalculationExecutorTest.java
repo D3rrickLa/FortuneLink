@@ -1,21 +1,17 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.services.AccountHealthService;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -29,6 +25,18 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class PositionRecalculationExecutorTest {
@@ -76,8 +84,8 @@ class PositionRecalculationExecutorTest {
       when(transaction.isExcluded()).thenReturn(false);
       when(transaction.transactionType()).thenReturn(txType);
       when(txType.affectsHoldings()).thenReturn(true);
-      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL))
-          .thenReturn(List.of(transaction));
+      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL)).thenReturn(
+          List.of(transaction));
 
       executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL);
 
@@ -92,16 +100,17 @@ class PositionRecalculationExecutorTest {
     @DisplayName("scheduleRecalculation: should mark account stale and rethrow when replay fails")
     void scheduleRecalculation_shouldHandleErrors() {
 
-      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL))
-          .thenReturn(List.of(transaction));
+      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL)).thenReturn(
+          List.of(transaction));
       when(transaction.isExcluded()).thenReturn(false);
       when(transaction.transactionType()).thenReturn(txType);
       when(txType.affectsHoldings()).thenReturn(true);
 
-      doThrow(new RuntimeException("Replay Failed"))
-          .when(transactionRecordingService).replayTransaction(any(), any());
+      doThrow(new RuntimeException("Replay Failed")).when(transactionRecordingService)
+          .replayTransaction(any(), any());
 
-      assertThrows(RuntimeException.class, () -> executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL));
+      assertThrows(RuntimeException.class,
+          () -> executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL));
 
       verify(accountHealthService).markStale(P_ID, U_ID, A_ID);
       verify(portfolioRepository, never()).save(any());
@@ -118,8 +127,8 @@ class PositionRecalculationExecutorTest {
 
       List<Transaction> transactions = List.of(transaction);
       when(transaction.isExcluded()).thenReturn(false);
-      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(P_ID, U_ID, A_ID))
-          .thenReturn(transactions);
+      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(P_ID, U_ID,
+          A_ID)).thenReturn(transactions);
 
       executor.replayFullAccount(P_ID, U_ID, A_ID);
 
@@ -132,11 +141,11 @@ class PositionRecalculationExecutorTest {
     @DisplayName("replayFullAccount: should mark account stale when full replay fails")
     void replayFullAccount_shouldHandleErrors() {
 
-      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(any(), any(), any()))
-          .thenReturn(Collections.emptyList());
+      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(any(), any(),
+          any())).thenReturn(Collections.emptyList());
 
-      doThrow(new RuntimeException("Critical Failure"))
-          .when(transactionRecordingService).replayFullTransaction(any(), any());
+      doThrow(new RuntimeException("Critical Failure")).when(transactionRecordingService)
+          .replayFullTransaction(any(), any());
 
       assertThrows(RuntimeException.class, () -> executor.replayFullAccount(P_ID, U_ID, A_ID));
 
@@ -157,7 +166,7 @@ class PositionRecalculationExecutorTest {
       TransactionType holdingType = mock(TransactionType.class);
       when(holdingType.affectsHoldings()).thenReturn(true);
       when(validTx.transactionType()).thenReturn(holdingType);
-      
+
       Transaction excludedTx = mock(Transaction.class);
       when(excludedTx.isExcluded()).thenReturn(true);
 
@@ -167,8 +176,8 @@ class PositionRecalculationExecutorTest {
       when(cashType.affectsHoldings()).thenReturn(false);
       when(nonHoldingTx.transactionType()).thenReturn(cashType);
 
-      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL))
-          .thenReturn(List.of(validTx, excludedTx, nonHoldingTx));
+      when(transactionRepository.findByAccountIdAndSymbol(A_ID, SYMBOL)).thenReturn(
+          List.of(validTx, excludedTx, nonHoldingTx));
 
       executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL);
 
@@ -191,13 +200,13 @@ class PositionRecalculationExecutorTest {
       Transaction excludedTx = mock(Transaction.class);
       when(excludedTx.isExcluded()).thenReturn(true);
 
-      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(P_ID, U_ID, A_ID))
-          .thenReturn(List.of(cashTx, holdingTx, excludedTx));
+      when(transactionRepository.findByPortfolioIdAndUserIdAndAccountId(P_ID, U_ID,
+          A_ID)).thenReturn(List.of(cashTx, holdingTx, excludedTx));
 
       executor.replayFullAccount(P_ID, U_ID, A_ID);
 
-      @SuppressWarnings("unchecked")
-      ArgumentCaptor<List<Transaction>> listCaptor = ArgumentCaptor.forClass(List.class);
+      @SuppressWarnings("unchecked") ArgumentCaptor<List<Transaction>> listCaptor = ArgumentCaptor.forClass(
+          List.class);
       verify(transactionRecordingService).replayFullTransaction(eq(account), listCaptor.capture());
 
       List<Transaction> capturedList = listCaptor.getValue();
