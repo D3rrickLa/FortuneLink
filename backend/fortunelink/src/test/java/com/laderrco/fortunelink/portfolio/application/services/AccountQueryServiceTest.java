@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
@@ -107,8 +106,6 @@ class AccountQueryServiceTest {
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteMap);
 
       Map<AssetSymbol, Money> feeMap = Map.of(btc, Money.of("5", Currency.USD));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(
-          Map.of(accountId, feeMap));
 
       AccountView expectedView = mock(AccountView.class);
       when(accountViewBuilder.build(eq(account), eq(quoteMap), eq(feeMap))).thenReturn(
@@ -151,8 +148,6 @@ class AccountQueryServiceTest {
 
       Map<AssetSymbol, Money> feesAcc1 = Map.of(btc, Money.of("10", Currency.USD));
       Map<AssetSymbol, Money> feesAcc2 = Map.of(eth, Money.of("20", Currency.USD));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(acc1Id, acc2Id))).thenReturn(
-          Map.of(acc1Id, feesAcc1, acc2Id, feesAcc2));
 
       AccountView view1 = mock(AccountView.class);
       AccountView view2 = mock(AccountView.class);
@@ -196,11 +191,6 @@ class AccountQueryServiceTest {
 
       Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(shop, mock(MarketAssetQuote.class));
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteCache);
-
-      Map<AccountId, Map<AssetSymbol, Money>> feeCache = Map.of(accountId,
-          Map.of(shop, Money.of(10, "CAD")));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(accountId))).thenReturn(
-          feeCache);
 
       AccountView expectedView = mock(AccountView.class);
       when(accountViewBuilder.build(eq(account), eq(quoteCache), anyMap())).thenReturn(
@@ -259,7 +249,6 @@ class AccountQueryServiceTest {
       when(portfolioLoader.loadUserPortfolio(any(), any())).thenReturn(portfolio);
 
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(Map.of());
 
       accountQueryService.getAccountSummary(
           new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId));

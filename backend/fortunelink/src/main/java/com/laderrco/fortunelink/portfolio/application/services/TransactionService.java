@@ -31,9 +31,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
@@ -42,6 +44,9 @@ import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -58,6 +63,8 @@ TransactionService-> TransactionRecordingService (create transaction) -> Positio
 @RequiredArgsConstructor
 @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
 public class TransactionService {
+  private static final String BUY_FEE_CACHE = "fees:buy:";
+
   private final PortfolioRepository portfolioRepository;
   private final TransactionRepository transactionRepository;
   private final MarketAssetInfoRepository infoRepository;
@@ -67,20 +74,17 @@ public class TransactionService {
   private final PortfolioLoader portfolioLoader;
   private final ExchangeRateService exchangeRateService;
   private final TransactionRecordingService transactionRecordingService;
+  private final CacheManager cacheManager;
 
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
     return execute(command, validator::validate, "recordPurchase", ctx -> {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
-
-      // Resolve the correct AssetType from the DB/Cache, else return STOCK default
-      AssetType validatedType = infoRepository.findBySymbol(symbol)
-          .map(MarketAssetInfo::type)
-          .orElseGet(() -> {
-            return AssetType.STOCK;
-          });
+      AssetType resolvedType = resolveAssetType(symbol, command.assetType());
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
-      return transactionRecordingService.recordBuy(ctx.account(), symbol, validatedType,
-          command.quantity(), price, command.fees(), command.notes(), command.transactionDate());
+      return transactionRecordingService.recordBuy(
+          ctx.account(), symbol, resolvedType,
+          command.quantity(), price, command.fees(),
+          command.notes(), command.transactionDate());
     });
   }
 
@@ -177,6 +181,11 @@ public class TransactionService {
     // portfolioId from command, no secondary lookup needed
     transactionRepository.save(excluded, command.portfolioId());
     publishRecalculationIfRequired(existing, command);
+
+    if (existing.transactionType() == TransactionType.BUY) {
+      evictBuyFeeCache(command.accountId());
+    }
+
     return transactionViewMapper.toTransactionView(excluded);
   }
 
@@ -190,6 +199,11 @@ public class TransactionService {
     // portfolioId from command — no secondary lookup needed
     transactionRepository.save(restored, command.portfolioId());
     publishRecalculationIfRequired(existing, command);
+
+    if (existing.transactionType() == TransactionType.BUY) {
+      evictBuyFeeCache(command.accountId());
+    }
+
     return transactionViewMapper.toTransactionView(restored);
   }
 
@@ -225,6 +239,12 @@ public class TransactionService {
     // Pass portfolioId from context, eliminates the findPortfolioIdByAccountId
     // secondary query that previously fired on every single transaction insert.
     transactionRepository.save(tx, ctx.portfolio().getPortfolioId());
+
+    // Fee totals change only on BUY transactions that carry fees.
+    // Evict so the next portfolio read reflects the updated ACB.
+    if (tx.transactionType() == TransactionType.BUY && !tx.fees().isEmpty()) {
+      evictBuyFeeCache(tx.accountId());
+    }
   }
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
@@ -246,5 +266,34 @@ public class TransactionService {
       return commandPrice;
     }
     return exchangeRateService.convertToPrice(commandPrice.pricePerUnit(), accountCurrency);
+  }
+
+  /**
+   * Resolution order:
+   * 1. DB/cache, authoritative for known symbols
+   * 2. Client hint, trusted only when structurally valid (not CASH, not null)
+   * 3. STOCK, safe fallback of last resort
+   *
+   * A client claiming AAPL is CRYPTO will be corrected once the symbol
+   * is seeded into market_asset_info. Until then, their hint is used.
+   */
+  private AssetType resolveAssetType(AssetSymbol symbol, AssetType clientHint) {
+    return infoRepository.findBySymbol(symbol)
+        .map(MarketAssetInfo::type)
+        .orElseGet(() -> sanitizeAssetTypeHint(clientHint));
+  }
+
+  private AssetType sanitizeAssetTypeHint(AssetType hint) {
+    if (hint == null || hint == AssetType.CASH || hint == AssetType.OTHER) {
+      return AssetType.STOCK;
+    }
+    return hint;
+  }
+
+  private void evictBuyFeeCache(AccountId accountId) {
+    Cache cache = cacheManager.getCache(BUY_FEE_CACHE);
+    if (cache != null) {
+      cache.evict(accountId.id().toString());
+    }
   }
 }

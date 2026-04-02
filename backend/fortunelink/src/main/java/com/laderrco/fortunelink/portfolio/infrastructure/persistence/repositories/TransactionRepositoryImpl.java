@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import java.time.Instant;
 import java.util.*;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -26,6 +27,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class TransactionRepositoryImpl implements TransactionRepository, TransactionQueryRepository {
+  private static final String BUY_FEE_CACHE = "fees:buy:";
+
   private final JpaTransactionRepository jpaRepository;
   private final TransactionDomainMapper mapper;
 
@@ -93,7 +96,8 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public List<Transaction> findByPortfolioIdAndUserIdAndAccountId(
       PortfolioId portfolioId, UserId userId, AccountId accountId) {
-        // NOTE: this might be wrong, the toString() returns a class description, not the uuid
+    // NOTE: this might be wrong, the toString() returns a class description, not
+    // the uuid
     return jpaRepository.findByPortfolioIdAndUserIdAndAccountId(
         UUID.fromString(portfolioId.toString()),
         UUID.fromString(userId.toString()),
@@ -133,30 +137,6 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
         .map(mapper::toDomain);
   }
 
-  @Override
-  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(
-      List<AccountId> accountIds) {
-
-    if (accountIds == null || accountIds.isEmpty())
-      return Map.of();
-
-    List<UUID> uuids = accountIds.stream()
-        .map(id -> UUID.fromString(id.toString()))
-        .toList();
-
-    List<FeeAggregationResult> rows = jpaRepository.sumBuyFeesByAccountAndSymbol(uuids);
-
-    Map<AccountId, Map<AssetSymbol, Money>> result = new LinkedHashMap<>();
-    for (FeeAggregationResult row : rows) {
-      AccountId accountId = AccountId.fromString(row.getAccountId().toString());
-      AssetSymbol assetSymbol = new AssetSymbol(row.getSymbol());
-      Money fee = new Money(row.getTotalFees(), Currency.of(row.getCurrency()));
-      result.computeIfAbsent(accountId, k -> new LinkedHashMap<>())
-          .merge(assetSymbol, fee, Money::add);
-    }
-    return Collections.unmodifiableMap(result);
-  }
-
   // =========================================================================
   // TransactionQueryRepository (paginated reads)
   // =========================================================================
@@ -182,5 +162,20 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
     return jpaRepository.findByAccountIdAndExecutionSymbol(
         UUID.fromString(accountId.toString()), symbol.symbol(), pageable)
         .map(mapper::toDomain);
+  }
+
+  @Override
+  @Cacheable(value = BUY_FEE_CACHE, key = "#accountId.id().toString()")
+  public Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId) {
+    List<FeeAggregationResult> rows = jpaRepository.sumBuyFeesByAccountAndSymbol(
+        List.of(UUID.fromString(accountId.toString())));
+
+    Map<AssetSymbol, Money> result = new LinkedHashMap<>();
+    for (FeeAggregationResult row : rows) {
+      result.put(
+          new AssetSymbol(row.getSymbol()),
+          new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
+    }
+    return Collections.unmodifiableMap(result);
   }
 }

@@ -128,5 +128,15 @@
     "name": "fortunelink.rate-limit.fmp-quota.reserve-buffer",
     "type": "java.lang.String",
     "description": "A description for 'fortunelink.rate-limit.fmp-quota.reserve-buffer'"
+  },
+  {
+    "name": "fortunelink.cache.ttl.buy-fees",
+    "type": "java.lang.String",
+    "description": "A description for 'fortunelink.cache.ttl.buy-fees'"
+  },
+  {
+    "name": "fortunelink.cache.key-prefix.buy-fees",
+    "type": "java.lang.String",
+    "description": "A description for 'fortunelink.cache.key-prefix.buy-fees'"
   }
 ]}

@@ -170,7 +170,6 @@ public class PortfolioQueryServiceTest {
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
           eq(Map.of()))).thenReturn(Money.zero(CAD));
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of())).thenReturn(Map.of());
       when(portfolioViewMapper.toPortfolioView(eq(portfolio), eq(List.of()), eq(Money.zero(CAD)),
           eq(false))).thenReturn(expected);
 
@@ -202,7 +201,6 @@ public class PortfolioQueryServiceTest {
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl, googl))).thenReturn(quotes);
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(any())).thenReturn(Map.of());
       when(accountViewBuilder.build(eq(account1), eq(quotes), any())).thenReturn(view1);
       when(accountViewBuilder.build(eq(account2), eq(quotes), any())).thenReturn(view2);
       when(portfolioValuationService.calculateTotalValue(any(), eq(CAD), eq(quotes))).thenReturn(
@@ -228,7 +226,6 @@ public class PortfolioQueryServiceTest {
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl))).thenReturn(quotes);
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(any())).thenReturn(Map.of());
       when(accountViewBuilder.build(eq(staleAccount), eq(quotes), any())).thenReturn(accountView);
       when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
           eq(quotes))).thenReturn(totalValue);
@@ -254,15 +251,12 @@ public class PortfolioQueryServiceTest {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(account));
 
       Money feeAmount = Money.of("9.99", CAD);
-      Map<AccountId, Map<AssetSymbol, Money>> feeCache = Map.of(accountId, Map.of(aapl, feeAmount));
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl));
       AccountView accountView = buildAccountView(accountId);
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(quotes);
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(List.of(accountId))).thenReturn(
-          feeCache);
       when(accountViewBuilder.build(eq(account), eq(quotes),
           eq(Map.of(aapl, feeAmount)))).thenReturn(accountView);
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
@@ -288,7 +282,6 @@ public class PortfolioQueryServiceTest {
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(Map.of());
       // account absent
-      when(transactionRepository.sumBuyFeesByAccountAndSymbol(any())).thenReturn(Map.of());
       when(accountViewBuilder.build(eq(account), any(), eq(Map.of()))).thenReturn(
           buildAccountView(accountId));
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(

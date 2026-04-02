@@ -81,5 +81,12 @@ public interface TransactionRepository {
   /**
    * Aggregates buy fees by account and asset symbol.
    */
-  Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds);
+  // Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds);
+
+  /**
+   * Sums BUY transaction fees by asset symbol for a single account.
+   * This is the cacheable single-account variant. Callers should prefer
+   * this over the batch method for read paths to benefit from caching.
+   */
+  Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId);
 }

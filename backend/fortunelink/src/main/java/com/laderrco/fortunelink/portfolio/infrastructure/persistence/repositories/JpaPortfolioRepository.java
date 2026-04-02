@@ -111,4 +111,18 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
         AND p.deleted = false
       """)
   Long countActiveByUserId(@Param("userId") UUID userId);
+
+  /**
+   * Loads the full aggregate graph by portfolio ID only.
+   * Ownership is pre-validated by PortfolioLoader before save is called —
+   * repeating the userId check here is redundant and costs a round-trip.
+   */
+  @EntityGraph(attributePaths = {
+      "accounts",
+      "accounts.positions",
+      "accounts.realizedGains"
+  })
+  @Query("SELECT p FROM PortfolioJpaEntity p WHERE p.id = :id")
+  Optional<PortfolioJpaEntity> findWithAccountsById(@Param("id") UUID id);
+
 }

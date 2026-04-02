@@ -61,6 +61,12 @@ public class RedisCacheConfig {
   @Value("${fortunelink.cache.key-prefix.currency}")
   private String currencyCacheName;
 
+  @Value("${fortunelink.cache.ttl.buy-fees}")
+  private long buyFeesTtl;
+
+  @Value("${fortunelink.cache.key-prefix.buy-fees}")
+  private String buyFeesCacheName;
+
   @Bean("redisCacheObjectMapper")
   public ObjectMapper redisCacheObjectMapper() {
     SimpleModule module = new SimpleModule()
@@ -108,6 +114,8 @@ public class RedisCacheConfig {
         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(marketAssetInfoSerializer)));
 
     cacheConfigs.put(currencyCacheName, defaultConfig.entryTtl(Duration.ofSeconds(tradingCurrencyTtl)));
+
+    cacheConfigs.put(buyFeesCacheName, defaultConfig.entryTtl(Duration.ofSeconds(buyFeesTtl)));
 
     return RedisCacheManager.builder(connectionFactory)
         .cacheDefaults(defaultConfig)

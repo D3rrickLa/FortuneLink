@@ -19,13 +19,19 @@ import java.util.List;
 // String symbol is fine, we are just recording the name, not the entity
 // asset symbol - name
 // asset entity - your identifier calss, the acutal holding
+
+/**
+ * @param assetType Client-supplied type hint. Used only when the symbol is not yet cached
+ * in market_asset_info. The service validates and sanitizes this value —
+ * never pass it directly to domain logic.
+ */
 @Builder
 public record RecordPurchaseCommand(
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,
     String symbol,
-    AssetType assetType, // MVP, instead of calling marketDataService for it, we give
+    AssetType assetType,
     Quantity quantity,
     Price price,
     List<Fee> fees,

@@ -66,12 +66,14 @@ fortunelink:
   cache:
     enabled: true
     ttl:
+      buy-fees: 300
       current-prices: 300
       historical-prices: 86400
       asset-info: 604800
       trading-currency: 604800
       exchange-rates: 3600
     key-prefix:
+      buy-fees: "fees:buy:"
       prices: "market:price:"
       historical: "market:historical:"
       asset-info: "market:info:"
