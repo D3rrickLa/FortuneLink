@@ -41,7 +41,7 @@ public class FeeJpaEntity {
   @Column(name = "native_amount", nullable = false, precision = 20, scale = 10)
   private BigDecimal nativeAmount;
 
-  @Column(name = "navtive_currency", nullable = false, length = 3)
+  @Column(name = "native_currency", nullable = false, length = 3)
   private String nativeCurrency;
 
   // Account amount — post-conversion (null if same currency as account)

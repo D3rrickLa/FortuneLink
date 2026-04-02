@@ -44,7 +44,8 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
     Objects.requireNonNull(domain, "Portfolio cannot be null");
 
     UUID id = UUID.fromString(domain.getPortfolioId().toString());
-
+    // TODO we need to fix this, we  added a Persistable<UUID> in the JPA
+    // but odn't know if we need to do anything else
     // Load the managed entity to support in-place update.
     // findWithAccountsByIdAndUserId uses an @EntityGraph so positions and
     // gains are already in the session, no lazy-load surprises.

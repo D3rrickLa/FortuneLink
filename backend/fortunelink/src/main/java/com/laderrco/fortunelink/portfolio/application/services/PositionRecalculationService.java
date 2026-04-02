@@ -34,7 +34,7 @@ public class PositionRecalculationService {
 
     // Lock at account level, not symbol level
     // A full replay and a partial replay must not run concurrently on same account
-    String lockKey = String.format("lock:position:%s:%s", event.accountId().id().toString(), event.symbol().symbol());
+    String lockKey = String.format("lock:account:%s", event.accountId().id().toString());
     RLock lock = redisson.getLock(lockKey);
 
     try {

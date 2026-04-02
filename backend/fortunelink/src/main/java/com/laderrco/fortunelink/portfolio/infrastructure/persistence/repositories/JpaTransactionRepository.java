@@ -60,7 +60,7 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   @Query("""
       SELECT t.accountId          as accountId,
              t.executionSymbol    as symbol,
-             SUM(f.nativeAmount)  as totalFees,
+             SUM(COALESCE(f.accountAmount, f.nativeAmount)) as totalFees,
              t.cashDeltaCurrency  as currency
       FROM TransactionJpaEntity t
       JOIN t.fees f
@@ -78,7 +78,7 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   int deleteExpiredTransactions(@Param("accountId") UUID accountId, @Param("cutoff") Instant cutoff);
 
   @Modifying
-  @Query("DELETE FROM TransactionJpaEntity t WHERE t.occurredAt < :cutoff")
+  @Query("DELETE FROM TransactionJpaEntity t WHERE t.excluded = true AND t.excludedAt < :cutoff")
   int deleteAllExpiredTransactions(@Param("cutoff") Instant cutoff);
 
 }

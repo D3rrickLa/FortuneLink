@@ -26,7 +26,7 @@ CREATE TABLE portfolios (
     deleted_by              UUID,                            -- UserId of who deleted it
     created_at              TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at              TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    version                 INTEGER         NOT NULL DEFAULT 0, -- optimistic locking
+    version                 BIGINT          NOT NULL DEFAULT 0, -- optimistic locking
  
     CONSTRAINT fk_portfolio_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
  
@@ -231,7 +231,7 @@ CREATE TABLE transaction_fees (
     version                     INTEGER         NOT NULL DEFAULT 0,
  
     CONSTRAINT fk_fee_transaction
-        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
  
     -- If conversion fields are present, all must be present
     CONSTRAINT chk_conversion_completeness CHECK (

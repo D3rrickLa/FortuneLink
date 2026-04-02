@@ -256,12 +256,12 @@ public class Account {
 
   // --- Maintenance & Recalculation (Internal Use) ---
 
-  void clearPositionForRecalculation(AssetSymbol symbol) {
+  public void clearPositionForRecalculation(AssetSymbol symbol) {
     positionBook.clearSymbol(symbol);
     touch();
   }
 
-  void clearRealizedGainsForSymbol(AssetSymbol symbol) {
+  public void clearRealizedGainsForSymbol(AssetSymbol symbol) {
     notNull(symbol, "symbol");
     realizedGains.removeIf(g -> g.symbol().equals(symbol));
     touch();

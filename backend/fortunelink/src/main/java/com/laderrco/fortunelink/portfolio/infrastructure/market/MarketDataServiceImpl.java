@@ -27,8 +27,7 @@ public class MarketDataServiceImpl implements MarketDataService {
 
   private final MarketDataProvider provider;
   private final MarketAssetInfoRepository infoRepository;
-
-  private RedisTemplate<String, MarketAssetQuote> redisTemplate;
+  private final RedisTemplate<String, MarketAssetQuote> redisTemplate;
 
   @Value("${fortunelink.cache.key-prefix.prices}")
   private String cacheKeyPrefix;

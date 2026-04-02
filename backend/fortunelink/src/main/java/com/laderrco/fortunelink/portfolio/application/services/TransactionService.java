@@ -30,9 +30,12 @@ import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
@@ -53,9 +56,11 @@ TransactionService-> TransactionRecordingService (create transaction) -> Positio
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
 public class TransactionService {
   private final PortfolioRepository portfolioRepository;
   private final TransactionRepository transactionRepository;
+  private final MarketAssetInfoRepository infoRepository;
   private final TransactionViewMapper transactionViewMapper;
   private final TransactionCommandValidator validator;
   private final ApplicationEventPublisher eventPublisher;
@@ -63,18 +68,18 @@ public class TransactionService {
   private final ExchangeRateService exchangeRateService;
   private final TransactionRecordingService transactionRecordingService;
 
-  @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
     return execute(command, validator::validate, "recordPurchase", ctx -> {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
 
-      // way to balance it, to aboivd market data service
-      // will need to change command.assetType() basck to this
-      // MarketAssetInfo info = infoRepository.findBySymbol(symbol)
-      // .orElseGet(() -> marketDataService.getAssetInfo(symbol)
-      // .orElseThrow(() -> new AssetNotFoundException(symbol.symbol())));
+      // Resolve the correct AssetType from the DB/Cache, else return STOCK default
+      AssetType validatedType = infoRepository.findBySymbol(symbol)
+          .map(MarketAssetInfo::type)
+          .orElseGet(() -> {
+            return AssetType.STOCK;
+          });
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
-      return transactionRecordingService.recordBuy(ctx.account(), symbol, command.assetType(),
+      return transactionRecordingService.recordBuy(ctx.account(), symbol, validatedType,
           command.quantity(), price, command.fees(), command.notes(), command.transactionDate());
     });
   }

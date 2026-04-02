@@ -59,7 +59,6 @@ public class PortfolioLifecycleService {
     return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
   }
 
-  @Transactional
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "updatePortfolio");
     Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(), command.userId());

@@ -3,6 +3,8 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 import java.time.Instant;
 import java.util.*;
 
+import org.springframework.data.domain.Persistable;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(name = "portfolios")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
-public class PortfolioJpaEntity {
+public class PortfolioJpaEntity implements Persistable<UUID> {
 
   @Id
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
@@ -57,7 +59,7 @@ public class PortfolioJpaEntity {
 
   @Version
   @Column(name = "version", nullable = false)
-  private int version;
+  private Long version;
 
   /**
    * LAZY by default. Load eagerly only when you need accounts in the same
@@ -148,5 +150,11 @@ public class PortfolioJpaEntity {
   // -------------------------------------------------------------------------
   public List<AccountJpaEntity> getAccounts() {
     return Collections.unmodifiableList(accounts);
+  }
+
+  @Override
+  public boolean isNew() {
+    // If version is not null, it's definitely an update. Skip the check!
+    return version == null;
   }
 }

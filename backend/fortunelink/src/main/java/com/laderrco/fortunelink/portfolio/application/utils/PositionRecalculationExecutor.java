@@ -31,7 +31,8 @@ public class PositionRecalculationExecutor {
   private final PortfolioLoader portfolioLoader;
 
   /**
-   * Surgical recalculation for a single symbol.` Corrects ACB/Position but leaves Cash Balance
+   * Surgical recalculation for a single symbol.` Corrects ACB/Position but leaves
+   * Cash Balance
    * as-is.
    * <p>
    * This filters to affectsHolding() before calling replayTransaction()
@@ -43,24 +44,24 @@ public class PositionRecalculationExecutor {
     Account account = portfolio.getAccount(accountId);
 
     List<Transaction> active = transactionRepository.findByAccountIdAndSymbol(accountId, symbol)
-        .stream().filter(tx -> !tx.isExcluded())
-        // EXPLICIT: only replay transactions that affect holdings.
-        // Cash events (DEPOSIT, WITHDRAWAL, DIVIDEND, FEE, etc.) are
-        // intentionally excluded. Cash state is already correct in DB.
-        // If you ever need full-account reconstruction, use the dedicated
-        // replayFullAccount() path that resets cash to zero first.
+        .stream()
+        .filter(tx -> !tx.isExcluded())
         .filter(tx -> tx.transactionType().affectsHoldings())
-        .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
+        .sorted(Comparator.comparing(Transaction::occurredAt))
+        .toList();
 
     try {
-      account.beginReplay();
+      // Clear only this symbol's position and its realized gains
+      // NOTE: had to make these public
+      account.clearPositionForRecalculation(symbol);
+      account.clearRealizedGainsForSymbol(symbol);
+
       active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
-      account.endReplay();
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
-      accountHealthService.markStale(portfolioId, userId, accountId); // mark it dirty
-      throw e; // let @Transactional roll back, don't persist partial state
+      accountHealthService.markStale(portfolioId, userId, accountId);
+      throw e;
     }
 
     portfolioRepository.save(portfolio);
@@ -75,7 +76,7 @@ public class PositionRecalculationExecutor {
     Account account = portfolio.getAccount(accountId);
 
     List<Transaction> allActive = transactionRepository.findByPortfolioIdAndUserIdAndAccountId(
-            portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
+        portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
         .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {

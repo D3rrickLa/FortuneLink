@@ -14,7 +14,7 @@ import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional; 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

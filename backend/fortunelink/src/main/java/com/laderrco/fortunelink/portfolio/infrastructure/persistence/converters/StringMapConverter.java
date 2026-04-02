@@ -3,11 +3,6 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.converters
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import tools.jackson.core.JacksonException;
@@ -22,11 +17,11 @@ import tools.jackson.databind.ObjectMapper;
  * classpath via Spring Boot.
  */
 @Converter
-public class StringMapConverter implements AttributeConverter<Map<String, Object>, String> {
+public class StringMapConverter implements AttributeConverter<Map<String, String>, String> {
   private final ObjectMapper mapper = new ObjectMapper();
 
   @Override
-  public String convertToDatabaseColumn(Map<String, Object> attribute) {
+  public String convertToDatabaseColumn(Map<String, String> attribute) {
     if (attribute == null)
       return null;
     try {
@@ -37,7 +32,7 @@ public class StringMapConverter implements AttributeConverter<Map<String, Object
   }
 
   @Override
-  public Map<String, Object> convertToEntityAttribute(String dbData) {
+  public Map<String, String> convertToEntityAttribute(String dbData) {
     if (dbData == null || dbData.isEmpty())
       return new HashMap<>();
     try {
