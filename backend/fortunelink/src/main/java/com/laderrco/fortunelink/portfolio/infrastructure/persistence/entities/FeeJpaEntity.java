@@ -74,7 +74,7 @@ public class FeeJpaEntity {
 
   @Version
   @Column(name = "version", nullable = false)
-  private int version;
+  private Long version;
 
   public static FeeJpaEntity create(UUID id, TransactionJpaEntity transaction, String feeType,
       BigDecimal nativeAmount, String nativeCurrency, BigDecimal accountAmount,

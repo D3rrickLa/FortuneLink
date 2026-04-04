@@ -49,7 +49,7 @@ public class MarketAssetInfoJpaEntity {
 
   @Version
   @Column(name = "version", nullable = false)
-  private int version;
+  private Long version;
 
   public static MarketAssetInfoJpaEntity from(MarketAssetInfo info, long ttlSeconds) {
     MarketAssetInfoJpaEntity e = new MarketAssetInfoJpaEntity();

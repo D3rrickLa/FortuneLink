@@ -21,6 +21,8 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotF
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasAssetSymbol;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.IdentifiedTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.PortfolioContext;
@@ -35,6 +37,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
@@ -42,8 +45,14 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
@@ -64,6 +73,7 @@ TransactionService-> TransactionRecordingService (create transaction) -> Positio
 @RequiredArgsConstructor
 @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
 public class TransactionService {
+  private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
   private static final String BUY_FEE_CACHE = "fees:buy:";
 
   private final PortfolioRepository portfolioRepository;
@@ -119,8 +129,7 @@ public class TransactionService {
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol =
-          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      AssetSymbol symbol = command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
       return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
@@ -128,16 +137,21 @@ public class TransactionService {
 
   public TransactionView recordDividend(RecordDividendCommand command) {
     return execute(command, validator::validate, "recordDividend",
-        ctx -> transactionRecordingService.recordDividend(ctx.account(),
+        ctx -> {
+          warnIfDuplicateExists(command.accountId(), command.assetSymbol(), command.transactionDate(), TransactionType.DIVIDEND_REINVEST);
+          return transactionRecordingService.recordDividend(ctx.account(),
             new AssetSymbol(command.assetSymbol()), command.amount(), command.notes(),
-            command.transactionDate()));
+            command.transactionDate())});
   }
 
   public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
-    return execute(command, validator::validate, "recordDividendReinvestment",
-        ctx -> transactionRecordingService.recordDividendReinvestment(ctx.account(),
-            new AssetSymbol(command.assetSymbol()), command.execution().sharesPurchased(),
-            command.execution().pricePerShare(), command.notes(), command.transactionDate()));
+    return execute(command, validator::validate, "recordDividendReinvestment", ctx -> {
+      AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
+      warnIfDividendAlreadyRecorded(command, ctx.account());
+      return transactionRecordingService.recordDividendReinvestment(ctx.account(), symbol,
+          command.execution().sharesPurchased(), command.execution().pricePerShare(),
+          command.notes(), command.transactionDate());
+    });
   }
 
   public TransactionView recordSplit(RecordSplitCommand command) {
@@ -230,7 +244,8 @@ public class TransactionService {
   }
 
   /**
-   * Persists both the portfolio aggregate and the new transaction. The portfolioId is taken
+   * Persists both the portfolio aggregate and the new transaction. The
+   * portfolioId is taken
    * directly from the in-memory context — no DB lookup.
    */
   private void persistChanges(PortfolioContext ctx, Transaction tx) {
@@ -248,7 +263,7 @@ public class TransactionService {
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
     return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+        command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 
@@ -268,10 +283,13 @@ public class TransactionService {
   }
 
   /**
-   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client hint, trusted only
-   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last resort
+   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client
+   * hint, trusted only
+   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last
+   * resort
    * <p>
-   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded into
+   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded
+   * into
    * market_asset_info. Until then, their hint is used.
    */
   private AssetType resolveAssetType(AssetSymbol symbol, AssetType clientHint) {
@@ -290,6 +308,42 @@ public class TransactionService {
     Cache cache = cacheManager.getCache(BUY_FEE_CACHE);
     if (cache != null) {
       cache.evict(accountId.id().toString());
+    }
+  }
+
+  /**
+   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol
+   * within 24 hours of this DRIP event.
+   *
+   * DRIP and DIVIDEND are mutually exclusive for the same event:
+   * - DIVIDEND_REINVEST = broker automatically reinvests, no cash lands
+   * - DIVIDEND = cash lands in account, user reinvests manually (records as
+   * separate BUY)
+   *
+   * Recording both for the same event will overstate cash balance.
+   * This check is a runtime warning only — enforcement is the caller's
+   * responsibility.
+   * Callers that intentionally bypass this (e.g., CSV import correction flows)
+   * should be aware of the accounting implication.
+   */
+  private void warnIfDividendAlreadyRecorded(HasAssetSymbol command, Account account) {
+
+    Instant windowStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
+    Instant windowEnd = command.transactionDate().plus(24, ChronoUnit.HOURS);
+
+    boolean hasConflict = transactionRepository
+        .findByAccountIdAndDateRange(command.accountId(), windowStart, windowEnd)
+        .stream()
+        .anyMatch(tx -> tx.transactionType() == TransactionType.DIVIDEND
+            && tx.metadata().get(TransactionMetadata.KEY_SYMBOL) != null
+            && tx.metadata().get(TransactionMetadata.KEY_SYMBOL).equals(command.assetSymbol()));
+
+    if (hasConflict) {
+      log.warn("DRIP recorded for symbol={} on {} but a DIVIDEND transaction exists " +
+          "within 24 hours for the same symbol in accountId={}. " +
+          "If this is the same event, the DIVIDEND transaction will overstate " +
+          "cash balance. Review transaction history before proceeding.",
+          command.assetSymbol(), command.transactionDate(), command.accountId());
     }
   }
 }

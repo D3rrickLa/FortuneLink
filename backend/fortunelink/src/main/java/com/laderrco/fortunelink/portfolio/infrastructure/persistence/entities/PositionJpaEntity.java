@@ -71,7 +71,7 @@ public class PositionJpaEntity {
 
   @Version
   @Column(name = "version", nullable = false)
-  private int version;
+  private Long version;
 
   // -------------------------------------------------------------------------
   // Factory

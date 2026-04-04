@@ -120,6 +120,9 @@ public class PortfolioQueryService {
         quoteCache);
 
     // TODO: integrate liabilities via ACL (Loan / Debt context)
+    // Liabilities are zero until the Loan Management bounded context is implemented.
+    // See LiabilityStub for scope. NetWorthView.includesLiabilities will be false
+    // until that context ships, so the frontend can display an appropriate disclaimer.
     Money totalLiabilities = Money.zero(displayCurrency);
     boolean liabilitiesIncluded = false;
     boolean isStale = portfolio.getAccounts().stream().anyMatch(Account::isStale);

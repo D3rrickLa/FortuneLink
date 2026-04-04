@@ -147,7 +147,7 @@ public class TransactionJpaEntity {
 
   @Version
   @Column(name = "version", nullable = false)
-  private int version;
+  private Long version;
 
   // fees are always needed with the transaction
   @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

@@ -50,7 +50,8 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
       @Param("accountId") UUID accountId);
 
   /**
-   * Used in the 'save' logic to find the denormalized portfolioId when it's not provided. Assumes a
+   * Used in the 'save' logic to find the denormalized portfolioId when it's not
+   * provided. Assumes a
    * relationship exists between Account and Portfolio.
    */
   @Query("SELECT a.portfolio.id FROM AccountJpaEntity a WHERE a.id = :accountId")
@@ -59,6 +60,12 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   @Query("""
       SELECT t.accountId          as accountId,
              t.executionSymbol    as symbol,
+             -- Uses accountAmount when set (post-conversion), falls back to nativeAmount.
+             -- This is safe only because Fee.withConversion() guarantees accountAmount
+             -- is always in account base currency. If a fee has only nativeAmount,
+             -- it was recorded in the same currency as the account (no conversion needed).
+             -- Any multi-currency fee without accountAmount set is a data integrity issue
+             -- that should have been caught at transaction recording time.
              SUM(COALESCE(f.accountAmount, f.nativeAmount)) as totalFees,
              t.cashDeltaCurrency  as currency
       FROM TransactionJpaEntity t
