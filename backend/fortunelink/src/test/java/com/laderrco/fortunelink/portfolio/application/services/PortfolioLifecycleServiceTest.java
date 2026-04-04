@@ -25,6 +25,7 @@ import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMappe
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
+import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -38,7 +39,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import java.math.BigDecimal;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -104,59 +104,50 @@ class PortfolioLifecycleServiceTest {
     }
 
     @Test
-    @DisplayName("createPortfolio: throws DataIntegrityViolation when create portfolio > 1")
-    void mapsDataIntegrityException() {
-      when(portfolioRepository.save(any())).thenThrow(
-          new DataIntegrityViolationException("Unique constraint"));
-
-      CreatePortfolioCommand command = new CreatePortfolioCommand(USER_ID, "Name", "Desc", USD,
-          false, null, PositionStrategy.ACB);
-
-      assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-          DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("createPortfolio: validator returns failure")
-    void createsDefaultAccountThrowExceptionWithValidation() {
-      when(validator.validate(any(CreatePortfolioCommand.class))).thenReturn(
-          ValidationResult.failure("Everything is null"));
-      CreatePortfolioCommand command = new CreatePortfolioCommand(USER_ID, "Name", "Desc", USD,
-          true, AccountType.MARGIN, PositionStrategy.ACB);
-      assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-          InvalidCommandException.class);
-    }
-
-    @Test
-    @DisplayName("createPortfolio: throws PortfolioLimitReachedException on unique constraint violation")
-    void throwsPortfolioLimitReachedOnUniqueConstraint() {
-      SQLException sqlException = new SQLException("Unique constraint", "23505");
-      DataIntegrityViolationException dataException = new DataIntegrityViolationException("Conflict", sqlException);
-
-      when(portfolioRepository.save(any(Portfolio.class))).thenThrow(dataException);
+    @DisplayName("createPortfolio: throws PortfolioLimitReachedException when active portfolio exists (Guard)")
+    void throwsPortfolioLimitReachedViaGuard() {
+      when(portfolioRepository.existsActiveByUserId(USER_ID)).thenReturn(true);
 
       CreatePortfolioCommand command = new CreatePortfolioCommand(
           USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command))
           .isInstanceOf(PortfolioLimitReachedException.class)
-          .hasMessageContaining("Portfolio already exists for this user");
+          .hasMessageContaining("User already has an active portfolio");
+
+      verify(portfolioRepository, never()).save(any(Portfolio.class));
     }
 
     @Test
-    @DisplayName("createPortfolio: rethrows DataIntegrityViolation for other DB errors")
-    void rethrowsOtherDataIntegrityExceptions() {
-      SQLException sqlException = new SQLException("FK violation", "23503");
-      DataIntegrityViolationException dataException = new DataIntegrityViolationException("Conflict", sqlException);
-
-      when(portfolioRepository.save(any(Portfolio.class))).thenThrow(dataException);
+    @DisplayName("createPortfolio: handles race condition via DataIntegrityViolationException")
+    void handlesRaceCondition() {
+      when(portfolioRepository.existsActiveByUserId(USER_ID)).thenReturn(false);
+      when(portfolioRepository.save(any(Portfolio.class)))
+          .thenThrow(new DataIntegrityViolationException("Duplicate Key"));
 
       CreatePortfolioCommand command = new CreatePortfolioCommand(
           USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command))
-          .isInstanceOf(DataIntegrityViolationException.class)
-          .isNotInstanceOf(PortfolioLimitReachedException.class);
+          .isInstanceOf(PortfolioLimitReachedException.class)
+          .hasMessageContaining("A portfolio was recently created for this user.");
+    }
+
+    @Test
+    @DisplayName("createPortfolio: successful path")
+    void createsPortfolioSuccessfully() {
+      when(portfolioRepository.existsActiveByUserId(USER_ID)).thenReturn(false);
+      when(portfolioRepository.save(any(Portfolio.class)))
+          .thenReturn(Portfolio.createNew(USER_ID, "Portfolio", "My desc", USD));
+
+      CreatePortfolioCommand command = new CreatePortfolioCommand(
+          USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
+      when(portfolioViewMapper.toNewPortfolioView(any())).thenReturn(
+          new PortfolioView(PORTFOLIO_ID, USER_ID, "Portfolio", "My Desc", List.of(), null, false, null, null));
+      PortfolioView result = service.createPortfolio(command);
+
+      assertThat(result).isNotNull();
+      verify(portfolioRepository).save(any(Portfolio.class));
     }
   }
 

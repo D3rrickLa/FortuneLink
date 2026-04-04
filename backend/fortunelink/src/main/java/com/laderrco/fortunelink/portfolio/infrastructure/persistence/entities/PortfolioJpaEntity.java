@@ -1,13 +1,5 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +11,10 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import org.springframework.data.domain.Persistable;
+
+import jakarta.persistence.*;
 
 /**
  * Pure persistence model for the {@code Portfolio} aggregate root.
@@ -67,6 +62,9 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
 
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
+
+  @Transient
+  private boolean isNew = true; // Unified strategy
 
   @Version
   @Column(name = "version", nullable = false)
@@ -117,9 +115,9 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
     this.updatedAt = updatedAt;
   }
 
+  // Merge rather than clear-and-add to avoid gratuitous DELETEs from
+  // Hibernate when only metadata changed.
   public void replaceAccounts(List<AccountJpaEntity> incoming) {
-    // Merge rather than clear-and-add to avoid gratuitous DELETEs from
-    // Hibernate when only metadata changed.
     Map<UUID, AccountJpaEntity> existing = new HashMap<>();
     for (AccountJpaEntity a : this.accounts) {
       existing.put(a.getId(), a);
@@ -161,7 +159,12 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
 
   @Override
   public boolean isNew() {
-    // If version is not null, it's definitely an update. Skip the check!
-    return version == null;
+      return isNew;
+  }
+
+  @PostLoad
+  @PostPersist
+  void markNotNew() {
+      this.isNew = false;
   }
 }

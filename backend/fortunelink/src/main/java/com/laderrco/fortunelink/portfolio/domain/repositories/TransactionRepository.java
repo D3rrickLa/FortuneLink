@@ -73,10 +73,6 @@ public interface TransactionRepository {
   Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id,
       PortfolioId portfolioId, UserId userId, AccountId accountId);
 
-  /**
-   * Aggregates buy fees by account and asset symbol.
-   */
-  // Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesByAccountAndSymbol(List<AccountId> accountIds);
 
   /**
    * Sums BUY transaction fees by asset symbol for a single account. This is the cacheable

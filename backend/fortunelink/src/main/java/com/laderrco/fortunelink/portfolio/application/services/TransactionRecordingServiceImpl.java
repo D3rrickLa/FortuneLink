@@ -55,7 +55,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
     Money cashRequired = gross.add(totalFees);
 
-    if (!account.hasSufficientCash(cashRequired)) {
+    if (!account.hasSufficientCash(cashRequired) && !account.isInReplayMode()) {
       throw new InsufficientFundsException(
           String.format("Insufficient cash for buy. Required: %s, Available: %s", cashRequired,
               account.getCashBalance()));

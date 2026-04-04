@@ -48,7 +48,7 @@ public class PositionJpaEntity {
   /**
    * Ticker or currency code, maps to {@code AssetSymbol.symbol()}.
    */
-  @Column(name = "symbol", nullable = false, length = 20) // match SQL
+  @Column(name = "symbol", nullable = false, length = 20)
   private String symbol;
 
   @Column(name = "asset_type", length = 50)
@@ -66,7 +66,7 @@ public class PositionJpaEntity {
   @Column(name = "first_acquired_at", nullable = false)
   private Instant acquiredDate; // AcbPosition.firstAcquiredAt
 
-  @Column(name = "last_modified_at") // added in V3
+  @Column(name = "last_modified_at")
   private Instant lastModifiedAt; // AcbPosition.lastModifiedAt
 
   @Version

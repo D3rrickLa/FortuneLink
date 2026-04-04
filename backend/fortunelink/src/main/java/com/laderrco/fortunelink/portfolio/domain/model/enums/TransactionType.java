@@ -14,12 +14,11 @@ public enum TransactionType {
   SPLIT(true, false, true, CashImpact.NONE),
 
   RETURN_OF_CAPITAL(true, false, true, CashImpact.IN),
-  // Intentionally unimplemented stub - not used in MVP (Bug 8 / tech debt).
+  // Intentionally unimplemented stub - not used in MVP (tech debt).
   // CashImpact.NONE is deliberately wrong; this whole entry needs a design
   // removed it so it won't be called
   // REINVESTED_CAPITAL_GAIN(false, true, false, CashImpact.NONE),
 
-  // Bug 6 - transfer in/out are orphaned, exists in Enum only
   TRANSFER_IN(false, false, false, CashImpact.IN),
   TRANSFER_OUT(false, false, false, CashImpact.OUT),
 

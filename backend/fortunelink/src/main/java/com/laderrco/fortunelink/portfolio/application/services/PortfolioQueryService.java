@@ -121,12 +121,14 @@ public class PortfolioQueryService {
 
     // TODO: integrate liabilities via ACL (Loan / Debt context)
     Money totalLiabilities = Money.zero(displayCurrency);
+    boolean liabilitiesIncluded = false;
+    boolean isStale = portfolio.getAccounts().stream().anyMatch(Account::isStale);
 
     Money netWorth = totalAssets.subtract(totalLiabilities);
 
-    boolean isStale = portfolio.getAccounts().stream().anyMatch(Account::isStale);
-    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency, isStale,
-        Instant.now());
+    // TODO: in frontend, display a warning because we didn't implement this
+    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency, liabilitiesIncluded, 
+      isStale, Instant.now());
   }
 
   /**

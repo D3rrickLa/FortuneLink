@@ -16,7 +16,6 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyExc
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
-import java.sql.SQLException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -37,6 +36,10 @@ public class PortfolioLifecycleService {
   public PortfolioView createPortfolio(CreatePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "createPortfolio");
 
+    if (portfolioRepository.existsActiveByUserId(command.userId())) {
+        throw new PortfolioLimitReachedException("User already has an active portfolio");
+    }
+
     Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
         command.description(), command.currency());
 
@@ -45,16 +48,12 @@ public class PortfolioLifecycleService {
           command.defaultStrategy());
     }
 
-    Portfolio savedPortfolio;
     try {
-      savedPortfolio = portfolioRepository.save(portfolio);
+        return portfolioViewMapper.toNewPortfolioView(portfolioRepository.save(portfolio));
     } catch (DataIntegrityViolationException e) {
-      if (e.getCause() instanceof SQLException psql && "23505".equals(psql.getSQLState())) {
-        throw new PortfolioLimitReachedException("Portfolio already exists for this user");
-      }
-      throw e; // re-throw everything else
+        // This only happens if a race condition occurred between the check and the save
+        throw new PortfolioLimitReachedException("A portfolio was recently created for this user.");
     }
-    return portfolioViewMapper.toNewPortfolioView(savedPortfolio);
   }
 
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
