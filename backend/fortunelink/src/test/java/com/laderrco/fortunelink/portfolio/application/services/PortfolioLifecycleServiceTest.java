@@ -19,12 +19,12 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
-import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -38,6 +38,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -125,6 +126,38 @@ class PortfolioLifecycleServiceTest {
       assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
           InvalidCommandException.class);
     }
+
+    @Test
+    @DisplayName("createPortfolio: throws PortfolioLimitReachedException on unique constraint violation")
+    void throwsPortfolioLimitReachedOnUniqueConstraint() {
+      SQLException sqlException = new SQLException("Unique constraint", "23505");
+      DataIntegrityViolationException dataException = new DataIntegrityViolationException("Conflict", sqlException);
+
+      when(portfolioRepository.save(any(Portfolio.class))).thenThrow(dataException);
+
+      CreatePortfolioCommand command = new CreatePortfolioCommand(
+          USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
+
+      assertThatThrownBy(() -> service.createPortfolio(command))
+          .isInstanceOf(PortfolioLimitReachedException.class)
+          .hasMessageContaining("Portfolio already exists for this user");
+    }
+
+    @Test
+    @DisplayName("createPortfolio: rethrows DataIntegrityViolation for other DB errors")
+    void rethrowsOtherDataIntegrityExceptions() {
+      SQLException sqlException = new SQLException("FK violation", "23503");
+      DataIntegrityViolationException dataException = new DataIntegrityViolationException("Conflict", sqlException);
+
+      when(portfolioRepository.save(any(Portfolio.class))).thenThrow(dataException);
+
+      CreatePortfolioCommand command = new CreatePortfolioCommand(
+          USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
+
+      assertThatThrownBy(() -> service.createPortfolio(command))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .isNotInstanceOf(PortfolioLimitReachedException.class);
+    }
   }
 
   @Nested
@@ -211,7 +244,7 @@ class PortfolioLifecycleServiceTest {
           true);
 
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-              PortfolioDeletionException.class)
+          PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
     }
 

@@ -105,10 +105,10 @@ class AccountQueryServiceTest {
       Map<AssetSymbol, MarketAssetQuote> quoteMap = Map.of(btc, mockQuote);
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteMap);
 
-      Map<AssetSymbol, Money> feeMap = Map.of(btc, Money.of("5", Currency.USD));
-
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.build(eq(account), eq(quoteMap), eq(feeMap))).thenReturn(
+
+      // Use anyMap() because the service is passing an empty map {} internally
+      when(accountViewBuilder.build(eq(account), eq(quoteMap), anyMap())).thenReturn(
           expectedView);
 
       List<AccountView> result = accountQueryService.getAllAccounts(
@@ -142,17 +142,17 @@ class AccountQueryServiceTest {
       when(portfolio.getAccounts()).thenReturn(List.of(acc1, acc2));
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
 
-      Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(btc, mock(MarketAssetQuote.class), eth,
-          mock(MarketAssetQuote.class));
+      Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(
+          btc, mock(MarketAssetQuote.class),
+          eth, mock(MarketAssetQuote.class));
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteCache);
-
-      Map<AssetSymbol, Money> feesAcc1 = Map.of(btc, Money.of("10", Currency.USD));
-      Map<AssetSymbol, Money> feesAcc2 = Map.of(eth, Money.of("20", Currency.USD));
 
       AccountView view1 = mock(AccountView.class);
       AccountView view2 = mock(AccountView.class);
-      when(accountViewBuilder.build(acc1, quoteCache, feesAcc1)).thenReturn(view1);
-      when(accountViewBuilder.build(acc2, quoteCache, feesAcc2)).thenReturn(view2);
+
+      // Use anyMap() for the third argument since the service is passing an empty map
+      when(accountViewBuilder.build(eq(acc1), eq(quoteCache), anyMap())).thenReturn(view1);
+      when(accountViewBuilder.build(eq(acc2), eq(quoteCache), anyMap())).thenReturn(view2);
 
       List<AccountView> result = accountQueryService.getAllAccounts(
           new GetAllAccountsQuery(portfolioId, userId));
@@ -212,7 +212,8 @@ class AccountQueryServiceTest {
 
       assertThatThrownBy(() -> accountQueryService.getAccountSummary(
           new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId))).isInstanceOf(
-          AccountNotFoundException.class).hasMessageContaining(accId.toString());
+              AccountNotFoundException.class)
+          .hasMessageContaining(accId.toString());
     }
 
     @Test

@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -103,7 +105,8 @@ class TransactionRecordingServiceImplTest {
       when(account.isActive()).thenReturn(false);
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW)).isInstanceOf(AccountClosedException.class);
+              NOTES, NOW))
+          .isInstanceOf(AccountClosedException.class);
     }
 
     @Test
@@ -112,7 +115,7 @@ class TransactionRecordingServiceImplTest {
       Instant invalidDate = CREATION_DATE.minus(Duration.ofDays(1));
       assertThatThrownBy(
           () -> service.recordDeposit(account, HUNDRED_USD_MONEY, NOTES, invalidDate)).isInstanceOf(
-          IllegalArgumentException.class);
+              IllegalArgumentException.class);
     }
   }
 
@@ -130,9 +133,11 @@ class TransactionRecordingServiceImplTest {
       return Stream.of(Arguments.of(Named.of("No Fees", null), new BigDecimal("1000.00")),
           Arguments.of(
               Named.of("With $10 Fee", List.of(Fee.of(FeeType.COMMISSION, Money.of(10, USD), NOW))),
-              new BigDecimal("990.00")), Arguments.of(Named.of("Multiple Fees ($15 total)",
+              new BigDecimal("990.00")),
+          Arguments.of(Named.of("Multiple Fees ($15 total)",
               List.of(Fee.of(FeeType.BROKERAGE, Money.of(10, USD), NOW),
-                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))), new BigDecimal("985.00")));
+                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))),
+              new BigDecimal("985.00")));
     }
 
     @ParameterizedTest
@@ -162,7 +167,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW)).isInstanceOf(InsufficientFundsException.class);
+              NOTES, NOW))
+          .isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).withdraw(any(), any(), anyBoolean());
       verify(account, never()).applyPositionResult(any(), any());
@@ -203,7 +209,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, List.of(), NOTES,
-              NOW)).isInstanceOf(IllegalStateException.class)
+              NOW))
+          .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot sell: no open position for AAPL");
 
       verify(account).getPosition(AAPL);
@@ -243,7 +250,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, null, NOTES,
-              NOW)).isInstanceOf(InsufficientQuantityException.class);
+              NOW))
+          .isInstanceOf(InsufficientQuantityException.class);
     }
   }
 
@@ -306,7 +314,8 @@ class TransactionRecordingServiceImplTest {
       Quantity partialQty = new Quantity(new BigDecimal("5.00"));
       assertThatThrownBy(
           () -> service.recordReturnOfCapital(account, AAPL, partialQty, HUNDRED_USD_PRICE, NOTES,
-              NOW)).isInstanceOf(IllegalArgumentException.class)
+              NOW))
+          .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("must match total held quantity");
     }
 
@@ -317,7 +326,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSplit(account, AAPL, RATIO_3_FOR_1, NOTES, NOW)).isInstanceOf(
-          AccountClosedException.class);
+              AccountClosedException.class);
     }
 
     @Test
@@ -328,7 +337,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSplit(account, AAPL, RATIO_3_FOR_1, NOTES, NOW)).isInstanceOf(
-          IllegalStateException.class).hasMessageContaining("no open position found for AAPL");
+              IllegalStateException.class)
+          .hasMessageContaining("no open position found for AAPL");
     }
 
     @Test
@@ -573,6 +583,29 @@ class TransactionRecordingServiceImplTest {
     }
 
     @Test
+    @DisplayName("recordInterest: should handle null symbol by using CASH reason and omitting symbol metadata")
+    void recordInterestWithNullSymbol() {
+      AssetSymbol nullSymbol = null;
+      Money amount = Money.of("10.00", USD);
+      String notes = "Monthly Interest";
+      Instant now = Instant.now();
+
+      when(account.getAccountId()).thenReturn(AccountId.newId());
+      when(account.isActive()).thenReturn(true);
+
+      Transaction result = service.recordInterest(account, nullSymbol, amount, notes, now);
+
+      String expectedReason = "INTEREST: CASH";
+      verify(account).deposit(eq(amount), eq(expectedReason));
+
+      assertFalse(result.metadata().containsKey(TransactionMetadata.KEY_SYMBOL),
+          "Metadata should not contain a 'symbol' key when input symbol is null");
+
+      assertEquals(TransactionType.INTEREST, result.transactionType());
+      assertEquals(AssetType.CASH, result.metadata().assetType());
+    }
+
+    @Test
     @DisplayName("recordFee: withdraw amount and verify negative cash delta")
     void recordFeeSuccess() {
       Money feeAmt = Money.of(15, USD);
@@ -589,7 +622,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordReturnOfCapital(account, AAPL, TEN, HUNDRED_USD_PRICE, NOTES,
-              NOW)).isInstanceOf(IllegalStateException.class);
+              NOW))
+          .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

@@ -18,6 +18,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSpl
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferOutCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand.DripExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -88,6 +89,17 @@ class TransactionCommandValidatorTest {
 
       assertSuccess(result);
     }
+
+    @Test
+    @DisplayName("shouldPassWithValidCommand: failure missing asset type")
+    void shouldFailWithMissingAssetType() {
+      RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          "AAPL", null, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null);
+
+      ValidationResult result = validator.validate(command);
+
+      assertFailure(result, "Asset type is null");
+    }
   }
 
   // ------------------- SALE -------------------
@@ -141,6 +153,14 @@ class TransactionCommandValidatorTest {
   @Nested
   @DisplayName("validateInterest: interest validation")
   class InterestTests {
+    @Test
+    @DisplayName("shouldValidateSymbolWhenAssetInterest is false")
+    void shouldValidateSymbolWhenAssetInterestIsFalse() {
+      RecordInterestCommand command = new RecordInterestCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          "", validMoney(), NOW, null);
+
+      assertSuccess(validator.validate(command));
+    }
 
     @Test
     @DisplayName("shouldValidateSymbolWhenAssetInterest")
@@ -169,9 +189,20 @@ class TransactionCommandValidatorTest {
   @Nested
   @DisplayName("validateDividendReinvestment: DRIP validation")
   class DripTests {
+    @Test
+    @DisplayName("recordDividendReinvestmentCommand: passes")
+    void shouldPassWithValidCommand() {
+      DripExecution execution = new DripExecution(Quantity.of(1), Price.of("9.99", USD));
+      RecordDividendReinvestmentCommand command = new RecordDividendReinvestmentCommand(
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL", execution, NOW, null);
+
+      ValidationResult result = validator.validate(command);
+
+      assertSuccess(result);
+    }
 
     @Test
-    @DisplayName("shouldFailWhenExecutionMissing")
+    @DisplayName("shouldFailWhenExecutionMissing: missing execution type")
     void shouldFailWhenExecutionMissing() {
       RecordDividendReinvestmentCommand command = new RecordDividendReinvestmentCommand(
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL", null, NOW, null);
@@ -185,6 +216,17 @@ class TransactionCommandValidatorTest {
   @Nested
   @DisplayName("validateSplit: split validation")
   class SplitTests {
+
+    @Test
+    @DisplayName("validateSplit: passes")
+    void shouldPass() {
+      RecordSplitCommand command = new RecordSplitCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
+          new Ratio(1, 2), NOW, null);
+
+      ValidationResult result = validator.validate(command);
+
+      assertSuccess(result);
+    }
 
     @Test
     @DisplayName("shouldFailWhenRatioIsOneToOne")
@@ -239,6 +281,17 @@ class TransactionCommandValidatorTest {
   class FeeTests {
 
     @Test
+    @DisplayName("validateFee: passes")
+    void shouldBeSuccess() {
+      RecordFeeCommand command = new RecordFeeCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          validMoney(), FeeType.ACCOUNT_MAINTENANCE, NOW, null);
+
+      ValidationResult result = validator.validate(command);
+
+      assertSuccess(result);
+    }
+
+    @Test
     @DisplayName("shouldFailWhenFeeTypeMissing")
     void shouldFailWhenFeeTypeMissing() {
       RecordFeeCommand command = new RecordFeeCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
@@ -279,6 +332,28 @@ class TransactionCommandValidatorTest {
       ValidationResult result = validator.validate(command);
 
       assertSuccess(result);
+    }
+
+    @Test
+    @DisplayName("validateStringLength: checks")
+    void ExcludeTransactionCommandFailsWhenResonsNullAndEmptyAndLong() {
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, TransactionId.newId(), null);
+      ExcludeTransactionCommand command2 = new ExcludeTransactionCommand(PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, TransactionId.newId(), "");
+
+      String longReason = "a".repeat(501);
+      ExcludeTransactionCommand command3 = new ExcludeTransactionCommand(PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, TransactionId.newId(), longReason);
+
+      ValidationResult result = validator.validate(command);
+      ValidationResult result2 = validator.validate(command2);
+      ValidationResult result3 = validator.validate(command3);
+
+      assertFailure(result, "Reason is required");
+      assertFailure(result2, "Reason is required");
+      assertFailure(result3, "Reason must be 500 characters or less");
+
     }
 
     @MethodSource("provideInvalidReasons")

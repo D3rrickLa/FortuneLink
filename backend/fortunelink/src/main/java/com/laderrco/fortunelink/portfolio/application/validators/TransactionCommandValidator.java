@@ -15,6 +15,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTra
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferOutCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.IdentifiedTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import java.util.ArrayList;
@@ -131,18 +132,14 @@ public class TransactionCommandValidator {
 
   public ValidationResult validate(ExcludeTransactionCommand command) {
     return validateCommand(command, errors -> {
-      if (command.transactionId() == null) {
-        errors.add("TransactionId is required");
-      }
+      validateTransactionId(command, errors);
       validateStringLength(command.reason(), errors);
     });
   }
 
   public ValidationResult validate(RestoreTransactionCommand command) {
     return validateCommand(command, errors -> {
-      if (command.transactionId() == null) {
-        errors.add("TransactionId is required");
-      }
+      validateTransactionId(command, errors);
     });
   }
 
@@ -178,6 +175,12 @@ public class TransactionCommandValidator {
     }
     if (command.accountId() == null) {
       errors.add("AccountId is required");
+    }
+  }
+
+  private void validateTransactionId(IdentifiedTransactionCommand command, List<String> errors) {
+    if (command.transactionId() == null) {
+      errors.add("TransactionId is required");
     }
   }
 

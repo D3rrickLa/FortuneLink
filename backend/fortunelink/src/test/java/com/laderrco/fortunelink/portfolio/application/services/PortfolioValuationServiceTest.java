@@ -5,11 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -179,6 +175,64 @@ class PortfolioValuationServiceTest {
 
       verify(exchangeRateService, times(2)).convert(any(), eq(USD));
       assertThat(total).isEqualTo(Money.of(275, "USD"));
+    }
+
+    @Test
+    @DisplayName("calculateTotalValue: ignores accounts that are not ACTIVE")
+    void calculateTotalValueIgnoresInactiveAccounts() {
+      // 1. Setup mocks (Dependencies)
+      Portfolio portfolio = mock(Portfolio.class);
+      Account activeAcc = createMockAccount(USD, HUNDRED_USD, Map.of());
+      Account closedAcc = createMockAccount(USD, HUNDRED_USD, Map.of());
+
+      when(activeAcc.getState()).thenReturn(AccountLifecycleState.ACTIVE);
+      when(closedAcc.getState()).thenReturn(AccountLifecycleState.CLOSED);
+      when(portfolio.getAccounts()).thenReturn(List.of(activeAcc, closedAcc));
+
+      // 2. Setup dependency behavior
+      // NOTE: We don't mock 'valuationService' because it's the class we are testing!
+      // We mock the ExchangeRateService which the class calls at the end.
+      when(exchangeRateService.convert(any(), eq(USD))).thenReturn(HUNDRED_USD);
+
+      // 3. Execute
+      Money total = valuationService.calculateTotalValue(portfolio, USD, Map.of());
+
+      // 4. Assert outcome
+      assertThat(total).isEqualTo(HUNDRED_USD);
+
+      // 5. Verify dependencies, NOT the service under test
+      verify(exchangeRateService, times(1)).convert(any(), eq(USD));
+    }
+
+    @Test
+    @DisplayName("calculateTotalValue: skips accounts that return null valuation")
+    void calculateTotalValueSkipsNullValuations() {
+      // 1. Create a SPY of the service under test
+      // This allows us to mock ONE method while keeping the rest of the class real
+      PortfolioValuationServiceImpl serviceSpy = spy(valuationService);
+
+      Portfolio portfolio = mock(Portfolio.class);
+      Account goodAcc = createMockAccount(USD, HUNDRED_USD, Map.of());
+      Account faultyAcc = createMockAccount(USD, HUNDRED_USD, Map.of());
+
+      when(goodAcc.getState()).thenReturn(AccountLifecycleState.ACTIVE);
+      when(faultyAcc.getState()).thenReturn(AccountLifecycleState.ACTIVE);
+      when(goodAcc.getAccountCurrency()).thenReturn(USD);
+      when(portfolio.getAccounts()).thenReturn(List.of(goodAcc, faultyAcc));
+
+      // 2. Use doReturn for Spies to avoid calling the real method during setup
+      doReturn(HUNDRED_USD).when(serviceSpy).calculateAccountValue(eq(goodAcc), any());
+      doReturn(null).when(serviceSpy).calculateAccountValue(eq(faultyAcc), any());
+
+      // 3. Mock the external dependency
+      when(exchangeRateService.convert(HUNDRED_USD, USD)).thenReturn(HUNDRED_USD);
+
+      // 4. Call the method on the SPY, not the original service
+      Money total = serviceSpy.calculateTotalValue(portfolio, USD, Map.of());
+
+      // Assertions
+      assertThat(total).isEqualTo(HUNDRED_USD);
+      verify(exchangeRateService, times(1)).convert(any(), eq(USD));
     }
   }
 
