@@ -21,13 +21,19 @@ public interface MarketDataProvider {
 
   Optional<MarketAssetInfo> fetchAssetInfo(AssetSymbol symbol);
 
-  // Returns a list of matches for a search string (e.g., "Apple")
-    List<MarketAssetInfo> searchSymbols(String query);
-
   Map<AssetSymbol, MarketAssetInfo> fetchBatchAssetInfo(Set<AssetSymbol> symbols);
+
+  // Returns a list of matches for a search string (e.g., "Apple")
+  List<MarketAssetInfo> searchSymbols(String query);
 
   Currency fetchTradingCurrency(AssetSymbol symbol);
 
+  /**
+   * Does this Data Provider Supports this symbol
+   * 
+   * @param symbol
+   * @return
+   */
   boolean supports(AssetSymbol symbol);
 
   /**
