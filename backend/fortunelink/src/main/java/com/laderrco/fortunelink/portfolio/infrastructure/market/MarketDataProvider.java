@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.market;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 import java.time.Instant;
@@ -15,7 +16,8 @@ import java.util.Set;
  * Our Api will impelment this (i.e. FMP, Alpha Vantage, etc.)
  */
 public interface MarketDataProvider {
-  Map<AssetSymbol, MarketAssetQuote> fetchBatchQuotes(Set<AssetSymbol> symbols);
+  Map<AssetSymbol, MarketAssetQuote> fetchBatchQuotes(Set<AssetSymbol> symbols,
+      Map<AssetSymbol, Currency> knownCurrencies);
 
   Optional<MarketAssetQuote> fetchHistoricalQuote(AssetSymbol symbol, Instant date);
 
@@ -23,23 +25,14 @@ public interface MarketDataProvider {
 
   Map<AssetSymbol, MarketAssetInfo> fetchBatchAssetInfo(Set<AssetSymbol> symbols);
 
-  // Returns a list of matches for a search string (e.g., "Apple")
-  List<MarketAssetInfo> searchSymbols(String query);
+  /**
+   * Symbol autocomplete for UI search boxes.
+   * Returns shallow results only — do NOT use for transaction validation.
+   * For transaction validation, use validateAndGet(AssetSymbol).
+   */
+  List<SymbolSearchResult> searchSymbols(String query);
 
   Currency fetchTradingCurrency(AssetSymbol symbol);
-
-  /**
-   * Does this Data Provider Supports this symbol
-   * 
-   * @param symbol
-   * @return
-   */
-  boolean supports(AssetSymbol symbol);
-
-  /**
-   * Get provider name for logging/debugging.
-   */
-  String getProviderName();
 
   /**
    * Check if this provider supports the symbol.
@@ -48,4 +41,10 @@ public interface MarketDataProvider {
    * @return true if supported
    */
   boolean supportsSymbol(AssetSymbol symbol);
+
+  /**
+   * Get provider name for logging/debugging.
+   */
+  String getProviderName();
+
 }

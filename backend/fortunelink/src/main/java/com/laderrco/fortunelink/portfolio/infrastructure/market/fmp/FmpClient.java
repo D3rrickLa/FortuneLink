@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.logging.log4j.spi.ObjectThreadContextMap;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -124,7 +123,10 @@ public class FmpClient {
 
       return objectMapper.readValue(response.body(), listType);
 
-    } catch (IOException | InterruptedException e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new FmpApiException("Request interrupted", e);
+    } catch (IOException e) {
       throw new FmpApiException("Failed to communicate with FMP API", e);
     }
   }

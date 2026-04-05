@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.market.fmp;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 import org.springframework.stereotype.Component;
@@ -10,110 +11,78 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpSearchResponse;
+import com.laderrco.fortunelink.shared.enums.Precision;
+import com.laderrco.fortunelink.shared.enums.Rounding;
 
 @Component
 public class FmpResponseMapper {
-  public MarketAssetQuote toDomain(FmpQuoteResponse fmp) {
+  /**
+   * Quotes don't carry a currency field from FMP on the free tier.
+   * Caller is responsible for passing the known trading currency
+   * sourced from MarketAssetInfo (stored in market_asset_info table).
+   * This eliminates the fragile exchange-name inference entirely.
+   */
+  public MarketAssetQuote toQuote(FmpQuoteResponse fmp, Currency tradingCurrency) {
     if (fmp == null)
       return null;
 
-    Currency currency = Currency.of(inferFromExchange(fmp.getExchange()));
     return new MarketAssetQuote(
-        new AssetSymbol(fmp.getSymbol()), // Assuming AssetSymbol is a value object
-        Price.of(fmp.getPrice(), currency),
-        Price.of(fmp.getOpen(), currency),
-        Price.of(fmp.getDayHigh(), currency),
-        Price.of(fmp.getDayLow(), currency),
-        Price.of(fmp.getPreviousClose(), currency),
-        new PercentageChange(fmp.getChangePercentage()),
-        null,
+        new AssetSymbol(fmp.getSymbol()),
+        Price.of(fmp.getPrice(), tradingCurrency),
+        Price.of(fmp.getOpen(), tradingCurrency),
+        Price.of(fmp.getDayHigh(), tradingCurrency),
+        Price.of(fmp.getDayLow(), tradingCurrency),
+        Price.of(fmp.getPreviousClose(), tradingCurrency),
+        new PercentageChange(
+            fmp.getChangePercentage()
+                .divide(BigDecimal.valueOf(100),
+                    Precision.PERCENTAGE.getDecimalPlaces(),
+                    Rounding.PERCENTAGE.getMode())),
+        fmp.getChange(),
         fmp.getMarketCap(),
         fmp.getVolume(),
-        "Financial Modeling Prep",
+        "FMP",
         Instant.ofEpochSecond(fmp.getTimestamp()));
   }
 
-  public MarketAssetInfo toDomain(FmpProfileResponse fmp) {
+  public MarketAssetInfo toAssetInfo(FmpProfileResponse fmp) {
     if (fmp == null)
       return null;
 
     return new MarketAssetInfo(
         new AssetSymbol(fmp.getSymbol()),
         fmp.getCompanyName(),
-        AssetType.valueOf(mapQuoteTypeToAssetType(fmp)),
+        AssetType.valueOf(mapToAssetType(fmp)),
         fmp.getExchange(),
-        Currency.of(fmp.getCountry()),
+        Currency.of(fmp.getCurrency()),
         fmp.getSector(),
         fmp.getDescription());
   }
 
-  public MarketAssetInfo toDomain(FmpSearchResponse fmp) {
-    if (fmp == null) {
+  public SymbolSearchResult toSearchResult(FmpSearchResponse fmp) {
+    if (fmp == null)
       return null;
-    }
 
-    return new MarketAssetInfo(
-      new AssetSymbol(fmp.getSymbol()),
-      fmp.getName(),
-      null,
-      fmp.getExchangeFullName(),
-      Currency.of(fmp.getCurrency()),
-      null,
-      null
-    );
+    return new SymbolSearchResult(
+        new AssetSymbol(fmp.getSymbol()),
+        fmp.getName(),
+        fmp.getExchangeFullName(),
+        Currency.of(fmp.getCurrency()));
   }
 
-  private String mapQuoteTypeToAssetType(FmpProfileResponse profileResponse) {
-    if (profileResponse.getIsEtf()) {
+  private String mapToAssetType(FmpProfileResponse fmp) {
+    if (Boolean.TRUE.equals(fmp.getIsEtf()))
       return "ETF";
-    }
+    if (Boolean.TRUE.equals(fmp.getIsFund()))
+      return "OTHER";
 
-    if (profileResponse.getIsFund()) {
-      return "MUTUAL_FUND";
-    }
-
-    if (profileResponse.getExchange() != null) {
-      String ex = profileResponse.getExchange().toUpperCase();
+    if (fmp.getExchange() != null) {
+      String ex = fmp.getExchange().toUpperCase();
       if (ex.contains("CRYPTO"))
         return "CRYPTO";
       if (ex.contains("FOREX") || ex.contains("CURRENCY"))
-        return "CURRENCY";
+        return "FOREX_PAIR";
     }
-    // 3. Check Industry/Sector for Indices
-    if (profileResponse.getIndustry() != null && profileResponse.getIndustry().toUpperCase().contains("INDEX")) {
-      return "INDEX";
-    }
-
     return "STOCK";
-  }
-
-  private String inferFromExchange(String exchange) {
-    if (exchange == null) {
-      return "USD";
-    }
-
-    String ex = exchange.toUpperCase();
-
-    // direct class match - REALLY DIRTY
-    if (ex.contains("CRYPTO"))
-      return "USD";
-    if (ex.contains("FOREX"))
-      return "USD";
-    if (ex.contains("COMMODITY"))
-      return "USD";
-    if (ex.contains("INDEX"))
-      return "USD";
-
-    return switch (ex) {
-      case "TSX", "TORONTO", "TSXV" -> "CAD";
-      case "LSE", "LONDON" -> "GBP";
-      case "XETRA", "EURONEXT", "MCX" -> "EUR";
-      case "HKSE" -> "HKD";
-      case "ASX" -> "AUD";
-      case "NSE", "BSE" -> "INR";
-      case "JPX", "TOKYO" -> "JPY";
-      // Add more as needed
-      default -> "USD"; // Default for NASDAQ/NYSE
-    };
   }
 }
