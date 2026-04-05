@@ -51,17 +51,15 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
       @Param("accountId") UUID accountId);
 
   /**
-   * Used in the 'save' logic to find the denormalized portfolioId when it's not
-   * provided. Assumes a
+   * Used in the 'save' logic to find the denormalized portfolioId when it's not provided. Assumes a
    * relationship exists between Account and Portfolio.
    */
   @Query("SELECT a.portfolio.id FROM AccountJpaEntity a WHERE a.id = :accountId")
   UUID findPortfolioIdByAccountId(@Param("accountId") UUID accountId);
 
   /**
-   * Uses accountAmount when set (post-conversion), falls back to nativeAmount.
-   * This is safe only because Fee.withConversion() guarantees accountAmount
-   * is always in account base currency.
+   * Uses accountAmount when set (post-conversion), falls back to nativeAmount. This is safe only
+   * because Fee.withConversion() guarantees accountAmount is always in account base currency.
    */
   @Query("""
       SELECT t.accountId as accountId,
@@ -76,7 +74,8 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
         AND t.executionSymbol IS NOT NULL
       GROUP BY t.accountId, t.executionSymbol, t.cashDeltaCurrency
       """)
-  List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(@Param("accountIds") List<UUID> accountIds);
+  List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(
+      @Param("accountIds") List<UUID> accountIds);
 
   @Query("""
       SELECT t FROM TransactionJpaEntity t
@@ -85,12 +84,9 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
         AND (:startDate IS NULL OR t.occurredAt >= :startDate)
         AND (:endDate IS NULL OR t.occurredAt <= :endDate)
       """)
-  Page<TransactionJpaEntity> findTransactionsDynamic(
-      @Param("accountId") UUID accountId,
-      @Param("symbol") String symbol,
-      @Param("startDate") Instant startDate,
-      @Param("endDate") Instant endDate,
-      Pageable pageable);
+  Page<TransactionJpaEntity> findTransactionsDynamic(@Param("accountId") UUID accountId,
+      @Param("symbol") String symbol, @Param("startDate") Instant startDate,
+      @Param("endDate") Instant endDate, Pageable pageable);
 
   // --- Deletion Logic ---
   @Modifying

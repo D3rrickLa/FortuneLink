@@ -1,59 +1,27 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos;
 
-import java.math.BigDecimal;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
 import lombok.Data;
 
 /**
  * FMP API response for company profile endpoint.
- * 
- * Endpoint: GET /profile/{symbol}
- * Example: https://financialmodelingprep.com/api/v3/profile/AAPL?apikey=xxx
- * 
- * Sample Response:
- * [
- * {
- * "symbol": "AAPL",
- * "price": 150.25,
- * "beta": 1.2,
- * "volAvg": 75000000,
- * "mktCap": 2500000000000,
- * "lastDiv": 0.92,
- * "range": "120.00-180.00",
- * "changes": 2.25,
- * "companyName": "Apple Inc.",
- * "currency": "USD",
- * "cik": "0000320193",
- * "isin": "US0378331005",
- * "cusip": "037833100",
- * "exchange": "NASDAQ Global Select",
- * "exchangeShortName": "NASDAQ",
- * "industry": "Consumer Electronics",
- * "website": "https://www.apple.com",
- * "description": "Apple Inc. designs, manufactures, and markets
- * smartphones...",
- * "ceo": "Timothy Cook",
- * "sector": "Technology",
- * "country": "US",
- * "fullTimeEmployees": "164000",
- * "phone": "14089961010",
- * "address": "One Apple Park Way",
- * "city": "Cupertino",
- * "state": "CA",
- * "zip": "95014",
- * "dcfDiff": 5.25,
- * "dcf": 145.00,
- * "image": "https://financialmodelingprep.com/image-stock/AAPL.png",
- * "ipoDate": "1980-12-12",
- * "defaultImage": false,
- * "isEtf": false,
- * "isActivelyTrading": true,
- * "isAdr": false,
- * "isFund": false
- * }
- * ]
+ * <p>
+ * Endpoint: GET /profile/{symbol} Example:
+ * https://financialmodelingprep.com/api/v3/profile/AAPL?apikey=xxx
+ * <p>
+ * Sample Response: [ { "symbol": "AAPL", "price": 150.25, "beta": 1.2, "volAvg": 75000000,
+ * "mktCap": 2500000000000, "lastDiv": 0.92, "range": "120.00-180.00", "changes": 2.25,
+ * "companyName": "Apple Inc.", "currency": "USD", "cik": "0000320193", "isin": "US0378331005",
+ * "cusip": "037833100", "exchange": "NASDAQ Global Select", "exchangeShortName": "NASDAQ",
+ * "industry": "Consumer Electronics", "website": "https://www.apple.com", "description": "Apple
+ * Inc. designs, manufactures, and markets smartphones...", "ceo": "Timothy Cook", "sector":
+ * "Technology", "country": "US", "fullTimeEmployees": "164000", "phone": "14089961010", "address":
+ * "One Apple Park Way", "city": "Cupertino", "state": "CA", "zip": "95014", "dcfDiff": 5.25, "dcf":
+ * 145.00, "image": "https://financialmodelingprep.com/image-stock/AAPL.png", "ipoDate":
+ * "1980-12-12", "defaultImage": false, "isEtf": false, "isActivelyTrading": true, "isAdr": false,
+ * "isFund": false } ]
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

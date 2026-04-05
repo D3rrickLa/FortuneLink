@@ -105,8 +105,7 @@ class TransactionRecordingServiceImplTest {
       when(account.isActive()).thenReturn(false);
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW, false))
-          .isInstanceOf(AccountClosedException.class);
+              NOTES, NOW, false)).isInstanceOf(AccountClosedException.class);
     }
 
     @Test
@@ -115,7 +114,7 @@ class TransactionRecordingServiceImplTest {
       Instant invalidDate = CREATION_DATE.minus(Duration.ofDays(1));
       assertThatThrownBy(
           () -> service.recordDeposit(account, HUNDRED_USD_MONEY, NOTES, invalidDate)).isInstanceOf(
-              IllegalArgumentException.class);
+          IllegalArgumentException.class);
     }
   }
 
@@ -133,11 +132,9 @@ class TransactionRecordingServiceImplTest {
       return Stream.of(Arguments.of(Named.of("No Fees", null), new BigDecimal("1000.00")),
           Arguments.of(
               Named.of("With $10 Fee", List.of(Fee.of(FeeType.COMMISSION, Money.of(10, USD), NOW))),
-              new BigDecimal("990.00")),
-          Arguments.of(Named.of("Multiple Fees ($15 total)",
+              new BigDecimal("990.00")), Arguments.of(Named.of("Multiple Fees ($15 total)",
               List.of(Fee.of(FeeType.BROKERAGE, Money.of(10, USD), NOW),
-                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))),
-              new BigDecimal("985.00")));
+                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))), new BigDecimal("985.00")));
     }
 
     @ParameterizedTest
@@ -149,7 +146,8 @@ class TransactionRecordingServiceImplTest {
       when(account.hasSufficientCash(any())).thenReturn(true);
       when(account.getPosition(AAPL)).thenReturn(Optional.of(mockPos));
 
-      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW, false);
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW,
+          false);
 
       verify(account).ensurePosition(AAPL, AssetType.STOCK);
       verify(account, atLeastOnce()).withdraw(
@@ -167,8 +165,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW, false))
-          .isInstanceOf(InsufficientFundsException.class);
+              NOTES, NOW, false)).isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).withdraw(any(), any(), anyBoolean());
       verify(account, never()).applyPositionResult(any(), any());
@@ -181,7 +178,8 @@ class TransactionRecordingServiceImplTest {
       when(account.getAccountCurrency()).thenReturn(USD);
       when(account.getPosition(any())).thenReturn(Optional.of(acb));
 
-      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, true);
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW,
+          true);
 
       verify(account).applyPositionResult(any(), any());
       verify(account, never()).hasSufficientCash(any());
@@ -195,7 +193,8 @@ class TransactionRecordingServiceImplTest {
       when(account.getAccountCurrency()).thenReturn(USD);
       when(account.getPosition(any())).thenReturn(Optional.of(acb));
 
-      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false);
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW,
+          false);
 
       // Assert
       verify(account).applyPositionResult(any(), any());
@@ -209,8 +208,8 @@ class TransactionRecordingServiceImplTest {
       when(account.getCashBalance()).thenReturn(Money.zero(USD));
 
       assertThatThrownBy(
-          () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false))
-          .isInstanceOf(InsufficientFundsException.class);
+          () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
+              NOTES, NOW, false)).isInstanceOf(InsufficientFundsException.class);
 
       verify(account).hasSufficientCash(any());
       verify(account, never()).applyPositionResult(any(), any());
@@ -224,8 +223,8 @@ class TransactionRecordingServiceImplTest {
       when(account.getCashBalance()).thenReturn(Money.zero(USD));
 
       assertThatThrownBy(
-          () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false))
-          .isInstanceOf(InsufficientFundsException.class);
+          () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
+              NOTES, NOW, false)).isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).applyPositionResult(any(), any());
     }
@@ -242,7 +241,8 @@ class TransactionRecordingServiceImplTest {
       lenient().when(account.isInReplayMode()).thenReturn(false);
       when(account.getAccountCurrency()).thenReturn(USD);
 
-      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false);
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW,
+          false);
 
       verify(account).applyPositionResult(any(), any());
     }
@@ -282,8 +282,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, List.of(), NOTES,
-              NOW))
-          .isInstanceOf(IllegalStateException.class)
+              NOW)).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot sell: no open position for AAPL");
 
       verify(account).getPosition(AAPL);
@@ -323,8 +322,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, null, NOTES,
-              NOW))
-          .isInstanceOf(InsufficientQuantityException.class);
+              NOW)).isInstanceOf(InsufficientQuantityException.class);
     }
   }
 
@@ -387,8 +385,7 @@ class TransactionRecordingServiceImplTest {
       Quantity partialQty = new Quantity(new BigDecimal("5.00"));
       assertThatThrownBy(
           () -> service.recordReturnOfCapital(account, AAPL, partialQty, HUNDRED_USD_PRICE, NOTES,
-              NOW))
-          .isInstanceOf(IllegalArgumentException.class)
+              NOW)).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("must match total held quantity");
     }
 
@@ -399,7 +396,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSplit(account, AAPL, RATIO_3_FOR_1, NOTES, NOW)).isInstanceOf(
-              AccountClosedException.class);
+          AccountClosedException.class);
     }
 
     @Test
@@ -410,8 +407,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSplit(account, AAPL, RATIO_3_FOR_1, NOTES, NOW)).isInstanceOf(
-              IllegalStateException.class)
-          .hasMessageContaining("no open position found for AAPL");
+          IllegalStateException.class).hasMessageContaining("no open position found for AAPL");
     }
 
     @Test
@@ -695,8 +691,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordReturnOfCapital(account, AAPL, TEN, HUNDRED_USD_PRICE, NOTES,
-              NOW))
-          .isInstanceOf(IllegalStateException.class);
+              NOW)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

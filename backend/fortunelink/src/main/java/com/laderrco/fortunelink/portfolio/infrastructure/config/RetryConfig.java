@@ -7,5 +7,5 @@ import org.springframework.retry.annotation.EnableRetry;
 @Configuration
 public class RetryConfig {
 
-  
+
 }

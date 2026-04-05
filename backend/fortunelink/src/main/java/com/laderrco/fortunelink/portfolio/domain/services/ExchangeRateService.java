@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio.domain.services;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -26,17 +25,13 @@ public interface ExchangeRateService {
   Optional<ExchangeRate> getRate(Currency from, Currency to);
 
   /**
-   * Converts an amount to a target currency using a historical rate.
-   */
-  Money convert(Money amount, Currency targetCurrency, Instant asOfDate);
-
-  /**
    * Converts an amount to a target currency using the current rate.
    */
   Money convert(Money amount, Currency targetCurrency);
 
   /**
-   * Converts a price object to a target currency using the current rate.
+   * Converts an amount to a target currency using a historical rate.
    */
-  Price convertToPrice(Money price, Currency targetCurrency);
+  Money convert(Money amount, Currency targetCurrency, Instant asOfDate);
+
 }

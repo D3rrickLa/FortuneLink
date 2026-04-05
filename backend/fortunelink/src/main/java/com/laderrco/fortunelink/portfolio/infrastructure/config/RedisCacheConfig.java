@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -67,8 +68,28 @@ public class RedisCacheConfig {
   @Value("${fortunelink.cache.key-prefix.buy-fees}")
   private String buyFeesCacheName;
 
-  @Bean("redisCacheObjectMapper")
-  public ObjectMapper redisCacheObjectMapper() {
+  @Bean
+  public RedisTemplate<String, MarketAssetQuote> marketAssetQuoteRedisTemplate(
+      RedisConnectionFactory connectionFactory,
+      @Qualifier("redisCacheObjectMapper") ObjectMapper objectMapper) {
+
+    RedisTemplate<String, MarketAssetQuote> template = new RedisTemplate<>();
+    template.setConnectionFactory(connectionFactory);
+
+    template.setKeySerializer(new StringRedisSerializer());
+
+    // Use the specific Jackson serializer for MarketAssetQuote
+    JacksonJsonRedisSerializer<MarketAssetQuote> serializer = new JacksonJsonRedisSerializer<>(
+        objectMapper, MarketAssetQuote.class);
+
+    template.setValueSerializer(serializer);
+    template.setHashValueSerializer(serializer);
+
+    return template;
+  }
+
+  @Bean(name = "redisCacheObjectMapper")
+  public JsonMapper redisCacheObjectMapper() {
     SimpleModule module = new SimpleModule().addSerializer(MarketAssetInfo.class,
             new MarketAssetInfoSerializer())
         .addDeserializer(MarketAssetInfo.class, new MarketAssetInfoDeserializer())
@@ -86,7 +107,7 @@ public class RedisCacheConfig {
 
   @Bean
   public CacheManager cacheManager(RedisConnectionFactory connectionFactory,
-      @Qualifier("redisCacheObjectMapper") ObjectMapper objectMapper) {
+      @Qualifier("redisCacheObjectMapper") JsonMapper objectMapper) {
 
     StringRedisSerializer keySerializer = new StringRedisSerializer();
     GenericJacksonJsonRedisSerializer genericValueSerializer = new GenericJacksonJsonRedisSerializer(

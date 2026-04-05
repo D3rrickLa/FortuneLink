@@ -19,10 +19,9 @@ import lombok.Builder;
 // asset entity - your identifier calss, the acutal holding
 
 /**
- * @param assetType Client-supplied type hint. Used only when the symbol is not yet cached in
- *                  market_asset_info. The service validates and sanitizes this value — never pass
- *                  it directly to domain logic.
- * 
+ * @param assetType     Client-supplied type hint. Used only when the symbol is not yet cached in
+ *                      market_asset_info. The service validates and sanitizes this value — never
+ *                      pass it directly to domain logic.
  * @param skipCashCheck true for historical/import flow, default is false
  */
 @Builder

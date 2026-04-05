@@ -72,7 +72,7 @@ class AccountTest {
           () -> assertEquals(account.getPositionStrategy(), PositionStrategy.ACB),
           () -> assertNotNull(account.getCreationDate()),
           () -> assertEquals(account.getLastUpdatedOn(), account.getCreationDate()),
-          () -> assertTrue(account.getHealthStatus().equals(HealthStatus.HEALTHY)));
+          () -> assertEquals(account.getHealthStatus(), HealthStatus.HEALTHY));
     }
 
     @Test

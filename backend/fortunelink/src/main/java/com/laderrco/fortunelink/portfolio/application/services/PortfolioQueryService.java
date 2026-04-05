@@ -130,8 +130,8 @@ public class PortfolioQueryService {
     Money netWorth = totalAssets.subtract(totalLiabilities);
 
     // TODO: in frontend, display a warning because we didn't implement this
-    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency, liabilitiesIncluded, 
-      isStale, Instant.now());
+    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency,
+        liabilitiesIncluded, isStale, Instant.now());
   }
 
   /**

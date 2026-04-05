@@ -33,8 +33,8 @@ public class PositionRecalculationService {
       acquireAndRun(lockKey, event);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.error("Recalculation interrupted for portfolioId={} accountId={}",
-          event.portfolioId(), event.accountId(), e);
+      log.error("Recalculation interrupted for portfolioId={} accountId={}", event.portfolioId(),
+          event.accountId(), e);
       accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
     }
   }
@@ -75,11 +75,11 @@ public class PositionRecalculationService {
 
   private void runRecalculation(PositionRecalculationRequestedEvent event) {
     try {
-      executor.scheduleRecalculation(
-          event.portfolioId(), event.userId(), event.accountId(), event.symbol());
+      executor.scheduleRecalculation(event.portfolioId(), event.userId(), event.accountId(),
+          event.symbol());
     } catch (Exception e) {
-      log.error("Recalculation failed for accountId={} symbol={}",
-          event.accountId(), event.symbol().symbol(), e);
+      log.error("Recalculation failed for accountId={} symbol={}", event.accountId(),
+          event.symbol().symbol(), e);
       accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
       throw e;
     }

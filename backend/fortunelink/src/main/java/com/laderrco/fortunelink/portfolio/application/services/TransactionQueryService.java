@@ -42,23 +42,18 @@ public class TransactionQueryService {
     Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
     // 1. Security & Basic Validation
-    portfolioLoader.validatePortfolioAndAccountOwnership(
-        query.portfolioId(), query.userId(), query.accountId());
-    
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
+        query.accountId());
+
     validateDateRange(query.startDate(), query.endDate());
 
     // 2. Execute the single, unified dynamic query
     // This replaces all the 'if (hasDateRange) ... else if (hasSymbol)' logic
-    Page<Transaction> page = transactionQueryRepository.findTransactionsDynamic(
-        query.accountId(),
-        query.symbol(),
-        query.startDate(),
-        query.endDate(),
-        query.toPageable()
-    );
+    Page<Transaction> page = transactionQueryRepository.findTransactionsDynamic(query.accountId(),
+        query.symbol(), query.startDate(), query.endDate(), query.toPageable());
 
     return page.map(transactionViewMapper::toTransactionView);
-}
+  }
 
   /**
    * Unbounded fetch for internal calculations only. NEVER expose this through a controller

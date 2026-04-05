@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -26,9 +25,8 @@ public interface MarketDataProvider {
   Map<AssetSymbol, MarketAssetInfo> fetchBatchAssetInfo(Set<AssetSymbol> symbols);
 
   /**
-   * Symbol autocomplete for UI search boxes.
-   * Returns shallow results only — do NOT use for transaction validation.
-   * For transaction validation, use validateAndGet(AssetSymbol).
+   * Symbol autocomplete for UI search boxes. Returns shallow results only — do NOT use for
+   * transaction validation. For transaction validation, use validateAndGet(AssetSymbol).
    */
   List<SymbolSearchResult> searchSymbols(String query);
 

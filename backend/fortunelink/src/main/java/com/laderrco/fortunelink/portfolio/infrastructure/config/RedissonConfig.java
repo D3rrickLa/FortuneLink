@@ -8,6 +8,7 @@ import org.redisson.config.EqualJitterDelay;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 @Configuration
 public class RedissonConfig {
@@ -21,19 +22,20 @@ public class RedissonConfig {
   @Value("${spring.data.redis.password:}")
   private String password;
 
+  @Lazy
   @Bean(destroyMethod = "shutdown")
   public RedissonClient redissonClient() {
     Config config = new Config();
     String address = "redis://" + host + ":" + port;
 
-    config.useSingleServer()
-        .setAddress(address)
-        .setConnectionMinimumIdleSize(2)
-        .setConnectionPoolSize(10)
-        .setTimeout(2000)
-        .setRetryAttempts(3)
-        .setRetryDelay(new EqualJitterDelay(Duration.ofSeconds(500), Duration.ofSeconds(600)));
-    config.setPassword(password.isBlank() ? null : password);
+    var serverConfig = config.useSingleServer().setAddress(address).setConnectionMinimumIdleSize(2)
+        .setConnectionPoolSize(10).setTimeout(2000).setRetryAttempts(3)
+        .setRetryDelay(new EqualJitterDelay(Duration.ofMillis(500), Duration.ofMillis(1000)));
+
+    if (!password.isBlank()) {
+      serverConfig.setPassword(password);
+    }
+
     return Redisson.create(config);
   }
 }

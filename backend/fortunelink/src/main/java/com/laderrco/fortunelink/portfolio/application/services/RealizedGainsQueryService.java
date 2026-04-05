@@ -1,12 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.laderrco.fortunelink.portfolio.application.queries.GetRealizedGainsQuery;
 import com.laderrco.fortunelink.portfolio.application.repositories.RealizedGainsQueryRepository;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
@@ -16,8 +9,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +26,8 @@ public class RealizedGainsQueryService {
   public RealizedGainsSummaryView getRealizedGains(GetRealizedGainsQuery query) {
     Objects.requireNonNull(query, "GetRealizedGainsQuery cannot be null");
 
-    portfolioLoader.validatePortfolioAndAccountOwnership(
-        query.portfolioId(), query.userId(), query.accountId());
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
+        query.accountId());
 
     List<RealizedGainRecord> records = fetchRecords(query);
 
@@ -43,8 +40,8 @@ public class RealizedGainsQueryService {
     boolean hasSymbol = query.symbol() != null;
 
     if (hasYear && hasSymbol) {
-      return repository.findByAccountIdAndYearAndSymbol(
-          query.accountId(), query.taxYear(), query.symbol());
+      return repository.findByAccountIdAndYearAndSymbol(query.accountId(), query.taxYear(),
+          query.symbol());
     } else if (hasYear) {
       return repository.findByAccountIdAndYear(query.accountId(), query.taxYear());
     } else if (hasSymbol) {
@@ -59,14 +56,11 @@ public class RealizedGainsQueryService {
       return records.get(0).realizedGainLoss().currency();
     }
     // No records to derive currency from, do a lightweight lookup.
-    return repository.findAccountCurrencyCode(accountId)
-        .map(Currency::of)
+    return repository.findAccountCurrencyCode(accountId).map(Currency::of)
         .orElse(Currency.CAD); // safe fallback, account should always have a currency
   }
 
-  private RealizedGainsSummaryView buildSummary(
-      List<RealizedGainRecord> records,
-      Currency currency,
+  private RealizedGainsSummaryView buildSummary(List<RealizedGainRecord> records, Currency currency,
       Integer taxYear) {
 
     Money totalGains = Money.zero(currency);
@@ -74,12 +68,8 @@ public class RealizedGainsQueryService {
     List<RealizedGainView> views = new ArrayList<>();
 
     for (RealizedGainRecord r : records) {
-      views.add(new RealizedGainView(
-          r.symbol().symbol(),
-          r.realizedGainLoss(),
-          r.costBasisSold(),
-          r.occurredAt(),
-          r.isGain()));
+      views.add(new RealizedGainView(r.symbol().symbol(), r.realizedGainLoss(), r.costBasisSold(),
+          r.occurredAt(), r.isGain()));
 
       if (r.isGain()) {
         totalGains = totalGains.add(r.realizedGainLoss());
@@ -90,6 +80,7 @@ public class RealizedGainsQueryService {
     }
 
     Money netGainLoss = totalGains.subtract(totalLosses);
-    return new RealizedGainsSummaryView(views, totalGains, totalLosses, netGainLoss, currency, taxYear);
+    return new RealizedGainsSummaryView(views, totalGains, totalLosses, netGainLoss, currency,
+        taxYear);
   }
 }

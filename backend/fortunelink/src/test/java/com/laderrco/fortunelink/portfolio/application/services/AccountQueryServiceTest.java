@@ -108,8 +108,7 @@ class AccountQueryServiceTest {
       AccountView expectedView = mock(AccountView.class);
 
       // Use anyMap() because the service is passing an empty map {} internally
-      when(accountViewBuilder.build(eq(account), eq(quoteMap), anyMap())).thenReturn(
-          expectedView);
+      when(accountViewBuilder.build(eq(account), eq(quoteMap), anyMap())).thenReturn(expectedView);
 
       List<AccountView> result = accountQueryService.getAllAccounts(
           new GetAllAccountsQuery(portfolioId, userId));
@@ -142,9 +141,8 @@ class AccountQueryServiceTest {
       when(portfolio.getAccounts()).thenReturn(List.of(acc1, acc2));
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
 
-      Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(
-          btc, mock(MarketAssetQuote.class),
-          eth, mock(MarketAssetQuote.class));
+      Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(btc, mock(MarketAssetQuote.class), eth,
+          mock(MarketAssetQuote.class));
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteCache);
 
       AccountView view1 = mock(AccountView.class);
@@ -212,8 +210,7 @@ class AccountQueryServiceTest {
 
       assertThatThrownBy(() -> accountQueryService.getAccountSummary(
           new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId))).isInstanceOf(
-              AccountNotFoundException.class)
-          .hasMessageContaining(accId.toString());
+          AccountNotFoundException.class).hasMessageContaining(accId.toString());
     }
 
     @Test

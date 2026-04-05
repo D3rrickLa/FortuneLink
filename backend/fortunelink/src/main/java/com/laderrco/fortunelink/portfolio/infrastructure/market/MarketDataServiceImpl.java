@@ -8,7 +8,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,12 +65,12 @@ public class MarketDataServiceImpl implements MarketDataService {
    */
   @Override
   public Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols) {
-    if (symbols.isEmpty())
+    if (symbols.isEmpty()) {
       return Map.of();
+    }
 
     // Redis cache hit path (unchanged from before)
-    List<String> keys = symbols.stream()
-        .map(s -> cacheKeyPrefix + s.symbol()).toList();
+    List<String> keys = symbols.stream().map(s -> cacheKeyPrefix + s.symbol()).toList();
     List<MarketAssetQuote> cached = redisTemplate.opsForValue().multiGet(keys);
 
     Map<AssetSymbol, MarketAssetQuote> result = new HashMap<>();
@@ -90,10 +88,12 @@ public class MarketDataServiceImpl implements MarketDataService {
     if (!misses.isEmpty()) {
       // Look up stored currencies for all misses in one DB call,
       // avoiding N individual lookups and eliminating exchange-name guessing
-      Map<AssetSymbol, Currency> knownCurrencies = infoRepository.findBySymbols(misses).entrySet().stream()
+      Map<AssetSymbol, Currency> knownCurrencies = infoRepository.findBySymbols(misses).entrySet()
+          .stream()
           .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().tradingCurrency()));
 
-      Map<AssetSymbol, MarketAssetQuote> fetched = provider.fetchBatchQuotes(misses, knownCurrencies);
+      Map<AssetSymbol, MarketAssetQuote> fetched = provider.fetchBatchQuotes(misses,
+          knownCurrencies);
 
       Map<String, MarketAssetQuote> toCache = new HashMap<>();
       fetched.forEach((sym, quote) -> {
@@ -103,8 +103,7 @@ public class MarketDataServiceImpl implements MarketDataService {
 
       if (!toCache.isEmpty()) {
         redisTemplate.opsForValue().multiSet(toCache);
-        toCache.keySet().forEach(
-            k -> redisTemplate.expire(k, Duration.ofSeconds(quoteTtl)));
+        toCache.keySet().forEach(k -> redisTemplate.expire(k, Duration.ofSeconds(quoteTtl)));
       }
     }
 
@@ -112,13 +111,13 @@ public class MarketDataServiceImpl implements MarketDataService {
   }
 
   @Override
-  @Cacheable(value = "market:historical:", key = "#symbol.symbol()", unless = "#result == null")
+  @Cacheable(value = "market:historical:", key = "#symbol.symbol()", unless = "#result.isEmpty()")
   public Optional<MarketAssetQuote> getHistoricalQuote(AssetSymbol symbol, Instant date) {
     return provider.fetchHistoricalQuote(symbol, date);
   }
 
   @Override
-  @Cacheable(value = "market:asset-info:", key = "#symbol.symbol()", unless = "#result == null")
+  @Cacheable(value = "market:info:", key = "#symbol.symbol()", unless = "#result.isEmpty()")
   public Optional<MarketAssetInfo> getAssetInfo(AssetSymbol symbol) {
     // Checking DB directly is fine, but Spring Cache will wrap this whole method.
     // If it's in Redis, this code won't even execute.

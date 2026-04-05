@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -15,20 +14,15 @@ import java.util.Set;
 /**
  * Primary gateway for retrieving financial market data.
  * <p>
- * This service provides a unified interface to fetch real-time quotes,
- * historical prices, and asset
- * metadata, shielding the rest of the application from the complexities of
- * specific external market
+ * This service provides a unified interface to fetch real-time quotes, historical prices, and asset
+ * metadata, shielding the rest of the application from the complexities of specific external market
  * data providers.
  */
 public interface MarketDataService {
   /**
-   * Returns current quotes for the specified assets. NOTE: we need to confirm the
-   * impl of this. If
-   * aa portfolio has accounts with nothing in them, extractSymbols returns empty
-   * set. but our
-   * MarketDataService.java contract says missing symbols are excluded from the
-   * result map. We need
+   * Returns current quotes for the specified assets. NOTE: we need to confirm the impl of this. If
+   * aa portfolio has accounts with nothing in them, extractSymbols returns empty set. but our
+   * MarketDataService.java contract says missing symbols are excluded from the result map. We need
    * to verify this impl handles getBatchQuotes(Set.of()) without hitting the API
    *
    * @param symbols a set of asset symbols to fetch
@@ -62,19 +56,17 @@ public interface MarketDataService {
   Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(Set<AssetSymbol> symbols);
 
   /**
-   * Symbol autocomplete for UI search boxes.
-   * Returns shallow results only — do NOT use for transaction validation.
-   * For transaction validation, use validateAndGet(AssetSymbol).
+   * Symbol autocomplete for UI search boxes. Returns shallow results only — do NOT use for
+   * transaction validation. For transaction validation, use validateAndGet(AssetSymbol).
    */
   List<SymbolSearchResult> searchSymbols(String query);
 
   /**
-   * Validates that a symbol exists and returns its full asset info.
-   * Use this at transaction recording time to confirm a symbol is real
-   * before persisting a BUY.
-   *
+   * Validates that a symbol exists and returns its full asset info. Use this at transaction
+   * recording time to confirm a symbol is real before persisting a BUY.
+   * <p>
    * NOT for search/autocomplete, use searchSymbols(String) for that.
-   *
+   * <p>
    * Side effect: seeds market_asset_info cache on first call.
    */
   MarketAssetInfo validateAndGet(AssetSymbol symbol);

@@ -171,7 +171,6 @@ class PortfolioTest {
       portfolio.closeAccount(account.getAccountId());
 
       portfolio.reopenAccount(account.getAccountId());
-      ;
       assertThat(portfolio.getAccountCount()).isEqualTo(1);
       assertThat(portfolio.findAccount(account.getAccountId()).get()).isEqualTo(account);
       assertThat(portfolio.findAccountByName("Test").get()).isEqualTo(account);

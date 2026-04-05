@@ -118,17 +118,17 @@ public class TransactionQueryServiceTest {
       Page<Transaction> mockPage = new PageImpl<>(List.of());
 
       // Stub the NEW dynamic method
-      when(transactionQueryRepository.findTransactionsDynamic(
-          eq(ACCOUNT_ID), eq(SYMBOL), eq(START), eq(END), any()))
-          .thenReturn(mockPage);
+      when(transactionQueryRepository.findTransactionsDynamic(eq(ACCOUNT_ID), eq(SYMBOL), eq(START),
+          eq(END), any())).thenReturn(mockPage);
 
       // Act
       transactionQueryService.getTransactionHistory(query);
 
       // Assert
-      verify(portfolioLoader).validatePortfolioAndAccountOwnership(PORTFOLIO_ID, USER_ID, ACCOUNT_ID);
-      verify(transactionQueryRepository).findTransactionsDynamic(
-          eq(ACCOUNT_ID), eq(SYMBOL), eq(START), eq(END), any());
+      verify(portfolioLoader).validatePortfolioAndAccountOwnership(PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID);
+      verify(transactionQueryRepository).findTransactionsDynamic(eq(ACCOUNT_ID), eq(SYMBOL),
+          eq(START), eq(END), any());
     }
 
     @Test
@@ -138,16 +138,15 @@ public class TransactionQueryServiceTest {
       GetTransactionHistoryQuery query = createHistoryQuery(null, null, null);
       Page<Transaction> mockPage = new PageImpl<>(List.of());
 
-      when(transactionQueryRepository.findTransactionsDynamic(
-          eq(ACCOUNT_ID), isNull(), isNull(), isNull(), any()))
-          .thenReturn(mockPage);
+      when(transactionQueryRepository.findTransactionsDynamic(eq(ACCOUNT_ID), isNull(), isNull(),
+          isNull(), any())).thenReturn(mockPage);
 
       // Act
       transactionQueryService.getTransactionHistory(query);
 
       // Assert
-      verify(transactionQueryRepository).findTransactionsDynamic(
-          eq(ACCOUNT_ID), isNull(), isNull(), isNull(), any());
+      verify(transactionQueryRepository).findTransactionsDynamic(eq(ACCOUNT_ID), isNull(), isNull(),
+          isNull(), any());
     }
 
     @Test
@@ -156,8 +155,8 @@ public class TransactionQueryServiceTest {
       // Arrange: End date before Start date
       GetTransactionHistoryQuery query = createHistoryQuery(END, START, null);
 
-      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query))
-          .isInstanceOf(InvalidDateRangeException.class)
+      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query)).isInstanceOf(
+              InvalidDateRangeException.class)
           .hasMessageContaining("Start date cannot be after end date");
 
       verifyNoInteractions(transactionQueryRepository);
@@ -166,9 +165,8 @@ public class TransactionQueryServiceTest {
     @Test
     @DisplayName("getTransactionHistory: throws exception when query is null")
     void getTransactionHistoryThrowsOnNullQuery() {
-      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(null))
-          .isInstanceOf(NullPointerException.class)
-          .hasMessageContaining("cannot be null");
+      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(null)).isInstanceOf(
+          NullPointerException.class).hasMessageContaining("cannot be null");
     }
   }
 
@@ -196,7 +194,7 @@ public class TransactionQueryServiceTest {
 
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
-              InvalidDateRangeException.class);
+          InvalidDateRangeException.class);
     }
 
     @Test
@@ -211,7 +209,7 @@ public class TransactionQueryServiceTest {
 
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
-              SecurityException.class);
+          SecurityException.class);
     }
 
     @Test
@@ -221,7 +219,7 @@ public class TransactionQueryServiceTest {
       // This tests the explicit Objects.requireNonNull checks in your method
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(nullQuery)).isInstanceOf(
-              NullPointerException.class);
+          NullPointerException.class);
     }
   }
 }

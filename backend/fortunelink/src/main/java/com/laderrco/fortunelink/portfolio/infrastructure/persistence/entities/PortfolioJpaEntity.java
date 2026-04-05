@@ -1,5 +1,16 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,10 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import org.springframework.data.domain.Persistable;
-
-import jakarta.persistence.*;
 
 /**
  * Pure persistence model for the {@code Portfolio} aggregate root.
@@ -75,7 +83,7 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
    * {@code @EntityGraph} on the repo for that).
    */
   @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-  private List<AccountJpaEntity> accounts = new ArrayList<>();
+  private final List<AccountJpaEntity> accounts = new ArrayList<>();
 
   // -------------------------------------------------------------------------
   // Factory, called by the domain mapper when persisting a new Portfolio
@@ -159,12 +167,12 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
 
   @Override
   public boolean isNew() {
-      return isNew;
+    return isNew;
   }
 
   @PostLoad
   @PostPersist
   void markNotNew() {
-      this.isNew = false;
+    this.isNew = false;
   }
 }

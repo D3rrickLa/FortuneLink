@@ -310,7 +310,7 @@ public class Account {
     return creationDate;
   }
 
-  public PositionBook getPositionBook() {
+  PositionBook getPositionBook() {
     return positionBook;
   }
 

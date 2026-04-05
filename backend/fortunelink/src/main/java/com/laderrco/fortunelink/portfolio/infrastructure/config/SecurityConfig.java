@@ -32,13 +32,11 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    return http
-        .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("api/v1/public/**", "/actuator/health").permitAll()
-            .anyRequest().authenticated())
-        .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
-        .build();
+    return http.csrf(AbstractHttpConfigurer::disable).sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(
+            auth -> auth.requestMatchers("api/v1/public/**", "/actuator/health").permitAll()
+                .anyRequest().authenticated())
+        .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults())).build();
   }
 }

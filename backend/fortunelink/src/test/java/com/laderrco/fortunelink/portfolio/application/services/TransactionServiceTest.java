@@ -2,14 +2,22 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
@@ -41,7 +49,14 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.Trad
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -53,12 +68,6 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -192,7 +201,8 @@ class TransactionServiceTest {
       RecordPurchaseCommand command = createPurchaseCommand();
 
       AssetSymbol symbol = new AssetSymbol("AAPL");
-      MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR, NOTES);
+      MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR,
+          NOTES);
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
           any(), anyBoolean())).thenReturn(transaction);
@@ -214,11 +224,12 @@ class TransactionServiceTest {
       Money AMOUNT = new Money(new BigDecimal("100.00"), CAD);
       Price shopPriceToUsd = new Price(Money.of(75, USD));
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES,
+          false);
 
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
           any(), anyBoolean())).thenReturn(transaction);
-      when(exchangeRateService.convertToPrice(any(), any())).thenReturn(shopPriceToUsd);
+      when(exchangeRateService.convert(any(), any())).thenReturn(shopPriceToUsd.pricePerUnit());
       when(transactionViewMapper.toTransactionView(transaction)).thenReturn(transactionView);
 
       TransactionView result = service.recordPurchase(command);
@@ -227,14 +238,15 @@ class TransactionServiceTest {
       assertThat(command.totalFees(CAD)).isEqualTo(Money.zero(CAD));
       verify(portfolioRepository).save(portfolio);
       verify(transactionRepository).save(transaction, portfolio.getPortfolioId());
-      verify(exchangeRateService).convertToPrice(AMOUNT, USD);
+      verify(exchangeRateService).convert(AMOUNT, USD);
     }
 
     @Test
     @DisplayName("recordPurchase: trigger evictBuyFeeCache success")
     void recordPurchaseEvictsFeeCache() {
       AssetSymbol symbol = new AssetSymbol("AAPL");
-      MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR, NOTES);
+      MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR,
+          NOTES);
       Fee fee = Fee.of(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, USD), NOW);
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
 
@@ -246,33 +258,33 @@ class TransactionServiceTest {
       when(cacheManager.getCache(any())).thenReturn(mock(Cache.class));
 
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES,
+          false);
 
       service.recordPurchase(command);
       verify(cacheManager).getCache(anyString());
     }
 
     @ParameterizedTest
-    @EnumSource(value = AssetType.class, names = { "CASH", "OTHER" })
+    @EnumSource(value = AssetType.class, names = {"CASH", "OTHER"})
     @NullSource
     @DisplayName("recordPurchase: should sanitize invalid hints to STOCK when asset not found")
     void recordPurchaseSanitizeType(AssetType hint) {
       AssetSymbol symbol = new AssetSymbol("AAPL");
 
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.empty());
-      when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
-          .thenReturn(transaction);
+      when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
+          any(), anyBoolean())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
 
-      RecordPurchaseCommand command = new RecordPurchaseCommand(
-          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, symbol.symbol(),
-          hint, // Injected by ParameterizedTest
+      RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          symbol.symbol(), hint, // Injected by ParameterizedTest
           Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       service.recordPurchase(command);
 
-      verify(transactionRecordingService).recordBuy(any(), eq(symbol), eq(AssetType.STOCK),
-          any(), any(), any(), any(), any(), anyBoolean());
+      verify(transactionRecordingService).recordBuy(any(), eq(symbol), eq(AssetType.STOCK), any(),
+          any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -312,8 +324,8 @@ class TransactionServiceTest {
       RecordDividendReinvestmentCommand command = new RecordDividendReinvestmentCommand(
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "GOOGL", exec, NOW, "Reinvest");
 
-      when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(), any()))
-          .thenReturn(transaction);
+      when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(),
+          any())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.DIVIDEND_REINVEST);
       service.recordDividendReinvestment(command);
 
@@ -332,18 +344,15 @@ class TransactionServiceTest {
       Instant expectedStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
       Instant expectedEnd = command.transactionDate().plus(24, ChronoUnit.HOURS);
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
-          .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND)
-          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
-              TransactionMetadata.manual(AssetType.BOND))
-          .build();
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND).cashDelta(AMOUNT)
+          .fees(List.of()).notes(NOTES).occurredAt(NOW)
+          .metadata(TransactionMetadata.manual(AssetType.BOND)).build();
 
-      when(transactionRecordingService.recordDividend(any(), any(), any(), any(), any()))
-          .thenReturn(dummyTx);
-      when(transactionRepository.existsConflict(
-          eq(command.accountId()),
-          eq(TransactionType.DIVIDEND_REINVEST),
-          eq(symbol),
-          eq(expectedStart),
+      when(
+          transactionRecordingService.recordDividend(any(), any(), any(), any(), any())).thenReturn(
+          dummyTx);
+      when(transactionRepository.existsConflict(eq(command.accountId()),
+          eq(TransactionType.DIVIDEND_REINVEST), eq(symbol), eq(expectedStart),
           eq(expectedEnd))).thenReturn(true);
 
       service.recordDividend(command);
@@ -381,13 +390,12 @@ class TransactionServiceTest {
           ACCOUNT_ID, AMOUNT, NOW, NOTES);
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
-          .accountId(ACCOUNT_ID).transactionType(TransactionType.WITHDRAWAL)
-          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
-              TransactionMetadata.manual(AssetType.BOND))
-          .build();
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.WITHDRAWAL).cashDelta(AMOUNT)
+          .fees(List.of()).notes(NOTES).occurredAt(NOW)
+          .metadata(TransactionMetadata.manual(AssetType.BOND)).build();
 
-      when(transactionRecordingService.recordWithdrawal(any(), any(), any(), any()))
-          .thenReturn(dummyTx);
+      when(transactionRecordingService.recordWithdrawal(any(), any(), any(), any())).thenReturn(
+          dummyTx);
 
       service.recordWithdrawal(command);
 
@@ -402,13 +410,12 @@ class TransactionServiceTest {
           FeeType.ACCOUNT_MAINTENANCE, NOW, NOTES);
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
-          .accountId(ACCOUNT_ID).transactionType(TransactionType.FEE)
-          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
-              TransactionMetadata.manual(AssetType.BOND))
-          .build();
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.FEE).cashDelta(AMOUNT)
+          .fees(List.of()).notes(NOTES).occurredAt(NOW)
+          .metadata(TransactionMetadata.manual(AssetType.BOND)).build();
 
-      when(transactionRecordingService.recordFee(any(), any(), any(), any(), any()))
-          .thenReturn(dummyTx);
+      when(transactionRecordingService.recordFee(any(), any(), any(), any(), any())).thenReturn(
+          dummyTx);
       service.recordFee(command);
 
       verify(transactionRecordingService).recordFee(any(), eq(command.amount()), any(),
@@ -424,13 +431,13 @@ class TransactionServiceTest {
           "", usd(5), NOW, "INTEREST");
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
-          .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST)
-          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
-              TransactionMetadata.manual(AssetType.BOND))
-          .build();
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST).cashDelta(AMOUNT)
+          .fees(List.of()).notes(NOTES).occurredAt(NOW)
+          .metadata(TransactionMetadata.manual(AssetType.BOND)).build();
 
-      when(transactionRecordingService.recordInterest(any(), any(), any(), any(), any()))
-          .thenReturn(dummyTx);
+      when(
+          transactionRecordingService.recordInterest(any(), any(), any(), any(), any())).thenReturn(
+          dummyTx);
 
       service.recordInterest(command);
 
@@ -447,13 +454,13 @@ class TransactionServiceTest {
           ACCOUNT_ID, "CAD.3TBILL", usd(15), NOW, "3 month GIC");
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
-          .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST)
-          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
-              TransactionMetadata.manual(AssetType.BOND))
-          .build();
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST).cashDelta(AMOUNT)
+          .fees(List.of()).notes(NOTES).occurredAt(NOW)
+          .metadata(TransactionMetadata.manual(AssetType.BOND)).build();
 
-      when(transactionRecordingService.recordInterest(any(), any(), any(), any(), any()))
-          .thenReturn(dummyTx);
+      when(
+          transactionRecordingService.recordInterest(any(), any(), any(), any(), any())).thenReturn(
+          dummyTx);
 
       service.recordInterest(command);
 
@@ -468,13 +475,13 @@ class TransactionServiceTest {
       RecordDividendCommand command = new RecordDividendCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
           "AAPL", usd(10), NOW, "Interest");
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
-          .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND)
-          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
-              TransactionMetadata.manual(AssetType.BOND))
-          .build();
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND).cashDelta(AMOUNT)
+          .fees(List.of()).notes(NOTES).occurredAt(NOW)
+          .metadata(TransactionMetadata.manual(AssetType.BOND)).build();
 
-      when(transactionRecordingService.recordDividend(any(), any(), any(), any(), any()))
-          .thenReturn(dummyTx);
+      when(
+          transactionRecordingService.recordDividend(any(), any(), any(), any(), any())).thenReturn(
+          dummyTx);
 
       service.recordDividend(command);
 
@@ -492,14 +499,11 @@ class TransactionServiceTest {
 
       Instant expectedStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
       Instant expectedEnd = command.transactionDate().plus(24, ChronoUnit.HOURS);
-      when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(), any()))
-          .thenReturn(transaction);
-      when(transactionRepository.existsConflict(
-          eq(command.accountId()),
+      when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(),
+          any())).thenReturn(transaction);
+      when(transactionRepository.existsConflict(eq(command.accountId()),
           eq(TransactionType.DIVIDEND), // Cross-check: Reinvestment checks for Dividend
-          eq(symbol),
-          eq(expectedStart),
-          eq(expectedEnd))).thenReturn(true);
+          eq(symbol), eq(expectedStart), eq(expectedEnd))).thenReturn(true);
 
       service.recordDividendReinvestment(command);
 
@@ -517,7 +521,8 @@ class TransactionServiceTest {
       RecordSplitCommand command = new RecordSplitCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "TSLA",
           new Ratio(2, 1), NOW, "Split");
 
-      when(transactionRecordingService.recordSplit(any(), any(), any(), any(), any())).thenReturn(transaction);
+      when(transactionRecordingService.recordSplit(any(), any(), any(), any(), any())).thenReturn(
+          transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.SPLIT);
       when(account.hasPosition(any())).thenReturn(true);
 
@@ -545,8 +550,8 @@ class TransactionServiceTest {
       RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID, "ABC", Price.of("100.0", USD), Quantity.of(0.5), NOW, "ROC");
 
-      when(transactionRecordingService.recordReturnOfCapital(any(), any(), any(), any(), any(), any()))
-          .thenReturn(transaction);
+      when(transactionRecordingService.recordReturnOfCapital(any(), any(), any(), any(), any(),
+          any())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.RETURN_OF_CAPITAL);
 
       service.recordReturnOfCapital(command);
@@ -561,8 +566,8 @@ class TransactionServiceTest {
       RecordTransferInCommand command = new RecordTransferInCommand(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID, AMOUNT, List.of(), NOW, "Transfer In");
 
-      when(transactionRecordingService.recordTransferIn(any(), any(), any(), any()))
-          .thenReturn(transaction);
+      when(transactionRecordingService.recordTransferIn(any(), any(), any(), any())).thenReturn(
+          transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.TRANSFER_IN);
 
       service.recordTransferIn(command);
@@ -577,8 +582,8 @@ class TransactionServiceTest {
       RecordTransferOutCommand command = new RecordTransferOutCommand(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID, usd(500), NOW, "Transfer Out");
 
-      when(transactionRecordingService.recordTransferOut(any(), any(), any(), any()))
-          .thenReturn(transaction);
+      when(transactionRecordingService.recordTransferOut(any(), any(), any(), any())).thenReturn(
+          transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.TRANSFER_OUT);
 
       service.recordTransferOut(command);

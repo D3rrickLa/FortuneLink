@@ -108,11 +108,11 @@ class PortfolioLifecycleServiceTest {
     void throwsPortfolioLimitReachedViaGuard() {
       when(portfolioRepository.existsActiveByUserId(USER_ID)).thenReturn(true);
 
-      CreatePortfolioCommand command = new CreatePortfolioCommand(
-          USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
+      CreatePortfolioCommand command = new CreatePortfolioCommand(USER_ID, "Name", "Desc", USD,
+          false, null, PositionStrategy.ACB);
 
-      assertThatThrownBy(() -> service.createPortfolio(command))
-          .isInstanceOf(PortfolioLimitReachedException.class)
+      assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
+              PortfolioLimitReachedException.class)
           .hasMessageContaining("User already has an active portfolio");
 
       verify(portfolioRepository, never()).save(any(Portfolio.class));
@@ -122,14 +122,14 @@ class PortfolioLifecycleServiceTest {
     @DisplayName("createPortfolio: handles race condition via DataIntegrityViolationException")
     void handlesRaceCondition() {
       when(portfolioRepository.existsActiveByUserId(USER_ID)).thenReturn(false);
-      when(portfolioRepository.save(any(Portfolio.class)))
-          .thenThrow(new DataIntegrityViolationException("Duplicate Key"));
+      when(portfolioRepository.save(any(Portfolio.class))).thenThrow(
+          new DataIntegrityViolationException("Duplicate Key"));
 
-      CreatePortfolioCommand command = new CreatePortfolioCommand(
-          USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
+      CreatePortfolioCommand command = new CreatePortfolioCommand(USER_ID, "Name", "Desc", USD,
+          false, null, PositionStrategy.ACB);
 
-      assertThatThrownBy(() -> service.createPortfolio(command))
-          .isInstanceOf(PortfolioLimitReachedException.class)
+      assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
+              PortfolioLimitReachedException.class)
           .hasMessageContaining("A portfolio was recently created for this user.");
     }
 
@@ -137,13 +137,14 @@ class PortfolioLifecycleServiceTest {
     @DisplayName("createPortfolio: successful path")
     void createsPortfolioSuccessfully() {
       when(portfolioRepository.existsActiveByUserId(USER_ID)).thenReturn(false);
-      when(portfolioRepository.save(any(Portfolio.class)))
-          .thenReturn(Portfolio.createNew(USER_ID, "Portfolio", "My desc", USD));
+      when(portfolioRepository.save(any(Portfolio.class))).thenReturn(
+          Portfolio.createNew(USER_ID, "Portfolio", "My desc", USD));
 
-      CreatePortfolioCommand command = new CreatePortfolioCommand(
-          USER_ID, "Name", "Desc", USD, false, null, PositionStrategy.ACB);
+      CreatePortfolioCommand command = new CreatePortfolioCommand(USER_ID, "Name", "Desc", USD,
+          false, null, PositionStrategy.ACB);
       when(portfolioViewMapper.toNewPortfolioView(any())).thenReturn(
-          new PortfolioView(PORTFOLIO_ID, USER_ID, "Portfolio", "My Desc", List.of(), null, false, null, null));
+          new PortfolioView(PORTFOLIO_ID, USER_ID, "Portfolio", "My Desc", List.of(), null, false,
+              null, null));
       PortfolioView result = service.createPortfolio(command);
 
       assertThat(result).isNotNull();
@@ -235,7 +236,7 @@ class PortfolioLifecycleServiceTest {
           true);
 
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-          PortfolioDeletionException.class)
+              PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
     }
 

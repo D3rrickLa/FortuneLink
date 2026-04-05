@@ -42,12 +42,10 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -88,7 +86,8 @@ public class TransactionService {
       AssetType resolvedType = resolveAssetType(symbol, command.assetType());
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
       return transactionRecordingService.recordBuy(ctx.account(), symbol, resolvedType,
-          command.quantity(), price, command.fees(), command.notes(), command.transactionDate(), command.skipCashCheck());
+          command.quantity(), price, command.fees(), command.notes(), command.transactionDate(),
+          command.skipCashCheck());
     });
   }
 
@@ -124,27 +123,28 @@ public class TransactionService {
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol = command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      AssetSymbol symbol =
+          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
       return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
   }
 
   public TransactionView recordDividend(RecordDividendCommand command) {
-    return execute(command, validator::validate, "recordDividend",
-        ctx -> {
-          warnIfDuplicateExists(command.accountId(), TransactionType.DIVIDEND_REINVEST,
-              new AssetSymbol(command.assetSymbol()), command.transactionDate());
-          return transactionRecordingService.recordDividend(ctx.account(),
-              new AssetSymbol(command.assetSymbol()), command.amount(), command.notes(),
-              command.transactionDate());
-        });
+    return execute(command, validator::validate, "recordDividend", ctx -> {
+      warnIfDuplicateExists(command.accountId(), TransactionType.DIVIDEND_REINVEST,
+          new AssetSymbol(command.assetSymbol()), command.transactionDate());
+      return transactionRecordingService.recordDividend(ctx.account(),
+          new AssetSymbol(command.assetSymbol()), command.amount(), command.notes(),
+          command.transactionDate());
+    });
   }
 
   public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
     return execute(command, validator::validate, "recordDividendReinvestment", ctx -> {
       AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
-      warnIfDuplicateExists(command.accountId(), TransactionType.DIVIDEND, symbol, command.transactionDate());
+      warnIfDuplicateExists(command.accountId(), TransactionType.DIVIDEND, symbol,
+          command.transactionDate());
       return transactionRecordingService.recordDividendReinvestment(ctx.account(), symbol,
           command.execution().sharesPurchased(), command.execution().pricePerShare(),
           command.notes(), command.transactionDate());
@@ -241,8 +241,7 @@ public class TransactionService {
   }
 
   /**
-   * Persists both the portfolio aggregate and the new transaction. The
-   * portfolioId is taken
+   * Persists both the portfolio aggregate and the new transaction. The portfolioId is taken
    * directly from the in-memory context — no DB lookup.
    */
   private void persistChanges(PortfolioContext ctx, Transaction tx) {
@@ -260,7 +259,7 @@ public class TransactionService {
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
     return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-        command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 
@@ -276,17 +275,14 @@ public class TransactionService {
     if (commandPrice.currency().equals(accountCurrency)) {
       return commandPrice;
     }
-    return exchangeRateService.convertToPrice(commandPrice.pricePerUnit(), accountCurrency);
+    return new Price(exchangeRateService.convert(commandPrice.pricePerUnit(), accountCurrency));
   }
 
   /**
-   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client
-   * hint, trusted only
-   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last
-   * resort
+   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client hint, trusted only
+   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last resort
    * <p>
-   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded
-   * into
+   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded into
    * market_asset_info. Until then, their hint is used.
    */
   private AssetType resolveAssetType(AssetSymbol symbol, AssetType clientHint) {
@@ -309,19 +305,16 @@ public class TransactionService {
   }
 
   /**
-   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol
-   * within 24 hours of this DRIP event.
-   *
-   * DRIP and DIVIDEND are mutually exclusive for the same event:
-   * - DIVIDEND_REINVEST = broker automatically reinvests, no cash lands
-   * - DIVIDEND = cash lands in account, user reinvests manually (records as
-   * separate BUY)
-   *
-   * Recording both for the same event will overstate cash balance.
-   * This check is a runtime warning only — enforcement is the caller's
-   * responsibility.
-   * Callers that intentionally bypass this (e.g., CSV import correction flows)
-   * should be aware of the accounting implication.
+   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol within 24 hours of this
+   * DRIP event.
+   * <p>
+   * DRIP and DIVIDEND are mutually exclusive for the same event: - DIVIDEND_REINVEST = broker
+   * automatically reinvests, no cash lands - DIVIDEND = cash lands in account, user reinvests
+   * manually (records as separate BUY)
+   * <p>
+   * Recording both for the same event will overstate cash balance. This check is a runtime warning
+   * only — enforcement is the caller's responsibility. Callers that intentionally bypass this
+   * (e.g., CSV import correction flows) should be aware of the accounting implication.
    */
   private void warnIfDuplicateExists(AccountId accountId, TransactionType transactionType,
       AssetSymbol assetSymbol, Instant transactionDate) {
@@ -329,15 +322,15 @@ public class TransactionService {
     Instant windowStart = transactionDate.minus(24, ChronoUnit.HOURS);
     Instant windowEnd = transactionDate.plus(24, ChronoUnit.HOURS);
 
-    boolean hasConflict = transactionRepository.existsConflict(accountId, transactionType, assetSymbol,
-        windowStart, windowEnd);
+    boolean hasConflict = transactionRepository.existsConflict(accountId, transactionType,
+        assetSymbol, windowStart, windowEnd);
 
     if (hasConflict) {
-      log.warn("DRIP recorded for symbol={} on {} but a DIVIDEND transaction exists " +
-          "within 24 hours for the same symbol in accountId={}. " +
-          "If this is the same event, the DIVIDEND transaction will overstate " +
-          "cash balance. Review transaction history before proceeding.",
-          assetSymbol, transactionDate, accountId);
+      log.warn("DRIP recorded for symbol={} on {} but a DIVIDEND transaction exists "
+              + "within 24 hours for the same symbol in accountId={}. "
+              + "If this is the same event, the DIVIDEND transaction will overstate "
+              + "cash balance. Review transaction history before proceeding.", assetSymbol,
+          transactionDate, accountId);
     }
   }
 }

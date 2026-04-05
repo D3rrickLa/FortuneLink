@@ -2,11 +2,15 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.AccountJpaEntity;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.FeeJpaEntity;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.TransactionJpaEntity;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobjects.FeeAggregationResult;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,32 +23,19 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.AccountJpaEntity;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.FeeJpaEntity;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.TransactionJpaEntity;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobjects.FeeAggregationResult;
-
 @SuppressWarnings("resource")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Testcontainers
 class JpaTransactionRepositoryTest {
-  private final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
-  @Autowired
-  private JpaPortfolioRepository portfolioRepository;
-
   @Container
   @ServiceConnection
   static PostgreSQLContainer<?> postgres;
 
   static {
-    postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-        .withDatabaseName("testdb")
-        .withUsername("test")
-        .withPassword("test")
-        .withInitScript("init-auth.sql")
+    postgres = new PostgreSQLContainer<>("postgres:16-alpine").withDatabaseName("testdb")
+        .withUsername("test").withPassword("test").withInitScript("init-auth.sql")
         .withInitScript("seed_user_portfolio.sql");
     postgres.start(); // Manual start to ensure we can run commands before Flyway
     try {
@@ -58,6 +49,14 @@ class JpaTransactionRepositoryTest {
     }
   }
 
+  private final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+  @Autowired
+  private JpaPortfolioRepository portfolioRepository;
+  @Autowired
+  private TestEntityManager entityManager;
+  @Autowired
+  private JpaTransactionRepository jpaRepository; // Test the interface directly
+
   @AfterAll
   static void stopContainer() {
     if (postgres != null) {
@@ -66,18 +65,13 @@ class JpaTransactionRepositoryTest {
     }
   }
 
-  @Autowired
-  private TestEntityManager entityManager;
-  @Autowired
-  private JpaTransactionRepository jpaRepository; // Test the interface directly
-
   /*
    * FeeAggregationResult interface projection, this is a runtime risk, not a
    * compile-time one. The JPQL query returns a projection onto an interface:
    * javaList<FeeAggregationResult>
    * sumBuyFeesByAccountAndSymbol(@Param("accountIds") List<UUID> accountIds);
-   * 
-   * 
+   *
+   *
    * Spring Data JPA projections onto interfaces work when the property names on
    * the interface match the aliases in the query exactly, case-sensitively. Your
    * query uses as accountId, as symbol, as totalFees, as currency — and your
@@ -89,35 +83,15 @@ class JpaTransactionRepositoryTest {
   @Test
   void shouldProperlyProjectAggregatedFees() {
     UUID portfolioId = UUID.randomUUID();
-    PortfolioJpaEntity portfolio = PortfolioJpaEntity.create(
-        portfolioId,
-        TEST_USER_ID,
-        "Portfolio name",
-        "DESC",
-        "CAD",
-        false,
-        null,
-        null,
-        Instant.now(),
-        Instant.now());
+    PortfolioJpaEntity portfolio = PortfolioJpaEntity.create(portfolioId, TEST_USER_ID,
+        "Portfolio name", "DESC", "CAD", false, null, null, Instant.now(), Instant.now());
 
     portfolioRepository.save(portfolio);
 
     UUID accountId = UUID.randomUUID();
 
-    AccountJpaEntity account = AccountJpaEntity.create(
-        accountId,
-        portfolio,
-        "Account name",
-        "TFSA",
-        "CAD",
-        "ACB",
-        "HEALTHY",
-        "ACTIVE",
-        BigDecimal.valueOf(10000),
-        "CAD",
-        null,
-        Instant.now(),
+    AccountJpaEntity account = AccountJpaEntity.create(accountId, portfolio, "Account name", "TFSA",
+        "CAD", "ACB", "HEALTHY", "ACTIVE", BigDecimal.valueOf(10000), "CAD", null, Instant.now(),
         Instant.now());
 
     portfolio.replaceAccounts(List.of(account));
@@ -160,28 +134,8 @@ class JpaTransactionRepositoryTest {
   }
 
   private TransactionJpaEntity createTestTransaction(UUID accountId, UUID portfolioId) {
-    return TransactionJpaEntity.create(
-        UUID.randomUUID(),
-        portfolioId,
-        accountId,
-        "BUY",
-        "AAPL",
-        null,
-        BigDecimal.valueOf(1000),
-        "USD",
-        "STOCK",
-        null,
-        null,
-        null,
-        "USD",
-        null,
-        false,
-        null,
-        null,
-        null,
-        null,
-        "SOME NOTES HERE",
-        Instant.now(),
-        null);
+    return TransactionJpaEntity.create(UUID.randomUUID(), portfolioId, accountId, "BUY", "AAPL",
+        null, BigDecimal.valueOf(1000), "USD", "STOCK", null, null, null, "USD", null, false, null,
+        null, null, null, "SOME NOTES HERE", Instant.now(), null);
   }
 }

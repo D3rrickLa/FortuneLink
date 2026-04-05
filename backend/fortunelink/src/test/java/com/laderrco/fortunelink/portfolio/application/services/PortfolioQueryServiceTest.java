@@ -83,8 +83,7 @@ public class PortfolioQueryServiceTest {
   }
 
   /**
-   * Builds a Portfolio with the given accounts pre-created. Uses reconstitution
-   * rather than mocking
+   * Builds a Portfolio with the given accounts pre-created. Uses reconstitution rather than mocking
    * to keep tests honest about domain behavior.
    */
   private Portfolio buildPortfolio(UserId userId, PortfolioId portfolioId, List<Account> accounts) {
@@ -103,8 +102,7 @@ public class PortfolioQueryServiceTest {
   }
 
   /**
-   * Builds a healthy account with mock positions. Uses a Mockito spy so we can
-   * control
+   * Builds a healthy account with mock positions. Uses a Mockito spy so we can control
    * getPositionEntries() without subclassing.
    */
   private Account buildAccount(AccountId accountId, Set<AssetSymbol> symbols) {
@@ -137,8 +135,7 @@ public class PortfolioQueryServiceTest {
   private MarketAssetQuote buildQuote(AssetSymbol symbol) {
     return new MarketAssetQuote(symbol,
         com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price.of("100.00",
-            CAD),
-        null, null, null, null, null, null, null, null, "TEST", Instant.now());
+            CAD), null, null, null, null, null, null, null, null, "TEST", Instant.now());
   }
 
   private PortfolioView buildPortfolioView(PortfolioId portfolioId, UserId userId) {
@@ -261,8 +258,7 @@ public class PortfolioQueryServiceTest {
       when(marketDataService.getBatchQuotes(any())).thenReturn(quotes);
 
       // Update: Match the empty map being passed by the service
-      when(accountViewBuilder.build(eq(account), eq(quotes), eq(Map.of())))
-          .thenReturn(accountView);
+      when(accountViewBuilder.build(eq(account), eq(quotes), eq(Map.of()))).thenReturn(accountView);
 
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
           Money.zero(CAD));

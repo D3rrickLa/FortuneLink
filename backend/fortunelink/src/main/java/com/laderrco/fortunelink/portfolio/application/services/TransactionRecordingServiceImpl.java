@@ -45,8 +45,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
-      Quantity quantity, Price price, List<Fee> fees, String notes, Instant date, boolean skipCashCheck) {
-       validateIsActive(account);
+      Quantity quantity, Price price, List<Fee> fees, String notes, Instant date,
+      boolean skipCashCheck) {
+    validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateTransactionDate(date, account);
 
@@ -57,9 +58,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
     boolean shouldCheckCash = !skipCashCheck && !account.isInReplayMode();
     if (shouldCheckCash && !account.hasSufficientCash(cashRequired)) {
-        throw new InsufficientFundsException(
-            String.format("Insufficient cash for buy. Required: %s, Available: %s",
-                cashRequired, account.getCashBalance()));
+      throw new InsufficientFundsException(
+          String.format("Insufficient cash for buy. Required: %s, Available: %s", cashRequired,
+              account.getCashBalance()));
     }
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.BUY)

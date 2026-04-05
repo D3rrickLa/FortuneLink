@@ -2,24 +2,34 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
-import java.util.concurrent.TimeUnit;
-
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
-
-import org.junit.jupiter.api.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -42,8 +52,10 @@ class PositionRecalculationServiceTest {
   private Appender<ILoggingEvent> mockAppender;
   @Captor
   private ArgumentCaptor<ILoggingEvent> logCaptor;
+
   @Mock
   private RedissonClient redissonClient;
+
   @Mock
   private PositionRecalculationExecutor executor;
   @Mock
@@ -70,9 +82,8 @@ class PositionRecalculationServiceTest {
   @Test
   @DisplayName("onRecalculationRequested: throws exception when event is null")
   void onRecalculationRequestedThrowsOnNullEvent() {
-    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(null))
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("cannot be null");
+    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(null)).isInstanceOf(
+        NullPointerException.class).hasMessageContaining("cannot be null");
   }
 
   @Test
@@ -112,8 +123,8 @@ class PositionRecalculationServiceTest {
     RLock mockLock = mock(RLock.class);
 
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
-        .thenThrow(new RuntimeException("Redis connection refused"));
+    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenThrow(
+        new RuntimeException("Redis connection refused"));
 
     recalculationService.onRecalculationRequested(event);
 
@@ -128,8 +139,8 @@ class PositionRecalculationServiceTest {
 
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
 
-    doThrow(new InterruptedException("Interrupted!"))
-        .when(mockLock).tryLock(anyLong(), anyLong(), any(TimeUnit.class));
+    doThrow(new InterruptedException("Interrupted!")).when(mockLock)
+        .tryLock(anyLong(), anyLong(), any(TimeUnit.class));
 
     recalculationService.onRecalculationRequested(event);
 
@@ -150,11 +161,11 @@ class PositionRecalculationServiceTest {
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
     when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
 
-    doThrow(new RuntimeException("Computation error"))
-        .when(executor).scheduleRecalculation(any(), any(), any(), any());
+    doThrow(new RuntimeException("Computation error")).when(executor)
+        .scheduleRecalculation(any(), any(), any(), any());
 
-    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(event))
-        .isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(event)).isInstanceOf(
+        RuntimeException.class);
 
     // If your service catches and rethrows, it might call markStale twice.
     // atLeastOnce() covers both 1 and 2 calls safely if the logic overlaps.

@@ -16,6 +16,6 @@ public interface TransactionQueryRepository {
   Page<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol,
       Pageable pageable);
 
-  Page<Transaction> findTransactionsDynamic(AccountId accountId, AssetSymbol symbol, Instant start, 
-    Instant end, Pageable pageable);
+  Page<Transaction> findTransactionsDynamic(AccountId accountId, AssetSymbol symbol, Instant start,
+      Instant end, Pageable pageable);
 }

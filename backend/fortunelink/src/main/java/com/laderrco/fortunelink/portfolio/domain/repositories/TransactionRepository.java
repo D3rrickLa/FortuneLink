@@ -82,5 +82,6 @@ public interface TransactionRepository {
    */
   Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId);
 
-  boolean existsConflict(AccountId accountId, TransactionType transactionType, AssetSymbol symbol, Instant start, Instant end);
+  boolean existsConflict(AccountId accountId, TransactionType transactionType, AssetSymbol symbol,
+      Instant start, Instant end);
 }

@@ -37,7 +37,7 @@ public class PortfolioLifecycleService {
     ValidationUtils.validate(command, validator::validate, "createPortfolio");
 
     if (portfolioRepository.existsActiveByUserId(command.userId())) {
-        throw new PortfolioLimitReachedException("User already has an active portfolio");
+      throw new PortfolioLimitReachedException("User already has an active portfolio");
     }
 
     Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
@@ -49,10 +49,10 @@ public class PortfolioLifecycleService {
     }
 
     try {
-        return portfolioViewMapper.toNewPortfolioView(portfolioRepository.save(portfolio));
+      return portfolioViewMapper.toNewPortfolioView(portfolioRepository.save(portfolio));
     } catch (DataIntegrityViolationException e) {
-        // This only happens if a race condition occurred between the check and the save
-        throw new PortfolioLimitReachedException("A portfolio was recently created for this user.");
+      // This only happens if a race condition occurred between the check and the save
+      throw new PortfolioLimitReachedException("A portfolio was recently created for this user.");
     }
   }
 
@@ -86,8 +86,6 @@ public class PortfolioLifecycleService {
       }
       portfolio.markAsDeleted(command.userId());
       portfolioRepository.save(portfolio);
-    } catch (PortfolioDeletionException e) {
-      throw e;
     } catch (PortfolioNotEmptyException e) {
       throw new PortfolioDeletionException(
           "Cannot delete portfolio: close accounts first or use recursive delete.");

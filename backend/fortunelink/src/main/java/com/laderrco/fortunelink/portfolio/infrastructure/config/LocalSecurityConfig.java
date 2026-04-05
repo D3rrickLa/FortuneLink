@@ -9,17 +9,20 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Profile("local | test")
+@Profile("local")
 @Configuration
 @EnableWebSecurity
 public class LocalSecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    return http
-        .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(a -> a.anyRequest().permitAll())
-        .build();
+    System.out.println("DEBUG: LocalSecurityConfig is LOADED!");
+    http.csrf(AbstractHttpConfigurer::disable) // Often needed for POST/PATCH testing
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/v1/health").permitAll()
+            .requestMatchers("/api/v1/portfolios/**").permitAll() // For testing
+            .anyRequest().authenticated()
+        );
+    return http.build();
   }
 }

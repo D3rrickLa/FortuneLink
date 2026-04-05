@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactio
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand.DripExecution;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
@@ -18,7 +19,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSpl
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferOutCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordWithdrawalCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDividendReinvestmentCommand.DripExecution;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -83,7 +83,8 @@ class TransactionCommandValidatorTest {
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", AssetType.STOCK, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null, false);
+          "AAPL", AssetType.STOCK, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null,
+          false);
 
       ValidationResult result = validator.validate(command);
 
