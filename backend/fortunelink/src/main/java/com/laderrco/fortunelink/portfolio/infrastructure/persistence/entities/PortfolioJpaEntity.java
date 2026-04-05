@@ -155,8 +155,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   // -------------------------------------------------------------------------
   // Getters, read-only for mapper use
   // -------------------------------------------------------------------------
-  public List<AccountJpaEntity> getAccounts() {
-    return Collections.unmodifiableList(accounts);
+  public Set<AccountJpaEntity> getAccounts() {
+    return Collections.unmodifiableSet(accounts);
   }
 
   @Override

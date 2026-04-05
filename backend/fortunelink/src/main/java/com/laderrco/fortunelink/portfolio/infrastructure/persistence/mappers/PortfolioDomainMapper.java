@@ -21,14 +21,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.Ac
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PositionJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.RealizedGainJpaEntity;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -186,7 +180,7 @@ public class PortfolioDomainMapper {
 
     // Positions — full replace is correct here because positions are always
     // fully rebuilt from transactions by PositionRecalculationService.
-    List<PositionJpaEntity> positionEntities = new ArrayList<>();
+    Set<PositionJpaEntity> positionEntities = new LinkedHashSet<>();
     for (Map.Entry<AssetSymbol, Position> entry : domain.getPositionEntries()) {
       AssetSymbol sym = entry.getKey();
       Position pos = entry.getValue();

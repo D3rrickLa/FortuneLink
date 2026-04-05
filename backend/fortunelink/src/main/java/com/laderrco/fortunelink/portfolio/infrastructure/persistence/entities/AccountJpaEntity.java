@@ -144,7 +144,7 @@ public class AccountJpaEntity implements Persistable<UUID> {
     // cleared.
   }
 
-  public void replacePositions(List<PositionJpaEntity> incoming) {
+  public void replacePositions(Set<PositionJpaEntity> incoming) {
     Map<UUID, PositionJpaEntity> existing = new HashMap<>();
     for (PositionJpaEntity p : this.positions) {
       existing.put(p.getId(), p);
@@ -186,12 +186,12 @@ public class AccountJpaEntity implements Persistable<UUID> {
   // Getters
   // -------------------------------------------------------------------------
 
-  public List<PositionJpaEntity> getPositions() {
-    return Collections.unmodifiableList(positions);
+  public Set<PositionJpaEntity> getPositions() {
+    return Collections.unmodifiableSet(positions);
   }
 
-  public List<RealizedGainJpaEntity> getRealizedGains() {
-    return Collections.unmodifiableList(realizedGains);
+  public Set<RealizedGainJpaEntity> getRealizedGains() {
+    return Collections.unmodifiableSet(realizedGains);
   }
 
   void setPortfolio(PortfolioJpaEntity portfolio) {

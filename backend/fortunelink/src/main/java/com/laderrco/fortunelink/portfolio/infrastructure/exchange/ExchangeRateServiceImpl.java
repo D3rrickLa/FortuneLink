@@ -19,7 +19,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
   @Override
   public Optional<ExchangeRate> getRate(Currency from, Currency to) {
-    return Optional.of(provider.getExchangeRate(from, to, null));
+    return Optional.of(provider.getExchangeRate(from, to, Instant.now()));
   }
 
   @Override
