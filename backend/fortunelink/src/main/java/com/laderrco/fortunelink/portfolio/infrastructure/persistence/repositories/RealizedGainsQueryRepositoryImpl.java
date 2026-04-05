@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class RealizedGainsQueryRepositoryImpl implements RealizedGainsQueryRepository {
-
     private final JpaRealizedGainRepository jpaRepository;
 
     @Override

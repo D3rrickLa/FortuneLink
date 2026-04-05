@@ -83,7 +83,7 @@ class TransactionCommandValidatorTest {
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", AssetType.STOCK, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null);
+          "AAPL", AssetType.STOCK, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null, false);
 
       ValidationResult result = validator.validate(command);
 
@@ -94,7 +94,7 @@ class TransactionCommandValidatorTest {
     @DisplayName("shouldPassWithValidCommand: failure missing asset type")
     void shouldFailWithMissingAssetType() {
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", null, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null);
+          "AAPL", null, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null, false);
 
       ValidationResult result = validator.validate(command);
 

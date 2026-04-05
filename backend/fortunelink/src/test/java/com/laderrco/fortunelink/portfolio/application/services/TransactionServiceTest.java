@@ -3,9 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -55,8 +53,15 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,9 +72,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
@@ -109,6 +117,12 @@ class TransactionServiceTest {
   private TransactionRecordingService transactionRecordingService;
   @Mock
   private CacheManager cacheManager;
+
+  @Mock
+  private Appender<ILoggingEvent> mockAppender;
+  @Captor
+  private ArgumentCaptor<ILoggingEvent> logCaptor;
+
   @InjectMocks
   private TransactionService service;
   @Mock
@@ -126,6 +140,9 @@ class TransactionServiceTest {
     lenient().when(portfolioLoader.loadUserPortfolio(PORTFOLIO_ID, USER_ID)).thenReturn(portfolio);
     lenient().when(portfolio.getAccount(ACCOUNT_ID)).thenReturn(account);
     lenient().when(account.getAccountCurrency()).thenReturn(USD);
+
+    Logger logger = (Logger) LoggerFactory.getLogger(TransactionService.class);
+    logger.addAppender(mockAppender);
 
     lenient().when(validator.validate(any(RecordPurchaseCommand.class)))
         .thenReturn(ValidationResult.success());
@@ -159,7 +176,7 @@ class TransactionServiceTest {
 
   private RecordPurchaseCommand createPurchaseCommand() {
     return new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE,
-        Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
+        Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
   }
 
   private Money usd(double amount) {
@@ -178,7 +195,7 @@ class TransactionServiceTest {
       MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR, NOTES);
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
-          any())).thenReturn(transaction);
+          any(), anyBoolean())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
       when(transactionViewMapper.toTransactionView(transaction)).thenReturn(transactionView);
 
@@ -197,10 +214,10 @@ class TransactionServiceTest {
       Money AMOUNT = new Money(new BigDecimal("100.00"), CAD);
       Price shopPriceToUsd = new Price(Money.of(75, USD));
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
+          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
-          any())).thenReturn(transaction);
+          any(), anyBoolean())).thenReturn(transaction);
       when(exchangeRateService.convertToPrice(any(), any())).thenReturn(shopPriceToUsd);
       when(transactionViewMapper.toTransactionView(transaction)).thenReturn(transactionView);
 
@@ -222,14 +239,14 @@ class TransactionServiceTest {
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
 
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
-          any())).thenReturn(transaction);
+          any(), anyBoolean())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
       when(transaction.fees()).thenReturn(List.of(fee));
       when(transaction.accountId()).thenReturn(ACCOUNT_ID);
       when(cacheManager.getCache(any())).thenReturn(mock(Cache.class));
 
       RecordPurchaseCommand command = new RecordPurchaseCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
+          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       service.recordPurchase(command);
       verify(cacheManager).getCache(anyString());
@@ -243,19 +260,19 @@ class TransactionServiceTest {
       AssetSymbol symbol = new AssetSymbol("AAPL");
 
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.empty());
-      when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any()))
+      when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
           .thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
 
       RecordPurchaseCommand command = new RecordPurchaseCommand(
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID, symbol.symbol(),
           hint, // Injected by ParameterizedTest
-          Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES);
+          Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       service.recordPurchase(command);
 
       verify(transactionRecordingService).recordBuy(any(), eq(symbol), eq(AssetType.STOCK),
-          any(), any(), any(), any(), any());
+          any(), any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -303,6 +320,40 @@ class TransactionServiceTest {
       verify(transactionRecordingService).recordDividendReinvestment(any(), any(AssetSymbol.class),
           eq(Quantity.of(10.0)), eq(Price.of("150", USD)), anyString(), any());
       assertThat(command.execution().totalCost()).isEqualTo(Money.of(1500, USD));
+    }
+
+    @Test
+    @DisplayName("recordDividend: logs warning when a reinvestment already exists within 24h")
+    void recordDividendWarnsOnExistingReinvestment() {
+      RecordDividendCommand command = new RecordDividendCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
+          "AAPL", usd(10), NOW, "Interest");
+      AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
+
+      Instant expectedStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
+      Instant expectedEnd = command.transactionDate().plus(24, ChronoUnit.HOURS);
+      Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
+          .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND)
+          .cashDelta(AMOUNT).fees(List.of()).notes(NOTES).occurredAt(NOW).metadata(
+              TransactionMetadata.manual(AssetType.BOND))
+          .build();
+
+      when(transactionRecordingService.recordDividend(any(), any(), any(), any(), any()))
+          .thenReturn(dummyTx);
+      when(transactionRepository.existsConflict(
+          eq(command.accountId()),
+          eq(TransactionType.DIVIDEND_REINVEST),
+          eq(symbol),
+          eq(expectedStart),
+          eq(expectedEnd))).thenReturn(true);
+
+      service.recordDividend(command);
+
+      verify(mockAppender).doAppend(logCaptor.capture());
+      ILoggingEvent log = logCaptor.getValue();
+
+      assertThat(log.getLevel()).isEqualTo(Level.WARN);
+      assertThat(log.getFormattedMessage()).contains("DRIP recorded for symbol");
+      assertThat(log.getFormattedMessage()).contains("DIVIDEND transaction exists");
     }
   }
 
@@ -389,7 +440,6 @@ class TransactionServiceTest {
       assertThat(command2.isAssetInterest()).isFalse();
     }
 
-
     @Test
     @DisplayName("recordInterest: verify success flow with symbol")
     void recordInterestSuccessAssetInterest() {
@@ -430,6 +480,31 @@ class TransactionServiceTest {
 
       verify(transactionRecordingService).recordDividend(any(), any(AssetSymbol.class),
           eq(command.amount()), eq(command.notes()), eq(command.transactionDate()));
+    }
+
+    @Test
+    @DisplayName("recordDividendReinvestment: logs warning when a dividend already exists within 24h")
+    void recordReinvestmentWarnsOnExistingDividend() {
+      DripExecution exec = new DripExecution(Quantity.of(10.0), Price.of("150", USD));
+      RecordDividendReinvestmentCommand command = new RecordDividendReinvestmentCommand(
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "GOOGL", exec, NOW, "Reinvest");
+      AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
+
+      Instant expectedStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
+      Instant expectedEnd = command.transactionDate().plus(24, ChronoUnit.HOURS);
+      when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(), any()))
+          .thenReturn(transaction);
+      when(transactionRepository.existsConflict(
+          eq(command.accountId()),
+          eq(TransactionType.DIVIDEND), // Cross-check: Reinvestment checks for Dividend
+          eq(symbol),
+          eq(expectedStart),
+          eq(expectedEnd))).thenReturn(true);
+
+      service.recordDividendReinvestment(command);
+
+      verify(mockAppender).doAppend(logCaptor.capture());
+      assertThat(logCaptor.getValue().getLevel()).isEqualTo(Level.WARN);
     }
   }
 

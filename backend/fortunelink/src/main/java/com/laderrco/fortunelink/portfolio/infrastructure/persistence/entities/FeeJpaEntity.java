@@ -1,17 +1,11 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.Getter;
+
+import jakarta.persistence.*;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
@@ -26,12 +20,17 @@ import lombok.NoArgsConstructor;
  * {@code TransactionJpaEntity} if required.
  */
 @Entity
-@Getter
+@Data
 @Table(name = "transaction_fees")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class FeeJpaEntity {
 
+  public static FeeJpaEntity createEmpty() {
+    return new FeeJpaEntity();
+  }
+
   @Id
+  @GeneratedValue
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
 
@@ -97,7 +96,7 @@ public class FeeJpaEntity {
     return e;
   }
 
-  void setTransaction(TransactionJpaEntity transaction) {
+  public void setTransaction(TransactionJpaEntity transaction) {
     this.transaction = transaction;
   }
 }

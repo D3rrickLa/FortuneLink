@@ -4,7 +4,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -18,6 +20,9 @@ public interface MarketDataProvider {
   Optional<MarketAssetQuote> fetchHistoricalQuote(AssetSymbol symbol, Instant date);
 
   Optional<MarketAssetInfo> fetchAssetInfo(AssetSymbol symbol);
+
+  // Returns a list of matches for a search string (e.g., "Apple")
+    List<MarketAssetInfo> searchSymbols(String query);
 
   Map<AssetSymbol, MarketAssetInfo> fetchBatchAssetInfo(Set<AssetSymbol> symbols);
 

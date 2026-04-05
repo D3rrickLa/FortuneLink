@@ -105,7 +105,7 @@ class TransactionRecordingServiceImplTest {
       when(account.isActive()).thenReturn(false);
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW))
+              NOTES, NOW, false))
           .isInstanceOf(AccountClosedException.class);
     }
 
@@ -149,7 +149,7 @@ class TransactionRecordingServiceImplTest {
       when(account.hasSufficientCash(any())).thenReturn(true);
       when(account.getPosition(AAPL)).thenReturn(Optional.of(mockPos));
 
-      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW);
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, fees, NOTES, NOW, false);
 
       verify(account).ensurePosition(AAPL, AssetType.STOCK);
       verify(account, atLeastOnce()).withdraw(
@@ -167,11 +167,84 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW))
+              NOTES, NOW, false))
           .isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).withdraw(any(), any(), anyBoolean());
       verify(account, never()).applyPositionResult(any(), any());
+    }
+
+    @Test
+    @DisplayName("recordBuy: allows transaction despite low cash when skipCashCheck is true")
+    void recordBuyAllowsInsufficientFundsWhenSkipCheckIsTrue() {
+      Position acb = AcbPosition.empty(AAPL, AssetType.STOCK, USD);
+      when(account.getAccountCurrency()).thenReturn(USD);
+      when(account.getPosition(any())).thenReturn(Optional.of(acb));
+
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, true);
+
+      verify(account).applyPositionResult(any(), any());
+      verify(account, never()).hasSufficientCash(any());
+    }
+
+    @Test
+    @DisplayName("recordBuy: allows transaction despite low cash when account is in replay mode")
+    void recordBuyAllowsInsufficientFundsDuringReplay() {
+      Position acb = AcbPosition.empty(AAPL, AssetType.STOCK, USD);
+      when(account.isInReplayMode()).thenReturn(true); // But we are replaying
+      when(account.getAccountCurrency()).thenReturn(USD);
+      when(account.getPosition(any())).thenReturn(Optional.of(acb));
+
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false);
+
+      // Assert
+      verify(account).applyPositionResult(any(), any());
+    }
+
+    @Test
+    @DisplayName("recordBuy: still enforces cash check when skipCashCheck is false and not in replay")
+    void recordBuyEnforcesCashCheckByDefault() {
+      when(account.hasSufficientCash(any())).thenReturn(false);
+      when(account.isInReplayMode()).thenReturn(false);
+      when(account.getCashBalance()).thenReturn(Money.zero(USD));
+
+      assertThatThrownBy(
+          () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false))
+          .isInstanceOf(InsufficientFundsException.class);
+
+      verify(account).hasSufficientCash(any());
+      verify(account, never()).applyPositionResult(any(), any());
+    }
+
+    @Test
+    @DisplayName("recordBuy: throws InsufficientFundsException when cash is low and NOT in replay mode")
+    void recordBuyThrowsWhenInsufficientAndNotInReplay() {
+      when(account.hasSufficientCash(any())).thenReturn(false);
+      when(account.isInReplayMode()).thenReturn(false);
+      when(account.getCashBalance()).thenReturn(Money.zero(USD));
+
+      assertThatThrownBy(
+          () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false))
+          .isInstanceOf(InsufficientFundsException.class);
+
+      verify(account, never()).applyPositionResult(any(), any());
+    }
+
+    @Test
+    @DisplayName("recordBuy: proceeds normally when funds are sufficient (Replay status irrelevant)")
+    void recordBuyProceedsWhenFundsAreSufficient() {
+      Position acb = AcbPosition.empty(AAPL, AssetType.STOCK, USD);
+
+      when(account.hasSufficientCash(any())).thenReturn(true);
+      when(account.getPosition(any())).thenReturn(Optional.of(acb));
+
+      // Even if replay is false, it should work
+      lenient().when(account.isInReplayMode()).thenReturn(false);
+      when(account.getAccountCurrency()).thenReturn(USD);
+
+      service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null, NOTES, NOW, false);
+
+      verify(account).applyPositionResult(any(), any());
     }
 
     @ParameterizedTest

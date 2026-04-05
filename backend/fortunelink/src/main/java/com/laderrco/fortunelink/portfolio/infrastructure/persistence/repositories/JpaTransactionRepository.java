@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.TransactionJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobjects.FeeAggregationResult;
 import java.time.Instant;
@@ -57,17 +58,16 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   @Query("SELECT a.portfolio.id FROM AccountJpaEntity a WHERE a.id = :accountId")
   UUID findPortfolioIdByAccountId(@Param("accountId") UUID accountId);
 
+  /**
+   * Uses accountAmount when set (post-conversion), falls back to nativeAmount.
+   * This is safe only because Fee.withConversion() guarantees accountAmount
+   * is always in account base currency.
+   */
   @Query("""
-      SELECT t.accountId          as accountId,
-             t.executionSymbol    as symbol,
-             -- Uses accountAmount when set (post-conversion), falls back to nativeAmount.
-             -- This is safe only because Fee.withConversion() guarantees accountAmount
-             -- is always in account base currency. If a fee has only nativeAmount,
-             -- it was recorded in the same currency as the account (no conversion needed).
-             -- Any multi-currency fee without accountAmount set is a data integrity issue
-             -- that should have been caught at transaction recording time.
+      SELECT t.accountId as accountId,
+             t.executionSymbol as symbol,
              SUM(COALESCE(f.accountAmount, f.nativeAmount)) as totalFees,
-             t.cashDeltaCurrency  as currency
+             t.cashDeltaCurrency as currency
       FROM TransactionJpaEntity t
       JOIN t.fees f
       WHERE t.accountId IN :accountIds
@@ -76,8 +76,21 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
         AND t.executionSymbol IS NOT NULL
       GROUP BY t.accountId, t.executionSymbol, t.cashDeltaCurrency
       """)
-  List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(
-      @Param("accountIds") List<UUID> accountIds);
+  List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(@Param("accountIds") List<UUID> accountIds);
+
+  @Query("""
+      SELECT t FROM TransactionJpaEntity t
+      WHERE t.accountId = :accountId
+        AND (:symbol IS NULL OR t.executionSymbol = :symbol)
+        AND (:startDate IS NULL OR t.occurredAt >= :startDate)
+        AND (:endDate IS NULL OR t.occurredAt <= :endDate)
+      """)
+  Page<TransactionJpaEntity> findTransactionsDynamic(
+      @Param("accountId") UUID accountId,
+      @Param("symbol") String symbol,
+      @Param("startDate") Instant startDate,
+      @Param("endDate") Instant endDate,
+      Pageable pageable);
 
   // --- Deletion Logic ---
   @Modifying
@@ -89,4 +102,14 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   @Query("DELETE FROM TransactionJpaEntity t WHERE t.excluded = true AND t.excludedAt < :cutoff")
   int deleteAllExpiredTransactions(@Param("cutoff") Instant cutoff);
 
+  @Query("""
+      SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END
+      FROM TransactionJpaEntity t
+      WHERE t.accountId = :accountId
+        AND t.transactionType = :type
+        AND t.executionSymbol = :symbol
+        AND t.occurredAt BETWEEN :start AND :end
+      """)
+  boolean existsConflict(@Param("accountId") UUID accountId, @Param("type") TransactionType type,
+      @Param("symbol") String symbol, @Param("start") Instant start, @Param("end") Instant end);
 }

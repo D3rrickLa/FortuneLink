@@ -33,22 +33,6 @@ public record GetTransactionHistoryQuery(
       throw new IllegalArgumentException("AccountId is required for transaction history queries");
     }
 
-    // MVP constraint: date range and symbol filters are mutually exclusive.
-    //
-    // Reason: the database index covering both filters simultaneously
-    // (account_id, execution_symbol, occurred_at) does not exist. Adding it
-    // increases write amplification on every transaction insert. The two
-    // separate indexes — idx_transactions_account_symbol and
-    // idx_transactions_account_occurred — cover each filter independently.
-    //
-    // When this constraint is lifted, remove this check and add a combined
-    // JPQL query path in TransactionQueryRepository.
-    if (startDate != null && endDate != null && symbol != null) {
-      throw new IllegalArgumentException(
-          "Date range and symbol filters cannot be combined. " +
-              "Apply one filter at a time.");
-    }
-
     validatePagination(page, size);
   }
 

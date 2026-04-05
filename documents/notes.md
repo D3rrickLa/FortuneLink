@@ -52,18 +52,18 @@
 * [✅] **Realized Gains Reporting**: Implement `GetRealizedGainsQuery` and corresponding service/endpoint for tax reporting.
 * [ ] **Performance Calculation**: Implement `PerformanceCalculationService` (Total Return, TWR, Unrealized Gains).
 * [ ] **Asset Allocation**: Implement `AssetAllocationService` for breakdown by asset type, account, and currency.
-* [ ] **CSV Import Engine**: Build parsing logic, bulk commands, and file upload endpoints.
-* [ ] **Symbol Validation**: Expose a search endpoint to validate symbols before transaction submission.
+* [🟨] **CSV Import Engine**: Build parsing logic, bulk commands, and file upload endpoints.
+* [✅] **Symbol Validation**: Expose a search endpoint to validate symbols before transaction submission.
 
 ## 4. Documentation & Cleanup
 * [✅] **Stale Code Cleanup**: Remove/update "Bug 6" comments in `TransactionType.java`.
 * [✅] **Net Worth Disclaimer**: Add `liabilitiesIncluded` flag to `NetWorthView` to warn users that Loan context is currently deferred.
-* [ ] **Filter Improvements**: Update `GetTransactionHistoryQuery` to allow simultaneous filtering by Date AND Symbol.
-* [ ] **DRIP Validation**: Implement a check to prevent duplicate recording of dividends and dividend reinvestments.
+* [✅] **Filter Improvements**: Update `GetTransactionHistoryQuery` to allow simultaneous filtering by Date AND Symbol.
+* [✅] **DRIP Validation**: Implement a check to prevent duplicate recording of dividends and dividend reinvestments.
 
 
 NOTE:
-* 1 - we didn't add a 'flag', we in the `TransactionRecordingServiceImpl.java` used the account HealthStatus to verify
+* 1 - we didn't add a 'flag', we in the `TransactionRecordingServiceImpl.java` used the account HealthStatus to verify ✅
 
 ---
 
@@ -110,3 +110,15 @@ infrastructure/
 ### No Symbol Search/Validation Endpoint
 Before a user records a BUY, they need to search for AAPL or BTC-USD. MarketDataService.isSymbolSupported() and getAssetInfo() exist, but there's no exposed endpoint. The frontend has no way to validate a symbol or retrieve its metadata before submitting a transaction.
 
+#### code example
+```
+@GetMapping("/{symbol}/validate")
+    public ResponseEntity<AssetInfoResponse> validateSymbol(@PathVariable String symbol) {
+        if (!marketDataService.isSymbolSupported(symbol)) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        var info = marketDataService.getAssetInfo(symbol);
+        return ResponseEntity.ok(new AssetInfoResponse(info));
+    }
+```

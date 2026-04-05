@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,35 +41,24 @@ public class TransactionQueryService {
   public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
     Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
-    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
-        query.accountId());
+    // 1. Security & Basic Validation
+    portfolioLoader.validatePortfolioAndAccountOwnership(
+        query.portfolioId(), query.userId(), query.accountId());
+    
     validateDateRange(query.startDate(), query.endDate());
 
-    boolean hasDateRange = query.startDate() != null && query.endDate() != null;
-    boolean hasSymbol = query.symbol() != null;
-
-    // MVP limitation
-    if (hasDateRange && hasSymbol) {
-      throw new IllegalArgumentException(
-          "Cannot filter by both date range and symbol simultaneously. "
-              + "Provide either a date range or a symbol, not both.");
-    }
-
-    Pageable pageable = query.toPageable();
-
-    Page<Transaction> page;
-    if (hasDateRange) {
-      page = transactionQueryRepository.findByAccountIdAndDateRange(query.accountId(),
-          query.startDate(), query.endDate(), pageable);
-    } else if (hasSymbol) {
-      page = transactionQueryRepository.findByAccountIdAndSymbol(query.accountId(), query.symbol(),
-          pageable);
-    } else {
-      page = transactionQueryRepository.findByAccountId(query.accountId(), pageable);
-    }
+    // 2. Execute the single, unified dynamic query
+    // This replaces all the 'if (hasDateRange) ... else if (hasSymbol)' logic
+    Page<Transaction> page = transactionQueryRepository.findTransactionsDynamic(
+        query.accountId(),
+        query.symbol(),
+        query.startDate(),
+        query.endDate(),
+        query.toPageable()
+    );
 
     return page.map(transactionViewMapper::toTransactionView);
-  }
+}
 
   /**
    * Unbounded fetch for internal calculations only. NEVER expose this through a controller

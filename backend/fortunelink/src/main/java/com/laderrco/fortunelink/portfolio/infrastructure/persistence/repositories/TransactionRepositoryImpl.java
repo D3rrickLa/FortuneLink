@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import com.laderrco.fortunelink.portfolio.application.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -45,22 +46,22 @@ public class TransactionRepositoryImpl implements TransactionRepository,
    *
    * <p>
    * <b>Existing transactions (exclusion/restore path):</b> The managed JPA entity
-   * is fetched by primary key, then only the exclusion state columns are updated in-place. The
+   * is fetched by primary key, then only the exclusion state columns are updated
+   * in-place. The
    * portfolioId is already on the managed entity from the original insert.
    *
    * <p>
    * <b>Why portfolioId is required even for updates:</b> The interface contract
-   * is uniform. The caller always has it available (from the command), so requiring it here
+   * is uniform. The caller always has it available (from the command), so
+   * requiring it here
    * prevents future callers from accidentally triggering the old lookup pattern.
    */
   @Override
   public Transaction save(Transaction domain, PortfolioId portfolioId) {
     Objects.requireNonNull(domain, "Transaction cannot be null");
-    Objects.requireNonNull(portfolioId,
-        "PortfolioId cannot be null — callers must always supply it");
+    Objects.requireNonNull(portfolioId, "PortfolioId cannot be null, callers must always supply it");
 
-    UUID id = UUID.fromString(domain.transactionId().toString());
-    Optional<TransactionJpaEntity> existing = jpaRepository.findById(id);
+    Optional<TransactionJpaEntity> existing = jpaRepository.findById(domain.transactionId().id());
     TransactionJpaEntity entity;
 
     if (existing.isPresent()) {
@@ -96,31 +97,27 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   public List<Transaction> findByPortfolioIdAndUserIdAndAccountId(PortfolioId portfolioId,
       UserId userId, AccountId accountId) {
-    // NOTE: this might be wrong, the toString() returns a class description, not
-    // the uuid
-    return jpaRepository.findByPortfolioIdAndUserIdAndAccountId(
-        UUID.fromString(portfolioId.toString()), UUID.fromString(userId.toString()),
-        UUID.fromString(accountId.toString())).stream().map(mapper::toDomain).toList();
+    return jpaRepository.findByPortfolioIdAndUserIdAndAccountId(portfolioId.id(), userId.id(),
+        accountId.id()).stream().map(mapper::toDomain).toList();
   }
 
   @Override
   public List<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol) {
-    return jpaRepository.findByAccountIdAndExecutionSymbol(UUID.fromString(accountId.toString()),
-        symbol.symbol()).stream().map(mapper::toDomain).toList();
+    return jpaRepository.findByAccountIdAndExecutionSymbol(accountId.id(), symbol.symbol())
+        .stream().map(mapper::toDomain).toList();
   }
 
   @Override
   public List<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start,
       Instant end) {
-    return jpaRepository.findByAccountIdAndOccurredAtBetween(UUID.fromString(accountId.toString()),
-        start, end).stream().map(mapper::toDomain).toList();
+    return jpaRepository.findByAccountIdAndOccurredAtBetween(accountId.id(), start, end)
+        .stream().map(mapper::toDomain).toList();
   }
 
   @Override
   public Optional<Transaction> findByIdAndPortfolioIdAndUserIdAndAccountId(TransactionId id,
       PortfolioId portfolioId, UserId userId, AccountId accountId) {
-    return jpaRepository.findByIdAndPortfolioIdAndAccountId(UUID.fromString(id.toString()),
-            UUID.fromString(portfolioId.toString()), UUID.fromString(accountId.toString()))
+    return jpaRepository.findByIdAndPortfolioIdAndAccountId(id.id(), portfolioId.id(), accountId.id())
         .map(mapper::toDomain);
   }
 
@@ -137,8 +134,8 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   public Page<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start,
       Instant end, Pageable pageable) {
-    return jpaRepository.findByAccountIdAndOccurredAtBetween(UUID.fromString(accountId.toString()),
-        start, end, pageable).map(mapper::toDomain);
+    return jpaRepository.findByAccountIdAndOccurredAtBetween(accountId.id(), start, end, pageable)
+        .map(mapper::toDomain);
   }
 
   @Override
@@ -161,5 +158,18 @@ public class TransactionRepositoryImpl implements TransactionRepository,
           new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
     }
     return Collections.unmodifiableMap(result);
+  }
+
+  @Override
+  public Page<Transaction> findTransactionsDynamic(AccountId accountId, AssetSymbol symbol, Instant start, Instant end,
+      Pageable pageable) {
+    return jpaRepository.findTransactionsDynamic(accountId.id(), symbol.symbol(), start, end, pageable)
+        .map(mapper::toDomain);
+  }
+
+  @Override
+  public boolean existsConflict(AccountId accountId, TransactionType transactionType, AssetSymbol symbol, Instant start,
+      Instant end) {
+    return jpaRepository.existsConflict(accountId.id(), transactionType, symbol.symbol(), start, end);
   }
 }

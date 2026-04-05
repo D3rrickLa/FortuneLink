@@ -27,7 +27,7 @@ public interface TransactionRecordingService {
    * Records a buy order and updates the account's position and cash balance.
    */
   Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type, Quantity quantity,
-      Price price, List<Fee> fees, String notes, Instant date);
+      Price price, List<Fee> fees, String notes, Instant date, boolean skipCashCheck);
 
   /**
    * Records a sell order and updates the account's position and cash balance.

@@ -45,8 +45,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
 
   @Override
   public Transaction recordBuy(Account account, AssetSymbol symbol, AssetType type,
-      Quantity quantity, Price price, List<Fee> fees, String notes, Instant date) {
-    validateIsActive(account);
+      Quantity quantity, Price price, List<Fee> fees, String notes, Instant date, boolean skipCashCheck) {
+       validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
     validateTransactionDate(date, account);
 
@@ -55,12 +55,12 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
     Money cashRequired = gross.add(totalFees);
 
-    if (!account.hasSufficientCash(cashRequired) && !account.isInReplayMode()) {
-      throw new InsufficientFundsException(
-          String.format("Insufficient cash for buy. Required: %s, Available: %s", cashRequired,
-              account.getCashBalance()));
+    boolean shouldCheckCash = !skipCashCheck && !account.isInReplayMode();
+    if (shouldCheckCash && !account.hasSufficientCash(cashRequired)) {
+        throw new InsufficientFundsException(
+            String.format("Insufficient cash for buy. Required: %s, Available: %s",
+                cashRequired, account.getCashBalance()));
     }
-
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.BUY)
         .execution(new TradeExecution(symbol, quantity, price)).cashDelta(cashRequired.negate())

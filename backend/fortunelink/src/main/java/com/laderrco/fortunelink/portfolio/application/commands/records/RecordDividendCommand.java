@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.commands.records;
 
-import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasAssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;

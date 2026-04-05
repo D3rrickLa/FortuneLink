@@ -66,6 +66,11 @@ class MarketDataServiceDomainInterfaceTest {
     public boolean isSymbolSupported(AssetSymbol symbol) {
       return false;
     }
+
+    @Override
+    public MarketAssetInfo validateAndGet(AssetSymbol symbol) {
+      return null;
+    }
   };
 
   @Test

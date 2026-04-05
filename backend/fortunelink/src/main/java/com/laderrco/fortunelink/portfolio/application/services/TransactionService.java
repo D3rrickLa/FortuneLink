@@ -21,8 +21,6 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotF
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
-import com.laderrco.fortunelink.portfolio.application.utils.annotations.AdditionalInfoTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasAssetSymbol;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.IdentifiedTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.PortfolioContext;
@@ -37,7 +35,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
@@ -58,7 +55,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,7 +64,6 @@ TransactionService-> TransactionRecordingService (create transaction) -> Positio
 -> Account/Position
 */
 @Service
-@EnableRetry
 @Transactional
 @RequiredArgsConstructor
 @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
@@ -93,7 +88,7 @@ public class TransactionService {
       AssetType resolvedType = resolveAssetType(symbol, command.assetType());
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
       return transactionRecordingService.recordBuy(ctx.account(), symbol, resolvedType,
-          command.quantity(), price, command.fees(), command.notes(), command.transactionDate());
+          command.quantity(), price, command.fees(), command.notes(), command.transactionDate(), command.skipCashCheck());
     });
   }
 
@@ -138,16 +133,18 @@ public class TransactionService {
   public TransactionView recordDividend(RecordDividendCommand command) {
     return execute(command, validator::validate, "recordDividend",
         ctx -> {
-          warnIfDuplicateExists(command.accountId(), command.assetSymbol(), command.transactionDate(), TransactionType.DIVIDEND_REINVEST);
+          warnIfDuplicateExists(command.accountId(), TransactionType.DIVIDEND_REINVEST,
+              new AssetSymbol(command.assetSymbol()), command.transactionDate());
           return transactionRecordingService.recordDividend(ctx.account(),
-            new AssetSymbol(command.assetSymbol()), command.amount(), command.notes(),
-            command.transactionDate())});
+              new AssetSymbol(command.assetSymbol()), command.amount(), command.notes(),
+              command.transactionDate());
+        });
   }
 
   public TransactionView recordDividendReinvestment(RecordDividendReinvestmentCommand command) {
     return execute(command, validator::validate, "recordDividendReinvestment", ctx -> {
       AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
-      warnIfDividendAlreadyRecorded(command, ctx.account());
+      warnIfDuplicateExists(command.accountId(), TransactionType.DIVIDEND, symbol, command.transactionDate());
       return transactionRecordingService.recordDividendReinvestment(ctx.account(), symbol,
           command.execution().sharesPurchased(), command.execution().pricePerShare(),
           command.notes(), command.transactionDate());
@@ -326,24 +323,21 @@ public class TransactionService {
    * Callers that intentionally bypass this (e.g., CSV import correction flows)
    * should be aware of the accounting implication.
    */
-  private void warnIfDividendAlreadyRecorded(HasAssetSymbol command, Account account) {
+  private void warnIfDuplicateExists(AccountId accountId, TransactionType transactionType,
+      AssetSymbol assetSymbol, Instant transactionDate) {
 
-    Instant windowStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
-    Instant windowEnd = command.transactionDate().plus(24, ChronoUnit.HOURS);
+    Instant windowStart = transactionDate.minus(24, ChronoUnit.HOURS);
+    Instant windowEnd = transactionDate.plus(24, ChronoUnit.HOURS);
 
-    boolean hasConflict = transactionRepository
-        .findByAccountIdAndDateRange(command.accountId(), windowStart, windowEnd)
-        .stream()
-        .anyMatch(tx -> tx.transactionType() == TransactionType.DIVIDEND
-            && tx.metadata().get(TransactionMetadata.KEY_SYMBOL) != null
-            && tx.metadata().get(TransactionMetadata.KEY_SYMBOL).equals(command.assetSymbol()));
+    boolean hasConflict = transactionRepository.existsConflict(accountId, transactionType, assetSymbol,
+        windowStart, windowEnd);
 
     if (hasConflict) {
       log.warn("DRIP recorded for symbol={} on {} but a DIVIDEND transaction exists " +
           "within 24 hours for the same symbol in accountId={}. " +
           "If this is the same event, the DIVIDEND transaction will overstate " +
           "cash balance. Review transaction history before proceeding.",
-          command.assetSymbol(), command.transactionDate(), command.accountId());
+          assetSymbol, transactionDate, accountId);
     }
   }
 }

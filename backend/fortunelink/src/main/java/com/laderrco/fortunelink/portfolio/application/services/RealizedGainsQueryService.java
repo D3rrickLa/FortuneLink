@@ -58,7 +58,7 @@ public class RealizedGainsQueryService {
     if (!records.isEmpty()) {
       return records.get(0).realizedGainLoss().currency();
     }
-    // No records to derive currency from — do a lightweight lookup.
+    // No records to derive currency from, do a lightweight lookup.
     return repository.findAccountCurrencyCode(accountId)
         .map(Currency::of)
         .orElse(Currency.CAD); // safe fallback, account should always have a currency
@@ -83,7 +83,8 @@ public class RealizedGainsQueryService {
 
       if (r.isGain()) {
         totalGains = totalGains.add(r.realizedGainLoss());
-      } else if (r.isLoss()) {
+      } else {
+        // This covers isLoss() AND isZero()
         totalLosses = totalLosses.add(r.realizedGainLoss().abs());
       }
     }

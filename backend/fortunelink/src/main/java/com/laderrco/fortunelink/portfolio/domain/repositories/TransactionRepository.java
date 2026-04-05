@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.repositories;
 import com.laderrco.fortunelink.portfolio.application.repositories.TransactionQueryRepository;
 import com.laderrco.fortunelink.portfolio.application.services.TransactionPurgeService;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -80,4 +81,6 @@ public interface TransactionRepository {
    * benefit from caching.
    */
   Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId);
+
+  boolean existsConflict(AccountId accountId, TransactionType transactionType, AssetSymbol symbol, Instant start, Instant end);
 }

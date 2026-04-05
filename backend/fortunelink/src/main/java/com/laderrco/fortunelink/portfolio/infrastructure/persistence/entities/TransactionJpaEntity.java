@@ -18,9 +18,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Getter;
+
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Persistence model for the {@code Transaction} domain record.
@@ -48,7 +51,7 @@ import org.hibernate.annotations.BatchSize;
  * retrieved from Redis/API on demand. Do not add JPA mapping for it.
  */
 @Entity
-@Getter
+@Data
 @Table(name = "transactions")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class TransactionJpaEntity {
@@ -127,6 +130,7 @@ public class TransactionJpaEntity {
    * Map&lt;String,String&gt; ↔ JSON text.
    */
   @Convert(converter = StringMapConverter.class)
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "additional_data", columnDefinition = "jsonb")
   private Map<String, String> additionalData = new HashMap<>();
 

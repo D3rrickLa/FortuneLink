@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
@@ -107,95 +109,66 @@ public class TransactionQueryServiceTest {
   @Nested
   @DisplayName("getTransactionHistory Filtering & Validation")
   class GetTransactionHistoryTests {
+
     @Test
-    @DisplayName("getTransactionHistory: throws exception when both date range and symbol provided")
-    void getTransactionHistoryThrowsOnMutualExclusion() {
+    @DisplayName("getTransactionHistory: successfully calls dynamic repository with all filters")
+    void getTransactionHistoryCallsDynamicRepository() {
+      // Arrange
       GetTransactionHistoryQuery query = createHistoryQuery(START, END, SYMBOL);
-
-      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query)).isInstanceOf(
-              IllegalArgumentException.class)
-          .hasMessageContaining("Cannot filter by both date range and symbol");
-    }
-
-    @Test
-    @DisplayName("getTransactionHistory: uses date range filter when only dates provided")
-    void getTransactionHistoryUsesDateRange() {
-      GetTransactionHistoryQuery query = createHistoryQuery(START, END, null);
       Page<Transaction> mockPage = new PageImpl<>(List.of());
 
-      when(
-          transactionQueryRepository.findByAccountIdAndDateRange(eq(ACCOUNT_ID), eq(START), eq(END),
-              any())).thenReturn(mockPage);
+      // Stub the NEW dynamic method
+      when(transactionQueryRepository.findTransactionsDynamic(
+          eq(ACCOUNT_ID), eq(SYMBOL), eq(START), eq(END), any()))
+          .thenReturn(mockPage);
 
+      // Act
       transactionQueryService.getTransactionHistory(query);
 
-      verify(transactionQueryRepository).findByAccountIdAndDateRange(eq(ACCOUNT_ID), eq(START),
-          eq(END), any());
+      // Assert
+      verify(portfolioLoader).validatePortfolioAndAccountOwnership(PORTFOLIO_ID, USER_ID, ACCOUNT_ID);
+      verify(transactionQueryRepository).findTransactionsDynamic(
+          eq(ACCOUNT_ID), eq(SYMBOL), eq(START), eq(END), any());
     }
 
     @Test
-    @DisplayName("getTransactionHistory: uses symbol filter when only symbol provided")
-    void getTransactionHistoryUsesSymbol() {
-      GetTransactionHistoryQuery query = createHistoryQuery(null, null, SYMBOL);
-      Page<Transaction> mockPage = new PageImpl<>(List.of());
-
-      when(transactionQueryRepository.findByAccountIdAndSymbol(eq(ACCOUNT_ID), eq(SYMBOL),
-          any())).thenReturn(mockPage);
-
-      transactionQueryService.getTransactionHistory(query);
-
-      verify(transactionQueryRepository).findByAccountIdAndSymbol(eq(ACCOUNT_ID), eq(SYMBOL),
-          any());
-    }
-
-    @Test
-    @DisplayName("getTransactionHistory: uses no-filter path when neither dates nor symbol provided")
-    void getTransactionHistoryUsesNoFilter() {
+    @DisplayName("getTransactionHistory: handles null filters correctly")
+    void getTransactionHistoryHandlesNullFilters() {
+      // Arrange: Query with no symbol and no dates
       GetTransactionHistoryQuery query = createHistoryQuery(null, null, null);
       Page<Transaction> mockPage = new PageImpl<>(List.of());
 
-      when(transactionQueryRepository.findByAccountId(eq(ACCOUNT_ID), any())).thenReturn(mockPage);
+      when(transactionQueryRepository.findTransactionsDynamic(
+          eq(ACCOUNT_ID), isNull(), isNull(), isNull(), any()))
+          .thenReturn(mockPage);
 
+      // Act
       transactionQueryService.getTransactionHistory(query);
 
-      verify(transactionQueryRepository).findByAccountId(eq(ACCOUNT_ID), any());
+      // Assert
+      verify(transactionQueryRepository).findTransactionsDynamic(
+          eq(ACCOUNT_ID), isNull(), isNull(), isNull(), any());
     }
 
-    @Nested
-    @DisplayName("getTransactionHistory Partial Filters and Defaults")
-    class GetTransactionHistoryPartialFilterTests {
-      @Test
-      @DisplayName("getTransactionHistory: uses symbol filter when start date is provided without end date")
-      void getTransactionHistoryUsesSymbolWhenDateRangeIsPartial() {
-        // hasDateRange will be false because endDate is null
-        GetTransactionHistoryQuery query = createHistoryQuery(START, null, SYMBOL);
-        Page<Transaction> mockPage = new PageImpl<>(List.of());
+    @Test
+    @DisplayName("getTransactionHistory: throws exception for invalid date range")
+    void getTransactionHistoryThrowsOnInvalidDates() {
+      // Arrange: End date before Start date
+      GetTransactionHistoryQuery query = createHistoryQuery(END, START, null);
 
-        when(transactionQueryRepository.findByAccountIdAndSymbol(eq(ACCOUNT_ID), eq(SYMBOL),
-            any())).thenReturn(mockPage);
+      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query))
+          .isInstanceOf(InvalidDateRangeException.class)
+          .hasMessageContaining("Start date cannot be after end date");
 
-        transactionQueryService.getTransactionHistory(query);
+      verifyNoInteractions(transactionQueryRepository);
+    }
 
-        // Verify it skipped findByAccountIdAndDateRange and went to Symbol
-        verify(transactionQueryRepository).findByAccountIdAndSymbol(eq(ACCOUNT_ID), eq(SYMBOL),
-            any());
-      }
-
-      @Test
-      @DisplayName("getTransactionHistory: defaults to basic account query when only end date is provided")
-      void getTransactionHistoryDefaultsToBasicWhenOnlyEndDateProvided() {
-        // hasDateRange = false, hasSymbol = false
-        GetTransactionHistoryQuery query = createHistoryQuery(null, END, null);
-        Page<Transaction> mockPage = new PageImpl<>(List.of());
-
-        when(transactionQueryRepository.findByAccountId(eq(ACCOUNT_ID), any())).thenReturn(
-            mockPage);
-
-        transactionQueryService.getTransactionHistory(query);
-
-        // Verify it hits the final 'else' block
-        verify(transactionQueryRepository).findByAccountId(eq(ACCOUNT_ID), any());
-      }
+    @Test
+    @DisplayName("getTransactionHistory: throws exception when query is null")
+    void getTransactionHistoryThrowsOnNullQuery() {
+      assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(null))
+          .isInstanceOf(NullPointerException.class)
+          .hasMessageContaining("cannot be null");
     }
   }
 
@@ -223,7 +196,7 @@ public class TransactionQueryServiceTest {
 
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
-          InvalidDateRangeException.class);
+              InvalidDateRangeException.class);
     }
 
     @Test
@@ -238,7 +211,7 @@ public class TransactionQueryServiceTest {
 
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
-          SecurityException.class);
+              SecurityException.class);
     }
 
     @Test
@@ -248,7 +221,7 @@ public class TransactionQueryServiceTest {
       // This tests the explicit Objects.requireNonNull checks in your method
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(nullQuery)).isInstanceOf(
-          NullPointerException.class);
+              NullPointerException.class);
     }
   }
 }

@@ -4,6 +4,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -44,6 +45,14 @@ public interface MarketDataService {
    * @return the asset information, or empty if the symbol is unknown
    */
   Optional<MarketAssetInfo> getAssetInfo(AssetSymbol symbol);
+
+  /**
+   * Returns a stripped down version of a symbol you are finding, a 'lookup'
+   * for the stock you are trying to find
+   * @param symbol
+   * @return market asset metadata
+   */
+  MarketAssetInfo validateAndGet(AssetSymbol symbol);
 
   /**
    * Returns descriptive details for multiple assets.

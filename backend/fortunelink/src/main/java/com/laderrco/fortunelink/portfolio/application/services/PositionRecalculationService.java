@@ -41,37 +41,33 @@ public class PositionRecalculationService {
 
   private void acquireAndRun(String lockKey, PositionRecalculationRequestedEvent event)
       throws InterruptedException {
-
-    RLock lock;
-    try {
-      lock = redisson.getLock(lockKey);
-    } catch (Exception redisEx) {
-      // Redis is unavailable. Proceed without the distributed lock.
-      // Two concurrent recalculations for the same account may run.
-      // The last writer wins on the portfolio save due to optimistic locking,
-      // so the final state will still be consistent — just potentially wasteful.
-      log.warn("Redis unavailable for lock key={}, proceeding without lock. " +
-          "Concurrent recalculation risk accepted.", lockKey, redisEx);
-      runRecalculation(event);
-      return;
-    }
-
+    RLock lock = redisson.getLock(lockKey);
     boolean acquired = false;
+
     try {
+      // The network call actually happens here.
+      // If Redis is down, this will throw a RedisException.
       acquired = lock.tryLock(10, 30, TimeUnit.SECONDS);
+
       if (acquired) {
         runRecalculation(event);
       } else {
-        log.warn("Could not acquire lock for accountId={} within 10s. " +
-            "Another recalculation is likely in progress.",
-            event.accountId());
+        log.warn("Lock busy for accountId={}", event.accountId());
       }
+
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt(); // preserve interrupt
+      throw e; // rethrow so outer handler catches it
+    } catch (Exception redisEx) {
+      log.warn("Redis connectivity issue. Falling back to unprotected execution.", redisEx);
+      runRecalculation(event);
+
     } finally {
       if (acquired) {
         try {
           lock.unlock();
         } catch (Exception e) {
-          log.warn("Failed to release lock={}, it will expire automatically.", lockKey, e);
+          log.debug("Lock already released or expired.");
         }
       }
     }

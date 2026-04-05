@@ -6,6 +6,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -143,5 +145,15 @@ public class MarketDataServiceImpl implements MarketDataService {
       }
     }
     return result;
+  }
+
+  @Override
+  public MarketAssetInfo validateAndGet(AssetSymbol symbol) {
+    return infoRepository.findBySymbol(symbol).orElseGet(() -> {
+          MarketAssetInfo external = provider.fetchAssetInfo(symbol)
+              .orElseThrow(() -> new UnknownSymbolException(symbol.symbol()));
+          infoRepository.save(external);
+          return external;
+        });
   }
 }

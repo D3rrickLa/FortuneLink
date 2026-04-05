@@ -22,6 +22,8 @@ import lombok.Builder;
  * @param assetType Client-supplied type hint. Used only when the symbol is not yet cached in
  *                  market_asset_info. The service validates and sanitizes this value — never pass
  *                  it directly to domain logic.
+ * 
+ * @param skipCashCheck true for historical/import flow, default is false
  */
 @Builder
 public record RecordPurchaseCommand(
@@ -34,7 +36,8 @@ public record RecordPurchaseCommand(
     Price price,
     List<Fee> fees,
     Instant transactionDate,
-    String notes) implements AdditionalInfoTransactionCommand {
+    String notes,
+    boolean skipCashCheck) implements AdditionalInfoTransactionCommand {
   public Money totalFees(Currency currency) {
     return Fee.totalInAccountCurrency(fees, currency);
   }
