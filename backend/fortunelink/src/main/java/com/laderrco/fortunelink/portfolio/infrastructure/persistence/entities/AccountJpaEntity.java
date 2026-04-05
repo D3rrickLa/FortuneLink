@@ -15,12 +15,8 @@ import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Persistable;
@@ -28,8 +24,10 @@ import org.springframework.data.domain.Persistable;
 /**
  * Persistence model for {@code Account}.
  * <p>
- * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and one-directional collections
- * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and {@code RealizedGainJpaEntity}.
+ * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and
+ * one-directional collections
+ * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and
+ * {@code RealizedGainJpaEntity}.
  */
 @Entity
 @Getter
@@ -90,14 +88,14 @@ public class AccountJpaEntity implements Persistable<UUID> {
   // -------------------------------------------------------------------------
 
   @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-  private final List<PositionJpaEntity> positions = new ArrayList<>();
+  private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
 
   // if a single portoflio lods like 3 years of active trading, that's 100+
   // records, each time they open the portfolio page, each one is 'loaded', LAZY
   // to solve this
-  @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
-      CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
-  private final List<RealizedGainJpaEntity> realizedGains = new ArrayList<>();
+  @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
+      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
+  private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
 
   // -------------------------------------------------------------------------
   // Factory
@@ -166,12 +164,15 @@ public class AccountJpaEntity implements Persistable<UUID> {
   }
 
   /**
-   * Appends only NEW realized gain rows, those whose UUID does not already exist in the persisted
-   * collection. This is the correct operation for append-only domain data. Never call clear() on
+   * Appends only NEW realized gain rows, those whose UUID does not already exist
+   * in the persisted
+   * collection. This is the correct operation for append-only domain data. Never
+   * call clear() on
    * realizedGains.
    *
    * <p>
-   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing only the delta
+   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing
+   * only the delta
    * here.
    */
   public void addNewRealizedGains(List<RealizedGainJpaEntity> newGains) {

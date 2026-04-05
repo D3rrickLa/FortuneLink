@@ -9,7 +9,7 @@ public record CreatePortfolioRequest(
     @NotBlank String name,
     String description,
     @NotBlank String currency,
-    boolean createDefaultAccount,
+    Boolean createDefaultAccount,
     @NotNull(message = "Account type required when creating default account") AccountType defaultAccountType,
     PositionStrategy defaultStrategy) {
 }

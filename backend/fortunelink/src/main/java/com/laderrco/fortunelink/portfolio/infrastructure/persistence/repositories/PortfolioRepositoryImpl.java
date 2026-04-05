@@ -64,7 +64,6 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @Override
   public List<Portfolio> findAllActiveByUserId(UserId userId) {
-    // Spring Data query — see JpaPortfolioRepository for the @Query definition.
     return jpaRepository.findAllActiveByUserId(UUID.fromString(userId.toString())).stream()
         .map(mapper::toDomain).toList();
   }
