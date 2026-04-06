@@ -2,6 +2,8 @@ package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -50,9 +52,14 @@ public class AccountController {
   }
 
   @GetMapping
-  public List<AccountView> getAllAccounts(@PathVariable String portfolioId, @AuthenticatedUser UserId userId) {
-    return accountQueryService.getAllAccounts(new GetAllAccountsQuery(
-        PortfolioId.fromString(portfolioId), userId));
+  public Page<AccountView> getAllAccounts(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      Pageable pageable) { // Spring automatically populates this from query params
+
+    return accountQueryService.getAllAccounts(
+        new GetAllAccountsQuery(PortfolioId.fromString(portfolioId), userId),
+        pageable);
   }
 
   @GetMapping("/{accountId}")

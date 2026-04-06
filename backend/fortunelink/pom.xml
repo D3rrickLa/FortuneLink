@@ -30,7 +30,7 @@
   <properties>
     <java.version>25</java.version>
     <testcontainers.version>1.21.4</testcontainers.version>
-    <bucket4j.version>8.7.0</bucket4j.version>
+    <bucket4j.version>8.17.0</bucket4j.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -159,8 +159,6 @@
       <artifactId>commons-pool2</artifactId>
     </dependency>
 
-    <!-- Source: https://mvnrepository.com/artifact/org.redisson/redisson -->
-     <!-- Replaces Striped<Lock> -->
     <dependency>
       <groupId>org.redisson</groupId>
       <artifactId>redisson</artifactId>
@@ -170,15 +168,22 @@
     <!-- Bucket4j for rate limiting -->
     <dependency>
       <groupId>com.bucket4j</groupId>
-      <artifactId>bucket4j-core</artifactId>
+      <artifactId>bucket4j_jdk17-core</artifactId>
       <version>${bucket4j.version}</version>
     </dependency>
 
     <!-- Bucket4j Redis integration -->
     <dependency>
       <groupId>com.bucket4j</groupId>
-      <artifactId>bucket4j-redis</artifactId>
+      <artifactId>bucket4j_jdk17-redis-common</artifactId>
       <version>${bucket4j.version}</version>
+    </dependency>
+
+    <!-- Bucket4j Redisson integration -->
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j_jdk17-redisson</artifactId>
+      <version>8.14.0</version>
     </dependency>
 
     <dependency>
@@ -186,38 +191,22 @@
       <artifactId>caffeine</artifactId>
     </dependency>
 
+
+    <!-- Databases -->
     <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
     </dependency>
 
-    <!--
-            REMOVED: h2 (runtime)
-            H2 is not compatible with PostgresSQL-dialect Flyway migrations.
-            It was likely here as a fast in-memory DB for tests, but you are already
-            using Testcontainers with a real PostgresSQL container, which is the correct
-            approach. Keeping H2 creates a false safety net where tests pass in-memory
-            but fail against real Postgres. Testcontainers covers this correctly.
-            If you ever need H2 for a specific lightweight test, re-add it scoped
-            to test only with a separate Flyway migration location.
-        -->
-
-    <!--
-            CHANGED: flyway-database-postgresql -> spring-boot-starter-flyway
-            Boot 4 added a proper Flyway starter. This pulls in flyway-core AND
-            flyway-database-postgresql as a managed, versioned set. Using the raw
-            flyway-database-postgresql artifact directly bypasses Boot's version
-            management and autoconfiguration wiring. Use the starter.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-flyway</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-database-postgresql</artifactId>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- JSONB / Hibernate Utilities -->

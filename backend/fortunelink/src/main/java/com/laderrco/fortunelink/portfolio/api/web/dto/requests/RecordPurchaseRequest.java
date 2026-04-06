@@ -12,7 +12,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 public record RecordPurchaseRequest(
     @NotBlank String accountId,
     @NotBlank String symbol,
-    @NotBlank AssetType type,
+    @NotNull  AssetType type,
     @NotNull @DecimalMin("0.00000001") BigDecimal quantity,
     @NotNull @DecimalMin("0.01") BigDecimal price,
     @NotBlank String currency,

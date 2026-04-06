@@ -23,6 +23,7 @@ import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +33,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Validated
 public class TransactionController {
-
   private final TransactionService transactionService;
   private final TransactionQueryService transactionQueryService;
-  private final AuthenticationUserService authService;
+  private final IdempotencyCache idempotencyCache;
 
   @PostMapping("/buy")
   @ResponseStatus(HttpStatus.CREATED)
@@ -43,11 +43,19 @@ public class TransactionController {
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
+      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
+
+    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+    if (cacheKey != null) {
+      TransactionView cached = idempotencyCache.get(cacheKey);
+      if (cached != null)
+        return cached;
+    }
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
-    return transactionService.recordPurchase(new RecordPurchaseCommand(
+    TransactionView result = transactionService.recordPurchase(new RecordPurchaseCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -59,6 +67,12 @@ public class TransactionController {
         request.transactionDate(),
         request.notes() != null ? request.notes() : "",
         false));
+
+    if (cacheKey != null) {
+      idempotencyCache.put(cacheKey, result);
+    }
+
+    return result;
   }
 
   @PostMapping("/sell")
@@ -67,11 +81,19 @@ public class TransactionController {
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
+      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
+
+    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+    if (cacheKey != null) {
+      TransactionView cached = idempotencyCache.get(cacheKey);
+      if (cached != null)
+        return cached;
+    }
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
-    return transactionService.recordSale(new RecordSaleCommand(
+    TransactionView result = transactionService.recordSale(new RecordSaleCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -81,35 +103,106 @@ public class TransactionController {
         fees,
         request.transactionDate(),
         request.notes() != null ? request.notes() : ""));
+
+    if (cacheKey != null)
+      idempotencyCache.put(cacheKey, result);
+    return result;
   }
 
   @PostMapping("/deposit")
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordDeposit(
       @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
+      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDepositRequest request) {
-    UserId userId = resolveUserId();
 
-    return transactionService.recordDeposit(new RecordDepositCommand(
+    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+
+    if (cacheKey != null) {
+      TransactionView cached = idempotencyCache.get(cacheKey);
+      if (cached != null)
+        return cached;
+    }
+
+    TransactionView result = transactionService.recordDeposit(new RecordDepositCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
         Money.of(request.amount(), request.currency()),
         request.transactionDate(),
         request.notes() != null ? request.notes() : ""));
+
+    if (cacheKey != null)
+      idempotencyCache.put(cacheKey, result);
+    return result;
+  }
+
+  @PatchMapping("/{transactionId}/exclude")
+  public TransactionView excludeTransaction(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @PathVariable String transactionId,
+      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+      @RequestBody ExcludeTransactionRequest request) {
+    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+
+    if (cacheKey != null) {
+      TransactionView cached = idempotencyCache.get(cacheKey);
+      if (cached != null)
+        return cached;
+    }
+
+    TransactionView result = transactionService.excludeTransaction(new ExcludeTransactionCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        TransactionId.fromString(transactionId),
+        request.reason()));
+
+    if (cacheKey != null)
+      idempotencyCache.put(cacheKey, result);
+    return result;
+  }
+
+  @PatchMapping("/{transactionId}/restore")
+  public TransactionView restoreTransaction(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @PathVariable String transactionId,
+      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey) {
+    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+
+    if (cacheKey != null) {
+      TransactionView cached = idempotencyCache.get(cacheKey);
+      if (cached != null)
+        return cached;
+    }
+
+    TransactionView result = transactionService.restoreTransaction(new RestoreTransactionCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        TransactionId.fromString(transactionId)));
+
+    if (cacheKey != null)
+      idempotencyCache.put(idempotencyKey, result);
+    return result;
   }
 
   @GetMapping
   public Page<TransactionView> getTransactionHistory(
       @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
       @RequestParam(required = false) String symbol,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    UserId userId = resolveUserId();
 
     return transactionQueryService.getTransactionHistory(new GetTransactionHistoryQuery(
         PortfolioId.fromString(portfolioId),
@@ -120,40 +213,6 @@ public class TransactionController {
         endDate,
         page,
         size));
-  }
-
-  @PatchMapping("/{transactionId}/exclude")
-  public TransactionView excludeTransaction(
-      @PathVariable String portfolioId,
-      @PathVariable String accountId,
-      @PathVariable String transactionId,
-      @RequestBody ExcludeTransactionRequest request) {
-    UserId userId = resolveUserId();
-
-    return transactionService.excludeTransaction(new ExcludeTransactionCommand(
-        PortfolioId.fromString(portfolioId),
-        userId,
-        AccountId.fromString(accountId),
-        TransactionId.fromString(transactionId),
-        request.reason()));
-  }
-
-  @PatchMapping("/{transactionId}/restore")
-  public TransactionView restoreTransaction(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
-      @PathVariable String accountId,
-      @PathVariable String transactionId) {
-
-    return transactionService.restoreTransaction(new RestoreTransactionCommand(
-        PortfolioId.fromString(portfolioId),
-        userId,
-        AccountId.fromString(accountId),
-        TransactionId.fromString(transactionId)));
-  }
-
-  private UserId resolveUserId() {
-    return UserId.fromString(authService.getCurrentUser().toString());
   }
 
   private List<Fee> mapFees(List<FeeRequest> feeRequests, Currency defaultCurrency) {

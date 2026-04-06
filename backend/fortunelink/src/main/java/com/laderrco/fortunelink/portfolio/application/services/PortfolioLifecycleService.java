@@ -43,7 +43,7 @@ public class PortfolioLifecycleService {
     Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
         command.description(), command.currency());
 
-    if (command.createDefaultAccount()) {
+    if (Boolean.TRUE.equals(command.createDefaultAccount())) {
       portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(), command.currency(),
           command.defaultStrategy());
     }

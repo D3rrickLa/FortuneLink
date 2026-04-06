@@ -20,7 +20,6 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
