@@ -119,6 +119,7 @@ fmp:
 # BOC API
 # ============================================
 boc:
+  base-url: ${BOC_BASE_URL}
   timeout-seconds: 10
   debug-logging: false
 # ============================================

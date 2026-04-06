@@ -13,9 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "boc")
 public class BankOfCanadaClientConfig {
   private String baseUrl = "https://www.bankofcanada.ca/valet/";
-
   private int timeoutSeconds = 10;
-
   private boolean debugLogging = true;
 
   public void validate() {

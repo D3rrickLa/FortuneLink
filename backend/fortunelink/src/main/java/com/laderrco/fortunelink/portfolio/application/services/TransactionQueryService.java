@@ -41,13 +41,11 @@ public class TransactionQueryService {
   public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
     Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
-    // 1. Security & Basic Validation
     portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
         query.accountId());
 
     validateDateRange(query.startDate(), query.endDate());
 
-    // 2. Execute the single, unified dynamic query
     // This replaces all the 'if (hasDateRange) ... else if (hasSymbol)' logic
     Page<Transaction> page = transactionQueryRepository.findTransactionsDynamic(query.accountId(),
         query.symbol(), query.startDate(), query.endDate(), query.toPageable());

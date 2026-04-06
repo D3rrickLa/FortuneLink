@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.infrastructure.config;
+package com.laderrco.fortunelink.portfolio.infrastructure.config.redis;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;

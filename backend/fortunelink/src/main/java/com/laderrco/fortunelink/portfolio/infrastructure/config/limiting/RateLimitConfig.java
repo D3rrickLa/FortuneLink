@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.infrastructure.config;
+package com.laderrco.fortunelink.portfolio.infrastructure.config.limiting;
 
 import io.github.bucket4j.Bucket;
 import java.time.Duration;

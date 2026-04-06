@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.infrastructure.config;
+package com.laderrco.fortunelink.portfolio.infrastructure.config.redis;
 
 import java.time.Duration;
 import org.redisson.Redisson;
@@ -28,12 +28,12 @@ public class RedissonConfig {
     Config config = new Config();
     String address = "redis://" + host + ":" + port;
 
-    var serverConfig = config.useSingleServer().setAddress(address).setConnectionMinimumIdleSize(2)
+    config.useSingleServer().setAddress(address).setConnectionMinimumIdleSize(2)
         .setConnectionPoolSize(10).setTimeout(2000).setRetryAttempts(3)
         .setRetryDelay(new EqualJitterDelay(Duration.ofMillis(500), Duration.ofMillis(1000)));
 
     if (!password.isBlank()) {
-      serverConfig.setPassword(password);
+      config.setPassword(password);
     }
 
     return Redisson.create(config);

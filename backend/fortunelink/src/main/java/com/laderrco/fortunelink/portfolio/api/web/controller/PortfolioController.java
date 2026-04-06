@@ -11,14 +11,17 @@ import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
-import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioLifecycleService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioQueryService;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
+
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -35,20 +38,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
-@RequestMapping("/api/v1/portfolios")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/portfolios")
 public class PortfolioController {
 
   private final PortfolioLifecycleService lifecycleService;
   private final PortfolioQueryService queryService;
-  private final AuthenticationUserService authService;
 
   // --- Portfolio Lifecycle ---
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public PortfolioResponse createPortfolio(@RequestBody @Valid CreatePortfolioRequest request) {
-    var userId = getCurrentUserId();
+  public PortfolioResponse createPortfolio(@AuthenticatedUser UserId userId,
+      @RequestBody @Valid CreatePortfolioRequest request) {
 
     // Map Request -> Command
     var command = new CreatePortfolioCommand(userId, request.name(), request.description(),
@@ -62,10 +64,9 @@ public class PortfolioController {
   }
 
   @PatchMapping("/{portfolioId}")
-  public PortfolioResponse updatePortfolio(@PathVariable String portfolioId,
+  public PortfolioResponse updatePortfolio(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @RequestBody @Valid UpdatePortfolioRequest request) {
 
-    var userId = getCurrentUserId();
     var command = new UpdatePortfolioCommand(PortfolioId.fromString(portfolioId), userId,
         request.name(), request.description(),
         request.currency() != null ? Currency.of(request.currency()) : null);
@@ -76,11 +77,10 @@ public class PortfolioController {
 
   @DeleteMapping("/{portfolioId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void deletePortfolio(@PathVariable String portfolioId,
+  public void deletePortfolio(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @RequestParam(defaultValue = "true") boolean softDelete,
       @RequestParam(defaultValue = "false") boolean recursive) {
 
-    var userId = getCurrentUserId();
     lifecycleService.deletePortfolio(
         new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, true,
             // isOwner check
@@ -90,16 +90,14 @@ public class PortfolioController {
   // --- Portfolio Queries ---
 
   @GetMapping
-  public List<PortfolioSummaryResponse> getPortfolios() {
-    var userId = getCurrentUserId();
+  public List<PortfolioSummaryResponse> getPortfolios(@AuthenticatedUser UserId userId) {
     var summaries = queryService.getPortfolioSummaries(new GetPortfoliosByUserIdQuery(userId));
 
     return summaries.stream().map(PortfolioSummaryResponse::fromView).toList();
   }
 
   @GetMapping("/{portfolioId}")
-  public PortfolioResponse getPortfolio(@PathVariable String portfolioId) {
-    var userId = getCurrentUserId();
+  public PortfolioResponse getPortfolio(@PathVariable String portfolioId, @AuthenticatedUser UserId userId) {
     var view = queryService.getPortfolioById(
         new GetPortfolioByIdQuery(PortfolioId.fromString(portfolioId), userId));
 
@@ -107,17 +105,10 @@ public class PortfolioController {
   }
 
   @GetMapping("/{portfolioId}/net-worth")
-  public NetWorthResponse getNetWorth(@PathVariable String portfolioId) {
-    var userId = getCurrentUserId();
+  public NetWorthResponse getNetWorth(@PathVariable String portfolioId, @AuthenticatedUser UserId userId) {
     var view = queryService.getNetWorth(
         new GetNetWorthQuery(PortfolioId.fromString(portfolioId), userId));
 
     return NetWorthResponse.fromView(view);
-  }
-
-  // --- Helper for the DRY-hater ---
-
-  private UserId getCurrentUserId() {
-    return UserId.fromString(authService.getCurrentUser().toString());
   }
 }
