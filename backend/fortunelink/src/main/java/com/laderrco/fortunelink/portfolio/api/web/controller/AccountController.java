@@ -1,7 +1,5 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -58,8 +56,7 @@ public class AccountController {
       Pageable pageable) { // Spring automatically populates this from query params
 
     return accountQueryService.getAllAccounts(
-        new GetAllAccountsQuery(PortfolioId.fromString(portfolioId), userId),
-        pageable);
+        new GetAllAccountsQuery(PortfolioId.fromString(portfolioId), userId, pageable));
   }
 
   @GetMapping("/{accountId}")

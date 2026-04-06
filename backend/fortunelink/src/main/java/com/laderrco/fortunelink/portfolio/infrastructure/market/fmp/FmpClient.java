@@ -23,7 +23,8 @@ import tools.jackson.databind.type.TypeFactory;
 /**
  * Low-level HTTP client for FMP API.
  * <p>
- * Responsibilities: - Construct FMP API URLs - Execute HTTP requests - Parse JSON responses -
+ * Responsibilities: - Construct FMP API URLs - Execute HTTP requests - Parse
+ * JSON responses -
  * Handle HTTP errors
  *
  */
@@ -115,7 +116,10 @@ public class FmpClient {
       Thread.currentThread().interrupt();
       throw new FmpApiException("Request interrupted", e);
     } catch (IOException e) {
-      throw new FmpApiException("Failed to communicate with FMP API", e);
+      if (e instanceof java.net.SocketTimeoutException) {
+        throw new FmpApiException("FMP API request timed out for: " + url, e);
+      }
+      throw new FmpApiException("Failed to communicate with FMP API: " + e.getMessage(), e);
     }
   }
 
@@ -135,8 +139,7 @@ public class FmpClient {
 
   private String buildUrl(String path) {
     String sanitizedPath = path.startsWith("/") ? path.substring(1) : path;
-    String sanitizedBase =
-        config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
+    String sanitizedBase = config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
 
     return UriComponentsBuilder.fromUriString(sanitizedBase).path(sanitizedPath)
         .queryParam("apikey", config.getApiKey()).build().toUriString();

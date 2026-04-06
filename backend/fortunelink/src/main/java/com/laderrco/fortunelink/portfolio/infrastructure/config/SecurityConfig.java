@@ -17,8 +17,13 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+  private final JwtAuthEntryPoint jwtAuthEntryPoint;
   @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
   private String issuerUri;
+
+  SecurityConfig(JwtAuthEntryPoint jwtAuthEntryPoint) {
+    this.jwtAuthEntryPoint = jwtAuthEntryPoint;
+  }
 
   @Bean
   public JwtDecoder jwtDecoder() {
@@ -37,6 +42,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth -> auth.requestMatchers("api/v1/public/**", "/actuator/health").permitAll()
                 .anyRequest().authenticated())
-        .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults())).build();
+        .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()).authenticationEntryPoint(jwtAuthEntryPoint))
+        .build();
   }
 }

@@ -60,13 +60,6 @@
     <!-- Spring Boot Starters    -->
     <!-- ======================= -->
 
-    <!--
-            CHANGED: spring-boot-starter-web -> spring-boot-starter-webmvc
-            Boot 4 split the old 'web' starter into focused starters.
-            spring-boot-starter-webmvc is the explicit Spring MVC (Tomcat) starter.
-            The old 'web' artifact still exists as a thin alias but the official
-            migration guide says to use the named starter going forward.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
@@ -106,25 +99,11 @@
     <!-- Spring Modulith         -->
     <!-- ======================= -->
 
-    <!--
-            Core Modulith dependency.
-            Provides:
-              - Module boundary enforcement (fails fast if internals are accessed across modules)
-              - @ApplicationModuleListener for transactional cross-module event handling
-              - ApplicationEventPublisher integration for domain events
-              - Module documentation/observability hooks
-        -->
     <dependency>
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>
     </dependency>
 
-    <!--
-            JPA event publication registry.
-            Stores domain events in the DB within the same transaction they were raised,
-            then publishes them after commit. Prevents lost events on failure - critical
-            for cross-module eventual consistency without a message broker.
-        -->
     <dependency>
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-events-api</artifactId>
@@ -191,7 +170,6 @@
       <artifactId>caffeine</artifactId>
     </dependency>
 
-
     <!-- Databases -->
     <dependency>
       <groupId>org.flywaydb</groupId>
@@ -240,7 +218,6 @@
       <version>2.7.0</version>
     </dependency>
 
-
     <!-- ======================= -->
     <!-- Development Tools -->
     <!-- ======================= -->
@@ -265,92 +242,46 @@
       <scope>test</scope>
     </dependency>
 
-
     <!-- ======================= -->
     <!-- Testing                 -->
     <!-- ======================= -->
 
-    <!--
-            Boot 4 modularized the entire test infrastructure. Each technology now has a
-            dedicated test starter. spring-boot-starter-test remains as the base layer
-            (JUnit 6, Mockito, AssertJ) but all test slices now require their own starter.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!--
-            NEW (Boot 4 required): spring-boot-starter-security-test
-            In Boot 4, @WithMockUser and @WithUserDetails from spring-security-test
-            now REQUIRE this starter to function. The raw spring-security-test artifact
-            on its own no longer wires the test infrastructure correctly.
-            This replaces the direct spring-security-test declaration.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security-test</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!--
-            REMOVED: org.springframework.security:spring-security-test (direct)
-            Replaced by spring-boot-starter-security-test above. The raw module is
-            pulled in transitively. Declaring both creates version ambiguity.
-        -->
-
-    <!--
-            CHANGED: spring-security-oauth2-authorization-server (test scoped)
-            Was declared as a raw Spring Security module scoped to test.
-            Boot 4 now has a proper test starter for this. Use it.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security-oauth2-authorization-server-test</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!--
-            NEW (Boot 4 required): spring-boot-starter-webmvc-test
-            Required for @WebMvcTest slice tests under Boot 4's modular structure.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc-test</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!--
-            NEW (Boot 4 required): spring-boot-starter-data-jpa-test
-            Required for @DataJpaTest slice tests under Boot 4's modular structure.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa-test</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!--
-            NEW (Boot 4 required): spring-boot-starter-graphql-test
-            Replaces the direct org.springframework.graphql:spring-graphql-test artifact.
-            This is the Boot 4 way - use the starter, not the raw module.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-graphql-test</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!--
-            REMOVED: org.springframework.graphql:spring-graphql-test (direct)
-            Replaced by spring-boot-starter-graphql-test above.
-        -->
-
-    <!--
-            NEW (Boot 4): spring-boot-starter-flyway-test
-            Required for Flyway-aware test slices under Boot 4's modular structure.
-        -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-flyway-test</artifactId>

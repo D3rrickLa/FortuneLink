@@ -37,10 +37,22 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
   }
 
+  /**
+   * @implNote An attacker can set X-Forwarded-For: 1.2.3.4 in their request and
+   *           cycle through "IPs." Only trust this header when behind a known
+   *           proxy. Either validate the connecting IP is your load balancer, or
+   *           limit it to a single forward
+   * @param request
+   * @return
+   */
   private String getClientIp(HttpServletRequest request) {
-    String xForwardedFor = request.getHeader("X-Forwarded-For");
-    if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-      return xForwardedFor.split(",")[0].trim();
+    String forwarded = request.getHeader("X-Forwarded-For");
+    if (forwarded != null && !forwarded.isBlank()) {
+      // Take only the FIRST IP, the rest are proxies and can be forged
+      String first = forwarded.split(",")[0].trim();
+      // Basic sanity check
+      if (first.matches("[0-9a-fA-F.:]+"))
+        return first;
     }
     return request.getRemoteAddr();
   }

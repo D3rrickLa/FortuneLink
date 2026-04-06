@@ -4,6 +4,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
 import java.time.Instant;
 
+// NOTE: @Primary is on BOC
 public interface ExchangeRateProvider {
   ExchangeRate getExchangeRate(Currency from, Currency to, Instant asOf);
 }

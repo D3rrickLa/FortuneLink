@@ -76,7 +76,7 @@ public class TransactionJpaEntity {
   /**
    * AssetSymbol.symbol() — null for DEPOSIT, WITHDRAWAL, FEE, etc.
    */
-  @Column(name = "execution_symbol", length = 100)
+  @Column(name = "execution_symbol", length = 20)
   private String executionSymbol;
 
   @Column(name = "execution_quantity", precision = 20, scale = 8)

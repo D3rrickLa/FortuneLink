@@ -35,6 +35,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,6 +46,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Account Query Service Tests")
@@ -67,19 +71,24 @@ class AccountQueryServiceTest {
   @Nested
   @DisplayName("getAllAccounts()")
   class GetAllAccountsTests {
+
     @Test
-    @DisplayName("getAllAccounts: returns empty list when portfolio has no accounts")
-    void getAllAccountsEmptyPortfolioReturnsEmptyList() {
+    @DisplayName("getAllAccounts: returns empty page when portfolio has no accounts")
+    void getAllAccountsEmptyPortfolioReturnsEmptyPage() {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
       Portfolio portfolio = mock(Portfolio.class);
+      // Using a concrete PageRequest is often safer than mocking for math logic
+      Pageable pageable = PageRequest.of(0, 10);
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
+      when(portfolio.hasAccounts()).thenReturn(false);
 
-      List<AccountView> result = accountQueryService.getAllAccounts(
-          new GetAllAccountsQuery(portfolioId, userId));
+      Page<AccountView> result = accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(portfolioId, userId, pageable));
 
-      assertThat(result).isEmpty();
+      assertThat(result.getContent()).isEmpty();
+      assertThat(result.getTotalElements()).isZero();
       verifyNoInteractions(marketDataService, transactionRepository);
     }
 
@@ -90,72 +99,61 @@ class AccountQueryServiceTest {
       PortfolioId portfolioId = PortfolioId.newId();
       AssetSymbol btc = new AssetSymbol("BTC");
       AccountId accountId = AccountId.newId();
+      Pageable pageable = PageRequest.of(0, 10);
 
       Account account = mock(Account.class);
-      Map<AssetSymbol, Position> positions = Map.of(btc, mock(AcbPosition.class));
       when(account.getAccountId()).thenReturn(accountId);
-      when(account.getPositionEntries()).thenReturn(positions.entrySet());
+      when(account.getPositionEntries())
+          .thenReturn(Collections.unmodifiableCollection(Map.of(btc, mock(Position.class)).entrySet()));
 
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getAccounts()).thenReturn(List.of(account));
       when(portfolio.hasAccounts()).thenReturn(true);
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
 
-      MarketAssetQuote mockQuote = mock(MarketAssetQuote.class);
-      Map<AssetSymbol, MarketAssetQuote> quoteMap = Map.of(btc, mockQuote);
+      Map<AssetSymbol, MarketAssetQuote> quoteMap = Map.of(btc, mock(MarketAssetQuote.class));
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteMap);
 
       AccountView expectedView = mock(AccountView.class);
-
-      // Use anyMap() because the service is passing an empty map {} internally
       when(accountViewBuilder.build(eq(account), eq(quoteMap), anyMap())).thenReturn(expectedView);
 
-      List<AccountView> result = accountQueryService.getAllAccounts(
-          new GetAllAccountsQuery(portfolioId, userId));
+      Page<AccountView> result = accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(portfolioId, userId, pageable));
 
-      assertThat(result).containsExactly(expectedView);
+      assertThat(result.getContent()).containsExactly(expectedView);
+      assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("getAllAccounts: maps multiple accounts and aggregates cache data")
-    void getAllAccountsMultipleAccountsMapsAllWithCorrectCaches() {
+    @DisplayName("getAllAccounts: handles pagination correctly by slicing list")
+    void getAllAccountsSlicesListBasedOnPageable() {
       UserId userId = UserId.random();
       PortfolioId portfolioId = PortfolioId.newId();
-      AccountId acc1Id = AccountId.newId();
-      AccountId acc2Id = AccountId.newId();
-      AssetSymbol btc = new AssetSymbol("BTC");
-      AssetSymbol eth = new AssetSymbol("ETH");
 
+      // Setup: 3 accounts, but we only want page 1 with size 2 (the 3rd account)
       Account acc1 = mock(Account.class);
-      Map<AssetSymbol, Position> positions1 = Map.of(btc, mock(AcbPosition.class));
-      when(acc1.getAccountId()).thenReturn(acc1Id);
-      when(acc1.getPositionEntries()).thenReturn(positions1.entrySet());
-
       Account acc2 = mock(Account.class);
-      Map<AssetSymbol, Position> positions2 = Map.of(eth, mock(AcbPosition.class));
-      when(acc2.getAccountId()).thenReturn(acc2Id);
-      when(acc2.getPositionEntries()).thenReturn(positions2.entrySet());
+      Account acc3 = mock(Account.class);
+      when(acc3.getAccountId()).thenReturn(AccountId.newId());
+      when(acc3.getPositionEntries()).thenReturn(Collections.emptySet());
 
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.hasAccounts()).thenReturn(true);
-      when(portfolio.getAccounts()).thenReturn(List.of(acc1, acc2));
+      when(portfolio.getAccounts()).thenReturn(List.of(acc1, acc2, acc3));
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
 
-      Map<AssetSymbol, MarketAssetQuote> quoteCache = Map.of(btc, mock(MarketAssetQuote.class), eth,
-          mock(MarketAssetQuote.class));
-      when(marketDataService.getBatchQuotes(anySet())).thenReturn(quoteCache);
+      Pageable pageable = PageRequest.of(1, 2); // Page 1 (offset 2), Size 2
 
-      AccountView view1 = mock(AccountView.class);
-      AccountView view2 = mock(AccountView.class);
+      AccountView view3 = mock(AccountView.class);
+      when(accountViewBuilder.build(eq(acc3), anyMap(), anyMap())).thenReturn(view3);
+      when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
 
-      // Use anyMap() for the third argument since the service is passing an empty map
-      when(accountViewBuilder.build(eq(acc1), eq(quoteCache), anyMap())).thenReturn(view1);
-      when(accountViewBuilder.build(eq(acc2), eq(quoteCache), anyMap())).thenReturn(view2);
+      Page<AccountView> result = accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(portfolioId, userId, pageable));
 
-      List<AccountView> result = accountQueryService.getAllAccounts(
-          new GetAllAccountsQuery(portfolioId, userId));
-
-      assertThat(result).containsExactly(view1, view2);
+      assertThat(result.getContent()).hasSize(1).containsExactly(view3);
+      assertThat(result.getTotalElements()).isEqualTo(3); // Total in DB
+      assertThat(result.getTotalPages()).isEqualTo(2);
     }
 
     @Test
@@ -210,7 +208,8 @@ class AccountQueryServiceTest {
 
       assertThatThrownBy(() -> accountQueryService.getAccountSummary(
           new GetAccountSummaryQuery(PortfolioId.newId(), UserId.random(), accId))).isInstanceOf(
-          AccountNotFoundException.class).hasMessageContaining(accId.toString());
+              AccountNotFoundException.class)
+          .hasMessageContaining(accId.toString());
     }
 
     @Test

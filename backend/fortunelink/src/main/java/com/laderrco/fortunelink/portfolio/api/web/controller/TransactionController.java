@@ -16,7 +16,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDep
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionHistoryQuery;
-import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.application.services.TransactionQueryService;
 import com.laderrco.fortunelink.portfolio.application.services.TransactionService;
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
@@ -28,10 +27,10 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotenc
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@RestController
-@RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions")
-@RequiredArgsConstructor
 @Validated
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions")
 public class TransactionController {
   private final TransactionService transactionService;
   private final TransactionQueryService transactionQueryService;
@@ -146,7 +145,7 @@ public class TransactionController {
       @PathVariable String accountId,
       @PathVariable String transactionId,
       @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
-      @RequestBody ExcludeTransactionRequest request) {
+      @RequestBody @Valid ExcludeTransactionRequest request) {
     String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
 
     if (cacheKey != null) {

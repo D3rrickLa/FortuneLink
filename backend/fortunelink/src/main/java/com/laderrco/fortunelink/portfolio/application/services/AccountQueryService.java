@@ -14,22 +14,28 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
+
+import java.util.*;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Handles account and position-level read operations.
  * <p>
- * Responsibility boundary: everything inside an account, positions, individual assets,
- * account-level totals. Portfolio identity and aggregate-level metrics (net worth, performance,
+ * Responsibility boundary: everything inside an account, positions, individual
+ * assets,
+ * account-level totals. Portfolio identity and aggregate-level metrics (net
+ * worth, performance,
  * allocation) belong in PortfolioQueryService.
  * <p>
- * API call discipline: ONE getBatchQuotes() call per request, scoped to the account(s) being
+ * API call discipline: ONE getBatchQuotes() call per request, scoped to the
+ * account(s) being
  * queried. Never fetches quotes for positions outside the requested scope.
  */
 @Service
@@ -43,21 +49,43 @@ public class AccountQueryService {
 
   private final AccountViewBuilder accountViewBuilder;
 
-  public List<AccountView> getAllAccounts(GetAllAccountsQuery query) {
+  public Page<AccountView> getAllAccounts(GetAllAccountsQuery query) {
     Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
 
+    Pageable pageable = query.pageable();
+    // TODO: a fix for when we have multiple accoutns, 100+ is rather than fetching accounts,
+    // through the Portfolio aggregate, we query an AccountRepository directly like
+    // accountRepository.findByPortoflioId(portoflioId, pageable)
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
 
     if (!portfolio.hasAccounts()) {
-      return List.of();
+      return Page.empty(pageable);
     }
 
-    Set<AssetSymbol> allSymbols = PortfolioAccessUtils.extractSymbols(portfolio);
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(allSymbols);
+    List<Account> allAccounts = new ArrayList<>(portfolio.getAccounts());
+    int start = (int) pageable.getOffset();
+    int end = Math.min(start + pageable.getPageSize(), allAccounts.size());
 
-    return portfolio.getAccounts().stream().map(
-        account -> accountViewBuilder.build(account, quoteCache,
-            transactionRepository.sumBuyFeesBySymbolForAccount(account.getAccountId()))).toList();
+    // out-of-bounds offsets check
+    if (start > allAccounts.size()) {
+      return new PageImpl<>(List.of(), pageable, allAccounts.size());
+    }
+
+    List<Account> pagedAccounts = allAccounts.subList(start, end);
+
+    // ONLY fetch market data/fees for the paged subset
+    Set<AssetSymbol> pagedSymbols = PortfolioAccessUtils.extractSymbolsFromAccounts(pagedAccounts);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(pagedSymbols);
+
+    List<AccountView> content = pagedAccounts.stream()
+        .map(account -> accountViewBuilder.build(
+            account,
+            quoteCache,
+            transactionRepository.sumBuyFeesBySymbolForAccount(account.getAccountId())))
+        .toList();
+
+    // Wrap in PageImpl to provide total count and pagination metadata
+    return new PageImpl<>(content, pageable, allAccounts.size());
   }
 
   public AccountView getAccountSummary(GetAccountSummaryQuery query) {
