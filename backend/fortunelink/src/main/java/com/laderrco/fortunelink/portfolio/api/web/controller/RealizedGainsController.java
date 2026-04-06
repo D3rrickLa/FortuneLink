@@ -7,6 +7,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.responses.RealizedGainsSummaryResponse;
 import com.laderrco.fortunelink.portfolio.application.queries.GetRealizedGainsQuery;
 import com.laderrco.fortunelink.portfolio.application.services.RealizedGainsQueryService;
 import com.laderrco.fortunelink.portfolio.application.views.RealizedGainsSummaryView;

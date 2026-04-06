@@ -57,13 +57,7 @@ public class PortfolioLifecycleCommandValidator {
   public ValidationResult validate(DeletePortfolioCommand command) {
     Objects.requireNonNull(command);
     List<String> errors = new ArrayList<>();
-
     ValidationUtils.validatePortfolioAndUserIds(command, errors);
-
-    if (!command.confirmed()) {
-      errors.add("Confirm delete cannot be false");
-    }
-
     return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
   }
 

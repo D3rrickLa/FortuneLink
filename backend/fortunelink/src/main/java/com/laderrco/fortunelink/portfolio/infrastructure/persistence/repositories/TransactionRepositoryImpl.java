@@ -46,12 +46,14 @@ public class TransactionRepositoryImpl implements TransactionRepository,
    *
    * <p>
    * <b>Existing transactions (exclusion/restore path):</b> The managed JPA entity
-   * is fetched by primary key, then only the exclusion state columns are updated in-place. The
+   * is fetched by primary key, then only the exclusion state columns are updated
+   * in-place. The
    * portfolioId is already on the managed entity from the original insert.
    *
    * <p>
    * <b>Why portfolioId is required even for updates:</b> The interface contract
-   * is uniform. The caller always has it available (from the command), so requiring it here
+   * is uniform. The caller always has it available (from the command), so
+   * requiring it here
    * prevents future callers from accidentally triggering the old lookup pattern.
    */
   @Override
@@ -148,15 +150,32 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   @Cacheable(value = BUY_FEE_CACHE, key = "#accountId.id().toString()")
   public Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId) {
-    List<FeeAggregationResult> rows = jpaRepository.sumBuyFeesByAccountAndSymbol(
-        List.of(UUID.fromString(accountId.toString())));
+    return sumBuyFeesBySymbolForAccounts(List.of(accountId))
+        .getOrDefault(accountId, Map.of());
+  }
 
-    Map<AssetSymbol, Money> result = new LinkedHashMap<>();
-    for (FeeAggregationResult row : rows) {
-      result.put(new AssetSymbol(row.getSymbol()),
+  @Override
+  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(List<AccountId> accountIds) {
+
+    if (accountIds == null || accountIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<UUID> uuids = accountIds.stream().map(AccountId::id).toList();
+    List<FeeAggregationResult> results = jpaRepository.sumBuyFeesByAccountAndSymbol(uuids);
+    Map<AccountId, Map<AssetSymbol, Money>> grouped = new LinkedHashMap<>();
+
+    for (FeeAggregationResult row : results) {
+      AccountId accountId = AccountId.fromString(row.getAccountId().toString());
+
+      grouped.computeIfAbsent(accountId, k -> new LinkedHashMap<>()).put(new AssetSymbol(row.getSymbol()),
           new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
     }
-    return Collections.unmodifiableMap(result);
+
+    // Ensure immutability (important)
+    grouped.replaceAll((k, v) -> Collections.unmodifiableMap(v));
+
+    return Collections.unmodifiableMap(grouped);
   }
 
   @Override

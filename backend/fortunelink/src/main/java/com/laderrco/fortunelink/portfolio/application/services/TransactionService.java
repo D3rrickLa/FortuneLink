@@ -44,6 +44,7 @@ import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ConcurrentModificationException;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,6 +72,7 @@ public class TransactionService {
   private static final String BUY_FEE_CACHE = "fees:buy:";
 
   private final PortfolioRepository portfolioRepository;
+  private final AccountHealthService accountHealthService;
   private final TransactionRepository transactionRepository;
   private final MarketAssetInfoRepository infoRepository;
   private final TransactionViewMapper transactionViewMapper;
@@ -79,6 +82,17 @@ public class TransactionService {
   private final ExchangeRateService exchangeRateService;
   private final TransactionRecordingService transactionRecordingService;
   private final CacheManager cacheManager;
+
+  @Recover
+  public TransactionView recoverFromOptimisticLock(ObjectOptimisticLockingFailureException ex,
+      TransactionCommand command) {
+    log.error("Optimistic lock exhausted after 3 attempts. portfolioId={} accountId={}",
+        command.portfolioId(), command.accountId(), ex);
+    accountHealthService.markStale(
+        command.portfolioId(), command.userId(), command.accountId());
+    throw new ConcurrentModificationException(
+        "Portfolio was modified concurrently. Please retry your transaction.", ex);
+  }
 
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
     return execute(command, validator::validate, "recordPurchase", ctx -> {
@@ -123,8 +137,7 @@ public class TransactionService {
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol =
-          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      AssetSymbol symbol = command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
       return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
@@ -241,7 +254,8 @@ public class TransactionService {
   }
 
   /**
-   * Persists both the portfolio aggregate and the new transaction. The portfolioId is taken
+   * Persists both the portfolio aggregate and the new transaction. The
+   * portfolioId is taken
    * directly from the in-memory context — no DB lookup.
    */
   private void persistChanges(PortfolioContext ctx, Transaction tx) {
@@ -259,7 +273,7 @@ public class TransactionService {
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
     return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+        command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 
@@ -279,10 +293,13 @@ public class TransactionService {
   }
 
   /**
-   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client hint, trusted only
-   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last resort
+   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client
+   * hint, trusted only
+   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last
+   * resort
    * <p>
-   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded into
+   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded
+   * into
    * market_asset_info. Until then, their hint is used.
    */
   private AssetType resolveAssetType(AssetSymbol symbol, AssetType clientHint) {
@@ -305,16 +322,22 @@ public class TransactionService {
   }
 
   /**
-   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol within 24 hours of this
+   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol
+   * within 24 hours of this
    * DRIP event.
    * <p>
-   * DRIP and DIVIDEND are mutually exclusive for the same event: - DIVIDEND_REINVEST = broker
-   * automatically reinvests, no cash lands - DIVIDEND = cash lands in account, user reinvests
+   * DRIP and DIVIDEND are mutually exclusive for the same event: -
+   * DIVIDEND_REINVEST = broker
+   * automatically reinvests, no cash lands - DIVIDEND = cash lands in account,
+   * user reinvests
    * manually (records as separate BUY)
    * <p>
-   * Recording both for the same event will overstate cash balance. This check is a runtime warning
-   * only — enforcement is the caller's responsibility. Callers that intentionally bypass this
-   * (e.g., CSV import correction flows) should be aware of the accounting implication.
+   * Recording both for the same event will overstate cash balance. This check is
+   * a runtime warning
+   * only — enforcement is the caller's responsibility. Callers that intentionally
+   * bypass this
+   * (e.g., CSV import correction flows) should be aware of the accounting
+   * implication.
    */
   private void warnIfDuplicateExists(AccountId accountId, TransactionType transactionType,
       AssetSymbol assetSymbol, Instant transactionDate) {
@@ -327,9 +350,9 @@ public class TransactionService {
 
     if (hasConflict) {
       log.warn("DRIP recorded for symbol={} on {} but a DIVIDEND transaction exists "
-              + "within 24 hours for the same symbol in accountId={}. "
-              + "If this is the same event, the DIVIDEND transaction will overstate "
-              + "cash balance. Review transaction history before proceeding.", assetSymbol,
+          + "within 24 hours for the same symbol in accountId={}. "
+          + "If this is the same event, the DIVIDEND transaction will overstate "
+          + "cash balance. Review transaction history before proceeding.", assetSymbol,
           transactionDate, accountId);
     }
   }

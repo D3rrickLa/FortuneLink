@@ -1,5 +1,9 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.responses;
 
+import java.time.Instant;
+
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
+
 /**
  * API representation of a single realized capital gain or loss event.
  *

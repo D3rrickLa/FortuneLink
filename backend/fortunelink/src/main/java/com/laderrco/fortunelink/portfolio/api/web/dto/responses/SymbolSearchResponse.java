@@ -1,6 +1,6 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.responses;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
+import com.laderrco.fortunelink.portfolio.api.web.dto.SymbolSearchResult;
 
 public record SymbolSearchResponse(
       String symbol,

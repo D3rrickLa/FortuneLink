@@ -130,7 +130,7 @@ public class PortfolioDomainMapper {
   // Position helpers
   // =========================================================================
 
-  Account accountToDomain(AccountJpaEntity ae) {
+  public Account accountToDomain(AccountJpaEntity ae) {
     Map<AssetSymbol, Position> positionMap = new LinkedHashMap<>();
     for (PositionJpaEntity pe : ae.getPositions()) {
       AcbPosition pos = positionToDomain(pe, ae.getBaseCurrencyCode());

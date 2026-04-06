@@ -10,13 +10,13 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.BatchQuoteRequest;
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.AssetInfoResponse;
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.MarketQuoteResponse;
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.SymbolSearchResponse;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
@@ -27,7 +27,7 @@ import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Public-facing market data endpoints.
+ * Public-facing market data endpoints.ks
  *
  * Rate-limit notes (enforced by RateLimitInterceptor):
  * - /search : lenient - lightweight autocomplete, no external API call if

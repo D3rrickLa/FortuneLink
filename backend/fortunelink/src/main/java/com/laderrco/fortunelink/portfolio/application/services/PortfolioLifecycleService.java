@@ -75,8 +75,39 @@ public class PortfolioLifecycleService {
     if (command.softDelete()) {
       softDelete(portfolio, command);
     } else {
-      portfolioRepository.delete(command.portfolioId());
+      hardDelete(portfolio, command);
     }
+  }
+
+  /**
+   * Permanent removal from the database. Bypasses soft-delete audit trail.
+   * Reserved for admin/test use — no API path exposes this in production.
+   *
+   * Domain invariants are still enforced: a portfolio with active accounts
+   * or open positions cannot be hard-deleted any more than soft-deleted.
+   * ON DELETE CASCADE in the schema handles child rows, but we validate
+   * business state here first so the error message is meaningful.
+   */
+  private void hardDelete(Portfolio portfolio, DeletePortfolioCommand command) {
+    // Same invariant as soft delete, you cannot delete a live portfolio.
+    // The DB cascade would handle orphaned rows, but silent data destruction
+    // is worse than a rejected request.
+    boolean hasActiveAccounts = portfolio.getAccounts().stream()
+        .anyMatch(Account::isActive);
+
+    if (hasActiveAccounts) {
+      long count = portfolio.getAccounts().stream()
+          .filter(Account::isActive).count();
+      throw new PortfolioDeletionException(
+          "Cannot hard delete portfolio with " + count + " active account(s). " +
+              "Close all accounts first, or use recursive=true.");
+    }
+
+    if (command.recursive()) {
+      closeAllEligibleAccounts(portfolio);
+    }
+
+    portfolioRepository.delete(command.portfolioId());
   }
 
   private void softDelete(Portfolio portfolio, DeletePortfolioCommand command) {

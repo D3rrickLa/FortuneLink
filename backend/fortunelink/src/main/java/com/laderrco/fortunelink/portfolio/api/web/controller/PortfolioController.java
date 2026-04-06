@@ -81,9 +81,7 @@ public class PortfolioController {
       @RequestParam(defaultValue = "false") boolean recursive) {
 
     lifecycleService.deletePortfolio(
-        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, true,
-            // isOwner check
-            softDelete, recursive));
+        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, softDelete, recursive));
   }
 
   // --- Portfolio Queries ---

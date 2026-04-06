@@ -1,20 +1,10 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
-import java.time.Instant;
-import java.util.List;
-
-import org.springframework.data.domain.Page;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.*;
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.*;
+import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionHistoryQuery;
 import com.laderrco.fortunelink.portfolio.application.services.TransactionQueryService;
 import com.laderrco.fortunelink.portfolio.application.services.TransactionService;
@@ -22,19 +12,58 @@ import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
 
 import jakarta.validation.Valid;
+import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-@Validated
+/**
+ * Full transaction lifecycle controller.
+ *
+ * All endpoints follow the same authentication pattern: @AuthenticatedUser
+ * UserId userId.
+ * All mutations return the created/modified TransactionView.
+ * All paths:
+ * /api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions/...
+ *
+ * Transaction type → endpoint mapping:
+ * BUY → POST /buy
+ * SELL → POST /sell
+ * DEPOSIT → POST /deposit
+ * WITHDRAWAL → POST /withdrawal
+ * FEE → POST /fee
+ * INTEREST → POST /interest
+ * DIVIDEND → POST /dividend
+ * DIVIDEND_REINVEST → POST /drip
+ * SPLIT → POST /split
+ * RETURN_OF_CAPITAL → POST /return-of-capital
+ * TRANSFER_IN → POST /transfer-in
+ * TRANSFER_OUT → POST /transfer-out
+ * (exclusion) → PATCH /{id}/exclude
+ * (restore) → PATCH /{id}/restore
+ *
+ * Reads:
+ * GET / → paginated history with optional filters
+ * GET /{id} → single transaction by ID
+ */
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions")
+@RequiredArgsConstructor
+@Validated
 public class TransactionController {
+
   private final TransactionService transactionService;
   private final TransactionQueryService transactionQueryService;
-  private final IdempotencyCache idempotencyCache;
+
+  // =========================================================================
+  // Trade transactions (affect positions AND cash)
+  // =========================================================================
 
   @PostMapping("/buy")
   @ResponseStatus(HttpStatus.CREATED)
@@ -42,19 +71,11 @@ public class TransactionController {
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
-      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
-
-    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
-    if (cacheKey != null) {
-      TransactionView cached = idempotencyCache.get(cacheKey);
-      if (cached != null)
-        return cached;
-    }
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
-    TransactionView result = transactionService.recordPurchase(new RecordPurchaseCommand(
+    return transactionService.recordPurchase(new RecordPurchaseCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -66,12 +87,6 @@ public class TransactionController {
         request.transactionDate(),
         request.notes() != null ? request.notes() : "",
         false));
-
-    if (cacheKey != null) {
-      idempotencyCache.put(cacheKey, result);
-    }
-
-    return result;
   }
 
   @PostMapping("/sell")
@@ -80,19 +95,11 @@ public class TransactionController {
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
-      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
-
-    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
-    if (cacheKey != null) {
-      TransactionView cached = idempotencyCache.get(cacheKey);
-      if (cached != null)
-        return cached;
-    }
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
-    TransactionView result = transactionService.recordSale(new RecordSaleCommand(
+    return transactionService.recordSale(new RecordSaleCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -102,11 +109,48 @@ public class TransactionController {
         fees,
         request.transactionDate(),
         request.notes() != null ? request.notes() : ""));
-
-    if (cacheKey != null)
-      idempotencyCache.put(cacheKey, result);
-    return result;
   }
+
+  @PostMapping("/split")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordSplit(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordSplitRequest request) {
+
+    return transactionService.recordSplit(new RecordSplitCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        request.symbol().toUpperCase(),
+        new Ratio(request.numerator(), request.denominator()),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
+  }
+
+  @PostMapping("/return-of-capital")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordReturnOfCapital(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordReturnOfCapitalRequest request) {
+
+    return transactionService.recordReturnOfCapital(new RecordReturnOfCaptialCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        request.assetSymbol().toUpperCase(),
+        Price.of(request.distributionPerUnit(), Currency.of(request.currency())),
+        new Quantity(request.heldQuantity()),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
+  }
+
+  // =========================================================================
+  // Cash-only transactions (affect cash balance, no position change)
+  // =========================================================================
 
   @PostMapping("/deposit")
   @ResponseStatus(HttpStatus.CREATED)
@@ -114,84 +158,168 @@ public class TransactionController {
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
-      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDepositRequest request) {
 
-    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
-
-    if (cacheKey != null) {
-      TransactionView cached = idempotencyCache.get(cacheKey);
-      if (cached != null)
-        return cached;
-    }
-
-    TransactionView result = transactionService.recordDeposit(new RecordDepositCommand(
+    return transactionService.recordDeposit(new RecordDepositCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
         Money.of(request.amount(), request.currency()),
         request.transactionDate(),
         request.notes() != null ? request.notes() : ""));
-
-    if (cacheKey != null)
-      idempotencyCache.put(cacheKey, result);
-    return result;
   }
 
-  @PatchMapping("/{transactionId}/exclude")
-  public TransactionView excludeTransaction(
+  @PostMapping("/withdrawal")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordWithdrawal(
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
-      @PathVariable String transactionId,
-      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
-      @RequestBody @Valid ExcludeTransactionRequest request) {
-    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+      @RequestBody @Valid RecordWithdrawalRequest request) {
 
-    if (cacheKey != null) {
-      TransactionView cached = idempotencyCache.get(cacheKey);
-      if (cached != null)
-        return cached;
-    }
-
-    TransactionView result = transactionService.excludeTransaction(new ExcludeTransactionCommand(
+    return transactionService.recordWithdrawal(new RecordWithdrawalCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
-        TransactionId.fromString(transactionId),
-        request.reason()));
-
-    if (cacheKey != null)
-      idempotencyCache.put(cacheKey, result);
-    return result;
+        Money.of(request.amount(), request.currency()),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
   }
 
-  @PatchMapping("/{transactionId}/restore")
-  public TransactionView restoreTransaction(
+  @PostMapping("/fee")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordFee(
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
-      @PathVariable String transactionId,
-      @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey) {
-    String cacheKey = (idempotencyKey != null) ? "idemp:" + userId + ":" + idempotencyKey : null;
+      @RequestBody @Valid RecordStandaloneFeeRequest request) {
 
-    if (cacheKey != null) {
-      TransactionView cached = idempotencyCache.get(cacheKey);
-      if (cached != null)
-        return cached;
-    }
-
-    TransactionView result = transactionService.restoreTransaction(new RestoreTransactionCommand(
+    return transactionService.recordFee(new RecordFeeCommand(
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
-        TransactionId.fromString(transactionId)));
-
-    if (cacheKey != null)
-      idempotencyCache.put(idempotencyKey, result);
-    return result;
+        Money.of(request.amount(), request.currency()),
+        request.feeType(),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
   }
 
+  @PostMapping("/transfer-in")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordTransferIn(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordTransferInRequest request) {
+
+    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
+
+    return transactionService.recordTransferIn(new RecordTransferInCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        Money.of(request.amount(), request.currency()),
+        fees,
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
+  }
+
+  @PostMapping("/transfer-out")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordTransferOut(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordTransferOutRequest request) {
+
+    return transactionService.recordTransferOut(new RecordTransferOutCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        Money.of(request.amount(), request.currency()),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
+  }
+
+  // =========================================================================
+  // Income transactions (cash in, associated with a holding)
+  // =========================================================================
+
+  @PostMapping("/interest")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordInterest(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordInterestRequest request) {
+
+    // RecordInterestCommand.cashInterest() / .assetInterest() are the factories
+    // but the command accepts null assetSymbol for cash-level interest
+    return transactionService.recordInterest(new RecordInterestCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        request.isAssetInterest() ? request.assetSymbol().toUpperCase() : null,
+        Money.of(request.amount(), request.currency()),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
+  }
+
+  @PostMapping("/dividend")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordDividend(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordDividendRequest request) {
+
+    return transactionService.recordDividend(new RecordDividendCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        request.assetSymbol().toUpperCase(),
+        Money.of(request.amount(), request.currency()),
+        request.transactionDate(),
+        request.notes() != null ? request.notes() : ""));
+  }
+
+  @PostMapping("/drip")
+  @ResponseStatus(HttpStatus.CREATED)
+  public TransactionView recordDividendReinvestment(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid RecordDRIPRequest request) {
+
+    return transactionService.recordDividendReinvestment(
+        new RecordDividendReinvestmentCommand(
+            PortfolioId.fromString(portfolioId),
+            userId,
+            AccountId.fromString(accountId),
+            request.assetSymbol().toUpperCase(),
+            new RecordDividendReinvestmentCommand.DripExecution(
+                new Quantity(request.sharesPurchased()),
+                Price.of(request.pricePerShare(), Currency.of(request.currency()))),
+            request.transactionDate(),
+            request.notes() != null ? request.notes() : ""));
+  }
+
+  // =========================================================================
+  // Read operations
+  // =========================================================================
+
+  /**
+   * Returns a paginated list of transactions for an account.
+   *
+   * Supports optional filtering by symbol and date range.
+   * Results are sorted by occurredAt descending (most recent first).
+   * Page size is capped at 100 per request.
+   *
+   * All filters are optional and can be combined:
+   * ?symbol=AAPL → AAPL transactions only
+   * ?startDate=...&endDate=... → date range
+   * ?symbol=AAPL&startDate=... → AAPL in range
+   */
   @GetMapping
   public Page<TransactionView> getTransactionHistory(
       @PathVariable String portfolioId,
@@ -207,18 +335,89 @@ public class TransactionController {
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
-        symbol != null ? new AssetSymbol(symbol) : null,
+        symbol != null ? new AssetSymbol(symbol.trim().toUpperCase()) : null,
         startDate,
         endDate,
         page,
         size));
   }
 
+  /**
+   * Returns a single transaction by ID.
+   *
+   * The transaction must belong to the specified account and portfolio.
+   * Returns 404 if the transaction does not exist or belongs to a different
+   * user's account — we do not differentiate to avoid information leakage.
+   */
+  @GetMapping("/{transactionId}")
+  public TransactionView getTransaction(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @PathVariable String transactionId) {
+
+    return transactionQueryService.getTransaction(new GetTransactionByIdQuery(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        TransactionId.fromString(transactionId)));
+  }
+
+  // =========================================================================
+  // Exclusion lifecycle (mutations on existing transactions)
+  // =========================================================================
+
+  /**
+   * Excludes a transaction from position and capital gains calculations.
+   *
+   * Cash balance is NOT reversed — see ExcludeTransactionCommand for rationale.
+   * Triggers an async position recalculation for the affected symbol.
+   */
+  @PatchMapping("/{transactionId}/exclude")
+  public TransactionView excludeTransaction(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @PathVariable String transactionId,
+      @RequestBody @Valid ExcludeTransactionRequest request) {
+
+    return transactionService.excludeTransaction(new ExcludeTransactionCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        TransactionId.fromString(transactionId),
+        request.reason()));
+  }
+
+  /**
+   * Restores a previously excluded transaction back into calculations.
+   * Triggers an async position recalculation for the affected symbol.
+   */
+  @PatchMapping("/{transactionId}/restore")
+  public TransactionView restoreTransaction(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @PathVariable String transactionId) {
+
+    return transactionService.restoreTransaction(new RestoreTransactionCommand(
+        PortfolioId.fromString(portfolioId),
+        userId,
+        AccountId.fromString(accountId),
+        TransactionId.fromString(transactionId)));
+  }
+
+  // =========================================================================
+  // Private helpers
+  // =========================================================================
+
   private List<Fee> mapFees(List<FeeRequest> feeRequests, Currency defaultCurrency) {
-    if (feeRequests == null || feeRequests.isEmpty())
+    if (feeRequests == null || feeRequests.isEmpty()) {
       return List.of();
+    }
     return feeRequests.stream()
-        .map(f -> Fee.of(f.feeType(),
+        .map(f -> Fee.of(
+            f.feeType(),
             Money.of(f.amount(), f.currency()),
             Instant.now()))
         .toList();

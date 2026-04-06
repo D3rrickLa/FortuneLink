@@ -1,9 +1,9 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.market;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;

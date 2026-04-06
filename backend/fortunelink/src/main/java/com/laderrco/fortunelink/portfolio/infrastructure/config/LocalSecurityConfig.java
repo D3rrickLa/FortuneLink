@@ -9,7 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Profile("local | test")
+@Profile({"local", "test"})
 @Configuration
 @EnableWebSecurity
 public class LocalSecurityConfig {

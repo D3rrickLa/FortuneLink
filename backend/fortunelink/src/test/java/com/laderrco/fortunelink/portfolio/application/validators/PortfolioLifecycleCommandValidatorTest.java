@@ -178,16 +178,8 @@ public class PortfolioLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: success when confirmed is true")
     void validateSuccessWhenConfirmed() {
-      var command = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, true, false, true);
+      var command = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, true);
       assertThat(validator.validate(command).isValid()).isTrue();
-    }
-
-    @Test
-    @DisplayName("validate: failure when confirmed is false")
-    void validateFailureWhenUnconfirmed() {
-      var command = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false, true);
-      ValidationResult result = validator.validate(command);
-      assertThat(result.errors()).contains("Confirm delete cannot be false");
     }
   }
 

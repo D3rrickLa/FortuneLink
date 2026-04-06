@@ -1,5 +1,9 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.responses;
 
+import java.util.List;
+
+import com.laderrco.fortunelink.portfolio.application.views.RealizedGainsSummaryView;
+
 /**
  * API response for the realized gains summary endpoint.
  *

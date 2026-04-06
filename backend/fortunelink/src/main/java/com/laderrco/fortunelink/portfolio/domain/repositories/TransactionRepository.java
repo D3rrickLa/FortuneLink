@@ -82,6 +82,13 @@ public interface TransactionRepository {
    */
   Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId);
 
+  /**
+   * Sums BUY transaction fees by asset symbol for a single account. This is the cacheable
+   * single-account variant. Callers should prefer this over the batch method for read paths to
+   * benefit from caching.
+   */
+  Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(List<AccountId> accountId);
+
   boolean existsConflict(AccountId accountId, TransactionType transactionType, AssetSymbol symbol,
       Instant start, Instant end);
 }

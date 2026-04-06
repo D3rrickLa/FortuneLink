@@ -87,7 +87,7 @@ public class AccountJpaEntity implements Persistable<UUID> {
   // Relationships
   // -------------------------------------------------------------------------
 
-  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
 
   // if a single portoflio lods like 3 years of active trading, that's 100+

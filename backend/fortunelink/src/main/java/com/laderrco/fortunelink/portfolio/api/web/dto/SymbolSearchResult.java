@@ -1,9 +1,10 @@
-package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
+package com.laderrco.fortunelink.portfolio.api.web.dto;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 
 /**
- * Shallow result from a symbol search query. Intentionally NOT a MarketAssetInfo — it is missing
+ * Shallow result from a symbol search query. Intentionally NOT a MarketAssetInfo, it is missing
  * type, sector, and description which require a full profile fetch. Used exclusively for UI
  * autocomplete/search flows.
  */

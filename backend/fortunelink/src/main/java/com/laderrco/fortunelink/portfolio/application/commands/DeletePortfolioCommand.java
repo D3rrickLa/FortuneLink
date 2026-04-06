@@ -4,13 +4,13 @@ import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasPortf
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
-/**
- * PortfolioId -> what to del UserId -> who is requesting it (for auth)
- */
+// DeletePortfolioCommand.java
+// Remove 'confirmed' entirely, the act of calling the endpoint IS confirmation.
+// If you ever need two-phase confirmation, implement it as a separate endpoint
+// that issues a short-lived token, not a boolean field on the command.
 public record DeletePortfolioCommand(
     PortfolioId portfolioId,
     UserId userId,
-    boolean confirmed,
     boolean softDelete,
     boolean recursive) implements HasPortfolioId {
 

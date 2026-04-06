@@ -1,12 +1,8 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.market.fmp;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.SymbolSearchResult;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.PercentageChange;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.SymbolSearchResult;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;

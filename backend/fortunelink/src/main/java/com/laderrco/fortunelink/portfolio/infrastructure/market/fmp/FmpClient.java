@@ -35,7 +35,7 @@ public class FmpClient {
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
 
-  FmpClient(FmpClientConfig config, @Qualifier("defaultObjectMapper") ObjectMapper objectMapper,
+  FmpClient(FmpClientConfig config, @Qualifier("fmpObjectMapper") ObjectMapper objectMapper,
       @Qualifier("fmpHttpClient") HttpClient httpClient) {
     this.config = config;
     this.objectMapper = objectMapper;
