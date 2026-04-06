@@ -205,8 +205,7 @@ class PositionRecalculationExecutorTest {
 
       executor.replayFullAccount(P_ID, U_ID, A_ID);
 
-      @SuppressWarnings("unchecked") ArgumentCaptor<List<Transaction>> listCaptor = ArgumentCaptor.forClass(
-          List.class);
+      ArgumentCaptor<List<Transaction>> listCaptor = ArgumentCaptor.forClass(List.class);
       verify(transactionRecordingService).replayFullTransaction(eq(account), listCaptor.capture());
 
       List<Transaction> capturedList = listCaptor.getValue();

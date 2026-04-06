@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.config;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -19,7 +20,8 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
-
+  @Value("${fortunelink.cors.allowed-origins:http://localhost:3000}")
+  private String[] allowedOrigins;
   private final RateLimitInterceptor rateLimitInterceptor;
   private final AuthenticatedUserResolver authenticatedUserResolver;
 
@@ -48,8 +50,7 @@ public class WebConfig implements WebMvcConfigurer {
   @Override
   public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/api/**")
-        .allowedOrigins(
-            "${fortunelink.cors.allowed-origins:http://localhost:3000}".split(","))
+        .allowedOrigins(allowedOrigins)
         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         .allowedHeaders("Authorization", "Content-Type", "X-Request-ID")
         .exposedHeaders("X-Rate-Limit-Remaining", "X-Request-ID")

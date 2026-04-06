@@ -76,8 +76,7 @@ class MarketDataServiceDomainInterfaceTest {
 
     @Override
     public List<SymbolSearchResult> searchSymbols(String query) {
-      // TODO Auto-generated method stub
-      throw new UnsupportedOperationException("Unimplemented method 'searchSymbols'");
+      return null;
     }
   };
 

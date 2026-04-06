@@ -17,8 +17,8 @@ public class CaseInsensitiveEnumConverterFactory implements ConverterFactory<Str
       this.enumType = enumType;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
+    @SuppressWarnings({ "rawtypes" })
     public T convert(String source) {
       if (source.isBlank()) {
         return null;
