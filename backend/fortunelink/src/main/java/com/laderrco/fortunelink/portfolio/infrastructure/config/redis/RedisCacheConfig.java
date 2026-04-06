@@ -35,7 +35,6 @@ import tools.jackson.databind.module.SimpleModule;
 @Configuration
 @EnableCaching
 public class RedisCacheConfig {
-
   // --- TTL Values ---
   @Value("${fortunelink.cache.ttl.current-prices}")
   private long currentPricesTtl;
@@ -78,7 +77,6 @@ public class RedisCacheConfig {
 
     template.setKeySerializer(new StringRedisSerializer());
 
-    // Use the specific Jackson serializer for MarketAssetQuote
     JacksonJsonRedisSerializer<MarketAssetQuote> serializer = new JacksonJsonRedisSerializer<>(
         objectMapper, MarketAssetQuote.class);
 

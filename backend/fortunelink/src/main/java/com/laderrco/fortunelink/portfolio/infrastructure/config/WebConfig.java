@@ -6,6 +6,7 @@ import java.util.Objects;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -42,5 +43,17 @@ public class WebConfig implements WebMvcConfigurer {
             "/actuator/**",
             "/swagger-ui/**",
             "/api-docs/**");
+  }
+
+  @Override
+  public void addCorsMappings(CorsRegistry registry) {
+    registry.addMapping("/api/**")
+        .allowedOrigins(
+            "${fortunelink.cors.allowed-origins:http://localhost:3000}".split(","))
+        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        .allowedHeaders("Authorization", "Content-Type", "X-Request-ID")
+        .exposedHeaders("X-Rate-Limit-Remaining", "X-Request-ID")
+        .allowCredentials(true)
+        .maxAge(3600);
   }
 }
