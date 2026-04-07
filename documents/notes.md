@@ -33,12 +33,12 @@
 # Portfolio Tracker Development Roadmap
 
 ## 1. Critical Infrastructure (Application Blockers)
-* [ ] **Implement REST Controllers**: Create the HTTP layer for `Portfolio`, `Account`, `Transaction`, and `MarketData` (symbol lookup).
+* [✅] **Implement REST Controllers**: Create the HTTP layer for `Portfolio`, `Account`, `Transaction`, and `MarketData` (symbol lookup).
 * [✅] **Security Configuration**: Implement `@Configuration` class for Spring Security filter chain and JWT/OAuth2 resource server setup.
-* [ ] **Global Exception Handling**: Create `@RestControllerAdvice` to map domain exceptions (`InsufficientFundsException`, etc.) to HTTP status codes.
-* [ ] **External Service Implementations**:
-    * [ ] `ExchangeRateService`: Implement Bank of Canada (BOC) integration for FX conversions.
-    * [ ] `MarketDataProvider`: Implement concrete provider (e.g., FMP) for live price feeds.
+* [✅] **Global Exception Handling**: Create `@RestControllerAdvice` to map domain exceptions (`InsufficientFundsException`, etc.) to HTTP status codes.
+* [✅] **External Service Implementations**:
+    * [✅] `ExchangeRateService`: Implement Bank of Canada (BOC) integration for FX conversions.
+    * [✅] `MarketDataProvider`: Implement concrete provider (e.g., FMP) for live price feeds.
 * [✅] **Database Migration (V3)**: Add missing Flyway script for `PositionJpaEntity` (last_modified_at) to prevent startup failure.
 
 ## 2. Logic & Stability Fixes
