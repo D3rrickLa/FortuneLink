@@ -66,6 +66,12 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("BAD_REQUEST", ex.getMessage()));
   }
 
+  @ExceptionHandler({ DomainArgumentException.class, IllegalArgumentException.class })
+  public ResponseEntity<ErrorResponse> handleDomainArgument(RuntimeException ex) {
+    return ResponseEntity.badRequest()
+        .body(ErrorResponse.of("INVALID_OPERATION", ex.getMessage()));
+  }
+
   // -------------------------------------------------------------------------
   // 401 Unauthorized
   // -------------------------------------------------------------------------
@@ -172,6 +178,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleInvalidDateRange(InvalidDateRangeException ex) {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(ErrorResponse.of("INVALID_DATE_RANGE", ex.getMessage()));
+  }
+
+  @ExceptionHandler(IllegalStateException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ErrorResponse.of("CONFLICT", ex.getMessage()));
   }
 
   // -------------------------------------------------------------------------
