@@ -8,6 +8,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,20 +25,16 @@ public class BocProvider implements ExchangeRateProvider {
 
   @Override
   public ExchangeRate getExchangeRate(Currency from, Currency to, Instant asOf) {
-    // 1. Identity check (Must return!)
     if (from.equals(to)) {
       return ExchangeRate.identity(to, asOf);
     }
 
     BocExchangeResponse response;
 
-    // 2. Determine if we need Latest or Historical
     if (asOf == null || isToday(asOf)) {
       response = bocApiClient.getLatestExchangeRate(to.getCode(), from.getCode());
     } else {
-      // BOC expects a range. Usually, for a specific point in time,
-      // we request from that date to that date.
-      response = bocApiClient.getHistoricalExchangeRate(to.getCode(), from.getCode(), asOf, asOf);
+      response = getHistoricalWithFallback(to.getCode(), from.getCode(),asOf);
     }
 
     // 3. Map the complex BOC JSON structure to your Domain objects
@@ -50,6 +47,19 @@ public class BocProvider implements ExchangeRateProvider {
 
     // 4. Return the most relevant rate (BOC usually returns list sorted by date)
     return rates.get(rates.size() - 1);
+  }
+
+  private BocExchangeResponse getHistoricalWithFallback(String from, String to, Instant asOf) {
+    // Try up to 4 days back (covers long weekends)
+    for (int daysBack = 0; daysBack <= 4; daysBack++) {
+      Instant adjusted = asOf.minus(daysBack, ChronoUnit.DAYS);
+      BocExchangeResponse response = bocApiClient
+          .getHistoricalExchangeRate(to, from, adjusted, adjusted);
+      if (!response.getObservations().isEmpty()) {
+        return response;
+      }
+    }
+    throw new ExchangeRateUnavailableException(from, to, asOf);
   }
 
   private boolean isToday(Instant instant) {

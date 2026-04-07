@@ -345,7 +345,7 @@ public class Account {
   }
 
   public boolean isActive() {
-    return this.state != AccountLifecycleState.CLOSED;
+    return this.state == AccountLifecycleState.ACTIVE;
   }
 
   public boolean isInReplayMode() {

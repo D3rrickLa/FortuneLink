@@ -16,6 +16,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -76,6 +78,7 @@ public class TransactionController {
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
     return transactionService.recordPurchase(new RecordPurchaseCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -100,6 +103,7 @@ public class TransactionController {
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
     return transactionService.recordSale(new RecordSaleCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -120,6 +124,7 @@ public class TransactionController {
       @RequestBody @Valid RecordSplitRequest request) {
 
     return transactionService.recordSplit(new RecordSplitCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -138,6 +143,7 @@ public class TransactionController {
       @RequestBody @Valid RecordReturnOfCapitalRequest request) {
 
     return transactionService.recordReturnOfCapital(new RecordReturnOfCaptialCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -161,6 +167,7 @@ public class TransactionController {
       @RequestBody @Valid RecordDepositRequest request) {
 
     return transactionService.recordDeposit(new RecordDepositCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -178,6 +185,7 @@ public class TransactionController {
       @RequestBody @Valid RecordWithdrawalRequest request) {
 
     return transactionService.recordWithdrawal(new RecordWithdrawalCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -195,6 +203,7 @@ public class TransactionController {
       @RequestBody @Valid RecordStandaloneFeeRequest request) {
 
     return transactionService.recordFee(new RecordFeeCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -215,6 +224,7 @@ public class TransactionController {
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
 
     return transactionService.recordTransferIn(new RecordTransferInCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -233,6 +243,7 @@ public class TransactionController {
       @RequestBody @Valid RecordTransferOutRequest request) {
 
     return transactionService.recordTransferOut(new RecordTransferOutCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -256,6 +267,7 @@ public class TransactionController {
     // RecordInterestCommand.cashInterest() / .assetInterest() are the factories
     // but the command accepts null assetSymbol for cash-level interest
     return transactionService.recordInterest(new RecordInterestCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -274,6 +286,7 @@ public class TransactionController {
       @RequestBody @Valid RecordDividendRequest request) {
 
     return transactionService.recordDividend(new RecordDividendCommand(
+        UUID.fromString(request.idempotencyKey()),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -293,6 +306,7 @@ public class TransactionController {
 
     return transactionService.recordDividendReinvestment(
         new RecordDividendReinvestmentCommand(
+            UUID.fromString(request.idempotencyKey()),
             PortfolioId.fromString(portfolioId),
             userId,
             AccountId.fromString(accountId),
@@ -375,6 +389,7 @@ public class TransactionController {
    */
   @PatchMapping("/{transactionId}/exclude")
   public TransactionView excludeTransaction(
+      @RequestHeader("X-Idempotency-Key") String idempotencyKey,
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
@@ -382,6 +397,7 @@ public class TransactionController {
       @RequestBody @Valid ExcludeTransactionRequest request) {
 
     return transactionService.excludeTransaction(new ExcludeTransactionCommand(
+        UUID.fromString(idempotencyKey),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),
@@ -395,12 +411,14 @@ public class TransactionController {
    */
   @PatchMapping("/{transactionId}/restore")
   public TransactionView restoreTransaction(
+      @RequestHeader("X-Idempotency-Key") String idempotencyKey,
       @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId,
       @PathVariable String accountId,
       @PathVariable String transactionId) {
 
     return transactionService.restoreTransaction(new RestoreTransactionCommand(
+        UUID.fromString(idempotencyKey),
         PortfolioId.fromString(portfolioId),
         userId,
         AccountId.fromString(accountId),

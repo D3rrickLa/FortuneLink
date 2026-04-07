@@ -4,6 +4,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
+
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -32,14 +34,13 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
   @Override
   public Money convert(Money amount, Currency targetCurrency) {
-    if (amount.currency().equals(targetCurrency))
+    if (amount.currency().equals(targetCurrency)) {
       return amount;
-
-    // getRate now safely returns Optional.empty() on API failure
-    ExchangeRate rate = getRate(amount.currency(), targetCurrency)
-        .orElseGet(() -> ExchangeRate.identity(amount.currency(), Instant.now()));
-
-    return rate.convert(amount);
+    }
+    return getRate(amount.currency(), targetCurrency)
+        .map(rate -> rate.convert(amount))
+        .orElseThrow(() -> new ExchangeRateUnavailableException(
+            amount.currency().getCode(), targetCurrency.getCode(), Instant.now()));
   }
 
   @Override

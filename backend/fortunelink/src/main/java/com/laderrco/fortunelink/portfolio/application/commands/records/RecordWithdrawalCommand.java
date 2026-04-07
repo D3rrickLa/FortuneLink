@@ -6,12 +6,15 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
- * Withdrawals do not carry fees in this model. If a broker charges a withdrawal fee, record it as a
+ * Withdrawals do not carry fees in this model. If a broker charges a withdrawal
+ * fee, record it as a
  * separate FEE transaction.
  */
 public record RecordWithdrawalCommand(
+    UUID idempotencyKey,
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,

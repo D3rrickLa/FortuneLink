@@ -57,7 +57,7 @@ public class TransactionRepositoryImpl implements TransactionRepository,
    * prevents future callers from accidentally triggering the old lookup pattern.
    */
   @Override
-  public Transaction save(Transaction domain, PortfolioId portfolioId) {
+  public Transaction save(Transaction domain, PortfolioId portfolioId, UUID idempotencyKey) {
     Objects.requireNonNull(domain, "Transaction cannot be null");
     Objects.requireNonNull(portfolioId,
         "PortfolioId cannot be null, callers must always supply it");
@@ -74,7 +74,7 @@ public class TransactionRepositoryImpl implements TransactionRepository,
       // New transaction insert. Use the caller-supplied portfolioId directly.
       // Previously this fired: jpaRepository.findPortfolioIdByAccountId(accountId)
       // — an unnecessary extra query on every single transaction record.
-      entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()));
+      entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()), idempotencyKey.toString());
     }
 
     TransactionJpaEntity saved = jpaRepository.save(entity);
@@ -190,5 +190,10 @@ public class TransactionRepositoryImpl implements TransactionRepository,
       AssetSymbol symbol, Instant start, Instant end) {
     return jpaRepository.existsConflict(accountId.id(), transactionType, symbol.symbol(), start,
         end);
+  }
+
+  @Override
+  public Optional<Transaction> findByIdempotencyKey(UUID key) {
+    return jpaRepository.findByIdempotencyKey(key.toString()).map(mapper::toDomain);
   }
 }

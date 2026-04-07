@@ -11,8 +11,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 public record RecordSaleCommand(
+    UUID idempotencyKey,
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,

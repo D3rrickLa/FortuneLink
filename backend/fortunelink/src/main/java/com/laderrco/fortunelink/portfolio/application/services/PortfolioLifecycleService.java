@@ -92,19 +92,16 @@ public class PortfolioLifecycleService {
     // Same invariant as soft delete, you cannot delete a live portfolio.
     // The DB cascade would handle orphaned rows, but silent data destruction
     // is worse than a rejected request.
-    boolean hasActiveAccounts = portfolio.getAccounts().stream()
-        .anyMatch(Account::isActive);
-
-    if (hasActiveAccounts) {
-      long count = portfolio.getAccounts().stream()
-          .filter(Account::isActive).count();
-      throw new PortfolioDeletionException(
-          "Cannot hard delete portfolio with " + count + " active account(s). " +
-              "Close all accounts first, or use recursive=true.");
+    if (command.recursive()) {
+        closeAllEligibleAccounts(portfolio);
     }
 
-    if (command.recursive()) {
-      closeAllEligibleAccounts(portfolio);
+    long activeCount = portfolio.getAccounts().stream().filter(Account::isActive).count();
+
+    if (activeCount > 0) {
+        throw new PortfolioDeletionException(
+            "Cannot hard delete portfolio with " + activeCount + " active account(s). " +
+            "Close all accounts first, or use recursive=true.");
     }
 
     portfolioRepository.delete(command.portfolioId());

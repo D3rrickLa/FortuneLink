@@ -7,9 +7,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
+import java.util.UUID;
 
 // just the total
 public record RecordFeeCommand(
+    UUID idempotencyKey,
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,

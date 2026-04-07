@@ -39,6 +39,8 @@ import java.time.Instant;
  * under US GAAP — US cost basis adjustments use different rules.
  */
 public record RecordReturnOfCapitalRequest(
+    @NotBlank String idempotencyKey,
+    
     @NotBlank(message = "Asset symbol is required") @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String assetSymbol,
 
     @NotNull(message = "Distribution per unit is required") @DecimalMin(value = "0.000001", message = "Distribution per unit must be greater than zero") BigDecimal distributionPerUnit,

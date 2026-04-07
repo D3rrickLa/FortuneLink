@@ -112,7 +112,7 @@ public class TransactionDomainMapper {
    * @param domain      the domain transaction record
    * @param portfolioId the owning portfolio UUID (denormalized for query efficiency)
    */
-  public TransactionJpaEntity toEntity(Transaction domain, UUID portfolioId) {
+  public TransactionJpaEntity toEntity(Transaction domain, UUID portfolioId, String idempotencyKey) {
     Objects.requireNonNull(domain, "Transaction cannot be null");
     Objects.requireNonNull(portfolioId, "portfolioId cannot be null");
 
@@ -157,7 +157,7 @@ public class TransactionDomainMapper {
         execQty, execPrice, execPriceCurrency, assetTypeName, splitNum, splitDenom,
         domain.cashDelta().amount(), domain.cashDelta().currency().getCode(),
         domain.metadata().source(), domain.isExcluded(), excludedAt, excludedBy, excludedReason,
-        domain.metadata().additionalData(), domain.notes(), domain.occurredAt(), relatedId);
+        domain.metadata().additionalData(), domain.notes(), domain.occurredAt(), relatedId, idempotencyKey);
 
     // Map fees
     List<FeeJpaEntity> feeEntities = domain.fees().stream()

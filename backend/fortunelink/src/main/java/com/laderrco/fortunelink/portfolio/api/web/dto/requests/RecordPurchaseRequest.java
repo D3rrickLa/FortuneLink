@@ -10,12 +10,13 @@ import java.util.List;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 
 public record RecordPurchaseRequest(
-    @NotBlank String accountId,
-    @NotBlank String symbol,
-    @NotNull  AssetType type,
+    @NotBlank String idempotencyKey,
+    @NotNull String accountId,
+    @NotNull String symbol,
+    @NotNull AssetType type,
     @NotNull @DecimalMin("0.00000001") BigDecimal quantity,
     @NotNull @DecimalMin("0.01") BigDecimal price,
-    @NotBlank String currency,
+    @NotNull String currency,
     List<FeeRequest> fees,
     @NotNull Instant transactionDate,
     String notes) {

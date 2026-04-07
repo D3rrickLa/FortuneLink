@@ -176,17 +176,22 @@ public class PortfolioLifecycleCommandValidatorTest {
   @DisplayName("validate(DeletePortfolioCommand)")
   class DeletePortfolioTests {
     @Test
-    @DisplayName("validate: success when confirmed is true")
-    void validateSuccessWhenConfirmed() {
+    @DisplayName("validate: success")
+    void validateSuccessNoErrors() {
       var command = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, true);
       assertThat(validator.validate(command).isValid()).isTrue();
+    }
+    @Test
+    @DisplayName("validate: errors when Id is null")
+    void validateFailure() {
+      var command = new DeletePortfolioCommand(null, USER_ID, false, true);
+      assertThat(validator.validate(command).isValid()).isFalse();
     }
   }
 
   @Nested
   @DisplayName("Null Safety")
   class NullSafetyTests {
-
     @Test
     @DisplayName("validate: throws NullPointerException on null command")
     void validateThrowsNpeOnNullCommand() {

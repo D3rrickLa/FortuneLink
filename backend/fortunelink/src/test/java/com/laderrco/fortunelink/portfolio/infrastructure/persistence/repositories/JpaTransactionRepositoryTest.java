@@ -136,6 +136,6 @@ class JpaTransactionRepositoryTest {
   private TransactionJpaEntity createTestTransaction(UUID accountId, UUID portfolioId) {
     return TransactionJpaEntity.create(UUID.randomUUID(), portfolioId, accountId, "BUY", "AAPL",
         null, BigDecimal.valueOf(1000), "USD", "STOCK", null, null, null, "USD", null, false, null,
-        null, null, null, "SOME NOTES HERE", Instant.now(), null);
+        null, null, null, "SOME NOTES HERE", Instant.now(), null, null);
   }
 }

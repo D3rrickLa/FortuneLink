@@ -51,15 +51,18 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
       @Param("accountId") UUID accountId);
 
   /**
-   * Used in the 'save' logic to find the denormalized portfolioId when it's not provided. Assumes a
+   * Used in the 'save' logic to find the denormalized portfolioId when it's not
+   * provided. Assumes a
    * relationship exists between Account and Portfolio.
    */
   @Query("SELECT a.portfolio.id FROM AccountJpaEntity a WHERE a.id = :accountId")
   UUID findPortfolioIdByAccountId(@Param("accountId") UUID accountId);
 
   /**
-   * Uses accountAmount when set (post-conversion), falls back to nativeAmount. This is safe only
-   * because Fee.withConversion() guarantees accountAmount is always in account base currency.
+   * Uses accountAmount when set (post-conversion), falls back to nativeAmount.
+   * This is safe only
+   * because Fee.withConversion() guarantees accountAmount is always in account
+   * base currency.
    */
   @Query("""
       SELECT t.accountId as accountId,
@@ -107,4 +110,6 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
       """)
   boolean existsConflict(@Param("accountId") UUID accountId, @Param("type") TransactionType type,
       @Param("symbol") String symbol, @Param("start") Instant start, @Param("end") Instant end);
+
+  Optional<TransactionJpaEntity> findByIdempotencyKey(String key);
 }

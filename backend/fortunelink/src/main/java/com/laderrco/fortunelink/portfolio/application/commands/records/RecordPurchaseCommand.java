@@ -12,6 +12,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
+
 import lombok.Builder;
 
 // String symbol is fine, we are just recording the name, not the entity
@@ -26,6 +28,7 @@ import lombok.Builder;
  */
 @Builder
 public record RecordPurchaseCommand(
+    UUID idempotencyKey,
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,

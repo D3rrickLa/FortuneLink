@@ -8,6 +8,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Records a DRIP reinvestment. IMPORTANT: Do NOT also call recordDividend() for the same event.
@@ -15,6 +16,7 @@ import java.time.Instant;
  * replayFullAccount() to overstate cash. NOTE: swtich notes to be the last thing, it's optional
  */
 public record RecordDividendReinvestmentCommand(
+    UUID idempotencyKey,
     PortfolioId portfolioId,
     UserId userId,
     AccountId accountId,

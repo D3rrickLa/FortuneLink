@@ -21,6 +21,8 @@ import jakarta.validation.constraints.Size;
  * are not supported — withdraw in the account's base currency only.
  */
 public record RecordWithdrawalRequest(
+    @NotBlank String idempotencyKey,
+    
     @NotNull(message = "Amount is required") @DecimalMin(value = "0.01", message = "Withdrawal amount must be greater than zero") BigDecimal amount,
 
     @NotBlank(message = "Currency is required") @Size(min = 3, max = 3, message = "Currency must be a 3-letter ISO-4217 code") String currency,

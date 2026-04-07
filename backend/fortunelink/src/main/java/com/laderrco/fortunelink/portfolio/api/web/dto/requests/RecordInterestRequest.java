@@ -29,6 +29,8 @@ import jakarta.validation.constraints.*;
  * is held. This will be tightened when bonds are fully supported.
  */
 public record RecordInterestRequest(
+    @NotBlank String idempotencyKey,
+    
     @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String assetSymbol,
 
     @NotNull(message = "Amount is required") @DecimalMin(value = "0.000001", message = "Interest amount must be greater than zero") BigDecimal amount,

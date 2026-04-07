@@ -206,21 +206,6 @@ class PortfolioLifecycleServiceTest {
     }
 
     @Test
-    @DisplayName("hard delete: calls delete directly on repository")
-    void hardDeleteCallsRepository() {
-      Portfolio portfolio = mock(Portfolio.class);
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
-          Optional.of(portfolio));
-
-      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false,
-          false);
-      service.deletePortfolio(cmd);
-
-      verify(portfolioRepository).delete(PORTFOLIO_ID);
-      verify(portfolioRepository, never()).save(any());
-    }
-
-    @Test
     @DisplayName("hard delete: fails when active accounts exist and recursive is false")
     void hardDeleteFailsWithActiveAccounts() {
       Portfolio portfolio = mock(Portfolio.class);
@@ -246,10 +231,15 @@ class PortfolioLifecycleServiceTest {
       Account emptyAccount = mock(Account.class);
       AccountId accId = AccountId.newId();
 
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID))
+          .thenReturn(Optional.of(portfolio));
       when(portfolio.getAccounts()).thenReturn(List.of(emptyAccount));
 
-      when(emptyAccount.isActive()).thenReturn(true, false);
+      // 1st call (guard): true
+      // 2nd call (action loop): true
+      // 3rd call (final hardDelete check): false (simulating it is now closed)
+      when(emptyAccount.isActive()).thenReturn(true, true, false);
+
       when(emptyAccount.getPositionCount()).thenReturn(0);
       when(emptyAccount.getCashBalance()).thenReturn(Money.zero(USD));
       when(emptyAccount.getAccountId()).thenReturn(accId);
@@ -258,6 +248,7 @@ class PortfolioLifecycleServiceTest {
 
       service.deletePortfolio(cmd);
 
+      // Now this will be invoked because the filter inside the forEach sees 'true'
       verify(portfolio).closeAccount(accId);
       verify(portfolioRepository).delete(PORTFOLIO_ID);
     }

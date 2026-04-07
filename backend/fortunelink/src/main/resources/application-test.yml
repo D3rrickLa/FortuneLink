@@ -11,7 +11,6 @@ spring:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     username: postgres
     password: postgres
-
   jpa:
     hibernate:
       ddl-auto: none   # Use Flyway for schema creation, not Hibernate

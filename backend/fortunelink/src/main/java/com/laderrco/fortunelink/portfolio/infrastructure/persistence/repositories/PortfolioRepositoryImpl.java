@@ -45,7 +45,6 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
     // Single SELECT with entity graph. Ownership was already validated by
     // PortfolioLoader before this call, no need to re-check userId here.
     Optional<PortfolioJpaEntity> existing = jpaRepository.findWithAccountsById(id);
-
     PortfolioJpaEntity entity = mapper.toEntity(domain, existing.orElse(null));
     return mapper.toDomain(jpaRepository.save(entity));
   }

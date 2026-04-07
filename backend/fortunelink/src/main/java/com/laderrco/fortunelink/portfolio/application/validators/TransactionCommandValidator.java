@@ -167,6 +167,9 @@ public class TransactionCommandValidator {
   }
 
   private void validateCommonIds(TransactionCommand command, List<String> errors) {
+    if (command.idempotencyKey() == null) {
+      errors.add("Idempotency key is required");
+    }
     if (command.portfolioId() == null) {
       errors.add("PortfolioId is required");
     }

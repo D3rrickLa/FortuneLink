@@ -89,7 +89,8 @@ public class TransactionJpaEntity {
   private String executionPriceCurrency;
 
   /**
-   * AssetType from TradeExecution / TransactionMetadata. Stored as the V1 {@code asset_type}
+   * AssetType from TradeExecution / TransactionMetadata. Stored as the V1
+   * {@code asset_type}
    * column.
    */
   @Column(name = "asset_type", length = 50)
@@ -124,8 +125,10 @@ public class TransactionJpaEntity {
   private String excludedReason;
 
   /**
-   * TransactionMetadata.additionalData — free-form key/value pairs. Stored as JSONB. The V1
-   * {@code metadata} column already exists for this. {@code StringMapConverter} serialises
+   * TransactionMetadata.additionalData — free-form key/value pairs. Stored as
+   * JSONB. The V1
+   * {@code metadata} column already exists for this. {@code StringMapConverter}
+   * serialises
    * Map&lt;String,String&gt; ↔ JSON text.
    */
   @Convert(converter = StringMapConverter.class)
@@ -148,6 +151,9 @@ public class TransactionJpaEntity {
   @Column(name = "related_transaction_id", columnDefinition = "uuid")
   private UUID relatedTransactionId;
 
+  @Column(name = "idempotency_key", nullable = false, unique = true, length = 36)
+  private String idempotencyKey;
+
   @Version
   @Column(name = "version", nullable = false)
   private Long version;
@@ -163,7 +169,7 @@ public class TransactionJpaEntity {
       Integer splitNumerator, Integer splitDenominator, BigDecimal cashDeltaAmount,
       String cashDeltaCurrency, String metadataSource, boolean excluded, Instant excludedAt,
       UUID excludedBy, String excludedReason, Map<String, String> additionalData, String notes,
-      Instant occurredAt, UUID relatedTransactionId) {
+      Instant occurredAt, UUID relatedTransactionId, String idempotencyKey) {
 
     TransactionJpaEntity e = new TransactionJpaEntity();
     e.id = id;
@@ -188,6 +194,7 @@ public class TransactionJpaEntity {
     e.notes = notes;
     e.occurredAt = occurredAt;
     e.relatedTransactionId = relatedTransactionId;
+    e.idempotencyKey = idempotencyKey;
     e.createdAt = Instant.now();
     return e;
   }
@@ -197,8 +204,10 @@ public class TransactionJpaEntity {
   // -------------------------------------------------------------------------
 
   /**
-   * Applies exclusion state from an updated domain record. Transactions are immutable in the domain
-   * — only exclusion metadata changes post-creation, so this is the only mutable operation on this
+   * Applies exclusion state from an updated domain record. Transactions are
+   * immutable in the domain
+   * — only exclusion metadata changes post-creation, so this is the only mutable
+   * operation on this
    * entity.
    */
   public void applyExclusionState(boolean excluded, Instant excludedAt, UUID excludedBy,

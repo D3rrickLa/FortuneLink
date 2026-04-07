@@ -45,6 +45,8 @@ import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingSe
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -88,8 +90,12 @@ public class TransactionService {
       TransactionCommand command) {
     log.error("Optimistic lock exhausted after 3 attempts. portfolioId={} accountId={}",
         command.portfolioId(), command.accountId(), ex);
+
     accountHealthService.markStale(
-        command.portfolioId(), command.userId(), command.accountId());
+        command.portfolioId(),
+        command.userId(),
+        command.accountId());
+
     throw new ConcurrentModificationException(
         "Portfolio was modified concurrently. Please retry your transaction.", ex);
   }
@@ -203,7 +209,7 @@ public class TransactionService {
     }
     Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
     // portfolioId from command, no secondary lookup needed
-    transactionRepository.save(excluded, command.portfolioId());
+    transactionRepository.save(excluded, command.portfolioId(), command.idempotencyKey());
     publishRecalculationIfRequired(existing, command);
 
     if (existing.transactionType() == TransactionType.BUY) {
@@ -221,7 +227,7 @@ public class TransactionService {
     }
     Transaction restored = existing.restore();
     // portfolioId from command — no secondary lookup needed
-    transactionRepository.save(restored, command.portfolioId());
+    transactionRepository.save(restored, command.portfolioId(), command.idempotencyKey());
     publishRecalculationIfRequired(existing, command);
 
     if (existing.transactionType() == TransactionType.BUY) {
@@ -240,9 +246,19 @@ public class TransactionService {
       Function<PortfolioContext, Transaction> recordFn) {
 
     ValidationUtils.validate(command, validationFn, operationName);
+
+    // Idempotency check — clean, no infra knowledge
+    if (command.idempotencyKey() != null) {
+      Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(command.idempotencyKey());
+      if (existing.isPresent()) {
+        log.info("Idempotent replay for key={}", command.idempotencyKey());
+        return transactionViewMapper.toTransactionView(existing.get());
+      }
+    }
+
     PortfolioContext ctx = getPortfolioContext(command);
     Transaction tx = recordFn.apply(ctx);
-    persistChanges(ctx, tx);
+    persistChanges(ctx, tx, command.idempotencyKey());
     return transactionViewMapper.toTransactionView(tx);
   }
 
@@ -258,11 +274,11 @@ public class TransactionService {
    * portfolioId is taken
    * directly from the in-memory context — no DB lookup.
    */
-  private void persistChanges(PortfolioContext ctx, Transaction tx) {
+  private void persistChanges(PortfolioContext ctx, Transaction tx, UUID idempotencyKey) {
     portfolioRepository.save(ctx.portfolio());
     // Pass portfolioId from context, eliminates the findPortfolioIdByAccountId
     // secondary query that previously fired on every single transaction insert.
-    transactionRepository.save(tx, ctx.portfolio().getPortfolioId());
+    transactionRepository.save(tx, ctx.portfolio().getPortfolioId(), idempotencyKey);
 
     // Fee totals change only on BUY transactions that carry fees.
     // Evict so the next portfolio read reflects the updated ACB.
