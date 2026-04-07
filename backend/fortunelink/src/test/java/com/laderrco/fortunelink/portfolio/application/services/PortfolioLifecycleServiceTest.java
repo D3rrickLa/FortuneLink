@@ -7,12 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
@@ -171,6 +166,24 @@ class PortfolioLifecycleServiceTest {
       assertThat(existingPortfolio.getDescription()).isEqualTo(command.description());
       assertThat(existingPortfolio.getName()).isEqualTo(command.name());
       assertThat(existingPortfolio.getDisplayCurrency()).isEqualTo(command.currency());
+    }
+
+    @Test
+    @DisplayName("updatePortfolio: updates details and returns lightweight view, currency not updated")
+    void updatesDetailsAndReturnsViewNotUpdatingCUrrency() {
+      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "New Name",
+          "New Desc", null);
+      Portfolio existingPortfolio = Portfolio.createNew(USER_ID, "TFSA", "MY TFSA", USD);
+
+      when(portfolioLoader.loadUserPortfolioWithGraph(eq(PORTFOLIO_ID), eq(USER_ID))).thenReturn(
+          existingPortfolio);
+
+      service.updatePortfolio(command);
+
+      verify(portfolioRepository).save(existingPortfolio);
+      assertThat(existingPortfolio.getDescription()).isEqualTo(command.description());
+      assertThat(existingPortfolio.getName()).isEqualTo(command.name());
+      assertThat(existingPortfolio.getDisplayCurrency()).isEqualTo(USD);
     }
 
     @Test

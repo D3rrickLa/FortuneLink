@@ -61,7 +61,9 @@ public class PortfolioLifecycleService {
     Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(),
         command.userId());
     existing.updateDetails(command.name(), command.description());
-    existing.updateDisplayCurrency(command.currency());
+    if (command.currency() != null) {
+      existing.updateDisplayCurrency(command.currency());
+    }
     Portfolio saved = portfolioRepository.save(existing);
     return portfolioViewMapper.toNewPortfolioView(saved);
   }
@@ -80,11 +82,14 @@ public class PortfolioLifecycleService {
   }
 
   /**
-   * Permanent removal from the database. Bypasses soft-delete audit trail. Reserved for admin/test
+   * Permanent removal from the database. Bypasses soft-delete audit trail.
+   * Reserved for admin/test
    * use — no API path exposes this in production.
    * <p>
-   * Domain invariants are still enforced: a portfolio with active accounts or open positions cannot
-   * be hard-deleted any more than soft-deleted. ON DELETE CASCADE in the schema handles child rows,
+   * Domain invariants are still enforced: a portfolio with active accounts or
+   * open positions cannot
+   * be hard-deleted any more than soft-deleted. ON DELETE CASCADE in the schema
+   * handles child rows,
    * but we validate business state here first so the error message is meaningful.
    */
   private void hardDelete(Portfolio portfolio, DeletePortfolioCommand command) {

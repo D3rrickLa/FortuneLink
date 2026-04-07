@@ -41,7 +41,7 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
 
-  @Column(name = "user_id", nullable = false, unique = true)
+  @Column(name = "user_id", nullable = false)
   private UUID userId;
 
   @Column(name = "name", nullable = false, length = 255)

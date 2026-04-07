@@ -74,8 +74,7 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
         AND t.executionSymbol IS NOT NULL
       GROUP BY t.accountId, t.executionSymbol, t.cashDeltaCurrency
       """)
-  List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(
-      @Param("accountIds") List<UUID> accountIds);
+  List<FeeAggregationResult> sumBuyFeesByAccountAndSymbol(@Param("accountIds") List<UUID> accountIds);
 
   @Query("""
       SELECT t FROM TransactionJpaEntity t
