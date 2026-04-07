@@ -93,8 +93,7 @@ public class PortfolioQueryService {
     Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotesForMultiple(portfolios);
 
     // PortfolioSummaryView contains only totalValue - fees are position-level
-    // detail
-    // and intentionally excluded here. Do NOT add fee loading to this method.
+    // detail and intentionally excluded here. Do NOT add fee loading to this method.
     return portfolios.stream().map(p -> {
       Money totalValue = portfolioValuationService.calculateTotalValue(p, p.getDisplayCurrency(),
           quoteCache);

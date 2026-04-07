@@ -32,7 +32,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class TransactionRepositoryImpl implements TransactionRepository,
     TransactionQueryRepository {
-  private static final String BUY_FEE_CACHE = "fees:buy:";
+  private static final String BUY_FEE_CACHE = "fees:buy";
 
   private final JpaTransactionRepository jpaRepository;
   private final TransactionDomainMapper mapper;

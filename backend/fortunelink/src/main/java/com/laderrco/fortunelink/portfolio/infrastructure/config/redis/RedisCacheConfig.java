@@ -25,11 +25,9 @@ import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializ
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tools.jackson.databind.DefaultTyping;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import tools.jackson.databind.module.SimpleModule;
 
 @Configuration
@@ -89,7 +87,7 @@ public class RedisCacheConfig {
   @Bean(name = "redisCacheObjectMapper")
   public JsonMapper redisCacheObjectMapper() {
     SimpleModule module = new SimpleModule().addSerializer(MarketAssetInfo.class,
-            new MarketAssetInfoSerializer())
+        new MarketAssetInfoSerializer())
         .addDeserializer(MarketAssetInfo.class, new MarketAssetInfoDeserializer())
         .addSerializer(Currency.class, new CurrencySerializer())
         .addDeserializer(Currency.class, new CurrencyDeserializer());
@@ -99,8 +97,6 @@ public class RedisCacheConfig {
         .changeDefaultVisibility(vc -> vc.withGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .changeDefaultVisibility(vc -> vc.withIsGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        // .activateDefaultTyping(BasicPolymorphicTypeValidator.builder().build(),
-        //     DefaultTyping.NON_FINAL)
         .build();
   }
 
@@ -112,7 +108,7 @@ public class RedisCacheConfig {
     GenericJacksonJsonRedisSerializer genericValueSerializer = new GenericJacksonJsonRedisSerializer(
         objectMapper);
 
-    JacksonJsonRedisSerializer<MarketAssetQuote> moneySerializer = new JacksonJsonRedisSerializer<>(
+    JacksonJsonRedisSerializer<MarketAssetQuote> marketAssetQuoteSerializer = new JacksonJsonRedisSerializer<>(
         objectMapper, MarketAssetQuote.class);
 
     JacksonJsonRedisSerializer<MarketAssetInfo> marketAssetInfoSerializer = new JacksonJsonRedisSerializer<>(
@@ -125,7 +121,7 @@ public class RedisCacheConfig {
     // Map the property-driven names to their specific TTLs and Serializers
     cacheConfigs.put(pricesCacheName, defaultConfig.entryTtl(Duration.ofSeconds(currentPricesTtl))
         .serializeValuesWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(moneySerializer)));
+            RedisSerializationContext.SerializationPair.fromSerializer(marketAssetQuoteSerializer)));
 
     cacheConfigs.put(historicalCacheName,
         defaultConfig.entryTtl(Duration.ofSeconds(historicalPricesTtl)));
@@ -146,7 +142,7 @@ public class RedisCacheConfig {
   private RedisCacheConfiguration getDefaultConfig(StringRedisSerializer keySerializer,
       GenericJacksonJsonRedisSerializer genericValueSerializer) {
     return RedisCacheConfiguration.defaultCacheConfig().serializeKeysWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(keySerializer))
+        RedisSerializationContext.SerializationPair.fromSerializer(keySerializer))
         .serializeValuesWith(
             RedisSerializationContext.SerializationPair.fromSerializer(genericValueSerializer))
         .disableCachingNullValues();

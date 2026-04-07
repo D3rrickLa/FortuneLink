@@ -73,11 +73,11 @@ fortunelink:
       trading-currency: 604800
       exchange-rates: 3600
     key-prefix:
-      buy-fees: "fees:buy:"
-      prices: "market:price:"
-      historical: "market:historical:"
-      asset-info: "market:info:"
-      currency: "market:currency:"
+      buy-fees: "fees:buy"
+      prices: "market:price"
+      historical: "market:historical"
+      asset-info: "market:info"
+      currency: "market:currency"
   purge:
     excluded-transaction-retention-days: 365
   # ============================================

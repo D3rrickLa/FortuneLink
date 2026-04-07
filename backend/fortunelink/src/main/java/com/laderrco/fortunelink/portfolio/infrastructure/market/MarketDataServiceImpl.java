@@ -70,7 +70,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
     // Redis cache hit path (unchanged from before)
-    List<String> keys = symbols.stream().map(s -> cacheKeyPrefix + s.symbol()).toList();
+    List<String> keys = symbols.stream().map(s -> "market:price::" + s.symbol()).toList();
     List<MarketAssetQuote> cached = redisTemplate.opsForValue().multiGet(keys);
 
     Map<AssetSymbol, MarketAssetQuote> result = new HashMap<>();
@@ -111,13 +111,13 @@ public class MarketDataServiceImpl implements MarketDataService {
   }
 
   @Override
-  @Cacheable(value = "market:historical:", key = "#symbol.symbol()", unless = "#result.isEmpty()")
+  @Cacheable(value = "market:historical", key = "#symbol.symbol()", unless = "#result.isEmpty()")
   public Optional<MarketAssetQuote> getHistoricalQuote(AssetSymbol symbol, Instant date) {
     return provider.fetchHistoricalQuote(symbol, date);
   }
 
   @Override
-  @Cacheable(value = "market:info:", key = "#symbol.symbol()", unless = "#result.isEmpty()")
+  @Cacheable(value = "market:info", key = "#symbol.symbol()", unless = "#result.isEmpty()")
   public Optional<MarketAssetInfo> getAssetInfo(AssetSymbol symbol) {
     // Checking DB directly is fine, but Spring Cache will wrap this whole method.
     // If it's in Redis, this code won't even execute.
@@ -138,8 +138,6 @@ public class MarketDataServiceImpl implements MarketDataService {
     return fetched;
   }
 
-  // Note: getBatchAssetInfo uses DB directly (infoRepository),
-  // so it doesn't need @Cacheable (Redis) unless you want a two-tier cache.
   @Override
   public Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(Set<AssetSymbol> symbols) {
     if (symbols.isEmpty()) {
@@ -180,7 +178,7 @@ public class MarketDataServiceImpl implements MarketDataService {
   }
 
   @Override
-  @Cacheable(value = "market:currency:", key = "#symbol.symbol()", unless = "#result == null")
+  @Cacheable(value = "market:currency", key = "#symbol.symbol()", unless = "#result == null")
   public Currency getTradingCurrency(AssetSymbol symbol) {
     return provider.fetchTradingCurrency(symbol);
   }
