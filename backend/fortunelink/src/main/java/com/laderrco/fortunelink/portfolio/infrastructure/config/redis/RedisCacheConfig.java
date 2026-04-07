@@ -99,8 +99,9 @@ public class RedisCacheConfig {
         .changeDefaultVisibility(vc -> vc.withGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .changeDefaultVisibility(vc -> vc.withIsGetterVisibility(JsonAutoDetect.Visibility.NONE))
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .activateDefaultTyping(BasicPolymorphicTypeValidator.builder().build(),
-            DefaultTyping.NON_FINAL).build();
+        // .activateDefaultTyping(BasicPolymorphicTypeValidator.builder().build(),
+        //     DefaultTyping.NON_FINAL)
+        .build();
   }
 
   @Bean
