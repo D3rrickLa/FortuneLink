@@ -66,12 +66,6 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("BAD_REQUEST", ex.getMessage()));
   }
 
-  @ExceptionHandler({ DomainArgumentException.class, IllegalArgumentException.class })
-  public ResponseEntity<ErrorResponse> handleDomainArgument(RuntimeException ex) {
-    return ResponseEntity.badRequest()
-        .body(ErrorResponse.of("INVALID_OPERATION", ex.getMessage()));
-  }
-
   // -------------------------------------------------------------------------
   // 401 Unauthorized
   // -------------------------------------------------------------------------
