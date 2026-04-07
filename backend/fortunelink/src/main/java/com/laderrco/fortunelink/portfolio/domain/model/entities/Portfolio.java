@@ -5,6 +5,7 @@ import static com.laderrco.fortunelink.portfolio.domain.utils.Guard.notNull;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -120,13 +121,15 @@ public class Portfolio {
     }
 
     Account account = getAccount(accountId);
+    
+    if (account.getState() == AccountLifecycleState.CLOSED) {
+      throw new IllegalStateException("Cannot rename a closed account.");
+    }
 
-    // 1. If the name is exactly the same, just exit early (Success)
     if (account.getName().equalsIgnoreCase(newName)) {
       return;
     }
 
-    // 2. Now check if someone ELSE is already using the name
     if (accountNameExists(newName)) {
       throw new IllegalArgumentException("Account name already exists: " + newName);
     }

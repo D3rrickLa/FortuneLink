@@ -10,9 +10,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
+import com.laderrco.fortunelink.portfolio.application.services.AccountLifecycleService;
+import com.laderrco.fortunelink.portfolio.application.services.AccountLifecycleServiceTest;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
@@ -137,6 +140,7 @@ class AccountViewBuilderTest {
       when(projection.getAccountType()).thenReturn("CHEQUING");
       when(projection.getBaseCurrencyCode()).thenReturn(currencyCode);
       when(projection.getCashBalanceAmount()).thenReturn(cashBalance);
+      when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(projection.getCreatedDate()).thenReturn(createdDate);
 
       // Act
@@ -164,38 +168,31 @@ class AccountViewBuilderTest {
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getAccountType()).thenReturn("RRSP");
-      // Other stubs needed to avoid NPEs during construction
       when(projection.getBaseCurrencyCode()).thenReturn("CAD");
+      when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(projection.getCashBalanceAmount()).thenReturn(BigDecimal.ZERO);
 
-      // Act
       AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of());
 
-      // Assert
       assertThat(result.type()).isEqualTo(AccountType.RRSP);
     }
 
     @Test
     @DisplayName("buildFromProjection: ignores quotes and fees as positions are currently empty")
     void ignoresEnrichmentDataForProjection() {
-      // Arrange
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getAccountType()).thenReturn("CHEQUING");
       when(projection.getBaseCurrencyCode()).thenReturn("CAD");
       when(projection.getCashBalanceAmount()).thenReturn(BigDecimal.TEN);
-
+      when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       AssetSymbol symbol = new AssetSymbol("AAPL");
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(symbol, mock(MarketAssetQuote.class));
       Map<AssetSymbol, Money> fees = Map.of(symbol, Money.of(5, "CAD"));
 
-      // Act
       AccountView result = accountViewBuilder.buildFromProjection(projection, quotes, fees);
 
-      // Assert
       assertThat(result.assets()).isEmpty();
-      // Verifying that the total value didn't change despite having quotes/fees
-      // passed in
       assertThat(result.totalValue().amount()).isEqualTo(
           BigDecimal.TEN.setScale(Precision.MONEY.getDecimalPlaces()));
     }

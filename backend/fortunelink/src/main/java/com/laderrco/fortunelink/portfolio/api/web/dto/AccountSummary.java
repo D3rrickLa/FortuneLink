@@ -7,6 +7,7 @@ public record AccountSummary(
     String id,
     String name,
     String type,
+    String status,
     String currency,
     double cashBalance,
     double totalValue,
@@ -15,7 +16,7 @@ public record AccountSummary(
     Instant creationDate) {
   public static AccountSummary fromView(AccountView view) {
     return new AccountSummary(view.accountId().toString(), view.name(), view.type().name(),
-        view.baseCurrency().getCode(), view.cashBalance().amount().doubleValue(),
+        view.status().name(), view.baseCurrency().getCode(), view.cashBalance().amount().doubleValue(),
         view.totalValue().amount().doubleValue(), view.assets().size(), view.creationDate());
   }
 }

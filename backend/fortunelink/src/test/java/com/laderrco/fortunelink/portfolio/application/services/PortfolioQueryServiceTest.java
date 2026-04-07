@@ -24,6 +24,7 @@ import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
@@ -145,8 +146,8 @@ public class PortfolioQueryServiceTest {
   }
 
   private AccountView buildAccountView(AccountId accountId) {
-    return new AccountView(accountId, "Test Account", AccountType.TFSA, List.of(), CAD,
-        Money.zero(CAD), Money.zero(CAD), Instant.now());
+    return new AccountView(accountId, "Test Account", AccountType.TFSA, AccountLifecycleState.ACTIVE, 
+      List.of(), CAD, Money.zero(CAD), Money.zero(CAD), Instant.now());
   }
 
   @Nested

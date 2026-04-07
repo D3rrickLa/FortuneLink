@@ -190,6 +190,18 @@ class PortfolioTest {
     }
 
     @Test
+    @DisplayName("renameAccount: updates name fails when closed")
+    void renameAccountThrowsWhenAccountIsClosed() {
+      Account account = createAccount(portfolio, "Test");
+      portfolio.closeAccount(account.getAccountId());
+
+      assertThatThrownBy(() ->portfolio.renameAccount(account.getAccountId(), "Valid Name"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Cannot rename a closed account.");
+      assertThat(account.getName()).isEqualTo("Test");
+    }
+
+    @Test
     @DisplayName("renameAccount: no-op when name unchanged")
     void renameAccountNoOpWhenSameName() {
       Account account = createAccount(portfolio, "Test");

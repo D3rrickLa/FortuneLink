@@ -112,7 +112,7 @@ public class PortfolioViewMapper {
 
   public AccountView toNewAccountView(Account account) {
     return new AccountView(account.getAccountId(), account.getName(), account.getAccountType(),
-        Collections.emptyList(), account.getAccountCurrency(),
+        account.getState(), Collections.emptyList(), account.getAccountCurrency(),
         Money.zero(account.getAccountCurrency()), Money.zero(account.getAccountCurrency()),
         account.getCreationDate());
   }
@@ -120,7 +120,7 @@ public class PortfolioViewMapper {
   public AccountView toAccountView(Account account, List<PositionView> positionViews,
       Money totalValue, Money cashBalance) {
     return new AccountView(account.getAccountId(), account.getName(), account.getAccountType(),
-        positionViews, account.getAccountCurrency(), cashBalance, totalValue,
+        account.getState(), positionViews, account.getAccountCurrency(), cashBalance, totalValue,
         account.getCreationDate());
   }
 
