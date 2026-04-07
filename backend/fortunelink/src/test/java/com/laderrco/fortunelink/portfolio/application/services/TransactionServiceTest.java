@@ -74,7 +74,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -187,8 +186,8 @@ class TransactionServiceTest {
   }
 
   private RecordPurchaseCommand createPurchaseCommand() {
-    return new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE,
-        Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+    return new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+        ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
   }
 
   private Money usd(double amount) {
@@ -226,9 +225,9 @@ class TransactionServiceTest {
       AssetSymbol symbol = new AssetSymbol("SHOP.TO");
       Money AMOUNT = new Money(new BigDecimal("100.00"), CAD);
       Price shopPriceToUsd = new Price(Money.of(75, USD));
-      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES,
-          false);
+      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT),
+          List.of(), NOW, NOTES, false);
 
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
           any(), anyBoolean())).thenReturn(transaction);
@@ -260,16 +259,16 @@ class TransactionServiceTest {
       when(transaction.accountId()).thenReturn(ACCOUNT_ID);
       when(cacheManager.getCache(any())).thenReturn(mock(Cache.class));
 
-      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES,
-          false);
+      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, symbol.symbol(), ASSET_TYPE, Quantity.of(10), new Price(AMOUNT),
+          List.of(), NOW, NOTES, false);
 
       service.recordPurchase(command);
       verify(cacheManager).getCache(anyString());
     }
 
     @ParameterizedTest
-    @EnumSource(value = AssetType.class, names = {"CASH", "OTHER"})
+    @EnumSource(value = AssetType.class, names = { "CASH", "OTHER" })
     @NullSource
     @DisplayName("recordPurchase: should sanitize invalid hints to STOCK when asset not found")
     void recordPurchaseSanitizeType(AssetType hint) {
@@ -280,8 +279,8 @@ class TransactionServiceTest {
           any(), anyBoolean())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
 
-      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          symbol.symbol(), hint, // Injected by ParameterizedTest
+      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, symbol.symbol(), hint, // Injected by ParameterizedTest
           Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       service.recordPurchase(command);
@@ -293,8 +292,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordSale: success when asset exists")
     void recordSaleSuccess() {
-      RecordSaleCommand command = new RecordSaleCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          SYMBOL_STR, Quantity.of(0), new Price(AMOUNT), List.of(), NOW, NOTES);
+      RecordSaleCommand command = new RecordSaleCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, SYMBOL_STR, Quantity.of(0), new Price(AMOUNT), List.of(), NOW, NOTES);
 
       when(account.hasPosition(any())).thenReturn(true);
       when(transactionRecordingService.recordSell(any(), any(), any(), any(), any(), any(),
@@ -312,8 +311,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordSale: throw InsufficientQuantityException when no position exists")
     void recordSaleThrowsWhenNoPosition() {
-      RecordSaleCommand command = new RecordSaleCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          SYMBOL_STR, Quantity.of(0), new Price(AMOUNT), List.of(), NOW, NOTES);
+      RecordSaleCommand command = new RecordSaleCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, SYMBOL_STR, Quantity.of(0), new Price(AMOUNT), List.of(), NOW, NOTES);
       when(account.hasPosition(any())).thenReturn(false);
 
       assertThatThrownBy(() -> service.recordSale(command)).isInstanceOf(
@@ -324,8 +323,8 @@ class TransactionServiceTest {
     @DisplayName("recordDividendReinvestment: verify success flow")
     void recordDividendReinvestmentSuccess() {
       DripExecution exec = new DripExecution(Quantity.of(10.0), Price.of("150", USD));
-      RecordDividendReinvestmentCommand command = new RecordDividendReinvestmentCommand(IDEMPOTENCY_KEY, 
-          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "GOOGL", exec, NOW, "Reinvest");
+      RecordDividendReinvestmentCommand command = new RecordDividendReinvestmentCommand(
+          IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "GOOGL", exec, NOW, "Reinvest");
 
       when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(),
           any())).thenReturn(transaction);
@@ -340,8 +339,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordDividend: logs warning when a reinvestment already exists within 24h")
     void recordDividendWarnsOnExistingReinvestment() {
-      RecordDividendCommand command = new RecordDividendCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", usd(10), NOW, "Interest");
+      RecordDividendCommand command = new RecordDividendCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "AAPL", usd(10), NOW, "Interest");
       AssetSymbol symbol = new AssetSymbol(command.assetSymbol());
 
       Instant expectedStart = command.transactionDate().minus(24, ChronoUnit.HOURS);
@@ -353,7 +352,7 @@ class TransactionServiceTest {
 
       when(
           transactionRecordingService.recordDividend(any(), any(), any(), any(), any())).thenReturn(
-          dummyTx);
+              dummyTx);
       when(transactionRepository.existsConflict(eq(command.accountId()),
           eq(TransactionType.DIVIDEND_REINVEST), eq(symbol), eq(expectedStart),
           eq(expectedEnd))).thenReturn(true);
@@ -375,8 +374,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordDeposit: verify success flow")
     void recordDepositSuccess() {
-      RecordDepositCommand cmd = new RecordDepositCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
-          NOW, NOTES);
+      RecordDepositCommand cmd = new RecordDepositCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, AMOUNT, NOW, NOTES);
       when(transactionRecordingService.recordDeposit(eq(account), eq(AMOUNT), eq(NOTES),
           eq(NOW))).thenReturn(transaction);
 
@@ -389,8 +388,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordWithdrawal: verify success flow")
     void recordWithdrawalSuccess() {
-      RecordWithdrawalCommand command = new RecordWithdrawalCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, AMOUNT, NOW, NOTES);
+      RecordWithdrawalCommand command = new RecordWithdrawalCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, AMOUNT, NOW, NOTES);
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
           .accountId(ACCOUNT_ID).transactionType(TransactionType.WITHDRAWAL).cashDelta(AMOUNT)
@@ -409,8 +408,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordFee: verify success flow")
     void recordFeeSuccess() {
-      RecordFeeCommand command = new RecordFeeCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, AMOUNT,
-          FeeType.ACCOUNT_MAINTENANCE, NOW, NOTES);
+      RecordFeeCommand command = new RecordFeeCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, AMOUNT, FeeType.ACCOUNT_MAINTENANCE, NOW, NOTES);
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
           .accountId(ACCOUNT_ID).transactionType(TransactionType.FEE).cashDelta(AMOUNT)
@@ -428,10 +427,10 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordInterest: verify success flow with no symbol")
     void recordInterestSuccessCashInterest() {
-      RecordInterestCommand command = RecordInterestCommand.cashInterest(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, usd(5), NOW, "Interest");
-      RecordInterestCommand command2 = new RecordInterestCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "", usd(5), NOW, "INTEREST");
+      RecordInterestCommand command = RecordInterestCommand.cashInterest(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, usd(5), NOW, "Interest");
+      RecordInterestCommand command2 = new RecordInterestCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "", usd(5), NOW, "INTEREST");
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
           .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST).cashDelta(AMOUNT)
@@ -440,7 +439,7 @@ class TransactionServiceTest {
 
       when(
           transactionRecordingService.recordInterest(any(), any(), any(), any(), any())).thenReturn(
-          dummyTx);
+              dummyTx);
 
       service.recordInterest(command);
 
@@ -453,8 +452,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordInterest: verify success flow with symbol")
     void recordInterestSuccessAssetInterest() {
-      RecordInterestCommand command = RecordInterestCommand.assetInterest(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, "CAD.3TBILL", usd(15), NOW, "3 month GIC");
+      RecordInterestCommand command = RecordInterestCommand.assetInterest(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "CAD.3TBILL", usd(15), NOW, "3 month GIC");
 
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
           .accountId(ACCOUNT_ID).transactionType(TransactionType.INTEREST).cashDelta(AMOUNT)
@@ -463,7 +462,7 @@ class TransactionServiceTest {
 
       when(
           transactionRecordingService.recordInterest(any(), any(), any(), any(), any())).thenReturn(
-          dummyTx);
+              dummyTx);
 
       service.recordInterest(command);
 
@@ -475,8 +474,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordDividend: verify success flow")
     void recordDividendSuccess() {
-      RecordDividendCommand command = new RecordDividendCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", usd(10), NOW, "Interest");
+      RecordDividendCommand command = new RecordDividendCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "AAPL", usd(10), NOW, "Interest");
       Transaction dummyTx = Transaction.builder().transactionId(TransactionId.newId())
           .accountId(ACCOUNT_ID).transactionType(TransactionType.DIVIDEND).cashDelta(AMOUNT)
           .fees(List.of()).notes(NOTES).occurredAt(NOW)
@@ -484,7 +483,7 @@ class TransactionServiceTest {
 
       when(
           transactionRecordingService.recordDividend(any(), any(), any(), any(), any())).thenReturn(
-          dummyTx);
+              dummyTx);
 
       service.recordDividend(command);
 
@@ -521,8 +520,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordSplit: passes and splits data")
     void recordSplitNoPositionSuccess() {
-      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "TSLA",
-          new Ratio(2, 1), NOW, "Split");
+      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "TSLA", new Ratio(2, 1), NOW, "Split");
 
       when(transactionRecordingService.recordSplit(any(), any(), any(), any(), any())).thenReturn(
           transaction);
@@ -538,8 +537,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordSplit: verify throws exception when position does not exist")
     void recordSplitNoPositionFailure() {
-      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "TSLA",
-          new Ratio(2, 1), NOW, "Split");
+      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "TSLA", new Ratio(2, 1), NOW, "Split");
 
       when(account.hasPosition(any())).thenReturn(false);
 
@@ -550,8 +549,9 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordReturnOfCapital: verify success flow")
     void recordReturnOfCapitalSuccess() {
-      RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, "ABC", Price.of("100.0", USD), Quantity.of(0.5), NOW, "ROC");
+      RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "ABC", Price.of("100.0", USD), Quantity.of(0.5), NOW,
+          "ROC");
 
       when(transactionRecordingService.recordReturnOfCapital(any(), any(), any(), any(), any(),
           any())).thenReturn(transaction);
@@ -566,8 +566,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordTransferIn: verify success flow")
     void recordTransferInSuccess() {
-      RecordTransferInCommand command = new RecordTransferInCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, AMOUNT, List.of(), NOW, "Transfer In");
+      RecordTransferInCommand command = new RecordTransferInCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, AMOUNT, List.of(), NOW, "Transfer In");
 
       when(transactionRecordingService.recordTransferIn(any(), any(), any(), any())).thenReturn(
           transaction);
@@ -582,8 +582,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordTransferOut: verify success flow")
     void recordTransferOutSuccess() {
-      RecordTransferOutCommand command = new RecordTransferOutCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, usd(500), NOW, "Transfer Out");
+      RecordTransferOutCommand command = new RecordTransferOutCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, usd(500), NOW, "Transfer Out");
 
       when(transactionRecordingService.recordTransferOut(any(), any(), any(), any())).thenReturn(
           transaction);
@@ -609,8 +609,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("restoreTransaction: verify success flow and event publication")
     void restoreTransactionSuccess() {
-      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, transactionId);
+      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, transactionId);
 
       Transaction existing = mock(Transaction.class);
       Transaction restored = mock(Transaction.class);
@@ -637,8 +637,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("restoreTransaction: verify success flow and event publication, branch")
     void restoreTransactionSuccessNotBuyTransaction() {
-      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, transactionId);
+      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, transactionId);
 
       Transaction existing = mock(Transaction.class);
       Transaction restored = mock(Transaction.class);
@@ -663,8 +663,8 @@ class TransactionServiceTest {
     @DisplayName("restoreTransaction: throw exception when transaction is not excluded")
     void restoreTransactionFailureNotExcluded() {
       // Arrange
-      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, transactionId);
+      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, transactionId);
 
       Transaction existing = mock(Transaction.class);
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(),
@@ -686,8 +686,8 @@ class TransactionServiceTest {
     @DisplayName("excludeTransaction: does not publish event when transaction does not affect holdings")
     void excludeTransactionNoEventWhenNotAffectingHoldings() {
       TransactionId TX_ID = TransactionId.newId();
-      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TX_ID, "Reason");
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TX_ID, "Reason");
 
       TransactionType nonHoldingType = mock(TransactionType.class);
       when(nonHoldingType.affectsHoldings()).thenReturn(false);
@@ -709,8 +709,8 @@ class TransactionServiceTest {
     @DisplayName("excludeTransaction: does not publish event when execution is null")
     void excludeTransaction_NoEvent_WhenExecutionIsNull() {
       TransactionId TX_ID = TransactionId.newId();
-      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TX_ID, "Reason");
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TX_ID, "Reason");
 
       TransactionType holdingType = mock(TransactionType.class);
       when(holdingType.affectsHoldings()).thenReturn(true);
@@ -731,8 +731,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("excludeTransaction: throw exception when transaction not found")
     void excludeTransactionThrowsWhenNotFound() {
-      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, transactionId, "reason");
+      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, transactionId, "reason");
 
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(),
           any())).thenReturn(Optional.empty());
@@ -744,8 +744,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("excludeTransaction: throw exception when already excluded")
     void excludeTransactionThrowsWhenAlreadyExcluded() {
-      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, transactionId, "reason");
+      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, transactionId, "reason");
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(),
           any())).thenReturn(Optional.of(transaction));
       when(transaction.isExcluded()).thenReturn(true);
@@ -757,8 +757,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("excludeTransaction: publish event when holdings are affected")
     void excludeTransactionPublishesEvent() {
-      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, transactionId, "reason");
+      ExcludeTransactionCommand cmd = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, transactionId, "reason");
       TradeExecution execution = mock(TradeExecution.class);
 
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(),
@@ -771,6 +771,79 @@ class TransactionServiceTest {
       service.excludeTransaction(cmd);
 
       verify(eventPublisher).publishEvent(any(PositionRecalculationRequestedEvent.class));
+    }
+  }
+
+  @Nested
+  @DisplayName("Execute test idempotent")
+  public class IdempotencyTest {
+    @Test
+    @DisplayName("execute: returns existing transaction when idempotency key is a replay")
+    void executeIdempotentReplay() {
+      RecordPurchaseCommand command = createPurchaseCommand();
+      UUID key = command.idempotencyKey();
+
+      when(transactionRepository.findByIdempotencyKey(key))
+          .thenReturn(Optional.of(transaction));
+      when(transactionViewMapper.toTransactionView(transaction))
+          .thenReturn(transactionView);
+
+      TransactionView result = service.recordPurchase(command);
+
+      assertThat(result).isEqualTo(transactionView);
+
+      verify(transactionRecordingService, never()).recordBuy(any(), any(), any(), any(), any(), any(), any(), any(),
+          anyBoolean());
+      verify(portfolioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("execute: records and persists when idempotency key is new")
+    void executeInitialRequest() {
+      // Arrange
+      RecordPurchaseCommand command = createPurchaseCommand();
+      UUID key = command.idempotencyKey();
+
+      // Mock the repository to return EMPTY (Key hasn't been used yet)
+      when(transactionRepository.findByIdempotencyKey(key))
+          .thenReturn(Optional.empty());
+
+      // Setup standard mocks for asset info and recording
+      MarketAssetInfo info = new MarketAssetInfo(new AssetSymbol("AAPL"), NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR,
+          NOTES);
+      when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
+      when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
+          .thenReturn(transaction);
+      when(transactionViewMapper.toTransactionView(transaction)).thenReturn(transactionView);
+
+      // Act
+      TransactionView result = service.recordPurchase(command);
+
+      // Assert
+      assertThat(result).isEqualTo(transactionView);
+
+      // VERIFY: Logic was executed because key was new
+      verify(transactionRepository).findByIdempotencyKey(key);
+      verify(transactionRecordingService).recordBuy(any(), any(), any(), any(), any(), any(), any(), any(),
+          anyBoolean());
+      verify(portfolioRepository).save(portfolio);
+    }
+
+    @Test
+    @DisplayName("execute: proceeds normally when idempotency key is null")
+    void executeNullKey() {
+      RecordPurchaseCommand command =  new RecordPurchaseCommand(null, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+        ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+
+
+      when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(mock(MarketAssetInfo.class)));
+      when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
+          .thenReturn(transaction);
+
+      service.recordPurchase(command);
+
+      verify(transactionRepository, never()).findByIdempotencyKey(null);
+      verify(portfolioRepository).save(any());
     }
   }
 }

@@ -23,8 +23,7 @@ import tools.jackson.databind.type.TypeFactory;
 /**
  * Low-level HTTP client for FMP API.
  * <p>
- * Responsibilities: - Construct FMP API URLs - Execute HTTP requests - Parse
- * JSON responses -
+ * Responsibilities: - Construct FMP API URLs - Execute HTTP requests - Parse JSON responses -
  * Handle HTTP errors
  *
  */
@@ -139,7 +138,8 @@ public class FmpClient {
 
   private String buildUrl(String path) {
     String sanitizedPath = path.startsWith("/") ? path.substring(1) : path;
-    String sanitizedBase = config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
+    String sanitizedBase =
+        config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
 
     return UriComponentsBuilder.fromUriString(sanitizedBase).path(sanitizedPath)
         .queryParam("apikey", config.getApiKey()).build().toUriString();

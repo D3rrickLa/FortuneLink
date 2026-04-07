@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

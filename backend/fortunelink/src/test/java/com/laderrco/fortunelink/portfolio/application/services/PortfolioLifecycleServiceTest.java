@@ -112,7 +112,7 @@ class PortfolioLifecycleServiceTest {
           false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-          PortfolioLimitReachedException.class)
+              PortfolioLimitReachedException.class)
           .hasMessageContaining("User already has an active portfolio");
 
       verify(portfolioRepository, never()).save(any(Portfolio.class));
@@ -129,7 +129,7 @@ class PortfolioLifecycleServiceTest {
           false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-          PortfolioLimitReachedException.class)
+              PortfolioLimitReachedException.class)
           .hasMessageContaining("A portfolio was recently created for this user.");
     }
 
@@ -211,14 +211,15 @@ class PortfolioLifecycleServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       Account activeAccount = mock(Account.class);
 
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
+          Optional.of(portfolio));
       when(portfolio.getAccounts()).thenReturn(List.of(activeAccount));
       when(activeAccount.isActive()).thenReturn(true);
 
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false);
 
-      assertThatThrownBy(() -> service.deletePortfolio(cmd))
-          .isInstanceOf(PortfolioDeletionException.class)
+      assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
+              PortfolioDeletionException.class)
           .hasMessageContaining("Cannot hard delete portfolio with 1 active account(s)");
 
       verify(portfolioRepository, never()).delete(any());
@@ -231,8 +232,8 @@ class PortfolioLifecycleServiceTest {
       Account emptyAccount = mock(Account.class);
       AccountId accId = AccountId.newId();
 
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID))
-          .thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
+          Optional.of(portfolio));
       when(portfolio.getAccounts()).thenReturn(List.of(emptyAccount));
 
       // 1st call (guard): true
@@ -259,15 +260,16 @@ class PortfolioLifecycleServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       Account busyAccount = mock(Account.class);
 
-      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(Optional.of(portfolio));
+      when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
+          Optional.of(portfolio));
       when(portfolio.getAccounts()).thenReturn(List.of(busyAccount));
 
       when(busyAccount.isActive()).thenReturn(true);
       when(busyAccount.getPositionCount()).thenReturn(5); // Not empty!
 
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, true);
-      assertThatThrownBy(() -> service.deletePortfolio(cmd))
-          .isInstanceOf(PortfolioDeletionException.class)
+      assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
+              PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
 
       verify(portfolioRepository, never()).delete(any());
@@ -285,11 +287,10 @@ class PortfolioLifecycleServiceTest {
       when(account.isActive()).thenReturn(true);
       when(account.getCashBalance()).thenReturn(new Money(BigDecimal.TEN, USD));
 
-      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, true,
-          true);
+      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, true, true);
 
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-          PortfolioDeletionException.class)
+              PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
     }
 
@@ -320,8 +321,7 @@ class PortfolioLifecycleServiceTest {
         String expectedMessage) {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
-      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true,
-          false);
+      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, false);
 
       Portfolio portfolio = mock(Portfolio.class);
 
@@ -342,8 +342,7 @@ class PortfolioLifecycleServiceTest {
         Money cashBalance, String expectedResult) {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
-      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true,
-          true);
+      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, true);
       Account mockAccount = mock(Account.class);
 
       when(mockAccount.isActive()).thenReturn(isActive);
@@ -377,8 +376,7 @@ class PortfolioLifecycleServiceTest {
       when(portfolioRepository.findByIdAndUserId(PORTFOLIO_ID, USER_ID)).thenReturn(
           Optional.empty());
 
-      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false,
-          false);
+      DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false);
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
           PortfolioNotFoundException.class);
     }

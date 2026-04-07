@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -32,11 +31,10 @@ import org.springframework.stereotype.Service;
 public class FmpProvider implements MarketDataProvider {
   private final FmpClient fmpClient;
   private final FmpResponseMapper responseMapper;
-  @Value("${fortunelink.rate-limit.fmp-quota.daily-limit:250}")
-  private int fmpDailyLimit;
-
   // AtomicInteger is thread-safe for multi-user access
   private final AtomicInteger fmpDailyCallCount = new AtomicInteger(0);
+  @Value("${fortunelink.rate-limit.fmp-quota.daily-limit:250}")
+  private int fmpDailyLimit;
 
   @Override
   public Map<AssetSymbol, MarketAssetQuote> fetchBatchQuotes(Set<AssetSymbol> symbols,
@@ -50,7 +48,8 @@ public class FmpProvider implements MarketDataProvider {
     // FMP Free Tier doesn't have a true 'batch' quote endpoint for all symbols,
     // so each loop iteration is a billing hit.
     if (fmpDailyCallCount.get() + symbols.size() > fmpDailyLimit) {
-      log.warn("FMP daily quota reached (Limit: {}). Skipping API calls to prevent 429/Account suspension.",
+      log.warn(
+          "FMP daily quota reached (Limit: {}). Skipping API calls to prevent 429/Account suspension.",
           fmpDailyLimit);
       return Map.of(); // Return empty to trigger fallback to cost basis in ValuationService
     }
@@ -63,8 +62,9 @@ public class FmpProvider implements MarketDataProvider {
         fmpDailyCallCount.incrementAndGet();
 
         FmpQuoteResponse raw = fmpClient.getQuote(symbol.symbol());
-        if (raw == null)
+        if (raw == null) {
           continue;
+        }
 
         Currency currency = knownCurrencies.getOrDefault(symbol, Currency.USD);
         MarketAssetQuote quote = responseMapper.toQuote(raw, currency);

@@ -12,7 +12,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
-
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -45,10 +44,9 @@ public class AccountViewBuilder {
   /**
    * Builds an AccountView from a summary projection (no full aggregate loaded).
    * <p>
-   * Positions are not included in this path because the caller fetches quotes
-   * for all accounts in one batch and hands them in via {@code quotes}.
-   * If the account has no open positions, it gets an empty position list and
-   * its totalValue is just its cash balance.
+   * Positions are not included in this path because the caller fetches quotes for all accounts in
+   * one batch and hands them in via {@code quotes}. If the account has no open positions, it gets
+   * an empty position list and its totalValue is just its cash balance.
    * <p>
    * Fee data is optional — pass {@code Map.of()} if not available.
    *
@@ -70,28 +68,19 @@ public class AccountViewBuilder {
     List<PositionView> positionViews = List.of();
     Money totalValue = cashBalance; // positions would add to this; revisit if list needs market value
 
-    return new AccountView(
-        accountId,
-        projection.getName(),
-        AccountType.valueOf(projection.getAccountType()),
-        positionViews,
-        currency,
-        cashBalance,
-        totalValue,
-        projection.getCreatedDate());
+    return new AccountView(accountId, projection.getName(),
+        AccountType.valueOf(projection.getAccountType()), positionViews, currency, cashBalance,
+        totalValue, projection.getCreatedDate());
   }
 
   /**
-   * Builds an AccountView without fee data - for summary screens where tax
-   * breakdown is not needed.
-   * Avoids the extra transaction fetch. totalFeesIncurred will be Price.zero on
-   * all PositionViews.
+   * Builds an AccountView without fee data - for summary screens where tax breakdown is not needed.
+   * Avoids the extra transaction fetch. totalFeesIncurred will be Price.zero on all PositionViews.
    */
   public AccountView buildSummary(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
     List<PositionView> positionViews = account.getPositionEntries().stream().map(
         entry -> portfolioViewMapper.toPositionView(entry.getValue(),
-            quoteCache.get(entry.getKey())))
-        .toList();
+            quoteCache.get(entry.getKey()))).toList();
 
     Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
     Money cashBalance = account.getCashBalance();

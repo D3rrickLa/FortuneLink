@@ -12,8 +12,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Our Api will impelment this (i.e. FMP, Alpha Vantage, etc.)
- * NOTE: Primary is on FMP, will be swtiching to Yahoo in the future
+ * Our Api will impelment this (i.e. FMP, Alpha Vantage, etc.) NOTE: Primary is on FMP, will be
+ * swtiching to Yahoo in the future
  */
 public interface MarketDataProvider {
   Map<AssetSymbol, MarketAssetQuote> fetchBatchQuotes(Set<AssetSymbol> symbols,

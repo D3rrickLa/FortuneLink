@@ -1,12 +1,16 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
@@ -29,7 +33,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -160,7 +163,7 @@ public class TransactionQueryServiceTest {
       GetTransactionHistoryQuery query = createHistoryQuery(END, START, null);
 
       assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query)).isInstanceOf(
-          InvalidDateRangeException.class)
+              InvalidDateRangeException.class)
           .hasMessageContaining("Start date cannot be after end date");
 
       verifyNoInteractions(transactionQueryRepository);
@@ -198,7 +201,7 @@ public class TransactionQueryServiceTest {
 
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
-              InvalidDateRangeException.class);
+          InvalidDateRangeException.class);
     }
 
     @Test
@@ -213,7 +216,7 @@ public class TransactionQueryServiceTest {
 
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
-              SecurityException.class);
+          SecurityException.class);
     }
 
     @Test
@@ -223,41 +226,39 @@ public class TransactionQueryServiceTest {
       // This tests the explicit Objects.requireNonNull checks in your method
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(nullQuery)).isInstanceOf(
-              NullPointerException.class);
+          NullPointerException.class);
     }
   }
 
   @Nested
   @DisplayName("validateDateRange: Logic Paths")
   class ValidateDateRange {
+    private static Stream<Arguments> dateRangeProvider() {
+      Instant now = Instant.now();
+      return Stream.of(Arguments.of("validRange", now.minusSeconds(100), now, false),
+          Arguments.of("equalDates", now, now, false), Arguments.of("nullStart", null, now, false),
+          Arguments.of("nullEnd", now, null, false), Arguments.of("bothNull", null, null, false),
+          Arguments.of("invalidRange", now, now.minusSeconds(100), true));
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("dateRangeProvider")
     @DisplayName("validateDateRange: verify behavior for various date combinations")
-    void validateDateRangeLogic(String description, Instant start, Instant end, boolean shouldThrow) {
-      GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(
-          PortfolioId.newId(), UserId.random(), AccountId.newId(),
-          null, start, end, 0, 10);
-          
-      lenient().when(transactionQueryRepository.findTransactionsDynamic(any(), any(), any(), any(), any()))
-      .thenReturn(mock(Page.class));
-      if (shouldThrow) {
-        assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query))
-            .isInstanceOf(InvalidDateRangeException.class);
-      } else {
-        assertThatCode(() -> transactionQueryService.getTransactionHistory(query))
-            .doesNotThrowAnyException();
-      }
-    }
+    void validateDateRangeLogic(String description, Instant start, Instant end,
+        boolean shouldThrow) {
+      GetTransactionHistoryQuery query = new GetTransactionHistoryQuery(PortfolioId.newId(),
+          UserId.random(), AccountId.newId(), null, start, end, 0, 10);
 
-    private static Stream<Arguments> dateRangeProvider() {
-      Instant now = Instant.now();
-      return Stream.of(
-          Arguments.of("validRange", now.minusSeconds(100), now, false),
-          Arguments.of("equalDates", now, now, false),
-          Arguments.of("nullStart", null, now, false),
-          Arguments.of("nullEnd", now, null, false),
-          Arguments.of("bothNull", null, null, false),
-          Arguments.of("invalidRange", now, now.minusSeconds(100), true));
+      lenient().when(
+              transactionQueryRepository.findTransactionsDynamic(any(), any(), any(), any(), any()))
+          .thenReturn(mock(Page.class));
+      if (shouldThrow) {
+        assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query)).isInstanceOf(
+            InvalidDateRangeException.class);
+      } else {
+        assertThatCode(
+            () -> transactionQueryService.getTransactionHistory(query)).doesNotThrowAnyException();
+      }
     }
   }
 
@@ -267,14 +268,13 @@ public class TransactionQueryServiceTest {
     @Test
     @DisplayName("getTransactionHistory: shouldReturnMappedPageWhenValid")
     void shouldReturnMappedPageWhenValid() {
-      var query = new GetTransactionHistoryQuery(
-          PortfolioId.newId(), UserId.random(), AccountId.newId(),
-          new AssetSymbol("AAPL"), null, null, 0, 10);
+      var query = new GetTransactionHistoryQuery(PortfolioId.newId(), UserId.random(),
+          AccountId.newId(), new AssetSymbol("AAPL"), null, null, 0, 10);
       var transaction = mock(Transaction.class);
       var page = new PageImpl<>(List.of(transaction));
 
-      when(transactionQueryRepository.findTransactionsDynamic(any(), any(), any(), any(), any()))
-          .thenReturn(page);
+      when(transactionQueryRepository.findTransactionsDynamic(any(), any(), any(), any(),
+          any())).thenReturn(page);
       when(transactionViewMapper.toTransactionView(any())).thenReturn(mock(TransactionView.class));
 
       var result = transactionQueryService.getTransactionHistory(query);
@@ -287,17 +287,33 @@ public class TransactionQueryServiceTest {
   @Nested
   @DisplayName("getTransactionsForCalculation: Execution Paths")
   class GetTransactionsForCalculation {
+    private static Stream<Arguments> calculationNullProvider() {
+      UUID id = UUID.randomUUID();
+      UserId user = UserId.random();
+      Instant now = Instant.now();
+      return Stream.of(Arguments.of("nullPortfolio",
+          new GetTransactionForCalculationQuery(null, user, AccountId.fromString(id.toString()),
+              now, now)), Arguments.of("nullAccount",
+          new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()), user, null,
+              now, now)), Arguments.of("nullUser",
+          new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()), null,
+              AccountId.fromString(id.toString()), now, now)), Arguments.of("nullStart",
+          new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()), user,
+              AccountId.fromString(id.toString()), null, now)), Arguments.of("nullEnd",
+          new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()), user,
+              AccountId.fromString(id.toString()), now, null)));
+    }
+
     @Test
     @DisplayName("getTransactionsForCalculation: shouldReturnListWhenValid")
     void shouldReturnListWhenValid() {
       var start = Instant.now().minusSeconds(1000);
       var end = Instant.now();
-      var query = new GetTransactionForCalculationQuery(
-          PortfolioId.newId(), UserId.random(), AccountId.newId(),
-          start, end);
+      var query = new GetTransactionForCalculationQuery(PortfolioId.newId(), UserId.random(),
+          AccountId.newId(), start, end);
 
-      when(transactionRepository.findByAccountIdAndDateRange(any(), eq(start), eq(end)))
-          .thenReturn(List.of(mock(Transaction.class)));
+      when(transactionRepository.findByAccountIdAndDateRange(any(), eq(start), eq(end))).thenReturn(
+          List.of(mock(Transaction.class)));
 
       var result = transactionQueryService.getTransactionsForCalculation(query);
 
@@ -308,28 +324,11 @@ public class TransactionQueryServiceTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("calculationNullProvider")
     @DisplayName("getTransactionsForCalculation: shouldThrowExceptionOnNullFields")
-    void shouldThrowExceptionOnNullFields(String description, GetTransactionForCalculationQuery query) {
-      assertThatThrownBy(() -> transactionQueryService.getTransactionsForCalculation(query))
-          .isInstanceOf(NullPointerException.class);
-    }
-
-    private static Stream<Arguments> calculationNullProvider() {
-      UUID id = UUID.randomUUID();
-      UserId user = UserId.random();
-      Instant now = Instant.now();
-      return Stream.of(
-          Arguments.of("nullPortfolio",
-              new GetTransactionForCalculationQuery(null, user, AccountId.fromString(id.toString()), now, now)),
-          Arguments.of("nullAccount",
-              new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()), user, null, now, now)),
-          Arguments.of("nullUser",
-              new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()), null,
-                  AccountId.fromString(id.toString()), now, now)),
-          Arguments.of("nullStart",
-              new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()),
-                  user, AccountId.fromString(id.toString()), null, now)),
-          Arguments.of("nullEnd", new GetTransactionForCalculationQuery(PortfolioId.fromString(id.toString()),
-              user, AccountId.fromString(id.toString()), now, null)));
+    void shouldThrowExceptionOnNullFields(String description,
+        GetTransactionForCalculationQuery query) {
+      assertThatThrownBy(
+          () -> transactionQueryService.getTransactionsForCalculation(query)).isInstanceOf(
+          NullPointerException.class);
     }
   }
 }

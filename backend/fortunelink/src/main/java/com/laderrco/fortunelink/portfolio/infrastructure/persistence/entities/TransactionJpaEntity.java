@@ -89,8 +89,7 @@ public class TransactionJpaEntity {
   private String executionPriceCurrency;
 
   /**
-   * AssetType from TradeExecution / TransactionMetadata. Stored as the V1
-   * {@code asset_type}
+   * AssetType from TradeExecution / TransactionMetadata. Stored as the V1 {@code asset_type}
    * column.
    */
   @Column(name = "asset_type", length = 50)
@@ -125,10 +124,8 @@ public class TransactionJpaEntity {
   private String excludedReason;
 
   /**
-   * TransactionMetadata.additionalData — free-form key/value pairs. Stored as
-   * JSONB. The V1
-   * {@code metadata} column already exists for this. {@code StringMapConverter}
-   * serialises
+   * TransactionMetadata.additionalData — free-form key/value pairs. Stored as JSONB. The V1
+   * {@code metadata} column already exists for this. {@code StringMapConverter} serialises
    * Map&lt;String,String&gt; ↔ JSON text.
    */
   @Convert(converter = StringMapConverter.class)
@@ -204,10 +201,8 @@ public class TransactionJpaEntity {
   // -------------------------------------------------------------------------
 
   /**
-   * Applies exclusion state from an updated domain record. Transactions are
-   * immutable in the domain
-   * — only exclusion metadata changes post-creation, so this is the only mutable
-   * operation on this
+   * Applies exclusion state from an updated domain record. Transactions are immutable in the domain
+   * — only exclusion metadata changes post-creation, so this is the only mutable operation on this
    * entity.
    */
   public void applyExclusionState(boolean excluded, Instant excludedAt, UUID excludedBy,

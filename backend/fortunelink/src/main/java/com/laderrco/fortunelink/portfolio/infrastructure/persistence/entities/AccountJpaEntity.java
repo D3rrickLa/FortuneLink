@@ -15,8 +15,13 @@ import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.*;
-
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Persistable;
@@ -24,10 +29,8 @@ import org.springframework.data.domain.Persistable;
 /**
  * Persistence model for {@code Account}.
  * <p>
- * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and
- * one-directional collections
- * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and
- * {@code RealizedGainJpaEntity}.
+ * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and one-directional collections
+ * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and {@code RealizedGainJpaEntity}.
  */
 @Entity
 @Getter
@@ -35,67 +38,51 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class AccountJpaEntity implements Persistable<UUID> {
 
+  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
+  // if a single portoflio lods like 3 years of active trading, that's 100+
+  // records, each time they open the portfolio page, each one is 'loaded', LAZY
+  // to solve this
+  @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
+      CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
+  private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
   @Id
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
-
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "portfolio_id", nullable = false)
   private PortfolioJpaEntity portfolio;
-
   @Column(name = "name", nullable = false, length = 255)
   private String name;
-
   @Column(name = "account_type", nullable = false, length = 50)
   private String accountType;
-
   @Column(name = "base_currency_code", nullable = false, length = 3)
   private String baseCurrencyCode;
-
   @Column(name = "position_strategy", nullable = false, length = 30)
   private String positionStrategy;
-
   @Column(name = "health_status", nullable = false, length = 20)
   private String healthStatus;
-
   @Column(name = "lifecycle_state", nullable = false, length = 20)
   private String lifecycleState;
-
   @Column(name = "cash_balance_amount", nullable = false, precision = 20, scale = 10)
   private BigDecimal cashBalanceAmount;
-
   @Column(name = "cash_balance_currency", nullable = false, length = 3)
   private String cashBalanceCurrency;
-
   @Column(name = "closed_date")
   private Instant closedDate;
-
   @Column(name = "created_date", nullable = false, updatable = false)
   private Instant createdDate;
-
   @Column(name = "last_updated_on", nullable = false)
   private Instant lastUpdatedOn;
-
-  @Version
-  @Column(name = "version", nullable = false)
-  private Long version;
-
-  @Transient
-  private boolean isNew = true;
 
   // -------------------------------------------------------------------------
   // Relationships
   // -------------------------------------------------------------------------
-
-  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-  private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
-
-  // if a single portoflio lods like 3 years of active trading, that's 100+
-  // records, each time they open the portfolio page, each one is 'loaded', LAZY
-  // to solve this
-  @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
-      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
-  private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
+  @Version
+  @Column(name = "version", nullable = false)
+  private Long version;
+  @Transient
+  private boolean isNew = true;
 
   // -------------------------------------------------------------------------
   // Factory
@@ -164,15 +151,12 @@ public class AccountJpaEntity implements Persistable<UUID> {
   }
 
   /**
-   * Appends only NEW realized gain rows, those whose UUID does not already exist
-   * in the persisted
-   * collection. This is the correct operation for append-only domain data. Never
-   * call clear() on
+   * Appends only NEW realized gain rows, those whose UUID does not already exist in the persisted
+   * collection. This is the correct operation for append-only domain data. Never call clear() on
    * realizedGains.
    *
    * <p>
-   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing
-   * only the delta
+   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing only the delta
    * here.
    */
   public void addNewRealizedGains(List<RealizedGainJpaEntity> newGains) {

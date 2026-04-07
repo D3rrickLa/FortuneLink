@@ -1,9 +1,27 @@
 package com.laderrco.fortunelink.portfolio.api.web;
 
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeReopenedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AuthorizationException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,9 +29,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
-
-import com.laderrco.fortunelink.portfolio.application.exceptions.*;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.*;
 
 @Slf4j
 @RestControllerAdvice
@@ -40,11 +55,9 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(
       MethodArgumentNotValidException ex) {
     List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-        .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-        .collect(Collectors.toList());
+        .map(fe -> fe.getField() + ": " + fe.getDefaultMessage()).collect(Collectors.toList());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-        .body(ErrorResponse.withErrors("VALIDATION_ERROR",
-            "Request validation failed", errors));
+        .body(ErrorResponse.withErrors("VALIDATION_ERROR", "Request validation failed", errors));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
@@ -202,8 +215,7 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
     // Log at ERROR with full stack trace, this should never happen in production
     // If it does, there's a missing handler above
-    log.error("Unhandled exception: add a specific handler for: {}",
-        ex.getClass().getName(), ex);
+    log.error("Unhandled exception: add a specific handler for: {}", ex.getClass().getName(), ex);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(ErrorResponse.of("INTERNAL_ERROR", "An unexpected error occurred"));
   }
@@ -213,10 +225,7 @@ public class GlobalExceptionHandler {
   // -------------------------------------------------------------------------
 
   public record ErrorResponse(
-      String code,
-      String message,
-      List<String> errors,
-      Instant timestamp) {
+      String code, String message, List<String> errors, Instant timestamp) {
 
     public static ErrorResponse of(String code, String message) {
       return new ErrorResponse(code, message, List.of(), Instant.now());

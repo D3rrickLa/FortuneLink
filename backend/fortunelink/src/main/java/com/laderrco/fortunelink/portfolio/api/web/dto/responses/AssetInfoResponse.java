@@ -12,13 +12,7 @@ public record AssetInfoResponse(
     String description) {
 
   public static AssetInfoResponse fromDomain(MarketAssetInfo info) {
-    return new AssetInfoResponse(
-        info.symbol().symbol(),
-        info.name(),
-        info.type().name(),
-        info.exchange(),
-        info.tradingCurrency().getCode(),
-        info.sector(),
-        info.description());
+    return new AssetInfoResponse(info.symbol().symbol(), info.name(), info.type().name(),
+        info.exchange(), info.tradingCurrency().getCode(), info.sector(), info.description());
   }
 }

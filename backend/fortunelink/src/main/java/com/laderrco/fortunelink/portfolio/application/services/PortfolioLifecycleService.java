@@ -43,7 +43,7 @@ public class PortfolioLifecycleService {
     Portfolio portfolio = Portfolio.createNew(command.userId(), command.name(),
         command.description(), command.currency());
 
-    if (Boolean.TRUE.equals(command.createDefaultAccount())) {
+    if (command.createDefaultAccount()) {
       portfolio.createAccount(DEFAULT_NAME, command.defaultAccountType(), command.currency(),
           command.defaultStrategy());
     }
@@ -80,28 +80,27 @@ public class PortfolioLifecycleService {
   }
 
   /**
-   * Permanent removal from the database. Bypasses soft-delete audit trail.
-   * Reserved for admin/test use — no API path exposes this in production.
-   *
-   * Domain invariants are still enforced: a portfolio with active accounts
-   * or open positions cannot be hard-deleted any more than soft-deleted.
-   * ON DELETE CASCADE in the schema handles child rows, but we validate
-   * business state here first so the error message is meaningful.
+   * Permanent removal from the database. Bypasses soft-delete audit trail. Reserved for admin/test
+   * use — no API path exposes this in production.
+   * <p>
+   * Domain invariants are still enforced: a portfolio with active accounts or open positions cannot
+   * be hard-deleted any more than soft-deleted. ON DELETE CASCADE in the schema handles child rows,
+   * but we validate business state here first so the error message is meaningful.
    */
   private void hardDelete(Portfolio portfolio, DeletePortfolioCommand command) {
     // Same invariant as soft delete, you cannot delete a live portfolio.
     // The DB cascade would handle orphaned rows, but silent data destruction
     // is worse than a rejected request.
     if (command.recursive()) {
-        closeAllEligibleAccounts(portfolio);
+      closeAllEligibleAccounts(portfolio);
     }
 
     long activeCount = portfolio.getAccounts().stream().filter(Account::isActive).count();
 
     if (activeCount > 0) {
-        throw new PortfolioDeletionException(
-            "Cannot hard delete portfolio with " + activeCount + " active account(s). " +
-            "Close all accounts first, or use recursive=true.");
+      throw new PortfolioDeletionException(
+          "Cannot hard delete portfolio with " + activeCount + " active account(s). "
+              + "Close all accounts first, or use recursive=true.");
     }
 
     portfolioRepository.delete(command.portfolioId());

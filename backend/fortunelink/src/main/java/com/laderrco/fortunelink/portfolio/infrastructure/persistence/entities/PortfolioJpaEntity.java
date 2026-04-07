@@ -12,8 +12,15 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import java.time.Instant;
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Persistable;
@@ -77,7 +84,7 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
    * {@code @EntityGraph} on the repo for that).
    */
   @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-  private Set<AccountJpaEntity> accounts = new LinkedHashSet<>();
+  private final Set<AccountJpaEntity> accounts = new LinkedHashSet<>();
 
   // -------------------------------------------------------------------------
   // Factory, called by the domain mapper when persisting a new Portfolio
@@ -146,9 +153,7 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
 
     // Add new ones
     for (AccountJpaEntity a : merged) {
-      if (!this.accounts.contains(a)) {
-        this.accounts.add(a);
-      }
+      this.accounts.add(a);
     }
   }
 

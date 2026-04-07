@@ -84,9 +84,9 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
-      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", AssetType.STOCK, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null,
-          false);
+      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "AAPL", AssetType.STOCK, Quantity.of(1), new Price(validMoney()),
+          validFees(), NOW, null, false);
 
       ValidationResult result = validator.validate(command);
 
@@ -96,8 +96,9 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand: failure missing asset type")
     void shouldFailWithMissingAssetType() {
-      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", null, Quantity.of(1), new Price(validMoney()), validFees(), NOW, null, false);
+      RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "AAPL", null, Quantity.of(1), new Price(validMoney()), validFees(),
+          NOW, null, false);
 
       ValidationResult result = validator.validate(command);
 
@@ -114,8 +115,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
-      RecordSaleCommand command = new RecordSaleCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
-          Quantity.of(1), new Price(validMoney()), validFees(), NOW, null);
+      RecordSaleCommand command = new RecordSaleCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "AAPL", Quantity.of(1), new Price(validMoney()), validFees(), NOW, null);
 
       assertSuccess(validator.validate(command));
     }
@@ -130,8 +131,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenAmountInvalid")
     void shouldFailWhenAmountInvalid() {
-      RecordDepositCommand command = new RecordDepositCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          new Money(BigDecimal.ZERO, USD), NOW, null);
+      RecordDepositCommand command = new RecordDepositCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -146,8 +147,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
-      RecordWithdrawalCommand command = new RecordWithdrawalCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, validMoney(), NOW, null);
+      RecordWithdrawalCommand command = new RecordWithdrawalCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, validMoney(), NOW, null);
 
       assertSuccess(validator.validate(command));
     }
@@ -159,8 +160,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldValidateSymbolWhenAssetInterest is false")
     void shouldValidateSymbolWhenAssetInterestIsFalse() {
-      RecordInterestCommand command = new RecordInterestCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "", validMoney(), NOW, null);
+      RecordInterestCommand command = new RecordInterestCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "", validMoney(), NOW, null);
 
       assertSuccess(validator.validate(command));
     }
@@ -168,8 +169,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldValidateSymbolWhenAssetInterest")
     void shouldValidateSymbolWhenAssetInterest() {
-      RecordInterestCommand command = new RecordInterestCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", validMoney(), NOW, null);
+      RecordInterestCommand command = new RecordInterestCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "AAPL", validMoney(), NOW, null);
 
       assertSuccess(validator.validate(command));
     }
@@ -182,8 +183,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
-      RecordDividendCommand command = new RecordDividendCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          "AAPL", validMoney(), NOW, null);
+      RecordDividendCommand command = new RecordDividendCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, "AAPL", validMoney(), NOW, null);
 
       assertSuccess(validator.validate(command));
     }
@@ -223,8 +224,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("validateSplit: passes")
     void shouldPass() {
-      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
-          new Ratio(1, 2), NOW, null);
+      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "AAPL", new Ratio(1, 2), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -234,8 +235,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenRatioIsOneToOne")
     void shouldFailWhenRatioIsOneToOne() {
-      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
-          new Ratio(1, 1), NOW, null);
+      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "AAPL", new Ratio(1, 1), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -245,8 +246,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenRatioEqual")
     void shouldFailWhenRatioInvalid() {
-      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
-          new Ratio(2, 2), NOW, null);
+      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "AAPL", new Ratio(2, 2), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -256,8 +257,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenRatioNull")
     void shouldFailWhenRatioNull() {
-      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
-          null, NOW, null);
+      RecordSplitCommand command = new RecordSplitCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, "AAPL", null, NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -272,8 +273,9 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
-      RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, "AAPL", new Price(validMoney()), Quantity.of(1), NOW, null);
+      RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL", new Price(validMoney()), Quantity.of(1), NOW,
+          null);
 
       assertSuccess(validator.validate(command));
     }
@@ -286,8 +288,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("validateFee: passes")
     void shouldBeSuccess() {
-      RecordFeeCommand command = new RecordFeeCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          validMoney(), FeeType.ACCOUNT_MAINTENANCE, NOW, null);
+      RecordFeeCommand command = new RecordFeeCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, validMoney(), FeeType.ACCOUNT_MAINTENANCE, NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -297,8 +299,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenFeeTypeMissing")
     void shouldFailWhenFeeTypeMissing() {
-      RecordFeeCommand command = new RecordFeeCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID,
-          validMoney(), null, NOW, null);
+      RecordFeeCommand command = new RecordFeeCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID, validMoney(), null, NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -329,8 +331,8 @@ class TransactionCommandValidatorTest {
     void success() {
       String longReason = "a".repeat(500);
 
-      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TransactionId.newId(), longReason);
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TransactionId.newId(), longReason);
 
       ValidationResult result = validator.validate(command);
 
@@ -340,14 +342,14 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("validateStringLength: checks")
     void ExcludeTransactionCommandFailsWhenResonsNullAndEmptyAndLong() {
-      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TransactionId.newId(), null);
-      ExcludeTransactionCommand command2 = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TransactionId.newId(), "");
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TransactionId.newId(), null);
+      ExcludeTransactionCommand command2 = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TransactionId.newId(), "");
 
       String longReason = "a".repeat(501);
-      ExcludeTransactionCommand command3 = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TransactionId.newId(), longReason);
+      ExcludeTransactionCommand command3 = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TransactionId.newId(), longReason);
 
       ValidationResult result = validator.validate(command);
       ValidationResult result2 = validator.validate(command2);
@@ -362,8 +364,8 @@ class TransactionCommandValidatorTest {
     @MethodSource("provideInvalidReasons")
     @DisplayName("validate: reason validation constraints")
     void shouldFailWhenReasonIsInvalid(String reason, String expectedErrorMessage) {
-      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, TransactionId.newId(), reason);
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TransactionId.newId(), reason);
 
       ValidationResult result = validator.validate(command);
 
@@ -378,8 +380,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenTransactionIdMissing")
     void shouldFailWhenTransactionIdMissing() {
-      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, null);
+      RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -394,8 +396,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("validateTransferIn: shouldValidateAmountAndDate")
     void shouldValidateTransferIn() {
-      RecordTransferInCommand command = new RecordTransferInCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), List.of(), NOW, null);
+      RecordTransferInCommand command = new RecordTransferInCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), List.of(), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -405,8 +407,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("validateTransferOut: shouldValidateAmountAndDate")
     void shouldValidateTransferOut() {
-      RecordTransferOutCommand command = new RecordTransferOutCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID,
-          ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), NOW, null);
+      RecordTransferOutCommand command = new RecordTransferOutCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -420,8 +422,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenPortfolioIdMissing")
     void shouldFailWhenPortfolioIdMissing() {
-      RecordDepositCommand command = new RecordDepositCommand(IDEMPOTENCY_KEY, null, USER_ID, ACCOUNT_ID,
-          validMoney(), NOW, null);
+      RecordDepositCommand command = new RecordDepositCommand(IDEMPOTENCY_KEY, null, USER_ID,
+          ACCOUNT_ID, validMoney(), NOW, null);
 
       ValidationResult result = validator.validate(command);
 
@@ -431,8 +433,8 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldFailWhenAllCommonMissing")
     void shouldFailWhenAllMissing() {
-      RecordDepositCommand command = new RecordDepositCommand(null, null, null, null, validMoney(), NOW,
-          null);
+      RecordDepositCommand command = new RecordDepositCommand(null, null, null, null, validMoney(),
+          NOW, null);
 
       ValidationResult result = validator.validate(command);
 

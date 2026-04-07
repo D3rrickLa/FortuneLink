@@ -19,15 +19,17 @@ public record RecordInterestCommand(
     Instant transactionDate,
     String notes) implements AdditionalInfoTransactionCommand {
   // Cash/account-level interest (HISA, savings)
-  public static RecordInterestCommand cashInterest(UUID idempotencyKey, PortfolioId portfolioId, UserId userId,
-      AccountId accountId, Money amount, Instant date, String notes) {
-    return new RecordInterestCommand(idempotencyKey, portfolioId, userId, accountId, null, amount, date, notes);
+  public static RecordInterestCommand cashInterest(UUID idempotencyKey, PortfolioId portfolioId,
+      UserId userId, AccountId accountId, Money amount, Instant date, String notes) {
+    return new RecordInterestCommand(idempotencyKey, portfolioId, userId, accountId, null, amount,
+        date, notes);
   }
 
   // Asset-level interest (bond coupons)
-  public static RecordInterestCommand assetInterest(UUID idempotencyKey, PortfolioId portfolioId, UserId userId,
-      AccountId accountId, String symbol, Money amount, Instant date, String notes) {
-    return new RecordInterestCommand(idempotencyKey, portfolioId, userId, accountId, symbol, amount, date, notes);
+  public static RecordInterestCommand assetInterest(UUID idempotencyKey, PortfolioId portfolioId,
+      UserId userId, AccountId accountId, String symbol, Money amount, Instant date, String notes) {
+    return new RecordInterestCommand(idempotencyKey, portfolioId, userId, accountId, symbol, amount,
+        date, notes);
   }
 
   public boolean isAssetInterest() {

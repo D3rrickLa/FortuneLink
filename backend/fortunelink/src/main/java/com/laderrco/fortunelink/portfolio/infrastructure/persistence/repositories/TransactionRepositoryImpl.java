@@ -46,14 +46,12 @@ public class TransactionRepositoryImpl implements TransactionRepository,
    *
    * <p>
    * <b>Existing transactions (exclusion/restore path):</b> The managed JPA entity
-   * is fetched by primary key, then only the exclusion state columns are updated
-   * in-place. The
+   * is fetched by primary key, then only the exclusion state columns are updated in-place. The
    * portfolioId is already on the managed entity from the original insert.
    *
    * <p>
    * <b>Why portfolioId is required even for updates:</b> The interface contract
-   * is uniform. The caller always has it available (from the command), so
-   * requiring it here
+   * is uniform. The caller always has it available (from the command), so requiring it here
    * prevents future callers from accidentally triggering the old lookup pattern.
    */
   @Override
@@ -74,7 +72,8 @@ public class TransactionRepositoryImpl implements TransactionRepository,
       // New transaction insert. Use the caller-supplied portfolioId directly.
       // Previously this fired: jpaRepository.findPortfolioIdByAccountId(accountId)
       // — an unnecessary extra query on every single transaction record.
-      entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()), idempotencyKey.toString());
+      entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()),
+          idempotencyKey.toString());
     }
 
     TransactionJpaEntity saved = jpaRepository.save(entity);
@@ -150,12 +149,12 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   @Cacheable(value = BUY_FEE_CACHE, key = "#accountId.id().toString()")
   public Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId) {
-    return sumBuyFeesBySymbolForAccounts(List.of(accountId))
-        .getOrDefault(accountId, Map.of());
+    return sumBuyFeesBySymbolForAccounts(List.of(accountId)).getOrDefault(accountId, Map.of());
   }
 
   @Override
-  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(List<AccountId> accountIds) {
+  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(
+      List<AccountId> accountIds) {
 
     if (accountIds == null || accountIds.isEmpty()) {
       return Map.of();
@@ -168,8 +167,9 @@ public class TransactionRepositoryImpl implements TransactionRepository,
     for (FeeAggregationResult row : results) {
       AccountId accountId = AccountId.fromString(row.getAccountId().toString());
 
-      grouped.computeIfAbsent(accountId, k -> new LinkedHashMap<>()).put(new AssetSymbol(row.getSymbol()),
-          new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
+      grouped.computeIfAbsent(accountId, k -> new LinkedHashMap<>())
+          .put(new AssetSymbol(row.getSymbol()),
+              new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
     }
 
     // Ensure immutability (important)

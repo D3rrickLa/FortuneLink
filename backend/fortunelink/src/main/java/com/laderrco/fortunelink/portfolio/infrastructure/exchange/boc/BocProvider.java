@@ -34,7 +34,7 @@ public class BocProvider implements ExchangeRateProvider {
     if (asOf == null || isToday(asOf)) {
       response = bocApiClient.getLatestExchangeRate(to.getCode(), from.getCode());
     } else {
-      response = getHistoricalWithFallback(to.getCode(), from.getCode(),asOf);
+      response = getHistoricalWithFallback(to.getCode(), from.getCode(), asOf);
     }
 
     // 3. Map the complex BOC JSON structure to your Domain objects
@@ -53,8 +53,8 @@ public class BocProvider implements ExchangeRateProvider {
     // Try up to 4 days back (covers long weekends)
     for (int daysBack = 0; daysBack <= 4; daysBack++) {
       Instant adjusted = asOf.minus(daysBack, ChronoUnit.DAYS);
-      BocExchangeResponse response = bocApiClient
-          .getHistoricalExchangeRate(to, from, adjusted, adjusted);
+      BocExchangeResponse response = bocApiClient.getHistoricalExchangeRate(to, from, adjusted,
+          adjusted);
       if (!response.getObservations().isEmpty()) {
         return response;
       }

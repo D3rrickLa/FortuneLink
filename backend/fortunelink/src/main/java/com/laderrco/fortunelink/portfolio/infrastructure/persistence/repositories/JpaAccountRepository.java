@@ -1,9 +1,11 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.AccountJpaEntity;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSymbolProjection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -12,20 +14,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.AccountJpaEntity;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSymbolProjection;
-
 @Repository
 public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UUID> {
   /**
    * Paginated summary projection for a portfolio's accounts.
    * <p>
-   * Note: uses {@code a.portfolio.id} — AccountJpaEntity has a @ManyToOne
-   * relationship, not a direct portfolioId column.
+   * Note: uses {@code a.portfolio.id} — AccountJpaEntity has a @ManyToOne relationship, not a
+   * direct portfolioId column.
    * <p>
-   * Explicitly excludes CLOSED accounts from the default list view.
-   * Callers that need closed accounts should add a separate query.
+   * Explicitly excludes CLOSED accounts from the default list view. Callers that need closed
+   * accounts should add a separate query.
    */
   @Query("""
       SELECT
@@ -44,17 +42,16 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
       WHERE a.portfolio.id = :portfolioId
         AND a.lifecycleState != 'CLOSED'
       """)
-  Page<AccountSummaryProjection> findByPortfolioId(
-      @Param("portfolioId") UUID portfolioId,
+  Page<AccountSummaryProjection> findByPortfolioId(@Param("portfolioId") UUID portfolioId,
       Pageable pageable);
 
   /**
-   * Returns one row per (accountId, symbol) for every open position
-   * across the supplied account IDs.
+   * Returns one row per (accountId, symbol) for every open position across the supplied account
+   * IDs.
    * <p>
-   * Sourced from PositionJpaEntity — current open holdings only.
-   * Symbols that have been fully sold are no longer in positions, so
-   * they will not appear here. This is the correct behaviour for quote fetching.
+   * Sourced from PositionJpaEntity — current open holdings only. Symbols that have been fully sold
+   * are no longer in positions, so they will not appear here. This is the correct behaviour for
+   * quote fetching.
    */
   @Query("""
       SELECT
@@ -65,7 +62,7 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
       """)
   List<AccountSymbolProjection> findSymbolsForAccounts(@Param("accountIds") List<UUID> accountIds);
 
-  @EntityGraph(attributePaths = { "positions", "realizedGains" })
+  @EntityGraph(attributePaths = {"positions", "realizedGains"})
   @Query("""
       SELECT a FROM AccountJpaEntity a
       WHERE a.id = :accountId

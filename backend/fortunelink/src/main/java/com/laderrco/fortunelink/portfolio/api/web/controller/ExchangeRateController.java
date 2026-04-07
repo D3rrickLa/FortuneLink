@@ -1,5 +1,15 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.responses.ExchangeRateResponse;
+import com.laderrco.fortunelink.portfolio.api.web.dto.responses.SupportedCurrenciesResponse;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,43 +18,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.laderrco.fortunelink.portfolio.api.web.dto.responses.ExchangeRateResponse;
-import com.laderrco.fortunelink.portfolio.api.web.dto.responses.SupportedCurrenciesResponse;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
-import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
-import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Provides exchange rate information for display purposes.
- *
- * This controller is intentionally read-only and display-focused.
- * The backend never exposes raw exchange rate data for use in external
- * calculations — all currency conversion for portfolio valuation happens
- * server-side in PortfolioValuationService.
- *
- * Primary use cases:
- * - Show the user "your CAD portfolio is worth X USD at today's rate"
- * - Show the exchange rate used for a cross-currency transaction
- * - Let the user see what rate is being applied before they confirm a trade
- *
- * Source: Bank of Canada Valet API (free, reliable for CAD pairs).
- * Cross-currency pairs are computed via CAD triangulation.
- *
- * Rate limit: lenient (30/min). Rates are cached in Redis at 1-hour TTL.
- * The BOC only publishes once per business day at ~16:30 ET so polling
- * more frequently than hourly is pointless. The client should cache
- * aggressively.
- *
- * Error handling:
- * - If BOC is down, returns 503 with a Retry-After header.
- * - If a currency pair is unsupported, returns 404.
- * - The frontend must handle both gracefully — degrade to showing the
+ * <p>
+ * This controller is intentionally read-only and display-focused. The backend never exposes raw
+ * exchange rate data for use in external calculations — all currency conversion for portfolio
+ * valuation happens server-side in PortfolioValuationService.
+ * <p>
+ * Primary use cases: - Show the user "your CAD portfolio is worth X USD at today's rate" - Show the
+ * exchange rate used for a cross-currency transaction - Let the user see what rate is being applied
+ * before they confirm a trade
+ * <p>
+ * Source: Bank of Canada Valet API (free, reliable for CAD pairs). Cross-currency pairs are
+ * computed via CAD triangulation.
+ * <p>
+ * Rate limit: lenient (30/min). Rates are cached in Redis at 1-hour TTL. The BOC only publishes
+ * once per business day at ~16:30 ET so polling more frequently than hourly is pointless. The
+ * client should cache aggressively.
+ * <p>
+ * Error handling: - If BOC is down, returns 503 with a Retry-After header. - If a currency pair is
+ * unsupported, returns 404. - The frontend must handle both gracefully — degrade to showing the
  * cost-basis value without a converted equivalent.
  */
 @Slf4j
@@ -64,21 +57,20 @@ public class ExchangeRateController {
 
   /**
    * Returns the current exchange rate between two currencies.
-   *
-   * Both currency codes must be ISO-4217 (3 uppercase letters).
-   * The rate returned is "1 {from} = {rate} {to}".
-   *
-   * Examples:
-   * GET /api/v1/exchange-rates/current?from=USD&to=CAD
-   * → { "from": "USD", "to": "CAD", "rate": 1.3625, ... }
-   *
-   * GET /api/v1/exchange-rates/current?from=EUR&to=USD
-   * → computed via EUR/CAD and CAD/USD triangulation
-   *
+   * <p>
+   * Both currency codes must be ISO-4217 (3 uppercase letters). The rate returned is "1 {from} =
+   * {rate} {to}".
+   * <p>
+   * Examples: GET /api/v1/exchange-rates/current?from=USD&to=CAD → { "from": "USD", "to": "CAD",
+   * "rate": 1.3625, ... }
+   * <p>
+   * GET /api/v1/exchange-rates/current?from=EUR&to=USD → computed via EUR/CAD and CAD/USD
+   * triangulation
+   * <p>
    * Identity requests (from == to) return rate 1.0 without hitting the API.
-   *
-   * Returns 404 if the currency pair is not supported by the Bank of Canada.
-   * Returns 503 if the BOC API is unreachable.
+   * <p>
+   * Returns 404 if the currency pair is not supported by the Bank of Canada. Returns 503 if the BOC
+   * API is unreachable.
    */
   @GetMapping("/current")
   public ExchangeRateResponse getCurrentRate(
@@ -102,9 +94,9 @@ public class ExchangeRateController {
 
     try {
       return exchangeRateService.getRate(fromCurrency, toCurrency)
-          .map(rate -> ExchangeRateResponse.fromDomain(rate))
-          .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-              "Exchange rate not available for: " + from + "/" + to));
+          .map(rate -> ExchangeRateResponse.fromDomain(rate)).orElseThrow(
+              () -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                  "Exchange rate not available for: " + from + "/" + to));
 
     } catch (ExchangeRateUnavailableException e) {
       log.warn("Exchange rate unavailable for {}/{}: {}", from, to, e.getMessage());
@@ -127,13 +119,13 @@ public class ExchangeRateController {
 
   /**
    * Returns the list of supported currency codes for exchange rate lookup.
-   *
-   * This is the set of ISO-4217 codes that the BOC Valet API supports,
-   * which is the set FortuneLink can reliably provide rates for.
-   *
-   * Note: FortuneLink accounts can be opened in ANY valid ISO-4217 currency,
-   * but exchange rate lookup is only guaranteed for currencies in this list.
-   * Unsupported currencies fall back to cost-basis display (no conversion).
+   * <p>
+   * This is the set of ISO-4217 codes that the BOC Valet API supports, which is the set FortuneLink
+   * can reliably provide rates for.
+   * <p>
+   * Note: FortuneLink accounts can be opened in ANY valid ISO-4217 currency, but exchange rate
+   * lookup is only guaranteed for currencies in this list. Unsupported currencies fall back to
+   * cost-basis display (no conversion).
    */
   @GetMapping("/supported")
   public SupportedCurrenciesResponse getSupportedCurrencies() {
@@ -141,9 +133,9 @@ public class ExchangeRateController {
     // Cross rates (e.g. EUR/USD) are computed via CAD triangulation.
     // Source:
     // https://www.bankofcanada.ca/rates/exchange/legacy-noon-and-closing-rates/
-    return new SupportedCurrenciesResponse(java.util.List.of(
-        "AUD", "BRL", "CAD", "CHF", "CNY", "DKK", "EUR", "GBP",
-        "HKD", "IDR", "INR", "JPY", "KRW", "MXN", "MYR", "NOK",
-        "NZD", "PEN", "SAR", "SEK", "SGD", "THB", "TRY", "USD", "ZAR"));
+    return new SupportedCurrenciesResponse(
+        java.util.List.of("AUD", "BRL", "CAD", "CHF", "CNY", "DKK", "EUR", "GBP", "HKD", "IDR",
+            "INR", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PEN", "SAR", "SEK", "SGD", "THB",
+            "TRY", "USD", "ZAR"));
   }
 }

@@ -9,13 +9,12 @@ import jakarta.validation.constraints.Size;
 /**
  * Request body for portfolio creation.
  * <p>
- * createDefaultAccount defaults to false if omitted in JSON.
- * When true, both defaultAccountType and defaultStrategy are required.
+ * createDefaultAccount defaults to false if omitted in JSON. When true, both defaultAccountType and
+ * defaultStrategy are required.
  * <p>
- * The cross-field validation (if createDefaultAccount=true then type/strategy
- * required)
- * is handled in PortfolioLifecycleCommandValidator rather than here, because
- * Jakarta Bean Validation doesn't support cross-field rules cleanly on records.
+ * The cross-field validation (if createDefaultAccount=true then type/strategy required) is handled
+ * in PortfolioLifecycleCommandValidator rather than here, because Jakarta Bean Validation doesn't
+ * support cross-field rules cleanly on records.
  */
 public record CreatePortfolioRequest(
     @NotBlank @Size(max = 100, message = "Portfolio name must be 100 characters or less") String name,

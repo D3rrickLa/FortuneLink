@@ -1,12 +1,11 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
 public record RecordSaleRequest(
     @NotBlank String idempotencyKey,

@@ -247,7 +247,7 @@ public class TransactionService {
 
     ValidationUtils.validate(command, validationFn, operationName);
 
-    // Idempotency check — clean, no infra knowledge
+    // Idempotency check
     if (command.idempotencyKey() != null) {
       Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(command.idempotencyKey());
       if (existing.isPresent()) {

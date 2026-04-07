@@ -181,6 +181,7 @@ public class PortfolioLifecycleCommandValidatorTest {
       var command = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, true);
       assertThat(validator.validate(command).isValid()).isTrue();
     }
+
     @Test
     @DisplayName("validate: errors when Id is null")
     void validateFailure() {

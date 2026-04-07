@@ -9,9 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 // If you ever need two-phase confirmation, implement it as a separate endpoint
 // that issues a short-lived token, not a boolean field on the command.
 public record DeletePortfolioCommand(
-    PortfolioId portfolioId,
-    UserId userId,
-    boolean softDelete,
-    boolean recursive) implements HasPortfolioId {
+    PortfolioId portfolioId, UserId userId, boolean softDelete, boolean recursive) implements
+    HasPortfolioId {
 
 }

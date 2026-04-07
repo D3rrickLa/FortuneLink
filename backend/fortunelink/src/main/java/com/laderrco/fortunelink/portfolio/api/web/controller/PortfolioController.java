@@ -17,10 +17,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import jakarta.validation.Valid;
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -63,8 +61,8 @@ public class PortfolioController {
   }
 
   @PatchMapping("/{portfolioId}")
-  public PortfolioResponse updatePortfolio(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
-      @RequestBody @Valid UpdatePortfolioRequest request) {
+  public PortfolioResponse updatePortfolio(@PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId, @RequestBody @Valid UpdatePortfolioRequest request) {
 
     var command = new UpdatePortfolioCommand(PortfolioId.fromString(portfolioId), userId,
         request.name(), request.description(),
@@ -81,7 +79,8 @@ public class PortfolioController {
       @RequestParam(defaultValue = "false") boolean recursive) {
 
     lifecycleService.deletePortfolio(
-        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, softDelete, recursive));
+        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, softDelete,
+            recursive));
   }
 
   // --- Portfolio Queries ---
@@ -94,7 +93,8 @@ public class PortfolioController {
   }
 
   @GetMapping("/{portfolioId}")
-  public PortfolioResponse getPortfolio(@PathVariable String portfolioId, @AuthenticatedUser UserId userId) {
+  public PortfolioResponse getPortfolio(@PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId) {
     var view = queryService.getPortfolioById(
         new GetPortfolioByIdQuery(PortfolioId.fromString(portfolioId), userId));
 
@@ -102,7 +102,8 @@ public class PortfolioController {
   }
 
   @GetMapping("/{portfolioId}/net-worth")
-  public NetWorthResponse getNetWorth(@PathVariable String portfolioId, @AuthenticatedUser UserId userId) {
+  public NetWorthResponse getNetWorth(@PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId) {
     var view = queryService.getNetWorth(
         new GetNetWorthQuery(PortfolioId.fromString(portfolioId), userId));
 

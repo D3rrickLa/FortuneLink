@@ -24,13 +24,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
 import com.laderrco.fortunelink.shared.enums.Precision;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -142,20 +140,19 @@ class AccountViewBuilderTest {
       when(projection.getCreatedDate()).thenReturn(createdDate);
 
       // Act
-      AccountView result = accountViewBuilder.buildFromProjection(
-          projection,
-          Map.of(),
-          Map.of());
+      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of());
 
       // Assert
       assertThat(result.accountId()).isEqualTo(AccountId.fromString(accountUuid.toString()));
       assertThat(result.name()).isEqualTo(accountName);
       assertThat(result.type()).isEqualTo(AccountType.CHEQUING);
       assertThat(result.cashBalance().currency().getCode()).isEqualTo(currencyCode);
-      assertThat(result.cashBalance().amount()).isEqualTo(cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
+      assertThat(result.cashBalance().amount()).isEqualTo(
+          cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
 
       // Logic check: total value should equal cash balance when positions are empty
-      assertThat(result.totalValue().amount()).isEqualTo(cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
+      assertThat(result.totalValue().amount()).isEqualTo(
+          cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
       assertThat(result.assets()).isEmpty();
       assertThat(result.creationDate()).isEqualTo(createdDate);
     }
@@ -199,7 +196,8 @@ class AccountViewBuilderTest {
       assertThat(result.assets()).isEmpty();
       // Verifying that the total value didn't change despite having quotes/fees
       // passed in
-      assertThat(result.totalValue().amount()).isEqualTo(BigDecimal.TEN.setScale(Precision.MONEY.getDecimalPlaces()));
+      assertThat(result.totalValue().amount()).isEqualTo(
+          BigDecimal.TEN.setScale(Precision.MONEY.getDecimalPlaces()));
     }
   }
 }

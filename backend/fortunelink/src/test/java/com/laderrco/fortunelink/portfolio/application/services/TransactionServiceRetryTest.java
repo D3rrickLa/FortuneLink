@@ -1,22 +1,13 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import java.time.Instant;
-import java.util.*;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.retry.annotation.EnableRetry;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
@@ -29,12 +20,30 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import java.time.Instant;
+import java.util.ConcurrentModificationException;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 @SpringJUnitConfig(classes = TransactionServiceRetryTest.TestConfig.class)
 class TransactionServiceRetryTest {
@@ -65,43 +74,45 @@ class TransactionServiceRetryTest {
     RecordPurchaseCommand command = createSampleCommand();
 
     // 2. Mock Validator (must succeed)
-    when(validator.validate(any(RecordPurchaseCommand.class))).thenReturn(ValidationResult.success());
+    when(validator.validate(any(RecordPurchaseCommand.class))).thenReturn(
+        ValidationResult.success());
 
     // 3. Mock Portfolio Loader & Account (must return valid, non-null objects)
     Portfolio portfolio = buildFakePortfolioForPurchase(command);
-    when(portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId()))
-        .thenReturn(portfolio);
+    when(portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId())).thenReturn(
+        portfolio);
 
     // 4. Mock Asset Info (to avoid resolveAssetType failing)
     when(infoRepository.findBySymbol(any())).thenReturn(Optional.empty());
 
     // 5. Force the specific exception that triggers @Retryable
     // This is where the loop happens
-    when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
-        .thenThrow(new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
+    when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
+        any(), anyBoolean())).thenThrow(
+        new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
 
     // 6. Execute and Assert
     // The @Recover method throws ConcurrentModificationException
-    assertThrows(ConcurrentModificationException.class, () -> transactionService.recordPurchase(command));
+    assertThrows(ConcurrentModificationException.class,
+        () -> transactionService.recordPurchase(command));
 
     // 7. Verify the Retry Logic
     // 1 initial attempt + 2 retries = 3 total calls
-    verify(transactionRecordingService, times(3))
-        .recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean());
+    verify(transactionRecordingService, times(3)).recordBuy(any(), any(), any(), any(), any(),
+        any(), any(), any(), anyBoolean());
 
     // 8. Verify the Recovery Logic
-    verify(accountHealthService)
-        .markStale(command.portfolioId(), command.userId(), command.accountId());
+    verify(accountHealthService).markStale(command.portfolioId(), command.userId(),
+        command.accountId());
   }
 
   @Test
   @DisplayName("Should retry recordSale and recover when locking fails")
   void shouldRetrySaleAndRecover() {
     // 1. Setup Command
-    RecordSaleCommand command = new RecordSaleCommand(UUID.randomUUID(),
-        PortfolioId.newId(), UserId.random(), AccountId.newId(),
-        "AAPL", Quantity.of(5), Price.of("150.00", Currency.CAD),
-        List.of(), Instant.now(), "Sale Test");
+    RecordSaleCommand command = new RecordSaleCommand(UUID.randomUUID(), PortfolioId.newId(),
+        UserId.random(), AccountId.newId(), "AAPL", Quantity.of(5),
+        Price.of("150.00", Currency.CAD), List.of(), Instant.now(), "Sale Test");
 
     // 2. Mock Validator
     when(validator.validate(any(RecordSaleCommand.class))).thenReturn(ValidationResult.success());
@@ -111,33 +122,26 @@ class TransactionServiceRetryTest {
     when(portfolioLoader.loadUserPortfolio(any(), any())).thenReturn(portfolio);
 
     // 4. Force failure on the recording service
-    when(transactionRecordingService.recordSell(any(), any(), any(), any(), any(), any(), any()))
-        .thenThrow(new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
+    when(transactionRecordingService.recordSell(any(), any(), any(), any(), any(), any(),
+        any())).thenThrow(new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
 
     // 5. Assert Recovery Exception
-    assertThrows(ConcurrentModificationException.class, () -> transactionService.recordSale(command));
+    assertThrows(ConcurrentModificationException.class,
+        () -> transactionService.recordSale(command));
 
     // 6. Verify 3 attempts
-    verify(transactionRecordingService, times(3))
-        .recordSell(any(), any(), any(), any(), any(), any(), any());
+    verify(transactionRecordingService, times(3)).recordSell(any(), any(), any(), any(), any(),
+        any(), any());
   }
 
   // --- Helpers to prevent DomainArgumentException ---
 
   private RecordPurchaseCommand createSampleCommand() {
-    return new RecordPurchaseCommand(
-        UUID.randomUUID(),
-        PortfolioId.newId(),
-        UserId.random(),
-        AccountId.newId(),
-        "AAPL",
-        AssetType.STOCK,
-        Quantity.of(10),
-        Price.of("150.00", Currency.CAD), // Ensure this matches account currency to skip conversion logic
-        List.of(),
-        Instant.now(),
-        "Test Note",
-        false);
+    return new RecordPurchaseCommand(UUID.randomUUID(), PortfolioId.newId(), UserId.random(),
+        AccountId.newId(), "AAPL", AssetType.STOCK, Quantity.of(10),
+        Price.of("150.00", Currency.CAD),
+        // Ensure this matches account currency to skip conversion logic
+        List.of(), Instant.now(), "Test Note", false);
   }
 
   private Portfolio buildFakePortfolioForPurchase(RecordPurchaseCommand command) {
@@ -234,11 +238,10 @@ class TransactionServiceRetryTest {
     }
 
     @Bean
-    public TransactionService transactionService(
-        PortfolioRepository pr, AccountHealthService ahs, TransactionRepository tr,
-        MarketAssetInfoRepository ir, TransactionViewMapper tvm, TransactionCommandValidator v,
-        ApplicationEventPublisher ep, PortfolioLoader pl, ExchangeRateService ers,
-        TransactionRecordingService trs, CacheManager cm) {
+    public TransactionService transactionService(PortfolioRepository pr, AccountHealthService ahs,
+        TransactionRepository tr, MarketAssetInfoRepository ir, TransactionViewMapper tvm,
+        TransactionCommandValidator v, ApplicationEventPublisher ep, PortfolioLoader pl,
+        ExchangeRateService ers, TransactionRecordingService trs, CacheManager cm) {
       return new TransactionService(pr, ahs, tr, ir, tvm, v, ep, pl, ers, trs, cm);
     }
   }

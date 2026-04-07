@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ex
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +25,8 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
       return Optional.of(provider.getExchangeRate(from, to, Instant.now()));
     } catch (Exception ex) {
       // If the API (BOC) is down, we log and return Empty
-      log.warn("Exchange rate provider failed for {}/{}. Cause: {}",
-          from.getCode(), to.getCode(), ex.getMessage());
+      log.warn("Exchange rate provider failed for {}/{}. Cause: {}", from.getCode(), to.getCode(),
+          ex.getMessage());
       return Optional.empty();
     }
   }
@@ -37,16 +36,16 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     if (amount.currency().equals(targetCurrency)) {
       return amount;
     }
-    return getRate(amount.currency(), targetCurrency)
-        .map(rate -> rate.convert(amount))
-        .orElseThrow(() -> new ExchangeRateUnavailableException(
-            amount.currency().getCode(), targetCurrency.getCode(), Instant.now()));
+    return getRate(amount.currency(), targetCurrency).map(rate -> rate.convert(amount)).orElseThrow(
+        () -> new ExchangeRateUnavailableException(amount.currency().getCode(),
+            targetCurrency.getCode(), Instant.now()));
   }
 
   @Override
   public Money convert(Money amount, Currency targetCurrency, Instant asOfDate) {
-    if (amount.currency().equals(targetCurrency))
+    if (amount.currency().equals(targetCurrency)) {
       return amount;
+    }
 
     try {
       ExchangeRate rate = provider.getExchangeRate(amount.currency(), targetCurrency, asOfDate);
