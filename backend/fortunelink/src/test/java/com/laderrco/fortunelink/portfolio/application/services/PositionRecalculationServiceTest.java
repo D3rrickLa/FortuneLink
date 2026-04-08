@@ -126,8 +126,8 @@ class PositionRecalculationServiceTest {
     recalculationService.onRecalculationRequested(event);
 
     // Verify executor is NOT called (safety first)
-    verifyNoInteractions(executor);
     // Verify fallback logic
+    verifyNoInteractions(executor);
     verify(accountHealthService).markStale(eq(PORTFOLIO_ID), eq(USER_ID), eq(ACCOUNT_ID));
   }
 
@@ -152,22 +152,26 @@ class PositionRecalculationServiceTest {
     verifyNoInteractions(executor);
   }
 
-@Test
-@DisplayName("onRecalculationRequested: marks stale if executor fails")
-void onRecalculationRequestedMarksStaleOnExecutorFailure() throws InterruptedException {
+  @Test
+  @DisplayName("onRecalculationRequested: marks stale and bubbles exception if executor fails")
+  void onRecalculationRequestedMarksStaleOnExecutorFailure() throws InterruptedException {
     PositionRecalculationRequestedEvent event = createEvent();
     RLock mockLock = mock(RLock.class);
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
     when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
-    
+
     doThrow(new RuntimeException("Computation error")).when(executor)
         .scheduleRecalculation(any(), any(), any(), any());
 
-    recalculationService.onRecalculationRequested(event);
+    // We expect the exception to bubble up to the test
+    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(event))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Computation error");
 
-    verify(accountHealthService).markStale(any(), any(), any());
+    // Verify side effects happened despite the crash
+    verify(accountHealthService).markStale(eq(PORTFOLIO_ID), eq(USER_ID), eq(ACCOUNT_ID));
     verify(mockLock).unlock();
-}
+  }
 
   @Test
   @DisplayName("onRecalculationRequested: suppresses failure during lock release")

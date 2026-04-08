@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
+package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -33,8 +33,6 @@ import java.time.Instant;
  * cost basis adjustments use different rules.
  */
 public record RecordReturnOfCapitalRequest(
-    @NotBlank String idempotencyKey,
-
     @NotBlank(message = "Asset symbol is required") @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String assetSymbol,
 
     @NotNull(message = "Distribution per unit is required") @DecimalMin(value = "0.000001", message = "Distribution per unit must be greater than zero") BigDecimal distributionPerUnit,

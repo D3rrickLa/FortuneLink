@@ -82,7 +82,8 @@ public class RealizedGainsController {
           + MIN_TAX_YEAR
           + " or later") @Max(value = 9999, message = "Tax year must be a 4-digit year") Integer taxYear,
 
-      @RequestParam(required = false) @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String symbol) {
+      @RequestParam(required = false) @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String symbol,
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
 
     // Reject future tax years — no trades can have settled in a future year
     if (taxYear != null && taxYear > Year.now().getValue()) {
@@ -101,7 +102,7 @@ public class RealizedGainsController {
     }
 
     GetRealizedGainsQuery query = new GetRealizedGainsQuery(PortfolioId.fromString(portfolioId),
-        userId, AccountId.fromString(accountId), taxYear, assetSymbol);
+        userId, AccountId.fromString(accountId), taxYear, assetSymbol, page, size);
 
     RealizedGainsSummaryView view = realizedGainsQueryService.getRealizedGains(query);
     return RealizedGainsSummaryResponse.from(view);

@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -55,18 +56,38 @@ class AcbPositionProjectorTest {
   @DisplayName("project: sorts deterministically by ID when timestamps are identical")
   void projectSortsByIdWhenTimestampsMatch() {
     Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
+    TransactionId buyId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5d");
+    TransactionId buyId2 = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5c");
     Transaction txA = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
-        .transactionId(TransactionId.newId())
+        .transactionId(buyId)
         .occurredAt(sameTime)
         .build();
 
-    Transaction txB = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
-        .transactionId(TransactionId.newId())
+    Transaction txB = TransactionFactory.buyBuilder(Quantity.of(5), Price.of("15", CAD))
+        .transactionId(buyId2)
         .occurredAt(sameTime)
         .build();
 
     AcbPosition result = projector.project(List.of(txB, txA));
-    assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
+    assertThat(result.totalQuantity().amount()).isEqualByComparingTo("15");
+  }
+
+  @Test
+  @DisplayName("project: prioritizes BUY over SELL when timestamps are identical")
+  void projectPrioritizesBuyOverSell() {
+    Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
+
+    // Ensure the Sell ID is "smaller" than the Buy ID to force the tie-breaker
+    TransactionId buyId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5d");
+    TransactionId sellId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5c");
+
+    Transaction buy = TransactionFactory.buyBuilder(Quantity.of(20), Price.of("30", CAD))
+        .transactionId(buyId).occurredAt(sameTime).build();
+    Transaction sell = TransactionFactory.sellBuilder(Quantity.of(10), Price.of("60", CAD))
+        .transactionId(sellId).occurredAt(sameTime).build();
+
+    // This should now pass because the comparator moves 'buy' to the front
+    assertDoesNotThrow(() -> projector.project(List.of(sell, buy)));
   }
 
   @Test

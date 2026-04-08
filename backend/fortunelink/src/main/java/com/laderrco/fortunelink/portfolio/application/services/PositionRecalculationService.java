@@ -44,33 +44,31 @@ public class PositionRecalculationService {
     RLock lock = redisson.getLock(lockKey);
     boolean acquired = false;
 
+    // --- STEP 1: LOCKING ---
     try {
-      // The network call actually happens here.
-      // If Redis is down, this will throw a RedisException.
       acquired = lock.tryLock(10, 30, TimeUnit.SECONDS);
-
-      if (acquired) {
-        runRecalculation(event);
-      } else {
-        log.warn("Lock busy for accountId={}", event.accountId());
-      }
-
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt(); // preserve interrupt
-      throw e; // rethrow so outer handler catches it
+      Thread.currentThread().interrupt();
+      throw e;
     } catch (Exception redisEx) {
-      log.error("Redis unavailable. Cannot acquire lock for accountId={}. " +
-          "Marking account STALE to prevent race condition.", event.accountId(), redisEx);
+      log.error("Redis unavailable. Marking account STALE.", redisEx);
       accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
-      // DO NOT fall through to runRecalculation
-    } finally {
-      if (acquired) {
+      return; // Fail-fast: No lock, no execution.
+    }
+
+    // --- STEP 2: EXECUTION ---
+    if (acquired) {
+      try {
+        runRecalculation(event);
+      } finally {
         try {
           lock.unlock();
         } catch (Exception e) {
           log.debug("Lock already released or expired.");
         }
       }
+    } else {
+      log.warn("Lock busy for accountId={}", event.accountId());
     }
   }
 

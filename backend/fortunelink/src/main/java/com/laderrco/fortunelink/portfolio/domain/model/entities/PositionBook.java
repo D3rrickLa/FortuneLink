@@ -6,7 +6,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.util.Collection;
@@ -15,7 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Encapculsates the position ledger for an Account is private pacakte, only Accoutn should
+ * Encapculsates the position ledger for an Account is private pacakte, only
+ * Accoutn should
  * construct or mutate this directly.
  */
 final class PositionBook {
@@ -41,7 +41,8 @@ final class PositionBook {
   }
 
   /**
-   * Apply the result from a TransactionApplier. If the pos closes out, it's auto removed. Callers
+   * Apply the result from a TransactionApplier. If the pos closes out, it's auto
+   * removed. Callers
    * never manipulate the map directly
    *
    * @param symbol
@@ -96,10 +97,8 @@ final class PositionBook {
   private Position createEmpty(AssetSymbol symbol, AssetType type) {
     return switch (strategy) {
       case ACB -> AcbPosition.empty(symbol, type, currency);
-      case FIFO -> FifoPosition.empty(symbol, type, currency);
-      case LIFO -> throw new IllegalArgumentException("LIFO not supported");
-      case SPECIFIC_ID -> throw new IllegalArgumentException("SPECIFIC_ID not supported");
+      case FIFO, LIFO, SPECIFIC_ID ->
+        throw new IllegalArgumentException(strategy + " not supported");
     };
   }
-
 }

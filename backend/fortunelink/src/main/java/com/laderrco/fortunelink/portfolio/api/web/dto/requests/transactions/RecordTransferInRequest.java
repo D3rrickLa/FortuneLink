@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
+package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+
+import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
 
 /**
  * Request body for recording an inbound cash transfer.
@@ -25,8 +27,6 @@ import java.util.List;
  * transfer), do not include them separately — just record the net amount and note the gross.
  */
 public record RecordTransferInRequest(
-    @NotBlank String idempotencyKey,
-
     @NotNull(message = "Amount is required") @DecimalMin(value = "0.01", message = "Transfer amount must be greater than zero") BigDecimal amount,
 
     @NotBlank(message = "Currency is required") @Size(min = 3, max = 3, message = "Currency must be a 3-letter ISO-4217 code") String currency,

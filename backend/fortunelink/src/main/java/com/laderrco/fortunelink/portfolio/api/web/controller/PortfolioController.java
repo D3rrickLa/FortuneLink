@@ -38,7 +38,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/portfolios")
 public class PortfolioController {
-
   private final PortfolioLifecycleService lifecycleService;
   private final PortfolioQueryService queryService;
 

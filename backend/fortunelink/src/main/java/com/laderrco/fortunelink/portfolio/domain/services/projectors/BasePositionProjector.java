@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.services.projectors;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.ApplyResult;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
@@ -33,6 +34,7 @@ public abstract class BasePositionProjector<P extends Position> implements
 
     List<Transaction> sorted = transactions.stream()
         .sorted(Comparator.comparing(Transaction::occurredAt)
+            .thenComparing(tx -> tx.transactionType() == TransactionType.BUY ? 0 : 1)
             .thenComparing(tx -> tx.transactionId().id())) // UUID gives stable, deterministic tie-break
         .toList();
 

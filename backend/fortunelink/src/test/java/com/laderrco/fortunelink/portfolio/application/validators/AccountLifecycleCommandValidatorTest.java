@@ -51,9 +51,17 @@ class AccountLifecycleCommandValidatorTest {
       assertThat(result.isValid()).isTrue();
     }
 
+    @Test
+    @DisplayName("validate: success with exactly 100 character name")
+    void validateSuccessWithBoundaryNameLength() {
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, NAME_100_CHARS,
+          AccountType.CHEQUING, PositionStrategy.ACB, Currency.of("USD"));
+      assertThat(validator.validate(command).isValid()).isTrue();
+    }
+
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "   ", LONG_NAME})
+    @ValueSource(strings = { "", "   ", LONG_NAME })
     @DisplayName("validate: failure on invalid account names")
     void validateFailureOnInvalidNames(String invalidName) {
       var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, invalidName,
@@ -66,14 +74,6 @@ class AccountLifecycleCommandValidatorTest {
     }
 
     @Test
-    @DisplayName("validate: success with exactly 100 character name")
-    void validateSuccessWithBoundaryNameLength() {
-      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, NAME_100_CHARS,
-          AccountType.CHEQUING, PositionStrategy.ACB, Currency.of("USD"));
-      assertThat(validator.validate(command).isValid()).isTrue();
-    }
-
-    @Test
     @DisplayName("validate: failure when required fields are null")
     void validateFailureOnMissingRequiredFields() {
       var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, null, null, null);
@@ -82,6 +82,16 @@ class AccountLifecycleCommandValidatorTest {
 
       assertThat(result.errors()).contains("Account type is required", "Strategy is required",
           "Base currency is required");
+    }
+
+    @Test
+    @DisplayName("validate: failure when strategy is FIFO and not ACB")
+    void validateFailureOnFifoStrategy() {
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, null, PositionStrategy.FIFO, null);
+
+      ValidationResult result = validator.validate(command);
+
+      assertThat(result.errors()).contains("Strategy FIFO is not yet supported. Current tax regulations only support ACB.");
     }
 
     @Test
@@ -124,7 +134,7 @@ class AccountLifecycleCommandValidatorTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "   "})
+    @ValueSource(strings = { "", "   " })
     @DisplayName("validate: failure on invalid names during update")
     void validateFailureOnInvalidNames(String invalidName) {
       var command = new UpdateAccountCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, invalidName);

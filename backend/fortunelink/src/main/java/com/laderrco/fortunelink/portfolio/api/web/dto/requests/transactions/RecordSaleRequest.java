@@ -1,14 +1,14 @@
-package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
+package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import jakarta.annotation.Nonnull;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
+
 public record RecordSaleRequest(
-    @NotBlank String idempotencyKey,
     @NotNull String symbol,
     @NotNull BigDecimal quantity,
     @NotNull BigDecimal price,

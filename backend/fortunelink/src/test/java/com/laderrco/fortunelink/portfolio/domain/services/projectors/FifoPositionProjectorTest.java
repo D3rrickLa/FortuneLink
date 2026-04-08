@@ -46,10 +46,8 @@ public class FifoPositionProjectorTest {
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
         .occurredAt(Instant.parse("2023-01-02T10:00:00Z")).build();
 
-    // 2. Act: Project the stream
     FifoPosition result = projector.project(List.of(sell, buy)); // Out of order list
 
-    // 3. Assert: Final state
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
 

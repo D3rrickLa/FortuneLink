@@ -125,7 +125,6 @@ class RealizedGainsQueryServiceTest {
 
       RealizedGainsSummaryView summary = service.getRealizedGains(query);
 
-
       verify(repository).findByAccountIdAndSymbol(eq(ACCOUNT_ID), eq(SYMBOL), any(Pageable.class));
       // Verify we didn't accidentally call the year-based methods
       verify(repository, never()).findByAccountIdAndYear(any(), anyInt(), any());
@@ -155,6 +154,29 @@ class RealizedGainsQueryServiceTest {
       Pageable sentPageable = captor.getValue();
       assertThat(sentPageable.getPageNumber()).isEqualTo(requestedPage);
       assertThat(sentPageable.getPageSize()).isEqualTo(requestedSize);
+    }
+
+    @Test
+    @DisplayName("getRealizedGains: should return ZERO totals when repository returns null aggregation")
+    void handlesNullAggregationFromRepository() {
+      GetRealizedGainsQuery query = new GetRealizedGainsQuery(
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID, 2023, null, 0, 10);
+      GainsAggregation nullAggregation = new GainsAggregation(null, null);
+
+      when(repository.findByAccountIdAndYear(any(), anyInt(), any()))
+          .thenReturn(new PageImpl<>(List.of()));
+      when(repository.calculateTotals(eq(ACCOUNT_ID), eq(2023), any()))
+          .thenReturn(nullAggregation);
+      when(repository.findAccountCurrencyCode(ACCOUNT_ID))
+          .thenReturn(Optional.of("USD"));
+
+      RealizedGainsSummaryView result = service.getRealizedGains(query);
+
+      // The Record's compact constructor should have converted null -> ZERO
+      assertThat(result.totalGains().amount()).isEqualByComparingTo(BigDecimal.ZERO);
+      assertThat(result.totalLosses().amount()).isEqualByComparingTo(BigDecimal.ZERO);
+      assertThat(result.netGainLoss().amount()).isEqualByComparingTo(BigDecimal.ZERO);
+      assertThat(result.currency()).isEqualTo(Currency.USD);
     }
   }
 

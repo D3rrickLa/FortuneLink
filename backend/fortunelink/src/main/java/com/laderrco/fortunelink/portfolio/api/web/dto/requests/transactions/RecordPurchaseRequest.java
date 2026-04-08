@@ -1,15 +1,14 @@
-package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
+package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
 public record RecordPurchaseRequest(
-    @NotBlank String idempotencyKey,
     @NotNull String accountId,
     @NotNull String symbol,
     @NotNull AssetType type,

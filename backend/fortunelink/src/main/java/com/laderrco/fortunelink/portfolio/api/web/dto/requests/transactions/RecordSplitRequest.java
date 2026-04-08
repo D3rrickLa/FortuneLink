@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
+package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -30,8 +30,6 @@ import java.time.Instant;
  * the current position quantity.
  */
 public record RecordSplitRequest(
-    @NotBlank String idempotencyKey,
-
     @NotBlank(message = "Symbol is required") @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String symbol,
 
     @Min(value = 1, message = "Numerator must be at least 1") int numerator,

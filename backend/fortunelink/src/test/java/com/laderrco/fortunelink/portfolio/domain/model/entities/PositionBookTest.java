@@ -1,12 +1,19 @@
 package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
+import java.time.Instant;
+
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -26,7 +33,7 @@ public class PositionBookTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = PositionStrategy.class, names = {"LIFO", "SPECIFIC_ID"})
+  @EnumSource(value = PositionStrategy.class, names = { "LIFO", "SPECIFIC_ID" })
   void ensurePositionThrowExceptionWhenStrategyIsNotSupported(
       PositionStrategy unsupportedStrategy) {
     AssetSymbol symbol = new AssetSymbol("AAPL");
@@ -35,7 +42,63 @@ public class PositionBookTest {
     PositionBook posBook = new PositionBook(USD, unsupportedStrategy);
 
     assertThatThrownBy(() -> posBook.ensurePosition(symbol, type)).isInstanceOf(
-            IllegalArgumentException.class)
+        IllegalArgumentException.class)
         .hasMessageContaining(unsupportedStrategy.name() + " not supported");
+  }
+
+  @Test
+  @DisplayName("applyResult: removes position from book when quantity reaches zero")
+  void shouldRemovePositionWhenQuantityIsZero() {
+    // 1. Setup
+    AssetSymbol symbol = new AssetSymbol("AAPL");
+    Currency cad = Currency.of("CAD");
+    PositionBook book = new PositionBook(cad, PositionStrategy.ACB);
+
+    // Create an initial position (e.g., 10 shares)
+    AcbPosition initialPos = AcbPosition.empty(symbol, AssetType.STOCK, cad)
+        .buy(Quantity.of(10), Money.of("1500", cad), Instant.now())
+        .newPosition();
+
+    book.applyResult(symbol, initialPos);
+    assertThat(book.has(symbol)).isTrue(); // Verify it was added
+
+    // 2. Execute: Create a "closed" position (0 shares)
+    // We simulate the result of a sell that clears the position
+    AcbPosition closedPos = initialPos
+        .sell(Quantity.of(10), Money.of("160", cad), Instant.now())
+        .newPosition();
+
+    assertThat(closedPos.totalQuantity().isZero()).isTrue();
+
+    book.applyResult(symbol, closedPos);
+
+    // 3. Verify: The symbol should no longer exist in the book
+    assertThat(book.has(symbol)).isFalse();
+    assertThat(book.get(symbol)).isEmpty();
+    assertThat(book.isEmpty()).isTrue();
+  }
+
+  @Test
+  @DisplayName("applyResult: updates position when quantity remains non-zero")
+  void shouldUpdatePositionWhenQuantityIsStillPositive() {
+    AssetSymbol symbol = new AssetSymbol("AAPL");
+    Currency cad = Currency.of("CAD");
+    PositionBook book = new PositionBook(cad, PositionStrategy.ACB);
+
+    // Start with 10, sell 5, result is 5 (non-zero)
+    AcbPosition initialPos = AcbPosition.empty(symbol, AssetType.STOCK, cad)
+        .buy(Quantity.of(10), Money.of("100", cad), Instant.now())
+        .newPosition();
+
+    AcbPosition updatedPos = initialPos
+        .sell(Quantity.of(5), Money.of("110", cad), Instant.now())
+        .newPosition();
+
+    book.applyResult(symbol, updatedPos);
+
+    // Verify it stays in the book with the new value
+    assertThat(book.has(symbol)).isTrue();
+    assertThat(book.get(symbol).get().totalQuantity().amount())
+        .isEqualByComparingTo("5");
   }
 }

@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
+package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -29,8 +29,6 @@ import java.time.Instant;
  * if no bond position is held. This will be tightened when bonds are fully supported.
  */
 public record RecordInterestRequest(
-    @NotBlank String idempotencyKey,
-
     @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String assetSymbol,
 
     @NotNull(message = "Amount is required") @DecimalMin(value = "0.000001", message = "Interest amount must be greater than zero") BigDecimal amount,

@@ -2,18 +2,7 @@ package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.ExcludeTransactionRequest;
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordDRIPRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordDepositRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordDividendRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordInterestRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordPurchaseRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordReturnOfCapitalRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordSaleRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordSplitRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordStandaloneFeeRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordTransferInRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordTransferOutRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.RecordWithdrawalRequest;
+import com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions.*;
 import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.RestoreTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDepositCommand;
@@ -97,12 +86,13 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordBuy(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordPurchase(
-        new RecordPurchaseCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordPurchaseCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), request.type(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
@@ -113,12 +103,13 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordSell(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordSale(
-        new RecordSaleCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordSaleCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
@@ -129,10 +120,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordSplit(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSplitRequest request) {
 
     return transactionService.recordSplit(
-        new RecordSplitCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordSplitCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol().toUpperCase(), new Ratio(request.numerator(), request.denominator()),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
@@ -142,10 +134,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordReturnOfCapital(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordReturnOfCapitalRequest request) {
 
     return transactionService.recordReturnOfCapital(
-        new RecordReturnOfCaptialCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordReturnOfCaptialCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol().toUpperCase(),
             Price.of(request.distributionPerUnit(), Currency.of(request.currency())),
@@ -161,10 +154,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordDeposit(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDepositRequest request) {
 
     return transactionService.recordDeposit(
-        new RecordDepositCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordDepositCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -174,10 +168,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordWithdrawal(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordWithdrawalRequest request) {
 
     return transactionService.recordWithdrawal(
-        new RecordWithdrawalCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordWithdrawalCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -187,10 +182,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordFee(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordStandaloneFeeRequest request) {
 
     return transactionService.recordFee(
-        new RecordFeeCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordFeeCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.feeType(),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
@@ -200,12 +196,13 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordTransferIn(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordTransferInRequest request) {
 
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordTransferIn(
-        new RecordTransferInCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordTransferInCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), fees, request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -215,10 +212,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordTransferOut(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordTransferOutRequest request) {
 
     return transactionService.recordTransferOut(
-        new RecordTransferOutCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordTransferOutCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -232,12 +230,13 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordInterest(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordInterestRequest request) {
 
     // RecordInterestCommand.cashInterest() / .assetInterest() are the factories
     // but the command accepts null assetSymbol for cash-level interest
     return transactionService.recordInterest(
-        new RecordInterestCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordInterestCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.isAssetInterest() ? request.assetSymbol().toUpperCase() : null,
             Money.of(request.amount(), request.currency()), request.transactionDate(),
@@ -248,10 +247,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordDividend(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDividendRequest request) {
 
     return transactionService.recordDividend(
-        new RecordDividendCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordDividendCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol().toUpperCase(), Money.of(request.amount(), request.currency()),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
@@ -261,10 +261,11 @@ public class TransactionController {
   @ResponseStatus(HttpStatus.CREATED)
   public TransactionView recordDividendReinvestment(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDRIPRequest request) {
 
     return transactionService.recordDividendReinvestment(
-        new RecordDividendReinvestmentCommand(UUID.fromString(request.idempotencyKey()),
+        new RecordDividendReinvestmentCommand(UUID.fromString(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol().toUpperCase(),
             new RecordDividendReinvestmentCommand.DripExecution(
