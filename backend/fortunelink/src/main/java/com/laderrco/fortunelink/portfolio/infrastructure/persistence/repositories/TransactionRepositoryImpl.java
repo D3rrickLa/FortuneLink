@@ -15,13 +15,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.Tr
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers.TransactionDomainMapper;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobjects.FeeAggregationResult;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -151,13 +146,11 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   @Cacheable(value = BUY_FEE_CACHE, key = "#accountId.id().toString()")
   public Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId) {
-    return sumBuyFeesBySymbolForAccounts(List.of(accountId)).getOrDefault(accountId, Map.of());
+    return sumBuyFeesBySymbolForAccounts(Set.of(accountId)).getOrDefault(accountId, Map.of());
   }
 
   @Override
-  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(
-      List<AccountId> accountIds) {
-
+  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(Set<AccountId> accountIds) {
     if (accountIds == null || accountIds.isEmpty()) {
       return Map.of();
     }

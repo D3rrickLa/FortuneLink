@@ -32,7 +32,9 @@ public abstract class BasePositionProjector<P extends Position> implements
     P current = getEmptyPosition(symbol, type, accountCurrency);
 
     List<Transaction> sorted = transactions.stream()
-        .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
+        .sorted(Comparator.comparing(Transaction::occurredAt)
+            .thenComparing(tx -> tx.transactionId().id())) // UUID gives stable, deterministic tie-break
+        .toList();
 
     for (Transaction tx : sorted) {
       ApplyResult<? extends Position> result = TransactionApplier.apply(current, tx);

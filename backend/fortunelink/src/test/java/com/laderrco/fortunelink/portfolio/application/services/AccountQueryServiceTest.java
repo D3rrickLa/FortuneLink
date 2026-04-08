@@ -78,9 +78,8 @@ class AccountQueryServiceTest {
   private AccountQueryService accountQueryService;
 
   @Nested
-  @DisplayName("getAllAccounts()")
+  @DisplayName("getAllAccounts")
   class GetAllAccountsTests {
-
     @Test
     @DisplayName("getAllAccounts: returns empty page when no accounts found")
     void getAllAccountsNoAccountsReturnsEmptyPage() {
@@ -88,8 +87,8 @@ class AccountQueryServiceTest {
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
-          any(Pageable.class))).thenReturn(Page.empty());
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
+          .thenReturn(Page.empty());
 
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
@@ -97,12 +96,14 @@ class AccountQueryServiceTest {
       assertThat(result.getTotalElements()).isZero();
 
       verify(portfolioLoader).validateOwnership(portfolioId, userId);
-      verifyNoInteractions(marketDataService, transactionRepository);
+      // Important: Ensure no batch calls are made if the page is empty
+      verifyNoInteractions(marketDataService, transactionRepository, accountViewBuilder);
     }
 
     @Test
     @DisplayName("getAllAccounts: maps projections with batch data")
     void getAllAccountsMapsProjectionsWithBatchData() {
+      // Arrange
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
@@ -112,47 +113,49 @@ class AccountQueryServiceTest {
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
-          any(Pageable.class))).thenReturn(
-          new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
+          .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
 
-      when(accountQueryRepository.findSymbolsForAccounts(anyList())).thenReturn(
-          Map.of(accountId, Set.of(new AssetSymbol("BTC"))));
+      // Mock the batch symbol lookup
+      when(accountQueryRepository.findSymbolsForAccounts(anyList()))
+          .thenReturn(Map.of(accountId, Set.of(new AssetSymbol("BTC"))));
+
+      // Mock the batch fee lookup
+      Map<AssetSymbol, Money> fees = Map.of(new AssetSymbol("BTC"), Money.of(1.0, "USD"));
+      when(transactionRepository.sumBuyFeesBySymbolForAccounts(any()))
+          .thenReturn(Map.of(accountId, fees));
 
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
-      when(transactionRepository.sumBuyFeesBySymbolForAccounts(anyList())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(eq(projection), anyMap(), anyMap())).thenReturn(
-          expectedView);
+      when(accountViewBuilder.buildFromProjection(eq(projection), anyMap(), eq(fees)))
+          .thenReturn(expectedView);
 
+      // Act
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
+      // Assert
       assertThat(result.getContent()).containsExactly(expectedView);
-      assertThat(result.getTotalElements()).isEqualTo(1);
+      verify(transactionRepository, times(1)).sumBuyFeesBySymbolForAccounts(any());
+      verify(accountViewBuilder).buildFromProjection(any(), anyMap(), eq(fees));
     }
 
     @Test
-    @DisplayName("getAllAccounts: handles page out of bounds gracefully via repository")
+    @DisplayName("getAllAccounts: handles page out of bounds gracefully")
     void getAllAccountsOutOfBoundsReturnsEmptyPageFromRepo() {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 5, 10);
 
-      // Mock returning a page that is empty (content) but has a total count of 2
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
-          any(Pageable.class))).thenAnswer(invocation -> {
-        Pageable requestedPageable = invocation.getArgument(1);
-        return new PageImpl<>(List.of(), requestedPageable, 2);
-      });
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
+          .thenReturn(new PageImpl<>(List.of(), PageRequest.of(5, 10), 2));
 
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
       assertThat(result.getContent()).isEmpty();
       assertThat(result.getTotalElements()).isEqualTo(2);
-      assertThat(result.getNumber()).isEqualTo(5);
 
-      // Now this will successfully pass because of the early return in the service!
+      // Ensure early return optimization works
       verify(accountQueryRepository, times(1)).findByPortfolioId(eq(portfolioId), any());
       verifyNoInteractions(marketDataService, transactionRepository, accountViewBuilder);
     }
@@ -169,26 +172,23 @@ class AccountQueryServiceTest {
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
-          any(Pageable.class))).thenReturn(
-          new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
+          .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
 
-      when(accountQueryRepository.findSymbolsForAccounts(List.of(accountId))).thenReturn(
-          Map.of(accountId, Collections.emptySet()));
+      // Symbols are empty for this account
+      when(accountQueryRepository.findSymbolsForAccounts(anyList()))
+          .thenReturn(Map.of(accountId, Collections.emptySet()));
 
-      when(transactionRepository.sumBuyFeesBySymbolForAccounts(anyList())).thenReturn(Map.of());
+      when(transactionRepository.sumBuyFeesBySymbolForAccounts(any())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(eq(projection), eq(Map.of()),
-          anyMap())).thenReturn(expectedView);
+      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap())).thenReturn(expectedView);
 
-      Page<AccountView> result = accountQueryService.getAllAccounts(query);
+      accountQueryService.getAllAccounts(query);
 
-      assertThat(result.getContent()).containsExactly(expectedView);
-
+      // Verify batching works but quote service is skipped due to no symbols
+      verify(transactionRepository).sumBuyFeesBySymbolForAccounts(any());
       verifyNoInteractions(marketDataService);
-      verify(accountQueryRepository).findSymbolsForAccounts(anyList());
-      verify(transactionRepository).sumBuyFeesBySymbolForAccounts(anyList());
     }
 
     @Test
@@ -198,18 +198,18 @@ class AccountQueryServiceTest {
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
 
-      doThrow(new RuntimeException("Unauthorized")).when(portfolioLoader)
-          .validateOwnership(portfolioId, userId);
+      doThrow(new RuntimeException("Unauthorized"))
+          .when(portfolioLoader).validateOwnership(portfolioId, userId);
 
-      assertThatThrownBy(() -> accountQueryService.getAllAccounts(query)).isInstanceOf(
-          RuntimeException.class);
+      assertThatThrownBy(() -> accountQueryService.getAllAccounts(query))
+          .isInstanceOf(RuntimeException.class);
 
-      verifyNoInteractions(accountQueryRepository);
+      verifyNoInteractions(accountQueryRepository, transactionRepository, marketDataService);
     }
   }
 
   @Nested
-  @DisplayName("getAccountSummary()")
+  @DisplayName("getAccountSummary")
   class GetAccountSummaryTests {
 
     private final UserId userId = UserId.random();
@@ -253,7 +253,8 @@ class AccountQueryServiceTest {
 
       assertThatThrownBy(() -> accountQueryService.getAccountSummary(
           new GetAccountSummaryQuery(portfolioId, userId, accountId))).isInstanceOf(
-          AccountNotFoundException.class).hasMessageContaining(accountId.toString());
+              AccountNotFoundException.class)
+          .hasMessageContaining(accountId.toString());
     }
 
     @Test

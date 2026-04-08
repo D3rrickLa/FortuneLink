@@ -17,6 +17,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -38,20 +40,34 @@ class AcbPositionProjectorTest {
   @Test
   @DisplayName("project: successfully accumulates acb position state")
   void projectAccumulatesPositionStateCorrectly() {
-    // 1. Arrange: Create a stream of events
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
         .occurredAt(Instant.parse("2023-01-01T10:00:00Z")).build();
 
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
         .occurredAt(Instant.parse("2023-01-02T10:00:00Z")).build();
 
-    // 2. Act: Project the stream
     AcbPosition result = projector.project(List.of(sell, buy)); // Out of order list
 
-    // 3. Assert: Final state
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
 
+  @Test
+  @DisplayName("project: sorts deterministically by ID when timestamps are identical")
+  void projectSortsByIdWhenTimestampsMatch() {
+    Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
+    Transaction txA = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
+        .transactionId(TransactionId.newId())
+        .occurredAt(sameTime)
+        .build();
+
+    Transaction txB = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
+        .transactionId(TransactionId.newId())
+        .occurredAt(sameTime)
+        .build();
+
+    AcbPosition result = projector.project(List.of(txB, txA));
+    assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
+  }
 
   @Test
   @DisplayName("project: throws checkInstance method exception in base class")
@@ -63,20 +79,12 @@ class AcbPositionProjectorTest {
     AcbPositionProjector projector = new AcbPositionProjector(symbol, type, currency);
 
     try (MockedStatic<TransactionApplier> utilities = mockStatic(TransactionApplier.class)) {
-
-      // 1. Create the "wrong" position (FifoPosition)
-      // Since Position is sealed too, make FifoPosition a concrete class or mockable
       FifoPosition wrongPosition = mock(FifoPosition.class);
 
-      // 2. Instead of mocking the interface, instantiate a Record implementation
-      // We use a raw type or <Position> to allow the "wrong" type to be passed in
       ApplyResult<Position> resultWithWrongType = new ApplyResult.Adjustment<>(wrongPosition);
 
-      // 3. Setup the static mock to return our real record
       utilities.when(() -> TransactionApplier.apply(any(), any())).thenReturn(resultWithWrongType);
 
-      // 4. Act & Assert
-      // This will trigger checkInstance(wrongPosition) inside the loop
       assertThrows(IllegalStateException.class, () -> {
         projector.project(List.of(mock(Transaction.class)));
       });

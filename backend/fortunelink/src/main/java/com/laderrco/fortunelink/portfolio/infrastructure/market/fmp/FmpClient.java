@@ -4,6 +4,11 @@ import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProf
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpSearchResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -23,8 +28,8 @@ import tools.jackson.databind.type.TypeFactory;
 /**
  * Low-level HTTP client for FMP API.
  * <p>
- * Responsibilities: - Construct FMP API URLs - Execute HTTP requests - Parse JSON responses -
- * Handle HTTP errors
+ * Responsibilities: - Construct FMP API URLs, Execute HTTP requests, Parse
+ * JSON responses - Handle HTTP errors
  *
  */
 @Slf4j
@@ -44,12 +49,17 @@ public class FmpClient {
     config.validate();
   }
 
+  @Retry(name = "fmp-api")
+  @TimeLimiter(name = "fmp-api")
+  @CircuitBreaker(name = "fmp-api", fallbackMethod = "getQuoteFallback")
   public FmpQuoteResponse getQuote(String symbol) {
     // FMP Quote endpoint is actually /quote/SYMBOL
     String url = buildUrl("/quote/" + symbol);
     return executeAndParseSingle(url, FmpQuoteResponse.class);
   }
 
+  @Retry(name = "fmp-api")
+  @CircuitBreaker(name = "fmp-api", fallbackMethod = "getBatchQuotesFallback")
   public List<FmpQuoteResponse> getBatchQuotes(List<String> symbols) {
     if (symbols == null || symbols.isEmpty()) {
       return List.of();
@@ -60,6 +70,8 @@ public class FmpClient {
     return symbols.stream().map(this::getQuote).filter(Objects::nonNull).toList();
   }
 
+  @Retry(name = "fmp-api")
+  @CircuitBreaker(name = "fmp-api", fallbackMethod = "getProfileFallback")
   public FmpProfileResponse getProfile(String symbol) {
     String url = buildUrl("/profile/" + symbol);
     return executeAndParseSingle(url, FmpProfileResponse.class);
@@ -138,10 +150,19 @@ public class FmpClient {
 
   private String buildUrl(String path) {
     String sanitizedPath = path.startsWith("/") ? path.substring(1) : path;
-    String sanitizedBase =
-        config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
+    String sanitizedBase = config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
 
     return UriComponentsBuilder.fromUriString(sanitizedBase).path(sanitizedPath)
         .queryParam("apikey", config.getApiKey()).build().toUriString();
+  }
+
+  private List<FmpQuoteResponse> getBatchQuotesFallback(List<String> symbols, Throwable t) {
+    log.warn("FMP circuit open for batch quote. Cause: {}", t.getMessage());
+    return List.of();
+  }
+
+  private FmpProfileResponse getProfileFallback(String symbol, Throwable t) {
+    log.warn("FMP circuit open for profile symbol={}", symbol);
+    return null;
   }
 }

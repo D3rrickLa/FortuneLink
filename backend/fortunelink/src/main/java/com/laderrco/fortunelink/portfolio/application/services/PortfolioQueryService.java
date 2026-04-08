@@ -16,6 +16,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
@@ -60,25 +61,26 @@ public class PortfolioQueryService {
 
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
     Currency displayCurrency = portfolio.getDisplayCurrency();
-
     Collection<Account> accounts = portfolio.getAccounts();
 
     Set<AssetSymbol> symbols = accounts.stream()
         .flatMap(a -> PortfolioAccessUtils.extractSymbolsByAccount(a).stream())
         .collect(Collectors.toSet());
-
     Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(symbols);
 
-    List<AccountView> accountViews = accounts.stream().map(
-        account -> accountViewBuilder.build(account, quoteCache,
-            transactionRepository.sumBuyFeesBySymbolForAccount(account.getAccountId()))).toList();
+    Set<AccountId> accountIds = accounts.stream().map(Account::getAccountId).collect(Collectors.toSet());
+    
+    Map<AccountId, Map<AssetSymbol, Money>> allFeesByAccount = 
+      transactionRepository.sumBuyFeesBySymbolForAccounts(accountIds);
 
-    Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency,
-        quoteCache);
+    List<AccountView> accountViews = accounts.stream().map(account -> accountViewBuilder.build(
+            account, quoteCache, allFeesByAccount.getOrDefault(account.getAccountId(), Map.of()))).toList();
 
+    Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);
     boolean hasStaleData = accounts.stream().anyMatch(Account::isStale);
 
     return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue, hasStaleData);
+    
   }
 
   public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {

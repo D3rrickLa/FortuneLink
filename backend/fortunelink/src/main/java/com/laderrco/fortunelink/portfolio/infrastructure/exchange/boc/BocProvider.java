@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 @Primary
 @RequiredArgsConstructor
 public class BocProvider implements ExchangeRateProvider {
-  private final BocApiClient bocApiClient;
+  private final BocClient bocClient;
   private final BocResponseMapper mapper;
 
   @Override
@@ -32,7 +32,7 @@ public class BocProvider implements ExchangeRateProvider {
     BocExchangeResponse response;
 
     if (asOf == null || isToday(asOf)) {
-      response = bocApiClient.getLatestExchangeRate(to.getCode(), from.getCode());
+      response = bocClient.getLatestExchangeRate(to.getCode(), from.getCode());
     } else {
       response = getHistoricalWithFallback(to.getCode(), from.getCode(), asOf);
     }
@@ -53,7 +53,7 @@ public class BocProvider implements ExchangeRateProvider {
     // Try up to 4 days back (covers long weekends)
     for (int daysBack = 0; daysBack <= 4; daysBack++) {
       Instant adjusted = asOf.minus(daysBack, ChronoUnit.DAYS);
-      BocExchangeResponse response = bocApiClient.getHistoricalExchangeRate(to, from, adjusted,
+      BocExchangeResponse response = bocClient.getHistoricalExchangeRate(to, from, adjusted,
           adjusted);
       if (!response.getObservations().isEmpty()) {
         return response;

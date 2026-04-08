@@ -17,6 +17,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +50,24 @@ public class FifoPositionProjectorTest {
     FifoPosition result = projector.project(List.of(sell, buy)); // Out of order list
 
     // 3. Assert: Final state
+    assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
+  }
+
+  @Test
+  @DisplayName("project: sorts deterministically by ID when timestamps are identical")
+  void projectSortsByIdWhenTimestampsMatch() {
+    Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
+    Transaction txA = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
+        .transactionId(TransactionId.newId())
+        .occurredAt(sameTime)
+        .build();
+
+    Transaction txB = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
+        .transactionId(TransactionId.newId())
+        .occurredAt(sameTime)
+        .build();
+
+    FifoPosition result = projector.project(List.of(txB, txA));
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
 

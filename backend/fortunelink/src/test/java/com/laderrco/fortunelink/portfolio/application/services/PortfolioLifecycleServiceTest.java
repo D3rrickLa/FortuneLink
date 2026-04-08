@@ -107,7 +107,7 @@ class PortfolioLifecycleServiceTest {
           false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-              PortfolioLimitReachedException.class)
+          PortfolioLimitReachedException.class)
           .hasMessageContaining("User already has an active portfolio");
 
       verify(portfolioRepository, never()).save(any(Portfolio.class));
@@ -124,7 +124,7 @@ class PortfolioLifecycleServiceTest {
           false, null, PositionStrategy.ACB);
 
       assertThatThrownBy(() -> service.createPortfolio(command)).isInstanceOf(
-              PortfolioLimitReachedException.class)
+          PortfolioLimitReachedException.class)
           .hasMessageContaining("A portfolio was recently created for this user.");
     }
 
@@ -203,12 +203,26 @@ class PortfolioLifecycleServiceTest {
   class DeletePortfolioTests {
     static Stream<Arguments> softDeleteExceptionProvider() {
       return Stream.of(
-          // Source Exception -> Expected Message (or partial match)
-          Arguments.of(new PortfolioNotEmptyException("error"),
-              "close accounts first or use recursive delete"),
-          Arguments.of(new PortfolioAlreadyDeletedException("Already gone"), "Already gone"),
-          Arguments.of(new IllegalStateException("Bad state"), "Bad state"),
-          Arguments.of(new PortfolioDeletionException("Direct error"), "Direct error"));
+          // 1. Portfolio is not empty, and we are NOT using recursive delete
+          Arguments.of(
+              new PortfolioNotEmptyException("Portfolio has active positions"),
+              PortfolioNotEmptyException.class,
+              "Portfolio has active positions",
+              false),
+
+          // 2. Portfolio already deleted
+          Arguments.of(
+              new PortfolioAlreadyDeletedException("Already gone"),
+              PortfolioAlreadyDeletedException.class,
+              "Already gone",
+              false),
+
+          // 3. Random state error
+          Arguments.of(
+              new IllegalStateException("Bad state"),
+              IllegalStateException.class,
+              "Bad state",
+              false));
     }
 
     static Stream<Arguments> recursiveDeleteAccountProvider() {
@@ -232,7 +246,7 @@ class PortfolioLifecycleServiceTest {
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, false);
 
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-              PortfolioDeletionException.class)
+          PortfolioDeletionException.class)
           .hasMessageContaining("Cannot hard delete portfolio with 1 active account(s)");
 
       verify(portfolioRepository, never()).delete(any());
@@ -282,7 +296,7 @@ class PortfolioLifecycleServiceTest {
 
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, true);
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-              PortfolioDeletionException.class)
+          PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
 
       verify(portfolioRepository, never()).delete(any());
@@ -303,7 +317,7 @@ class PortfolioLifecycleServiceTest {
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, true, true);
 
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
-              PortfolioDeletionException.class)
+          PortfolioDeletionException.class)
           .hasMessageContaining("zero positions and zero cash balance");
     }
 
@@ -331,10 +345,10 @@ class PortfolioLifecycleServiceTest {
     @ParameterizedTest
     @MethodSource("softDeleteExceptionProvider")
     void deletePortfolioSoftDeleteShouldHandleExceptions(Exception thrownException,
-        String expectedMessage) {
+        Class<? extends Exception> expectedClass, String expectedMessage, boolean recursive) {
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
-      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, false);
+      DeletePortfolioCommand command = new DeletePortfolioCommand(portfolioId, userId, true, recursive);
 
       Portfolio portfolio = mock(Portfolio.class);
 
@@ -343,10 +357,9 @@ class PortfolioLifecycleServiceTest {
 
       doThrow(thrownException).when(portfolio).markAsDeleted(userId);
 
-      PortfolioDeletionException ex = assertThrows(PortfolioDeletionException.class,
-          () -> service.deletePortfolio(command));
+      Exception ex = assertThrows(expectedClass, () -> service.deletePortfolio(command));
 
-      assertTrue(ex.getMessage().contains(expectedMessage));
+      assertTrue(ex.getMessage().equals(expectedMessage));
     }
 
     @ParameterizedTest

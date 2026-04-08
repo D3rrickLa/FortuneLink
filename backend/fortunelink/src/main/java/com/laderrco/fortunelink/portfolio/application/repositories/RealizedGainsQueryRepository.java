@@ -1,20 +1,25 @@
 package com.laderrco.fortunelink.portfolio.application.repositories;
 
+import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.GainsAggregation;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface RealizedGainsQueryRepository {
-  List<RealizedGainRecord> findByAccountId(AccountId accountId);
+  Page<RealizedGainRecord> findByAccountId(AccountId accountId, Pageable pageable);
 
-  List<RealizedGainRecord> findByAccountIdAndYear(AccountId accountId, int year);
+  Page<RealizedGainRecord> findByAccountIdAndYear(AccountId accountId, int year, Pageable pageable);
 
-  List<RealizedGainRecord> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol);
+  Page<RealizedGainRecord> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol, Pageable pageable);
 
-  List<RealizedGainRecord> findByAccountIdAndYearAndSymbol(AccountId accountId, int year,
-      AssetSymbol symbol);
+  Page<RealizedGainRecord> findByAccountIdAndYearAndSymbol(AccountId accountId, int year,
+      AssetSymbol symbol, Pageable pageable);
+
+  GainsAggregation calculateTotals(AccountId accountId, Integer year, AssetSymbol symbol);
 
   // Lightweight, avoids loading the full account aggregate just for currency.
   Optional<String> findAccountCurrencyCode(AccountId accountId);

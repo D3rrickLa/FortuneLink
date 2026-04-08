@@ -99,7 +99,7 @@ public class TransactionController {
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @RequestBody @Valid RecordPurchaseRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
+    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordPurchase(
         new RecordPurchaseCommand(UUID.fromString(request.idempotencyKey()),
@@ -115,7 +115,7 @@ public class TransactionController {
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @RequestBody @Valid RecordSaleRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
+    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordSale(
         new RecordSaleCommand(UUID.fromString(request.idempotencyKey()),
@@ -202,7 +202,7 @@ public class TransactionController {
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @RequestBody @Valid RecordTransferInRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()));
+    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordTransferIn(
         new RecordTransferInCommand(UUID.fromString(request.idempotencyKey()),
@@ -360,11 +360,11 @@ public class TransactionController {
   // Private helpers
   // =========================================================================
 
-  private List<Fee> mapFees(List<FeeRequest> feeRequests, Currency defaultCurrency) {
+  private List<Fee> mapFees(List<FeeRequest> feeRequests, Currency defaultCurrency, Instant txDate) {
     if (feeRequests == null || feeRequests.isEmpty()) {
       return List.of();
     }
     return feeRequests.stream()
-        .map(f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()), Instant.now())).toList();
+        .map(f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()), txDate)).toList();
   }
 }

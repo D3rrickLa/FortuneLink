@@ -59,9 +59,10 @@ public class PositionRecalculationService {
       Thread.currentThread().interrupt(); // preserve interrupt
       throw e; // rethrow so outer handler catches it
     } catch (Exception redisEx) {
-      log.warn("Redis connectivity issue. Falling back to unprotected execution.", redisEx);
-      runRecalculation(event);
-
+      log.error("Redis unavailable. Cannot acquire lock for accountId={}. " +
+          "Marking account STALE to prevent race condition.", event.accountId(), redisEx);
+      accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+      // DO NOT fall through to runRecalculation
     } finally {
       if (acquired) {
         try {

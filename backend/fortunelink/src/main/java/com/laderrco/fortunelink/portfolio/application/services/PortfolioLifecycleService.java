@@ -11,8 +11,6 @@ import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.application.validators.PortfolioLifecycleCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
@@ -112,18 +110,12 @@ public class PortfolioLifecycleService {
   }
 
   private void softDelete(Portfolio portfolio, DeletePortfolioCommand command) {
-    try {
-      if (command.recursive()) {
-        closeAllEligibleAccounts(portfolio);
-      }
-      portfolio.markAsDeleted(command.userId());
-      portfolioRepository.save(portfolio);
-    } catch (PortfolioNotEmptyException e) {
-      throw new PortfolioDeletionException(
-          "Cannot delete portfolio: close accounts first or use recursive delete.");
-    } catch (PortfolioAlreadyDeletedException | IllegalStateException e) {
-      throw new PortfolioDeletionException(e.getMessage());
+    if (command.recursive()) {
+      closeAllEligibleAccounts(portfolio);
     }
+    // Let domain exceptions (NotEmpty, AlreadyDeleted) bubble up naturally
+    portfolio.markAsDeleted(command.userId());
+    portfolioRepository.save(portfolio);
   }
 
   private void closeAllEligibleAccounts(Portfolio portfolio) {

@@ -16,10 +16,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,11 +29,14 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Account-level read operations.
  * <p>
- * getAllAccounts: paginated, does NOT load the Portfolio aggregate. Queries accounts table directly
- * -> batch-fetches symbols -> batch-fetches quotes. Three DB/cache hits total regardless of how
+ * getAllAccounts: paginated, does NOT load the Portfolio aggregate. Queries
+ * accounts table directly
+ * -> batch-fetches symbols -> batch-fetches quotes. Three DB/cache hits total
+ * regardless of how
  * many accounts are on the page.
  * <p>
- * getAccountSummary: single account, DOES load the aggregate because it needs full position detail
+ * getAccountSummary: single account, DOES load the aggregate because it needs
+ * full position detail
  * (quantity, cost basis per lot, etc.) for the detail view.
  */
 @Service
@@ -51,39 +52,39 @@ public class AccountQueryService {
   public Page<AccountView> getAllAccounts(GetAllAccountsQuery query) {
     Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
 
-    // Lightweight ownership check — no aggregate load.
     portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
 
     Pageable pageable = query.pageable();
     Page<AccountSummaryProjection> page = accountQueryRepository.findByPortfolioId(
         query.portfolioId(), pageable);
 
-    // OPTIMIZATION: If the database found no accounts for this specific page,
-    // stop here and return the page metadata.
     if (page.isEmpty()) {
       return new PageImpl<>(List.of(), pageable, page.getTotalElements());
     }
 
     List<AccountSummaryProjection> projections = page.getContent();
     List<AccountId> accountIds = projections.stream()
-        .map(a -> AccountId.fromString(a.getId().toString())).toList();
+        .map(a -> AccountId.fromString(a.getId().toString()))
+        .toList();
 
-    Map<AccountId, Set<AssetSymbol>> symbolsByAccount = accountQueryRepository.findSymbolsForAccounts(
-        accountIds);
+    Map<AccountId, Set<AssetSymbol>> symbolsByAccount = accountQueryRepository.findSymbolsForAccounts(accountIds);
 
-    Set<AssetSymbol> allSymbols = symbolsByAccount.values().stream().flatMap(Set::stream)
+    Set<AssetSymbol> allSymbols = symbolsByAccount.values().stream().flatMap(Collection::stream)
         .collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache =
-        allSymbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
+        ? Map.of()
+        : marketDataService.getBatchQuotes(allSymbols);
 
-    Map<AccountId, Map<AssetSymbol, Money>> feesByAccount = transactionRepository.sumBuyFeesBySymbolForAccounts(
-        accountIds);
+    Map<AccountId, Map<AssetSymbol, Money>> feesByAccount = transactionRepository
+        .sumBuyFeesBySymbolForAccounts(new HashSet<>(accountIds));
 
-    List<AccountView> content = projections.stream().map(
-        projection -> accountViewBuilder.buildFromProjection(projection, quoteCache,
-            feesByAccount.getOrDefault(AccountId.fromString(projection.getId().toString()),
-                Map.of()))).toList();
+    List<AccountView> content = projections.stream().map(projection -> {
+      AccountId currentId = AccountId.fromString(projection.getId().toString());
+      var accountFees = feesByAccount.getOrDefault(currentId, Map.of());
+
+      return accountViewBuilder.buildFromProjection(projection, quoteCache, accountFees);
+    }).toList();
 
     return new PageImpl<>(content, pageable, page.getTotalElements());
   }
@@ -93,7 +94,7 @@ public class AccountQueryService {
 
     // Repository handles ownership check and domain mapping
     Account account = accountQueryRepository.findByIdWithDetails(query.accountId(),
-            query.portfolioId(), query.userId())
+        query.portfolioId(), query.userId())
         .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
     if (account.getPositionCount() == 0) {

@@ -3,6 +3,11 @@ package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.dtos.BocExchangeResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocParsingException;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -19,13 +24,13 @@ import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
-public class BocApiClient {
+public class BocClient {
 
   private final BankOfCanadaClientConfig config;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
 
-  public BocApiClient(BankOfCanadaClientConfig config,
+  public BocClient(BankOfCanadaClientConfig config,
       @Qualifier("defaultObjectMapper") ObjectMapper objectMapper,
       @Qualifier("bocHttpClient") HttpClient httpClient) {
     this.config = config;
@@ -36,6 +41,8 @@ public class BocApiClient {
     config.validate();
   }
 
+  @Retry(name = "boc-api")
+  @CircuitBreaker(name = "boc-api", fallbackMethod = "getLatestRateFallback")
   public BocExchangeResponse getLatestExchangeRate(String to, String from) {
     List<String> series = BocCurrencyPairResolver.resolveSeries(from, to);
 
@@ -102,10 +109,15 @@ public class BocApiClient {
       case 404 -> "BOC API endpoint or series not found: " + url;
       case 500 -> "Bank of Canada server encountered an internal error.";
       default ->
-          String.format("BOC API returned unexpected status: %d - %s", status, response.body());
+        String.format("BOC API returned unexpected status: %d - %s", status, response.body());
     };
 
     log.error(errorMessage);
     throw new BocApiException(errorMessage);
+  }
+
+  private BocExchangeResponse getLatestRateFallback(String to, String from, Throwable t) {
+    log.error("BOC circuit open for {}/{}. Exchange rate unavailable.", from, to);
+    throw new ExchangeRateUnavailableException(from, to, Instant.now());
   }
 }

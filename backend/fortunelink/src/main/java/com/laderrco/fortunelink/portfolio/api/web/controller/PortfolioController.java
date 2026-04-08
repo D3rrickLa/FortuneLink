@@ -49,14 +49,12 @@ public class PortfolioController {
   public PortfolioResponse createPortfolio(@AuthenticatedUser UserId userId,
       @RequestBody @Valid CreatePortfolioRequest request) {
 
-    // Map Request -> Command
     var command = new CreatePortfolioCommand(userId, request.name(), request.description(),
         Currency.of(request.currency()), request.createDefaultAccount(),
         request.defaultAccountType(), request.defaultStrategy());
 
     var view = lifecycleService.createPortfolio(command);
 
-    // Map View -> Response
     return PortfolioResponse.fromView(view);
   }
 

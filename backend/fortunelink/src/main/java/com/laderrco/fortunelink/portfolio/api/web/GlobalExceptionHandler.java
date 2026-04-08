@@ -13,18 +13,19 @@ import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeleti
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.*;
+import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.MarketDataException;
+import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
+import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -142,6 +143,13 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("PORTFOLIO_DELETION_ERROR", ex.getMessage()));
   }
 
+  // NOTE: comment out until we fixed PortfolioLifeCycleService.softDelete() 
+  @ExceptionHandler({ PortfolioNotEmptyException.class, PortfolioAlreadyDeletedException.class })
+  public ResponseEntity<ErrorResponse> handlePortfolioStateConflicts(RuntimeException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ErrorResponse.of("PORTFOLIO_STATE_ERROR", ex.getMessage()));
+  }
+
   @ExceptionHandler(AccountCannotBeClosedException.class)
   public ResponseEntity<ErrorResponse> handleAccountCannotBeClosed(
       AccountCannotBeClosedException ex) {
@@ -180,6 +188,13 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("CONFLICT", ex.getMessage()));
   }
 
+  @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+  public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ErrorResponse.of("CONCURRENT_MODIFICATION",
+            "The record was updated by another process. Please refresh and try again."));
+  }
+
   // -------------------------------------------------------------------------
   // 422 Unprocessable - business rule violations with valid data
   // -------------------------------------------------------------------------
@@ -203,6 +218,12 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("CURRENCY_MISMATCH", ex.getMessage()));
   }
 
+  @ExceptionHandler(UnknownSymbolException.class)
+  public ResponseEntity<ErrorResponse> handleUnknownSymbol(UnknownSymbolException ex) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+        .body(ErrorResponse.of("UNKNOWN_SYMBOL", ex.getMessage()));
+  }
+
   // -------------------------------------------------------------------------
   // ResponseStatusException - from controllers that throw it directly
   // -------------------------------------------------------------------------
@@ -224,6 +245,16 @@ public class GlobalExceptionHandler {
     log.error("Unhandled exception: add a specific handler for: {}", ex.getClass().getName(), ex);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(ErrorResponse.of("INTERNAL_ERROR", "An unexpected error occurred"));
+  }
+
+  // -------------------------------------------------------------------------
+  // 503 - third party APIs
+  // -------------------------------------------------------------------------
+  @ExceptionHandler({ FmpApiException.class, BocApiException.class, MarketDataException.class })
+  public ResponseEntity<ErrorResponse> handleMarketDataError(RuntimeException ex) {
+    log.error("External Provider Error: {}", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .body(ErrorResponse.of("MARKET_DATA_UNAVAILABLE", "Market data service is temporarily unavailable"));
   }
 
   // -------------------------------------------------------------------------

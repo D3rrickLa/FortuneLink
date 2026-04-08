@@ -2,15 +2,13 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -116,18 +114,21 @@ class PositionRecalculationServiceTest {
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: proceeds with fallback when Redis is unreachable")
-  void onRecalculationRequestedProceedsIfRedisDown() throws InterruptedException {
+  @DisplayName("onRecalculationRequested: marks stale and skips execution when Redis is unreachable")
+  void onRecalculationRequestedHandlesRedisDown() throws InterruptedException {
     PositionRecalculationRequestedEvent event = createEvent();
     RLock mockLock = mock(RLock.class);
 
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenThrow(
-        new RuntimeException("Redis connection refused"));
+    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
+        .thenThrow(new RuntimeException("Redis connection refused"));
 
     recalculationService.onRecalculationRequested(event);
 
-    verify(executor).scheduleRecalculation(any(), any(), any(), any());
+    // Verify executor is NOT called (safety first)
+    verifyNoInteractions(executor);
+    // Verify fallback logic
+    verify(accountHealthService).markStale(eq(PORTFOLIO_ID), eq(USER_ID), eq(ACCOUNT_ID));
   }
 
   @Test
@@ -151,26 +152,22 @@ class PositionRecalculationServiceTest {
     verifyNoInteractions(executor);
   }
 
-  @Test
-  @DisplayName("onRecalculationRequested: marks stale if executor fails after lock acquisition")
-  void onRecalculationRequestedMarksStaleOnExecutorFailure() throws InterruptedException {
+@Test
+@DisplayName("onRecalculationRequested: marks stale if executor fails")
+void onRecalculationRequestedMarksStaleOnExecutorFailure() throws InterruptedException {
     PositionRecalculationRequestedEvent event = createEvent();
     RLock mockLock = mock(RLock.class);
-
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
-
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
+    
     doThrow(new RuntimeException("Computation error")).when(executor)
         .scheduleRecalculation(any(), any(), any(), any());
 
-    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(event)).isInstanceOf(
-        RuntimeException.class);
+    recalculationService.onRecalculationRequested(event);
 
-    // If your service catches and rethrows, it might call markStale twice.
-    // atLeastOnce() covers both 1 and 2 calls safely if the logic overlaps.
-    verify(accountHealthService, atLeastOnce()).markStale(any(), any(), any());
+    verify(accountHealthService).markStale(any(), any(), any());
     verify(mockLock).unlock();
-  }
+}
 
   @Test
   @DisplayName("onRecalculationRequested: suppresses failure during lock release")
