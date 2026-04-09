@@ -51,8 +51,6 @@ public class AccountQueryService {
   private final AccountViewBuilder accountViewBuilder;
 
   public Page<AccountView> getAllAccounts(GetAllAccountsQuery query) {
-    Objects.requireNonNull(query, "GetAllAccountsQuery cannot be null");
-
     portfolioLoader.validateOwnership(query.portfolioId(), query.userId());
 
     Pageable pageable = query.pageable();
@@ -68,28 +66,29 @@ public class AccountQueryService {
         .map(a -> AccountId.fromString(a.getId().toString()))
         .toList();
 
-    Map<AccountId, Set<AssetSymbol>> symbolsByAccount = accountQueryRepository.findSymbolsForAccounts(accountIds);
-
-    Set<AssetSymbol> allSymbols = symbolsByAccount.values().stream().flatMap(Collection::stream)
-        .collect(Collectors.toSet());
-
+    // Still need quantities for Total Value calculation
     Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository
         .findQuantitiesForAccounts(accountIds);
+
+    // Get all symbols just for current price quotes
+    Set<AssetSymbol> allSymbols = quantitiesByAccount.values().stream()
+        .flatMap(m -> m.keySet().stream())
+        .collect(Collectors.toSet());
 
     Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
         ? Map.of()
         : marketDataService.getBatchQuotes(allSymbols);
 
-    Map<AccountId, Map<AssetSymbol, Money>> feesByAccount = transactionRepository
-        .sumBuyFeesBySymbolForAccounts(new HashSet<>(accountIds));
+    // REMOVED: symbolsByAccount query
+    // REMOVED: feesByAccount query (The Big Win)
 
     List<AccountView> content = projections.stream().map(projection -> {
       AccountId currentId = AccountId.fromString(projection.getId().toString());
-      var accountFees = feesByAccount.getOrDefault(currentId, Map.of());
       var accountQuantities = quantitiesByAccount.getOrDefault(currentId, Map.of());
 
+      // Pass Map.of() for fees since the builder doesn't use them anyway
       return accountViewBuilder.buildFromProjection(
-          projection, accountQuantities, quoteCache, accountFees);
+          projection, accountQuantities, quoteCache, Map.of());
     }).toList();
 
     return new PageImpl<>(content, pageable, page.getTotalElements());

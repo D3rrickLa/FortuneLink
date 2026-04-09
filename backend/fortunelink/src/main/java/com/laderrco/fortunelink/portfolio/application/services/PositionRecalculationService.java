@@ -2,13 +2,17 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
-import java.util.Objects;
+
+import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -18,24 +22,54 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class PositionRecalculationService {
   private static final Logger log = LoggerFactory.getLogger(PositionRecalculationService.class);
+  private static final Duration DEBOUNCE_WINDOW = Duration.ofSeconds(3);
+  private final StringRedisTemplate redisTemplate;
   private final PositionRecalculationExecutor executor;
   private final AccountHealthService accountHealthService;
   private final RedissonClient redisson; // Injected by Spring Boot Starter
 
-  @Async("recalculationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Async("recalculationExecutor")
   public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
-    Objects.requireNonNull(event, "PositionRecalculationRequestedEvent cannot be null");
+    String key = String.format("recalc:%s:%s",
+        event.accountId().id(),
+        event.symbol().symbol());
 
-    String lockKey = String.format("lock:account:%s", event.accountId().id().toString());
+    String token = UUID.randomUUID().toString();
+
+    Boolean isFirst = redisTemplate.opsForValue().setIfAbsent(key, token, DEBOUNCE_WINDOW);
+
+    if (Boolean.TRUE.equals(isFirst)) {
+      schedule(event, key, token);
+    } else {
+      redisTemplate.opsForValue().set(key, token, DEBOUNCE_WINDOW);
+    }
+  }
+
+  private void schedule(PositionRecalculationRequestedEvent event, String key, String token) {
+    CompletableFuture.delayedExecutor(
+        DEBOUNCE_WINDOW.toMillis(),
+        TimeUnit.MILLISECONDS).execute(() -> runIfLatest(event, key, token));
+  }
+
+  private void runIfLatest(PositionRecalculationRequestedEvent event, String key, String token) {
+    String current = redisTemplate.opsForValue().get(key);
+
+    if (!token.equals(current)) {
+      // A newer event replaced this one → skip
+      return;
+    }
+
+    // We are the latest → delete key and execute
+    redisTemplate.delete(key);
 
     try {
-      acquireAndRun(lockKey, event);
+      acquireAndRun(
+          String.format("lock:account:%s", event.accountId().id()),
+          event);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.error("Recalculation interrupted for portfolioId={} accountId={}", event.portfolioId(),
-          event.accountId(), e);
-      accountHealthService.markStale(event.accountId());
+      log.error("Interrupted", e);
     }
   }
 

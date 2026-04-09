@@ -9,10 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-/*
- * Instant startDate, Instant endDate, TransactionType transactionType, AccountId accountId are
- * optional NOTE: removed transactionType as it was dead code for now, will add back later
- */
+
 public record GetTransactionHistoryQuery(
     PortfolioId portfolioId,
     UserId userId,
@@ -25,7 +22,6 @@ public record GetTransactionHistoryQuery(
   public GetTransactionHistoryQuery {
     // startDate can be null (means from beginning)
     // endDate can be null (means until now)
-    // transactionType can be null (means all types)
 
     // NOTE: originally we did not have this, as in 'null' it means all accounts.
     // that is kind of hard to do so for now, MVP, requires an accountId

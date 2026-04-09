@@ -8,7 +8,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.infrastructure.market.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;
+
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -16,13 +20,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -32,8 +35,7 @@ import org.springframework.stereotype.Service;
 public class FmpProvider implements MarketDataProvider {
   private final FmpClient fmpClient;
   private final FmpResponseMapper responseMapper;
-  // AtomicInteger is thread-safe for multi-user access
-  private final AtomicInteger fmpDailyCallCount = new AtomicInteger(0);
+  private final StringRedisTemplate redisTemplate;
   @Value("${fortunelink.rate-limit.fmp-quota.daily-limit:250}")
   private int fmpDailyLimit;
 
@@ -78,7 +80,7 @@ public class FmpProvider implements MarketDataProvider {
     if (!tryReserve(1)) {
       return null;
     }
-    
+
     try {
       FmpProfileResponse response = fmpClient.getProfile(symbol.symbol());
       return Optional.ofNullable(responseMapper.toAssetInfo(response));
@@ -138,21 +140,24 @@ public class FmpProvider implements MarketDataProvider {
     return "FMP";
   }
 
-  @Scheduled(cron = "0 0 0 * * *")
-  public void resetDailyQuota() {
-    fmpDailyCallCount.set(0);
-  }
-
   private boolean tryReserve(int count) {
-    int current;
-    do {
-      current = fmpDailyCallCount.get();
-      if (current + count > fmpDailyLimit) {
-        log.warn("FMP daily quota reached. Current: {}, Requested: {}, Limit: {}",
-            current, count, fmpDailyLimit);
-        return false;
-      }
-    } while (!fmpDailyCallCount.compareAndSet(current, current + count));
+    String key = "quota:fmp:" + LocalDate.now(ZoneOffset.UTC).toString();
+
+    // Atomically increment
+    Long current = redisTemplate.opsForValue().increment(key, count);
+
+    if (current == null)
+      return false;
+
+    // If this is the first call of the day, set expiration so Redis cleans up
+    if (current <= count) {
+      redisTemplate.expire(key, Duration.ofHours(25));
+    }
+
+    if (current > fmpDailyLimit) {
+      log.warn("FMP daily quota reached. Current: {}, Limit: {}", current, fmpDailyLimit);
+      return false;
+    }
     return true;
   }
 }

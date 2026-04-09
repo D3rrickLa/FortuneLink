@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
-import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -14,7 +13,7 @@ public record RecordSaleRequest(
     @NotNull BigDecimal price,
     @NotNull String currency,
     @NotNull List<FeeRequest> fees,
-    @Nonnull Instant transactionDate,
+    @NotNull Instant transactionDate,
     String notes) {
 
 }

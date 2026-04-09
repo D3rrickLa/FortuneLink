@@ -122,3 +122,9 @@ Before a user records a BUY, they need to search for AAPL or BTC-USD. MarketData
         return ResponseEntity.ok(new AssetInfoResponse(info));
     }
 ```
+
+
+New other issues:
+- No Net Worth History/snapshots
+- Exclude transaction command - needs cash balance 
+- RateLimitInterceptor.getClientIp has a sec vulnerability

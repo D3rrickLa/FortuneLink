@@ -32,11 +32,12 @@ public class TransactionPurgeService {
     this.retentionDays = retentionDays;
   }
 
-  @Scheduled(cron = "0 0 0 * * *") // midnight every night
+  @Scheduled(cron = "0 0 0 * * *", zone = "UTC") // midnight every night
   @Transactional
   public void purgeExpiredTransactions() {
     try {
-      Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
+      int safeRetention = Math.max(retentionDays, 7); // Never purge stuff newer than 7 days
+      Instant cutoff = Instant.now().minus(safeRetention, ChronoUnit.DAYS);
       int deleted = transactionRepository.deleteAllExpiredTransactions(cutoff);
       if (deleted > 0) {
         log.info("Purged {} excluded transactions (cutoff={}, retention={}d)", deleted, cutoff,
@@ -49,7 +50,7 @@ public class TransactionPurgeService {
     }
   }
 
-  @Scheduled(cron = "0 0 3 * * SUN") // 3am Sunday
+  @Scheduled(cron = "0 0 3 * * SUN", zone = "UTC")
   @Transactional
   public void purgeExpiredAssetInfo() {
     infoRepository.deleteExpired();
