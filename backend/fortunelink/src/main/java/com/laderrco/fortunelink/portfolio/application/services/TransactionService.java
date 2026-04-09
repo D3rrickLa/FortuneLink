@@ -50,6 +50,8 @@ import java.util.ConcurrentModificationException;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,15 +91,14 @@ public class TransactionService {
   private final IdempotencyCache idempotencyCache; // Inject the Caffeine bean
 
   @Recover
-  public TransactionView recoverFromOptimisticLock(ObjectOptimisticLockingFailureException ex,
-      TransactionCommand command) {
-    log.error("Optimistic lock exhausted after 3 attempts. portfolioId={} accountId={}",
-        command.portfolioId(), command.accountId(), ex);
+  public TransactionView recover(ObjectOptimisticLockingFailureException ex, TransactionCommand cmd) {
+    return handleOptimisticLockFailure(ex, cmd.accountId());
+  }
 
-    accountHealthService.markStale(command.accountId());
-
-    throw new ConcurrentModificationException(
-        "Portfolio was modified concurrently. Please retry your transaction.", ex);
+  @Recover
+  public TransactionView recover(ObjectOptimisticLockingFailureException ex, IdentifiedTransactionCommand cmd) {
+    // This catches the Exclude/Restore path explicitly
+    return handleOptimisticLockFailure(ex, cmd.accountId());
   }
 
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
@@ -203,38 +204,48 @@ public class TransactionService {
 
   public TransactionView excludeTransaction(ExcludeTransactionCommand command) {
     ValidationUtils.validate(command, validator::validate, "excludeTransaction");
-    Transaction existing = loadTransaction(command);
-    if (existing.isExcluded()) {
-      throw new InvalidTransactionException("Transaction already excluded");
-    }
-    Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
-    // portfolioId from command, no secondary lookup needed
-    transactionRepository.save(excluded, command.portfolioId(), command.idempotencyKey());
-    publishRecalculationIfRequired(existing, command);
 
-    if (existing.transactionType() == TransactionType.BUY) {
-      evictBuyFeeCache(command.accountId());
-    }
+    return executeWithIdempotency(command, () -> {
+      Transaction existing = loadTransaction(command);
 
-    return transactionViewMapper.toTransactionView(excluded);
+      // This only throws if the transaction was excluded by a DIFFERENT idempotency
+      // key
+      if (existing.isExcluded()) {
+        throw new InvalidTransactionException("Transaction already excluded");
+      }
+
+      Transaction excluded = existing.markAsExcluded(command.userId(), command.reason());
+      transactionRepository.save(excluded, command.portfolioId(), command.idempotencyKey());
+
+      publishRecalculationIfRequired(existing, command);
+      if (existing.transactionType() == TransactionType.BUY) {
+        evictBuyFeeCache(command.accountId());
+      }
+
+      return transactionViewMapper.toTransactionView(excluded);
+    });
   }
 
   public TransactionView restoreTransaction(RestoreTransactionCommand command) {
     ValidationUtils.validate(command, validator::validate, "restoreTransaction");
-    Transaction existing = loadTransaction(command);
-    if (!existing.isExcluded()) {
-      throw new InvalidTransactionException("Transaction is not excluded");
-    }
-    Transaction restored = existing.restore();
-    // portfolioId from command — no secondary lookup needed
-    transactionRepository.save(restored, command.portfolioId(), command.idempotencyKey());
-    publishRecalculationIfRequired(existing, command);
 
-    if (existing.transactionType() == TransactionType.BUY) {
-      evictBuyFeeCache(command.accountId());
-    }
+    return executeWithIdempotency(command, () -> {
+      Transaction existing = loadTransaction(command);
 
-    return transactionViewMapper.toTransactionView(restored);
+      if (!existing.isExcluded()) {
+        throw new InvalidTransactionException("Transaction is not excluded");
+      }
+
+      Transaction restored = existing.restore();
+      transactionRepository.save(restored, command.portfolioId(), command.idempotencyKey());
+
+      publishRecalculationIfRequired(existing, command);
+      if (existing.transactionType() == TransactionType.BUY) {
+        evictBuyFeeCache(command.accountId());
+      }
+
+      return transactionViewMapper.toTransactionView(restored);
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -246,34 +257,12 @@ public class TransactionService {
       Function<PortfolioContext, Transaction> recordFn) {
     ValidationUtils.validate(command, validationFn, operationName);
 
-    UUID key = command.idempotencyKey();
-    if (key != null) {
-      // 1. Level 1: Memory Cache (Super Fast)
-      TransactionView cached = idempotencyCache.get(key.toString());
-      if (cached != null)
-        return cached;
-
-      // 2. Level 2: Database (Safety Net)
-      Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(key);
-      if (existing.isPresent()) {
-        TransactionView view = transactionViewMapper.toTransactionView(existing.get());
-        idempotencyCache.put(key.toString(), view); // Backfill cache
-        return view;
-      }
-    }
-
-    PortfolioContext ctx = getPortfolioContext(command);
-    Transaction tx = recordFn.apply(ctx);
-    persistChanges(ctx, tx, key);
-
-    TransactionView result = transactionViewMapper.toTransactionView(tx);
-
-    // 3. Save to cache after success
-    if (key != null) {
-      idempotencyCache.put(key.toString(), result);
-    }
-
-    return result;
+    return executeWithIdempotency(command, () -> {
+      PortfolioContext ctx = getPortfolioContext(command);
+      Transaction tx = recordFn.apply(ctx);
+      persistChanges(ctx, tx, command.idempotencyKey());
+      return transactionViewMapper.toTransactionView(tx);
+    });
   }
 
   private PortfolioContext getPortfolioContext(TransactionCommand command) {
@@ -385,5 +374,40 @@ public class TransactionService {
           + "cash balance. Review transaction history before proceeding.", assetSymbol,
           transactionDate, accountId);
     }
+  }
+
+  private TransactionView executeWithIdempotency(TransactionCommand command,
+      Supplier<TransactionView> businessLogic) {
+    UUID key = command.idempotencyKey();
+
+    // 1. Level 1 & 2: Check Cache and DB
+    if (key != null) {
+      TransactionView cached = idempotencyCache.get(key.toString());
+      if (cached != null)
+        return cached;
+
+      Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(key);
+      if (existing.isPresent()) {
+        TransactionView view = transactionViewMapper.toTransactionView(existing.get());
+        idempotencyCache.put(key.toString(), view);
+        return view;
+      }
+    }
+
+    // 2. Execute the actual logic
+    TransactionView result = businessLogic.get();
+
+    // 3. Level 3: Backfill cache after success
+    if (key != null) {
+      idempotencyCache.put(key.toString(), result);
+    }
+
+    return result;
+  }
+
+  private TransactionView handleOptimisticLockFailure(Exception ex, AccountId accountId) {
+    log.error("Optimistic lock exhausted. Marking account {} as stale.", accountId, ex);
+    accountHealthService.markStale(accountId);
+    throw new ConcurrentModificationException("Portfolio was modified concurrently.", ex);
   }
 }
