@@ -45,34 +45,21 @@ public class FmpProvider implements MarketDataProvider {
       return Map.of();
     }
 
-    final int batchSize = symbols.size();
-
-    // --- ATOMIC QUOTA CHECK & RESERVE ---
-    // We attempt to "reserve" the entire batch size upfront.
-    int currentCount;
-    do {
-      currentCount = fmpDailyCallCount.get();
-      if (currentCount + batchSize > fmpDailyLimit) {
-        log.warn("FMP daily quota reached (Limit: {}). Skipping batch.", fmpDailyLimit);
-        return Map.of();
-      }
-      // Only proceed if we can atomically swap the old value for (old + batchSize)
-    } while (!fmpDailyCallCount.compareAndSet(currentCount, currentCount + batchSize));
+    if (!tryReserve(symbols.size())) {
+      return Map.of();
+    }
 
     Map<AssetSymbol, MarketAssetQuote> results = new HashMap<>();
-
     for (AssetSymbol symbol : symbols) {
       try {
-        // Note: fmpDailyCallCount is already incremented via the CAS loop above
         FmpQuoteResponse raw = fmpClient.getQuote(symbol.symbol());
         if (raw == null)
           continue;
 
         Currency currency = knownCurrencies.getOrDefault(symbol, Currency.USD);
         MarketAssetQuote quote = responseMapper.toQuote(raw, currency);
-        if (quote != null) {
+        if (quote != null)
           results.put(symbol, quote);
-        }
       } catch (Exception e) {
         log.warn("Failed to fetch quote for symbol={}: {}", symbol.symbol(), e.getMessage());
       }
@@ -88,14 +75,10 @@ public class FmpProvider implements MarketDataProvider {
 
   @Override
   public Optional<MarketAssetInfo> fetchAssetInfo(AssetSymbol symbol) {
-    // Single increments are easier: incrementAndGet returns the NEW value
-    if (fmpDailyCallCount.incrementAndGet() > fmpDailyLimit) {
-      log.warn("FMP daily quota reached. Cannot fetch Asset Info for {}", symbol.symbol());
-      // Optional: decrement if you want to be "precise" about failed attempts not counting,
-      // but usually, it's safer to leave it to avoid infinite retries.
-      return Optional.empty();
+    if (!tryReserve(1)) {
+      return null;
     }
-
+    
     try {
       FmpProfileResponse response = fmpClient.getProfile(symbol.symbol());
       return Optional.ofNullable(responseMapper.toAssetInfo(response));
@@ -158,5 +141,18 @@ public class FmpProvider implements MarketDataProvider {
   @Scheduled(cron = "0 0 0 * * *")
   public void resetDailyQuota() {
     fmpDailyCallCount.set(0);
+  }
+
+  private boolean tryReserve(int count) {
+    int current;
+    do {
+      current = fmpDailyCallCount.get();
+      if (current + count > fmpDailyLimit) {
+        log.warn("FMP daily quota reached. Current: {}, Requested: {}, Limit: {}",
+            current, count, fmpDailyLimit);
+        return false;
+      }
+    } while (!fmpDailyCallCount.compareAndSet(current, current + count));
+    return true;
   }
 }

@@ -21,6 +21,8 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity, UUID> {
+
+  Optional<PortfolioJpaEntity> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
   /**
    * Fetches the portfolio with its complete account graph (accounts → positions +
    * realized gains).

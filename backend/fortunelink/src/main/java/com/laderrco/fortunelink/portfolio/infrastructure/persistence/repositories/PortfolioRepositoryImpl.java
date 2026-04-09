@@ -57,7 +57,7 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @Override
   public Optional<Portfolio> findByIdAndUserId(PortfolioId id, UserId userId) {
-    return jpaRepository.findWithAccountsByIdAndUserId(UUID.fromString(id.toString()),
+    return jpaRepository.findByIdAndUserId(UUID.fromString(id.toString()),
         UUID.fromString(userId.toString())).map(mapper::toDomain);
   }
 

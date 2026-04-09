@@ -109,4 +109,6 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
       @Param("symbol") String symbol, @Param("start") Instant start, @Param("end") Instant end);
 
   Optional<TransactionJpaEntity> findByIdempotencyKey(String key);
+
+  Optional<TransactionJpaEntity> findByIdempotencyKeyAndPortfolioId(String key, @Param("portfolioId") UUID portfolioId);
 }

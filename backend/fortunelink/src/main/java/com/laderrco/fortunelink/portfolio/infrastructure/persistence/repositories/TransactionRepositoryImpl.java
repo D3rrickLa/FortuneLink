@@ -144,7 +144,7 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   }
 
   @Override
-  @Cacheable(value = BUY_FEE_CACHE, key = "#accountId.id().toString()")
+  @Cacheable(value = "fees:buy", key = "'account:' + #accountId.id()")
   public Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId) {
     return sumBuyFeesBySymbolForAccounts(Set.of(accountId)).getOrDefault(accountId, Map.of());
   }
@@ -197,5 +197,11 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   public Optional<Transaction> findByIdempotencyKey(UUID key) {
     return jpaRepository.findByIdempotencyKey(key.toString()).map(mapper::toDomain);
+  }
+
+  @Override
+  public Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId) {
+    return jpaRepository.findByIdempotencyKeyAndPortfolioId(idempotencyKey.toString(), portfolioId.id())
+    .map(mapper::toDomain);
   }
 }

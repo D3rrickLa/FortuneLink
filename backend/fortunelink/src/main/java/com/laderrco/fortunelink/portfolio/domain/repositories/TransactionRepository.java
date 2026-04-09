@@ -102,4 +102,6 @@ public interface TransactionRepository {
       Instant start, Instant end);
 
   Optional<Transaction> findByIdempotencyKey(UUID idempotencyKey);
+
+  Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId);
 }

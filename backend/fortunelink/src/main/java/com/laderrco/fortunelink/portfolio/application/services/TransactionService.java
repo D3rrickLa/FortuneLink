@@ -386,18 +386,17 @@ public class TransactionService {
       if (cached != null)
         return cached;
 
-      Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(key);
+      Optional<Transaction> existing = transactionRepository.findByIdempotencyKeyAndPortfolioId(key, command.portfolioId());
       if (existing.isPresent()) {
+        log.info("Duplicate transaction detected for key {} in portfolio {}", key, command.portfolioId());
         TransactionView view = transactionViewMapper.toTransactionView(existing.get());
         idempotencyCache.put(key.toString(), view);
         return view;
       }
     }
 
-    // 2. Execute the actual logic
     TransactionView result = businessLogic.get();
 
-    // 3. Level 3: Backfill cache after success
     if (key != null) {
       idempotencyCache.put(key.toString(), result);
     }

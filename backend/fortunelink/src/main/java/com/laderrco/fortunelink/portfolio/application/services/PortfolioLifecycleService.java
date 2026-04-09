@@ -56,8 +56,7 @@ public class PortfolioLifecycleService {
 
   public PortfolioView updatePortfolio(UpdatePortfolioCommand command) {
     ValidationUtils.validate(command, validator::validate, "updatePortfolio");
-    Portfolio existing = portfolioLoader.loadUserPortfolioWithGraph(command.portfolioId(),
-        command.userId());
+    Portfolio existing = portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId());
     existing.updateDetails(command.name(), command.description());
     if (command.currency() != null) {
       existing.updateDisplayCurrency(command.currency());
