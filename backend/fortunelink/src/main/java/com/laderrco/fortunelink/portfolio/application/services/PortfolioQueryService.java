@@ -104,7 +104,7 @@ public class PortfolioQueryService {
   }
 
   /**
-   * Calculates net worth for a user's portfolio.
+   * Calculates net worth for a user's portfolio. as of 'now'
    * <p>
    * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL into Loan/Debt
    * context).

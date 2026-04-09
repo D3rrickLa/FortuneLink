@@ -42,6 +42,8 @@ public interface PortfolioRepository {
    */
   List<Portfolio> findAllActiveByUserId(UserId userId);
 
+  List<UserId> findAllActiveUserIds();
+
   /**
    * Retrieves portfolios that have accounts by id and user id
    *

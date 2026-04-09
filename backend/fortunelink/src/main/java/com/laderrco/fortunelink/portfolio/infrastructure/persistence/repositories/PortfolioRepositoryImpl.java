@@ -106,4 +106,9 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
   public void markAccountStale(AccountId accountId) {
     jpaRepository.markAccountStale(accountId.id());
   }
+
+  @Override
+  public List<UserId> findAllActiveUserIds() {
+    return jpaRepository.findAllActiveUserIds().stream().map(u -> new UserId(u)).toList();
+  }
 }

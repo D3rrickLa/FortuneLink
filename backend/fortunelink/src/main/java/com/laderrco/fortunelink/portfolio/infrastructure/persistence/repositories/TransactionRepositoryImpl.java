@@ -25,9 +25,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class TransactionRepositoryImpl implements TransactionRepository,
-    TransactionQueryRepository {
-  private static final String BUY_FEE_CACHE = "fees:buy";
+public class TransactionRepositoryImpl implements TransactionRepository, TransactionQueryRepository {
 
   private final JpaTransactionRepository jpaRepository;
   private final TransactionDomainMapper mapper;

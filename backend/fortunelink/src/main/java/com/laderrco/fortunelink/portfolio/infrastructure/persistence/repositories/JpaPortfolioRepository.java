@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Repository;
 public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity, UUID> {
 
   Optional<PortfolioJpaEntity> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
   /**
    * Fetches the portfolio with its complete account graph (accounts → positions +
    * realized gains).
@@ -122,4 +124,7 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
   @Modifying
   @Query("UPDATE AccountJpaEntity a SET a.healthStatus = 'STALE' WHERE a.id = :accountId")
   void markAccountStale(@Param("accountId") UUID accountId);
+
+  @Query("SELECT DISTINCT p.userId FROM Portfolio p WHERE p.deleted = false")
+  List<UUID> findAllActiveUserIds();
 }
