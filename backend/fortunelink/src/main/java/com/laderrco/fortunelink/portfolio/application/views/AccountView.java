@@ -17,5 +17,7 @@ public record AccountView(
     Currency baseCurrency,
     Money cashBalance,
     Money totalValue,
-    Instant creationDate) {
+    Instant creationDate,
+    boolean hasCashImbalance,
+    int excludedTransactionCount) {
 }

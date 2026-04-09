@@ -200,6 +200,11 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId) {
     return jpaRepository.findByIdempotencyKeyAndPortfolioId(idempotencyKey.toString(), portfolioId.id())
-    .map(mapper::toDomain);
+        .map(mapper::toDomain);
+  }
+
+  @Override
+  public int countExcludedPositionAffecting(AccountId accountId) {
+    return jpaRepository.countExcludedPositionAffecting(accountId.id());
   }
 }

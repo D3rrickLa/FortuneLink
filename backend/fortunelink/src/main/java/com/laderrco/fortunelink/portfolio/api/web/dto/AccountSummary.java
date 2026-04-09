@@ -12,11 +12,22 @@ public record AccountSummary(
     double cashBalance,
     double totalValue,
     int assetCount,
-    // Derived from PositionView list size
-    Instant creationDate) {
+    Instant creationDate,
+    boolean hasCashImbalance, // NEW
+    int excludedTransactionCount) // NEW
+{
   public static AccountSummary fromView(AccountView view) {
-    return new AccountSummary(view.accountId().toString(), view.name(), view.type().name(),
-        view.status().name(), view.baseCurrency().getCode(), view.cashBalance().amount().doubleValue(),
-        view.totalValue().amount().doubleValue(), view.assets().size(), view.creationDate());
+    return new AccountSummary(
+        view.accountId().toString(),
+        view.name(),
+        view.type().name(),
+        view.status().name(),
+        view.baseCurrency().getCode(),
+        view.cashBalance().amount().doubleValue(),
+        view.totalValue().amount().doubleValue(),
+        view.assets().size(),
+        view.creationDate(),
+        view.hasCashImbalance(),
+        view.excludedTransactionCount());
   }
 }

@@ -104,4 +104,6 @@ public interface TransactionRepository {
   Optional<Transaction> findByIdempotencyKey(UUID idempotencyKey);
 
   Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId);
+
+  int countExcludedPositionAffecting(AccountId accountId);
 }
