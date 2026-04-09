@@ -29,6 +29,8 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
+
 import java.time.Instant;
 import java.util.ConcurrentModificationException;
 import java.util.List;
@@ -89,7 +91,7 @@ class TransactionServiceRetryTest {
     // This is where the loop happens
     when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
         any(), anyBoolean())).thenThrow(
-        new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
+            new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
 
     // 6. Execute and Assert
     // The @Recover method throws ConcurrentModificationException
@@ -102,8 +104,7 @@ class TransactionServiceRetryTest {
         any(), any(), any(), anyBoolean());
 
     // 8. Verify the Recovery Logic
-    verify(accountHealthService).markStale(command.portfolioId(), command.userId(),
-        command.accountId());
+    verify(accountHealthService).markStale(command.accountId());
   }
 
   @Test
@@ -238,11 +239,16 @@ class TransactionServiceRetryTest {
     }
 
     @Bean
+    public IdempotencyCache ic() {
+      return mock(IdempotencyCache.class);
+    };
+
+    @Bean
     public TransactionService transactionService(PortfolioRepository pr, AccountHealthService ahs,
         TransactionRepository tr, MarketAssetInfoRepository ir, TransactionViewMapper tvm,
         TransactionCommandValidator v, ApplicationEventPublisher ep, PortfolioLoader pl,
-        ExchangeRateService ers, TransactionRecordingService trs, CacheManager cm) {
-      return new TransactionService(pr, ahs, tr, ir, tvm, v, ep, pl, ers, trs, cm);
+        ExchangeRateService ers, TransactionRecordingService trs, CacheManager cm, IdempotencyCache ic) {
+      return new TransactionService(pr, ahs, tr, ir, tvm, v, ep, pl, ers, trs, cm, ic);
     }
   }
 }

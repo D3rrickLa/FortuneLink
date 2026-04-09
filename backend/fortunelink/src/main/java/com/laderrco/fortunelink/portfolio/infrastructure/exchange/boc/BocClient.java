@@ -61,6 +61,7 @@ public class BocClient {
     }
   }
 
+  @CircuitBreaker(name = "boc-api")
   public BocExchangeResponse getHistoricalExchangeRate(String to, String from, Instant startDate,
       Instant endDate) {
     List<String> series = BocCurrencyPairResolver.resolveSeries(from, to);

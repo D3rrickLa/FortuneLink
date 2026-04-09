@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -39,32 +40,33 @@ public class FmpProvider implements MarketDataProvider {
   @Override
   public Map<AssetSymbol, MarketAssetQuote> fetchBatchQuotes(Set<AssetSymbol> symbols,
       Map<AssetSymbol, Currency> knownCurrencies) {
+
     if (symbols == null || symbols.isEmpty()) {
       return Map.of();
     }
 
-    // --- QUOTA CHECK ---
-    // We check if the NEXT batch of calls will put us over.
-    // FMP Free Tier doesn't have a true 'batch' quote endpoint for all symbols,
-    // so each loop iteration is a billing hit.
-    if (fmpDailyCallCount.get() + symbols.size() > fmpDailyLimit) {
-      log.warn(
-          "FMP daily quota reached (Limit: {}). Skipping API calls to prevent 429/Account suspension.",
-          fmpDailyLimit);
-      return Map.of(); // Return empty to trigger fallback to cost basis in ValuationService
-    }
+    final int batchSize = symbols.size();
+
+    // --- ATOMIC QUOTA CHECK & RESERVE ---
+    // We attempt to "reserve" the entire batch size upfront.
+    int currentCount;
+    do {
+      currentCount = fmpDailyCallCount.get();
+      if (currentCount + batchSize > fmpDailyLimit) {
+        log.warn("FMP daily quota reached (Limit: {}). Skipping batch.", fmpDailyLimit);
+        return Map.of();
+      }
+      // Only proceed if we can atomically swap the old value for (old + batchSize)
+    } while (!fmpDailyCallCount.compareAndSet(currentCount, currentCount + batchSize));
 
     Map<AssetSymbol, MarketAssetQuote> results = new HashMap<>();
 
     for (AssetSymbol symbol : symbols) {
       try {
-        // Increment counter for every actual network call
-        fmpDailyCallCount.incrementAndGet();
-
+        // Note: fmpDailyCallCount is already incremented via the CAS loop above
         FmpQuoteResponse raw = fmpClient.getQuote(symbol.symbol());
-        if (raw == null) {
+        if (raw == null)
           continue;
-        }
 
         Currency currency = knownCurrencies.getOrDefault(symbol, Currency.USD);
         MarketAssetQuote quote = responseMapper.toQuote(raw, currency);
@@ -86,8 +88,11 @@ public class FmpProvider implements MarketDataProvider {
 
   @Override
   public Optional<MarketAssetInfo> fetchAssetInfo(AssetSymbol symbol) {
+    // Single increments are easier: incrementAndGet returns the NEW value
     if (fmpDailyCallCount.incrementAndGet() > fmpDailyLimit) {
       log.warn("FMP daily quota reached. Cannot fetch Asset Info for {}", symbol.symbol());
+      // Optional: decrement if you want to be "precise" about failed attempts not counting,
+      // but usually, it's safer to leave it to avoid infinite retries.
       return Optional.empty();
     }
 
@@ -150,10 +155,7 @@ public class FmpProvider implements MarketDataProvider {
     return "FMP";
   }
 
-  // This method resets the counter at midnight (or whenever the app restarts)
-  // For a production app, you'd likely use a Redis key that expires at midnight
-  // to track this across app restarts, but AtomicInteger works for a single
-  // instance.
+  @Scheduled(cron = "0 0 0 * * *")
   public void resetDailyQuota() {
     fmpDailyCallCount.set(0);
   }

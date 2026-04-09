@@ -7,7 +7,6 @@ import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.F
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 
 import java.io.IOException;
 import java.net.URI;
@@ -50,7 +49,6 @@ public class FmpClient {
   }
 
   @Retry(name = "fmp-api")
-  @TimeLimiter(name = "fmp-api")
   @CircuitBreaker(name = "fmp-api", fallbackMethod = "getQuoteFallback")
   public FmpQuoteResponse getQuote(String symbol) {
     // FMP Quote endpoint is actually /quote/SYMBOL
@@ -156,11 +154,19 @@ public class FmpClient {
         .queryParam("apikey", config.getApiKey()).build().toUriString();
   }
 
+  @SuppressWarnings("unused")
   private List<FmpQuoteResponse> getBatchQuotesFallback(List<String> symbols, Throwable t) {
     log.warn("FMP circuit open for batch quote. Cause: {}", t.getMessage());
     return List.of();
   }
 
+  @SuppressWarnings("unused")
+  private FmpQuoteResponse getQuoteFallback(String symbol, Throwable t) {
+    log.warn("FMP circuit open for quote symbol={}, cause: {}", symbol, t.getMessage());
+    return null; // caller must handle null
+}
+
+  @SuppressWarnings("unused")
   private FmpProfileResponse getProfileFallback(String symbol, Throwable t) {
     log.warn("FMP circuit open for profile symbol={}", symbol);
     return null;

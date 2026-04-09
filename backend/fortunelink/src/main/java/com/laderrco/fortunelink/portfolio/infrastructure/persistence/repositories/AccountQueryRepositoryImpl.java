@@ -2,10 +2,12 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import com.laderrco.fortunelink.portfolio.application.repositories.AccountQueryRepository;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.services.projectors.AssetBalanceProjection;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers.PortfolioDomainMapper;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSymbolProjection;
@@ -36,8 +38,10 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
   }
 
   /**
-   * Groups (accountId, symbol) rows into Map<AccountId, Set<AssetSymbol>>. Accounts with no open
-   * positions are absent from the result — callers should use getOrDefault(id, Set.of()).
+   * Groups (accountId, symbol) rows into Map<AccountId, Set<AssetSymbol>>.
+   * Accounts with no open
+   * positions are absent from the result — callers should use getOrDefault(id,
+   * Set.of()).
    */
   @Override
   public Map<AccountId, Set<AssetSymbol>> findSymbolsForAccounts(List<AccountId> accountIds) {
@@ -64,7 +68,29 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
   public Optional<Account> findByIdWithDetails(AccountId accountId, PortfolioId portfolioId,
       UserId userId) {
     return jpaAccountRepository.findByIdWithOwnershipCheck(UUID.fromString(accountId.toString()),
-            UUID.fromString(portfolioId.toString()), UUID.fromString(userId.toString()))
+        UUID.fromString(portfolioId.toString()), UUID.fromString(userId.toString()))
         .map(mapper::accountToDomain);
+  }
+
+  @Override
+  public Map<AccountId, Map<AssetSymbol, Quantity>> findQuantitiesForAccounts(List<AccountId> accountIds) {
+    if (accountIds == null || accountIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<UUID> uuids = accountIds.stream()
+        .map(id -> UUID.fromString(id.toString()))
+        .toList();
+
+    List<AssetBalanceProjection> rows = jpaAccountRepository.findBalancesForAccounts(uuids);
+
+    Map<AccountId, Map<AssetSymbol, Quantity>> result = new LinkedHashMap<>();
+    for (AssetBalanceProjection row : rows) {
+      AccountId accountId = AccountId.fromString(row.getAccountId().toString());
+      AssetSymbol symbol = new AssetSymbol(row.getSymbol());
+      Quantity qty = new Quantity(row.getQuantity());
+      result.computeIfAbsent(accountId, k -> new LinkedHashMap<>()).put(symbol, qty);
+    }
+    return Collections.unmodifiableMap(result);
   }
 }

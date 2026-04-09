@@ -35,7 +35,7 @@ public class PositionRecalculationService {
       Thread.currentThread().interrupt();
       log.error("Recalculation interrupted for portfolioId={} accountId={}", event.portfolioId(),
           event.accountId(), e);
-      accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+      accountHealthService.markStale(event.accountId());
     }
   }
 
@@ -52,7 +52,7 @@ public class PositionRecalculationService {
       throw e;
     } catch (Exception redisEx) {
       log.error("Redis unavailable. Marking account STALE.", redisEx);
-      accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+      accountHealthService.markStale(event.accountId());
       return; // Fail-fast: No lock, no execution.
     }
 
@@ -79,7 +79,7 @@ public class PositionRecalculationService {
     } catch (Exception e) {
       log.error("Recalculation failed for accountId={} symbol={}", event.accountId(),
           event.symbol().symbol(), e);
-      accountHealthService.markStale(event.portfolioId(), event.userId(), event.accountId());
+      accountHealthService.markStale(event.accountId());
       throw e;
     }
   }

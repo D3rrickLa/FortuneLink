@@ -42,6 +42,8 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepositor
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
@@ -71,7 +73,7 @@ TransactionService-> TransactionRecordingService (create transaction) -> Positio
 @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
 public class TransactionService {
   private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
-  private static final String BUY_FEE_CACHE = "fees:buy:";
+  private static final String BUY_FEE_CACHE = "fees:buy";
 
   private final PortfolioRepository portfolioRepository;
   private final AccountHealthService accountHealthService;
@@ -84,6 +86,7 @@ public class TransactionService {
   private final ExchangeRateService exchangeRateService;
   private final TransactionRecordingService transactionRecordingService;
   private final CacheManager cacheManager;
+  private final IdempotencyCache idempotencyCache; // Inject the Caffeine bean
 
   @Recover
   public TransactionView recoverFromOptimisticLock(ObjectOptimisticLockingFailureException ex,
@@ -91,10 +94,7 @@ public class TransactionService {
     log.error("Optimistic lock exhausted after 3 attempts. portfolioId={} accountId={}",
         command.portfolioId(), command.accountId(), ex);
 
-    accountHealthService.markStale(
-        command.portfolioId(),
-        command.userId(),
-        command.accountId());
+    accountHealthService.markStale(command.accountId());
 
     throw new ConcurrentModificationException(
         "Portfolio was modified concurrently. Please retry your transaction.", ex);
@@ -244,22 +244,36 @@ public class TransactionService {
   private <C extends TransactionCommand> TransactionView execute(C command,
       Function<C, ValidationResult> validationFn, String operationName,
       Function<PortfolioContext, Transaction> recordFn) {
-
     ValidationUtils.validate(command, validationFn, operationName);
 
-    // Idempotency check
-    if (command.idempotencyKey() != null) {
-      Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(command.idempotencyKey());
+    UUID key = command.idempotencyKey();
+    if (key != null) {
+      // 1. Level 1: Memory Cache (Super Fast)
+      TransactionView cached = idempotencyCache.get(key.toString());
+      if (cached != null)
+        return cached;
+
+      // 2. Level 2: Database (Safety Net)
+      Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(key);
       if (existing.isPresent()) {
-        log.info("Idempotent replay for key={}", command.idempotencyKey());
-        return transactionViewMapper.toTransactionView(existing.get());
+        TransactionView view = transactionViewMapper.toTransactionView(existing.get());
+        idempotencyCache.put(key.toString(), view); // Backfill cache
+        return view;
       }
     }
 
     PortfolioContext ctx = getPortfolioContext(command);
     Transaction tx = recordFn.apply(ctx);
-    persistChanges(ctx, tx, command.idempotencyKey());
-    return transactionViewMapper.toTransactionView(tx);
+    persistChanges(ctx, tx, key);
+
+    TransactionView result = transactionViewMapper.toTransactionView(tx);
+
+    // 3. Save to cache after success
+    if (key != null) {
+      idempotencyCache.put(key.toString(), result);
+    }
+
+    return result;
   }
 
   private PortfolioContext getPortfolioContext(TransactionCommand command) {

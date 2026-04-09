@@ -3,7 +3,6 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -128,7 +127,7 @@ class PositionRecalculationServiceTest {
     // Verify executor is NOT called (safety first)
     // Verify fallback logic
     verifyNoInteractions(executor);
-    verify(accountHealthService).markStale(eq(PORTFOLIO_ID), eq(USER_ID), eq(ACCOUNT_ID));
+    verify(accountHealthService).markStale(eq(ACCOUNT_ID));
   }
 
   @Test
@@ -145,8 +144,7 @@ class PositionRecalculationServiceTest {
     recalculationService.onRecalculationRequested(event);
 
     // Explicitly check for interactions with markStale using class matchers
-    verify(accountHealthService).markStale(any(PortfolioId.class), any(UserId.class),
-        any(AccountId.class));
+    verify(accountHealthService).markStale(any(AccountId.class));
 
     assertTrue(Thread.interrupted(), "Interrupt flag should be set");
     verifyNoInteractions(executor);
@@ -169,7 +167,7 @@ class PositionRecalculationServiceTest {
         .hasMessageContaining("Computation error");
 
     // Verify side effects happened despite the crash
-    verify(accountHealthService).markStale(eq(PORTFOLIO_ID), eq(USER_ID), eq(ACCOUNT_ID));
+    verify(accountHealthService).markStale(eq(ACCOUNT_ID));
     verify(mockLock).unlock();
   }
 

@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import com.laderrco.fortunelink.portfolio.domain.services.projectors.AssetBalanceProjection;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.AccountJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSymbolProjection;
@@ -19,10 +20,12 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
   /**
    * Paginated summary projection for a portfolio's accounts.
    * <p>
-   * Note: uses {@code a.portfolio.id} — AccountJpaEntity has a @ManyToOne relationship, not a
+   * Note: uses {@code a.portfolio.id} — AccountJpaEntity has a @ManyToOne
+   * relationship, not a
    * direct portfolioId column.
    * <p>
-   * Explicitly excludes CLOSED accounts from the default list view. Callers that need closed
+   * Explicitly excludes CLOSED accounts from the default list view. Callers that
+   * need closed
    * accounts should add a separate query.
    */
   @Query("""
@@ -46,11 +49,14 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
       Pageable pageable);
 
   /**
-   * Returns one row per (accountId, symbol) for every open position across the supplied account
+   * Returns one row per (accountId, symbol) for every open position across the
+   * supplied account
    * IDs.
    * <p>
-   * Sourced from PositionJpaEntity — current open holdings only. Symbols that have been fully sold
-   * are no longer in positions, so they will not appear here. This is the correct behaviour for
+   * Sourced from PositionJpaEntity — current open holdings only. Symbols that
+   * have been fully sold
+   * are no longer in positions, so they will not appear here. This is the correct
+   * behaviour for
    * quote fetching.
    */
   @Query("""
@@ -62,7 +68,18 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
       """)
   List<AccountSymbolProjection> findSymbolsForAccounts(@Param("accountIds") List<UUID> accountIds);
 
-  @EntityGraph(attributePaths = {"positions", "realizedGains"})
+  @Query("""
+      SELECT
+          p.account.id AS accountId,
+          p.symbol     AS symbol,
+          p.quantity   AS quantity
+      FROM PositionJpaEntity p
+      WHERE p.account.id IN :accountIds
+      """)
+  List<AssetBalanceProjection> findBalancesForAccounts(
+      @Param("accountIds") List<UUID> accountIds);
+
+  @EntityGraph(attributePaths = { "positions", "realizedGains" })
   @Query("""
       SELECT a FROM AccountJpaEntity a
       WHERE a.id = :accountId
@@ -71,4 +88,5 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
       """)
   Optional<AccountJpaEntity> findByIdWithOwnershipCheck(@Param("accountId") UUID accountId,
       @Param("portfolioId") UUID portfolioId, @Param("userId") UUID userId);
+
 }

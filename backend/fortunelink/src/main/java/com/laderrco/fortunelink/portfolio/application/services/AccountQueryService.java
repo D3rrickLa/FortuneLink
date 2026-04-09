@@ -11,6 +11,7 @@ import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundExcep
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
@@ -72,6 +73,9 @@ public class AccountQueryService {
     Set<AssetSymbol> allSymbols = symbolsByAccount.values().stream().flatMap(Collection::stream)
         .collect(Collectors.toSet());
 
+    Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository
+        .findQuantitiesForAccounts(accountIds);
+
     Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
         ? Map.of()
         : marketDataService.getBatchQuotes(allSymbols);
@@ -82,8 +86,10 @@ public class AccountQueryService {
     List<AccountView> content = projections.stream().map(projection -> {
       AccountId currentId = AccountId.fromString(projection.getId().toString());
       var accountFees = feesByAccount.getOrDefault(currentId, Map.of());
+      var accountQuantities = quantitiesByAccount.getOrDefault(currentId, Map.of());
 
-      return accountViewBuilder.buildFromProjection(projection, quoteCache, accountFees);
+      return accountViewBuilder.buildFromProjection(
+          projection, accountQuantities, quoteCache, accountFees);
     }).toList();
 
     return new PageImpl<>(content, pageable, page.getTotalElements());

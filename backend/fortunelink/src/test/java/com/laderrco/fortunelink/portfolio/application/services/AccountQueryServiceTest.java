@@ -128,7 +128,7 @@ class AccountQueryServiceTest {
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(eq(projection), anyMap(), eq(fees)))
+      when(accountViewBuilder.buildFromProjection(eq(projection), anyMap(), anyMap(), eq(fees)))
           .thenReturn(expectedView);
 
       // Act
@@ -137,7 +137,7 @@ class AccountQueryServiceTest {
       // Assert
       assertThat(result.getContent()).containsExactly(expectedView);
       verify(transactionRepository, times(1)).sumBuyFeesBySymbolForAccounts(any());
-      verify(accountViewBuilder).buildFromProjection(any(), anyMap(), eq(fees));
+      verify(accountViewBuilder).buildFromProjection(any(), anyMap(), anyMap(), eq(fees));
     }
 
     @Test
@@ -182,7 +182,7 @@ class AccountQueryServiceTest {
       when(transactionRepository.sumBuyFeesBySymbolForAccounts(any())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap())).thenReturn(expectedView);
+      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap())).thenReturn(expectedView);
 
       accountQueryService.getAllAccounts(query);
 

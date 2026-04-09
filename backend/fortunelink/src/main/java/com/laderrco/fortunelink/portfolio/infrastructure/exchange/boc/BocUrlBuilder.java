@@ -3,6 +3,8 @@ package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,12 +36,12 @@ public class BocUrlBuilder {
   }
 
   public BocUrlBuilder startDate(Instant date) {
-    queryParams.put("start_date", date.toString());
+    queryParams.put("start_date", LocalDate.ofInstant(date, ZoneOffset.UTC).toString());
     return this;
   }
 
   public BocUrlBuilder endDate(Instant date) {
-    queryParams.put("end_date", date.toString());
+    queryParams.put("end_date", LocalDate.ofInstant(date, ZoneOffset.UTC).toString());
     return this;
   }
 

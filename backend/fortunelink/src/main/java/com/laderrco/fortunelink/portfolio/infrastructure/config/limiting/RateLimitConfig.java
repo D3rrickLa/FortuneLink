@@ -14,10 +14,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 @Data
 @Configuration
-@ConditionalOnProperty(name = "app.rate-limiting.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "fortunelink.rate-limit.enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitConfig {
 
   @Value("${fortunelink.rate-limit.global.requests-per-minute:60}")
@@ -37,25 +38,29 @@ public class RateLimitConfig {
   @Bean
   public ProxyManager<String> bucketProxyManager(CommandAsyncExecutor executor) {
     return Bucket4jRedisson.casBasedBuilder(executor).expirationAfterWrite(
-            ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofDays(1)))
+        ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofDays(1)))
         .build();
   }
 
   @Bean
+  @Primary
   public BucketConfiguration globalBucketConfig() {
     return BucketConfiguration.builder().addLimit(
         Bandwidth.builder().capacity(globalRequestsPerMinute)
-            .refillIntervally(globalRequestsPerMinute, Duration.ofMinutes(1)).build()).addLimit(
-        Bandwidth.builder().capacity(globalRequestsPerHour)
-            .refillIntervally(globalRequestsPerHour, Duration.ofHours(1)).build()).addLimit(
-        Bandwidth.builder().capacity(globalRequestsPerDay)
-            .refillIntervally(globalRequestsPerDay, Duration.ofDays(1)).build()).build();
+            .refillIntervally(globalRequestsPerMinute, Duration.ofMinutes(1)).build())
+        .addLimit(
+            Bandwidth.builder().capacity(globalRequestsPerHour)
+                .refillIntervally(globalRequestsPerHour, Duration.ofHours(1)).build())
+        .addLimit(
+            Bandwidth.builder().capacity(globalRequestsPerDay)
+                .refillIntervally(globalRequestsPerDay, Duration.ofDays(1)).build())
+        .build();
   }
 
-  @Bean
+  @Bean("marketDataPriceConfig")
   public BucketConfiguration marketDataPriceConfig() {
     return BucketConfiguration.builder().addLimit(
-            Bandwidth.builder().capacity(30).refillIntervally(30, Duration.ofMinutes(1)).build())
+        Bandwidth.builder().capacity(30).refillIntervally(30, Duration.ofMinutes(1)).build())
         .build();
   }
 }

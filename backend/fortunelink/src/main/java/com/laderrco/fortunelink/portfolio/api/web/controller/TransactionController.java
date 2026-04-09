@@ -92,7 +92,7 @@ public class TransactionController {
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordPurchase(
-        new RecordPurchaseCommand(UUID.fromString(idempotencyKey),
+        new RecordPurchaseCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), request.type(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
@@ -124,7 +124,7 @@ public class TransactionController {
       @RequestBody @Valid RecordSplitRequest request) {
 
     return transactionService.recordSplit(
-        new RecordSplitCommand(UUID.fromString(idempotencyKey),
+        new RecordSplitCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol().toUpperCase(), new Ratio(request.numerator(), request.denominator()),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
@@ -138,7 +138,7 @@ public class TransactionController {
       @RequestBody @Valid RecordReturnOfCapitalRequest request) {
 
     return transactionService.recordReturnOfCapital(
-        new RecordReturnOfCaptialCommand(UUID.fromString(idempotencyKey),
+        new RecordReturnOfCaptialCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol().toUpperCase(),
             Price.of(request.distributionPerUnit(), Currency.of(request.currency())),
@@ -158,7 +158,7 @@ public class TransactionController {
       @RequestBody @Valid RecordDepositRequest request) {
 
     return transactionService.recordDeposit(
-        new RecordDepositCommand(UUID.fromString(idempotencyKey),
+        new RecordDepositCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -172,7 +172,7 @@ public class TransactionController {
       @RequestBody @Valid RecordWithdrawalRequest request) {
 
     return transactionService.recordWithdrawal(
-        new RecordWithdrawalCommand(UUID.fromString(idempotencyKey),
+        new RecordWithdrawalCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -186,7 +186,7 @@ public class TransactionController {
       @RequestBody @Valid RecordStandaloneFeeRequest request) {
 
     return transactionService.recordFee(
-        new RecordFeeCommand(UUID.fromString(idempotencyKey),
+        new RecordFeeCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.feeType(),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
@@ -202,7 +202,7 @@ public class TransactionController {
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordTransferIn(
-        new RecordTransferInCommand(UUID.fromString(idempotencyKey),
+        new RecordTransferInCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), fees, request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -216,7 +216,7 @@ public class TransactionController {
       @RequestBody @Valid RecordTransferOutRequest request) {
 
     return transactionService.recordTransferOut(
-        new RecordTransferOutCommand(UUID.fromString(idempotencyKey),
+        new RecordTransferOutCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -236,7 +236,7 @@ public class TransactionController {
     // RecordInterestCommand.cashInterest() / .assetInterest() are the factories
     // but the command accepts null assetSymbol for cash-level interest
     return transactionService.recordInterest(
-        new RecordInterestCommand(UUID.fromString(idempotencyKey),
+        new RecordInterestCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.isAssetInterest() ? request.assetSymbol().toUpperCase() : null,
             Money.of(request.amount(), request.currency()), request.transactionDate(),
@@ -251,7 +251,7 @@ public class TransactionController {
       @RequestBody @Valid RecordDividendRequest request) {
 
     return transactionService.recordDividend(
-        new RecordDividendCommand(UUID.fromString(idempotencyKey),
+        new RecordDividendCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol().toUpperCase(), Money.of(request.amount(), request.currency()),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
@@ -265,7 +265,7 @@ public class TransactionController {
       @RequestBody @Valid RecordDRIPRequest request) {
 
     return transactionService.recordDividendReinvestment(
-        new RecordDividendReinvestmentCommand(UUID.fromString(idempotencyKey),
+        new RecordDividendReinvestmentCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol().toUpperCase(),
             new RecordDividendReinvestmentCommand.DripExecution(
@@ -331,12 +331,12 @@ public class TransactionController {
    */
   @PatchMapping("/{transactionId}/exclude")
   public TransactionView excludeTransaction(
-      @RequestHeader("X-Idempotency-Key") String idempotencyKey, @PathVariable String portfolioId,
+      @RequestHeader("Idempotency-Key") String idempotencyKey, @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @PathVariable String transactionId, @RequestBody @Valid ExcludeTransactionRequest request) {
 
     return transactionService.excludeTransaction(
-        new ExcludeTransactionCommand(UUID.fromString(idempotencyKey),
+        new ExcludeTransactionCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             TransactionId.fromString(transactionId), request.reason()));
   }
@@ -347,12 +347,12 @@ public class TransactionController {
    */
   @PatchMapping("/{transactionId}/restore")
   public TransactionView restoreTransaction(
-      @RequestHeader("X-Idempotency-Key") String idempotencyKey, @PathVariable String portfolioId,
+      @RequestHeader("Idempotency-Key") String idempotencyKey, @PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @PathVariable String transactionId) {
 
     return transactionService.restoreTransaction(
-        new RestoreTransactionCommand(UUID.fromString(idempotencyKey),
+        new RestoreTransactionCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             TransactionId.fromString(transactionId)));
   }
@@ -367,5 +367,9 @@ public class TransactionController {
     }
     return feeRequests.stream()
         .map(f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()), txDate)).toList();
+  }
+
+  private UUID validateUuid(String idempotencyKey) {
+    return idempotencyKey != null ? UUID.fromString(idempotencyKey) : UUID.randomUUID();
   }
 }

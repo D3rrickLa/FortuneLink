@@ -112,7 +112,7 @@ class PositionRecalculationExecutorTest {
       assertThrows(RuntimeException.class,
           () -> executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL));
 
-      verify(accountHealthService).markStale(P_ID, U_ID, A_ID);
+      verify(accountHealthService).markStale(A_ID);
       verify(portfolioRepository, never()).save(any());
     }
   }
@@ -149,7 +149,7 @@ class PositionRecalculationExecutorTest {
 
       assertThrows(RuntimeException.class, () -> executor.replayFullAccount(P_ID, U_ID, A_ID));
 
-      verify(accountHealthService).markStale(P_ID, U_ID, A_ID);
+      verify(accountHealthService).markStale(A_ID);
       verify(portfolioRepository, never()).save(any());
     }
   }

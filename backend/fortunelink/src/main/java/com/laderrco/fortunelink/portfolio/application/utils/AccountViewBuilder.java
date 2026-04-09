@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
@@ -42,38 +43,37 @@ public class AccountViewBuilder {
     return portfolioViewMapper.toAccountView(account, positionViews, totalValue, cashBalance);
   }
 
-  /**
-   * Builds an AccountView from a summary projection (no full aggregate loaded).
-   * <p>
-   * Positions are not included in this path because the caller fetches quotes for
-   * all accounts in
-   * one batch and hands them in via {@code quotes}. If the account has no open
-   * positions, it gets
-   * an empty position list and its totalValue is just its cash balance.
-   * <p>
-   * Fee data is optional — pass {@code Map.of()} if not available.
-   *
-   * @param projection     lightweight DB projection, no positions loaded
-   * @param allQuotes      quotes for ALL symbols across ALL accounts in this page
-   * @param feesForAccount fees keyed by symbol for this specific account
-   */
-  public AccountView buildFromProjection(AccountSummaryProjection projection,
-      Map<AssetSymbol, MarketAssetQuote> allQuotes, Map<AssetSymbol, Money> feesForAccount) {
+  public AccountView buildFromProjection(
+      AccountSummaryProjection projection,
+      Map<AssetSymbol, Quantity> quantities,
+      Map<AssetSymbol, MarketAssetQuote> allQuotes,
+      Map<AssetSymbol, Money> feesForAccount) {
 
-    AccountId accountId = AccountId.fromString(projection.getId().toString());
     Currency currency = Currency.of(projection.getBaseCurrencyCode());
     Money cashBalance = new Money(projection.getCashBalanceAmount(), currency);
 
-    // Without loading the full Account aggregate we don't have position objects.
-    // For the list view this is fine — return empty positions.
-    // getAccountSummary (single account) still uses the full build() path with real
-    // positions.
-    List<PositionView> positionViews = List.of();
-    Money totalValue = cashBalance; // positions would add to this; revisit if list needs market value
+    Money marketValue = quantities.entrySet().stream()
+        .map(entry -> {
+          MarketAssetQuote quote = allQuotes.get(entry.getKey());
+          if (quote == null || quote.currentPrice().isZero()) {
+            return Money.zero(currency);
+          }
+          return quote.currentPrice().calculateValue(entry.getValue());
+        })
+        .reduce(Money.zero(currency), Money::add);
 
-    return new AccountView(accountId, projection.getName(),
-        AccountType.valueOf(projection.getAccountType()), AccountLifecycleState.valueOf(projection.getLifecycleState()),
-        positionViews, currency, cashBalance, totalValue, projection.getCreatedDate());
+    Money totalValue = cashBalance.add(marketValue);
+
+    return new AccountView(
+        AccountId.fromString(projection.getId().toString()),
+        projection.getName(),
+        AccountType.valueOf(projection.getAccountType()),
+        AccountLifecycleState.valueOf(projection.getLifecycleState()),
+        List.of(),
+        currency,
+        cashBalance,
+        totalValue,
+        projection.getCreatedDate());
   }
 
   /**

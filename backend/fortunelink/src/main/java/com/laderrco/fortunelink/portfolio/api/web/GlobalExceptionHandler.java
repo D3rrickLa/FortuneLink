@@ -143,8 +143,7 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("PORTFOLIO_DELETION_ERROR", ex.getMessage()));
   }
 
-  // NOTE: comment out until we fixed PortfolioLifeCycleService.softDelete() 
-  @ExceptionHandler({ PortfolioNotEmptyException.class, PortfolioAlreadyDeletedException.class })
+  @ExceptionHandler(PortfolioAlreadyDeletedException.class)
   public ResponseEntity<ErrorResponse> handlePortfolioStateConflicts(RuntimeException ex) {
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body(ErrorResponse.of("PORTFOLIO_STATE_ERROR", ex.getMessage()));

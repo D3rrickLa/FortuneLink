@@ -2,16 +2,13 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
-import com.laderrco.fortunelink.portfolio.application.services.AccountLifecycleService;
-import com.laderrco.fortunelink.portfolio.application.services.AccountLifecycleServiceTest;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -144,7 +141,7 @@ class AccountViewBuilderTest {
       when(projection.getCreatedDate()).thenReturn(createdDate);
 
       // Act
-      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of());
+      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(), Map.of());
 
       // Assert
       assertThat(result.accountId()).isEqualTo(AccountId.fromString(accountUuid.toString()));
@@ -172,7 +169,7 @@ class AccountViewBuilderTest {
       when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(projection.getCashBalanceAmount()).thenReturn(BigDecimal.ZERO);
 
-      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of());
+      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(), Map.of());
 
       assertThat(result.type()).isEqualTo(AccountType.RRSP);
     }
@@ -190,7 +187,7 @@ class AccountViewBuilderTest {
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(symbol, mock(MarketAssetQuote.class));
       Map<AssetSymbol, Money> fees = Map.of(symbol, Money.of(5, "CAD"));
 
-      AccountView result = accountViewBuilder.buildFromProjection(projection, quotes, fees);
+      AccountView result = accountViewBuilder.buildFromProjection(projection, anyMap(), quotes, fees);
 
       assertThat(result.assets()).isEmpty();
       assertThat(result.totalValue().amount()).isEqualTo(

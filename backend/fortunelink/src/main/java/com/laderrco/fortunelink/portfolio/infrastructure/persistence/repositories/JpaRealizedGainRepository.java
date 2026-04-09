@@ -55,15 +55,17 @@ public interface JpaRealizedGainRepository extends JpaRepository<RealizedGainJpa
   Optional<String> findAccountCurrencyById(@Param("accountId") UUID accountId);
 
   @Query("""
-      SELECT new com.yourproject.domain.GainsAggregation(
-          SUM(CASE WHEN r.amount > 0 THEN r.amount ELSE 0 END),
-          SUM(CASE WHEN r.amount < 0 THEN ABS(r.amount) ELSE 0 END)
+      SELECT new com.laderrco.fortunelink.portfolio.application.utils.valueobjects.GainsAggregation(
+          SUM(CASE WHEN r.gainLossAmount > 0 THEN r.gainLossAmount ELSE 0 END),
+          SUM(CASE WHEN r.gainLossAmount < 0 THEN ABS(r.gainLossAmount) ELSE 0 END)
       )
-      FROM RealizedGainRecord r
-      WHERE r.accountId = :accountId
-      AND (:taxYear IS NULL OR r.taxYear = :taxYear)
-      AND (:symbol IS NULL OR r.symbol = :symbol)
+      FROM RealizedGainJpaEntity r
+      WHERE r.account.id = :accountId
+        AND (:symbol IS NULL OR r.symbol = :symbol)
+        AND (:taxYear IS NULL OR EXTRACT(YEAR FROM r.occurredAt) = :taxYear)
       """)
-  GainsAggregation calculateTotals(@Param("accountId") UUID accountId, @Param("taxYear") Integer taxYear,
+  GainsAggregation calculateTotals(
+      @Param("accountId") UUID accountId,
+      @Param("taxYear") Integer taxYear,
       @Param("symbol") String symbol);
 }

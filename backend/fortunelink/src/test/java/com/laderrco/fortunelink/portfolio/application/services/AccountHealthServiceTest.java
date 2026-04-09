@@ -44,7 +44,7 @@ class AccountHealthServiceTest {
         Optional.of(mockPortfolio));
     when(portfolioRepository.save(mockPortfolio)).thenReturn(mockPortfolio);
 
-    assertDoesNotThrow(() -> accountHealthService.markStale(portfolioId, userId, accountId));
+    assertDoesNotThrow(() -> accountHealthService.markStale(accountId));
 
     verify(mockPortfolio).reportRecalculationFailure(accountId);
     verify(portfolioRepository).save(mockPortfolio);
@@ -60,7 +60,7 @@ class AccountHealthServiceTest {
 
     when(portfolioRepository.findByIdAndUserId(portfolioId, userId)).thenReturn(Optional.empty());
 
-    assertDoesNotThrow(() -> accountHealthService.markStale(portfolioId, userId, accountId));
+    assertDoesNotThrow(() -> accountHealthService.markStale(accountId));
 
     assertThat(logCaptor.getErrorLogs()).hasSize(1)
         .anyMatch(log -> log.contains("Failed to mark account as stale"));

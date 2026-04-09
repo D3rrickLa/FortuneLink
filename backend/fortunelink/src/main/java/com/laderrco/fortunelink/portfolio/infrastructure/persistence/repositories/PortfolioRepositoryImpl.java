@@ -101,4 +101,9 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
   public Long countByUserId(UserId userId) {
     return jpaRepository.countActiveByUserId(UUID.fromString(userId.toString()));
   }
+
+  @Override
+  public void markAccountStale(AccountId accountId) {
+    jpaRepository.markAccountStale(accountId.id());
+  }
 }

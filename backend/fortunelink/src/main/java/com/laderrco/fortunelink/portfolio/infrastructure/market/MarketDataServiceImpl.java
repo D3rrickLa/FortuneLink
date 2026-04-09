@@ -98,7 +98,7 @@ public class MarketDataServiceImpl implements MarketDataService {
       Map<String, MarketAssetQuote> toCache = new HashMap<>();
       fetched.forEach((sym, quote) -> {
         result.put(sym, quote);
-        toCache.put(cacheKeyPrefix + sym.symbol(), quote);
+        toCache.put(cacheKeyPrefix + "::" + sym.symbol(), quote);
       });
 
       if (!toCache.isEmpty()) {

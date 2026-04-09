@@ -59,7 +59,7 @@ public class PositionRecalculationExecutor {
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);
-      accountHealthService.markStale(portfolioId, userId, accountId);
+      accountHealthService.markStale(accountId);
       throw e;
     }
 
@@ -84,7 +84,7 @@ public class PositionRecalculationExecutor {
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Full account replay failed for account {}", accountId, e);
-      accountHealthService.markStale(portfolioId, userId, accountId);
+      accountHealthService.markStale(accountId);
       throw e; // rollback the transaction, don't commit partial state
     }
 

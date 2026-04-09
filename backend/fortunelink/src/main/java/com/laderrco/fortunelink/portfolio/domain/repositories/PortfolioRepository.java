@@ -51,6 +51,8 @@ public interface PortfolioRepository {
    */
   Optional<Portfolio> findWithAccountsByIdAndUserId(PortfolioId id, UserId userId);
 
+  void markAccountStale(AccountId accountId);
+
   /**
    * Boolean if a portfolio already exists for a user that is active
    *
