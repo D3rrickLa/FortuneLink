@@ -117,6 +117,7 @@ public class BocClient {
     throw new BocApiException(errorMessage);
   }
 
+  @SuppressWarnings("unused")
   private BocExchangeResponse getLatestRateFallback(String to, String from, Throwable t) {
     log.error("BOC circuit open for {}/{}. Exchange rate unavailable.", from, to);
     throw new ExchangeRateUnavailableException(from, to, Instant.now());

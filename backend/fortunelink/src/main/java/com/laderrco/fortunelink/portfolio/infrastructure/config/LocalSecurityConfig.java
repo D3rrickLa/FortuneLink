@@ -16,7 +16,6 @@ public class LocalSecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    System.out.println("DEBUG: LocalSecurityConfig is LOADED!");
     http.csrf(AbstractHttpConfigurer::disable).authorizeHttpRequests(
             auth -> auth.requestMatchers("/actuator/health").permitAll().anyRequest().authenticated())
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

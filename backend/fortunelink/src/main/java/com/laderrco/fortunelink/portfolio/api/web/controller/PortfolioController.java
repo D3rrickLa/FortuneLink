@@ -22,6 +22,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,7 +42,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class PortfolioController {
   private final PortfolioLifecycleService lifecycleService;
   private final PortfolioQueryService queryService;
-  private final Authentication auth;
 
   // --- Portfolio Lifecycle ---
 
@@ -78,12 +78,14 @@ public class PortfolioController {
       @RequestParam(defaultValue = "false") boolean recursive) {
 
     // Force soft-delete unless user is an ADMIN
-    boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    boolean isAdmin = auth != null && auth.getAuthorities().stream()
+        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     boolean finalSoftDelete = isAdmin ? softDelete : true;
 
     // Allow 'recursive' regardless—it just means "mark all children as deleted too"
     lifecycleService.deletePortfolio(new DeletePortfolioCommand(PortfolioId.fromString(portfolioId),
-            userId,finalSoftDelete,recursive));
+        userId, finalSoftDelete, recursive));
   }
 
   // --- Portfolio Queries ---

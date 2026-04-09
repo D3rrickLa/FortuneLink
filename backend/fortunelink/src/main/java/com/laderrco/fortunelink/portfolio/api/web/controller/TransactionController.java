@@ -109,7 +109,7 @@ public class TransactionController {
     List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
 
     return transactionService.recordSale(
-        new RecordSaleCommand(UUID.fromString(idempotencyKey),
+        new RecordSaleCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
