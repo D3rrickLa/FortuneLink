@@ -17,11 +17,14 @@ import org.springframework.stereotype.Repository;
 /**
  * Implements the domain {@code PortfolioRepository} port using JPA.
  * <p>
- * This class knows about both layers by design — that is its entire purpose. All other classes in
+ * This class knows about both layers by design — that is its entire purpose.
+ * All other classes in
  * the application layer see only the interface.
  * <p>
- * Save strategy: load the managed JPA entity first (if it exists), then pass it to the mapper for
- * an in-place update so Hibernate's dirty-checking works correctly and doesn't issue a DELETE +
+ * Save strategy: load the managed JPA entity first (if it exists), then pass it
+ * to the mapper for
+ * an in-place update so Hibernate's dirty-checking works correctly and doesn't
+ * issue a DELETE +
  * INSERT for every save.
  */
 @Repository
@@ -109,6 +112,7 @@ public class PortfolioRepositoryImpl implements PortfolioRepository {
 
   @Override
   public List<UserId> findAllActiveUserIds() {
-    return jpaRepository.findAllActiveUserIds().stream().map(u -> new UserId(u)).toList();
+    return jpaRepository.findAllActiveUserIds().stream().map(u -> UserId.fromString(u.toString()))
+    .toList();
   }
 }

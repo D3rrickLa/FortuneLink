@@ -89,9 +89,7 @@ class PositionRecalculationExecutorTest {
 
       executor.scheduleRecalculation(P_ID, U_ID, A_ID, SYMBOL);
 
-      verify(account).beginReplay();
       verify(transactionRecordingService).replayTransaction(account, transaction);
-      verify(account).endReplay();
       verify(portfolio).reportRecalculationSuccess(A_ID);
       verify(portfolioRepository).save(portfolio);
     }

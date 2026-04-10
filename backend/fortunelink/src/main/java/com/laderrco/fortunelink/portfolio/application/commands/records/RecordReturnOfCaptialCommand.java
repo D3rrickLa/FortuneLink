@@ -19,5 +19,4 @@ public record RecordReturnOfCaptialCommand(
     Quantity heldQuantity,
     Instant transactionDate,
     String notes) implements AdditionalInfoTransactionCommand {
-
 }

@@ -17,12 +17,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
   private final ProxyManager<String> proxyManager;
   private final BucketConfiguration globalBucketConfig;
   private final BucketConfiguration marketDataPriceConfig; // Inject the specific bean
+  private final BucketConfiguration csvImportConfig; // Inject the specific bean
 
-  public RateLimitInterceptor(ProxyManager<String> proxyManager, BucketConfiguration globalBucketConfig, // Gets the @Primary one
-      @Qualifier("marketDataPriceConfig") BucketConfiguration marketDataPriceConfig) {
+  public RateLimitInterceptor(ProxyManager<String> proxyManager, BucketConfiguration globalBucketConfig,
+      @Qualifier("marketDataPriceConfig") BucketConfiguration marketDataPriceConfig,
+    @Qualifier("csvImportConfig") BucketConfiguration csvImportConfig) {
     this.proxyManager = proxyManager;
     this.globalBucketConfig = globalBucketConfig;
     this.marketDataPriceConfig = marketDataPriceConfig;
+    this.csvImportConfig = csvImportConfig;
   }
 
   @Override
@@ -37,6 +40,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     if (uri.startsWith("/api/v1/market-data/price")) {
       config = marketDataPriceConfig;
       limitType = "market";
+    } else if (uri.startsWith("/api/v1/portfolios") && uri.endsWith("/import")) {
+      config = csvImportConfig;
+      limitType = "csvImport";
     } else {
       config = globalBucketConfig;
       limitType = "global";
@@ -52,29 +58,19 @@ public class RateLimitInterceptor implements HandlerInterceptor {
       return true;
     } else {
       response.setStatus(429);
-      response.addHeader("X-Rate-Limit-Retry-After-Seconds", 
+      response.addHeader("X-Rate-Limit-Retry-After-Seconds",
           String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
       return false;
     }
   }
 
-  /**
-   * @param request
-   * @return
-   * @implNote An attacker can set X-Forwarded-For: 1.2.3.4 in their request and cycle through
-   * "IPs." Only trust this header when behind a known proxy. Either validate the connecting IP is
-   * your load balancer, or limit it to a single forward
-   */
+  // Rate limiting uses RemoteAddr directly. X-Forwarded-For is intentionally
+  // NOT trusted until a load balancer with a known IP range is in place.
+  // See: https://github.com/D3rrickLa/FortuneLink/issues/160
   private String getClientIp(HttpServletRequest request) {
-    String forwarded = request.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isBlank()) {
-      // Take only the FIRST IP, the rest are proxies and can be forged
-      String first = forwarded.split(",")[0].trim();
-      // Basic sanity check
-      if (first.matches("[0-9a-fA-F.:]+")) {
-        return first;
-      }
-    }
+    // TODO: When Nginx/ALB is deployed, re-enable X-Forwarded-For
+    // but ONLY after validating request.getRemoteAddr() matches the
+    // known load balancer CIDR range.
     return request.getRemoteAddr();
   }
 }

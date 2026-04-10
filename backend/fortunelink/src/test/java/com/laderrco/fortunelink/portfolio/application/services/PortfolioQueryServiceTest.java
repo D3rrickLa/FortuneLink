@@ -147,7 +147,7 @@ public class PortfolioQueryServiceTest {
 
   private AccountView buildAccountView(AccountId accountId) {
     return new AccountView(accountId, "Test Account", AccountType.TFSA, AccountLifecycleState.ACTIVE, 
-      List.of(), CAD, Money.zero(CAD), Money.zero(CAD), Instant.now());
+      List.of(), CAD, Money.zero(CAD), Money.zero(CAD), Instant.now(), false, 0);
   }
 
   @Nested

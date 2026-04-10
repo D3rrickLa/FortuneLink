@@ -1,18 +1,6 @@
 package com.laderrco.fortunelink.portfolio.api.web;
 
-import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeReopenedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.AuthorizationException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.*;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.*;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
@@ -221,6 +209,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleUnknownSymbol(UnknownSymbolException ex) {
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
         .body(ErrorResponse.of("UNKNOWN_SYMBOL", ex.getMessage()));
+  }
+
+  @ExceptionHandler(CsvImportCommitException.class)
+  public ResponseEntity<ErrorResponse> handleCsvCommitFailure(CsvImportCommitException ex) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+        .body(ErrorResponse.of("CSV_COMMIT_FAILED", ex.getMessage()));
   }
 
   // -------------------------------------------------------------------------

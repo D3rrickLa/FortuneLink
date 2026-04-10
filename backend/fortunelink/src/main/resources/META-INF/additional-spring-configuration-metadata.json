@@ -148,5 +148,40 @@
     "name": "fortunelink.cors.allowed-origins",
     "type": "java.lang.String",
     "description": "A description for 'fortunelink.cors.allowed-origins'"
+  },
+  {
+    "name": "boc.base-url",
+    "type": "java.lang.String",
+    "description": "A description for 'boc.base-url'"
+  },
+  {
+    "name": "boc.timeout-seconds",
+    "type": "java.lang.String",
+    "description": "A description for 'boc.timeout-seconds'"
+  },
+  {
+    "name": "boc.debug-logging",
+    "type": "java.lang.String",
+    "description": "A description for 'boc.debug-logging'"
+  },
+  {
+    "name": "fmp.base-url",
+    "type": "java.lang.String",
+    "description": "A description for 'fmp.base-url'"
+  },
+  {
+    "name": "fmp.api-key",
+    "type": "java.lang.String",
+    "description": "A description for 'fmp.api-key'"
+  },
+  {
+    "name": "fmp.timeout-seconds",
+    "type": "java.lang.String",
+    "description": "A description for 'fmp.timeout-seconds'"
+  },
+  {
+    "name": "fmp.debug-logging",
+    "type": "java.lang.String",
+    "description": "A description for 'fmp.debug-logging'"
   }
 ]}

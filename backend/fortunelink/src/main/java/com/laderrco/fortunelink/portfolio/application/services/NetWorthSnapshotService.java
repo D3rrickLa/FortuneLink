@@ -49,7 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class NetWorthSnapshotService {
-
   private final PortfolioRepository portfolioRepository;
   private final NetWorthSnapshotRepository snapshotRepository;
   private final MarketDataService marketDataService;
@@ -64,10 +63,11 @@ public class NetWorthSnapshotService {
     for (UserId userId : activeUsers) {
       try {
         boolean wrote = snapshotForUser(userId);
-        if (wrote)
+        if (wrote) {
           success++;
-        else
+        } else {
           skipped++;
+        }
       } catch (Exception e) {
         failed++;
         log.error("Snapshot failed for userId={}: {}", userId, e.getMessage(), e);

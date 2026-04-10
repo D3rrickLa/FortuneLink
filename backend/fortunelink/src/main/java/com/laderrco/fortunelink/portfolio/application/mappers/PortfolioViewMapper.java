@@ -124,13 +124,8 @@ public class PortfolioViewMapper {
         account.getCreationDate(), false, 0);
   }
 
-  public AccountView toAccountView(
-      Account account,
-      List<PositionView> positionViews,
-      Money totalValue,
-      Money cashBalance,
-      boolean hasCashImbalance,
-      int excludedTransactionCount) {
+  public AccountView toAccountView(Account account, List<PositionView> positionViews,
+      Money totalValue, Money cashBalance, boolean hasCashImbalance, int excludedTransactionCount) {
 
     return new AccountView(
         account.getAccountId(),

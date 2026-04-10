@@ -63,4 +63,15 @@ public class RateLimitConfig {
         Bandwidth.builder().capacity(30).refillIntervally(30, Duration.ofMinutes(1)).build())
         .build();
   }
+
+@Bean("csvImportConfig")
+  public BucketConfiguration csvImportConfig() {
+    return BucketConfiguration.builder()
+        .addLimit(Bandwidth.builder()
+            .capacity(3)
+            .refillIntervally(3, Duration.ofMinutes(1))
+            .build())
+        .build();
+  }
+
 }

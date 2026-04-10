@@ -75,9 +75,14 @@ public class ValidationUtils {
       errors.add("Asset symbol is required");
       return;
     }
-    if (!symbol.matches("^[A-Z0-9.\\-]{1,20}$")) {
+    String normalized = symbol.toUpperCase().trim();
+    if (!normalized.matches("^[A-Z0-9.\\-]{1,20}$")) {
       errors.add("Invalid asset symbol format");
     }
+  }
+
+  public static String normalizeSymbol(String symbol) {
+    return (symbol == null) ? null : symbol.toUpperCase().trim();
   }
 
   public static boolean isValidCurrency(String code) {

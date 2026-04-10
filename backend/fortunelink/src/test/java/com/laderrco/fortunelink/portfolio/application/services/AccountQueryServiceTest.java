@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,7 @@ import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
@@ -38,11 +40,9 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -103,7 +103,6 @@ class AccountQueryServiceTest {
     @Test
     @DisplayName("getAllAccounts: maps projections with batch data")
     void getAllAccountsMapsProjectionsWithBatchData() {
-      // Arrange
       PortfolioId portfolioId = PortfolioId.newId();
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
@@ -112,32 +111,24 @@ class AccountQueryServiceTest {
       AccountId accountId = AccountId.fromString(accountUuid.toString());
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
+      when(projection.getLifecycleState()).thenReturn("ACTIVE");
 
       when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
           .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
 
-      // Mock the batch symbol lookup
-      when(accountQueryRepository.findSymbolsForAccounts(anyList()))
-          .thenReturn(Map.of(accountId, Set.of(new AssetSymbol("BTC"))));
-
-      // Mock the batch fee lookup
-      Map<AssetSymbol, Money> fees = Map.of(new AssetSymbol("BTC"), Money.of(1.0, "USD"));
-      when(transactionRepository.sumBuyFeesBySymbolForAccounts(any()))
-          .thenReturn(Map.of(accountId, fees));
+      Map<AssetSymbol, Quantity> quantities = Map.of(new AssetSymbol("BTC"), Quantity.of(1));
+      when(accountQueryRepository.findQuantitiesForAccounts(anyList()))
+          .thenReturn(Map.of(accountId, quantities));
 
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(eq(projection), anyMap(), anyMap(), eq(fees)))
+      when(accountViewBuilder.buildFromProjection(eq(projection), eq(quantities), anyMap(), eq(Map.of())))
           .thenReturn(expectedView);
 
-      // Act
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
-      // Assert
       assertThat(result.getContent()).containsExactly(expectedView);
-      verify(transactionRepository, times(1)).sumBuyFeesBySymbolForAccounts(any());
-      verify(accountViewBuilder).buildFromProjection(any(), anyMap(), anyMap(), eq(fees));
     }
 
     @Test
@@ -168,18 +159,11 @@ class AccountQueryServiceTest {
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
 
       UUID accountUuid = UUID.randomUUID();
-      AccountId accountId = AccountId.fromString(accountUuid.toString());
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
 
       when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
           .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
-
-      // Symbols are empty for this account
-      when(accountQueryRepository.findSymbolsForAccounts(anyList()))
-          .thenReturn(Map.of(accountId, Collections.emptySet()));
-
-      when(transactionRepository.sumBuyFeesBySymbolForAccounts(any())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
       when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap())).thenReturn(expectedView);
@@ -187,7 +171,6 @@ class AccountQueryServiceTest {
       accountQueryService.getAllAccounts(query);
 
       // Verify batching works but quote service is skipped due to no symbols
-      verify(transactionRepository).sumBuyFeesBySymbolForAccounts(any());
       verifyNoInteractions(marketDataService);
     }
 
@@ -205,6 +188,47 @@ class AccountQueryServiceTest {
           .isInstanceOf(RuntimeException.class);
 
       verifyNoInteractions(accountQueryRepository, transactionRepository, marketDataService);
+    }
+
+    @Test
+    @DisplayName("getAllAccounts: skips batch lookups when all accounts are inactive (CLOSED/REPLAYING)")
+    void getAllAccountsShortCircuitsForInactiveAccounts() {
+      AccountSummaryProjection replayingAcc = mock(AccountSummaryProjection.class);
+      when(replayingAcc.getLifecycleState()).thenReturn(AccountLifecycleState.REPLAYING.name());
+
+      AccountSummaryProjection closedAcc = mock(AccountSummaryProjection.class);
+      when(closedAcc.getLifecycleState()).thenReturn(AccountLifecycleState.CLOSED.name());
+
+      when(accountQueryRepository.findByPortfolioId(any(), any()))
+          .thenReturn(new PageImpl<>(List.of(replayingAcc, closedAcc)));
+
+      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap()))
+          .thenReturn(mock(AccountView.class));
+
+      accountQueryService.getAllAccounts(new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
+
+      verify(accountQueryRepository, never()).findQuantitiesForAccounts(any());
+    }
+
+    @Test
+    @DisplayName("getAllAccounts: proceeds to batch lookup if at least one account is ACTIVE")
+    void getAllAccountsProceedsIfOneAccountIsActive() {
+      AccountSummaryProjection closedAcc = mock(AccountSummaryProjection.class);
+      when(closedAcc.getLifecycleState()).thenReturn(AccountLifecycleState.CLOSED.name());
+      when(closedAcc.getId()).thenReturn(UUID.randomUUID());
+
+      AccountSummaryProjection activeAcc = mock(AccountSummaryProjection.class);
+      when(activeAcc.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
+      when(activeAcc.getId()).thenReturn(UUID.randomUUID());
+
+      when(accountQueryRepository.findByPortfolioId(any(), any()))
+          .thenReturn(new PageImpl<>(List.of(closedAcc, activeAcc)));
+      when(accountQueryRepository.findQuantitiesForAccounts(any())).thenReturn(Map.of());
+
+      accountQueryService.getAllAccounts(new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
+
+      // Assert
+      verify(accountQueryRepository, times(1)).findQuantitiesForAccounts(any());
     }
   }
 

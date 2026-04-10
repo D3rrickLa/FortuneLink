@@ -123,7 +123,7 @@ class AccountTest {
       AssetSymbol apple = new AssetSymbol("AAPL");
       Map<AssetSymbol, Position> positions = Map.of(apple, mock(AcbPosition.class));
       List<RealizedGainRecord> gains = List.of(
-          RealizedGainRecord.of(apple, Money.of(50, currency), Money.of(200, currency), now));
+          RealizedGainRecord.of(accountId, apple, Money.of(50, currency), Money.of(200, currency), now));
 
       Account account = Account.reconstitute(accountId, name, type, currency, strategy, health,
           state, null, now, now, balance, positions, gains);
@@ -257,12 +257,12 @@ class AccountTest {
       Instant now = Instant.now();
 
       // 2. Use that same instant for BOTH the expected record and the action
-      RealizedGainRecord appleGain = RealizedGainRecord.of(apple, Money.of(100, USD),
+      RealizedGainRecord appleGain = RealizedGainRecord.of(accountId, apple, Money.of(100, USD),
           Money.of(500, USD), now);
 
       // We don't necessarily need 'now' for Google since we aren't asserting its
       // exact content
-      RealizedGainRecord googleGain = RealizedGainRecord.of(google, Money.of(200, USD),
+      RealizedGainRecord googleGain = RealizedGainRecord.of(accountId, google, Money.of(200, USD),
           Money.of(1000, USD), now);
 
       // 3. Pass the SAME 'now' into the method

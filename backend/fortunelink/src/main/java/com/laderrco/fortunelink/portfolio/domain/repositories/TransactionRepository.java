@@ -105,5 +105,16 @@ public interface TransactionRepository {
 
   Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId);
 
+  /**
+   * Returns the number of transactions in this account that:
+   * (a) have been excluded from position calculations, AND
+   * (b) are of a type that affects positions or income.
+   *
+   * Used to populate AccountView.hasCashImbalance. A non-zero count means
+   * the account's displayed cash balance may not reconcile against its
+   * position history, because cash movements were NOT reversed on exclusion.
+   *
+   * @return count, never negative
+   */
   int countExcludedPositionAffecting(AccountId accountId);
 }

@@ -1,5 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.utils;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -184,6 +185,14 @@ class ValidationUtilsTest {
       List<String> errors = new ArrayList<>();
       ValidationUtils.validateSymbol(symbol, errors);
       assertTrue(errors.isEmpty());
+    }
+
+    @Test
+    void normalizedSymbolSuccess() {
+      String symbol = "aapl";
+      String normalized = ValidationUtils.normalizeSymbol(symbol);
+      assertThat(normalized).isUpperCase();
+      assertThat(ValidationUtils.normalizeSymbol(null)).isNull();
     }
   }
 

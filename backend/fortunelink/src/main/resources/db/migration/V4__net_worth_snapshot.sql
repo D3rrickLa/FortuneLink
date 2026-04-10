@@ -25,7 +25,7 @@ CREATE INDEX idx_snapshots_user_date
 -- Prevent duplicate snapshots on the same calendar day per user
 -- (snapshotDate is truncated to midnight UTC by the service)
 CREATE UNIQUE INDEX idx_snapshots_user_day
-    ON net_worth_snapshots (user_id, DATE(snapshot_date));
+    ON net_worth_snapshots (user_id, CAST(snapshot_date AT TIME ZONE 'UTC' AS DATE));
  
 COMMENT ON TABLE net_worth_snapshots IS
     'Daily net worth snapshots for FIRE progress tracking. '

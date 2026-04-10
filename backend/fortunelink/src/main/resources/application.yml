@@ -5,6 +5,10 @@ spring:
     active: local
   config:
     import: "optional:file:.env[.properties]"
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5 MB
   # ============================================
   # DATABASE
   # ============================================

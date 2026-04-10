@@ -18,6 +18,9 @@ import java.time.Instant;
 import java.util.*;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,9 +29,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class TransactionRepositoryImpl implements TransactionRepository, TransactionQueryRepository {
-
   private final JpaTransactionRepository jpaRepository;
   private final TransactionDomainMapper mapper;
+  private final CacheManager cacheManager;
 
   /**
    * Saves a transaction.
@@ -153,29 +156,61 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
       return Map.of();
     }
 
-    List<UUID> uuids = accountIds.stream().map(AccountId::id).toList();
-    Map<AccountId, Map<AssetSymbol, Money>> grouped = new LinkedHashMap<>();
+    Map<AccountId, Map<AssetSymbol, Money>> finalResult = new LinkedHashMap<>();
+    Set<AccountId> missingAccountIds = new HashSet<>();
+    Cache cache = cacheManager.getCache("fees:buy");
 
-    // Batch size of 500 is generally the "sweet spot" for Postgres query planning
-    int batchSize = 500;
-    for (int i = 0; i < uuids.size(); i += batchSize) {
-      List<UUID> batch = uuids.subList(i, Math.min(i + batchSize, uuids.size()));
+    // 1. Check Cache-Aside: See what we already have
+    for (AccountId id : accountIds) {
+      String cacheKey = "account:" + id.id();
+      Map<AssetSymbol, Money> cachedValue = cache != null ? cache.get(cacheKey, Map.class) : null;
 
-      // Fetch results for this specific chunk
-      List<FeeAggregationResult> results = jpaRepository.sumBuyFeesByAccountAndSymbol(batch);
-
-      // Process results into the map
-      for (FeeAggregationResult row : results) {
-        AccountId accountId = new AccountId(row.getAccountId());
-        grouped.computeIfAbsent(accountId, k -> new LinkedHashMap<>())
-            .put(new AssetSymbol(row.getSymbol()),
-                new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
+      if (cachedValue != null) {
+        finalResult.put(id, cachedValue);
+      } else {
+        missingAccountIds.add(id);
       }
     }
 
-    // Ensure immutability
-    grouped.replaceAll((k, v) -> Collections.unmodifiableMap(v));
-    return Collections.unmodifiableMap(grouped);
+    // 2. If nothing is missing, return immediately
+    if (missingAccountIds.isEmpty()) {
+      return Collections.unmodifiableMap(finalResult);
+    }
+
+    // 3. Fetch missing data in batches from DB
+    List<UUID> missingUuids = missingAccountIds.stream().map(AccountId::id).toList();
+    int batchSize = 500;
+
+    for (int i = 0; i < missingUuids.size(); i += batchSize) {
+      List<UUID> batch = missingUuids.subList(i, Math.min(i + batchSize, missingUuids.size()));
+      List<FeeAggregationResult> dbResults = jpaRepository.sumBuyFeesByAccountAndSymbol(batch);
+
+      // Map to hold results for this specific DB fetch
+      Map<AccountId, Map<AssetSymbol, Money>> fetchedFromDb = new HashMap<>();
+
+      for (FeeAggregationResult row : dbResults) {
+        AccountId accountId = new AccountId(row.getAccountId());
+        fetchedFromDb.computeIfAbsent(accountId, k -> new LinkedHashMap<>())
+            .put(new AssetSymbol(row.getSymbol()),
+                new Money(row.getTotalFees(), Currency.of(row.getCurrency())));
+      }
+
+      // 4. Back-fill final result and write to Cache for future calls
+      for (AccountId id : missingAccountIds) {
+        // Even if the DB returned nothing for an ID, we want to represent it
+        Map<AssetSymbol, Money> accountFees = fetchedFromDb.getOrDefault(id, Map.of());
+        Map<AssetSymbol, Money> immutableFees = Collections.unmodifiableMap(accountFees);
+
+        finalResult.put(id, immutableFees);
+
+        // Manual cache put to keep @Cacheable in sync
+        if (cache != null) {
+          cache.put("account:" + id.id(), immutableFees);
+        }
+      }
+    }
+
+    return Collections.unmodifiableMap(finalResult);
   }
 
   @Override
@@ -205,6 +240,6 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
 
   @Override
   public int countExcludedPositionAffecting(AccountId accountId) {
-    return jpaRepository.countExcludedPositionAffecting(accountId.id());
+    return (int) jpaRepository.countExcludedPositionAffecting(UUID.fromString(accountId.toString()));
   }
 }

@@ -311,10 +311,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public void replayFullTransaction(Account account, List<Transaction> history) {
     account.beginReplay();
     try {
-      // NOTE: null here instead of outside, when beginReplay(), account sets flag, if
-      // skipped
-      // state of the account remains consistent, but we've bypass the expected
-      // operational flow
       if (history == null || history.isEmpty()) {
         return;
       }

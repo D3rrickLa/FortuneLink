@@ -104,7 +104,7 @@ class PortfolioViewMapperTest {
       Money total = new Money(new BigDecimal("100.00"), CAD);
       Money cash = new Money(new BigDecimal("50.00"), CAD);
 
-      AccountView result = mapper.toAccountView(account, positions, total, cash);
+      AccountView result = mapper.toAccountView(account, positions, total, cash, false, 0);
 
       assertThat(result.accountId()).isEqualTo(ACCOUNTID);
       assertThat(result.totalValue()).isEqualTo(total);

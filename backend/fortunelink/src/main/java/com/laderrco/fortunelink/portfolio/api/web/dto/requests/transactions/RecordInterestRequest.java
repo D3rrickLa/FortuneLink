@@ -24,7 +24,7 @@ import java.time.Instant;
  * In both cases the cash balance increases by the full amount. Interest is taxable in the year
  * received (not deferred).
  * <p>
- * NOTE: Bond coupon support is marked TODO in TransactionCommandValidator — the validator does not
+ * NOTE: Bond coupon support is marked TODO in TransactionCommandValidator, the validator does not
  * currently confirm an open position exists for the symbol. The server will accept the request even
  * if no bond position is held. This will be tightened when bonds are fully supported.
  */

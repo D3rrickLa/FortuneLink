@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.time.Instant;
 import java.util.UUID;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 public class RealizedGainRecordTest {
   private static final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
   private static final Currency USD_CURRENCY = Currency.USD;
+  private static final AccountId ID = AccountId.newId();
   private Instant now;
 
   @BeforeEach
@@ -22,7 +24,7 @@ public class RealizedGainRecordTest {
   void testIsGain() {
     Money RGL = Money.of(30, USD_CURRENCY);
     Money CBS = Money.of(300, USD_CURRENCY);
-    RealizedGainRecord record = RealizedGainRecord.of(SYMBOL, RGL, CBS, now);
+    RealizedGainRecord record = RealizedGainRecord.of(ID, SYMBOL, RGL, CBS, now);
     assertThat(record.isGain()).isTrue();
     assertThat(record.isLoss()).isFalse();
   }
@@ -31,7 +33,7 @@ public class RealizedGainRecordTest {
   void testIsLoss() {
     Money RGL = Money.of(-30, USD_CURRENCY);
     Money CBS = Money.of(300, USD_CURRENCY);
-    RealizedGainRecord record = RealizedGainRecord.of(SYMBOL, RGL, CBS, now);
+    RealizedGainRecord record = RealizedGainRecord.of(ID, SYMBOL, RGL, CBS, now);
     assertThat(record.isGain()).isFalse();
     assertThat(record.isLoss()).isTrue();
   }

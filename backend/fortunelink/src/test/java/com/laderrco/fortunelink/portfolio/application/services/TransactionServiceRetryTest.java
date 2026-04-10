@@ -1,29 +1,26 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
+import com.laderrco.fortunelink.portfolio.application.commands.ExcludeTransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.IdentifiedTransactionCommand;
+import com.laderrco.fortunelink.portfolio.application.utils.annotations.TransactionCommand;
 import com.laderrco.fortunelink.portfolio.application.validators.TransactionCommandValidator;
 import com.laderrco.fortunelink.portfolio.application.validators.ValidationResult;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
@@ -67,7 +64,72 @@ class TransactionServiceRetryTest {
   private AccountHealthService accountHealthService;
 
   @Autowired
+  private TransactionRepository transactionRepository;
+
+  @Autowired
   private MarketAssetInfoRepository infoRepository;
+
+  @Test
+  @DisplayName("recover(TransactionCommand): marks account stale and throws exception")
+  void recoverTransactionCommandDirectly() {
+    // 1. Setup
+    var ex = new ObjectOptimisticLockingFailureException("Portfolio", "123");
+    var cmd = mock(TransactionCommand.class);
+    var accountId = AccountId.newId();
+    when(cmd.accountId()).thenReturn(accountId);
+
+    // 2. Execute & Assert
+    // We expect handleOptimisticLockFailure to throw
+    // ConcurrentModificationException
+    assertThrows(ConcurrentModificationException.class, () -> transactionService.recover(ex, cmd));
+
+    // 3. Verify side effects
+    verify(accountHealthService).markStale(accountId);
+  }
+
+  @Test
+  @DisplayName("recover(IdentifiedTransactionCommand): marks account stale and throws exception")
+  void recoverIdentifiedCommandDirectly() {
+    // 1. Setup
+    var ex = new ObjectOptimisticLockingFailureException("Transaction", "456");
+    var cmd = mock(IdentifiedTransactionCommand.class);
+    var accountId = AccountId.newId();
+    when(cmd.accountId()).thenReturn(accountId);
+
+    // 2. Execute & Assert
+    assertThrows(ConcurrentModificationException.class, () -> transactionService.recover(ex, cmd));
+
+    // 3. Verify side effects
+    verify(accountHealthService).markStale(accountId);
+  }
+
+  @Test
+  @DisplayName("Should retry excludeTransaction and trigger IdentifiedTransactionCommand recover logic")
+  void shouldRetryExcludeAndRecover() {
+    ExcludeTransactionCommand command = new ExcludeTransactionCommand(
+        UUID.randomUUID(), PortfolioId.newId(), UserId.random(),
+        AccountId.newId(), TransactionId.newId(), "Reason");
+
+    when(validator.validate(any(ExcludeTransactionCommand.class))).thenReturn(ValidationResult.success());
+
+    Transaction mockTx = mock(Transaction.class);
+    when(mockTx.isExcluded()).thenReturn(false);
+    when(mockTx.markAsExcluded(any(), any())).thenReturn(mockTx);
+
+    when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+        command.transactionId(), command.portfolioId(), command.userId(), command.accountId()))
+        .thenReturn(Optional.of(mockTx));
+
+    doThrow(new ObjectOptimisticLockingFailureException("Transaction", command.transactionId().toString()))
+        .when(transactionRepository).save(any(Transaction.class), eq(command.portfolioId()), any(UUID.class));
+
+    assertThrows(ConcurrentModificationException.class,
+        () -> transactionService.excludeTransaction(command));
+
+    verify(transactionRepository, times(3)).save(any(), any(), any());
+    verify(accountHealthService).markStale(command.accountId());
+    verify(accountHealthService, times(1)).markStale(command.accountId());
+  }
 
   @Test
   @DisplayName("Should retry 3 times and then trigger @Recover logic")
@@ -105,6 +167,7 @@ class TransactionServiceRetryTest {
 
     // 8. Verify the Recovery Logic
     verify(accountHealthService).markStale(command.accountId());
+    verify(accountHealthService, times(1)).markStale(command.accountId());
   }
 
   @Test
@@ -133,6 +196,7 @@ class TransactionServiceRetryTest {
     // 6. Verify 3 attempts
     verify(transactionRecordingService, times(3)).recordSell(any(), any(), any(), any(), any(),
         any(), any());
+    verify(accountHealthService, times(1)).markStale(command.accountId());
   }
 
   // --- Helpers to prevent DomainArgumentException ---

@@ -115,6 +115,14 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
 
   Optional<TransactionJpaEntity> findByIdempotencyKeyAndPortfolioId(String key, @Param("portfolioId") UUID portfolioId);
 
-  @Query("SELECT COUNT(p) FROM Position p WHERE p.accountId = :accountId AND p.excluded = true")
-  int countExcludedPositionAffecting(@Param("accountId") UUID accountId);
+  @Query("""
+      SELECT COUNT(t) FROM TransactionJpaEntity t
+      WHERE t.accountId = :accountId
+        AND t.excluded = true
+        AND t.transactionType IN (
+            'BUY', 'SELL', 'DIVIDEND', 'DIVIDEND_REINVEST',
+            'INTEREST', 'RETURN_OF_CAPITAL', 'SPLIT'
+        )
+      """)
+  long countExcludedPositionAffecting(@Param("accountId") UUID accountId);
 }

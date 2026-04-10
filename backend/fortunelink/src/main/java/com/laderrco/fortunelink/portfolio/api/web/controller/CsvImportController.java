@@ -1,13 +1,15 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.laderrco.fortunelink.portfolio.application.services.CsvImportService;
-import com.laderrco.fortunelink.portfolio.application.services.CsvImportService.CsvImportResult;
+import com.laderrco.fortunelink.portfolio.application.views.CsvImportResult;
+import com.laderrco.fortunelink.portfolio.application.views.CsvRowError;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
@@ -67,16 +69,19 @@ public class CsvImportController {
    * is enough for 50k rows of text.
    */
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<CsvImportResult> importCsv(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
-      @PathVariable String accountId,
+  public ResponseEntity<CsvImportResult> importCsv(@PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @RequestParam("file") MultipartFile file) {
 
     if (file.isEmpty()) {
       return ResponseEntity.badRequest()
           .body(CsvImportResult.failure(
-              java.util.List.of(new CsvImportService.CsvRowError(0, "File is empty"))));
+              java.util.List.of(new CsvRowError(0, "File is empty"))));
+    }
+
+    if (file.getSize() > 5 * 1024 * 1024) {
+      return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
+          .body(CsvImportResult.failure(List.of(new CsvRowError(0, "File size exceeds 5MB limit"))));
     }
 
     String contentType = file.getContentType();
@@ -86,7 +91,7 @@ public class CsvImportController {
         && !contentType.contains("text/plain")) {
       return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
           .body(CsvImportResult.failure(
-              java.util.List.of(new CsvImportService.CsvRowError(
+              java.util.List.of(new CsvRowError(
                   0, "Expected a CSV file"))));
     }
 

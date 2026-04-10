@@ -153,12 +153,13 @@ class PortfolioLifecycleServiceTest {
     @Test
     @DisplayName("updatePortfolio: updates details and returns lightweight view")
     void updatesDetailsAndReturnsView() {
-      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "New Name",
-          "New Desc", USD);
+      UpdatePortfolioCommand command = new UpdatePortfolioCommand(PORTFOLIO_ID, USER_ID, "New Name", "New Desc", USD);
       Portfolio existingPortfolio = Portfolio.createNew(USER_ID, "TFSA", "MY TFSA", USD);
 
-      when(portfolioLoader.loadUserPortfolioWithGraph(eq(PORTFOLIO_ID), eq(USER_ID))).thenReturn(
-          existingPortfolio);
+      when(portfolioLoader.loadUserPortfolio(eq(PORTFOLIO_ID), eq(USER_ID)))
+          .thenReturn(existingPortfolio);
+      when(portfolioViewMapper.toNewPortfolioView(any())).thenReturn(mock(PortfolioView.class));
+      when(portfolioRepository.save(any())).thenReturn(existingPortfolio);
 
       service.updatePortfolio(command);
 
@@ -175,8 +176,10 @@ class PortfolioLifecycleServiceTest {
           "New Desc", null);
       Portfolio existingPortfolio = Portfolio.createNew(USER_ID, "TFSA", "MY TFSA", USD);
 
-      when(portfolioLoader.loadUserPortfolioWithGraph(eq(PORTFOLIO_ID), eq(USER_ID))).thenReturn(
-          existingPortfolio);
+      when(portfolioLoader.loadUserPortfolio(eq(PORTFOLIO_ID), eq(USER_ID)))
+          .thenReturn(existingPortfolio);
+      when(portfolioViewMapper.toNewPortfolioView(any())).thenReturn(mock(PortfolioView.class));
+      when(portfolioRepository.save(any())).thenReturn(existingPortfolio);
 
       service.updatePortfolio(command);
 

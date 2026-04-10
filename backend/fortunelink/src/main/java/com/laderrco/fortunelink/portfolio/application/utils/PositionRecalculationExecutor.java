@@ -54,9 +54,7 @@ public class PositionRecalculationExecutor {
       account.clearPositionForRecalculation(symbol);
       account.clearRealizedGainsForSymbol(symbol);
 
-      account.beginReplay();
       active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
-      account.endReplay();
       portfolio.reportRecalculationSuccess(accountId);
     } catch (Exception e) {
       log.error("Recalculation failed for account {} symbol {}", accountId, symbol, e);

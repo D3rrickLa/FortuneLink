@@ -126,7 +126,7 @@ public class TransactionController {
     return transactionService.recordSplit(
         new RecordSplitCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            request.symbol().toUpperCase(), new Ratio(request.numerator(), request.denominator()),
+            request.symbol(), new Ratio(request.numerator(), request.denominator()),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
   }
 
@@ -140,7 +140,7 @@ public class TransactionController {
     return transactionService.recordReturnOfCapital(
         new RecordReturnOfCaptialCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            request.assetSymbol().toUpperCase(),
+            request.assetSymbol(),
             Price.of(request.distributionPerUnit(), Currency.of(request.currency())),
             new Quantity(request.heldQuantity()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
@@ -238,7 +238,7 @@ public class TransactionController {
     return transactionService.recordInterest(
         new RecordInterestCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            request.isAssetInterest() ? request.assetSymbol().toUpperCase() : null,
+            request.isAssetInterest() ? request.assetSymbol() : null,
             Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
   }
@@ -253,7 +253,7 @@ public class TransactionController {
     return transactionService.recordDividend(
         new RecordDividendCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            request.assetSymbol().toUpperCase(), Money.of(request.amount(), request.currency()),
+            request.assetSymbol(), Money.of(request.amount(), request.currency()),
             request.transactionDate(), request.notes() != null ? request.notes() : ""));
   }
 
@@ -267,7 +267,7 @@ public class TransactionController {
     return transactionService.recordDividendReinvestment(
         new RecordDividendReinvestmentCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            request.assetSymbol().toUpperCase(),
+            request.assetSymbol(),
             new RecordDividendReinvestmentCommand.DripExecution(
                 new Quantity(request.sharesPurchased()),
                 Price.of(request.pricePerShare(), Currency.of(request.currency()))),
@@ -298,7 +298,7 @@ public class TransactionController {
     return transactionQueryService.getTransactionHistory(
         new GetTransactionHistoryQuery(PortfolioId.fromString(portfolioId), userId,
             AccountId.fromString(accountId),
-            symbol != null ? new AssetSymbol(symbol.trim().toUpperCase()) : null, startDate,
+            symbol != null ? new AssetSymbol(symbol.trim()) : null, startDate,
             endDate, page, size));
   }
 

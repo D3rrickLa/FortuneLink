@@ -68,6 +68,8 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -128,6 +130,8 @@ class TransactionServiceTest {
   private TransactionRecordingService transactionRecordingService;
   @Mock
   private CacheManager cacheManager;
+  @Mock
+  private IdempotencyCache idempotencyCache;
 
   @Mock
   private Appender<ILoggingEvent> mockAppender;
@@ -247,11 +251,13 @@ class TransactionServiceTest {
     @DisplayName("recordPurchase: trigger evictBuyFeeCache success")
     void recordPurchaseEvictsFeeCache() {
       AssetSymbol symbol = new AssetSymbol("AAPL");
-      MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR,
-          NOTES);
       Fee fee = Fee.of(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, USD), NOW);
-      when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
+      MarketAssetInfo info = new MarketAssetInfo(symbol, NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR, NOTES);
 
+      when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
+      when(idempotencyCache.get(anyString())).thenReturn(null);
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(any(), any()))
+          .thenReturn(Optional.empty());
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
           any(), anyBoolean())).thenReturn(transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
@@ -783,15 +789,14 @@ class TransactionServiceTest {
       RecordPurchaseCommand command = createPurchaseCommand();
       UUID key = command.idempotencyKey();
 
-      when(transactionRepository.findByIdempotencyKey(key))
-          .thenReturn(Optional.of(transaction));
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, command.portfolioId()))
+          .thenReturn(Optional.of(transaction)); // Now the service finds it!
       when(transactionViewMapper.toTransactionView(transaction))
           .thenReturn(transactionView);
 
       TransactionView result = service.recordPurchase(command);
 
       assertThat(result).isEqualTo(transactionView);
-
       verify(transactionRecordingService, never()).recordBuy(any(), any(), any(), any(), any(), any(), any(), any(),
           anyBoolean());
       verify(portfolioRepository, never()).save(any());
@@ -804,8 +809,8 @@ class TransactionServiceTest {
       RecordPurchaseCommand command = createPurchaseCommand();
       UUID key = command.idempotencyKey();
 
-      // Mock the repository to return EMPTY (Key hasn't been used yet)
-      when(transactionRepository.findByIdempotencyKey(key))
+      // Match the signature: key AND portfolioId
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(eq(key), eq(command.portfolioId())))
           .thenReturn(Optional.empty());
 
       // Setup standard mocks for asset info and recording
@@ -816,14 +821,11 @@ class TransactionServiceTest {
           .thenReturn(transaction);
       when(transactionViewMapper.toTransactionView(transaction)).thenReturn(transactionView);
 
-      // Act
       TransactionView result = service.recordPurchase(command);
 
-      // Assert
+      // Verify the actual method called by the service
       assertThat(result).isEqualTo(transactionView);
-
-      // VERIFY: Logic was executed because key was new
-      verify(transactionRepository).findByIdempotencyKey(key);
+      verify(transactionRepository).findByIdempotencyKeyAndPortfolioId(key, command.portfolioId());
       verify(transactionRecordingService).recordBuy(any(), any(), any(), any(), any(), any(), any(), any(),
           anyBoolean());
       verify(portfolioRepository).save(portfolio);
@@ -832,9 +834,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("execute: proceeds normally when idempotency key is null")
     void executeNullKey() {
-      RecordPurchaseCommand command =  new RecordPurchaseCommand(null, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
-        ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
-
+      RecordPurchaseCommand command = new RecordPurchaseCommand(null, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+          ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(mock(MarketAssetInfo.class)));
       when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(), any(), anyBoolean()))

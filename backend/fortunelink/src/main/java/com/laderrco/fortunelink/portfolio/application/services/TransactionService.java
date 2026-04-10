@@ -95,11 +95,11 @@ public class TransactionService {
     return handleOptimisticLockFailure(ex, cmd.accountId());
   }
 
-  @Recover
-  public TransactionView recover(ObjectOptimisticLockingFailureException ex, IdentifiedTransactionCommand cmd) {
-    // This catches the Exclude/Restore path explicitly
-    return handleOptimisticLockFailure(ex, cmd.accountId());
-  }
+  // @Recover
+  // public TransactionView recover(ObjectOptimisticLockingFailureException ex, IdentifiedTransactionCommand cmd) {
+  //   // This catches the Exclude/Restore path explicitly
+  //   return handleOptimisticLockFailure(ex, cmd.accountId());
+  // }
 
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
     return execute(command, validator::validate, "recordPurchase", ctx -> {

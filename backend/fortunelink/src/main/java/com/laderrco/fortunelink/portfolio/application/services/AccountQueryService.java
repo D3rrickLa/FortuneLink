@@ -9,6 +9,7 @@ import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -62,6 +63,18 @@ public class AccountQueryService {
     }
 
     List<AccountSummaryProjection> projections = page.getContent();
+
+    boolean hasActiveAccounts = projections.stream()
+        .anyMatch(p -> p.getLifecycleState() != AccountLifecycleState.CLOSED.name() &&
+            p.getLifecycleState() != AccountLifecycleState.REPLAYING.name());
+
+    if (!hasActiveAccounts) {
+      List<AccountView> content = projections.stream()
+          .map(p -> accountViewBuilder.buildFromProjection(p, Map.of(), Map.of(), Map.of()))
+          .toList();
+      return new PageImpl<>(content, pageable, page.getTotalElements());
+    }
+    
     List<AccountId> accountIds = projections.stream()
         .map(a -> AccountId.fromString(a.getId().toString()))
         .toList();
@@ -76,8 +89,7 @@ public class AccountQueryService {
         .collect(Collectors.toSet());
 
     Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
-        ? Map.of()
-        : marketDataService.getBatchQuotes(allSymbols);
+        ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
 
     // REMOVED: symbolsByAccount query
     // REMOVED: feesByAccount query (The Big Win)

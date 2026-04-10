@@ -19,6 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.laderrco.fortunelink.portfolio.application.commands.records.*;
+import com.laderrco.fortunelink.portfolio.application.exceptions.CsvImportCommitException;
+import com.laderrco.fortunelink.portfolio.application.views.CsvImportResult;
+import com.laderrco.fortunelink.portfolio.application.views.CsvRowError;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -263,28 +266,5 @@ public class CsvImportService {
       BigDecimal price,
       String currency,
       String notes) {
-  }
-
-  public record CsvRowError(int rowNum, String message) {
-  }
-
-  public record CsvImportResult(
-      boolean success,
-      int rowsCommitted,
-      List<CsvRowError> errors) {
-
-    public static CsvImportResult success(int count) {
-      return new CsvImportResult(true, count, List.of());
-    }
-
-    public static CsvImportResult failure(List<CsvRowError> errors) {
-      return new CsvImportResult(false, 0, errors);
-    }
-  }
-
-  public static class CsvImportCommitException extends RuntimeException {
-    public CsvImportCommitException(String message, Throwable cause) {
-      super(message, cause);
-    }
   }
 }

@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
 import java.util.List;
 import java.util.Optional;
@@ -125,6 +124,6 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
   @Query("UPDATE AccountJpaEntity a SET a.healthStatus = 'STALE' WHERE a.id = :accountId")
   void markAccountStale(@Param("accountId") UUID accountId);
 
-  @Query("SELECT DISTINCT p.userId FROM Portfolio p WHERE p.deleted = false")
+  @Query("SELECT DISTINCT p.userId FROM PortfolioJpaEntity p WHERE p.deleted = false")
   List<UUID> findAllActiveUserIds();
 }

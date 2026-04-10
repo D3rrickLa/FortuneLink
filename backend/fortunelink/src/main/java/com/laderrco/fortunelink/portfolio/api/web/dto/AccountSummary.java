@@ -13,9 +13,9 @@ public record AccountSummary(
     double totalValue,
     int assetCount,
     Instant creationDate,
-    boolean hasCashImbalance, // NEW
-    int excludedTransactionCount) // NEW
-{
+    boolean hasCashImbalance,
+    int excludedTransactionCount) {
+
   public static AccountSummary fromView(AccountView view) {
     return new AccountSummary(
         view.accountId().toString(),

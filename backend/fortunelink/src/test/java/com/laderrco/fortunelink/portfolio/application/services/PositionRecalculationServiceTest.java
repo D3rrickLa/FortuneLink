@@ -1,40 +1,37 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+
+import nl.altindag.log.LogCaptor;
+
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Position Recalculation Service Unit Tests")
@@ -43,148 +40,268 @@ class PositionRecalculationServiceTest {
   private final UserId USER_ID = UserId.random();
   private final AccountId ACCOUNT_ID = AccountId.newId();
   private final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
+  private LogCaptor logCaptor;
 
   @Mock
-  private Appender<ILoggingEvent> mockAppender;
-  @Captor
-  private ArgumentCaptor<ILoggingEvent> logCaptor;
-
+  private StringRedisTemplate redisTemplate;
+  @Mock
+  private ValueOperations<String, String> valueOperations;
   @Mock
   private RedissonClient redissonClient;
-
   @Mock
   private PositionRecalculationExecutor executor;
   @Mock
   private AccountHealthService accountHealthService;
+
   @InjectMocks
   private PositionRecalculationService recalculationService;
 
   @BeforeEach
-  void setupLogging() {
-    Logger logger = (Logger) LoggerFactory.getLogger(PositionRecalculationService.class);
-    logger.addAppender(mockAppender);
+  void setup() {
+    lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    logCaptor = LogCaptor.forClass(PositionRecalculationService.class);
   }
 
   @AfterEach
-  void tearDownLogging() {
-    Logger logger = (Logger) LoggerFactory.getLogger(PositionRecalculationService.class);
-    logger.detachAppender(mockAppender);
-  }
-
-  private PositionRecalculationRequestedEvent createEvent() {
-    return new PositionRecalculationRequestedEvent(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL);
+  void tearDown() {
+    logCaptor.clearLogs();
+    logCaptor.close();
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: throws exception when event is null")
-  void onRecalculationRequestedThrowsOnNullEvent() {
-    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(null)).isInstanceOf(
-        NullPointerException.class).hasMessageContaining("cannot be null");
+  @DisplayName("onRecalculationRequested: debounce logic sets key in Redis")
+  void debounceLogicSetsKey() {
+    PositionRecalculationRequestedEvent event = createEvent();
+
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+        .thenReturn(true);
+
+    recalculationService.onRecalculationRequested(event);
+
+    verify(valueOperations).setIfAbsent(startsWith("recalc:"), anyString(), eq(Duration.ofSeconds(3)));
+
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: successfully schedules when lock is acquired")
-  void onRecalculationRequestedSchedulesSuccessfully() throws InterruptedException {
+  @DisplayName("onRecalculationRequested: subsequent requests update token but don't schedule new task")
+  void subsequentRequestsUpdateToken() {
+    PositionRecalculationRequestedEvent event = createEvent();
+
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+        .thenReturn(false);
+
+    recalculationService.onRecalculationRequested(event);
+
+    verify(valueOperations).set(anyString(), anyString(), any(Duration.class));
+  }
+
+  @Test
+  @DisplayName("acquireAndRun: handles Redis connection failure by marking account stale")
+  void handlesLockingRedisFailure() throws InterruptedException {
     PositionRecalculationRequestedEvent event = createEvent();
     RLock mockLock = mock(RLock.class);
 
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
+        .thenThrow(new RuntimeException("Redis down"));
 
-    recalculationService.onRecalculationRequested(event);
+    ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "test-lock", event);
 
-    verify(executor).scheduleRecalculation(any(), any(), any(), any());
-    verify(mockLock).unlock();
+    verify(accountHealthService).markStale(event.accountId());
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: skips execution when lock is busy")
-  void onRecalculationRequestedHandlesLockContention() throws InterruptedException {
+  @DisplayName("runRecalculation: marks stale if executor throws exception")
+  void marksStaleOnExecutorError() {
     PositionRecalculationRequestedEvent event = createEvent();
-    RLock mockLock = mock(RLock.class);
+    doThrow(new RuntimeException("Failed")).when(executor)
+        .scheduleRecalculation(any(), any(), any(), any());
 
-    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(false);
+    assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(recalculationService, "runRecalculation", event))
+        .isInstanceOf(RuntimeException.class);
+
+    verify(accountHealthService).markStale(event.accountId());
+  }
+
+  @Test
+  @DisplayName("onRecalculationRequested: schedules execution when it's the first event for a symbol")
+  void onRecalculationRequestedSchedulesFirst() {
+    PositionRecalculationRequestedEvent event = createEvent();
+
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+        .thenReturn(true);
 
     recalculationService.onRecalculationRequested(event);
+
+    verify(valueOperations).setIfAbsent(
+        contains(SYMBOL.symbol()),
+        anyString(),
+        eq(Duration.ofSeconds(3)));
+  }
+
+  @Test
+  @DisplayName("onRecalculationRequested: updates token but doesn't re-schedule on duplicate")
+  void onRecalculationRequestedUpdatesDuplicate() {
+    PositionRecalculationRequestedEvent event = createEvent();
+
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+        .thenReturn(false);
+
+    recalculationService.onRecalculationRequested(event);
+
+    verify(valueOperations).set(anyString(), anyString(), eq(Duration.ofSeconds(3)));
+  }
+
+  @Test
+  @DisplayName("runIfLatest: skips execution if token is no longer current")
+  void runIfLatestSkipsIfObsolete() {
+    PositionRecalculationRequestedEvent event = createEvent();
+    String key = "recalc:key";
+    String oldToken = "token-123";
+    String newToken = "token-456";
+
+    when(valueOperations.get(key)).thenReturn(newToken);
+
+    ReflectionTestUtils.invokeMethod(recalculationService, "runIfLatest", event, key, oldToken);
+
+    verify(redisTemplate, never()).delete(anyString());
+    verifyNoInteractions(redissonClient);
+  }
+
+  @Test
+  @DisplayName("runIfLatest: proceeds and deletes key if token is current")
+  void runIfLatestProceedsIfCurrent() throws InterruptedException {
+    PositionRecalculationRequestedEvent event = createEvent();
+    String key = "recalc:key";
+    String token = "token-123";
+    RLock mockLock = mock(RLock.class);
+
+    when(valueOperations.get(key)).thenReturn(token);
+    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
+
+    ReflectionTestUtils.invokeMethod(recalculationService, "runIfLatest", event, key, token);
+
+    verify(redisTemplate).delete(key);
+    verify(redissonClient).getLock(contains(ACCOUNT_ID.id().toString()));
+  }
+
+  @Test
+  @DisplayName("acquireAndRun: logs warning and skips when lock is held by another process")
+  void acquireAndRunHandlesLockBusy() throws InterruptedException {
+    PositionRecalculationRequestedEvent event = createEvent();
+    RLock mockLock = mock(RLock.class);
+    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
+
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(false);
+
+    ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event);
 
     verifyNoInteractions(executor);
     verify(mockLock, never()).unlock();
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: marks stale and skips execution when Redis is unreachable")
-  void onRecalculationRequestedHandlesRedisDown() throws InterruptedException {
+  @DisplayName("acquireAndRun: marks account stale if Redis fails during locking")
+  void acquireAndRunHandlesRedisFailure() throws InterruptedException {
     PositionRecalculationRequestedEvent event = createEvent();
     RLock mockLock = mock(RLock.class);
-
-    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
-        .thenThrow(new RuntimeException("Redis connection refused"));
-
-    recalculationService.onRecalculationRequested(event);
-
-    // Verify executor is NOT called (safety first)
-    // Verify fallback logic
-    verifyNoInteractions(executor);
-    verify(accountHealthService).markStale(eq(ACCOUNT_ID));
-  }
-
-  @Test
-  @DisplayName("onRecalculationRequested: marks stale and restores interrupt on InterruptedException")
-  void onRecalculationRequestedHandlesInterruptedException() throws InterruptedException {
-    PositionRecalculationRequestedEvent event = createEvent();
-    RLock mockLock = mock(RLock.class);
-
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
 
-    doThrow(new InterruptedException("Interrupted!")).when(mockLock)
-        .tryLock(anyLong(), anyLong(), any(TimeUnit.class));
+    when(mockLock.tryLock(anyLong(), anyLong(), any()))
+        .thenThrow(new RuntimeException("Redis connection lost"));
 
-    recalculationService.onRecalculationRequested(event);
+    ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event);
 
-    // Explicitly check for interactions with markStale using class matchers
-    verify(accountHealthService).markStale(any(AccountId.class));
-
-    assertTrue(Thread.interrupted(), "Interrupt flag should be set");
+    verify(accountHealthService).markStale(event.accountId());
     verifyNoInteractions(executor);
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: marks stale and bubbles exception if executor fails")
-  void onRecalculationRequestedMarksStaleOnExecutorFailure() throws InterruptedException {
+  @DisplayName("runRecalculation: marks stale and bubbles exception on executor failure")
+  void runRecalculationHandlesFailure() {
     PositionRecalculationRequestedEvent event = createEvent();
-    RLock mockLock = mock(RLock.class);
-    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
 
-    doThrow(new RuntimeException("Computation error")).when(executor)
+    doThrow(new RuntimeException("Math error")).when(executor)
         .scheduleRecalculation(any(), any(), any(), any());
 
-    // We expect the exception to bubble up to the test
-    assertThatThrownBy(() -> recalculationService.onRecalculationRequested(event))
-        .isInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Computation error");
+    assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(recalculationService, "runRecalculation", event))
+        .isInstanceOf(RuntimeException.class);
 
-    // Verify side effects happened despite the crash
-    verify(accountHealthService).markStale(eq(ACCOUNT_ID));
-    verify(mockLock).unlock();
+    verify(accountHealthService).markStale(event.accountId());
   }
 
   @Test
-  @DisplayName("onRecalculationRequested: suppresses failure during lock release")
-  void suppressesUnlockErrors() throws InterruptedException {
+  @DisplayName("acquireAndRun: handles interruption during lock acquisition")
+  void acquireAndRunHandlesInterruption() throws InterruptedException {
     PositionRecalculationRequestedEvent event = createEvent();
     RLock mockLock = mock(RLock.class);
-
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
-    doThrow(new RuntimeException("Network lost")).when(mockLock).unlock();
 
-    recalculationService.onRecalculationRequested(event);
+    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
+        .thenThrow(new InterruptedException("Simulation"));
 
-    verify(executor).scheduleRecalculation(any(), any(), any(), any());
-    verify(mockAppender, never()).doAppend(argThat(l -> l.getLevel().equals(Level.ERROR)));
+    assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event))
+        .hasCauseInstanceOf(InterruptedException.class);
+
+    assertTrue(Thread.interrupted(), "Interrupt flag should be restored");
   }
 
+  @Test
+  @DisplayName("runIfLatest: logs error when acquireAndRun throws InterruptedException")
+  void runIfLatestLogsInterrupted() throws InterruptedException {
+    PositionRecalculationRequestedEvent event = createEvent();
+    String key = "recalc:key";
+    String token = "token";
+
+    when(valueOperations.get(key)).thenReturn(token);
+    RLock mockLock = mock(RLock.class);
+    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
+
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenThrow(new InterruptedException());
+
+    ReflectionTestUtils.invokeMethod(recalculationService, "runIfLatest", event, key, token);
+
+    assertThat(logCaptor.getErrorLogs())
+        .anyMatch(l -> l.contains("Interrupted"));
+  }
+
+  @Test
+  @DisplayName("acquireAndRun: suppresses error when unlock fails")
+  void acquireAndRunSuppressesUnlockError() throws InterruptedException {
+    PositionRecalculationRequestedEvent event = createEvent();
+    RLock mockLock = mock(RLock.class);
+    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
+
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
+
+    doThrow(new IllegalMonitorStateException("Lock already released"))
+        .when(mockLock).unlock();
+
+    assertDoesNotThrow(
+        () -> ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event));
+
+    verify(mockLock).unlock();
+
+  }
+
+  @Test
+  @DisplayName("acquireAndRun: logs warning when lock is busy")
+  void acquireAndRunLogsWarnWhenBusy() throws InterruptedException {
+    PositionRecalculationRequestedEvent event = createEvent();
+    RLock mockLock = mock(RLock.class);
+    when(redissonClient.getLock(anyString())).thenReturn(mockLock);
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(false);
+
+    ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event);
+
+    assertThat(logCaptor.getWarnLogs())
+        .anyMatch(l -> l.contains("Lock busy for accountId"));
+
+    verifyNoInteractions(executor);
+  }
+
+  private PositionRecalculationRequestedEvent createEvent() {
+    return new PositionRecalculationRequestedEvent(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL);
+  }
 }
