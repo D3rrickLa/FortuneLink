@@ -20,9 +20,14 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
   @Override
   public Optional<ExchangeRate> getRate(Currency from, Currency to) {
+    return getRate(from, to, Instant.now());
+  }
+
+  @Override
+  public Optional<ExchangeRate> getRate(Currency from, Currency to, Instant date) {
     try {
       // If the API is up, we get the real rate
-      return Optional.of(provider.getExchangeRate(from, to, Instant.now()));
+      return Optional.of(provider.getExchangeRate(from, to, date));
     } catch (Exception ex) {
       // If the API (BOC) is down, we log and return Empty
       log.warn("Exchange rate provider failed for {}/{}. Cause: {}", from.getCode(), to.getCode(),
@@ -51,8 +56,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
       ExchangeRate rate = provider.getExchangeRate(amount.currency(), targetCurrency, asOfDate);
       return rate.convert(amount);
     } catch (Exception ex) {
-      log.warn("Historical rate unavailable for {}. Using 1:1 fallback.", asOfDate);
-      return amount; // Fallback to identity/original amount
+      throw ex;
     }
   }
 }

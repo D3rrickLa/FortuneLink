@@ -32,9 +32,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
@@ -43,10 +41,12 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -109,8 +110,13 @@ public class TransactionService {
       AssetSymbol symbol = new AssetSymbol(command.symbol());
       AssetType resolvedType = resolveAssetType(symbol, command.assetType());
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
+
+      // 1. Process and convert the fees here
+      List<Fee> convertedFees = processFees(command.fees(), ctx.account(), command.transactionDate());
+
+      // 2. Pass the convertedFees (not command.fees()) to the recording service
       return transactionRecordingService.recordBuy(ctx.account(), symbol, resolvedType,
-          command.quantity(), price, command.fees(), command.notes(), command.transactionDate(),
+          command.quantity(), price, convertedFees, command.notes(), command.transactionDate(),
           command.skipCashCheck());
     });
   }
@@ -121,9 +127,15 @@ public class TransactionService {
       if (!ctx.account().hasPosition(symbol)) {
         throw new InsufficientQuantityException("No position found for: " + command.symbol());
       }
+
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
+
+      // 1. Process and convert the fees here
+      List<Fee> convertedFees = processFees(command.fees(), ctx.account(), command.transactionDate());
+
+      // 2. Pass the convertedFees to the recording service
       return transactionRecordingService.recordSell(ctx.account(), symbol, command.quantity(),
-          price, command.fees(), command.notes(), command.transactionDate());
+          price, convertedFees, command.notes(), command.transactionDate());
     });
   }
 
@@ -193,6 +205,7 @@ public class TransactionService {
             command.distributionPerUnit(), command.notes(), command.transactionDate()));
   }
 
+  // TODO: fix this, we have a fee var, but it is never used
   public TransactionView recordTransferIn(RecordTransferInCommand command) {
     return execute(command, validator::validate, "recordTransferIn",
         ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(),
@@ -383,30 +396,69 @@ public class TransactionService {
       Supplier<TransactionView> businessLogic) {
     UUID key = command.idempotencyKey();
 
-    // 1. Level 1 & 2: Check Cache and DB
+    // 1. Initial Checks (Still good to have for performance)
     if (key != null) {
       TransactionView cached = idempotencyCache.get(key.toString());
-      if (cached != null) {
+      if (cached != null)
         return cached;
-      }
 
-      Optional<Transaction> existing = transactionRepository.findByIdempotencyKeyAndPortfolioId(key,
-          command.portfolioId());
+      Optional<Transaction> existing = transactionRepository
+          .findByIdempotencyKeyAndPortfolioId(key, command.portfolioId());
+
       if (existing.isPresent()) {
-        log.info("Duplicate transaction detected for key {} in portfolio {}", key, command.portfolioId());
         TransactionView view = transactionViewMapper.toTransactionView(existing.get());
         idempotencyCache.put(key.toString(), view);
         return view;
       }
     }
 
-    TransactionView result = businessLogic.get();
+    // 2. The Critical Section
+    try {
+      // Run the logic and save
+      TransactionView result = businessLogic.get();
 
-    if (key != null) {
-      idempotencyCache.put(key.toString(), result);
+      if (key != null) {
+        idempotencyCache.put(key.toString(), result);
+      }
+      return result;
+
+    } catch (DataIntegrityViolationException ex) {
+      // 3. The Recovery Logic
+      // If we hit this, it means another thread JUST saved this exact key.
+      // Instead of erroring out, we act like we found it in the first place.
+      if (key != null) {
+        return transactionRepository
+            .findByIdempotencyKeyAndPortfolioId(key, command.portfolioId())
+            .map(transactionViewMapper::toTransactionView)
+            .orElseThrow(() -> ex); // If we still can't find it, rethrow the original error
+      }
+      throw ex;
     }
+  }
 
-    return result;
+  private List<Fee> processFees(List<Fee> fees, Account account, Instant txDate) {
+    if (fees == null || fees.isEmpty())
+      return List.of();
+
+    Currency accountCurrency = account.getAccountCurrency();
+
+    return fees.stream().map(fee -> {
+      // If already in account currency, just stamp it with an identity rate
+      if (fee.nativeAmount().currency().equals(accountCurrency)) {
+        return fee.withAccountAmount(
+            fee.nativeAmount(),
+            ExchangeRate.identity(accountCurrency, txDate));
+      }
+
+      // Fetch rate. Use .orElseThrow to stop the "1:1 fallback" corruption.
+      return exchangeRateService.getRate(fee.nativeAmount().currency(), accountCurrency, txDate)
+          .map(rate -> {
+            Money converted = rate.convert(fee.nativeAmount());
+            return fee.withAccountAmount(converted, rate);
+          })
+          .orElseThrow(() -> new ExchangeRateUnavailableException(fee.nativeAmount().currency().getCode(),
+              accountCurrency.getCode(), txDate));
+    }).toList();
   }
 
   private TransactionView handleOptimisticLockFailure(Exception ex, AccountId accountId) {

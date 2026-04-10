@@ -50,8 +50,8 @@ public class BocProvider implements ExchangeRateProvider {
   }
 
   private BocExchangeResponse getHistoricalWithFallback(String from, String to, Instant asOf) {
-    // Try up to 4 days back (covers long weekends)
-    for (int daysBack = 0; daysBack <= 4; daysBack++) {
+    // Try up to 7 days back (covers long weekends/holidays)
+    for (int daysBack = 0; daysBack <= 7; daysBack++) {
       Instant adjusted = asOf.minus(daysBack, ChronoUnit.DAYS);
       BocExchangeResponse response = bocClient.getHistoricalExchangeRate(to, from, adjusted,
           adjusted);

@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -39,11 +40,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CsvImportService {
   private static Logger log = LoggerFactory.getLogger(CsvImportService.class);
+  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final Set<TransactionType> SUPPORTED_CSV_TYPES = Set.of(
+      TransactionType.BUY,
+      TransactionType.SELL,
+      TransactionType.DEPOSIT,
+      TransactionType.WITHDRAWAL,
+      TransactionType.DIVIDEND);
   // Enforce a hard cap to prevent abuse on free tier.
   // If you ever add a "premium" tier, gate this behind a feature flag.
   private static final int MAX_ROWS = 5_000;
   private static final int EXPECTED_COLUMNS = 8;
-  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private final TransactionService transactionService;
 
@@ -160,6 +167,13 @@ public class CsvImportService {
       String currency = parts[6].trim().toUpperCase();
       String notes = parts[7].trim();
 
+      if (!SUPPORTED_CSV_TYPES.contains(type)) {
+        errors.add(new CsvRowError(rowNum,
+            String.format("Transaction type '%s' is not supported in CSV import. Supported types are: %s",
+                type, SUPPORTED_CSV_TYPES)));
+        return; // Stop processing this row further
+      }
+
       // Type-specific field requirements
       if ((type == TransactionType.BUY || type == TransactionType.SELL)
           && symbol.isBlank()) {
@@ -235,8 +249,8 @@ public class CsvImportService {
               row.symbol(), Money.of(row.price(), row.currency()),
               row.date(), row.notes()));
 
-      default -> throw new IllegalArgumentException(
-          "Unsupported transaction type in CSV: " + row.type());
+      default -> throw new IllegalStateException(
+          "Validation-Execution mismatch: Type " + row.type() + " passed validation but has no execution logic.");
     }
   }
 

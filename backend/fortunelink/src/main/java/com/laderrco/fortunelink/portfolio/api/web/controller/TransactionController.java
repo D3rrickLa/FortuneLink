@@ -24,6 +24,7 @@ import com.laderrco.fortunelink.portfolio.application.services.TransactionServic
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee.FeeMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -37,6 +38,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -57,17 +59,23 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Full transaction lifecycle controller.
  * <p>
- * All endpoints follow the same authentication pattern: @AuthenticatedUser UserId userId. All
+ * All endpoints follow the same authentication pattern: @AuthenticatedUser
+ * UserId userId. All
  * mutations return the created/modified TransactionView. All paths:
  * /api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions/...
  * <p>
- * Transaction type → endpoint mapping: BUY → POST /buy SELL → POST /sell DEPOSIT → POST /deposit
- * WITHDRAWAL → POST /withdrawal FEE → POST /fee INTEREST → POST /interest DIVIDEND → POST /dividend
- * DIVIDEND_REINVEST → POST /drip SPLIT → POST /split RETURN_OF_CAPITAL → POST /return-of-capital
- * TRANSFER_IN → POST /transfer-in TRANSFER_OUT → POST /transfer-out (exclusion) → PATCH
+ * Transaction type → endpoint mapping: BUY → POST /buy SELL → POST /sell
+ * DEPOSIT → POST /deposit
+ * WITHDRAWAL → POST /withdrawal FEE → POST /fee INTEREST → POST /interest
+ * DIVIDEND → POST /dividend
+ * DIVIDEND_REINVEST → POST /drip SPLIT → POST /split RETURN_OF_CAPITAL → POST
+ * /return-of-capital
+ * TRANSFER_IN → POST /transfer-in TRANSFER_OUT → POST /transfer-out (exclusion)
+ * → PATCH
  * /{id}/exclude (restore) → PATCH /{id}/restore
  * <p>
- * Reads: GET / → paginated history with optional filters GET /{id} → single transaction by ID
+ * Reads: GET / → paginated history with optional filters GET /{id} → single
+ * transaction by ID
  */
 @RestController
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions")
@@ -89,7 +97,7 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
+    List<Fee> fees = mapFees(request.fees(),request.transactionDate());
 
     return transactionService.recordPurchase(
         new RecordPurchaseCommand(validateUuid(idempotencyKey),
@@ -106,7 +114,7 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
+    List<Fee> fees = mapFees(request.fees(), request.transactionDate());
 
     return transactionService.recordSale(
         new RecordSaleCommand(validateUuid(idempotencyKey),
@@ -199,7 +207,7 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordTransferInRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), Currency.of(request.currency()), request.transactionDate());
+    List<Fee> fees = mapFees(request.fees(), request.transactionDate());
 
     return transactionService.recordTransferIn(
         new RecordTransferInCommand(validateUuid(idempotencyKey),
@@ -281,11 +289,14 @@ public class TransactionController {
   /**
    * Returns a paginated list of transactions for an account.
    * <p>
-   * Supports optional filtering by symbol and date range. Results are sorted by occurredAt
+   * Supports optional filtering by symbol and date range. Results are sorted by
+   * occurredAt
    * descending (most recent first). Page size is capped at 100 per request.
    * <p>
-   * All filters are optional and can be combined: ?symbol=AAPL → AAPL transactions only
-   * ?startDate=...&endDate=... → date range ?symbol=AAPL&startDate=... → AAPL in range
+   * All filters are optional and can be combined: ?symbol=AAPL → AAPL
+   * transactions only
+   * ?startDate=...&endDate=... → date range ?symbol=AAPL&startDate=... → AAPL in
+   * range
    */
   @GetMapping
   public Page<TransactionView> getTransactionHistory(@PathVariable String portfolioId,
@@ -305,8 +316,10 @@ public class TransactionController {
   /**
    * Returns a single transaction by ID.
    * <p>
-   * The transaction must belong to the specified account and portfolio. Returns 404 if the
-   * transaction does not exist or belongs to a different user's account — we do not differentiate
+   * The transaction must belong to the specified account and portfolio. Returns
+   * 404 if the
+   * transaction does not exist or belongs to a different user's account — we do
+   * not differentiate
    * to avoid information leakage.
    */
   @GetMapping("/{transactionId}")
@@ -326,7 +339,8 @@ public class TransactionController {
   /**
    * Excludes a transaction from position and capital gains calculations.
    * <p>
-   * Cash balance is NOT reversed — see ExcludeTransactionCommand for rationale. Triggers an async
+   * Cash balance is NOT reversed — see ExcludeTransactionCommand for rationale.
+   * Triggers an async
    * position recalculation for the affected symbol.
    */
   @PatchMapping("/{transactionId}/exclude")
@@ -342,7 +356,8 @@ public class TransactionController {
   }
 
   /**
-   * Restores a previously excluded transaction back into calculations. Triggers an async position
+   * Restores a previously excluded transaction back into calculations. Triggers
+   * an async position
    * recalculation for the affected symbol.
    */
   @PatchMapping("/{transactionId}/restore")
@@ -361,12 +376,13 @@ public class TransactionController {
   // Private helpers
   // =========================================================================
 
-  private List<Fee> mapFees(List<FeeRequest> feeRequests, Currency defaultCurrency, Instant txDate) {
+  private List<Fee> mapFees(List<FeeRequest> feeRequests, Instant txDate) {
     if (feeRequests == null || feeRequests.isEmpty()) {
       return List.of();
     }
-    return feeRequests.stream()
-        .map(f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()), txDate)).toList();
+
+    return feeRequests.stream().map(f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()),
+        txDate, new FeeMetadata(Map.of()))).toList();
   }
 
   private UUID validateUuid(String idempotencyKey) {

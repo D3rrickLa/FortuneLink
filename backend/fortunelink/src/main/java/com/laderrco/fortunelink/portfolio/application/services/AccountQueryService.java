@@ -65,8 +65,8 @@ public class AccountQueryService {
     List<AccountSummaryProjection> projections = page.getContent();
 
     boolean hasActiveAccounts = projections.stream()
-        .anyMatch(p -> p.getLifecycleState() != AccountLifecycleState.CLOSED.name() &&
-            p.getLifecycleState() != AccountLifecycleState.REPLAYING.name());
+        .anyMatch(p -> !AccountLifecycleState.CLOSED.name().equals(p.getLifecycleState()) &&
+            !AccountLifecycleState.REPLAYING.name().equals(p.getLifecycleState()));
 
     if (!hasActiveAccounts) {
       List<AccountView> content = projections.stream()
@@ -74,7 +74,7 @@ public class AccountQueryService {
           .toList();
       return new PageImpl<>(content, pageable, page.getTotalElements());
     }
-    
+
     List<AccountId> accountIds = projections.stream()
         .map(a -> AccountId.fromString(a.getId().toString()))
         .toList();
@@ -89,7 +89,8 @@ public class AccountQueryService {
         .collect(Collectors.toSet());
 
     Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
-        ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
+        ? Map.of()
+        : marketDataService.getBatchQuotes(allSymbols);
 
     // REMOVED: symbolsByAccount query
     // REMOVED: feesByAccount query (The Big Win)

@@ -78,7 +78,7 @@ public class FmpProvider implements MarketDataProvider {
   @Override
   public Optional<MarketAssetInfo> fetchAssetInfo(AssetSymbol symbol) {
     if (!tryReserve(1)) {
-      return null;
+      return Optional.empty();
     }
 
     try {

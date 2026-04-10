@@ -9,11 +9,13 @@ import java.util.Optional;
 /**
  * Service providing currency conversion and exchange rate lookups.
  *
- * <p><b>Common Parameters:</b>
+ * <p>
+ * <b>Common Parameters:</b>
  * <ul>
  * <li>{@code amount} / {@code price} - The monetary value to be converted.</li>
  * <li>{@code targetCurrency} - The currency to convert into.</li>
- * <li>{@code asOfDate} - The historical point in time for the exchange rate.</li>
+ * <li>{@code asOfDate} - The historical point in time for the exchange
+ * rate.</li>
  * </ul>
  */
 public interface ExchangeRateService {
@@ -22,6 +24,8 @@ public interface ExchangeRateService {
    *
    * @return An Optional containing the rate, or empty if no rate exists.
    */
+  Optional<ExchangeRate> getRate(Currency from, Currency to, Instant date);
+
   Optional<ExchangeRate> getRate(Currency from, Currency to);
 
   /**

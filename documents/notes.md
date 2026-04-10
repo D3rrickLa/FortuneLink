@@ -14,7 +14,7 @@
 | **Record Liability Payment** | ❌ | Explicitly deferred |
 | **Transaction History with filters** | ✅ (partial — date OR symbol, not both) | ✅ |
 | **Realized Gains Report** | ❌ | ✅ |
-| **CSV Import** | ❌ | 🟨 |
+| **CSV Import** | ❌ | ✅ |
 
 ### Completed
 
@@ -52,7 +52,7 @@
 * [✅] **Realized Gains Reporting**: Implement `GetRealizedGainsQuery` and corresponding service/endpoint for tax reporting.
 * [ ] **Performance Calculation**: Implement `PerformanceCalculationService` (Total Return, TWR, Unrealized Gains).
 * [ ] **Asset Allocation**: Implement `AssetAllocationService` for breakdown by asset type, account, and currency.
-* [🟨] **CSV Import Engine**: Build parsing logic, bulk commands, and file upload endpoints.
+* [✅] **CSV Import Engine**: Build parsing logic, bulk commands, and file upload endpoints.
 * [✅] **Symbol Validation**: Expose a search endpoint to validate symbols before transaction submission.
 
 ## 4. Documentation & Cleanup
@@ -123,8 +123,17 @@ Before a user records a BUY, they need to search for AAPL or BTC-USD. MarketData
     }
 ```
 
+How to implement the other stuff
+```
+class PerformanceCalculationService {
+    +calculateTotalReturn(Portfolio, MarketDataService) Percentage
+    +calculateRealizedGains(List~Transaction~) Money
+    +calculateUnrealizedGains(Portfolio, MarketDataService) Money
+    +calculateTimeWeightedReturn(Portfolio) Percentage
+}
 
-New other issues:
-- No Net Worth History/snapshots
-- Exclude transaction command - needs cash balance 
-- RateLimitInterceptor.getClientIp has a sec vulnerability
+class AssetAllocationService {
+    +calculateAllocationByType(Portfolio) Map~AssetType, Percentage~
+    +calculateAllocationByAccount(Portfolio) Map~AccountType, Percentage~
+}
+```

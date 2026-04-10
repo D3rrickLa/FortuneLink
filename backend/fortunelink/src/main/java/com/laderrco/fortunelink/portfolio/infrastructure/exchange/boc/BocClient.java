@@ -61,6 +61,7 @@ public class BocClient {
     }
   }
 
+  @Retry(name = "boc-api")
   @CircuitBreaker(name = "boc-api")
   public BocExchangeResponse getHistoricalExchangeRate(String to, String from, Instant startDate,
       Instant endDate) {
