@@ -8,11 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -49,14 +45,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction.Trad
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee.FeeMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -69,11 +59,13 @@ import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,6 +85,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -106,6 +100,7 @@ class TransactionServiceTest {
   private static final String NOTES = "Test Note";
   private static final Instant NOW = Instant.now();
   private static final Currency USD = Currency.of("USD");
+  private static final Currency CAD = Currency.of("CAD");
   private static final Money AMOUNT = new Money(new BigDecimal("100.00"), USD);
   private static final UUID IDEMPOTENCY_KEY = UUID.randomUUID();
   @Mock
@@ -582,7 +577,7 @@ class TransactionServiceTest {
       service.recordTransferIn(command);
 
       verify(transactionRecordingService).recordTransferIn(any(), eq(command.amount()),
-         eq(command.notes()), eq(command.transactionDate()));
+          eq(command.notes()), eq(command.transactionDate()));
     }
 
     @Test
@@ -668,7 +663,7 @@ class TransactionServiceTest {
     @Test
     @DisplayName("restoreTransaction: throw exception when transaction is not excluded")
     void restoreTransactionFailureNotExcluded() {
-      // Arrange
+
       RestoreTransactionCommand command = new RestoreTransactionCommand(IDEMPOTENCY_KEY,
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID, transactionId);
 
@@ -679,7 +674,6 @@ class TransactionServiceTest {
       // If it's already active (not excluded), the method should throw an error
       when(existing.isExcluded()).thenReturn(false);
 
-      // Act & Assert
       assertThrows(InvalidTransactionException.class, () -> {
         service.restoreTransaction(command);
       });
@@ -771,7 +765,7 @@ class TransactionServiceTest {
           any())).thenReturn(Optional.of(transaction));
       when(transaction.isExcluded()).thenReturn(false);
       when(transaction.markAsExcluded(any(), any())).thenReturn(transaction);
-      when(transaction.transactionType()).thenReturn(TransactionType.BUY); // affects holdings
+      when(transaction.transactionType()).thenReturn(TransactionType.BUY);
       when(transaction.execution()).thenReturn(execution);
 
       service.excludeTransaction(cmd);
@@ -783,6 +777,8 @@ class TransactionServiceTest {
   @Nested
   @DisplayName("Execute test idempotent")
   public class IdempotencyTest {
+    private final TransactionId TRANSACTION_ID = TransactionId.newId();
+
     @Test
     @DisplayName("execute: returns existing transaction when idempotency key is a replay")
     void executeIdempotentReplay() {
@@ -805,7 +801,7 @@ class TransactionServiceTest {
     @Test
     @DisplayName("execute: records and persists when idempotency key is new")
     void executeInitialRequest() {
-      // Arrange
+
       RecordPurchaseCommand command = createPurchaseCommand();
       UUID key = command.idempotencyKey();
 
@@ -845,6 +841,230 @@ class TransactionServiceTest {
 
       verify(transactionRepository, never()).findByIdempotencyKey(null);
       verify(portfolioRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("executeWithIdempotency: returns cached view immediately if present")
+    void shouldReturnCachedViewOnHit() {
+
+      UUID key = UUID.randomUUID();
+      RecordPurchaseCommand command = new RecordPurchaseCommand(key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+          ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+      TransactionView mockView = mock(TransactionView.class);
+
+      // Simulate cache hit
+      when(idempotencyCache.get(key.toString())).thenReturn(mockView);
+
+      TransactionView result = service.recordPurchase(command);
+
+      assertThat(result).isEqualTo(mockView);
+      // Verify business logic was SKIPPED (no repo call)
+      verify(transactionRepository, never()).findByIdempotencyKeyAndPortfolioId(any(), any());
+    }
+
+    @Test
+    @DisplayName("executeWithIdempotency: recovers from DB if cache is empty but key exists")
+    void shouldRecoverFromDbOnCacheMiss() {
+
+      UUID key = UUID.randomUUID();
+      RecordPurchaseCommand command = new RecordPurchaseCommand(key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+          ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+      Transaction existingTx = mock(Transaction.class);
+      TransactionView mappedView = mock(TransactionView.class);
+
+      when(idempotencyCache.get(key.toString())).thenReturn(null);
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID))
+          .thenReturn(Optional.of(existingTx));
+      when(transactionViewMapper.toTransactionView(existingTx)).thenReturn(mappedView);
+
+      TransactionView result = service.recordPurchase(command);
+
+      assertThat(result).isEqualTo(mappedView);
+      verify(idempotencyCache).put(key.toString(), mappedView); // Logic should update cache
+    }
+
+    @Test
+    @DisplayName("executeWithIdempotency: recovers when DataIntegrityViolation occurs (Race Condition)")
+    void shouldRecoverOnDataIntegrityViolation() {
+      UUID key = UUID.randomUUID();
+
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(
+          key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TRANSACTION_ID, "reason");
+
+      // FIX: Chain the responses.
+      // First call returns empty (check), second call returns the winner (recovery).
+      Transaction winningTx = mock(Transaction.class);
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID))
+          .thenReturn(Optional.empty()) // 1st call
+          .thenReturn(Optional.of(winningTx)); // 2nd call (Recovery)
+
+      // Standard business logic setup
+      Transaction existingTx = mock(Transaction.class);
+      when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+          TRANSACTION_ID, PORTFOLIO_ID, USER_ID, ACCOUNT_ID))
+          .thenReturn(Optional.of(existingTx));
+
+      // Simulate the race condition failure
+      doThrow(new DataIntegrityViolationException("Duplicate key"))
+          .when(transactionRepository).save(any(), any(), eq(key));
+
+      TransactionView winningView = mock(TransactionView.class);
+      when(transactionViewMapper.toTransactionView(winningTx)).thenReturn(winningView);
+
+      TransactionView result = service.excludeTransaction(command);
+
+      assertThat(result).isEqualTo(winningView);
+      verify(transactionRepository, times(2)).findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID);
+    }
+
+    @Test
+    @DisplayName("executeWithIdempotency: rethrows exception if recovery lookup fails")
+    void shouldRethrowIfRecoveryLookupEmpty() {
+
+      UUID key = UUID.randomUUID();
+      RecordPurchaseCommand command = new RecordPurchaseCommand(key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR,
+          ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
+
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID)).thenReturn(Optional.empty());
+
+      // Force the logic to fail with integrity violation
+      doThrow(new DataIntegrityViolationException("Actual DB Error"))
+          .when(transactionRepository).save(any(), any(), any());
+
+      assertThatThrownBy(() -> service.recordPurchase(command))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasMessageContaining("Actual DB Error");
+    }
+
+    @Test
+    @DisplayName("executeWithIdempotency: throws original exception if key is null")
+    void shouldThrowImmediatelyIfKeyIsNull() {
+      // Command with null key
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(
+          null, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TRANSACTION_ID, "reason");
+
+      // Force failure
+      doThrow(new DataIntegrityViolationException("Unique constraint failed"))
+          .when(transactionRepository).findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any());
+
+      assertThatThrownBy(() -> service.excludeTransaction(command))
+          .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("executeWithIdempotency: rethrows original violation if recovery lookup returns empty")
+    void shouldRethrowIfRecordMissingAfterViolation() {
+      UUID key = UUID.randomUUID();
+      ExcludeTransactionCommand command = new ExcludeTransactionCommand(
+          key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TRANSACTION_ID, "reason");
+
+      // 1. Initial Idempotency Check (Cache/DB miss)
+      when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID))
+          .thenReturn(Optional.empty());
+
+      // 2. FIX: Stub the 'loadTransaction' logic so we don't crash early
+      Transaction mockTx = mock(Transaction.class);
+      when(mockTx.isExcluded()).thenReturn(false); // Ensure we don't trip the 'already excluded' check
+      when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
+          TRANSACTION_ID, PORTFOLIO_ID, USER_ID, ACCOUNT_ID))
+          .thenReturn(Optional.of(mockTx));
+
+      // 3. Force the save to throw the violation
+      doThrow(new DataIntegrityViolationException("Conflict occurred"))
+          .when(transactionRepository).save(any(), any(), eq(key));
+
+      // 4. Act & Assert
+      assertThatThrownBy(() -> service.excludeTransaction(command))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasMessageContaining("Conflict occurred");
+    }
+  }
+
+  @Nested
+  @DisplayName("processFees Branch Testing")
+  class FeeProcessTests {
+
+    @Test
+    @DisplayName("processFees: handles null and empty inputs")
+    void shouldHandleNullOrEmptyFees() {
+      // Since processFees is likely private, we test via recordPurchase
+      // or using ReflectionTestUtils
+      List<Fee> resultNull = ReflectionTestUtils.invokeMethod(service, "processFees", null, account, NOW);
+      List<Fee> resultEmpty = ReflectionTestUtils.invokeMethod(service, "processFees", List.of(), account, NOW);
+
+      assertThat(resultNull).isEmpty();
+      assertThat(resultEmpty).isEmpty();
+    }
+
+    @Test
+    @DisplayName("processFees: uses identity rate when currencies match")
+    void shouldSkipConversionForSameCurrency() {
+      when(account.getAccountCurrency()).thenReturn(USD);
+      Fee sameCurrencyFee = Fee.of(FeeType.BROKERAGE, Money.of(5, "USD"), NOW, new FeeMetadata(Map.of()));
+
+      List<Fee> results = ReflectionTestUtils.invokeMethod(service, "processFees", List.of(sameCurrencyFee), account,
+          NOW);
+
+      assertThat(results.get(0).accountAmount()).isEqualTo(sameCurrencyFee.nativeAmount());
+      verifyNoInteractions(exchangeRateService); // Critical: Ensure service wasn't called
+    }
+
+    @Test
+    @DisplayName("processFees: throws Exception when exchange rate is missing")
+    void shouldThrowWhenRateUnavailable() {
+      when(account.getAccountCurrency()).thenReturn(CAD);
+      Fee usdFee = Fee.of(FeeType.BROKERAGE, Money.of(5, "USD"), NOW, new FeeMetadata(Map.of()));
+
+      // Simulate rate service returning empty
+      when(exchangeRateService.getRate(Currency.of("USD"), CAD, NOW)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "processFees", List.of(usdFee), account, NOW))
+          .isInstanceOf(ExchangeRateUnavailableException.class);
+    }
+
+    @Test
+    @DisplayName("processFees: successfully converts currency when different from account")
+    void shouldConvertCurrencyWhenDifferent() {
+      // Arrange
+      when(account.getAccountCurrency()).thenReturn(CAD); // Account is CAD
+
+      // Fee is 10 USD
+      Money nativeFee = Money.of(10, "USD");
+      Fee fee = Fee.of(FeeType.BROKERAGE, nativeFee, NOW, new FeeMetadata(Map.of()));
+
+      // Stub the rate service (1.35 rate)
+      ExchangeRate mockRate = mock(ExchangeRate.class);
+      Money convertedMoney = Money.of("13.50", CAD);
+
+      when(exchangeRateService.getRate(Currency.of("USD"), CAD, NOW))
+          .thenReturn(Optional.of(mockRate));
+      when(mockRate.convert(nativeFee)).thenReturn(convertedMoney);
+
+      // Act
+      List<Fee> results = ReflectionTestUtils.invokeMethod(service, "processFees", List.of(fee), account, NOW);
+
+      // Assert
+      assertThat(results).hasSize(1);
+      assertThat(results.get(0).accountAmount()).isEqualTo(convertedMoney);
+      verify(exchangeRateService).getRate(Currency.of("USD"), CAD, NOW);
+    }
+
+    @Test
+    @DisplayName("processFees: throws ExchangeRateUnavailableException when rate service returns empty")
+    void shouldThrowWhenExchangeRateIsMissing() {
+      // Arrange
+      when(account.getAccountCurrency()).thenReturn(CAD);
+      Fee usdFee = Fee.of(FeeType.BROKERAGE, Money.of(10, "USD"), NOW, new FeeMetadata(Map.of()));
+
+      // Rate service returns empty
+      when(exchangeRateService.getRate(Currency.of("USD"), CAD, NOW))
+          .thenReturn(Optional.empty());
+
+      // Act & Assert
+      assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "processFees", List.of(usdFee), account, NOW))
+          .isInstanceOf(ExchangeRateUnavailableException.class)
+          .hasMessageContaining("USD")
+          .hasMessageContaining("CAD");
     }
   }
 }

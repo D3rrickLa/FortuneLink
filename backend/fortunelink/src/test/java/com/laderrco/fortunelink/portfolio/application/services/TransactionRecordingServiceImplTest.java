@@ -36,7 +36,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Pr
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee.FeeMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -46,7 +45,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -778,47 +776,19 @@ class TransactionRecordingServiceImplTest {
   @Nested
   @DisplayName("recordTransferIn Tests")
   class TransferInTests {
-    @ParameterizedTest
-    @MethodSource("provideFeeScenarios")
-    @DisplayName("recordTransferIn: verifies net cash calculation (Gross - Fees)")
-    void recordTransferIn_CalculatesNetCashCorrectly(List<Fee> fees, Money expectedNetCash) {
-      when(account.getAccountId()).thenReturn(AccountId.newId());
-      when(account.getAccountCurrency()).thenReturn(USD);
+    @Test
+    @DisplayName("recordTransferIn: successfully deposits and returns transaction")
+    void recordTransferIn_Success() {
+      AccountId accountId = AccountId.newId();
+      when(account.getAccountId()).thenReturn(accountId);
 
       Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, NOTES, NOW);
 
-      verify(account).deposit(eq(expectedNetCash), eq("TRANSFER IN"));
+      verify(account).deposit(eq(HUNDRED_USD_MONEY), eq("TRANSFER IN"));
 
-      assertThat(tx.cashDelta()).isEqualTo(expectedNetCash);
       assertThat(tx.transactionType()).isEqualTo(TransactionType.TRANSFER_IN);
-
-      if (fees == null) {
-        assertThat(tx.fees()).isEmpty();
-      } else {
-        assertThat(tx.fees()).hasSize(fees.size());
-      }
-    }
-
-    private static Stream<Arguments> provideFeeScenarios() {
-      return Stream.of(
-          // Scenario 1: No fees (Gross 100 - Fee 0 = Net 100)
-          Arguments.of(null, Money.of(100, "USD")),
-
-          // Scenario 2: Empty fee list (Gross 100 - Fee 0 = Net 100)
-          Arguments.of(List.of(), Money.of(100, "USD")),
-
-          // Scenario 3: Real fees (Gross 100 - Fee 5 = Net 95)
-          Arguments.of(
-              List.of(Fee.of(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), NOW,
-                  new FeeMetadata(Map.of("info", "Brokerage Cut")))),
-              Money.of(95, "USD")),
-
-          // Scenario 4: Multiple fees (Gross 100 - Fee 12 = Net 88)
-          Arguments.of(
-              List.of(
-                  Fee.of(FeeType.ADVISORY_FEE, Money.of(10, "USD"), NOW, new FeeMetadata(Map.of("info", "Wire Fee"))),
-                  Fee.of(FeeType.TRANSACTION_TAX, Money.of(2, "USD"), NOW, new FeeMetadata(Map.of("info", "Tax")))),
-              Money.of(88, "USD")));
+      assertThat(tx.cashDelta()).isEqualTo(HUNDRED_USD_MONEY);
+      assertThat(tx.fees()).isEmpty();
     }
   }
 
