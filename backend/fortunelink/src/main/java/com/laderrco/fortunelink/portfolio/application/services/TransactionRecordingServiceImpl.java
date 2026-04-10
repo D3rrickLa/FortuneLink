@@ -100,7 +100,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
+        .build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -137,7 +138,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.FEE)
         .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date)).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_FEE_TYPE, feeType.name())).build();
+                .with(TransactionMetadata.KEY_FEE_TYPE, feeType.name()))
+        .build();
 
     account.applyFee(amount, REASON_FEE + amount.amount().toString());
     return tx;
@@ -262,15 +264,24 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     return tx;
   }
 
+  /*
+   * The cash effect is amount minus fees. The user transferred in gross, the
+   * broker kept their cut. The net is what lands in the account. This is
+   * consistent with how recordBuy handles it on the other side.
+   */
   @Override
-  public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
+  public Transaction recordTransferIn(Account account, Money amount, List<Fee> fees, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
     validateTransactionDate(date, account);
 
+    List<Fee> feeList = fees != null ? fees : List.of();
+    Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
+    Money netCash = amount.subtract(totalFees);
+
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.TRANSFER_IN)
-        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date)
+        .cashDelta(netCash).fees(feeList).notes(notes).occurredAt(date)
         .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
     account.deposit(amount, REASON_TRANSFER_IN);

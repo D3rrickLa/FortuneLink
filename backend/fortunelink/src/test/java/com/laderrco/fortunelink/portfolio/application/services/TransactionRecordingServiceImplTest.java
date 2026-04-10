@@ -770,7 +770,7 @@ class TransactionRecordingServiceImplTest {
     void recordTransferIn_Success() {
       when(account.getAccountId()).thenReturn(AccountId.newId());
 
-      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, NOTES, NOW);
+      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, List.of(), NOTES, NOW);
 
       verify(account).deposit(eq(HUNDRED_USD_MONEY), eq("TRANSFER IN"));
 

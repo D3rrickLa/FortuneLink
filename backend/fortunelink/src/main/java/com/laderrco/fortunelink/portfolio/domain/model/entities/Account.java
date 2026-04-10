@@ -264,19 +264,14 @@ public class Account {
     touch();
   }
 
-  public void clearPositionForRecalculation(AssetSymbol symbol) {
-    positionBook.clearSymbol(symbol);
-    touch();
+  public void prepareForRecalculation(AssetSymbol symbol) {
+    // log.info("Resetting state for symbol {} in account {} for recalculation",
+    // symbol, this.id);
+    clearPositionForRecalculation(symbol);
+    clearRealizedGainsForSymbol(symbol);
   }
 
   // --- Metadata & Health Updates ---
-
-  public void clearRealizedGainsForSymbol(AssetSymbol symbol) {
-    notNull(symbol, "symbol");
-    realizedGains.removeIf(g -> g.symbol().equals(symbol));
-    touch();
-  }
-
   public void updateName(String newName) {
     if (newName == null || newName.trim().isEmpty()) {
       throw new DomainArgumentException("Account name cannot be empty");
@@ -377,4 +372,16 @@ public class Account {
   private void touch() {
     this.lastUpdatedOn = Instant.now();
   }
+
+  private void clearPositionForRecalculation(AssetSymbol symbol) {
+    positionBook.clearSymbol(symbol);
+    touch();
+  }
+
+  private void clearRealizedGainsForSymbol(AssetSymbol symbol) {
+    notNull(symbol, "symbol");
+    realizedGains.removeIf(g -> g.symbol().equals(symbol));
+    touch();
+  }
+
 }

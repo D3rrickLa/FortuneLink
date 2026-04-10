@@ -49,10 +49,7 @@ public class PositionRecalculationExecutor {
         .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
-      // Clear only this symbol's position and its realized gains
-      // NOTE: had to make these public
-      account.clearPositionForRecalculation(symbol);
-      account.clearRealizedGainsForSymbol(symbol);
+      account.prepareForRecalculation(symbol);
 
       active.forEach(tx -> transactionRecordingService.replayTransaction(account, tx));
       portfolio.reportRecalculationSuccess(accountId);

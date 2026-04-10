@@ -93,7 +93,7 @@ public interface TransactionRecordingService {
   /**
    * Records a transfer of funds into the account.
    */
-  Transaction recordTransferIn(Account account, Money amount, String notes, Instant date);
+  Transaction recordTransferIn(Account account, Money amount, List<Fee> fees, String notes, Instant date);
 
   /**
    * Records a transfer of funds out of the account.

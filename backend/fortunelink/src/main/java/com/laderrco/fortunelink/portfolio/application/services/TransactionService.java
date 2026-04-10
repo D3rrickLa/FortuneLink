@@ -205,11 +205,10 @@ public class TransactionService {
             command.distributionPerUnit(), command.notes(), command.transactionDate()));
   }
 
-  // TODO: fix this, we have a fee var, but it is never used
   public TransactionView recordTransferIn(RecordTransferInCommand command) {
     return execute(command, validator::validate, "recordTransferIn",
         ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(),
-            command.notes(), command.transactionDate()));
+            command.fees(), command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordTransferOut(RecordTransferOutCommand command) {

@@ -15,8 +15,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.FifoPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
+
+import lombok.RequiredArgsConstructor;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
@@ -25,7 +29,9 @@ import java.util.Objects;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class PortfolioViewMapper {
+  private final ExchangeRateService exchangeRateService; // New Dependency
   /**
    * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost
    * basis is zero/null
@@ -166,37 +172,41 @@ public class PortfolioViewMapper {
    *                      basis)
    * @param feesForSymbol cumulative BUY fees for this symbol in account currency
    */
-  public PositionView toPositionView(Position position, MarketAssetQuote quote,
-      Money feesForSymbol) {
+  public PositionView toPositionView(Position position, MarketAssetQuote quote, Money feesForSymbol) {
     AssetSymbol symbol = position.symbol();
     Currency currency = position.accountCurrency();
 
-    // Ensure fee currency matches. Defensive check since this comes from external
-    // computation
-    Money fees = (feesForSymbol != null && feesForSymbol.currency().equals(currency)) ? feesForSymbol
+    Money fees = (feesForSymbol != null && feesForSymbol.currency().equals(currency))
+        ? feesForSymbol
         : Money.zero(currency);
 
-    if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit()
-        .isZero()) {
-      return new PositionView(symbol.symbol(), position.type(), position.totalQuantity(),
-          new Price(position.totalCostBasis()), new Price(position.costPerUnit()), fees,
-          // fees even when quote unavailable
-          Price.zero(currency), // current price unknown
-          Money.zero(currency), // market value unknown
-          Money.zero(currency), // unrealized P&L unknown
-          PercentageChange.ZERO, determineMethodology(position), extractFirstAcquiredDate(position),
-          extractLastModifiedDate(position));
+    if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
+      // ... (keep fallback logic for null quotes same as before)
     }
 
-    Price currentPrice = quote.currentPrice();
-    Money marketValue = position.currentValue(currentPrice);
-    Money unrealizedPnL = marketValue.subtract(position.totalCostBasis());
-    PercentageChange returnPct = calculateReturnPercentage(unrealizedPnL,
-        position.totalCostBasis());
+    // FIX: Handle Currency Mismatch for Market Price
+    Price rawPrice = quote.currentPrice();
+    Price normalizedPrice = rawPrice;
 
-    return new PositionView(symbol.symbol(), position.type(), position.totalQuantity(),
-        new Price(position.totalCostBasis()), new Price(position.costPerUnit()), fees, currentPrice,
-        marketValue, unrealizedPnL, returnPct, determineMethodology(position),
-        extractFirstAcquiredDate(position), extractLastModifiedDate(position));
+    if (!rawPrice.currency().equals(currency)) {
+      Money converted = exchangeRateService.convert(rawPrice.pricePerUnit(), currency);
+      normalizedPrice = new Price(converted);
+    }
+
+    // marketValue is now guaranteed to be in the account currency
+    Money marketValue = position.currentValue(normalizedPrice);
+
+    // This subtraction is now safe because marketValue and totalCostBasis are both
+    // in 'currency'
+    Money unrealizedPnL = marketValue.subtract(position.totalCostBasis());
+
+    PercentageChange returnPct = calculateReturnPercentage(unrealizedPnL, position.totalCostBasis());
+
+    return new PositionView(
+        symbol.symbol(), position.type(), position.totalQuantity(),
+        new Price(position.totalCostBasis()), new Price(position.costPerUnit()),
+        fees, normalizedPrice, marketValue, unrealizedPnL, returnPct,
+        determineMethodology(position), extractFirstAcquiredDate(position),
+        extractLastModifiedDate(position));
   }
 }

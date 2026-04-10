@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -54,6 +55,10 @@ public class NetWorthSnapshotService {
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
 
+  // Use @Autowired on a field or setter for self-injection
+  @Autowired
+  private NetWorthSnapshotService self;
+
   @Scheduled(cron = "0 0 2 * * *", zone = "UTC")
   public void snapshotAllUsers() {
     List<UserId> activeUsers = portfolioRepository.findAllActiveUserIds();
@@ -62,20 +67,18 @@ public class NetWorthSnapshotService {
     int success = 0, skipped = 0, failed = 0;
     for (UserId userId : activeUsers) {
       try {
-        boolean wrote = snapshotForUser(userId);
-        if (wrote) {
+        // FIX: Use 'self' to trigger @Transactional proxy
+        boolean wrote = self.snapshotForUser(userId);
+        if (wrote)
           success++;
-        } else {
+        else
           skipped++;
-        }
       } catch (Exception e) {
         failed++;
         log.error("Snapshot failed for userId={}: {}", userId, e.getMessage(), e);
       }
     }
-
-    log.info("Net worth snapshot job complete. success={}, skipped={}, failed={}",
-        success, skipped, failed);
+    log.info("Net worth snapshot job complete. success={}, skipped={}, failed={}", success, skipped, failed);
   }
 
   /**

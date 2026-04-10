@@ -236,7 +236,7 @@ class AccountTest {
       account.recordRealizedGain(AAPL, Money.of(100, USD), Money.of(500, USD), Instant.now());
       account.recordRealizedGain(TSLA, Money.of(300, USD), Money.of(1000, USD), Instant.now());
 
-      account.clearRealizedGainsForSymbol(AAPL);
+      account.prepareForRecalculation(AAPL);
 
       assertAll(() -> assertEquals(1, account.getRealizedGains().size()),
           () -> assertEquals(TSLA, account.getRealizedGains().get(0).symbol()));
@@ -304,7 +304,7 @@ class AccountTest {
           .buy(Quantity.of(10), Money.of(150, "USD"), Instant.now()).getUpdatedPosition();
       account.applyPositionResult(apple, pos);
 
-      account.clearPositionForRecalculation(apple);
+      account.prepareForRecalculation(apple);
       assertTrue(account.getPosition(apple).isEmpty());
     }
   }
