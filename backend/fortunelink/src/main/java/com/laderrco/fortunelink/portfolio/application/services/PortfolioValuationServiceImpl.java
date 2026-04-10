@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;

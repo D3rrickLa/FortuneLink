@@ -7,6 +7,8 @@ import static org.mockito.Mockito.*;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.CsvImportCommitException;
 import com.laderrco.fortunelink.portfolio.application.services.CsvImportService.ParsedRow;
+import com.laderrco.fortunelink.portfolio.application.views.CsvImportResult;
+import com.laderrco.fortunelink.portfolio.application.views.CsvRowError;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -16,6 +18,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +32,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Csv Import Service Unit Tests")
@@ -113,12 +118,12 @@ class CsvImportServiceTest {
     }
 
     @Test
-    @DisplayName("executeRow: throws IllegalArgumentException for unimplemented transaction types")
+    @DisplayName("executeRow: throws IllegalStateException for unimplemented transaction types")
     void executeRowThrowsOnUnimplementedType() {
       ParsedRow unhandledRow = new ParsedRow(
           1,
           Instant.now(),
-          TransactionType.TRANSFER_IN,
+          TransactionType.TRANSFER_IN, // Not in SUPPORTED_CSV_TYPES
           "AAPL",
           AssetType.STOCK,
           BigDecimal.ONE,
@@ -128,8 +133,157 @@ class CsvImportServiceTest {
 
       assertThatThrownBy(
           () -> ReflectionTestUtils.invokeMethod(csvImportService, "executeRow", unhandledRow, PID, UID, AID))
-          .isExactlyInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Unsupported transaction type in CSV: TRANSFER_IN");
+          .isExactlyInstanceOf(IllegalStateException.class)
+          .hasMessageContaining(
+              "Validation-Execution mismatch: Type TRANSFER_IN passed validation but has no execution logic.");
     }
+  }
+
+  @Nested
+  @DisplayName("Parsing and Validation Branches")
+  class ParsingBranches {
+
+    @Test
+    @DisplayName("parseRow: handles comment lines and missing columns")
+    void parseRowHandlesCommentsAndShortLines() {
+      List<CsvRowError> errors = new ArrayList<>();
+      List<ParsedRow> rows = new ArrayList<>();
+
+      // Test Comment Line
+      ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", "# This is a comment", 1, errors, rows);
+      assertThat(errors).isEmpty();
+      assertThat(rows).isEmpty();
+
+      // Test Missing Columns
+      ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", "2024-01-01,BUY,AAPL", 2, errors, rows);
+      assertThat(errors).hasSize(1);
+      assertThat(errors.get(0).message()).contains("Expected 8 columns, found 3");
+    }
+
+    @Test
+    @DisplayName("parseRow: rejects unsupported transaction types")
+    void parseRowRejectsUnsupportedTypes() {
+      List<CsvRowError> errors = new ArrayList<>();
+      List<ParsedRow> rows = new ArrayList<>();
+      // TRANSFER_IN exists in the Enum but is not in SUPPORTED_CSV_TYPES
+      String csvLine = "2024-01-01,TRANSFER_IN,AAPL,STOCK,10,100,USD,notes";
+
+      ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", csvLine, 1, errors, rows);
+
+      assertThat(errors).hasSize(1);
+      assertThat(errors.get(0).message()).contains("is not supported in CSV import");
+      assertThat(rows).isEmpty();
+    }
+
+    @Test
+    @DisplayName("parseRow: requires quantity for SELL transactions")
+    void parseRowRequiresQuantityForSell() {
+      List<CsvRowError> errors = new ArrayList<>();
+      List<ParsedRow> rows = new ArrayList<>();
+      // Type is SELL, but quantity (index 4) is empty
+      String csvLine = "2024-01-01,SELL,AAPL,STOCK,,150.00,USD,notes";
+
+      ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", csvLine, 1, errors, rows);
+
+      assertThat(errors).hasSize(1);
+      assertThat(errors.get(0).message()).isEqualTo("Quantity required for SELL");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'', STOCK", // isBlank() -> STOCK
+        "CASH, STOCK", // equals('CASH') -> STOCK
+        "ETF, ETF", // Specific type -> ETF
+        "CRYPTO, CRYPTO" // Specific type -> CRYPTO
+    })
+    @DisplayName("parseRow: correctly resolves asset type and fallbacks")
+    void parseRowResolvesAssetType(String inputAssetType, AssetType expected) {
+      List<CsvRowError> errors = new ArrayList<>();
+      List<ParsedRow> rows = new ArrayList<>();
+
+      // Construct a valid BUY row with the varying assetType input
+      String csvLine = String.format("2024-01-01,BUY,AAPL,%s,10,150.00,USD,notes", inputAssetType);
+
+      ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", csvLine, 1, errors, rows);
+
+      assertThat(errors).isEmpty();
+      assertThat(rows.get(0).assetType()).isEqualTo(expected);
+    }
+  }
+
+  @Nested
+  @DisplayName("Import Transactions Workflow")
+  class ImportWorkflow {
+
+    @Test
+    @DisplayName("importTransactions: handles empty file")
+    void handlesEmptyFile() {
+      MockMultipartFile file = new MockMultipartFile("file", "".getBytes());
+
+      CsvImportResult result = csvImportService.importTransactions(file, PID, UID, AID);
+
+      assertThat(result.success()).isFalse();
+      assertThat(result.errors().get(0).message()).isEqualTo("File is empty");
+    }
+
+    @Test
+    @DisplayName("importTransactions: enforces MAX_ROWS limit")
+    void enforcesMaxRows() throws Exception {
+      // Generate a string with 5002 lines
+      StringBuilder sb = new StringBuilder("date,type,symbol,asset_type,quantity,price,currency,notes\n");
+      for (int i = 0; i < 5005; i++) {
+        sb.append("2024-01-01,BUY,AAPL,STOCK,1,100,USD,note\n");
+      }
+      MockMultipartFile file = new MockMultipartFile("file", sb.toString().getBytes());
+
+      CsvImportResult result = csvImportService.importTransactions(file, PID, UID, AID);
+
+      assertThat(result.success()).isFalse();
+      assertThat(result.errors().stream().anyMatch(e -> e.message().contains("File exceeds maximum"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("importTransactions: catches IO exceptions during read")
+    void handlesIoException() throws Exception {
+      MultipartFile file = mock(MultipartFile.class);
+      when(file.getInputStream()).thenThrow(new RuntimeException("Disk failure"));
+
+      CsvImportResult result = csvImportService.importTransactions(file, PID, UID, AID);
+
+      assertThat(result.success()).isFalse();
+      assertThat(result.errors().get(0).message()).contains("File could not be read: Disk failure");
+    }
+
+    @Test
+    @DisplayName("importTransactions: skips blank lines and processes valid rows")
+    void skipsBlankLines() throws Exception {
+      String csvContent = """
+          date,type,symbol,asset_type,quantity,price,currency,notes
+
+          2024-01-15,DEPOSIT,,CASH,,1000.00,USD,Valid Deposit
+
+
+          2024-01-16,WITHDRAWAL,,CASH,,500.00,USD,Valid Withdrawal
+          """;
+      MockMultipartFile file = new MockMultipartFile("file", csvContent.getBytes());
+
+      CsvImportResult result = csvImportService.importTransactions(file, PID, UID, AID);
+
+      assertThat(result.success()).isTrue();
+      assertThat(result.rowsCommitted()).isEqualTo(2); // Only the 2 non-blank rows
+      verify(transactionService, times(1)).recordDeposit(any());
+      verify(transactionService, times(1)).recordWithdrawal(any());
+    }
+  }
+
+  @Test
+  @DisplayName("generateTemplate: returns valid header and content")
+  void testGenerateTemplate() {
+    String template = csvImportService.generateTemplate();
+
+    assertThat(template).contains("date,type,symbol,asset_type,quantity,price,currency,notes");
+    assertThat(template).contains("BUY,AAPL,STOCK");
+    // Ensure it starts with a comment/header
+    assertThat(template.trim()).startsWith("#");
   }
 }

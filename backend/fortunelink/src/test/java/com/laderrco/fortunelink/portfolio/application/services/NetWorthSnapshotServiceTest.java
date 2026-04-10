@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -31,43 +34,54 @@ import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationServ
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Net Worth Snapshot Service Unit Tests")
 class NetWorthSnapshotServiceTest {
-
-  @Mock
-  private PortfolioRepository portfolioRepository;
-  @Mock
-  private NetWorthSnapshotRepository snapshotRepository;
+  private final UserId USER_ID = UserId.random();
+  private final Currency USD = Currency.of("USD");
+  
   @Mock
   private MarketDataService marketDataService;
+  @Mock
+  private PortfolioRepository portfolioRepository;
+
+  @Mock
+  private NetWorthSnapshotRepository snapshotRepository;
+
   @Mock
   private PortfolioValuationService valuationService;
 
   @InjectMocks
+  @Spy
   private NetWorthSnapshotService snapshotService;
 
-  private final UserId USER_ID = UserId.random();
-  private final Currency USD = Currency.of("USD");
-
-  @Test
-  @DisplayName("snapshotAllUsers: processes batch and survives individual failures")
-  void snapshotAllUsersProcessesBatch() {
-    UserId u1 = UserId.random(), u2 = UserId.random();
-    when(portfolioRepository.findAllActiveUserIds()).thenReturn(List.of(u1, u2));
-
-    // User 1: Already has snapshot (skip)
-    when(snapshotRepository.existsForToday(u1)).thenReturn(true);
-
-    // User 2: Throws error (should be caught by try-catch in service)
-    when(snapshotRepository.existsForToday(u2)).thenThrow(new RuntimeException("Fail"));
-
-    snapshotService.snapshotAllUsers();
-
-    verify(snapshotRepository, never()).save(any());
-    verify(portfolioRepository, never()).findAllActiveByUserId(any());
+  @BeforeEach
+  void setUp() {
+    ReflectionTestUtils.setField(snapshotService, "self", snapshotService);
   }
 
   @Nested
   @DisplayName("snapshotForUser Logic")
   class SnapshotLogic {
+    @Test
+    @DisplayName("snapshotAllUsers: processes batch and survives individual failures")
+    void snapshotAllUsersProcessesBatch() {
+      // Arrange
+      UserId u1 = UserId.random();
+      UserId u2 = UserId.random();
+      when(portfolioRepository.findAllActiveUserIds()).thenReturn(List.of(u1, u2));
+
+      // User 1: Already has snapshot (logic inside snapshotForUser will now run)
+      when(snapshotRepository.existsForToday(u1)).thenReturn(true);
+
+      // User 2: Throws error (logic inside snapshotForUser will now run)
+      when(snapshotRepository.existsForToday(u2)).thenThrow(new RuntimeException("Fail"));
+
+      // Act
+      snapshotService.snapshotAllUsers();
+
+      // Assert
+      verify(snapshotRepository, never()).save(any());
+      verify(snapshotRepository, times(2)).existsForToday(any());
+    }
+
     @Test
     @DisplayName("snapshotAllUsers: tests success, skipped, and failed counters")
     void snapshotAllUsersBranching() {

@@ -74,6 +74,17 @@ class FeeTest {
           () -> new Fee(VALID_TYPE, negativeMoney, null, null, NOW, EMPTY_METADATA)).isInstanceOf(
           IllegalArgumentException.class).hasMessageContaining("cannot be negative");
     }
+
+    @Test
+    @DisplayName("withAccountAmount: successfully generates Fee")
+    void withAccountAmountIsSuccess() {
+      Fee fee = Fee.zero(Currency.CAD);
+      Money convertedAmount = Money.of(200, Currency.CAD);
+      ExchangeRate rate = ExchangeRate.identity(Currency.CAD, NOW);
+
+      Fee newFee = fee.withAccountAmount(convertedAmount, rate);
+      assertThat(newFee.accountAmount()).isEqualByComparingTo(convertedAmount);
+    }
   }
 
   @Nested

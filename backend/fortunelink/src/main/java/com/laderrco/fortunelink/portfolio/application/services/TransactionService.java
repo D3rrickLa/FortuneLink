@@ -436,8 +436,9 @@ public class TransactionService {
   }
 
   private List<Fee> processFees(List<Fee> fees, Account account, Instant txDate) {
-    if (fees == null || fees.isEmpty())
+    if (fees == null || fees.isEmpty()) {
       return List.of();
+    }
 
     Currency accountCurrency = account.getAccountCurrency();
 

@@ -95,9 +95,9 @@ public record Fee(
     return total;
   }
 
+  // Ensure the convertedAmount currency actually matches the rate's target
+  // currency
   public Fee withAccountAmount(Money convertedAmount, ExchangeRate rate) {
-    // Ensure the convertedAmount currency actually matches the rate's target
-    // currency
     return new Fee(this.feeType, this.nativeAmount, convertedAmount, rate, this.occurredAt, this.metadata);
   }
 

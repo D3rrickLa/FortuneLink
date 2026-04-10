@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -13,7 +12,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
@@ -70,7 +68,6 @@ class PortfolioValuationServiceTest {
     Money costBasis = Money.of(1200.00, "USD");
     when(pos.totalCostBasis()).thenReturn(costBasis);
 
-    // Passing null as the quote in the map
     Money result = invokeResolvePositionValue(pos, null, USD);
 
     assertThat(result).isEqualTo(costBasis);
@@ -83,7 +80,6 @@ class PortfolioValuationServiceTest {
     Money costBasis = Money.of(1200.00, "USD");
     when(pos.totalCostBasis()).thenReturn(costBasis);
 
-    // Quote exists, but internal price is null
     MarketAssetQuote emptyQuote = new MarketAssetQuote(AAPL, null, null, null, null, null, null,
         null, null, null, "Unit testing source", Instant.now());
 
@@ -99,7 +95,6 @@ class PortfolioValuationServiceTest {
     Money costBasis = Money.of(1200.00, "USD");
     when(pos.totalCostBasis()).thenReturn(costBasis);
 
-    // Quote has a price of 0.00
     Price zeroPrice = Price.of(BigDecimal.ZERO, USD);
     MarketAssetQuote quote = new MarketAssetQuote(AAPL, zeroPrice, null, null, null, null, null,
         null, null, null, "Unit testing source", Instant.now());
@@ -166,7 +161,6 @@ class PortfolioValuationServiceTest {
       List.of(usdAcc1, usdAcc2, cadAcc)
           .forEach(acc -> when(acc.getState()).thenReturn(AccountLifecycleState.ACTIVE));
 
-      // Ensure the valuation of the accounts themselves doesn't return null
       when(valuationService.calculateAccountValue(usdAcc1, Map.of())).thenReturn(HUNDRED_USD);
       when(valuationService.calculateAccountValue(usdAcc2, Map.of())).thenReturn(HUNDRED_USD);
       when(valuationService.calculateAccountValue(cadAcc, Map.of())).thenReturn(HUNDRED_CAD);
@@ -186,7 +180,7 @@ class PortfolioValuationServiceTest {
     @Test
     @DisplayName("calculateTotalValue: ignores accounts that are not ACTIVE")
     void calculateTotalValueIgnoresInactiveAccounts() {
-      // 1. Setup mocks (Dependencies)
+
       Portfolio portfolio = mock(Portfolio.class);
       Account activeAcc = createMockAccount(USD, HUNDRED_USD, Map.of());
       Account closedAcc = createMockAccount(USD, HUNDRED_USD, Map.of());
@@ -195,26 +189,19 @@ class PortfolioValuationServiceTest {
       when(closedAcc.getState()).thenReturn(AccountLifecycleState.CLOSED);
       when(portfolio.getAccounts()).thenReturn(List.of(activeAcc, closedAcc));
 
-      // 2. Setup dependency behavior
-      // NOTE: We don't mock 'valuationService' because it's the class we are testing!
-      // We mock the ExchangeRateService which the class calls at the end.
       when(exchangeRateService.convert(any(), eq(USD))).thenReturn(HUNDRED_USD);
 
-      // 3. Execute
       Money total = valuationService.calculateTotalValue(portfolio, USD, Map.of());
 
-      // 4. Assert outcome
       assertThat(total).isEqualTo(HUNDRED_USD);
 
-      // 5. Verify dependencies, NOT the service under test
       verify(exchangeRateService, times(1)).convert(any(), eq(USD));
     }
 
     @Test
     @DisplayName("calculateTotalValue: skips accounts that return null valuation")
     void calculateTotalValueSkipsNullValuations() {
-      // 1. Create a SPY of the service under test
-      // This allows us to mock ONE method while keeping the rest of the class real
+
       PortfolioValuationServiceImpl serviceSpy = spy(valuationService);
 
       Portfolio portfolio = mock(Portfolio.class);
@@ -226,17 +213,13 @@ class PortfolioValuationServiceTest {
       when(goodAcc.getAccountCurrency()).thenReturn(USD);
       when(portfolio.getAccounts()).thenReturn(List.of(goodAcc, faultyAcc));
 
-      // 2. Use doReturn for Spies to avoid calling the real method during setup
       doReturn(HUNDRED_USD).when(serviceSpy).calculateAccountValue(eq(goodAcc), any());
       doReturn(null).when(serviceSpy).calculateAccountValue(eq(faultyAcc), any());
 
-      // 3. Mock the external dependency
       when(exchangeRateService.convert(HUNDRED_USD, USD)).thenReturn(HUNDRED_USD);
 
-      // 4. Call the method on the SPY, not the original service
       Money total = serviceSpy.calculateTotalValue(portfolio, USD, Map.of());
 
-      // Assertions
       assertThat(total).isEqualTo(HUNDRED_USD);
       verify(exchangeRateService, times(1)).convert(any(), eq(USD));
     }
@@ -265,7 +248,6 @@ class PortfolioValuationServiceTest {
       when(stockPos.type()).thenReturn(AssetType.STOCK);
       when(cashPos.type()).thenReturn(AssetType.CASH);
 
-      // Stock has a quote, should be valued at 150
       MarketAssetQuote quote = new MarketAssetQuote(AAPL, Price.of("150", USD), null, null, null,
           null, null, null, null, null, "Unit testing source", Instant.now());
       when(stockPos.currentValue(any())).thenReturn(Money.of(150, "USD"));
@@ -299,19 +281,31 @@ class PortfolioValuationServiceTest {
     }
 
     @Test
-    @DisplayName("resolvePositionValue: throws exception on currency mismatch")
-    void resolvePositionValueThrowsOnMismatch() {
+    @DisplayName("resolvePositionValue: converts currency when quote currency differs from account")
+    void resolvePositionValueConvertsCurrency() {
+
       Position pos = mock(AcbPosition.class);
-      when(pos.symbol()).thenReturn(AAPL);
+      Currency accountCurrency = Currency.of("USD");
 
-      // Quote is CAD, Account is USD
-      MarketAssetQuote cadQuote = new MarketAssetQuote(AAPL, Price.of("100", CAD), null, null, null,
-          null, null, null, null, null, "Unit testing source", Instant.now());
-      Account account = createMockAccount(USD, Money.zero(USD), Map.of(AAPL, pos));
+      Money priceInCad = Money.of(100, "CAD");
+      MarketAssetQuote cadQuote = new MarketAssetQuote(
+          AAPL, new Price(priceInCad), null, null, null,
+          null, null, null, null, null, "Test Source", Instant.now());
 
-      assertThatThrownBy(() -> valuationService.calculatePositionsValue(account,
-          Map.of(AAPL, cadQuote))).isInstanceOf(CurrencyMismatchException.class)
-          .hasMessageContaining("does not match account currency");
+      Account account = createMockAccount(accountCurrency, Money.zero(accountCurrency), Map.of(AAPL, pos));
+
+      Money priceInUsd = Money.of(75, "USD");
+      when(exchangeRateService.convert(priceInCad, accountCurrency)).thenReturn(priceInUsd);
+
+      Money expectedFinalValue = Money.of(750, "USD");
+
+      when(pos.currentValue(argThat(p -> p.currency().equals(accountCurrency) && p.amount().doubleValue() == 75.0)))
+          .thenReturn(expectedFinalValue);
+
+      Money result = valuationService.calculatePositionsValue(account, Map.of(AAPL, cadQuote));
+
+      assertThat(result).isEqualTo(expectedFinalValue);
+      verify(exchangeRateService).convert(priceInCad, accountCurrency);
     }
   }
 }

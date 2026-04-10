@@ -79,8 +79,9 @@ public class CsvImportService {
       String line;
       int rowNum = 1;
       while ((line = reader.readLine()) != null) {
-        if (line.isBlank())
+        if (line.isBlank()) {
           continue;
+        }
         if (rowNum > MAX_ROWS) {
           errors.add(new CsvRowError(rowNum,
               "File exceeds maximum of " + MAX_ROWS + " rows"));
@@ -266,9 +267,6 @@ public class CsvImportService {
     return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
   }
 
-  // -------------------------------------------------------------------------
-  // Value objects
-  // -------------------------------------------------------------------------
 
   public record ParsedRow(
       int rowNum,

@@ -2,9 +2,8 @@ package com.laderrco.fortunelink.portfolio.application.mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.*;
 
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
@@ -25,6 +24,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
@@ -51,6 +52,8 @@ class PortfolioViewMapperTest {
   private static final Currency CAD = Currency.of("CAD");
   private static final String SYMBOL = "SHOP.TO";
   private static final Instant NOW = Instant.now();
+  @Mock
+  private ExchangeRateService exchangeRateService;
   @InjectMocks
   private PortfolioViewMapper mapper;
 
@@ -158,6 +161,7 @@ class PortfolioViewMapperTest {
       when(acbPos.firstAcquiredAt()).thenReturn(NOW);
       when(acbPos.lastModifiedAt()).thenReturn(NOW);
       when(acbPos.costPerUnit()).thenReturn(Money.of(125, CAD));
+      when(currentPrice.currency()).thenReturn(CAD);
 
       PositionView result = mapper.toPositionView(acbPos, quote);
 
@@ -202,6 +206,44 @@ class PortfolioViewMapperTest {
       assertThat(result.totalFeesIncurred().currency()).isEqualTo(CAD);
       assertThat(result.totalFeesIncurred().isZero()).isTrue();
     }
+
+    @Test
+    @DisplayName("toPositionView: converts market price when quote currency differs from account")
+    void toPositionViewConvertsMarketPriceOnCurrencyMismatch() {
+      AcbPosition position = mock(AcbPosition.class);
+      when(position.symbol()).thenReturn(new AssetSymbol("AAPL"));
+      when(position.accountCurrency()).thenReturn(CAD);
+      when(position.totalCostBasis()).thenReturn(Money.of(100, CAD));
+      when(position.costPerUnit()).thenReturn(Money.of(10, CAD));
+      when(position.totalQuantity()).thenReturn(Quantity.of(10));
+      when(position.lastModifiedAt()).thenReturn(Instant.now());
+      when(position.firstAcquiredAt()).thenReturn(Instant.now());
+
+      MarketAssetQuote usdQuote = mock(MarketAssetQuote.class);
+      Price usdPrice = mock(Price.class);
+      Money pricePerUnitUsd = Money.of(100, "USD");
+
+      when(usdQuote.currentPrice()).thenReturn(usdPrice);
+      when(usdPrice.currency()).thenReturn(Currency.of("USD"));
+      when(usdPrice.pricePerUnit()).thenReturn(pricePerUnitUsd);
+
+      Money pricePerUnitCad = Money.of(135, CAD);
+
+      when(exchangeRateService.convert(pricePerUnitUsd, CAD)).thenReturn(pricePerUnitCad);
+      when(position.currentValue(argThat(p -> p != null &&
+          p.pricePerUnit().amount().stripTrailingZeros().equals(new BigDecimal("135")) &&
+          p.currency().equals(CAD)))).thenReturn(Money.of(1350, CAD));
+
+      PositionView result = mapper.toPositionView(position, usdQuote);
+
+      // Assert
+      // Use isEqualByComparingTo for BigDecimals to ignore scale (135 vs 135.00)
+      assertThat(result.currentPrice().amount()).isEqualByComparingTo("135");
+      assertThat(result.currentPrice().currency()).isEqualTo(CAD);
+      assertThat(result.marketValue()).isEqualTo(Money.of(1350, CAD));
+
+      verify(exchangeRateService).convert(pricePerUnitUsd, CAD);
+    }
   }
 
   @Nested
@@ -221,7 +263,7 @@ class PortfolioViewMapperTest {
       when(position.totalCostBasis()).thenReturn(Money.zero(CAD)); // Trigger!
       when(position.costPerUnit()).thenReturn(Money.zero(CAD));
       when(position.totalQuantity()).thenReturn(Quantity.of(0));
-
+      when(price.currency()).thenReturn(CAD);
       when(quote.currentPrice()).thenReturn(price);
       when(price.pricePerUnit()).thenReturn(Money.of(100, CAD));
       when(position.currentValue(any())).thenReturn(Money.of(100, CAD));

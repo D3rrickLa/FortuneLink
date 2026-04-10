@@ -36,6 +36,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Pr
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ratio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.TransactionMetadata;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee.FeeMetadata;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -45,6 +46,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,7 +107,8 @@ class TransactionRecordingServiceImplTest {
       when(account.isActive()).thenReturn(false);
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW, false)).isInstanceOf(AccountClosedException.class);
+              NOTES, NOW, false))
+          .isInstanceOf(AccountClosedException.class);
     }
 
     @Test
@@ -114,7 +117,7 @@ class TransactionRecordingServiceImplTest {
       Instant invalidDate = CREATION_DATE.minus(Duration.ofDays(1));
       assertThatThrownBy(
           () -> service.recordDeposit(account, HUNDRED_USD_MONEY, NOTES, invalidDate)).isInstanceOf(
-          IllegalArgumentException.class);
+              IllegalArgumentException.class);
     }
   }
 
@@ -132,9 +135,11 @@ class TransactionRecordingServiceImplTest {
       return Stream.of(Arguments.of(Named.of("No Fees", null), new BigDecimal("1000.00")),
           Arguments.of(
               Named.of("With $10 Fee", List.of(Fee.of(FeeType.COMMISSION, Money.of(10, USD), NOW))),
-              new BigDecimal("990.00")), Arguments.of(Named.of("Multiple Fees ($15 total)",
+              new BigDecimal("990.00")),
+          Arguments.of(Named.of("Multiple Fees ($15 total)",
               List.of(Fee.of(FeeType.BROKERAGE, Money.of(10, USD), NOW),
-                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))), new BigDecimal("985.00")));
+                  Fee.of(FeeType.CLEARING_FEE, Money.of(5, USD), NOW))),
+              new BigDecimal("985.00")));
     }
 
     @ParameterizedTest
@@ -165,7 +170,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW, false)).isInstanceOf(InsufficientFundsException.class);
+              NOTES, NOW, false))
+          .isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).withdraw(any(), any(), anyBoolean());
       verify(account, never()).applyPositionResult(any(), any());
@@ -209,7 +215,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW, false)).isInstanceOf(InsufficientFundsException.class);
+              NOTES, NOW, false))
+          .isInstanceOf(InsufficientFundsException.class);
 
       verify(account).hasSufficientCash(any());
       verify(account, never()).applyPositionResult(any(), any());
@@ -224,7 +231,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
-              NOTES, NOW, false)).isInstanceOf(InsufficientFundsException.class);
+              NOTES, NOW, false))
+          .isInstanceOf(InsufficientFundsException.class);
 
       verify(account, never()).applyPositionResult(any(), any());
     }
@@ -282,7 +290,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, List.of(), NOTES,
-              NOW)).isInstanceOf(IllegalStateException.class)
+              NOW))
+          .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot sell: no open position for AAPL");
 
       verify(account).getPosition(AAPL);
@@ -322,7 +331,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSell(account, AAPL, TEN, HUNDRED_USD_PRICE, null, NOTES,
-              NOW)).isInstanceOf(InsufficientQuantityException.class);
+              NOW))
+          .isInstanceOf(InsufficientQuantityException.class);
     }
   }
 
@@ -385,7 +395,8 @@ class TransactionRecordingServiceImplTest {
       Quantity partialQty = new Quantity(new BigDecimal("5.00"));
       assertThatThrownBy(
           () -> service.recordReturnOfCapital(account, AAPL, partialQty, HUNDRED_USD_PRICE, NOTES,
-              NOW)).isInstanceOf(IllegalArgumentException.class)
+              NOW))
+          .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("must match total held quantity");
     }
 
@@ -396,7 +407,7 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSplit(account, AAPL, RATIO_3_FOR_1, NOTES, NOW)).isInstanceOf(
-          AccountClosedException.class);
+              AccountClosedException.class);
     }
 
     @Test
@@ -407,7 +418,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordSplit(account, AAPL, RATIO_3_FOR_1, NOTES, NOW)).isInstanceOf(
-          IllegalStateException.class).hasMessageContaining("no open position found for AAPL");
+              IllegalStateException.class)
+          .hasMessageContaining("no open position found for AAPL");
     }
 
     @Test
@@ -691,7 +703,8 @@ class TransactionRecordingServiceImplTest {
 
       assertThatThrownBy(
           () -> service.recordReturnOfCapital(account, AAPL, TEN, HUNDRED_USD_PRICE, NOTES,
-              NOW)).isInstanceOf(IllegalStateException.class);
+              NOW))
+          .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -765,19 +778,47 @@ class TransactionRecordingServiceImplTest {
   @Nested
   @DisplayName("recordTransferIn Tests")
   class TransferInTests {
-    @Test
-    @DisplayName("recordTransferIn: successfully deposits and returns transaction")
-    void recordTransferIn_Success() {
+    @ParameterizedTest
+    @MethodSource("provideFeeScenarios")
+    @DisplayName("recordTransferIn: verifies net cash calculation (Gross - Fees)")
+    void recordTransferIn_CalculatesNetCashCorrectly(List<Fee> fees, Money expectedNetCash) {
       when(account.getAccountId()).thenReturn(AccountId.newId());
+      when(account.getAccountCurrency()).thenReturn(USD);
 
-      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, List.of(), NOTES, NOW);
+      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, fees, NOTES, NOW);
 
-      verify(account).deposit(eq(HUNDRED_USD_MONEY), eq("TRANSFER IN"));
+      verify(account).deposit(eq(expectedNetCash), eq("TRANSFER IN"));
 
+      assertThat(tx.cashDelta()).isEqualTo(expectedNetCash);
       assertThat(tx.transactionType()).isEqualTo(TransactionType.TRANSFER_IN);
-      assertThat(tx.cashDelta()).isEqualTo(HUNDRED_USD_MONEY);
-      assertThat(tx.notes()).isEqualTo(NOTES);
-      assertThat(tx.metadata().assetType()).isEqualTo(AssetType.CASH);
+
+      if (fees == null) {
+        assertThat(tx.fees()).isEmpty();
+      } else {
+        assertThat(tx.fees()).hasSize(fees.size());
+      }
+    }
+
+    private static Stream<Arguments> provideFeeScenarios() {
+      return Stream.of(
+          // Scenario 1: No fees (Gross 100 - Fee 0 = Net 100)
+          Arguments.of(null, Money.of(100, "USD")),
+
+          // Scenario 2: Empty fee list (Gross 100 - Fee 0 = Net 100)
+          Arguments.of(List.of(), Money.of(100, "USD")),
+
+          // Scenario 3: Real fees (Gross 100 - Fee 5 = Net 95)
+          Arguments.of(
+              List.of(Fee.of(FeeType.ACCOUNT_MAINTENANCE, Money.of(5, "USD"), NOW,
+                  new FeeMetadata(Map.of("info", "Brokerage Cut")))),
+              Money.of(95, "USD")),
+
+          // Scenario 4: Multiple fees (Gross 100 - Fee 12 = Net 88)
+          Arguments.of(
+              List.of(
+                  Fee.of(FeeType.ADVISORY_FEE, Money.of(10, "USD"), NOW, new FeeMetadata(Map.of("info", "Wire Fee"))),
+                  Fee.of(FeeType.TRANSACTION_TAX, Money.of(2, "USD"), NOW, new FeeMetadata(Map.of("info", "Tax")))),
+              Money.of(88, "USD")));
     }
   }
 

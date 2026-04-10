@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PortfolioViewMapper {
   private final ExchangeRateService exchangeRateService; // New Dependency
+
   /**
    * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost
    * basis is zero/null
@@ -181,7 +182,14 @@ public class PortfolioViewMapper {
         : Money.zero(currency);
 
     if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
-      // ... (keep fallback logic for null quotes same as before)
+      return new PositionView(symbol.symbol(), position.type(), position.totalQuantity(),
+          new Price(position.totalCostBasis()), new Price(position.costPerUnit()), fees,
+          // fees even when quote unavailable
+          Price.zero(currency), // current price unknown
+          Money.zero(currency), // market value unknown
+          Money.zero(currency), // unrealized P&L unknown
+          PercentageChange.ZERO, determineMethodology(position), extractFirstAcquiredDate(position),
+          extractLastModifiedDate(position));
     }
 
     // FIX: Handle Currency Mismatch for Market Price
