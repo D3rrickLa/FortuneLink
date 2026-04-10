@@ -92,14 +92,17 @@ public class TransactionService {
 
   @Recover
   public TransactionView recover(ObjectOptimisticLockingFailureException ex, TransactionCommand cmd) {
+    log.warn("Triggering recovery");
     return handleOptimisticLockFailure(ex, cmd.accountId());
   }
 
-  // @Recover
-  // public TransactionView recover(ObjectOptimisticLockingFailureException ex, IdentifiedTransactionCommand cmd) {
-  //   // This catches the Exclude/Restore path explicitly
-  //   return handleOptimisticLockFailure(ex, cmd.accountId());
-  // }
+  @Recover
+  public TransactionView recover(ObjectOptimisticLockingFailureException ex,
+      IdentifiedTransactionCommand cmd) {
+    // This catches the Exclude/Restore path explicitly
+    log.warn("Triggering recovery on exclusion/recover transaction");
+    return handleOptimisticLockFailure(ex, cmd.accountId());
+  }
 
   public TransactionView recordPurchase(RecordPurchaseCommand command) {
     return execute(command, validator::validate, "recordPurchase", ctx -> {
@@ -383,10 +386,12 @@ public class TransactionService {
     // 1. Level 1 & 2: Check Cache and DB
     if (key != null) {
       TransactionView cached = idempotencyCache.get(key.toString());
-      if (cached != null)
+      if (cached != null) {
         return cached;
+      }
 
-      Optional<Transaction> existing = transactionRepository.findByIdempotencyKeyAndPortfolioId(key, command.portfolioId());
+      Optional<Transaction> existing = transactionRepository.findByIdempotencyKeyAndPortfolioId(key,
+          command.portfolioId());
       if (existing.isPresent()) {
         log.info("Duplicate transaction detected for key {} in portfolio {}", key, command.portfolioId());
         TransactionView view = transactionViewMapper.toTransactionView(existing.get());
