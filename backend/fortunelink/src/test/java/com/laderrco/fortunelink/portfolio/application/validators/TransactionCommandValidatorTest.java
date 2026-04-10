@@ -397,7 +397,7 @@ class TransactionCommandValidatorTest {
     @DisplayName("validateTransferIn: shouldValidateAmountAndDate")
     void shouldValidateTransferIn() {
       RecordTransferInCommand command = new RecordTransferInCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
-          USER_ID, ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), List.of(), NOW, null);
+          USER_ID, ACCOUNT_ID, new Money(BigDecimal.ZERO, USD), NOW, null);
 
       ValidationResult result = validator.validate(command);
 

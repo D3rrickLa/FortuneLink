@@ -97,7 +97,7 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(),request.transactionDate());
+    List<Fee> fees = mapFees(request.fees(), request.transactionDate());
 
     return transactionService.recordPurchase(
         new RecordPurchaseCommand(validateUuid(idempotencyKey),
@@ -207,12 +207,10 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordTransferInRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), request.transactionDate());
-
     return transactionService.recordTransferIn(
         new RecordTransferInCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            Money.of(request.amount(), request.currency()), fees, request.transactionDate(),
+            Money.of(request.amount(), request.currency()), request.transactionDate(),
             request.notes() != null ? request.notes() : ""));
   }
 

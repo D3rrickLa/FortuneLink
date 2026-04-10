@@ -207,8 +207,8 @@ public class TransactionService {
 
   public TransactionView recordTransferIn(RecordTransferInCommand command) {
     return execute(command, validator::validate, "recordTransferIn",
-        ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(),
-            command.fees(), command.notes(), command.transactionDate()));
+        ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(), command.notes(),
+            command.transactionDate()));
   }
 
   public TransactionView recordTransferOut(RecordTransferOutCommand command) {

@@ -573,16 +573,16 @@ class TransactionServiceTest {
     @DisplayName("recordTransferIn: verify success flow")
     void recordTransferInSuccess() {
       RecordTransferInCommand command = new RecordTransferInCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
-          USER_ID, ACCOUNT_ID, AMOUNT, List.of(), NOW, "Transfer In");
+          USER_ID, ACCOUNT_ID, AMOUNT, NOW, "Transfer In");
 
-      when(transactionRecordingService.recordTransferIn(any(), any(), any(), any(), any())).thenReturn(
+      when(transactionRecordingService.recordTransferIn(any(), any(), any(), any())).thenReturn(
           transaction);
       when(transaction.transactionType()).thenReturn(TransactionType.TRANSFER_IN);
 
       service.recordTransferIn(command);
 
       verify(transactionRecordingService).recordTransferIn(any(), eq(command.amount()),
-          any(), eq(command.notes()), eq(command.transactionDate()));
+         eq(command.notes()), eq(command.transactionDate()));
     }
 
     @Test

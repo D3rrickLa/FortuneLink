@@ -6,9 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
-
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
 
 /**
  * Request body for recording an inbound cash transfer.
@@ -30,8 +27,6 @@ public record RecordTransferInRequest(
     @NotNull(message = "Amount is required") @DecimalMin(value = "0.01", message = "Transfer amount must be greater than zero") BigDecimal amount,
 
     @NotBlank(message = "Currency is required") @Size(min = 3, max = 3, message = "Currency must be a 3-letter ISO-4217 code") String currency,
-
-    List<FeeRequest> fees,
 
     @NotNull(message = "Transaction date is required") Instant transactionDate,
 

@@ -146,7 +146,6 @@ public class TransactionCommandValidator {
   public ValidationResult validate(RecordTransferInCommand command) {
     return validateCommand(command, errors -> {
         ValidationUtils.validateAmount(command.amount().amount(), errors);
-        validateFees(command.fees(), errors); 
         ValidationUtils.validateDate(command.transactionDate(), null, errors);
     });
   }

@@ -270,18 +270,14 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
    * consistent with how recordBuy handles it on the other side.
    */
   @Override
-  public Transaction recordTransferIn(Account account, Money amount, List<Fee> fees, String notes, Instant date) {
+  public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
     validateTransactionDate(date, account);
 
-    List<Fee> feeList = fees != null ? fees : List.of();
-    Money totalFees = Fee.totalInAccountCurrency(feeList, account.getAccountCurrency());
-    Money netCash = amount.subtract(totalFees);
-
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.TRANSFER_IN)
-        .cashDelta(netCash).fees(feeList).notes(notes).occurredAt(date)
+        .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date)
         .metadata(TransactionMetadata.manual(AssetType.CASH)).build();
 
     account.deposit(amount, REASON_TRANSFER_IN);

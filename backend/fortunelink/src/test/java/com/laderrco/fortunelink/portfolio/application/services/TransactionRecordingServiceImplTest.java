@@ -785,7 +785,7 @@ class TransactionRecordingServiceImplTest {
       when(account.getAccountId()).thenReturn(AccountId.newId());
       when(account.getAccountCurrency()).thenReturn(USD);
 
-      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, fees, NOTES, NOW);
+      Transaction tx = service.recordTransferIn(account, HUNDRED_USD_MONEY, NOTES, NOW);
 
       verify(account).deposit(eq(expectedNetCash), eq("TRANSFER IN"));
 
