@@ -8,8 +8,4 @@ public class BocApiException extends RuntimeException {
   public BocApiException(String message, Throwable cause) {
     super(message, cause);
   }
-
-  public BocApiException(String string, int i) {
-    super(string + " code: " + i);
-  }
 }

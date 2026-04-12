@@ -2,11 +2,12 @@ package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class BocCurrencyPairResolver {
   private static final String CAD = "CAD";
-
-  private BocCurrencyPairResolver() {
-  }
 
   /**
    * Resolves BOC FX series needed to satisfy a currency request.

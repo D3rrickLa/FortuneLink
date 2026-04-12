@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public final class CacheKeyFactory {
-
   @Value("${fortunelink.cache.key-prefix.prices}")
   private String pricesPrefix;
 

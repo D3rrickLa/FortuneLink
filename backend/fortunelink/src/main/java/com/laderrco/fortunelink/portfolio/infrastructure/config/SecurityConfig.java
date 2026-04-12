@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -36,13 +37,26 @@ public class SecurityConfig {
   }
 
   @Bean
+  public WebSecurityCustomizer webSecurityCustomizer() {
+    return (web) -> web.ignoring()
+        .requestMatchers("/api/v1/public/**")
+        .requestMatchers("/actuator/health/**");
+  }
+
+  @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    return http.csrf(AbstractHttpConfigurer::disable).sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(
-            auth -> auth.requestMatchers("api/v1/public/**", "/actuator/health").permitAll()
-                .anyRequest().authenticated()).oauth2ResourceServer(
-            oauth -> oauth.jwt(Customizer.withDefaults())
-                .authenticationEntryPoint(jwtAuthEntryPoint)).build();
+    http
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/v1/public/**").permitAll()
+            .requestMatchers("/actuator/health").permitAll()
+            .anyRequest().authenticated())
+        // .httpBasic(Customizer.withDefaults());
+        .oauth2ResourceServer(oauth -> oauth
+            .jwt(Customizer.withDefaults())
+            .authenticationEntryPoint(jwtAuthEntryPoint));
+
+    return http.build();
   }
 }
