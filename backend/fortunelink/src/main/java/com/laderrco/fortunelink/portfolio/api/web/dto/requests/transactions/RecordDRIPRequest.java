@@ -20,7 +20,7 @@ import java.time.Instant;
  * more shares
  * <p>
  * Never record both for the same event. If you record a DIVIDEND and then a BUY with the proceeds,
- * that is two separate transactions. A DRIP is ONE transaction — no cash, shares added, cost basis
+ * that is two separate transactions. A DRIP is ONE transaction , no cash, shares added, cost basis
  * increases.
  * <p>
  * pricePerShare: Use the actual DRIP price from your broker statement. DRIP prices are often

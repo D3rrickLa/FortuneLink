@@ -18,9 +18,9 @@ import java.util.UUID;
  * replaying the full transaction ledger.
  * <p>
  * <b>ID contract:</b>
- * - New gains: use {@link #of} — generates a stable UUID once, persisted
+ * - New gains: use {@link #of} , generates a stable UUID once, persisted
  * immediately. - DB
- * hydration: use {@link #reconstitute} — passes the existing row UUID through,
+ * hydration: use {@link #reconstitute} , passes the existing row UUID through,
  * ensuring the mapper
  * can detect which gains already exist and skip re-inserting them.
  * <p>

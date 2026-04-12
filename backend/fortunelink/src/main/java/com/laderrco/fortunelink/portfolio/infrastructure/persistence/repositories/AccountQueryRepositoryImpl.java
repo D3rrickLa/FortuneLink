@@ -40,7 +40,7 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
   /**
    * Groups (accountId, symbol) rows into Map<AccountId, Set<AssetSymbol>>.
    * Accounts with no open
-   * positions are absent from the result — callers should use getOrDefault(id,
+   * positions are absent from the result , callers should use getOrDefault(id,
    * Set.of()).
    */
   @Override

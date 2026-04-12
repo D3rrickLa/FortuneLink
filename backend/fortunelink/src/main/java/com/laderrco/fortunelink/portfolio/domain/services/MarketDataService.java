@@ -56,7 +56,7 @@ public interface MarketDataService {
   Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(Set<AssetSymbol> symbols);
 
   /**
-   * Symbol autocomplete for UI search boxes. Returns shallow results only — do NOT use for
+   * Symbol autocomplete for UI search boxes. Returns shallow results only , do NOT use for
    * transaction validation. For transaction validation, use validateAndGet(AssetSymbol).
    */
   List<SymbolSearchResult> searchSymbols(String query);

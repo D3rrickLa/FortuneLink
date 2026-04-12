@@ -7,7 +7,7 @@ import java.util.List;
  * API response for the realized gains summary endpoint.
  * <p>
  * Contains both the line-item breakdown (items) and pre-computed totals. The totals are
- * authoritative — the frontend must not re-sum items, as rounding on individual BigDecimal rows can
+ * authoritative , the frontend must not re-sum items, as rounding on individual BigDecimal rows can
  * drift from the server total.
  * <p>
  * Tax year timezone caveat: All timestamps are UTC. For CRA (Canada) reporting, tax year runs Jan 1

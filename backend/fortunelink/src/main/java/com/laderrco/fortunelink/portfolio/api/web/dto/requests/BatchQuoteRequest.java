@@ -8,7 +8,7 @@ import java.util.List;
  * Request body for the batch quote endpoint.
  * <p>
  * Limited to 20 symbols server-side. The controller enforces this independently of this annotation
- * so there are two layers of protection — annotation handles the Spring validation pipeline,
+ * so there are two layers of protection , annotation handles the Spring validation pipeline,
  * controller handles the FMP quota concern.
  */
 public record BatchQuoteRequest(

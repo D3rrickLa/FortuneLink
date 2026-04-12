@@ -20,7 +20,7 @@ import org.springframework.data.domain.Pageable;
  * <p>
  * Lives in the application layer (not domain) because it returns infrastructure
  * projections rather
- * than domain entities. This is intentional — these are query-side
+ * than domain entities. This is intentional , these are query-side
  * optimizations, not aggregate
  * mutations.
  * <p>
@@ -33,7 +33,7 @@ public interface AccountQueryRepository {
   /**
    * Paginated account list for a portfolio, without positions loaded. Performs a
    * single SELECT on
-   * the accounts table — no aggregate hydration.
+   * the accounts table , no aggregate hydration.
    */
   Page<AccountSummaryProjection> findByPortfolioId(PortfolioId portfolioId, Pageable pageable);
 
@@ -43,11 +43,11 @@ public interface AccountQueryRepository {
    * <p>
    * Returns a map of accountId -> set of symbols. Accounts with no open positions
    * are absent from
-   * the map (not present with an empty set) — callers should use
+   * the map (not present with an empty set) , callers should use
    * {@code getOrDefault(id, Set.of())}.
    * <p>
    * Uses positions table, not transactions, because we want current open holdings
-   * only — not
+   * only , not
    * historical symbols that have since been fully sold.
    */
   Map<AccountId, Set<AssetSymbol>> findSymbolsForAccounts(List<AccountId> accountIds);

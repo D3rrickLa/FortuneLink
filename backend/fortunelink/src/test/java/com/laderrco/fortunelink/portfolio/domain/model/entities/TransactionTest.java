@@ -193,7 +193,7 @@ public class TransactionTest {
     void splitCashDeltaMustBeZero() {
       // SPLIT has CashImpact.NONE but requiresExecution=true and
       // requiresSplitDetails=true;
-      // missing split Ratio triggers first — the consistency message still surfaces
+      // missing split Ratio triggers first , the consistency message still surfaces
       var ex = assertThrows(IllegalArgumentException.class,
           () -> validBuy().transactionType(TransactionType.SPLIT).cashDelta(Money.of(1350, "USD"))
               .build());

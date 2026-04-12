@@ -96,7 +96,7 @@ public class CsvImportService {
           List.of(new CsvRowError(0, "File could not be read: " + e.getMessage())));
     }
 
-    // Phase 1 validation failed — do not commit anything
+    // Phase 1 validation failed , do not commit anything
     if (!errors.isEmpty()) {
       return CsvImportResult.failure(errors);
     }
@@ -256,9 +256,9 @@ public class CsvImportService {
   }
 
   /**
-   * Deterministic idempotency key from content — safe to re-upload the same file.
+   * Deterministic idempotency key from content , safe to re-upload the same file.
    * Uses UUID v5 (name-based) semantics via a simple string hash.
-   * Not cryptographically secure — this is not a security boundary.
+   * Not cryptographically secure , this is not a security boundary.
    */
   private UUID deterministicKey(PortfolioId portfolioId, AccountId accountId, ParsedRow row) {
     String seed = portfolioId + ":" + accountId + ":" + row.rowNum() + ":"

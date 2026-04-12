@@ -10,7 +10,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
  * Domain port for net worth snapshot persistence.
  * <p>
  * Snapshots are append-only. There is intentionally no update or delete
- * operation — the DB unique index enforces one snapshot per user per day,
+ * operation , the DB unique index enforces one snapshot per user per day,
  * and the snapshot service uses {@code existsForToday} to skip duplicate runs.
  */
 public interface NetWorthSnapshotRepository {

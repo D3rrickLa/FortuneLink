@@ -22,7 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
  * Provides exchange rate information for display purposes.
  * <p>
  * This controller is intentionally read-only and display-focused. The backend never exposes raw
- * exchange rate data for use in external calculations — all currency conversion for portfolio
+ * exchange rate data for use in external calculations , all currency conversion for portfolio
  * valuation happens server-side in PortfolioValuationService.
  * <p>
  * Primary use cases: - Show the user "your CAD portfolio is worth X USD at today's rate" - Show the
@@ -37,7 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
  * client should cache aggressively.
  * <p>
  * Error handling: - If BOC is down, returns 503 with a Retry-After header. - If a currency pair is
- * unsupported, returns 404. - The frontend must handle both gracefully — degrade to showing the
+ * unsupported, returns 404. - The frontend must handle both gracefully , degrade to showing the
  * cost-basis value without a converted equivalent.
  */
 @Slf4j
@@ -106,7 +106,7 @@ public class ExchangeRateController {
 
     } catch (BocApiException e) {
       log.error("BOC API error fetching {}/{}: {}", from, to, e.getMessage());
-      // Return 503 with a Retry-After header — client should back off
+      // Return 503 with a Retry-After header , client should back off
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
           "Exchange rate service is temporarily unavailable. "
               + "Portfolio values will show cost-basis fallback.");
@@ -114,7 +114,7 @@ public class ExchangeRateController {
   }
 
   // -------------------------------------------------------------------------
-  // Supported currencies — lets the UI know what currencies are valid inputs
+  // Supported currencies , lets the UI know what currencies are valid inputs
   // -------------------------------------------------------------------------
 
   /**

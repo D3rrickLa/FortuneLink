@@ -34,7 +34,7 @@ public abstract class BaseControllerTest {
      * Returns a RequestPostProcessor that injects a valid JWT principal.
      * Use this for standard authenticated requests.
      *
-     * userId must be a valid UUID — it maps to the 'sub' claim your
+     * userId must be a valid UUID , it maps to the 'sub' claim your
      * AuthenticationUserService reads.
      */
     protected RequestPostProcessor authenticatedUser(UUID userId) {

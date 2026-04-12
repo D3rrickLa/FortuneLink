@@ -154,20 +154,18 @@ public class FmpClient {
         .queryParam("apikey", config.getApiKey()).build().toUriString();
   }
 
-  @SuppressWarnings("unused")
-  private List<FmpQuoteResponse> getBatchQuotesFallback(List<String> symbols, Throwable t) {
+  List<FmpQuoteResponse> getBatchQuotesFallback(List<String> symbols, Throwable t) {
     log.warn("FMP circuit open for batch quote. Cause: {}", t.getMessage());
     return List.of();
   }
 
-  @SuppressWarnings("unused")
-  private FmpQuoteResponse getQuoteFallback(String symbol, Throwable t) {
+  FmpQuoteResponse getQuoteFallback(String symbol, Throwable t) {
     log.warn("FMP circuit open for quote symbol={}, cause: {}", symbol, t.getMessage());
     return null; // caller must handle null
 }
 
-  @SuppressWarnings("unused")
-  private FmpProfileResponse getProfileFallback(String symbol, Throwable t) {
+  
+  FmpProfileResponse getProfileFallback(String symbol, Throwable t) {
     log.warn("FMP circuit open for profile symbol={}", symbol);
     return null;
   }

@@ -83,7 +83,7 @@ public class PortfolioController {
         .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     boolean finalSoftDelete = isAdmin ? softDelete : true;
 
-    // Allow 'recursive' regardless—it just means "mark all children as deleted too"
+    // Allow 'recursive' regardless,it just means "mark all children as deleted too"
     lifecycleService.deletePortfolio(new DeletePortfolioCommand(PortfolioId.fromString(portfolioId),
         userId, finalSoftDelete, recursive));
   }

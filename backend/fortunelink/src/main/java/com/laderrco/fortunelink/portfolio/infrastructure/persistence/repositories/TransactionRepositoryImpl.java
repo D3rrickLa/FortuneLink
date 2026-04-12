@@ -63,13 +63,13 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
 
     if (existing.isPresent()) {
       // Exclusion / restore path: only mutation allowed post-creation.
-      // portfolioId is already persisted on the managed row — no update needed.
+      // portfolioId is already persisted on the managed row , no update needed.
       entity = existing.get();
       mapper.applyExclusionState(domain, entity);
     } else {
       // New transaction insert. Use the caller-supplied portfolioId directly.
       // Previously this fired: jpaRepository.findPortfolioIdByAccountId(accountId)
-      // — an unnecessary extra query on every single transaction record.
+      // , an unnecessary extra query on every single transaction record.
       entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()),
           idempotencyKey.toString());
     }
@@ -89,7 +89,7 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   }
 
   // =========================================================================
-  // Read — domain repository interface
+  // Read , domain repository interface
   // =========================================================================
 
   @Override

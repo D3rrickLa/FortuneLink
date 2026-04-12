@@ -316,7 +316,7 @@ public class TransactionController {
    * <p>
    * The transaction must belong to the specified account and portfolio. Returns
    * 404 if the
-   * transaction does not exist or belongs to a different user's account — we do
+   * transaction does not exist or belongs to a different user's account , we do
    * not differentiate
    * to avoid information leakage.
    */
@@ -337,7 +337,7 @@ public class TransactionController {
   /**
    * Excludes a transaction from position and capital gains calculations.
    * <p>
-   * Cash balance is NOT reversed — see ExcludeTransactionCommand for rationale.
+   * Cash balance is NOT reversed , see ExcludeTransactionCommand for rationale.
    * Triggers an async
    * position recalculation for the affected symbol.
    */

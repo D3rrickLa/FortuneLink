@@ -13,9 +13,11 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -55,6 +57,11 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of("BAD_REQUEST", ex.getMessage()));
   }
 
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public String handleMissingBody(HttpMessageNotReadableException ex) {
+    return "Body is missing";
+  }
   // -------------------------------------------------------------------------
   // 401 Unauthorized
   // -------------------------------------------------------------------------

@@ -26,7 +26,7 @@ public record AccountView(
      * recalculated without those transactions.
      *
      * <p>
-     * This flag does NOT indicate data corruption — it's intentional design.
+     * This flag does NOT indicate data corruption , it's intentional design.
      * The frontend should display a contextual warning when this is true so users
      * understand their shown cash balance may not reconcile against their
      * positions.
@@ -41,7 +41,7 @@ public record AccountView(
     /**
      * Count of excluded transactions that affect positions or income.
      * Shown alongside hasCashImbalance so the frontend can render
-     * "2 transactions excluded — cash balance may not reconcile" rather than
+     * "2 transactions excluded , cash balance may not reconcile" rather than
      * a generic warning.
      */
     int excludedTransactionCount) {

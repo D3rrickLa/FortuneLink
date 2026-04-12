@@ -77,7 +77,7 @@ class JpaTransactionRepositoryTest {
    *
    * Spring Data JPA projections onto interfaces work when the property names on
    * the interface match the aliases in the query exactly, case-sensitively. Your
-   * query uses as accountId, as symbol, as totalFees, as currency — and your
+   * query uses as accountId, as symbol, as totalFees, as currency , and your
    * interface has getAccountId(), getSymbol(), getTotalFees(), getCurrency().
    * That should work, but verify it with an integration test before you ship. If
    * it silently returns nulls you'll have a fee calculation bug that's hard to

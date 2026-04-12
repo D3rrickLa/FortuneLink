@@ -30,5 +30,5 @@ CREATE UNIQUE INDEX idx_snapshots_user_day
 COMMENT ON TABLE net_worth_snapshots IS
     'Daily net worth snapshots for FIRE progress tracking. '
     'Written by NetWorthSnapshotService at 02:00 UTC. '
-    'totalLiabilities is zero at MVP — field exists for Loan Management context.';
+    'totalLiabilities is zero at MVP , field exists for Loan Management context.';
  

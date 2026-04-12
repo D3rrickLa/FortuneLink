@@ -15,7 +15,7 @@ import java.time.Instant;
  * Annual account maintenance fees - Wire transfer fees - Margin interest charges - Management fees
  * billed to the account
  * <p>
- * Do NOT use this for trading commissions on a BUY or SELL — those are attached to the trade via
+ * Do NOT use this for trading commissions on a BUY or SELL , those are attached to the trade via
  * the fees[] array on /buy or /sell. Trading fees attached to trades affect the cost basis (ACB).
  * Standalone fees do not.
  * <p>

@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
  * (original currency) and an {@code accountAmount} (converted to account currency) plus the
  * {@code ExchangeRate} used. All three are persisted here so they can be reconstructed exactly.
  * <p>
- * {@code FeeMetadata} key/value pairs are NOT persisted separately — they are rarely needed after
+ * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are rarely needed after
  * recording and can be reconstructed from the {@code additionalData} JSONB on
  * {@code TransactionJpaEntity} if required.
  */
@@ -41,12 +41,12 @@ public class FeeJpaEntity {
   private TransactionJpaEntity transaction;
   @Column(name = "fee_type", length = 50)
   private String feeType; // FeeType enum name
-  // Native amount — the currency the fee was charged in
+  // Native amount , the currency the fee was charged in
   @Column(name = "native_amount", nullable = false, precision = 20, scale = 10)
   private BigDecimal nativeAmount;
   @Column(name = "native_currency", nullable = false, length = 3)
   private String nativeCurrency;
-  // Account amount — post-conversion (null if same currency as account)
+  // Account amount , post-conversion (null if same currency as account)
   @Column(name = "account_amount", precision = 20, scale = 10)
   private BigDecimal accountAmount;
   @Column(name = "account_amount_currency", length = 3)

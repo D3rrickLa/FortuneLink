@@ -20,7 +20,7 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
   /**
    * Paginated summary projection for a portfolio's accounts.
    * <p>
-   * Note: uses {@code a.portfolio.id} — AccountJpaEntity has a @ManyToOne
+   * Note: uses {@code a.portfolio.id} , AccountJpaEntity has a @ManyToOne
    * relationship, not a
    * direct portfolioId column.
    * <p>
@@ -53,7 +53,7 @@ public interface JpaAccountRepository extends JpaRepository<AccountJpaEntity, UU
    * supplied account
    * IDs.
    * <p>
-   * Sourced from PositionJpaEntity — current open holdings only. Symbols that
+   * Sourced from PositionJpaEntity , current open holdings only. Symbols that
    * have been fully sold
    * are no longer in positions, so they will not appear here. This is the correct
    * behaviour for

@@ -81,7 +81,7 @@ public class PortfolioLifecycleService {
   /**
    * Permanent removal from the database. Bypasses soft-delete audit trail.
    * Reserved for admin/test
-   * use — no API path exposes this in production.
+   * use , no API path exposes this in production.
    * <p>
    * Domain invariants are still enforced: a portfolio with active accounts or
    * open positions cannot

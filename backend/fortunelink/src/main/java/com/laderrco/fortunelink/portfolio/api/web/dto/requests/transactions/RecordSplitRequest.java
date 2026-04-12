@@ -26,7 +26,7 @@ import java.time.Instant;
  * is rejected (server returns 422).
  * <p>
  * If the split has already been partially applied by your broker (i.e. your brokerage already shows
- * the post-split quantity), do NOT record it again — recording a split replays the ratio against
+ * the post-split quantity), do NOT record it again , recording a split replays the ratio against
  * the current position quantity.
  */
 public record RecordSplitRequest(

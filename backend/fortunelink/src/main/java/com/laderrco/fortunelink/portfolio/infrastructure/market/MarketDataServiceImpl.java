@@ -174,8 +174,9 @@ public class MarketDataServiceImpl implements MarketDataService {
     String key = keyFactory.historical(symbol.symbol(), date);
 
     MarketAssetQuote cached = quoteRedis.opsForValue().get(key);
-    if (cached != null)
+    if (cached != null) {
       return Optional.of(cached);
+    }
 
     Optional<MarketAssetQuote> fetched = provider.fetchHistoricalQuote(symbol, date);
 
@@ -222,8 +223,9 @@ public class MarketDataServiceImpl implements MarketDataService {
   }
 
   private void writeQuotesToCache(Map<String, MarketAssetQuote> data) {
-    if (data.isEmpty())
+    if (data.isEmpty()) {
       return;
+    }
 
     quoteRedis.opsForValue().multiSet(data);
     data.keySet().forEach(k -> quoteRedis.expire(k, Duration.ofSeconds(quoteTtl)));

@@ -52,7 +52,7 @@ import org.springframework.stereotype.Component;
 public class PortfolioDomainMapper {
 
   // =========================================================================
-  // Portfolio — toDomain
+  // Portfolio , toDomain
   // =========================================================================
 
   private static String resolveIdentifierType(AssetType type) {
@@ -64,7 +64,7 @@ public class PortfolioDomainMapper {
   }
 
   // =========================================================================
-  // Portfolio — toEntity (new or update)
+  // Portfolio , toEntity (new or update)
   // =========================================================================
 
   private static UUID findExistingPositionId(AccountJpaEntity existing, String symbol) {
@@ -76,7 +76,7 @@ public class PortfolioDomainMapper {
   }
 
   // =========================================================================
-  // Account — toDomain
+  // Account , toDomain
   // =========================================================================
 
   public Portfolio toDomain(PortfolioJpaEntity entity) {
@@ -98,7 +98,7 @@ public class PortfolioDomainMapper {
   }
 
   // =========================================================================
-  // Account — toEntity
+  // Account , toEntity
   // =========================================================================
 
   public PortfolioJpaEntity toEntity(Portfolio domain, PortfolioJpaEntity existing) {
@@ -185,7 +185,7 @@ public class PortfolioDomainMapper {
       entity = existing;
     }
 
-    // Positions — full replace is correct here because positions are always
+    // Positions , full replace is correct here because positions are always
     // fully rebuilt from transactions by PositionRecalculationService.
     Set<PositionJpaEntity> positionEntities = new LinkedHashSet<>();
     for (Map.Entry<AssetSymbol, Position> entry : domain.getPositionEntries()) {
@@ -197,7 +197,7 @@ public class PortfolioDomainMapper {
     }
     entity.replacePositions(positionEntities);
 
-    // Realized gains — append-only. NEVER clear and re-insert.
+    // Realized gains , append-only. NEVER clear and re-insert.
     //
     // 1. Collect the UUIDs that are already persisted in the DB.
     // 2. Filter domain gains to only those not yet persisted.
@@ -213,7 +213,7 @@ public class PortfolioDomainMapper {
     List<RealizedGainJpaEntity> newGainEntities = new ArrayList<>();
     for (RealizedGainRecord rg : domain.getRealizedGains()) {
       if (!persistedGainIds.contains(rg.id())) {
-        // Use rg.id() — NOT UUID.randomUUID() — so the ID is stable across saves.
+        // Use rg.id() , NOT UUID.randomUUID() , so the ID is stable across saves.
         newGainEntities.add(realizedGainToEntity(rg.id(), entity, rg));
       }
     }
@@ -253,12 +253,12 @@ public class PortfolioDomainMapper {
 
   /**
    * Reconstitutes a domain record from a DB row, threading the stable UUID through. This must use
-   * RealizedGainRecord.reconstitute() — NOT of() — so the ID matches the persisted row and the
+   * RealizedGainRecord.reconstitute() , NOT of() , so the ID matches the persisted row and the
    * mapper can skip re-inserting on the next save.
    */
   private RealizedGainRecord realizedGainToDomain(RealizedGainJpaEntity ge) {
     return RealizedGainRecord.reconstitute(ge.getId(),
-        // stable DB row UUID — critical for the append-only diff in toEntity
+        // stable DB row UUID , critical for the append-only diff in toEntity
         new AssetSymbol(ge.getSymbol()),
         new Money(ge.getGainLossAmount(), Currency.of(ge.getGainLossCurrency())),
         new Money(ge.getCostBasisSoldAmount(), Currency.of(ge.getCostBasisSoldCurrency())),
@@ -267,7 +267,7 @@ public class PortfolioDomainMapper {
 
   /**
    * Converts a domain realized gain to a JPA entity for persistence. The id parameter MUST be
-   * rg.id() — it is passed explicitly to make it impossible to accidentally pass UUID.randomUUID()
+   * rg.id() , it is passed explicitly to make it impossible to accidentally pass UUID.randomUUID()
    * here again.
    */
   private RealizedGainJpaEntity realizedGainToEntity(UUID id, AccountJpaEntity accountEntity,

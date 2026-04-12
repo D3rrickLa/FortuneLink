@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
  * {@code TransactionJpaEntity}.
  * <p>
  * Separate from {@code PortfolioDomainMapper} intentionally. Transactions are not part of the
- * Portfolio aggregate graph — they are loaded independently through {@code TransactionRepository}
+ * Portfolio aggregate graph , they are loaded independently through {@code TransactionRepository}
  * and have their own lifecycle. Keeping mappers focused on one aggregate boundary prevents them
  * from becoming 800-line god classes.
  * <p>
@@ -47,7 +47,7 @@ import org.springframework.stereotype.Component;
 public class TransactionDomainMapper {
 
   // =========================================================================
-  // toDomain — JPA → Transaction (domain record)
+  // toDomain , JPA → Transaction (domain record)
   // =========================================================================
 
   public Transaction toDomain(TransactionJpaEntity entity) {
@@ -99,14 +99,14 @@ public class TransactionDomainMapper {
   }
 
   // =========================================================================
-  // toEntity — Transaction (domain record) → JPA
+  // toEntity , Transaction (domain record) → JPA
   // =========================================================================
 
   /**
    * Converts a domain {@code Transaction} to a new {@code TransactionJpaEntity}.
    * <p>
    * Always creates a fresh entity. Transactions are immutable in the domain (only exclusion state
-   * changes), so there is no update path here — use {@link #applyExclusionState} for exclusion
+   * changes), so there is no update path here , use {@link #applyExclusionState} for exclusion
    * mutations on an existing managed entity.
    *
    * @param domain      the domain transaction record
@@ -171,7 +171,7 @@ public class TransactionDomainMapper {
 
   /**
    * Applies only the exclusion mutation to a managed JPA entity. Call this instead of
-   * {@code toEntity} when restoring or excluding an existing transaction — avoids a pointless
+   * {@code toEntity} when restoring or excluding an existing transaction , avoids a pointless
    * re-insert of all fee rows.
    */
   public void applyExclusionState(Transaction domain, TransactionJpaEntity managed) {
@@ -208,7 +208,7 @@ public class TransactionDomainMapper {
     }
 
     return new Fee(FeeType.valueOf(fe.getFeeType()), nativeAmount, accountAmount, exchangeRate,
-        fe.getOccurredAt(), new Fee.FeeMetadata(Map.of()) // metadata not persisted — by design
+        fe.getOccurredAt(), new Fee.FeeMetadata(Map.of()) // metadata not persisted , by design
     );
   }
 

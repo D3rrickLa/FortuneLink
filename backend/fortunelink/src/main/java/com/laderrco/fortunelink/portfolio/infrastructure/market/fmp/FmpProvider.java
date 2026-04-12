@@ -55,13 +55,15 @@ public class FmpProvider implements MarketDataProvider {
     for (AssetSymbol symbol : symbols) {
       try {
         FmpQuoteResponse raw = fmpClient.getQuote(symbol.symbol());
-        if (raw == null)
+        if (raw == null) {
           continue;
+        }
 
         Currency currency = knownCurrencies.getOrDefault(symbol, Currency.USD);
         MarketAssetQuote quote = responseMapper.toQuote(raw, currency);
-        if (quote != null)
+        if (quote != null) {
           results.put(symbol, quote);
+        }
       } catch (Exception e) {
         log.warn("Failed to fetch quote for symbol={}: {}", symbol.symbol(), e.getMessage());
       }

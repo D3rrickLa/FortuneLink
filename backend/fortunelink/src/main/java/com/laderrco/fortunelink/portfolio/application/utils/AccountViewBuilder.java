@@ -29,7 +29,7 @@ public class AccountViewBuilder {
   private final TransactionRepository transactionRepository;
 
   /**
-   * Full detail build — includes position views, fee breakdown, and cash
+   * Full detail build , includes position views, fee breakdown, and cash
    * imbalance check.
    * Used by getAccountSummary (single account detail page).
    *
@@ -38,7 +38,7 @@ public class AccountViewBuilder {
    * basic build.
    * That's acceptable for the detail path where the user explicitly navigated to
    * an account.
-   * Do NOT use this for the list path (getAllAccounts) — use
+   * Do NOT use this for the list path (getAllAccounts) , use
    * {@link #buildFromProjection} there.
    */
   public AccountView build(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache,
@@ -64,7 +64,7 @@ public class AccountViewBuilder {
   }
 
   /**
-   * Summary build from a lightweight projection — used by getAllAccounts
+   * Summary build from a lightweight projection , used by getAllAccounts
    * (paginated list).
    *
    * <p>
@@ -102,12 +102,12 @@ public class AccountViewBuilder {
         cashBalance,
         totalValue,
         projection.getCreatedDate(),
-        false, // imbalance check skipped on list view — see Javadoc
+        false, // imbalance check skipped on list view , see Javadoc
         0);
   }
 
   /**
-   * Summary build from a full Account aggregate — used internally when the
+   * Summary build from a full Account aggregate , used internally when the
    * aggregate
    * is already loaded but fee detail is not needed (e.g., portfolio-level
    * rollups).

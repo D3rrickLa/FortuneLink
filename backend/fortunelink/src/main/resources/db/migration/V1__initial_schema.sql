@@ -1,5 +1,5 @@
 -- ============================================================
--- FortuneLink — V1 Initial Schema
+-- FortuneLink , V1 Initial Schema
 -- Aligned to domain model v8 (ACB MVP)
 --
 -- Design notes:
@@ -13,7 +13,7 @@
 -- ============================================================
  
 -- ============================================================
--- PORTFOLIOS — aggregate root
+-- PORTFOLIOS , aggregate root
 -- ============================================================
 CREATE TABLE portfolios (
     id                      UUID            PRIMARY KEY,
@@ -43,7 +43,7 @@ COMMENT ON COLUMN portfolios.display_currency_code IS
     'ISO-4217 code used to aggregate multi-currency accounts into a single display value.';
  
 -- ============================================================
--- ACCOUNTS — child of portfolio
+-- ACCOUNTS , child of portfolio
 -- ============================================================
 CREATE TABLE accounts (
     id                      UUID            PRIMARY KEY,
@@ -101,7 +101,7 @@ COMMENT ON COLUMN accounts.health_status IS
     'STALE indicates a failed position recalculation. HEALTHY is the normal state.';
  
 -- ============================================================
--- POSITIONS — normalized per (account, symbol)
+-- POSITIONS , normalized per (account, symbol)
 -- Replaces the old polymorphic 'assets' table entirely.
 -- ============================================================
 CREATE TABLE positions (
@@ -135,7 +135,7 @@ COMMENT ON COLUMN positions.identifier_type IS
     'Discriminator used by the domain mapper: MARKET (stocks/ETFs/bonds), CRYPTO, CASH.';
  
 -- ============================================================
--- TRANSACTIONS — immutable ledger
+-- TRANSACTIONS , immutable ledger
 -- ============================================================
 CREATE TABLE transactions (
     id                      UUID            PRIMARY KEY,
@@ -206,7 +206,7 @@ COMMENT ON COLUMN transactions.additional_data IS
     'Examples: symbol for DIVIDEND/INTEREST, feeType for standalone FEE transactions.';
  
 -- ============================================================
--- TRANSACTION FEES — multi-currency fee breakdown per transaction
+-- TRANSACTION FEES , multi-currency fee breakdown per transaction
 -- ============================================================
 CREATE TABLE transaction_fees (
     id                          UUID            PRIMARY KEY,
@@ -248,7 +248,7 @@ COMMENT ON TABLE transaction_fees IS
     'Fee.accountAmount is the converted value in account base currency (CRA ACB inclusion).';
  
 -- ============================================================
--- REALIZED GAINS — append-only record of closed positions
+-- REALIZED GAINS , append-only record of closed positions
 -- ============================================================
 CREATE TABLE realized_gains (
     id                          UUID            PRIMARY KEY,
@@ -267,10 +267,10 @@ CREATE TABLE realized_gains (
 COMMENT ON TABLE realized_gains IS
     'Capital gains/losses realized when positions are closed (SELL, ROC excess). '
     'Rebuilt from the domain on every account save. See the note on UUID stability '
-    'in RealizedGainRecord — the domain needs a stable ID to avoid DELETE+INSERT churn.';
+    'in RealizedGainRecord , the domain needs a stable ID to avoid DELETE+INSERT churn.';
  
 -- ============================================================
--- MARKET ASSET INFO — cached metadata, NOT financial data
+-- MARKET ASSET INFO , cached metadata, NOT financial data
 -- ============================================================
 CREATE TABLE market_asset_info (
     symbol              VARCHAR(20)     PRIMARY KEY,         -- AssetSymbol.symbol()
@@ -286,7 +286,7 @@ CREATE TABLE market_asset_info (
  
 COMMENT ON TABLE market_asset_info IS
     'DB-side cache for slow-changing asset metadata (name, sector, exchange). '
-    'Market quotes (prices) are NOT stored here — they live in Redis only. '
+    'Market quotes (prices) are NOT stored here , they live in Redis only. '
     'Purged weekly by TransactionPurgeService on a Sunday 3am cron.';
  
 -- ============================================================

@@ -29,24 +29,24 @@ import org.hibernate.type.SqlTypes;
  * <p>
  * Column mapping rationale:
  * <ul>
- * <li><b>TradeExecution</b> — flattened into nullable columns. The execution is
+ * <li><b>TradeExecution</b> , flattened into nullable columns. The execution is
  * optional (null for DEPOSIT, WITHDRAWAL, etc.) so an @Embeddable would
  * require {@code @Column(nullable=true)} on all fields anyway. Flattening
  * is cleaner.</li>
- * <li><b>TransactionMetadata</b> — assetType and source are columns; exclusion
+ * <li><b>TransactionMetadata</b> , assetType and source are columns; exclusion
  * fields are columns (added V3); additionalData is JSONB because it is a
  * free-form Map used for audit/vendor-specific keys.</li>
- * <li><b>Fees</b> — @OneToMany to {@code transaction_fees} (V1 schema). This
+ * <li><b>Fees</b> , @OneToMany to {@code transaction_fees} (V1 schema). This
  * preserves the existing table structure and allows individual fee
  * queries.</li>
- * <li><b>cashDelta</b> — stored as two columns (amount + currency). Required
+ * <li><b>cashDelta</b> , stored as two columns (amount + currency). Required
  * for
  * the full-account replay path in {@code replayFullTransaction}.</li>
  * </ul>
  *
  * <p>
  * <b>What is NOT mapped here:</b>
- * {@code MarketAssetQuote} is never persisted — it is ephemeral market data
+ * {@code MarketAssetQuote} is never persisted , it is ephemeral market data
  * retrieved from Redis/API on demand. Do not add JPA mapping for it.
  */
 @Entity
@@ -59,7 +59,7 @@ public class TransactionJpaEntity {
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
 
-  // The V1 schema has portfolio_id for join queries — store it denormalized.
+  // The V1 schema has portfolio_id for join queries , store it denormalized.
   @Column(name = "portfolio_id", nullable = false, columnDefinition = "uuid")
   private UUID portfolioId;
 
@@ -70,11 +70,11 @@ public class TransactionJpaEntity {
   private String transactionType;
 
   // -------------------------------------------------------------------------
-  // TradeExecution (flattened, all nullable — absent for non-trade types)
+  // TradeExecution (flattened, all nullable , absent for non-trade types)
   // -------------------------------------------------------------------------
 
   /**
-   * AssetSymbol.symbol() — null for DEPOSIT, WITHDRAWAL, FEE, etc.
+   * AssetSymbol.symbol() , null for DEPOSIT, WITHDRAWAL, FEE, etc.
    */
   @Column(name = "execution_symbol", length = 20)
   private String executionSymbol;
@@ -124,7 +124,7 @@ public class TransactionJpaEntity {
   private String excludedReason;
 
   /**
-   * TransactionMetadata.additionalData — free-form key/value pairs. Stored as JSONB. The V1
+   * TransactionMetadata.additionalData , free-form key/value pairs. Stored as JSONB. The V1
    * {@code metadata} column already exists for this. {@code StringMapConverter} serialises
    * Map&lt;String,String&gt; ↔ JSON text.
    */
@@ -197,12 +197,12 @@ public class TransactionJpaEntity {
   }
 
   // -------------------------------------------------------------------------
-  // Mutation (exclusion lifecycle only — transactions are otherwise immutable)
+  // Mutation (exclusion lifecycle only , transactions are otherwise immutable)
   // -------------------------------------------------------------------------
 
   /**
    * Applies exclusion state from an updated domain record. Transactions are immutable in the domain
-   * — only exclusion metadata changes post-creation, so this is the only mutable operation on this
+   * , only exclusion metadata changes post-creation, so this is the only mutable operation on this
    * entity.
    */
   public void applyExclusionState(boolean excluded, Instant excludedAt, UUID excludedBy,

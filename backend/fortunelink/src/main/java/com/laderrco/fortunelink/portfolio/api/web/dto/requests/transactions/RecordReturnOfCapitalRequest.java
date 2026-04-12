@@ -12,7 +12,7 @@ import java.time.Instant;
  * Request body for recording a Return of Capital (ROC) distribution.
  * <p>
  * A Return of Capital is a distribution from a fund or REIT that is classified as a return of
- * invested capital rather than income. It is NOT immediately taxable as income — instead it reduces
+ * invested capital rather than income. It is NOT immediately taxable as income , instead it reduces
  * the Adjusted Cost Base (ACB) of the position. If the ACB reaches zero, subsequent ROC
  * distributions become capital gains.
  * <p>
@@ -21,7 +21,7 @@ import java.time.Instant;
  * recorded as a capital gain - Share count: UNCHANGED
  * <p>
  * distributionPerUnit: The per-share ROC amount from the fund's distribution notice (T3/T5013). Not
- * the total distribution amount — the system multiplies by heldQuantity. Example: if a fund
+ * the total distribution amount , the system multiplies by heldQuantity. Example: if a fund
  * distributes $0.05/unit ROC on 200 units: distributionPerUnit=0.05, heldQuantity=200 → total
  * reduction = $10.00
  * <p>
@@ -29,7 +29,7 @@ import java.time.Instant;
  * have 200.00000000 units, pass exactly that. This prevents silent partial-position ROC
  * calculations. If the quantities don't match, the server returns 422 UNPROCESSABLE_ENTITY.
  * <p>
- * This is a Canadian tax concept (CRA IT-434R). Not applicable to US positions under US GAAP — US
+ * This is a Canadian tax concept (CRA IT-434R). Not applicable to US positions under US GAAP , US
  * cost basis adjustments use different rules.
  */
 public record RecordReturnOfCapitalRequest(

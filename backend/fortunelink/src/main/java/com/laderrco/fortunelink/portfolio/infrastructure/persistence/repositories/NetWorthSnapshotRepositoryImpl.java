@@ -37,7 +37,7 @@ public class NetWorthSnapshotRepositoryImpl implements NetWorthSnapshotRepositor
 
   /**
    * Computes UTC day boundaries in the impl rather than using DATE() in JPQL.
-   * DATE() behavior in JPQL is JVM-timezone-dependent — on a UTC container this
+   * DATE() behavior in JPQL is JVM-timezone-dependent , on a UTC container this
    * is fine, but it's an invisible trap when someone runs the app locally with a
    * non-UTC system timezone. Explicit bounds are unambiguous.
    */

@@ -16,7 +16,7 @@ import java.time.Instant;
  * The account's cash balance must cover the withdrawal amount. The server will return 422
  * INSUFFICIENT_FUNDS if it does not.
  * <p>
- * currency must match the account's base currency. Cross-currency withdrawals are not supported —
+ * currency must match the account's base currency. Cross-currency withdrawals are not supported ,
  * withdraw in the account's base currency only.
  */
 public record RecordWithdrawalRequest(

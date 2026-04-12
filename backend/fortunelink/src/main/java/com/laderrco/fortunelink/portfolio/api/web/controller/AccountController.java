@@ -104,11 +104,11 @@ public class AccountController {
    * Returns all accounts in a portfolio with their current positions and balances.
    * <p>
    * This fires one batch market data call for all symbols across all accounts. It is not paginated
-   * — the MVP enforces one portfolio per user and the expected account count per portfolio is low
+   * , the MVP enforces one portfolio per user and the expected account count per portfolio is low
    * (< 20). Add pagination when the multi-portfolio feature ships.
    * <p>
    * Performance note: each call fetches fresh market quotes for all positions. Cache aggressively
-   * on the client — the underlying Redis TTL is 5 minutes.
+   * on the client , the underlying Redis TTL is 5 minutes.
    */
   @GetMapping
   // Spring automatically populates this from query params

@@ -38,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
  * Failure handling:
  * - A single user's failure does not abort the job. Log and continue.
  * - If Redis is down, getBatchQuotes() returns cost-basis fallback
- * (hasStaleData = true on the snapshot). That's acceptable — better
+ * (hasStaleData = true on the snapshot). That's acceptable , better
  * a stale snapshot than no snapshot.
  *
  * Idempotency:

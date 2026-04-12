@@ -10,7 +10,7 @@ import java.time.Instant;
 /**
  * Request body for recording an outbound cash transfer.
  * <p>
- * Use this when cash moves OUT of an account to another account. No fees are supported here — if
+ * Use this when cash moves OUT of an account to another account. No fees are supported here , if
  * your broker charged an outbound transfer fee, record it as a separate POST /fee with
  * feeType=WIRE_TRANSFER_FEE or ACCOUNT_MAINTENANCE after this transfer-out.
  * <p>

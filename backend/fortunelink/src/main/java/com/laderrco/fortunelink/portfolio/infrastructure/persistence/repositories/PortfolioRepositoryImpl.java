@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
 /**
  * Implements the domain {@code PortfolioRepository} port using JPA.
  * <p>
- * This class knows about both layers by design — that is its entire purpose.
+ * This class knows about both layers by design , that is its entire purpose.
  * All other classes in
  * the application layer see only the interface.
  * <p>

@@ -20,13 +20,13 @@ import lombok.NoArgsConstructor;
  * Persistence model for {@code NetWorthSnapshot}.
  *
  * <p>
- * Append-only. Rows are never updated — one row per user per calendar day
+ * Append-only. Rows are never updated , one row per user per calendar day
  * (enforced by the unique index on (user_id, DATE(snapshot_date))).
  *
  * <p>
  * No @Version / optimistic locking needed because this entity is write-once
  * from a single scheduled job. If the job fires twice on the same day, the DB
- * constraint prevents the second write — no concurrent mutation scenario
+ * constraint prevents the second write , no concurrent mutation scenario
  * exists.
  */
 @Entity

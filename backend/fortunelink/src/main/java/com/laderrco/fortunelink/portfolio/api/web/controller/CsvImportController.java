@@ -20,8 +20,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * CSV import endpoints.
  *
- * GET /template — download the CSV template
- * POST / — upload a CSV file for import
+ * GET /template , download the CSV template
+ * POST / , upload a CSV file for import
  *
  * The import is intentionally synchronous for MVP. At scale you'd want to
  * push the file to S3 and process it async via SQS/queue. For the user base
@@ -38,7 +38,7 @@ public class CsvImportController {
   /**
    * Returns a pre-filled CSV template the user can download, populate, and
    * upload.
-   * No auth required on the template — it contains no user data.
+   * No auth required on the template , it contains no user data.
    */
   @GetMapping("/template")
   public ResponseEntity<byte[]> getTemplate() {
@@ -65,7 +65,7 @@ public class CsvImportController {
    *
    * <p>
    * File size is enforced by Spring's multipart config
-   * (spring.servlet.multipart.max-file-size). Set this to something sane — 2MB
+   * (spring.servlet.multipart.max-file-size). Set this to something sane , 2MB
    * is enough for 50k rows of text.
    */
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -105,7 +105,7 @@ public class CsvImportController {
       return ResponseEntity.ok(result);
     }
 
-    // 422 — validation errors with row-level detail so the user knows what to fix
+    // 422 , validation errors with row-level detail so the user knows what to fix
     return ResponseEntity.unprocessableContent().body(result);
   }
 }

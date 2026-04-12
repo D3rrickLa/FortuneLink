@@ -290,7 +290,7 @@ public class TransactionService {
   /**
    * Persists both the portfolio aggregate and the new transaction. The
    * portfolioId is taken
-   * directly from the in-memory context — no DB lookup.
+   * directly from the in-memory context , no DB lookup.
    */
   private void persistChanges(PortfolioContext ctx, Transaction tx, UUID idempotencyKey) {
     portfolioRepository.save(ctx.portfolio());
@@ -368,7 +368,7 @@ public class TransactionService {
    * <p>
    * Recording both for the same event will overstate cash balance. This check is
    * a runtime warning
-   * only — enforcement is the caller's responsibility. Callers that intentionally
+   * only , enforcement is the caller's responsibility. Callers that intentionally
    * bypass this
    * (e.g., CSV import correction flows) should be aware of the accounting
    * implication.

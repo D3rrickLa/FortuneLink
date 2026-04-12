@@ -112,7 +112,7 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
   /**
    * Loads the full aggregate graph by portfolio ID only. Ownership is
    * pre-validated by
-   * PortfolioLoader before save is called — repeating the userId check here is
+   * PortfolioLoader before save is called , repeating the userId check here is
    * redundant and costs
    * a round-trip.
    */

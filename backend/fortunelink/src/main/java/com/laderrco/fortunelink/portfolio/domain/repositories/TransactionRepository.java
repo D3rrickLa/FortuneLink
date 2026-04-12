@@ -30,7 +30,7 @@ public interface TransactionRepository {
    * engine. For
    * exclusion/restore updates to existing transactions, the portfolio ID is
    * already on the managed
-   * JPA entity — it is still required here to satisfy the contract uniformly and
+   * JPA entity , it is still required here to satisfy the contract uniformly and
    * to avoid a
    * secondary lookup.
    *
@@ -40,7 +40,7 @@ public interface TransactionRepository {
    * here costs nothing and eliminates an extra DB round-trip.
    *
    * @param transaction The transaction entity to save.
-   * @param portfolioId The owning portfolio — used for the denormalized column on
+   * @param portfolioId The owning portfolio , used for the denormalized column on
    *                    inserts.
    * @return The persisted {@link Transaction} instance.
    */

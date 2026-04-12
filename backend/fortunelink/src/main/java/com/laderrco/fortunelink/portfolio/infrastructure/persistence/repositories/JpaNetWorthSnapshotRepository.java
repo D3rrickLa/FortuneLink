@@ -16,7 +16,7 @@ public interface JpaNetWorthSnapshotRepository extends JpaRepository<NetWorthSna
 
   /**
    * Snapshots in ascending date order for chart rendering (oldest → newest).
-   * Caller determines the window — typically 90 or 365 days.
+   * Caller determines the window , typically 90 or 365 days.
    */
   @Query("""
       SELECT s FROM NetWorthSnapshotJpaEntity s
@@ -27,7 +27,7 @@ public interface JpaNetWorthSnapshotRepository extends JpaRepository<NetWorthSna
   List<NetWorthSnapshotJpaEntity> findByUserIdSince(@Param("userId") UUID userId, @Param("since") Instant since);
 
   /**
-   * Day-boundary check. NEVER use DATE() in JPQL against a TIMESTAMPTZ column —
+   * Day-boundary check. NEVER use DATE() in JPQL against a TIMESTAMPTZ column ,
    * the cast behavior is JVM-timezone-dependent. Instead pass explicit UTC bounds
    * computed by the caller (start of today UTC, start of tomorrow UTC).
    *
