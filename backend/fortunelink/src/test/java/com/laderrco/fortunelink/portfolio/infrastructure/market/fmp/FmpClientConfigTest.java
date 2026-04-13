@@ -24,10 +24,10 @@ class FmpClientConfigTest {
   @Test
   @DisplayName("should pass validation when a valid API key is provided")
   void shouldPassWithValidKey() {
-    // Given
+    
     config.setApiKey("valid-secret-key-123");
 
-    // When & Then
+    
     assertThatCode(() -> config.validate()).doesNotThrowAnyException();
   }
 
@@ -35,10 +35,10 @@ class FmpClientConfigTest {
   @ValueSource(strings = { "", "   ", "YOUR_API_KEY" })
   @DisplayName("should throw IllegalStateException for invalid or placeholder keys")
   void shouldFailWithInvalidKeys(String invalidKey) {
-    // Given
+    
     config.setApiKey(invalidKey);
 
-    // When & Then
+    
     assertThatThrownBy(() -> config.validate())
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("FMP API key is missing");
@@ -47,10 +47,10 @@ class FmpClientConfigTest {
   @Test
   @DisplayName("should throw IllegalStateException when API key is null")
   void shouldFailWithNullKey() {
-    // Given
+    
     config.setApiKey(null);
 
-    // When & Then
+    
     assertThatThrownBy(() -> config.validate())
         .isInstanceOf(IllegalStateException.class);
   }
@@ -58,7 +58,7 @@ class FmpClientConfigTest {
   @Test
   @DisplayName("should verify default configuration values")
   void shouldHaveCorrectDefaults() {
-    // These ensure your config doesn't accidentally change defaults
+    
     assertThat(config.getBaseUrl()).isEqualTo("https://financialmodelingprep.com/api/v3");
     assertThat(config.getTimeoutSeconds()).isEqualTo(10);
     assertThat(config.isDebugLogging()).isFalse();

@@ -32,7 +32,7 @@ class RedissonConfigTest {
         .run(context -> {
           assertThat(context).hasSingleBean(RedissonClient.class);
           RedissonClient client = context.getBean(RedissonClient.class);
-          assertThat(client.getKeys().count()).isNotNull(); // Proves connection works
+          assertThat(client.getKeys().count()).isNotNull(); 
         });
   }
 }

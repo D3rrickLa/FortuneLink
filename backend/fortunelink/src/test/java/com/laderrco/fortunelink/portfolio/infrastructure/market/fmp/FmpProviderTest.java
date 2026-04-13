@@ -113,7 +113,7 @@ class FmpProviderTest {
 
       Map<AssetSymbol, MarketAssetQuote> result = fmpProvider.fetchBatchQuotes(Set.of(aapl), Map.of());
 
-      assertThat(result).isEmpty(); // Loop continued but nothing was added
+      assertThat(result).isEmpty(); 
     }
   }
 
@@ -139,13 +139,13 @@ class FmpProviderTest {
       MarketAssetInfo info = mock(MarketAssetInfo.class);
       when(info.symbol()).thenReturn(aapl);
 
-      // Return two identical items (simulating a weird API response)
+      
       when(fmpClient.getBatchProfiles(anyList())).thenReturn(List.of(raw, raw));
       when(responseMapper.toAssetInfo(any())).thenReturn(info);
 
       Map<AssetSymbol, MarketAssetInfo> result = fmpProvider.fetchBatchAssetInfo(Set.of(aapl));
 
-      assertThat(result).hasSize(1); // Merge function picked one
+      assertThat(result).hasSize(1); 
     }
   }
 
@@ -158,7 +158,7 @@ class FmpProviderTest {
     void testSupportsSymbol() {
       assertThat(fmpProvider.supportsSymbol(new AssetSymbol("AAPL"))).isTrue();
       assertThat(fmpProvider.supportsSymbol(new AssetSymbol("BRK.B"))).isTrue();
-      // assertThat(fmpProvider.supportsSymbol(new AssetSymbol("^GSPC"))).isFalse();
+      
       assertThat(fmpProvider.supportsSymbol(new AssetSymbol("BTC-USD"))).isTrue();
       assertThat(fmpProvider.supportsSymbol(null)).isFalse();
     }
@@ -187,37 +187,37 @@ class FmpProviderTest {
     @Test
     @DisplayName("fetchBatchQuotes: should trigger tryReserve and handle null raw response")
     void fetchBatchQuotes_GuardAndNullRaw() {
-      // Given
+      
       Set<AssetSymbol> symbols = Set.of(aapl);
-      // 1. Test tryReserve branch (True path)
+      
       when(valueOps.increment(anyString(), anyLong())).thenReturn(1L);
-      // 2. Test raw == null branch
+      
       when(fmpClient.getQuote("AAPL")).thenReturn(null);
 
-      // When
+      
       Map<AssetSymbol, MarketAssetQuote> result = fmpProvider.fetchBatchQuotes(symbols, Map.of());
 
-      // Then
+      
       assertThat(result).isEmpty();
-      verify(valueOps).increment(anyString(), eq(1L)); // Confirms tryReserve was called
+      verify(valueOps).increment(anyString(), eq(1L)); 
     }
 
     @Test
     @DisplayName("fetchBatchQuotes: should map result when quote is NOT null")
     void fetchBatchQuotes_SuccessPath() {
-      // Given
+      
       when(valueOps.increment(anyString(), anyLong())).thenReturn(1L);
       FmpQuoteResponse raw = new FmpQuoteResponse();
       MarketAssetQuote quote = mock(MarketAssetQuote.class);
 
       when(fmpClient.getQuote("AAPL")).thenReturn(raw);
-      // 3. Test knownCurrencies.getOrDefault and quote != null branch
+      
       when(responseMapper.toQuote(eq(raw), any(Currency.class))).thenReturn(quote);
 
-      // When
+      
       Map<AssetSymbol, MarketAssetQuote> result = fmpProvider.fetchBatchQuotes(Set.of(aapl), Map.of());
 
-      // Then
+      
       assertThat(result).hasSize(1);
       assertThat(result.get(aapl)).isEqualTo(quote);
     }
@@ -232,11 +232,11 @@ class FmpProviderTest {
     @Test
     @DisplayName("searchSymbols: should return empty for blank query and test success path")
     void searchSymbols_Branches() {
-      // 1. Guard path
+      
       assertThat(fmpProvider.searchSymbols("")).isEmpty();
       assertThat(fmpProvider.searchSymbols(null)).isEmpty();
 
-      // 2. Try path (Success)
+      
       FmpSearchResponse raw = new FmpSearchResponse();
       SymbolSearchResult mapped = mock(SymbolSearchResult.class);
       when(fmpClient.getSearch("AAPL")).thenReturn(List.of(raw));
@@ -252,7 +252,7 @@ class FmpProviderTest {
     void fetchTradingCurrency_Logic() {
       when(valueOps.increment(anyString(), anyLong())).thenReturn(1L);
 
-      // Case A: Found in AssetInfo
+      
       MarketAssetInfo info = mock(MarketAssetInfo.class);
       Currency eur = Currency.of("EUR");
       when(info.tradingCurrency()).thenReturn(eur);
@@ -261,7 +261,7 @@ class FmpProviderTest {
 
       assertThat(fmpProvider.fetchTradingCurrency(aapl)).isEqualTo(eur);
 
-      // Case B: Fallback to USD (AssetInfo returns empty)
+      
       when(responseMapper.toAssetInfo(any())).thenReturn(null);
       assertThat(fmpProvider.fetchTradingCurrency(aapl)).isEqualTo(Currency.of("USD"));
     }
@@ -275,35 +275,35 @@ class FmpProviderTest {
     @Test
     @DisplayName("fetchBatchQuotes: should return empty map when tryReserve fails")
     void fetchBatchQuotes_TryReserveFail() {
-      // Given: Set the quota increment to exceed the limit (limit is 250)
+      
       when(valueOps.increment(anyString(), anyLong())).thenReturn(251L);
 
-      // When
+      
       Map<AssetSymbol, MarketAssetQuote> result = fmpProvider.fetchBatchQuotes(Set.of(aapl), Map.of());
 
-      // Then
+      
       assertThat(result).isEmpty();
-      // Verify we never even reached the client because we returned early
+      
       verifyNoInteractions(fmpClient);
     }
 
     @Test
     @DisplayName("fetchBatchQuotes: should skip adding to result when mapper returns null")
     void fetchBatchQuotes_MapperReturnsNull() {
-      // Given: Quota is fine
+      
       when(valueOps.increment(anyString(), anyLong())).thenReturn(10L);
 
       FmpQuoteResponse raw = new FmpQuoteResponse();
       when(fmpClient.getQuote("AAPL")).thenReturn(raw);
 
-      // Force the mapper to return null (triggers the 'if (quote != null)' false
-      // branch)
+      
+      
       when(responseMapper.toQuote(eq(raw), any(Currency.class))).thenReturn(null);
 
-      // When
+      
       Map<AssetSymbol, MarketAssetQuote> result = fmpProvider.fetchBatchQuotes(Set.of(aapl), Map.of());
 
-      // Then
+      
       assertThat(result).isEmpty();
       assertThat(result).doesNotContainKey(aapl);
     }

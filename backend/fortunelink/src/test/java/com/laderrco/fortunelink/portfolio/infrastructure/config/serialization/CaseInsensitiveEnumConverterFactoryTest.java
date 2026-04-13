@@ -48,13 +48,13 @@ class CaseInsensitiveEnumConverterFactoryTest {
   void shouldReturnNullForInvalidEnumValue() {
     Converter<String, TestStatus> converter = factory.getConverter(TestStatus.class);
 
-    // Should catch IllegalArgumentException and return null
+    
     assertThat(converter.convert("NOT_A_STATUS")).isNull();
   }
 
   @Test
   void shouldCreateConverterForDifferentEnumTypes() {
-    // Just verifying the factory can handle multiple types
+    
     enum AnotherEnum {
       YES, NO
     }

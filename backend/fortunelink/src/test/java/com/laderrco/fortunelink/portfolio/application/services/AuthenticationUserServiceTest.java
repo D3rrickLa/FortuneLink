@@ -59,7 +59,7 @@ class AuthenticationUserServiceTest {
 
   @AfterEach
   void tearDown() {
-    // Clear global static state to prevent test pollution
+    
     SecurityContextHolder.clearContext();
   }
 
@@ -71,10 +71,10 @@ class AuthenticationUserServiceTest {
       Jwt mockJwtWithBadSub = mock(Jwt.class);
       when(mockJwtWithBadSub.getSubject()).thenReturn("not-a-uuid");
 
-      return Stream.of(Arguments.of(null, AuthenticationException.class), // Auth is null
-          Arguments.of("not-a-jwt", AuthenticationException.class), // Principal wrong type
-          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class), // Invalid UUID string
-          Arguments.of(mock(Jwt.class), AuthenticationException.class) // Missing data
+      return Stream.of(Arguments.of(null, AuthenticationException.class), 
+          Arguments.of("not-a-jwt", AuthenticationException.class), 
+          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class), 
+          Arguments.of(mock(Jwt.class), AuthenticationException.class) 
       );
     }
 

@@ -47,7 +47,7 @@ class ValidationUtilsTest {
 
       assertTrue(ex.getMessage().contains("CreateAccount"));
 
-      // Compare the error LISTS, not the message string
+      
       assertEquals(errorList, ex.getErrors());
     }
 
@@ -201,12 +201,12 @@ class ValidationUtilsTest {
   class CurrencyValidationTests {
     @ParameterizedTest
     @CsvSource(value = {"USD, true", "EUR, true", "INVALID, false", "null, false", "' ', false"
-        // This often represents a null/empty string in CSV source
+        
     }, nullValues = "null")
     @DisplayName("isValidCurrency: should return correct boolean for currency codes including nulls")
     void isValidCurrencyshouldReturnExpectedResult(String code, boolean expected) {
-      // If the library interprets the empty CSV column as null,
-      // your guard in the production code will now handle it.
+      
+      
       assertEquals(expected, ValidationUtils.isValidCurrency(code));
     }
   }

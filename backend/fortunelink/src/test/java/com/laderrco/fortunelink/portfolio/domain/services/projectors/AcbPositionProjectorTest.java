@@ -47,7 +47,7 @@ class AcbPositionProjectorTest {
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
         .occurredAt(Instant.parse("2023-01-02T10:00:00Z")).build();
 
-    AcbPosition result = projector.project(List.of(sell, buy)); // Out of order list
+    AcbPosition result = projector.project(List.of(sell, buy)); 
 
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
@@ -77,7 +77,7 @@ class AcbPositionProjectorTest {
   void projectPrioritizesBuyOverSell() {
     Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
 
-    // Ensure the Sell ID is "smaller" than the Buy ID to force the tie-breaker
+    
     TransactionId buyId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5d");
     TransactionId sellId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5c");
 
@@ -86,7 +86,7 @@ class AcbPositionProjectorTest {
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(10), Price.of("60", CAD))
         .transactionId(sellId).occurredAt(sameTime).build();
 
-    // This should now pass because the comparator moves 'buy' to the front
+    
     assertDoesNotThrow(() -> projector.project(List.of(sell, buy)));
   }
 

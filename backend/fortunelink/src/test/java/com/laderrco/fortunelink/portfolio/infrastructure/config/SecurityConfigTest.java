@@ -18,7 +18,7 @@ import com.laderrco.fortunelink.portfolio.application.services.PortfolioQuerySer
 import com.laderrco.fortunelink.portfolio.infrastructure.config.SecurityTestsSuite.TestSecurityConfig;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
-@WebMvcTest(useDefaultFilters = false) // Stops it from scanning all controllers
+@WebMvcTest(useDefaultFilters = false) 
 @Import({ TestSecurityConfig.class,
     com.laderrco.fortunelink.portfolio.infrastructure.config.SecurityConfigTest.DummyController.class })
 class SecurityConfigTest {
@@ -35,27 +35,27 @@ class SecurityConfigTest {
 
   @Test
   void publicEndpointsShouldBeAccessibleWithoutToken() throws Exception {
-    // Now hitting the actual path mapped in our DummyController
+    
     mockMvc.perform(get("/api/v1/public/test"))
         .andExpect(status().isOk());
   }
 
   @Test
   void privateEndpointsShouldReturn401WhenUnauthenticated() throws Exception {
-    // Hitting the private path without security context
+    
     mockMvc.perform(get("/api/v1/private/test"))
         .andExpect(status().isUnauthorized());
   }
 
   @Test
   void privateEndpointsShouldReturn200WhenAuthenticated() throws Exception {
-    // Hitting the private path WITH a mock JWT
+    
     mockMvc.perform(get("/api/v1/private/test")
         .with(jwt().jwt(j -> j.subject("test-user"))))
         .andExpect(status().isOk());
   }
 
-  // A tiny dummy controller just to give MockMvc something to hit
+  
   @RestController
   static class DummyController {
     @GetMapping("/api/v1/public/test")

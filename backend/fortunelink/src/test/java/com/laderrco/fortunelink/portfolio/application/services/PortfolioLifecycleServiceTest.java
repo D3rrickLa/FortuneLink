@@ -73,7 +73,7 @@ class PortfolioLifecycleServiceTest {
 
   @BeforeEach
   void setUp() {
-    // Validation passes by default
+    
     lenient().when(validator.validate(any(CreatePortfolioCommand.class)))
         .thenReturn(ValidationResult.success());
     lenient().when(validator.validate(any(UpdatePortfolioCommand.class)))
@@ -206,21 +206,21 @@ class PortfolioLifecycleServiceTest {
   class DeletePortfolioTests {
     static Stream<Arguments> softDeleteExceptionProvider() {
       return Stream.of(
-          // 1. Portfolio is not empty, and we are NOT using recursive delete
+          
           Arguments.of(
               new PortfolioNotEmptyException("Portfolio has active positions"),
               PortfolioNotEmptyException.class,
               "Portfolio has active positions",
               false),
 
-          // 2. Portfolio already deleted
+          
           Arguments.of(
               new PortfolioAlreadyDeletedException("Already gone"),
               PortfolioAlreadyDeletedException.class,
               "Already gone",
               false),
 
-          // 3. Random state error
+          
           Arguments.of(
               new IllegalStateException("Bad state"),
               IllegalStateException.class,
@@ -266,9 +266,9 @@ class PortfolioLifecycleServiceTest {
           Optional.of(portfolio));
       when(portfolio.getAccounts()).thenReturn(List.of(emptyAccount));
 
-      // 1st call (guard): true
-      // 2nd call (action loop): true
-      // 3rd call (final hardDelete check): false (simulating it is now closed)
+      
+      
+      
       when(emptyAccount.isActive()).thenReturn(true, true, false);
 
       when(emptyAccount.getPositionCount()).thenReturn(0);
@@ -279,7 +279,7 @@ class PortfolioLifecycleServiceTest {
 
       service.deletePortfolio(cmd);
 
-      // Now this will be invoked because the filter inside the forEach sees 'true'
+      
       verify(portfolio).closeAccount(accId);
       verify(portfolioRepository).delete(PORTFOLIO_ID);
     }
@@ -295,7 +295,7 @@ class PortfolioLifecycleServiceTest {
       when(portfolio.getAccounts()).thenReturn(List.of(busyAccount));
 
       when(busyAccount.isActive()).thenReturn(true);
-      when(busyAccount.getPositionCount()).thenReturn(5); // Not empty!
+      when(busyAccount.getPositionCount()).thenReturn(5); 
 
       DeletePortfolioCommand cmd = new DeletePortfolioCommand(PORTFOLIO_ID, USER_ID, false, true);
       assertThatThrownBy(() -> service.deletePortfolio(cmd)).isInstanceOf(
@@ -376,7 +376,7 @@ class PortfolioLifecycleServiceTest {
 
       when(mockAccount.isActive()).thenReturn(isActive);
       if (isActive) {
-        // These only matter if the account is active (due to short-circuiting)
+        
         when(mockAccount.getPositionCount()).thenReturn(positionCount);
         if (positionCount == 0) {
           when(mockAccount.getCashBalance()).thenReturn(cashBalance);
@@ -390,8 +390,8 @@ class PortfolioLifecycleServiceTest {
           Optional.of(portfolio));
 
       if ("Failure".equals(expectedResult)) {
-        // If anyMatch is true, your code likely throws an exception downstream
-        // (assuming closeAllEligibleAccounts throws if it finds non-empty accounts)
+        
+        
         assertThrows(PortfolioDeletionException.class, () -> service.deletePortfolio(command));
       } else {
         service.deletePortfolio(command);

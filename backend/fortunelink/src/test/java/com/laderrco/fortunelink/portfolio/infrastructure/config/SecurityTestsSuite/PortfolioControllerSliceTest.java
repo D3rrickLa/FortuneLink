@@ -34,7 +34,7 @@ class PortfolioControllerSliceTest {
   @Autowired
   private MockMvc mockMvc;
 
-  // --- Rate Limiting Mocks to satisfy RateLimitInterceptor ---
+  
   @MockitoBean
   private ProxyManager<String> proxyManager;
 
@@ -52,7 +52,7 @@ class PortfolioControllerSliceTest {
 
   @MockitoBean
   private RateLimitInterceptor rateLimitInterceptor;
-  // ----------------------------------------------------------
+  
 
   @MockitoBean
   private PortfolioLifecycleService lifecycleService;

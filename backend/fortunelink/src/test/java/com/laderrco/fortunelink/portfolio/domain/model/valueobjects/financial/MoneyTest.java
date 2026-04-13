@@ -186,10 +186,10 @@ class MoneyTest {
 
     static Stream<Arguments> operationProvider() {
       Money m1 = Money.of(10.1, "USD");
-      return Stream.of(Arguments.of(new Money(new BigDecimal("10.5"), USD)), // Constructor
-          Arguments.of(m1.add(Money.of(20.222, "USD"))), // Addition
-          Arguments.of(m1.multiply(new BigDecimal("1.123"))), // Multiplication
-          Arguments.of(m1.divide(new BigDecimal("3"))) // Division
+      return Stream.of(Arguments.of(new Money(new BigDecimal("10.5"), USD)), 
+          Arguments.of(m1.add(Money.of(20.222, "USD"))), 
+          Arguments.of(m1.multiply(new BigDecimal("1.123"))), 
+          Arguments.of(m1.divide(new BigDecimal("3"))) 
       );
     }
 

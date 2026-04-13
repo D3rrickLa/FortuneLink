@@ -47,7 +47,7 @@ class TaxLotTest {
       TaxLot lot = new TaxLot(tenShares, thousandUsd, acquiredDate);
       Quantity fourShares = new Quantity(new BigDecimal("4.00"));
 
-      // 4/10 = 40% of $1000 = $400
+      
       Money result = lot.proportionalCost(fourShares);
       assertThat(result.amount()).isEqualByComparingTo("400.00");
     }

@@ -38,7 +38,7 @@ class FmpClientTest {
 
   @BeforeEach
   void setUp() {
-    // Satisfy the constructor validation
+    
     lenient().when(config.getBaseUrl()).thenReturn("https://api.test.com");
     lenient().when(config.getApiKey()).thenReturn("test-key");
     lenient().when(config.getTimeoutSeconds()).thenReturn(10);
@@ -53,7 +53,7 @@ class FmpClientTest {
     @Test
     @DisplayName("getQuote: should parse FMP array wrapper correctly")
     void shouldParseSingleArrayWrapper() throws Exception {
-      // FMP returns single objects inside an array: [{"symbol": "AAPL", ...}]
+      
       String jsonResponse = "[{\"symbol\": \"AAPL\", \"price\": 150.00}]";
 
       when(httpResponse.statusCode()).thenReturn(200);
@@ -123,11 +123,11 @@ class FmpClientTest {
     @Test
     @DisplayName("getBatchQuotes: should filter out nulls and return list")
     void shouldProcessBatchSequentially() throws Exception {
-      // Mocking two calls: one success, one null (via empty array)
+      
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body())
-          .thenReturn("[{\"symbol\": \"AAPL\"}]") // first call
-          .thenReturn("[]"); // second call
+          .thenReturn("[{\"symbol\": \"AAPL\"}]") 
+          .thenReturn("[]"); 
 
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -168,30 +168,30 @@ class FmpClientTest {
     @Test
     @DisplayName("isDebugLogging: should trigger debug log branch")
     void testDebugLoggingBranch() throws Exception {
-      // Given
+      
       when(config.isDebugLogging()).thenReturn(true);
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      // When
+      
       fmpClient.getQuote("AAPL");
 
-      // Then
+      
       verify(config).isDebugLogging();
-      // Since we can't easily verify SLF4J logs without extra libraries,
-      // verifying the mock interaction is the standard way to show the branch was
-      // hit.
+      
+      
+      
     }
 
     @Test
     @DisplayName("handleErrorResponse: should throw 404 specific exception")
     void shouldThrow404Error() throws Exception {
-      // Given
+      
       when(httpResponse.statusCode()).thenReturn(404);
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      // When & Then
+      
       assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
           .isInstanceOf(FmpApiException.class)
           .hasMessageContaining("Endpoint not found");
@@ -200,24 +200,24 @@ class FmpClientTest {
     @Test
     @DisplayName("executeAndParseList: should handle InterruptedException")
     void shouldHandleInterruptedException() throws Exception {
-      // Given
+      
       when(httpClient.send(any(), any())).thenThrow(new InterruptedException("Interrupted!"));
 
-      // When & Then
+      
       assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
           .isInstanceOf(FmpApiException.class)
           .hasMessageContaining("Request interrupted");
 
-      assertThat(Thread.interrupted()).isTrue(); // Verify thread interrupt status was restored
+      assertThat(Thread.interrupted()).isTrue(); 
     }
 
     @Test
     @DisplayName("executeAndParseList: should handle SocketTimeoutException")
     void shouldHandleTimeoutException() throws Exception {
-      // Given
+      
       when(httpClient.send(any(), any())).thenThrow(new java.net.SocketTimeoutException("Timeout"));
 
-      // When & Then
+      
       assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
           .isInstanceOf(FmpApiException.class)
           .hasMessageContaining("request timed out");
@@ -226,18 +226,18 @@ class FmpClientTest {
     @Test
     @DisplayName("buildUrl: should handle paths with and without leading slashes")
     void testBuildUrlPathSanitization() throws Exception {
-      // We use Reflection to test the private buildUrl or just call a public method
-      // that uses it with specific strings.
+      
+      
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      // Path with leading slash
+      
       fmpClient.getQuote("/AAPL");
-      // Path without leading slash (normal)
+      
       fmpClient.getQuote("AAPL");
 
-      // Base URL with trailing slash
+      
       when(config.getBaseUrl()).thenReturn("https://api.test.com/");
       fmpClient.getProfile("AAPL");
 
@@ -247,15 +247,15 @@ class FmpClientTest {
     @Test
     @DisplayName("getBatchProfiles: should fetch and filter profiles")
     void testGetBatchProfiles() throws Exception {
-      // Given
+      
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[{\"symbol\": \"AAPL\"}]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      // When
+      
       List<FmpProfileResponse> results = fmpClient.getBatchProfiles(List.of("AAPL"));
 
-      // Then
+      
       assertThat(results).hasSize(1);
       assertThat(fmpClient.getBatchProfiles(null)).isEmpty();
     }
@@ -263,15 +263,15 @@ class FmpClientTest {
     @Test
     @DisplayName("getSearch: should build search URL and return list")
     void testGetSearch() throws Exception {
-      // Given
+      
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[{\"symbol\": \"AAPL\", \"name\": \"Apple\"}]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      // When
+      
       List<FmpSearchResponse> results = fmpClient.getSearch("Apple");
 
-      // Then
+      
       assertThat(results).hasSize(1);
       assertThat(results.get(0).getSymbol()).isEqualTo("AAPL");
     }

@@ -28,7 +28,7 @@ class FifoPositionTest {
   private static final Instant T2 = Instant.parse("2023-02-01T10:00:00Z");
   private static final Instant T3 = Instant.parse("2023-03-01T10:00:00Z");
 
-  // --- Helpers used across all nested classes ---
+  
   private static TaxLot createLot(String qty, String basis, Instant date) {
     return new TaxLot(new Quantity(new BigDecimal(qty)), new Money(new BigDecimal(basis), USD),
         date);

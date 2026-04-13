@@ -29,7 +29,7 @@ class MarketAssetInfoSerializationTest {
 
   @Test
   void shouldSerializeCompleteObject() throws JsonProcessingException {
-    // Given
+    
     MarketAssetInfo info = new MarketAssetInfo(
         new AssetSymbol("AAPL"),
         "Apple Inc.",
@@ -39,10 +39,10 @@ class MarketAssetInfoSerializationTest {
         "Technology",
         "Consumer Electronics");
 
-    // When
+    
     String json = objectMapper.writeValueAsString(info);
 
-    // Then
+    
     assertThat(json)
         .contains("\"symbol\":\"AAPL\"")
         .contains("\"name\":\"Apple Inc.\"")
@@ -52,7 +52,7 @@ class MarketAssetInfoSerializationTest {
 
   @Test
   void shouldDeserializeCompleteObject() throws JsonProcessingException {
-    // Given
+    
     String json = """
         {
             "symbol": "MSFT",
@@ -65,10 +65,10 @@ class MarketAssetInfoSerializationTest {
         }
         """;
 
-    // When
+    
     MarketAssetInfo result = objectMapper.readValue(json, MarketAssetInfo.class);
 
-    // Then
+    
     assertThat(result).isNotNull();
     assertThat(result.symbol().symbol()).isEqualTo("MSFT");
     assertThat(result.type()).isEqualTo(AssetType.STOCK);
@@ -78,9 +78,9 @@ class MarketAssetInfoSerializationTest {
 
   @Test
   void shouldHandleMissingOptionalFields() throws JsonProcessingException {
-    // Given: A JSON that might have missing fields (checking for
-    // NullPointerExceptions)
-    // Note: This test depends on whether your Deserializer handles missing nodes
+    
+    
+    
     String json = """
         {
             "symbol": "BTC",
@@ -93,7 +93,7 @@ class MarketAssetInfoSerializationTest {
         }
         """;
 
-    // When/Then
+    
     MarketAssetInfo result = objectMapper.readValue(json, MarketAssetInfo.class);
     assertThat(result.symbol().symbol()).isEqualTo("BTC");
   }

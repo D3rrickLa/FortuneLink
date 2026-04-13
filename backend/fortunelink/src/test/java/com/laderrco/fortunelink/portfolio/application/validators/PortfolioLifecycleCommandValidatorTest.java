@@ -78,7 +78,7 @@ public class PortfolioLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: failure when strategy missing for default account")
     void validateFailureOnMissingStrategyWithDefaultAccount() {
-      // createDefaultAccount is true, but strategy is null
+      
       var command = new CreatePortfolioCommand(USER_ID, VALID_NAME, "DSEC", USD, true,
           AccountType.CHEQUING, null);
       ValidationResult result = validator.validate(command);
@@ -99,7 +99,7 @@ public class PortfolioLifecycleCommandValidatorTest {
   @DisplayName("validate(UpdatePortfolioCommand)")
   class UpdatePortfolioTests {
 
-    private static final int MAX_DESC = 500; // Match your DESCRIPTION_NAME_LENGTH
+    private static final int MAX_DESC = 500; 
     private static final String VALID_DESC = "A standard investment portfolio.";
     private static final String LONG_DESC = "A".repeat(MAX_DESC + 1);
     private static final String BOUNDARY_DESC = "B".repeat(MAX_DESC);
@@ -157,7 +157,7 @@ public class PortfolioLifecycleCommandValidatorTest {
       @Test
       @DisplayName("validate: failure when currency code is invalid")
       void validateFailureOnInvalidCurrency() {
-        // Mocking a currency that returns an invalid code
+        
         Currency mockCurrency = mock(Currency.class);
         when(mockCurrency.getCode()).thenReturn("INVALID_XYZ");
 

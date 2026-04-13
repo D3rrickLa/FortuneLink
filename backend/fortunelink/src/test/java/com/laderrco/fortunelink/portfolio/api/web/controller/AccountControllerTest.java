@@ -68,20 +68,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(AuthenticatedUserResolver.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AccountControllerTest {
-
-  // -------------------------------------------------------------------------
-  // Constants
-  // -------------------------------------------------------------------------
-
   private static final UUID USER_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
   private static final String PORTFOLIO_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
   private static final String ACCOUNT_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
   private static final String BASE_URL = "/api/v1/portfolios/" + PORTFOLIO_ID + "/accounts";
   private static final String ACCOUNT_URL = BASE_URL + "/" + ACCOUNT_ID;
-
-  // -------------------------------------------------------------------------
-  // Injected / mocked beans
-  // -------------------------------------------------------------------------
 
   @Autowired
   MockMvc mockMvc;
@@ -99,25 +90,17 @@ class AccountControllerTest {
   @MockitoBean
   RateLimitInterceptor rateLimitInterceptor;
 
-  // -------------------------------------------------------------------------
-  // Setup
-  // -------------------------------------------------------------------------
-
   @BeforeEach
   void setUp() throws Exception {
-    // Always resolve the authenticated user to our test UUID
+
     when(authenticationUserService.getCurrentUser()).thenReturn(USER_UUID);
-    // Always let requests through the rate-limit interceptor
+
     when(rateLimitInterceptor.preHandle(
         any(HttpServletRequest.class),
         any(HttpServletResponse.class),
         any()))
         .thenReturn(true);
   }
-
-  // =========================================================================
-  // POST / — createAccount
-  // =========================================================================
 
   @Nested
   @DisplayName("POST / — createAccount")
@@ -249,10 +232,6 @@ class AccountControllerTest {
     }
   }
 
-  // =========================================================================
-  // PUT /{accountId} — updateAccount
-  // =========================================================================
-
   @Nested
   @DisplayName("PUT /{accountId} — updateAccount")
   class UpdateAccount {
@@ -312,10 +291,6 @@ class AccountControllerTest {
     }
   }
 
-  // =========================================================================
-  // DELETE /{accountId} — closeAccount
-  // =========================================================================
-
   @Nested
   @DisplayName("DELETE /{accountId} — closeAccount")
   class CloseAccount {
@@ -358,10 +333,6 @@ class AccountControllerTest {
           .andExpect(jsonPath("$.code").value("ACCOUNT_CANNOT_BE_CLOSED"));
     }
   }
-
-  // =========================================================================
-  // PATCH /{accountId}/reopen — reopenAccount
-  // =========================================================================
 
   @Nested
   @DisplayName("PATCH /{accountId}/reopen — reopenAccount")
@@ -407,10 +378,6 @@ class AccountControllerTest {
           .andExpect(jsonPath("$.code").value("ACCOUNT_CANNOT_BE_REOPENED"));
     }
   }
-
-  // =========================================================================
-  // GET / — getAllAccounts
-  // =========================================================================
 
   @Nested
   @DisplayName("GET / — getAllAccounts")
@@ -478,10 +445,6 @@ class AccountControllerTest {
     }
   }
 
-  // =========================================================================
-  // GET /{accountId} — getAccount
-  // =========================================================================
-
   @Nested
   @DisplayName("GET /{accountId} — getAccount")
   class GetAccount {
@@ -529,10 +492,6 @@ class AccountControllerTest {
     }
   }
 
-  // =========================================================================
-  // Helper methods
-  // =========================================================================
-
   private String validCreateRequest() {
     return """
         {
@@ -555,10 +514,10 @@ class AccountControllerTest {
         "Test Account",
         AccountType.valueOf(accountTypeName),
         state,
-        List.of(), // no positions
+        List.of(),
         cad,
-        zero, // cash balance
-        zero, // total value
+        zero,
+        zero,
         Instant.now(),
         false,
         0);

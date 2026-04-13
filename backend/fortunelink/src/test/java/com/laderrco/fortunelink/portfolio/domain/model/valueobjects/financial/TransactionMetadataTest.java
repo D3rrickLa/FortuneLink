@@ -47,7 +47,7 @@ class TransactionMetadataTest {
 
     var meta = new TransactionMetadata(AssetType.STOCK, "SOURCE", null, originalData);
 
-    // Modify original map post-construction
+    
     originalData.put("key", "changed");
 
     assertEquals("value", meta.get("key"), "Metadata should retain the original value");

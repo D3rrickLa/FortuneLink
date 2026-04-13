@@ -18,7 +18,7 @@ class QuantityTest {
     @Test
     @DisplayName("constructor: success applies bankers rounding")
     void constructorAppliesBankersRounding() {
-      // HALF_EVEN rounds to the nearest even neighbor for .5 cases
+      
       Quantity q1 = new Quantity(new BigDecimal("2.225"));
       Quantity q2 = new Quantity(new BigDecimal("2.235"));
 

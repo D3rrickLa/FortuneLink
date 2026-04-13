@@ -60,8 +60,9 @@ spring:
         jwt:
           issuer-uri: ${SUPABASE_PROJ_URL} # This is the iss field in a jwt
           # we technically don't need this because the way we set up the path,
-# oauth2 will discover the jwk-set-uri
-# jwk-set-uri: ${SUPABASE_PROJ_URL}/jwks # fetching public keys to verify JWT signatures
+          # oauth2 will discover the jwk-set-uri
+          # fetching public keys to verify JWT signatures
+          # jwk-set-uri: ${SUPABASE_PROJ_URL}/jwks 
 
 # ============================================
 # APPLICATION CACHING
@@ -149,7 +150,7 @@ resilience4j:
           - java.util.concurrent.TimeoutException
           - java.io.IOException
         ignoreExceptions:
-          - com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.SymbolNotFoundException
+          - com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException
       boc-api:
         registerHealthIndicator: true
         slidingWindowSize: 10

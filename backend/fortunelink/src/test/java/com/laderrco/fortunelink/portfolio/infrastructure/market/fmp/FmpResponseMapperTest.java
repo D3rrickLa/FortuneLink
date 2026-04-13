@@ -30,21 +30,21 @@ class FmpResponseMapperTest {
     @Test
     @DisplayName("should map full FMP quote response correctly")
     void shouldMapFullQuote() {
-      // Given
+      
       FmpQuoteResponse fmp = new FmpQuoteResponse();
       fmp.setSymbol("AAPL");
       fmp.setPrice(new BigDecimal("150.00"));
-      fmp.setChangePercentage(new BigDecimal("2.5")); // 2.5%
-      fmp.setTimestamp(1704067200L); // 2024-01-01
+      fmp.setChangePercentage(new BigDecimal("2.5")); 
+      fmp.setTimestamp(1704067200L); 
 
-      // When
+      
       MarketAssetQuote result = mapper.toQuote(fmp, usd);
 
-      // Then
+      
       assertThat(result.symbol().symbol()).isEqualTo("AAPL");
       assertThat(result.currentPrice().amount()).isEqualByComparingTo("150.00");
       assertThat(result.currentPrice().currency()).isEqualTo(usd);
-      // Verify percentage division (2.5 / 100 = 0.025)
+      
       assertThat(result.changePercent()).isEqualByComparingTo(new PercentageChange(BigDecimal.valueOf(0.025)));
       assertThat(result.timestamp()).isEqualTo(Instant.ofEpochSecond(1704067200L));
     }
@@ -58,15 +58,15 @@ class FmpResponseMapperTest {
     @DisplayName("should prioritize ETF and Fund flags")
     void shouldMapFlags() {
       FmpProfileResponse etf = new FmpProfileResponse();
-      etf.setSymbol("VTI"); // Add Symbol
-      etf.setCurrency("USD"); // Add Currency
+      etf.setSymbol("VTI"); 
+      etf.setCurrency("USD"); 
       etf.setIsEtf(true);
 
       assertThat(mapper.toAssetInfo(etf).type()).isEqualTo(AssetType.ETF);
 
       FmpProfileResponse fund = new FmpProfileResponse();
-      fund.setSymbol("VFIAX"); // Add Symbol
-      fund.setCurrency("USD"); // Add Currency
+      fund.setSymbol("VFIAX"); 
+      fund.setCurrency("USD"); 
       fund.setIsFund(true);
 
       assertThat(mapper.toAssetInfo(fund).type()).isEqualTo(AssetType.OTHER);
@@ -76,15 +76,15 @@ class FmpResponseMapperTest {
     @DisplayName("should map via Exchange name when flags are false")
     void shouldMapViaExchange() {
       FmpProfileResponse crypto = new FmpProfileResponse();
-      crypto.setSymbol("BTCUSD"); // Add Symbol
-      crypto.setCurrency("USD"); // Add Currency
+      crypto.setSymbol("BTCUSD"); 
+      crypto.setCurrency("USD"); 
       crypto.setExchange("Crypto");
 
       assertThat(mapper.toAssetInfo(crypto).type()).isEqualTo(AssetType.CRYPTO);
 
       FmpProfileResponse forex = new FmpProfileResponse();
-      forex.setSymbol("EURUSD"); // Add Symbol
-      forex.setCurrency("USD"); // Add Currency
+      forex.setSymbol("EURUSD"); 
+      forex.setCurrency("USD"); 
       forex.setExchange("FOREX");
       assertThat(mapper.toAssetInfo(forex).type()).isEqualTo(AssetType.FOREX_PAIR);
       forex.setExchange("CURRENCY");
@@ -96,9 +96,9 @@ class FmpResponseMapperTest {
     @DisplayName("should default to STOCK")
     void shouldDefaultToStock() {
       FmpProfileResponse stock = new FmpProfileResponse();
-      stock.setSymbol("MSFT"); // Add Symbol
-      stock.setCurrency("USD"); // Add Currency
-      // stock.setExchange("NASDAQ");
+      stock.setSymbol("MSFT"); 
+      stock.setCurrency("USD"); 
+      
 
       assertThat(mapper.toAssetInfo(stock).type()).isEqualTo(AssetType.STOCK);
     }
@@ -116,7 +116,7 @@ class FmpResponseMapperTest {
     assertThat(mapper.toQuote(null, usd)).isNull();
 
     FmpQuoteResponse fmp = new FmpQuoteResponse();
-    fmp.setSymbol("NULL-TEST"); // Use hyphen instead of underscore to satisfy AssetSymbol regex
+    fmp.setSymbol("NULL-TEST"); 
 
     MarketAssetQuote result = mapper.toQuote(fmp, usd);
 

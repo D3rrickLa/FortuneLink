@@ -26,7 +26,7 @@ class JwtAuthEntryPointTest {
     request = mock(HttpServletRequest.class);
     response = mock(HttpServletResponse.class);
 
-    // Mock the writer so we can inspect the JSON output
+    
     stringWriter = new StringWriter();
     PrintWriter printWriter = new PrintWriter(stringWriter);
     when(response.getWriter()).thenReturn(printWriter);
@@ -34,17 +34,17 @@ class JwtAuthEntryPointTest {
 
   @Test
   void shouldReturnUnauthorizedJsonOnCommence() throws IOException {
-    // Arrange
+    
     AuthenticationException authEx = mock(AuthenticationException.class);
 
-    // Act
+    
     authEntryPoint.commence(request, response, authEx);
 
-    // Assert status and content type
+    
     verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     verify(response).setContentType("application/json");
 
-    // Assert body content
+    
     String output = stringWriter.toString();
     assertThat(output).contains("\"code\":\"UNAUTHORIZED\"");
     assertThat(output).contains("\"message\":\"Authentication required\"");

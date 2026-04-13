@@ -49,21 +49,21 @@ public class PositionBookTest {
   @Test
   @DisplayName("applyResult: removes position from book when quantity reaches zero")
   void shouldRemovePositionWhenQuantityIsZero() {
-    // 1. Setup
+    
     AssetSymbol symbol = new AssetSymbol("AAPL");
     Currency cad = Currency.of("CAD");
     PositionBook book = new PositionBook(cad, PositionStrategy.ACB);
 
-    // Create an initial position (e.g., 10 shares)
+    
     AcbPosition initialPos = AcbPosition.empty(symbol, AssetType.STOCK, cad)
         .buy(Quantity.of(10), Money.of("1500", cad), Instant.now())
         .newPosition();
 
     book.applyResult(symbol, initialPos);
-    assertThat(book.has(symbol)).isTrue(); // Verify it was added
+    assertThat(book.has(symbol)).isTrue(); 
 
-    // 2. Execute: Create a "closed" position (0 shares)
-    // We simulate the result of a sell that clears the position
+    
+    
     AcbPosition closedPos = initialPos
         .sell(Quantity.of(10), Money.of("160", cad), Instant.now())
         .newPosition();
@@ -72,7 +72,7 @@ public class PositionBookTest {
 
     book.applyResult(symbol, closedPos);
 
-    // 3. Verify: The symbol should no longer exist in the book
+    
     assertThat(book.has(symbol)).isFalse();
     assertThat(book.get(symbol)).isEmpty();
     assertThat(book.isEmpty()).isTrue();
@@ -85,7 +85,7 @@ public class PositionBookTest {
     Currency cad = Currency.of("CAD");
     PositionBook book = new PositionBook(cad, PositionStrategy.ACB);
 
-    // Start with 10, sell 5, result is 5 (non-zero)
+    
     AcbPosition initialPos = AcbPosition.empty(symbol, AssetType.STOCK, cad)
         .buy(Quantity.of(10), Money.of("100", cad), Instant.now())
         .newPosition();
@@ -96,7 +96,7 @@ public class PositionBookTest {
 
     book.applyResult(symbol, updatedPos);
 
-    // Verify it stays in the book with the new value
+    
     assertThat(book.has(symbol)).isTrue();
     assertThat(book.get(symbol).get().totalQuantity().amount())
         .isEqualByComparingTo("5");

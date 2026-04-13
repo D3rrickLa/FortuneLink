@@ -42,7 +42,7 @@ class MarketAssetInfoRepositoryImplTest {
 
   @BeforeEach
   void setUp() {
-    // Injecting @Value field manually since this is a unit test
+    
     ReflectionTestUtils.setField(repository, "ttlSeconds", TTL_SECONDS);
   }
 
@@ -95,8 +95,8 @@ class MarketAssetInfoRepositoryImplTest {
       ArgumentCaptor<MarketAssetInfoJpaEntity> captor = ArgumentCaptor.forClass(MarketAssetInfoJpaEntity.class);
       verify(jpaRepo).save(captor.capture());
 
-      // Note: Validation of the 'from' logic usually happens in the Entity test,
-      // but we verify the call happened.
+      
+      
       assertThat(captor.getValue().getSymbol()).isEqualTo(BTC_TICKER);
     }
 
@@ -131,7 +131,7 @@ class MarketAssetInfoRepositoryImplTest {
     }
   }
 
-  // --- Helper Methods ---
+  
 
   private AssetSymbol createSymbol(String ticker) {
     return new AssetSymbol(ticker);
@@ -143,7 +143,7 @@ class MarketAssetInfoRepositoryImplTest {
             "Desc"),
         TTL_SECONDS);
     entity.setSymbol(ticker);
-    // Set other required fields for mapping
+    
     return entity;
   }
 }

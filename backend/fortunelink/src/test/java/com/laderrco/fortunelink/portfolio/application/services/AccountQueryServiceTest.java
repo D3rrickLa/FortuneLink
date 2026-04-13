@@ -227,7 +227,7 @@ class AccountQueryServiceTest {
 
       accountQueryService.getAllAccounts(new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
 
-      // Assert
+      
       verify(accountQueryRepository, times(1)).findQuantitiesForAccounts(any());
     }
   }
@@ -245,14 +245,14 @@ class AccountQueryServiceTest {
     void getAccountSummaryValidIdReturnsMappedView() {
       AssetSymbol shop = new AssetSymbol("SHOP.TO");
 
-      // Prepare domain object
+      
       Account account = new Account(accountId, "Resp", AccountType.RESP, Currency.CAD,
           PositionStrategy.ACB);
       AcbPosition updated = new AcbPosition(shop, AssetType.STOCK, Currency.CAD, Quantity.of(100),
           Money.of(2010, "CAD"), Instant.now(), Instant.now());
       account.applyPositionResult(shop, updated);
 
-      // Mock Repository instead of PortfolioLoader
+      
       when(accountQueryRepository.findByIdWithDetails(accountId, portfolioId, userId)).thenReturn(
           Optional.of(account));
 

@@ -27,10 +27,10 @@ class AccountHealthServiceTest {
     AccountId accountId = AccountId.newId();
     LogCaptor logCaptor = LogCaptor.forClass(AccountHealthService.class);
 
-    // Act
+    
     accountHealthService.markStale(accountId);
 
-    // Assert
+    
     verify(portfolioRepository).markAccountStale(accountId);
     assertThat(logCaptor.getInfoLogs())
         .contains("Account " + accountId + " marked as STALE due to calculation failure.");
@@ -42,14 +42,14 @@ class AccountHealthServiceTest {
     AccountId accountId = AccountId.newId();
     LogCaptor logCaptor = LogCaptor.forClass(AccountHealthService.class);
 
-    // Arrange: Simulate a database failure
+    
     doThrow(new RuntimeException("DB Error"))
         .when(portfolioRepository).markAccountStale(accountId);
 
-    // Act
+    
     accountHealthService.markStale(accountId);
 
-    // Assert
+    
     assertThat(logCaptor.getErrorLogs())
         .hasSize(1)
         .anyMatch(log -> log.contains("Failed to mark account " + accountId + " as stale"));

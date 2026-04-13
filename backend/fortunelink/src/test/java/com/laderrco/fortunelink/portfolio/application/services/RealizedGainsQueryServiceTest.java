@@ -57,7 +57,7 @@ class RealizedGainsQueryServiceTest {
   private RealizedGainsQueryService service;
 
   private GetRealizedGainsQuery createQuery(Integer year, AssetSymbol symbol) {
-    // Defaulting page/size to 0/20 as per the record's logic
+    
     return new GetRealizedGainsQuery(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, year, symbol, 0, 20);
   }
 
@@ -126,7 +126,7 @@ class RealizedGainsQueryServiceTest {
       RealizedGainsSummaryView summary = service.getRealizedGains(query);
 
       verify(repository).findByAccountIdAndSymbol(eq(ACCOUNT_ID), eq(SYMBOL), any(Pageable.class));
-      // Verify we didn't accidentally call the year-based methods
+      
       verify(repository, never()).findByAccountIdAndYear(any(), anyInt(), any());
       verify(repository, never()).findByAccountIdAndYearAndSymbol(any(), anyInt(), any(), any());
 
@@ -172,7 +172,7 @@ class RealizedGainsQueryServiceTest {
 
       RealizedGainsSummaryView result = service.getRealizedGains(query);
 
-      // The Record's compact constructor should have converted null -> ZERO
+      
       assertThat(result.totalGains().amount()).isEqualByComparingTo(BigDecimal.ZERO);
       assertThat(result.totalLosses().amount()).isEqualByComparingTo(BigDecimal.ZERO);
       assertThat(result.netGainLoss().amount()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -225,18 +225,18 @@ class RealizedGainsQueryServiceTest {
       when(repository.findByAccountIdAndYear(eq(ACCOUNT_ID), eq(TAX_YEAR), any(Pageable.class)))
           .thenReturn(page);
 
-      // Totals represent EVERYTHING in the DB (including a loss not on this page)
+      
       mockTotals(150.0, 50.0);
       when(repository.findAccountCurrencyCode(ACCOUNT_ID)).thenReturn(Optional.of("USD"));
 
       RealizedGainsSummaryView summary = service.getRealizedGains(query);
 
-      // Totals come from the MockTotals, not the list
+      
       assertThat(summary.totalGains()).isEqualTo(new Money(new BigDecimal("150.0"), USD));
       assertThat(summary.totalLosses()).isEqualTo(new Money(new BigDecimal("50.0"), USD));
       assertThat(summary.netGainLoss()).isEqualTo(new Money(new BigDecimal("100.0"), USD));
 
-      // Items come from the Page content
+      
       assertThat(summary.items()).hasSize(1);
     }
   }

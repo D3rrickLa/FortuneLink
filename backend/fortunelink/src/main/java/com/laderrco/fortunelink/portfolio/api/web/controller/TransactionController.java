@@ -104,7 +104,7 @@ public class TransactionController {
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), request.type(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
-            request.transactionDate(), request.notes() != null ? request.notes() : "", false));
+            request.transactionDate(), emptyIfNull(request.notes()), false));
   }
 
   @PostMapping("/sell")
@@ -121,7 +121,7 @@ public class TransactionController {
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
-            request.transactionDate(), request.notes() != null ? request.notes() : ""));
+            request.transactionDate(), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/split")
@@ -135,7 +135,7 @@ public class TransactionController {
         new RecordSplitCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), new Ratio(request.numerator(), request.denominator()),
-            request.transactionDate(), request.notes() != null ? request.notes() : ""));
+            request.transactionDate(), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/return-of-capital")
@@ -151,7 +151,7 @@ public class TransactionController {
             request.assetSymbol(),
             Price.of(request.distributionPerUnit(), Currency.of(request.currency())),
             new Quantity(request.heldQuantity()), request.transactionDate(),
-            request.notes() != null ? request.notes() : ""));
+            emptyIfNull(request.notes())));
   }
 
   // =========================================================================
@@ -169,7 +169,7 @@ public class TransactionController {
         new RecordDepositCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
-            request.notes() != null ? request.notes() : ""));
+            emptyIfNull(request.notes())));
   }
 
   @PostMapping("/withdrawal")
@@ -183,7 +183,7 @@ public class TransactionController {
         new RecordWithdrawalCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
-            request.notes() != null ? request.notes() : ""));
+            emptyIfNull(request.notes())));
   }
 
   @PostMapping("/fee")
@@ -197,7 +197,7 @@ public class TransactionController {
         new RecordFeeCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.feeType(),
-            request.transactionDate(), request.notes() != null ? request.notes() : ""));
+            request.transactionDate(), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/transfer-in")
@@ -211,7 +211,7 @@ public class TransactionController {
         new RecordTransferInCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
-            request.notes() != null ? request.notes() : ""));
+            emptyIfNull(request.notes())));
   }
 
   @PostMapping("/transfer-out")
@@ -225,7 +225,7 @@ public class TransactionController {
         new RecordTransferOutCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.transactionDate(),
-            request.notes() != null ? request.notes() : ""));
+            emptyIfNull(request.notes())));
   }
 
   // =========================================================================
@@ -246,7 +246,7 @@ public class TransactionController {
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.isAssetInterest() ? request.assetSymbol() : null,
             Money.of(request.amount(), request.currency()), request.transactionDate(),
-            request.notes() != null ? request.notes() : ""));
+            emptyIfNull(request.notes())));
   }
 
   @PostMapping("/dividend")
@@ -260,7 +260,7 @@ public class TransactionController {
         new RecordDividendCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol(), Money.of(request.amount(), request.currency()),
-            request.transactionDate(), request.notes() != null ? request.notes() : ""));
+            request.transactionDate(), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/drip")
@@ -277,7 +277,7 @@ public class TransactionController {
             new RecordDividendReinvestmentCommand.DripExecution(
                 new Quantity(request.sharesPurchased()),
                 Price.of(request.pricePerShare(), Currency.of(request.currency()))),
-            request.transactionDate(), request.notes() != null ? request.notes() : ""));
+            request.transactionDate(), emptyIfNull(request.notes())));
   }
 
   // =========================================================================
@@ -385,5 +385,9 @@ public class TransactionController {
 
   private UUID validateUuid(String idempotencyKey) {
     return idempotencyKey != null ? UUID.fromString(idempotencyKey) : UUID.randomUUID();
+  }
+
+  private String emptyIfNull(String value) {
+    return value != null ? value : "";
   }
 }

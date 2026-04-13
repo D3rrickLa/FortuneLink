@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RateLimitConfigTest {
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(RateLimitConfig.class))
-      // This allows the test beans to override the ones in RateLimitConfig
+      
       .withAllowBeanDefinitionOverriding(true)
       .withBean(org.redisson.command.CommandAsyncExecutor.class,
           () -> Mockito.mock(org.redisson.command.CommandAsyncExecutor.class))

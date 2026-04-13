@@ -133,7 +133,7 @@ class AccountViewBuilderTest {
     @Test
     @DisplayName("buildFromProjection: successfully creates AccountView with empty positions")
     void buildsViewFromProjectionSuccessfully() {
-      // Arrange
+      
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getName()).thenReturn(accountName);
@@ -143,10 +143,10 @@ class AccountViewBuilderTest {
       when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(projection.getCreatedDate()).thenReturn(createdDate);
 
-      // Act
+      
       AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(), Map.of());
 
-      // Assert
+      
       assertThat(result.accountId()).isEqualTo(AccountId.fromString(accountUuid.toString()));
       assertThat(result.name()).isEqualTo(accountName);
       assertThat(result.type()).isEqualTo(AccountType.CHEQUING);
@@ -154,7 +154,7 @@ class AccountViewBuilderTest {
       assertThat(result.cashBalance().amount()).isEqualTo(
           cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
 
-      // Logic check: total value should equal cash balance when positions are empty
+      
       assertThat(result.totalValue().amount()).isEqualTo(
           cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
       assertThat(result.assets()).isEmpty();
@@ -164,7 +164,7 @@ class AccountViewBuilderTest {
     @Test
     @DisplayName("buildFromProjection: correctly maps complex account types")
     void mapsDifferentAccountTypesCorrectly() {
-      // Arrange
+      
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getAccountType()).thenReturn("RRSP");
@@ -212,9 +212,9 @@ class AccountViewBuilderTest {
       when(projection.getId()).thenReturn(accountUuid);
 
       Map<AssetSymbol, Quantity> quantities = Map.of(
-          apple, Quantity.of(10), // Valid quote
-          google, Quantity.of(5), // Missing quote
-          tesla, Quantity.of(2) // Zero price quote
+          apple, Quantity.of(10), 
+          google, Quantity.of(5), 
+          tesla, Quantity.of(2) 
       );
 
       MarketAssetQuote appleQuote = mock(MarketAssetQuote.class);

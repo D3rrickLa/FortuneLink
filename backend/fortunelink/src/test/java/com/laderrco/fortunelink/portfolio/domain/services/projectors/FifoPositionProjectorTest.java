@@ -39,14 +39,14 @@ public class FifoPositionProjectorTest {
   @Test
   @DisplayName("project: successfully accumulates fifo position state")
   void projectAccumulatesPositionStateCorrectly() {
-    // 1. Arrange: Create a stream of events
+    
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
         .occurredAt(Instant.parse("2023-01-01T10:00:00Z")).build();
 
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
         .occurredAt(Instant.parse("2023-01-02T10:00:00Z")).build();
 
-    FifoPosition result = projector.project(List.of(sell, buy)); // Out of order list
+    FifoPosition result = projector.project(List.of(sell, buy)); 
 
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
@@ -80,19 +80,19 @@ public class FifoPositionProjectorTest {
 
     try (MockedStatic<TransactionApplier> utilities = mockStatic(TransactionApplier.class)) {
 
-      // 1. Create the "wrong" position (FifoPosition)
-      // Since Position is sealed too, make AcbPosition a concrete class or mockable
+      
+      
       AcbPosition wrongPosition = mock(AcbPosition.class);
 
-      // 2. Instead of mocking the interface, instantiate a Record implementation
-      // We use a raw type or <Position> to allow the "wrong" type to be passed in
+      
+      
       ApplyResult<Position> resultWithWrongType = new ApplyResult.Adjustment<>(wrongPosition);
 
-      // 3. Setup the static mock to return our real record
+      
       utilities.when(() -> TransactionApplier.apply(any(), any())).thenReturn(resultWithWrongType);
 
-      // 4. Act & Assert
-      // This will trigger checkInstance(wrongPosition) inside the loop
+      
+      
       assertThrows(IllegalStateException.class, () -> {
         projector.project(List.of(mock(Transaction.class)));
       });

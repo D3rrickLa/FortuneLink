@@ -84,7 +84,7 @@ class NetWorthSnapshotRepositoryImplTest {
     @Test
     @DisplayName("existsForToday should check between start and end of UTC day")
     void existsForTodayShouldCheckBetweenStartAndEndOfUtcDay() {
-      // Expected boundaries
+      
       Instant expectedStart = LocalDate.now(ZoneOffset.UTC)
           .atStartOfDay(ZoneOffset.UTC)
           .toInstant();
@@ -100,11 +100,11 @@ class NetWorthSnapshotRepositoryImplTest {
     }
   }
 
-  // --- Helper Methods ---
+  
 
   private NetWorthSnapshotJpaEntity createMockEntity() {
-    // This assumes your JpaEntity has a toDomain method that won't NPE on a blank
-    // entity if it does, use a proper builder or setter here.
+    
+    
     NetWorthSnapshotJpaEntity entity = NetWorthSnapshotJpaEntity.from(
         new NetWorthSnapshot(
             UUID.randomUUID(),
@@ -115,7 +115,7 @@ class NetWorthSnapshotRepositoryImplTest {
             CAD,
             false,
             Instant.now()));
-    // Set necessary fields if toDomain() requires them
+    
     return entity;
   }
 }

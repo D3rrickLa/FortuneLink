@@ -15,7 +15,7 @@ class CacheKeyFactoryTest {
   @BeforeEach
   void setUp() {
     factory = new CacheKeyFactory();
-    // Manually inject the @Value properties
+    
     ReflectionTestUtils.setField(factory, "pricesPrefix", "prices");
     ReflectionTestUtils.setField(factory, "assetInfoPrefix", "assets");
     ReflectionTestUtils.setField(factory, "historicalPrefix", "hist");

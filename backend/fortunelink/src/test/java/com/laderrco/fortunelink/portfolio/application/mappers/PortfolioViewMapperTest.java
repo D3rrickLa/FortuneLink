@@ -45,7 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("PortfolioViewMapper Unit Tests")
 class PortfolioViewMapperTest {
 
-  // --- Test Constants ---
+  
   private static final PortfolioId PORTFOLIOID = PortfolioId.newId();
   private static final AccountId ACCOUNTID = AccountId.newId();
   private static final UserId USERID = UserId.random();
@@ -236,7 +236,7 @@ class PortfolioViewMapperTest {
 
       PositionView result = mapper.toPositionView(position, usdQuote);
 
-      // Assert
+      
       // Use isEqualByComparingTo for BigDecimals to ignore scale (135 vs 135.00)
       assertThat(result.currentPrice().amount()).isEqualByComparingTo("135");
       assertThat(result.currentPrice().currency()).isEqualTo(CAD);
@@ -253,14 +253,14 @@ class PortfolioViewMapperTest {
     @Test
     @DisplayName("calculateReturnPercentage should return ZERO when cost basis is zero (prevent division by zero)")
     void calculateReturnPercentageShouldHandleZeroCostBasis() {
-      // Arrange: Use a position with 0 cost basis
+      
       AcbPosition position = mock(AcbPosition.class);
       MarketAssetQuote quote = mock(MarketAssetQuote.class);
       Price price = mock(Price.class);
 
       when(position.symbol()).thenReturn(new AssetSymbol(SYMBOL));
       when(position.accountCurrency()).thenReturn(CAD);
-      when(position.totalCostBasis()).thenReturn(Money.zero(CAD)); // Trigger!
+      when(position.totalCostBasis()).thenReturn(Money.zero(CAD)); 
       when(position.costPerUnit()).thenReturn(Money.zero(CAD));
       when(position.totalQuantity()).thenReturn(Quantity.of(0));
       when(price.currency()).thenReturn(CAD);
@@ -282,7 +282,7 @@ class PortfolioViewMapperTest {
       when(fifoPos.totalCostBasis()).thenReturn(Money.zero(CAD));
       when(fifoPos.costPerUnit()).thenReturn(Money.zero(CAD));
       when(fifoPos.totalQuantity()).thenReturn(Quantity.of(0));
-      when(fifoPos.lots()).thenReturn(Collections.emptyList()); // Trigger empty branch
+      when(fifoPos.lots()).thenReturn(Collections.emptyList()); 
 
       PositionView result = mapper.toPositionView(fifoPos, null);
 
@@ -342,10 +342,10 @@ class PortfolioViewMapperTest {
       when(position.costPerUnit()).thenReturn(Money.zero(CAD));
       when(position.totalQuantity()).thenReturn(Quantity.of(0));
 
-      // Act: Explicitly passing null for feesForSymbol
+      
       PositionView result = mapper.toPositionView(position, null, null);
 
-      // Assert: Ensure it didn't NPE and used Money.zero
+      
       assertThat(result.totalFeesIncurred()).isNotNull();
       assertThat(result.totalFeesIncurred().isZero()).isTrue();
       assertThat(result.totalFeesIncurred().currency()).isEqualTo(CAD);

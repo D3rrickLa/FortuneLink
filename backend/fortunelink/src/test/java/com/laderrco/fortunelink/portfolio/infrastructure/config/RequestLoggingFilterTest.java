@@ -31,30 +31,30 @@ class RequestLoggingFilterTest {
 
   @Test
   void shouldPropagateExistingRequestId() throws ServletException, IOException {
-    // Arrange
+    
     String existingId = "client-provided-id";
     when(request.getHeader("X-Request-ID")).thenReturn(existingId);
 
-    // Act
+    
     filter.doFilterInternal(request, response, filterChain);
 
-    // Assert
+    
     verify(response).setHeader("X-Request-ID", existingId);
     verify(filterChain).doFilter(request, response);
-    // MDC is cleared in finally block, so we check if it's empty now
+    
     assertThat(MDC.get("requestId")).isNull();
   }
 
   @Test
   void shouldGenerateNewIdIfHeaderMissing() throws ServletException, IOException {
-    // Arrange
+    
     when(request.getHeader("X-Request-ID")).thenReturn(null);
 
-    // Act
+    
     filter.doFilterInternal(request, response, filterChain);
 
-    // Assert
-    // Capture the generated ID to ensure it was actually a UUID
+    
+    
     verify(response).setHeader(eq("X-Request-ID"), argThat(id -> {
       assertThat(id).isNotBlank();
       return true;
@@ -63,18 +63,18 @@ class RequestLoggingFilterTest {
 
   @Test
   void shouldClearMdcEvenIfExceptionOccurs() throws ServletException, IOException {
-    // Arrange
+    
     when(request.getHeader("X-Request-ID")).thenReturn("error-id");
     doThrow(new RuntimeException("Filter error")).when(filterChain).doFilter(any(), any());
 
-    // Act & Assert
+    
     try {
       filter.doFilterInternal(request, response, filterChain);
     } catch (RuntimeException ignored) {
-      // Expected
+      
     }
 
-    // Verify MDC was still cleared due to 'finally' block
+    
     assertThat(MDC.get("requestId")).isNull();
   }
 }

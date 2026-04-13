@@ -110,8 +110,8 @@ public class PortfolioQueryServiceTest {
     Account account = new Account(accountId, "Test Account", AccountType.TFSA, CAD,
         PositionStrategy.ACB);
 
-    // Wire up positions entries via spy if symbols present, avoids
-    // fighting Hibernate-managed maps directly in unit tests.
+    
+    
     if (!symbols.isEmpty()) {
       Account spy = org.mockito.Mockito.spy(account);
       Collection<Map.Entry<AssetSymbol, Position>> entries = symbols.stream()
@@ -179,7 +179,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result).isEqualTo(expected);
 
-      // Market data must NOT be called when there are no symbols to fetch
+      
       verify(marketDataService, never()).getBatchQuotes(anySet());
     }
 
@@ -209,7 +209,7 @@ public class PortfolioQueryServiceTest {
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
-      // The critical invariant, one batch call, never N calls for N accounts
+      
       verify(marketDataService, times(1)).getBatchQuotes(any());
     }
 
@@ -231,7 +231,7 @@ public class PortfolioQueryServiceTest {
       when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
           eq(quotes))).thenReturn(totalValue);
       when(portfolioViewMapper.toPortfolioView(eq(portfolio), any(), eq(totalValue),
-          eq(true))) // <-- stale = true
+          eq(true))) 
           .thenReturn(expected);
 
       PortfolioView result = portfolioQueryService.getPortfolioById(
@@ -239,7 +239,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result).isEqualTo(expected);
 
-      // Verify the mapper received hasStaleData=true
+      
       verify(portfolioViewMapper).toPortfolioView(eq(portfolio), any(), eq(totalValue), eq(true));
     }
 
@@ -258,7 +258,7 @@ public class PortfolioQueryServiceTest {
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(quotes);
 
-      // Update: Match the empty map being passed by the service
+      
       when(accountViewBuilder.build(eq(account), eq(quotes), eq(Map.of()))).thenReturn(accountView);
 
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
@@ -268,7 +268,7 @@ public class PortfolioQueryServiceTest {
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
-      // Verify against an empty map to match actual production behavior
+      
       verify(accountViewBuilder).build(eq(account), eq(quotes), eq(Map.of()));
     }
 
@@ -280,10 +280,10 @@ public class PortfolioQueryServiceTest {
       Account account = buildAccount(accountId, Set.of(aapl));
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(account));
 
-      // Fee cache returns nothing for this account
+      
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(Map.of());
-      // account absent
+      
       when(accountViewBuilder.build(eq(account), any(), eq(Map.of()))).thenReturn(
           buildAccountView(accountId));
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
@@ -319,7 +319,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result.isEmpty()).isTrue();
 
-      // Nothing to fetch, guard must prevent market data call
+      
       verifyNoInteractions(marketDataService, portfolioValuationService);
     }
 
@@ -403,9 +403,9 @@ public class PortfolioQueryServiceTest {
     }
   }
 
-  // =========================================================================
-  // getNetWorth
-  // =========================================================================
+  
+  
+  
   @Nested
   @DisplayName("getNetWorth")
   class GetNetWorthTests {
@@ -434,7 +434,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result.totalAssets()).isEqualTo(totalAssets);
       assertThat(result.totalLiabilities()).isEqualTo(Money.zero(CAD));
-      assertThat(result.netWorth()).isEqualTo(totalAssets); // liabilities = 0
+      assertThat(result.netWorth()).isEqualTo(totalAssets); 
       assertThat(result.displayCurrency()).isEqualTo(CAD);
     }
 

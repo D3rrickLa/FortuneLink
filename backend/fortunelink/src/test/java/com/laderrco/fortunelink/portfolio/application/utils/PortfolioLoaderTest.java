@@ -197,31 +197,31 @@ class PortfolioLoaderTest {
     @Test
     @DisplayName("validateOwnership: should complete normally when ownership exists")
     void validateOwnershipshouldSucceedWhenOwnershipExists() {
-      // Arrange
+      
       when(portfolioRepository.existsByIdAndUserId(PID, UID)).thenReturn(true);
 
-      // Act & Assert
+      
       portfolioLoader.validateOwnership(PID, UID);
-      // No exception thrown means success
+      
     }
 
     @Test
     @DisplayName("validateAccountOwnershipToPortfolio: should complete normally when account belongs to portfolio")
     void validateAccountOwnershipToPortfolioshouldSucceedWhenRelationExists() {
-      // Arrange
+      
       when(portfolioRepository.existsByPortfolioIdAndAccountId(PID, AID)).thenReturn(true);
 
-      // Act & Assert
+      
       portfolioLoader.validateAccountOwnershipToPortfolio(PID, AID);
     }
 
     @Test
     @DisplayName("validatePortfolioAndAccountOwnership: should complete normally when tripartite link is valid")
     void validatePortfolioAndAccountOwnershipshouldSucceedWhenAllLinksExist() {
-      // Arrange
+      
       when(portfolioRepository.existsByIdAndUserIdAndAccountId(PID, UID, AID)).thenReturn(true);
 
-      // Act & Assert
+      
       portfolioLoader.validatePortfolioAndAccountOwnership(PID, UID, AID);
     }
   }

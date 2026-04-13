@@ -40,7 +40,7 @@ class MarketDataServiceImplTest {
   @Mock
   private CacheKeyFactory keyFactory;
 
-  // Redis Mocks
+  
   @Mock
   private RedisTemplate<String, MarketAssetQuote> quoteRedis;
   @Mock
@@ -59,7 +59,7 @@ class MarketDataServiceImplTest {
     marketDataService = new MarketDataServiceImpl(
         provider, infoRepository, quoteRedis, infoRedis, keyFactory);
 
-    // Inject @Value fields manually for unit test
+    
     ReflectionTestUtils.setField(marketDataService, "quoteTtl", 60L);
     ReflectionTestUtils.setField(marketDataService, "assetInfoTtl", 3600L);
   }
@@ -71,7 +71,7 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("should return cached quotes and fetch misses from provider")
     void shouldHandleCacheHitsAndMisses() {
-      // Given
+      
       AssetSymbol msft = new AssetSymbol("MSFT");
       Set<AssetSymbol> symbols = Set.of(aapl, msft);
 
@@ -81,7 +81,7 @@ class MarketDataServiceImplTest {
 
       when(keyFactory.price(anyString())).thenAnswer(inv -> "price:" + inv.getArgument(0));
 
-      // Mock Redis: We use a custom answer to ensure the "Hit" follows the key
+      
       when(quoteRedis.opsForValue()).thenReturn(quoteOps);
       when(quoteOps.multiGet(anyList())).thenAnswer(inv -> {
         List<String> requestedKeys = inv.getArgument(0);
@@ -90,24 +90,24 @@ class MarketDataServiceImplTest {
             .toList();
       });
 
-      // Mock DB lookup: Use anySet() or verify the specific miss logic
-      // We use anySet() here to avoid the Strictness mismatch if order changes
+      
+      
       when(infoRepository.findBySymbols(anySet())).thenReturn(Map.of(msft, msftInfo));
       when(msftInfo.tradingCurrency()).thenReturn(usd);
 
-      // Mock Provider fetch
+      
       MarketAssetQuote msftQuote = mock(MarketAssetQuote.class);
       when(provider.fetchBatchQuotes(anySet(), anyMap())).thenReturn(Map.of(msft, msftQuote));
 
-      // When
+      
       Map<AssetSymbol, MarketAssetQuote> result = marketDataService.getBatchQuotes(symbols);
 
-      // Then
+      
       assertThat(result).hasSize(2);
       assertThat(result.get(aapl)).isEqualTo(aaplQuote);
       assertThat(result.get(msft)).isEqualTo(msftQuote);
 
-      // Verify caching of the new quote only (MSFT)
+      
       verify(quoteOps).multiSet(argThat(map -> map.containsKey("price:MSFT")));
     }
 
@@ -125,26 +125,26 @@ class MarketDataServiceImplTest {
       @Test
       @DisplayName("should handle null cachedList from Redis safely")
       void shouldHandleNullCachedList() {
-        // Given: Redis multiGet returns null (edge case)
+        
         when(quoteRedis.opsForValue()).thenReturn(quoteOps);
         when(quoteOps.multiGet(anyList())).thenReturn(null);
 
-        // Mocking the subsequent calls so it doesn't crash on the 'misses' logic
+        
         when(infoRepository.findBySymbols(anySet())).thenReturn(new HashMap<>());
         when(provider.fetchBatchQuotes(anySet(), anyMap())).thenReturn(new HashMap<>());
 
-        // When
+        
         Map<AssetSymbol, MarketAssetQuote> result = marketDataService.getBatchQuotes(Set.of(aapl));
 
-        // Then
+        
         assertThat(result).isEmpty();
-        // Verifies the (cachedList != null) ternary worked
+        
       }
 
       @Test
       @DisplayName("should execute provider fetch when misses is NOT empty")
       void shouldExecuteWhenMissesNotEmpty() {
-        // Given: Cache is empty (misses will contain AAPL)
+        
         when(quoteRedis.opsForValue()).thenReturn(quoteOps);
         when(quoteOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
         when(keyFactory.price(anyString())).thenReturn("price:AAPL");
@@ -153,14 +153,14 @@ class MarketDataServiceImplTest {
         Currency usd = Currency.of("USD");
         when(info.tradingCurrency()).thenReturn(usd);
 
-        // Mock DB and Provider for the miss
+        
         when(infoRepository.findBySymbols(anySet())).thenReturn(Map.of(aapl, info));
         when(provider.fetchBatchQuotes(anySet(), anyMap())).thenReturn(Map.of(aapl, mock(MarketAssetQuote.class)));
 
-        // When
+        
         marketDataService.getBatchQuotes(Set.of(aapl));
 
-        // Then: Verifies the !misses.isEmpty() block was entered
+        
         verify(infoRepository).findBySymbols(argThat(s -> s.contains(aapl)));
         verify(provider).fetchBatchQuotes(anySet(), anyMap());
       }
@@ -168,21 +168,21 @@ class MarketDataServiceImplTest {
       @Test
       @DisplayName("writeQuotesToCache: should skip Redis calls if data map is empty")
       void shouldSkipRedisCallsIfDataIsEmpty() {
-        // This branch is triggered when 'fetched' is empty, resulting in an empty
-        // 'toCache' map
+        
+        
 
-        // Given: Cache miss, but Provider returns an empty map
+        
         when(quoteRedis.opsForValue()).thenReturn(quoteOps);
         when(quoteOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
         when(keyFactory.price(anyString())).thenReturn("price:AAPL");
 
         when(infoRepository.findBySymbols(anySet())).thenReturn(new HashMap<>());
-        when(provider.fetchBatchQuotes(anySet(), anyMap())).thenReturn(new HashMap<>()); // Empty return
+        when(provider.fetchBatchQuotes(anySet(), anyMap())).thenReturn(new HashMap<>()); 
 
-        // When
+        
         marketDataService.getBatchQuotes(Set.of(aapl));
 
-        // Then: writeQuotesToCache(data) sees data.isEmpty() and returns early
+        
         verify(quoteOps, never()).multiSet(anyMap());
         verify(quoteRedis, never()).expire(anyString(), any(Duration.class));
       }
@@ -196,28 +196,28 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("should cascade through Cache -> DB -> Provider")
     void shouldCascadeThroughDataSources() {
-      // Given
+      
       Set<AssetSymbol> symbols = Set.of(aapl);
       when(keyFactory.assetInfo("AAPL")).thenReturn("info:AAPL");
 
-      // 1. Cache Miss
+      
       when(infoRedis.opsForValue()).thenReturn(infoOps);
       when(infoOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
 
-      // 2. DB Miss
+      
       when(infoRepository.findBySymbols(anySet())).thenReturn(Map.of());
 
-      // 3. Provider Hit
+      
       MarketAssetInfo info = mock(MarketAssetInfo.class);
       when(provider.fetchBatchAssetInfo(anySet())).thenReturn(Map.of(aapl, info));
 
-      // When
+      
       Map<AssetSymbol, MarketAssetInfo> result = marketDataService.getBatchAssetInfo(symbols);
 
-      // Then
+      
       assertThat(result).containsKey(aapl);
-      verify(infoRepository).saveAll(anyMap()); // Verify persistence
-      verify(infoOps).multiSet(anyMap()); // Verify caching
+      verify(infoRepository).saveAll(anyMap()); 
+      verify(infoOps).multiSet(anyMap()); 
     }
   }
 
@@ -228,10 +228,10 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("should return empty map immediately when symbols set is empty")
     void shouldReturnEmptyWhenInputIsEmpty() {
-      // When
+      
       Map<AssetSymbol, MarketAssetInfo> result = marketDataService.getBatchAssetInfo(Collections.emptySet());
 
-      // Then
+      
       assertThat(result).isEmpty();
       verifyNoInteractions(infoRedis, infoRepository, provider);
     }
@@ -239,17 +239,17 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("should handle null cachedList from Redis safely")
     void shouldHandleNullCachedListFromRedis() {
-      // Given: Redis ops returns null instead of a list (rare but possible in some
-      // drivers)
+      
+      
       when(infoRedis.opsForValue()).thenReturn(infoOps);
       when(infoOps.multiGet(anyList())).thenReturn(null);
 
-      // Setup mocks for subsequent DB/Provider calls so the test can finish
+      
       when(infoRepository.findBySymbols(anySet())).thenReturn(new HashMap<>());
       when(provider.fetchBatchAssetInfo(anySet())).thenReturn(new HashMap<>());
 
-      // When & Then
-      // This confirms the (cachedList != null) ternary doesn't crash
+      
+      
       Map<AssetSymbol, MarketAssetInfo> result = marketDataService.getBatchAssetInfo(Set.of(aapl));
       assertThat(result).isEmpty();
     }
@@ -257,16 +257,16 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("should skip DB and Provider blocks if all items are found in cache")
     void shouldSkipFallbacksIfAllCached() {
-      // Given: Everything is in cache
+      
       MarketAssetInfo info = mock(MarketAssetInfo.class);
       when(infoRedis.opsForValue()).thenReturn(infoOps);
       when(infoOps.multiGet(anyList())).thenReturn(List.of(info));
       when(keyFactory.assetInfo(anyString())).thenReturn("key");
 
-      // When
+      
       marketDataService.getBatchAssetInfo(Set.of(aapl));
 
-      // Then: Verify !misses.isEmpty() blocks were skipped
+      
       verify(infoRepository, never()).findBySymbols(anySet());
       verify(provider, never()).fetchBatchAssetInfo(anySet());
     }
@@ -274,39 +274,39 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("should skip persistence if provider returns empty map")
     void shouldSkipSaveIfProviderReturnsEmpty() {
-      // Given: Cache miss, DB miss, and Provider also returns nothing
+      
       when(infoRedis.opsForValue()).thenReturn(infoOps);
       when(infoOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
       when(infoRepository.findBySymbols(anySet())).thenReturn(new HashMap<>());
-      when(provider.fetchBatchAssetInfo(anySet())).thenReturn(new HashMap<>()); // Empty return
+      when(provider.fetchBatchAssetInfo(anySet())).thenReturn(new HashMap<>()); 
 
-      // When
+      
       marketDataService.getBatchAssetInfo(Set.of(aapl));
 
-      // Then: !fetched.isEmpty() branch is skipped
+      
       verify(infoRepository, never()).saveAll(anyMap());
     }
 
     @Test
     @DisplayName("should catch and log exception when database save fails")
     void shouldHandleDatabaseSaveFailureGracefully() {
-      // Given: Everything is a miss, Provider returns data, but DB save crashes
+      
       MarketAssetInfo info = mock(MarketAssetInfo.class);
       when(infoRedis.opsForValue()).thenReturn(infoOps);
       when(infoOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
       when(infoRepository.findBySymbols(anySet())).thenReturn(new HashMap<>());
       when(provider.fetchBatchAssetInfo(anySet())).thenReturn(Map.of(aapl, info));
 
-      // Force the saveAll to crash
+      
       doThrow(new RuntimeException("DB Error")).when(infoRepository).saveAll(anyMap());
 
-      // When
+      
       Map<AssetSymbol, MarketAssetInfo> result = marketDataService.getBatchAssetInfo(Set.of(aapl));
 
-      // Then
-      assertThat(result).containsKey(aapl); // Service should still return data even if save failed
+      
+      assertThat(result).containsKey(aapl); 
       verify(infoRepository).saveAll(anyMap());
-      // Verify code continues to cache even after DB failure
+      
       verify(infoOps).multiSet(anyMap());
     }
   }
@@ -337,7 +337,7 @@ class MarketDataServiceImplTest {
       @Test
       @DisplayName("getHistoricalQuote: should fetch from provider and cache when cache is null")
       void getHistoricalQuoteCacheMiss() {
-        // Given
+        
         Instant date = Instant.now();
         String key = "hist:AAPL:" + date;
         MarketAssetQuote quote = mock(MarketAssetQuote.class);
@@ -345,42 +345,42 @@ class MarketDataServiceImplTest {
         when(keyFactory.historical(anyString(), any())).thenReturn(key);
         when(quoteRedis.opsForValue()).thenReturn(quoteOps);
 
-        // 1. Force Cache Miss (cached == null)
+        
         when(quoteOps.get(key)).thenReturn(null);
 
-        // 2. Provider returns data
+        
         when(provider.fetchHistoricalQuote(aapl, date)).thenReturn(Optional.of(quote));
 
-        // When
+        
         Optional<MarketAssetQuote> result = marketDataService.getHistoricalQuote(aapl, date);
 
-        // Then
+        
         assertThat(result).isPresent().contains(quote);
 
-        // 3. Verify the lambda inside ifPresent() fired and cached the result
+        
         verify(quoteOps).set(eq(key), eq(quote), any(Duration.class));
       }
 
       @Test
       @DisplayName("getTradingCurrency: should use provider fallback when getAssetInfo is empty")
       void getTradingCurrencyDoubleFallback() {
-        // Given: getAssetInfo returns Optional.empty()
-        // We do this by making all cascading lookups fail
+        
+        
         when(infoRedis.opsForValue()).thenReturn(infoOps);
         when(infoOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
         when(infoRepository.findBySymbols(anySet())).thenReturn(Map.of());
         when(provider.fetchBatchAssetInfo(anySet())).thenReturn(Map.of());
 
-        // Mock the final provider fallback
+        
         Currency eur = Currency.of("EUR");
         when(provider.fetchTradingCurrency(aapl)).thenReturn(eur);
 
-        // When
+        
         Currency result = marketDataService.getTradingCurrency(aapl);
 
-        // Then
+        
         assertThat(result).isEqualTo(eur);
-        verify(provider).fetchTradingCurrency(aapl); // Confirms orElseGet lambda fired
+        verify(provider).fetchTradingCurrency(aapl); 
       }
 
       @Test
@@ -414,7 +414,7 @@ class MarketDataServiceImplTest {
     @Test
     @DisplayName("validateAndGet should throw exception if symbol not found")
     void validateAndGetShouldThrow() {
-      // Mock empty results from the cascade
+      
       when(infoRedis.opsForValue()).thenReturn(infoOps);
       when(infoOps.multiGet(anyList())).thenReturn(Collections.singletonList(null));
       when(infoRepository.findBySymbols(anySet())).thenReturn(Map.of());

@@ -12,14 +12,14 @@ class MoneyEmbeddableTest {
   @Test
   @DisplayName("Constructor and Getters should preserve values and precision")
   void constructorAndGettersShouldWork() {
-    // Arrange
+    
     BigDecimal amount = new BigDecimal("1234.5678901234");
     String currency = "USD";
 
-    // Act
+    
     MoneyEmbeddable embeddable = new MoneyEmbeddable(amount, currency);
 
-    // Assert
+    
     assertThat(embeddable.getAmount()).isEqualByComparingTo(amount);
     assertThat(embeddable.getCurrencyCode()).isEqualTo("USD");
   }
@@ -27,7 +27,7 @@ class MoneyEmbeddableTest {
   @Test
   @DisplayName("JPA requirements: should have a protected no-args constructor")
   void shouldHaveProtectedNoArgsConstructor() {
-    // This test ensures that Hibernate/JPA can instantiate the class via reflection
+    
     MoneyEmbeddable embeddable = new MoneyEmbeddable() {
     };
 

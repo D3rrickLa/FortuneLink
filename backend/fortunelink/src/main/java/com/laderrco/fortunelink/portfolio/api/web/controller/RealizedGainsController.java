@@ -96,8 +96,7 @@ public class RealizedGainsController {
       try {
         assetSymbol = new AssetSymbol(symbol.trim().toUpperCase());
       } catch (IllegalArgumentException e) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-            "Invalid symbol format: " + symbol);
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: " + symbol);
       }
     }
 

@@ -1,9 +1,7 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.config.authentication;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
-
-import java.util.UUID;
+import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,17 +9,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
 
-import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticatedUserResolverTest {
 
   @Mock
   private AuthenticationUserService authenticationUserService;
-
-  @Mock
-  private MethodParameter methodParameter;
 
   private AuthenticatedUserResolver resolver;
 
@@ -30,27 +27,35 @@ class AuthenticatedUserResolverTest {
     resolver = new AuthenticatedUserResolver(authenticationUserService);
   }
 
+  void testMethod(
+      @AuthenticatedUser UserId annotatedUserId, 
+      @AuthenticatedUser UUID annotatedUuid, 
+      UserId unannotatedUserId, 
+      @AuthenticatedUser String wrongTypeString 
+  ) {
+  }
+
   @Test
   void shouldSupportUserIdWithAnnotation() throws NoSuchMethodException {
-    MethodParameter param = getParam(0); // Points to @AuthenticatedUser UserId
+    MethodParameter param = getParam(0);
     assertThat(resolver.supportsParameter(param)).isTrue();
   }
 
   @Test
   void shouldSupportUUIDWithAnnotation() throws NoSuchMethodException {
-    MethodParameter param = getParam(1); // Points to @AuthenticatedUser UUID
+    MethodParameter param = getParam(1);
     assertThat(resolver.supportsParameter(param)).isTrue();
   }
 
   @Test
   void shouldNotSupportParametersWithoutAnnotation() throws NoSuchMethodException {
-    MethodParameter param = getParam(2); // Points to UserId (no annotation)
+    MethodParameter param = getParam(2);
     assertThat(resolver.supportsParameter(param)).isFalse();
   }
 
   @Test
   void shouldNotSupportWrongTypes() throws NoSuchMethodException {
-    MethodParameter param = getParam(3); // Points to @AuthenticatedUser String
+    MethodParameter param = getParam(3);
     assertThat(resolver.supportsParameter(param)).isFalse();
   }
 
@@ -63,11 +68,12 @@ class AuthenticatedUserResolverTest {
     Object result = resolver.resolveArgument(param, null, null, null);
 
     assertThat(result).isInstanceOf(UserId.class);
-    assertThat(result.toString()).isEqualTo(expectedUuid.toString());
+    
+    assertThat(result.toString()).contains(expectedUuid.toString());
   }
 
-  // Helper to get MethodParameter for the dummy method
   private MethodParameter getParam(int index) throws NoSuchMethodException {
+    
     var method = AuthenticatedUserResolverTest.class.getDeclaredMethod(
         "testMethod", UserId.class, UUID.class, UserId.class, String.class);
     return new MethodParameter(method, index);

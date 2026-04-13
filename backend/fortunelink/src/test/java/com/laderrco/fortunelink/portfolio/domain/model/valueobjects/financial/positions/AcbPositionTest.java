@@ -80,7 +80,7 @@ class AcbPositionTest {
     @Test
     @DisplayName("sell: reduces quantity and calculates proportional gain")
     void sellPartialSaleCalculatesRealizedGain() {
-      // 10 units at $10/unit
+      
       AcbPosition position = createAcbPosition("10", "100.00");
       Quantity sellQty = new Quantity(new BigDecimal("5"));
       Money proceeds = new Money(new BigDecimal("80.00"), USD);
@@ -96,7 +96,7 @@ class AcbPositionTest {
     @Test
     @DisplayName("sell: wipes basis to exactly zero on full liquidation")
     void sellFullLiquidationClearsBasisExactly() {
-      // Setup position with "difficult" division (3 units for $100)
+      
       AcbPosition position = createAcbPosition("3", "100");
 
       var result = position.sell(Quantity.of(3), Money.of("150", USD), NOW);
@@ -145,7 +145,7 @@ class AcbPositionTest {
     @DisplayName("applyReturnOfCapital: reduces total cost basis correctly")
     void applyReturnOfCapitalStandardCaseReducesBasis() {
       AcbPosition position = createAcbPosition("100", "1000");
-      Price rocPrice = Price.of(BigDecimal.TWO, USD); // $200 total reduction
+      Price rocPrice = Price.of(BigDecimal.TWO, USD); 
 
       var result = (ApplyResult.Adjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice,
           Quantity.of(100));
@@ -158,7 +158,7 @@ class AcbPositionTest {
     @DisplayName("applyReturnOfCapital: caps basis at zero and generates gain if ROC exceeds basis")
     void applyReturnOfCapitalExcessRocGeneratesCapitalGain() {
       AcbPosition position = createAcbPosition("10", "100");
-      Price rocPrice = Price.of(BigDecimal.valueOf(15), USD); // $150 reduction
+      Price rocPrice = Price.of(BigDecimal.valueOf(15), USD); 
 
       var result = (ApplyResult.RocAdjustment<AcbPosition>) position.applyReturnOfCapital(rocPrice,
           Quantity.of(10));
@@ -198,7 +198,7 @@ class AcbPositionTest {
     @DisplayName("calculateUnrealizedGain: returns difference between value and basis")
     void calculateUnrealizedGainValidPriceReturnsDifference() {
       AcbPosition position = createAcbPosition("10", "100.00");
-      Price marketPrice = Price.of(new BigDecimal("15.00"), USD); // Total market value $150
+      Price marketPrice = Price.of(new BigDecimal("15.00"), USD); 
 
       Money unrealized = position.calculateUnrealizedGain(marketPrice);
       assertThat(unrealized.amount()).isEqualByComparingTo("50");

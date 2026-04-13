@@ -91,7 +91,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
 
-  // --- Constants for DRYness ---
+  
   private static final UserId USER_ID = UserId.random();
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private static final AccountId ACCOUNT_ID = AccountId.newId();
@@ -281,7 +281,7 @@ class TransactionServiceTest {
       when(transaction.transactionType()).thenReturn(TransactionType.BUY);
 
       RecordPurchaseCommand command = new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
-          USER_ID, ACCOUNT_ID, symbol.symbol(), hint, // Injected by ParameterizedTest
+          USER_ID, ACCOUNT_ID, symbol.symbol(), hint, 
           Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
 
       service.recordPurchase(command);
@@ -505,7 +505,7 @@ class TransactionServiceTest {
       when(transactionRecordingService.recordDividendReinvestment(any(), any(), any(), any(), any(),
           any())).thenReturn(transaction);
       when(transactionRepository.existsConflict(eq(command.accountId()),
-          eq(TransactionType.DIVIDEND), // Cross-check: Reinvestment checks for Dividend
+          eq(TransactionType.DIVIDEND), 
           eq(symbol), eq(expectedStart), eq(expectedEnd))).thenReturn(true);
 
       service.recordDividendReinvestment(command);
@@ -671,7 +671,7 @@ class TransactionServiceTest {
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(),
           any())).thenReturn(Optional.of(existing));
 
-      // If it's already active (not excluded), the method should throw an error
+      
       when(existing.isExcluded()).thenReturn(false);
 
       assertThrows(InvalidTransactionException.class, () -> {
@@ -786,7 +786,7 @@ class TransactionServiceTest {
       UUID key = command.idempotencyKey();
 
       when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, command.portfolioId()))
-          .thenReturn(Optional.of(transaction)); // Now the service finds it!
+          .thenReturn(Optional.of(transaction)); 
       when(transactionViewMapper.toTransactionView(transaction))
           .thenReturn(transactionView);
 
@@ -805,11 +805,11 @@ class TransactionServiceTest {
       RecordPurchaseCommand command = createPurchaseCommand();
       UUID key = command.idempotencyKey();
 
-      // Match the signature: key AND portfolioId
+      
       when(transactionRepository.findByIdempotencyKeyAndPortfolioId(eq(key), eq(command.portfolioId())))
           .thenReturn(Optional.empty());
 
-      // Setup standard mocks for asset info and recording
+      
       MarketAssetInfo info = new MarketAssetInfo(new AssetSymbol("AAPL"), NOTES, ASSET_TYPE, NOTES, USD, SYMBOL_STR,
           NOTES);
       when(infoRepository.findBySymbol(any())).thenReturn(Optional.of(info));
@@ -819,7 +819,7 @@ class TransactionServiceTest {
 
       TransactionView result = service.recordPurchase(command);
 
-      // Verify the actual method called by the service
+      
       assertThat(result).isEqualTo(transactionView);
       verify(transactionRepository).findByIdempotencyKeyAndPortfolioId(key, command.portfolioId());
       verify(transactionRecordingService).recordBuy(any(), any(), any(), any(), any(), any(), any(), any(),
@@ -852,13 +852,13 @@ class TransactionServiceTest {
           ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
       TransactionView mockView = mock(TransactionView.class);
 
-      // Simulate cache hit
+      
       when(idempotencyCache.get(key.toString())).thenReturn(mockView);
 
       TransactionView result = service.recordPurchase(command);
 
       assertThat(result).isEqualTo(mockView);
-      // Verify business logic was SKIPPED (no repo call)
+      
       verify(transactionRepository, never()).findByIdempotencyKeyAndPortfolioId(any(), any());
     }
 
@@ -880,7 +880,7 @@ class TransactionServiceTest {
       TransactionView result = service.recordPurchase(command);
 
       assertThat(result).isEqualTo(mappedView);
-      verify(idempotencyCache).put(key.toString(), mappedView); // Logic should update cache
+      verify(idempotencyCache).put(key.toString(), mappedView); 
     }
 
     @Test
@@ -891,20 +891,20 @@ class TransactionServiceTest {
       ExcludeTransactionCommand command = new ExcludeTransactionCommand(
           key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TRANSACTION_ID, "reason");
 
-      // FIX: Chain the responses.
-      // First call returns empty (check), second call returns the winner (recovery).
+      
+      
       Transaction winningTx = mock(Transaction.class);
       when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID))
-          .thenReturn(Optional.empty()) // 1st call
-          .thenReturn(Optional.of(winningTx)); // 2nd call (Recovery)
+          .thenReturn(Optional.empty()) 
+          .thenReturn(Optional.of(winningTx)); 
 
-      // Standard business logic setup
+      
       Transaction existingTx = mock(Transaction.class);
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
           TRANSACTION_ID, PORTFOLIO_ID, USER_ID, ACCOUNT_ID))
           .thenReturn(Optional.of(existingTx));
 
-      // Simulate the race condition failure
+      
       doThrow(new DataIntegrityViolationException("Duplicate key"))
           .when(transactionRepository).save(any(), any(), eq(key));
 
@@ -927,7 +927,7 @@ class TransactionServiceTest {
 
       when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID)).thenReturn(Optional.empty());
 
-      // Force the logic to fail with integrity violation
+      
       doThrow(new DataIntegrityViolationException("Actual DB Error"))
           .when(transactionRepository).save(any(), any(), any());
 
@@ -939,11 +939,11 @@ class TransactionServiceTest {
     @Test
     @DisplayName("executeWithIdempotency: throws original exception if key is null")
     void shouldThrowImmediatelyIfKeyIsNull() {
-      // Command with null key
+      
       ExcludeTransactionCommand command = new ExcludeTransactionCommand(
           null, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TRANSACTION_ID, "reason");
 
-      // Force failure
+      
       doThrow(new DataIntegrityViolationException("Unique constraint failed"))
           .when(transactionRepository).findByIdAndPortfolioIdAndUserIdAndAccountId(any(), any(), any(), any());
 
@@ -958,22 +958,22 @@ class TransactionServiceTest {
       ExcludeTransactionCommand command = new ExcludeTransactionCommand(
           key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, TRANSACTION_ID, "reason");
 
-      // 1. Initial Idempotency Check (Cache/DB miss)
+      
       when(transactionRepository.findByIdempotencyKeyAndPortfolioId(key, PORTFOLIO_ID))
           .thenReturn(Optional.empty());
 
-      // 2. FIX: Stub the 'loadTransaction' logic so we don't crash early
+      
       Transaction mockTx = mock(Transaction.class);
-      when(mockTx.isExcluded()).thenReturn(false); // Ensure we don't trip the 'already excluded' check
+      when(mockTx.isExcluded()).thenReturn(false); 
       when(transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
           TRANSACTION_ID, PORTFOLIO_ID, USER_ID, ACCOUNT_ID))
           .thenReturn(Optional.of(mockTx));
 
-      // 3. Force the save to throw the violation
+      
       doThrow(new DataIntegrityViolationException("Conflict occurred"))
           .when(transactionRepository).save(any(), any(), eq(key));
 
-      // 4. Act & Assert
+      
       assertThatThrownBy(() -> service.excludeTransaction(command))
           .isInstanceOf(DataIntegrityViolationException.class)
           .hasMessageContaining("Conflict occurred");
@@ -987,8 +987,8 @@ class TransactionServiceTest {
     @Test
     @DisplayName("processFees: handles null and empty inputs")
     void shouldHandleNullOrEmptyFees() {
-      // Since processFees is likely private, we test via recordPurchase
-      // or using ReflectionTestUtils
+      
+      
       List<Fee> resultNull = ReflectionTestUtils.invokeMethod(service, "processFees", null, account, NOW);
       List<Fee> resultEmpty = ReflectionTestUtils.invokeMethod(service, "processFees", List.of(), account, NOW);
 
@@ -1006,7 +1006,7 @@ class TransactionServiceTest {
           NOW);
 
       assertThat(results.get(0).accountAmount()).isEqualTo(sameCurrencyFee.nativeAmount());
-      verifyNoInteractions(exchangeRateService); // Critical: Ensure service wasn't called
+      verifyNoInteractions(exchangeRateService); 
     }
 
     @Test
@@ -1015,7 +1015,7 @@ class TransactionServiceTest {
       when(account.getAccountCurrency()).thenReturn(CAD);
       Fee usdFee = Fee.of(FeeType.BROKERAGE, Money.of(5, "USD"), NOW, new FeeMetadata(Map.of()));
 
-      // Simulate rate service returning empty
+      
       when(exchangeRateService.getRate(Currency.of("USD"), CAD, NOW)).thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "processFees", List.of(usdFee), account, NOW))
@@ -1025,14 +1025,14 @@ class TransactionServiceTest {
     @Test
     @DisplayName("processFees: successfully converts currency when different from account")
     void shouldConvertCurrencyWhenDifferent() {
-      // Arrange
-      when(account.getAccountCurrency()).thenReturn(CAD); // Account is CAD
+      
+      when(account.getAccountCurrency()).thenReturn(CAD); 
 
-      // Fee is 10 USD
+      
       Money nativeFee = Money.of(10, "USD");
       Fee fee = Fee.of(FeeType.BROKERAGE, nativeFee, NOW, new FeeMetadata(Map.of()));
 
-      // Stub the rate service (1.35 rate)
+      
       ExchangeRate mockRate = mock(ExchangeRate.class);
       Money convertedMoney = Money.of("13.50", CAD);
 
@@ -1040,10 +1040,10 @@ class TransactionServiceTest {
           .thenReturn(Optional.of(mockRate));
       when(mockRate.convert(nativeFee)).thenReturn(convertedMoney);
 
-      // Act
+      
       List<Fee> results = ReflectionTestUtils.invokeMethod(service, "processFees", List.of(fee), account, NOW);
 
-      // Assert
+      
       assertThat(results).hasSize(1);
       assertThat(results.get(0).accountAmount()).isEqualTo(convertedMoney);
       verify(exchangeRateService).getRate(Currency.of("USD"), CAD, NOW);
@@ -1052,15 +1052,15 @@ class TransactionServiceTest {
     @Test
     @DisplayName("processFees: throws ExchangeRateUnavailableException when rate service returns empty")
     void shouldThrowWhenExchangeRateIsMissing() {
-      // Arrange
+      
       when(account.getAccountCurrency()).thenReturn(CAD);
       Fee usdFee = Fee.of(FeeType.BROKERAGE, Money.of(10, "USD"), NOW, new FeeMetadata(Map.of()));
 
-      // Rate service returns empty
+      
       when(exchangeRateService.getRate(Currency.of("USD"), CAD, NOW))
           .thenReturn(Optional.empty());
 
-      // Act & Assert
+      
       assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "processFees", List.of(usdFee), account, NOW))
           .isInstanceOf(ExchangeRateUnavailableException.class)
           .hasMessageContaining("USD")

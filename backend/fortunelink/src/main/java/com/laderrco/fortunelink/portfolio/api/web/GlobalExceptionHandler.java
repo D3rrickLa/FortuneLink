@@ -7,8 +7,11 @@ import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbo
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
 
+import jakarta.validation.ConstraintViolationException;
+
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -55,6 +59,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(ErrorResponse.of("BAD_REQUEST", ex.getMessage()));
+  }
+
+  @ExceptionHandler(MissingRequestHeaderException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public Map<String, String> handleHeaderException(MissingRequestHeaderException ex) {
+    return Map.of("error", "Missing header: " + ex.getHeaderName());
   }
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -187,6 +197,11 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body(ErrorResponse.of("CONCURRENT_MODIFICATION",
             "The record was updated by another process. Please refresh and try again."));
+  }
+
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<Map<String, String>> handleValidation(ConstraintViolationException e) {
+    return ResponseEntity.badRequest().body(Map.of("message", "Query cannot be blank"));
   }
 
   // -------------------------------------------------------------------------

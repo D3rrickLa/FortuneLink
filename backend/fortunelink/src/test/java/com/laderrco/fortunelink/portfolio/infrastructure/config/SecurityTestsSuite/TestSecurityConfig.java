@@ -40,7 +40,7 @@ public class TestSecurityConfig {
   @Primary
   public JwtDecoder jwtDecoder() {
     return token -> {
-      // Return a minimal valid Jwt for any token string
+      
       return Jwt.withTokenValue(token)
           .header("alg", "RS256")
           .subject(UUID.randomUUID().toString())

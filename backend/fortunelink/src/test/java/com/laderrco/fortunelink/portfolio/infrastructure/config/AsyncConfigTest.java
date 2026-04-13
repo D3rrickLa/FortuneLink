@@ -16,15 +16,15 @@ class AsyncConfigTest {
 
   @Test
   void shouldConfigureRecalculationExecutorCorrectly() {
-    // Retrieve the bean by name
+    
     ThreadPoolTaskExecutor executor = context.getBean("recalculationExecutor", ThreadPoolTaskExecutor.class);
 
-    // Verify the properties
+    
     assertThat(executor.getCorePoolSize()).isEqualTo(2);
     assertThat(executor.getMaxPoolSize()).isEqualTo(4);
     assertThat(executor.getThreadNamePrefix()).isEqualTo("recalc-");
 
-    // Verify it's actually working
+    
     assertThat(executor.getThreadPoolExecutor()).isNotNull();
   }
 }

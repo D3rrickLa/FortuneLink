@@ -134,7 +134,7 @@ class RealizedGainsQueryRepositoryImplTest {
     }
   }
 
-  // --- Helper Methods ---
+  
   private PortfolioJpaEntity createPortfolio() {
     return PortfolioJpaEntity.create(
         RAW_PORTFOLIO_ID, RAW_USER_ID, "Portfolio Name", "Desc", CAD, false, null, null,

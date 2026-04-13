@@ -401,14 +401,14 @@ class PortfolioTest {
     @Test
     @DisplayName("reportRecalculationSuccess should restore health only if account was stale")
     void reportRecalculationSuccess_RestoresStaleAccount() {
-      // Arrange: Start in a stale state
+      
       portfolio.reportRecalculationFailure(accountId);
       Instant afterFailure = portfolio.getLastUpdatedAt();
 
-      // Act
+      
       portfolio.reportRecalculationSuccess(accountId);
 
-      // Assert
+      
       assertThat(account.isStale()).isFalse();
       assertThat(portfolio.getLastUpdatedAt()).isAfterOrEqualTo(afterFailure);
     }
@@ -416,13 +416,13 @@ class PortfolioTest {
     @Test
     @DisplayName("reportRecalculationSuccess should not touch portfolio if account was already healthy")
     void reportRecalculationSuccess_NoOpForHealthyAccount() {
-      // Ensure account is healthy
+      
       assertThat(account.isStale()).isFalse();
       Instant initialTime = portfolio.getLastUpdatedAt();
 
       portfolio.reportRecalculationSuccess(accountId);
 
-      // Assert: touch() should not have been called because account wasn't stale
+      
       assertThat(portfolio.getLastUpdatedAt()).isEqualTo(initialTime);
     }
 

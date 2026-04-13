@@ -57,7 +57,7 @@ class PercentageRateTest {
     @Test
     @DisplayName("annualizedOver: success on valid calculation")
     void annualizationCalculatesCorrectRate() {
-      // A 21% total return over 2 years: (1.21)^(1/2) - 1 = 0.10 (10% annual)
+      
       PercentageRate totalReturn = PercentageRate.fromRate(new BigDecimal("0.21"));
       PercentageRate annualized = totalReturn.annualizedOver(BigDecimal.valueOf(2.0));
 

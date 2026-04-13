@@ -50,7 +50,7 @@ class TransactionServiceRetryTest {
   @Autowired
   private TransactionService transactionService;
 
-  // We autowire the beans defined in TestConfig to manipulate their behavior
+  
   @Autowired
   private TransactionRecordingService transactionRecordingService;
 
@@ -72,34 +72,34 @@ class TransactionServiceRetryTest {
   @Test
   @DisplayName("recover(TransactionCommand): marks account stale and throws exception")
   void recoverTransactionCommandDirectly() {
-    // 1. Setup
+    
     var ex = new ObjectOptimisticLockingFailureException("Portfolio", "123");
     var cmd = mock(TransactionCommand.class);
     var accountId = AccountId.newId();
     when(cmd.accountId()).thenReturn(accountId);
 
-    // 2. Execute & Assert
-    // We expect handleOptimisticLockFailure to throw
-    // ConcurrentModificationException
+    
+    
+    
     assertThrows(ConcurrentModificationException.class, () -> transactionService.recover(ex, cmd));
 
-    // 3. Verify side effects
+    
     verify(accountHealthService).markStale(accountId);
   }
 
   @Test
   @DisplayName("recover(IdentifiedTransactionCommand): marks account stale and throws exception")
   void recoverIdentifiedCommandDirectly() {
-    // 1. Setup
+    
     var ex = new ObjectOptimisticLockingFailureException("Transaction", "456");
     var cmd = mock(IdentifiedTransactionCommand.class);
     var accountId = AccountId.newId();
     when(cmd.accountId()).thenReturn(accountId);
 
-    // 2. Execute & Assert
+    
     assertThrows(ConcurrentModificationException.class, () -> transactionService.recover(ex, cmd));
 
-    // 3. Verify side effects
+    
     verify(accountHealthService).markStale(accountId);
   }
 
@@ -134,38 +134,38 @@ class TransactionServiceRetryTest {
   @Test
   @DisplayName("Should retry 3 times and then trigger @Recover logic")
   void shouldRetryThreeTimesAndRecover() {
-    // 1. Setup valid command with non-null Price
+    
     RecordPurchaseCommand command = createSampleCommand();
 
-    // 2. Mock Validator (must succeed)
+    
     when(validator.validate(any(RecordPurchaseCommand.class))).thenReturn(
         ValidationResult.success());
 
-    // 3. Mock Portfolio Loader & Account (must return valid, non-null objects)
+    
     Portfolio portfolio = buildFakePortfolioForPurchase(command);
     when(portfolioLoader.loadUserPortfolio(command.portfolioId(), command.userId())).thenReturn(
         portfolio);
 
-    // 4. Mock Asset Info (to avoid resolveAssetType failing)
+    
     when(infoRepository.findBySymbol(any())).thenReturn(Optional.empty());
 
-    // 5. Force the specific exception that triggers @Retryable
-    // This is where the loop happens
+    
+    
     when(transactionRecordingService.recordBuy(any(), any(), any(), any(), any(), any(), any(),
         any(), anyBoolean())).thenThrow(
             new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
 
-    // 6. Execute and Assert
-    // The @Recover method throws ConcurrentModificationException
+    
+    
     assertThrows(ConcurrentModificationException.class,
         () -> transactionService.recordPurchase(command));
 
-    // 7. Verify the Retry Logic
-    // 1 initial attempt + 2 retries = 3 total calls
+    
+    
     verify(transactionRecordingService, times(3)).recordBuy(any(), any(), any(), any(), any(),
         any(), any(), any(), anyBoolean());
 
-    // 8. Verify the Recovery Logic
+    
     verify(accountHealthService).markStale(command.accountId());
     verify(accountHealthService, times(1)).markStale(command.accountId());
   }
@@ -173,39 +173,39 @@ class TransactionServiceRetryTest {
   @Test
   @DisplayName("Should retry recordSale and recover when locking fails")
   void shouldRetrySaleAndRecover() {
-    // 1. Setup Command
+    
     RecordSaleCommand command = new RecordSaleCommand(UUID.randomUUID(), PortfolioId.newId(),
         UserId.random(), AccountId.newId(), "AAPL", Quantity.of(5),
         Price.of("150.00", Currency.CAD), List.of(), Instant.now(), "Sale Test");
 
-    // 2. Mock Validator
+    
     when(validator.validate(any(RecordSaleCommand.class))).thenReturn(ValidationResult.success());
 
-    // 3. Mock Portfolio/Account
+    
     Portfolio portfolio = buildFakePortfolioForSale(command);
     when(portfolioLoader.loadUserPortfolio(any(), any())).thenReturn(portfolio);
 
-    // 4. Force failure on the recording service
+    
     when(transactionRecordingService.recordSell(any(), any(), any(), any(), any(), any(),
         any())).thenThrow(new ObjectOptimisticLockingFailureException("Portfolio", "test-id"));
 
-    // 5. Assert Recovery Exception
+    
     assertThrows(ConcurrentModificationException.class,
         () -> transactionService.recordSale(command));
 
-    // 6. Verify 3 attempts
+    
     verify(transactionRecordingService, times(3)).recordSell(any(), any(), any(), any(), any(),
         any(), any());
     verify(accountHealthService, times(1)).markStale(command.accountId());
   }
 
-  // --- Helpers to prevent DomainArgumentException ---
+  
 
   private RecordPurchaseCommand createSampleCommand() {
     return new RecordPurchaseCommand(UUID.randomUUID(), PortfolioId.newId(), UserId.random(),
         AccountId.newId(), "AAPL", AssetType.STOCK, Quantity.of(10),
         Price.of("150.00", Currency.CAD),
-        // Ensure this matches account currency to skip conversion logic
+        
         List.of(), Instant.now(), "Test Note", false);
   }
 
@@ -217,7 +217,7 @@ class TransactionServiceRetryTest {
     when(mockPortfolio.getUserId()).thenReturn(command.userId());
     when(mockPortfolio.getAccount(command.accountId())).thenReturn(mockAccount);
 
-    // Setup Account to satisfy the 'execute' context and 'resolvePrice'
+    
     when(mockAccount.getAccountId()).thenReturn(command.accountId());
     when(mockAccount.getAccountCurrency()).thenReturn(Currency.CAD);
     when(mockAccount.isActive()).thenReturn(true);
@@ -234,19 +234,19 @@ class TransactionServiceRetryTest {
     when(mockAccount.getAccountCurrency()).thenReturn(Currency.CAD);
     when(mockAccount.isActive()).thenReturn(true);
 
-    // CRITICAL for recordSale: Must return true so we don't throw
-    // InsufficientQuantityException
+    
+    
     when(mockAccount.hasPosition(any(AssetSymbol.class))).thenReturn(true);
 
     return mockPortfolio;
   }
 
-  // --- Configuration ---
+  
 
   @Configuration
   @EnableRetry
   static class TestConfig {
-    // Define all dependencies as mocks
+    
     @Bean
     public PortfolioRepository portfolioRepository() {
       return mock(PortfolioRepository.class);

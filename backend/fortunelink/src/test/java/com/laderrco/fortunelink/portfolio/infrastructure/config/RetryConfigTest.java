@@ -42,7 +42,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotenc
 
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
-// We need a Spring context to enable the Retry proxy
+
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
 @SpringBootTest(classes = { TransactionService.class, RetryConfig.class })
 class TransactionServiceRetryTest {
@@ -91,11 +91,11 @@ class TransactionServiceRetryTest {
     doThrow(new ObjectOptimisticLockingFailureException(Portfolio.class, "123"))
         .when(validator).validate(any(RecordPurchaseCommand.class));
 
-    // Wrap in Assertions to catch the exception thrown by your @Recover method
+    
     assertThatThrownBy(() -> transactionService.recordPurchase(cmd))
         .isInstanceOf(ConcurrentModificationException.class);
 
-    // This proves the retries happened before the recovery logic failed
+    
     verify(validator, times(3)).validate(any(RecordPurchaseCommand.class));
   }
 

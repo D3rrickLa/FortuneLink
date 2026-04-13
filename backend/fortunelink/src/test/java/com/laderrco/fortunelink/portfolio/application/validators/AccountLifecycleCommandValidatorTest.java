@@ -24,11 +24,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class AccountLifecycleCommandValidatorTest {
 
-  // Constants for testing
+  
   private static final String VALID_NAME = "Standard Investment Account";
-  // 101 characters
+  
   private static final String LONG_NAME = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-  // 100 characters
+  
   private static final String NAME_100_CHARS = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private static final UserId USER_ID = UserId.random();
@@ -189,13 +189,13 @@ class AccountLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: failure when portfolio or user IDs are invalid")
     void validateFailureOnInvalidContextIds() {
-      // Here we assume ValidationUtils adds specific messages for these
+      
       var command = new ReopenAccountCommand(ACCOUNT_ID, null, null);
 
       ValidationResult result = validator.validate(command);
 
       assertThat(result.isValid()).isFalse();
-      // Checking that multiple errors are collected
+      
       assertThat(result.errors()).hasSizeGreaterThanOrEqualTo(2);
     }
 
@@ -212,8 +212,8 @@ class AccountLifecycleCommandValidatorTest {
     void validateFailureOnInvalidCurrencyCode() {
       Currency invalidCurrency = mock(Currency.class);
 
-      // When the validator calls .getCode(), return a junk string
-      // This ensures ValidationUtils.isValidCurrency("JUNK_CODE") is called
+      
+      
       when(invalidCurrency.getCode()).thenReturn("JUNK_CODE");
 
       var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, AccountType.RESP,
@@ -232,7 +232,7 @@ class AccountLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: throws NullPointerException when command is null")
     void validateThrowsNpeOnNullCommand() {
-      // Testing the Objects.requireNonNull(command)
+      
       org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
         validator.validate((CreateAccountCommand) null);
       });

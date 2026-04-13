@@ -53,7 +53,7 @@ class PortfolioRepositoryImplTest {
     @Test
     @DisplayName("save should merge with existing entity and return domain object")
     void saveShouldMergeWithExistingEntity() {
-      // Arrange
+      
       Portfolio domain = mock(Portfolio.class);
       PortfolioJpaEntity existingEntity = create();
       PortfolioJpaEntity updatedEntity = create();
@@ -65,10 +65,10 @@ class PortfolioRepositoryImplTest {
       when(jpaRepository.save(updatedEntity)).thenReturn(updatedEntity);
       when(mapper.toDomain(updatedEntity)).thenReturn(domain);
 
-      // Act
+      
       Portfolio result = repository.save(domain);
 
-      // Assert
+      
       assertThat(result).isEqualTo(domain);
       assertThat(result.getAccounts().size()).isEqualTo(0);
       assertThat(existingEntity.getAccounts().size()).isEqualTo(0);

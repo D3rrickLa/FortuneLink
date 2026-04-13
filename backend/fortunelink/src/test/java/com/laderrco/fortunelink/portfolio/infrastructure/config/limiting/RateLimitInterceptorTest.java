@@ -76,12 +76,12 @@ class RateLimitInterceptorTest {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(true);
 
-    // This starts with /portfolios but does NOT end with /import
+    
     mockMvc.perform(get("/api/v1/portfolios/123/details")
         .remoteAddress("2.2.2.2"))
         .andExpect(status().isOk());
 
-    // Verify it uses the "global" suffix instead of "csvImport"
+    
     verify(bucketBuilder).build(eq("2.2.2.2:global"), any(java.util.function.Supplier.class));
   }
 
@@ -103,7 +103,7 @@ class RateLimitInterceptorTest {
   void shouldRejectWith429WhenLimitExceeded() throws Exception {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(false);
-    when(probe.getNanosToWaitForRefill()).thenReturn(5_000_000_000L); // 5 seconds
+    when(probe.getNanosToWaitForRefill()).thenReturn(5_000_000_000L); 
 
     mockMvc.perform(get("/api/v1/any-url")
         .remoteAddress("127.0.0.1"))
@@ -135,7 +135,7 @@ class RateLimitInterceptorTest {
     verify(bucketBuilder).build(eq("1.1.1.1:csvImport"), any(java.util.function.Supplier.class));
   }
 
-  // Dummy controller for MockMvc to route to
+  
   @RestController
   private static class TestController {
     @GetMapping("/**")

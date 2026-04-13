@@ -90,7 +90,7 @@ class CsvImportServiceTest {
 
     @Test
     void rollsBackOnServiceFailure() {
-      // Ensure the data here is valid so it passes Phase 1 (Parsing)
+      
       String validRow = "2024-01-01,BUY,AAPL,STOCK,1,100.00,USD,note";
       doThrow(new RuntimeException("DB Down")).when(transactionService).recordPurchase(any());
 
@@ -101,7 +101,7 @@ class CsvImportServiceTest {
 
     @Test
     void reflectionEdgeCases() {
-      // Null type check
+      
       ParsedRow nullRow = new ParsedRow(1, Instant.now(), null, "A", AssetType.STOCK, BigDecimal.ONE, BigDecimal.ONE,
           "USD", "n");
       assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(csvImportService, "executeRow", nullRow, PID, UID, AID))
@@ -149,12 +149,12 @@ class CsvImportServiceTest {
       List<CsvRowError> errors = new ArrayList<>();
       List<ParsedRow> rows = new ArrayList<>();
 
-      // Test Comment Line
+      
       ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", "# This is a comment", 1, errors, rows);
       assertThat(errors).isEmpty();
       assertThat(rows).isEmpty();
 
-      // Test Missing Columns
+      
       ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", "2024-01-01,BUY,AAPL", 2, errors, rows);
       assertThat(errors).hasSize(1);
       assertThat(errors.get(0).message()).contains("Expected 8 columns, found 3");
@@ -165,7 +165,7 @@ class CsvImportServiceTest {
     void parseRowRejectsUnsupportedTypes() {
       List<CsvRowError> errors = new ArrayList<>();
       List<ParsedRow> rows = new ArrayList<>();
-      // TRANSFER_IN exists in the Enum but is not in SUPPORTED_CSV_TYPES
+      
       String csvLine = "2024-01-01,TRANSFER_IN,AAPL,STOCK,10,100,USD,notes";
 
       ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", csvLine, 1, errors, rows);
@@ -180,7 +180,7 @@ class CsvImportServiceTest {
     void parseRowRequiresQuantityForSell() {
       List<CsvRowError> errors = new ArrayList<>();
       List<ParsedRow> rows = new ArrayList<>();
-      // Type is SELL, but quantity (index 4) is empty
+      
       String csvLine = "2024-01-01,SELL,AAPL,STOCK,,150.00,USD,notes";
 
       ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", csvLine, 1, errors, rows);
@@ -201,7 +201,7 @@ class CsvImportServiceTest {
       List<CsvRowError> errors = new ArrayList<>();
       List<ParsedRow> rows = new ArrayList<>();
 
-      // Construct a valid BUY row with the varying assetType input
+      
       String csvLine = String.format("2024-01-01,BUY,AAPL,%s,10,150.00,USD,notes", inputAssetType);
 
       ReflectionTestUtils.invokeMethod(csvImportService, "parseRow", csvLine, 1, errors, rows);
@@ -229,7 +229,7 @@ class CsvImportServiceTest {
     @Test
     @DisplayName("importTransactions: enforces MAX_ROWS limit")
     void enforcesMaxRows() throws Exception {
-      // Generate a string with 5002 lines
+      
       StringBuilder sb = new StringBuilder("date,type,symbol,asset_type,quantity,price,currency,notes\n");
       for (int i = 0; i < 5005; i++) {
         sb.append("2024-01-01,BUY,AAPL,STOCK,1,100,USD,note\n");

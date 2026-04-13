@@ -42,13 +42,13 @@ class RedisCacheConfigTest {
       assertThat(context).hasSingleBean(CacheManager.class);
       RedisCacheManager cacheManager = context.getBean(RedisCacheManager.class);
 
-      // Get the raw configurations map (bypasses TransactionAware decorator issues)
+      
       Map<String, RedisCacheConfiguration> configs = (Map<String, RedisCacheConfiguration>) ReflectionTestUtils
           .getField(cacheManager, "initialCacheConfiguration");
 
       assertThat(configs).isNotNull();
 
-      // Verify TTLs using our new helper
+      
       assertThat(getTtl(configs.get("prices"))).isEqualTo(Duration.ofSeconds(60));
       assertThat(getTtl(configs.get("assets"))).isEqualTo(Duration.ofSeconds(86400));
       assertThat(getTtl(configs.get("fees"))).isEqualTo(Duration.ofSeconds(300));
@@ -58,13 +58,13 @@ class RedisCacheConfigTest {
   @Test
   void shouldConfigureCustomObjectMapper() {
     contextRunner.run(context -> {
-      // Request by name and cast to the base ObjectMapper class
+      
       Object bean = context.getBean("redisCacheObjectMapper");
       assertThat(bean).isInstanceOf(ObjectMapper.class);
 
       ObjectMapper mapper = (ObjectMapper) bean;
 
-      // Behavioral test: verify it ignores getters
+      
       var sample = new Object() {
         @SuppressWarnings("unused")
         public String id = "123";
@@ -93,12 +93,12 @@ class RedisCacheConfigTest {
   }
 
   private Duration getTtl(RedisCacheConfiguration config) {
-    // 1. Use the public getter from the source you provided
+    
     TtlFunction ttlFunction = config.getTtlFunction();
 
-    // 2. Invoke the function.
-    // For fixed TTLs (like the ones in your config), the arguments (key, value)
-    // are ignored, so passing null is safe.
+    
+    
+    
     return ttlFunction.getTimeToLive(null, null);
   }
 }
