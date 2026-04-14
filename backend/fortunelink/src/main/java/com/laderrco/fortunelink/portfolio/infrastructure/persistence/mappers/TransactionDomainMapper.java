@@ -19,30 +19,13 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.FeeJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.TransactionJpaEntity;
+
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
+
 import org.springframework.stereotype.Component;
 
-/**
- * Bidirectional mapper between the {@code Transaction} domain record and
- * {@code TransactionJpaEntity}.
- * <p>
- * Separate from {@code PortfolioDomainMapper} intentionally. Transactions are not part of the
- * Portfolio aggregate graph , they are loaded independently through {@code TransactionRepository}
- * and have their own lifecycle. Keeping mappers focused on one aggregate boundary prevents them
- * from becoming 800-line god classes.
- * <p>
- * Mapper responsibility boundary:
- * <ul>
- * <li>This class handles Transaction ↔ TransactionJpaEntity and
- * Fee ↔ FeeJpaEntity.</li>
- * <li>It does NOT know about Portfolio or Account domain objects.</li>
- * <li>It does NOT call repositories or services.</li>
- * </ul>
- */
+
 @Component
 public class TransactionDomainMapper {
 
@@ -83,7 +66,7 @@ public class TransactionDomainMapper {
         entity.getMetadataSource(), exclusionRecord, entity.getAdditionalData());
 
     // Reconstruct fees
-    List<Fee> fees = entity.getFees().stream().map(this::feeToDomain).toList();
+    List<Fee> fees = entity.getFees().stream().map(this::toFeeDomain).toList();
 
     // Reconstruct related transaction ID
     TransactionId relatedId = entity.getRelatedTransactionId() != null ? TransactionId.fromString(
@@ -105,16 +88,18 @@ public class TransactionDomainMapper {
   /**
    * Converts a domain {@code Transaction} to a new {@code TransactionJpaEntity}.
    * <p>
-   * Always creates a fresh entity. Transactions are immutable in the domain (only exclusion state
-   * changes), so there is no update path here , use {@link #applyExclusionState} for exclusion
+   * Always creates a fresh entity. Transactions are immutable in the domain (only
+   * exclusion state
+   * changes), so there is no update path here , use {@link #applyExclusionState}
+   * for exclusion
    * mutations on an existing managed entity.
    *
    * @param domain      the domain transaction record
-   * @param portfolioId the owning portfolio UUID (denormalized for query efficiency)
+   * @param portfolioId the owning portfolio UUID (denormalized for query
+   *                    efficiency)
    */
-  public TransactionJpaEntity toEntity(Transaction domain, UUID portfolioId,
-      String idempotencyKey) {
-    Objects.requireNonNull(domain, "Transaction cannot be null");
+  public TransactionJpaEntity toEntity(Transaction tx, UUID portfolioId, String idempotencyKey) {
+    Objects.requireNonNull(tx, "Transaction cannot be null");
     Objects.requireNonNull(portfolioId, "portfolioId cannot be null");
 
     // TradeExecution fields (all null for non-trade types)
@@ -123,19 +108,19 @@ public class TransactionDomainMapper {
     java.math.BigDecimal execPrice = null;
     String execPriceCurrency = null;
 
-    if (domain.execution() != null) {
-      execSymbol = domain.execution().asset().symbol();
-      execQty = domain.execution().quantity().amount();
-      execPrice = domain.execution().pricePerUnit().amount();
-      execPriceCurrency = domain.execution().pricePerUnit().currency().getCode();
+    if (tx.execution() != null) {
+      execSymbol = tx.execution().asset().symbol();
+      execQty = tx.execution().quantity().amount();
+      execPrice = tx.execution().pricePerUnit().amount();
+      execPriceCurrency = tx.execution().pricePerUnit().currency().getCode();
     }
 
     // Split ratio (null for non-SPLIT)
-    Integer splitNum = domain.split() != null ? domain.split().numerator() : null;
-    Integer splitDenom = domain.split() != null ? domain.split().denominator() : null;
+    Integer splitNum = tx.split() != null ? tx.split().numerator() : null;
+    Integer splitDenom = tx.split() != null ? tx.split().denominator() : null;
 
     // Exclusion
-    TransactionMetadata.ExclusionRecord excl = domain.metadata().exclusion();
+    TransactionMetadata.ExclusionRecord excl = tx.metadata().exclusion();
     UUID excludedBy = null;
     Instant excludedAt = null;
     String excludedReason = null;
@@ -145,33 +130,34 @@ public class TransactionDomainMapper {
       excludedReason = excl.reason();
     }
 
-    UUID relatedId = domain.relatedTransactionId() != null ? UUID.fromString(
-        domain.relatedTransactionId().toString()) : null;
+    UUID relatedId = tx.relatedTransactionId() != null ? UUID.fromString(
+        tx.relatedTransactionId().toString()) : null;
 
     // Asset type: prefer execution type, fall back to metadata
-    String assetTypeName =
-        domain.metadata().assetType() != null ? domain.metadata().assetType().name() : null;
+    String assetTypeName = tx.metadata().assetType() != null ? tx.metadata().assetType().name() : null;
 
     TransactionJpaEntity entity = TransactionJpaEntity.create(
-        UUID.fromString(domain.transactionId().toString()), portfolioId,
-        UUID.fromString(domain.accountId().toString()), domain.transactionType().name(), execSymbol,
+        UUID.fromString(tx.transactionId().toString()), portfolioId,
+        UUID.fromString(tx.accountId().toString()), tx.transactionType().name(), execSymbol,
         execQty, execPrice, execPriceCurrency, assetTypeName, splitNum, splitDenom,
-        domain.cashDelta().amount(), domain.cashDelta().currency().getCode(),
-        domain.metadata().source(), domain.isExcluded(), excludedAt, excludedBy, excludedReason,
-        domain.metadata().additionalData(), domain.notes(), domain.occurredAt(), relatedId,
+        tx.cashDelta().amount(), tx.cashDelta().currency().getCode(),
+        tx.metadata().source(), tx.isExcluded(), excludedAt, excludedBy, excludedReason,
+        tx.metadata().additionalData(), tx.notes(), tx.occurredAt(), relatedId,
         idempotencyKey);
 
-    // Map fees
-    List<FeeJpaEntity> feeEntities = domain.fees().stream()
-        .map(f -> feeToEntity(UUID.randomUUID(), entity, f)).toList();
-    entity.replaceFees(feeEntities);
+    List<FeeJpaEntity> feeEntities = tx.fees().stream().map(f -> toFeeEntity(entity, f)).toList();
+
+    entity.getFees().clear();
+    entity.getFees().addAll(feeEntities);
 
     return entity;
   }
 
   /**
-   * Applies only the exclusion mutation to a managed JPA entity. Call this instead of
-   * {@code toEntity} when restoring or excluding an existing transaction , avoids a pointless
+   * Applies only the exclusion mutation to a managed JPA entity. Call this
+   * instead of
+   * {@code toEntity} when restoring or excluding an existing transaction , avoids
+   * a pointless
    * re-insert of all fee rows.
    */
   public void applyExclusionState(Transaction domain, TransactionJpaEntity managed) {
@@ -191,7 +177,7 @@ public class TransactionDomainMapper {
   // Fee helpers
   // =========================================================================
 
-  private Fee feeToDomain(FeeJpaEntity fe) {
+  private Fee toFeeDomain(FeeJpaEntity fe) {
     Currency nativeCurrency = Currency.of(fe.getNativeCurrency());
     Money nativeAmount = new Money(fe.getNativeAmount(), nativeCurrency);
 
@@ -212,18 +198,19 @@ public class TransactionDomainMapper {
     );
   }
 
-  private FeeJpaEntity feeToEntity(UUID id, TransactionJpaEntity transactionEntity, Fee fee) {
-    java.math.BigDecimal accountAmt =
-        fee.accountAmount() != null ? fee.accountAmount().amount() : null;
-    String accountAmtCurrency =
-        fee.accountAmount() != null ? fee.accountAmount().currency().getCode() : null;
-    java.math.BigDecimal rate = fee.exchangeRate() != null ? fee.exchangeRate().rate() : null;
-    String fromCcy = fee.exchangeRate() != null ? fee.exchangeRate().from().getCode() : null;
-    String toCcy = fee.exchangeRate() != null ? fee.exchangeRate().to().getCode() : null;
-    Instant rateDate = fee.exchangeRate() != null ? fee.exchangeRate().quotedAt() : null;
-
-    return FeeJpaEntity.create(id, transactionEntity, fee.feeType().name(),
-        fee.nativeAmount().amount(), fee.nativeAmount().currency().getCode(), accountAmt,
-        accountAmtCurrency, rate, fromCcy, toCcy, rateDate, fee.occurredAt());
+  private FeeJpaEntity toFeeEntity(TransactionJpaEntity parent, Fee fee) {
+    FeeJpaEntity e = FeeJpaEntity.create(
+        parent,
+        fee.feeType().name(),
+        fee.nativeAmount().amount(),
+        fee.nativeAmount().currency().getCode(),
+        fee.accountAmount().amount(),
+        fee.accountAmount().currency().getCode(),
+        fee.exchangeRate().rate(),
+        fee.exchangeRate().from().getCode(),
+        fee.exchangeRate().to().getCode(),
+        fee.exchangeRate().quotedAt(),
+        fee.occurredAt());
+    return e;
   }
 }

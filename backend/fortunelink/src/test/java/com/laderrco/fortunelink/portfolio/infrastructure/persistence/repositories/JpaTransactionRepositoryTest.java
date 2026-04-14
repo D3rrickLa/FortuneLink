@@ -105,8 +105,18 @@ class JpaTransactionRepositoryTest {
     tx.setExcluded(false);
     tx.setCashDeltaAmount(new BigDecimal("-1000.00"));
     tx.setMetadataSource("MANUAL");
-
-    FeeJpaEntity fee = FeeJpaEntity.createEmpty();
+    FeeJpaEntity fee = FeeJpaEntity.create(
+      tx, 
+      "BROKEAGE", 
+      null, 
+      "CAD", 
+      null, 
+      null, 
+      null, 
+      null, 
+      null, 
+      null,
+      Instant.now());
     fee.setNativeAmount(new BigDecimal("10.50"));
     fee.setTransaction(tx);
     fee.setFeeType("BROKERAGE");

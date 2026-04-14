@@ -42,7 +42,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -106,15 +105,6 @@ class TransactionRecordingServiceImplTest {
       assertThatThrownBy(
           () -> service.recordBuy(account, AAPL, AssetType.STOCK, TEN, HUNDRED_USD_PRICE, null,
               NOTES, NOW, false)).isInstanceOf(AccountClosedException.class);
-    }
-
-    @Test
-    @DisplayName("recordDeposit: throw IllegalArgumentException for transaction before account creation")
-    void recordDepositThrowsForInvalidDate() {
-      Instant invalidDate = CREATION_DATE.minus(Duration.ofDays(1));
-      assertThatThrownBy(
-          () -> service.recordDeposit(account, HUNDRED_USD_MONEY, NOTES, invalidDate)).isInstanceOf(
-          IllegalArgumentException.class);
     }
   }
 

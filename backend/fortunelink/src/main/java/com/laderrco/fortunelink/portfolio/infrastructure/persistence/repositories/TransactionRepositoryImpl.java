@@ -61,12 +61,10 @@ public class TransactionRepositoryImpl implements TransactionRepository,
   @Override
   public Transaction save(Transaction domain, PortfolioId portfolioId, UUID idempotencyKey) {
     Objects.requireNonNull(domain, "Transaction cannot be null");
-    Objects.requireNonNull(portfolioId,
-        "PortfolioId cannot be null, callers must always supply it");
-
+    Objects.requireNonNull(portfolioId, "PortfolioId cannot be null, callers must always supply it");
     Optional<TransactionJpaEntity> existing = jpaRepository.findById(domain.transactionId().id());
     TransactionJpaEntity entity;
-
+    
     if (existing.isPresent()) {
       // Exclusion / restore path: only mutation allowed post-creation.
       // portfolioId is already persisted on the managed row , no update needed.
@@ -74,12 +72,11 @@ public class TransactionRepositoryImpl implements TransactionRepository,
       mapper.applyExclusionState(domain, entity);
     } else {
       // New transaction insert. Use the caller-supplied portfolioId directly.
-      // Previously this fired: jpaRepository.findPortfolioIdByAccountId(accountId)
-      // , an unnecessary extra query on every single transaction record.
-      entity = mapper.toEntity(domain, UUID.fromString(portfolioId.toString()),
-          idempotencyKey.toString());
+      // Previously this fired: jpaRepository.findPortfolioIdByAccountId(accountId),
+      //  an unnecessary extra query on every single transaction record.
+      entity = mapper.toEntity(domain, portfolioId.id(), idempotencyKey.toString());
     }
-
+    IO.println("DEBUG ENTITY: " + entity.toString());
     TransactionJpaEntity saved = jpaRepository.save(entity);
     return mapper.toDomain(saved);
   }

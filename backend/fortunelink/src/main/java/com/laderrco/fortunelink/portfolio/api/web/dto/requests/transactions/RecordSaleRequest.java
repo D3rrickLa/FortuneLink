@@ -11,8 +11,8 @@ public record RecordSaleRequest(
     @NotNull BigDecimal quantity,
     @NotNull BigDecimal price,
     @NotNull String currency,
-    @NotNull List<FeeRequest> fees,
-    @NotNull Instant transactionDate,
+    List<FeeRequest> fees,
+    Instant transactionDate,
     String notes) {
 
 }

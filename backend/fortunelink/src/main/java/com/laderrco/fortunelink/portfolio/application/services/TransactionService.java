@@ -282,8 +282,7 @@ public class TransactionService {
     return executeWithIdempotency(command, () -> {
       PortfolioContext ctx = getPortfolioContext(command);
       Transaction tx = recordFn.apply(ctx);
-      log.info("DEBUG: account {} has {} positions after record", ctx.account().getAccountId(),
-          ctx.account().getPositionEntries().size());
+
       persistChanges(ctx, tx, command.idempotencyKey());
       return transactionViewMapper.toTransactionView(tx);
     });
@@ -390,8 +389,7 @@ public class TransactionService {
     }
   }
 
-  private TransactionView executeWithIdempotency(TransactionCommand command,
-      Supplier<TransactionView> businessLogic) {
+  private TransactionView executeWithIdempotency(TransactionCommand command, Supplier<TransactionView> businessLogic) {
     UUID key = command.idempotencyKey();
 
     // 1. Initial Checks (Still good to have for performance)

@@ -84,7 +84,7 @@ class TransactionDomainMapperTest {
       entity.setCashDeltaCurrency("USD");
       entity.setExcludedReason("Duplicate");
 
-      FeeJpaEntity fee = FeeJpaEntity.create(UUID.randomUUID(), entity, "COMMISSION",
+      FeeJpaEntity fee = FeeJpaEntity.create(entity, "COMMISSION",
           new BigDecimal("5.00"), "USD", null, null, null, null, null, null, Instant.now());
       entity.replaceFees(List.of(fee));
 

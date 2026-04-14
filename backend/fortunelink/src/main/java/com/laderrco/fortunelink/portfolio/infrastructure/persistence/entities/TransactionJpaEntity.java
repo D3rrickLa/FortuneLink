@@ -5,11 +5,12 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -18,8 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -50,11 +50,15 @@ import org.hibernate.type.SqlTypes;
  * retrieved from Redis/API on demand. Do not add JPA mapping for it.
  */
 @Entity
-@Data
+@Getter
+@Setter
+@ToString(exclude = "fees")
 @Table(name = "transactions")
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TransactionJpaEntity {
 
+  @EqualsAndHashCode.Include
   @Id
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
@@ -88,10 +92,6 @@ public class TransactionJpaEntity {
   @Column(name = "execution_price_currency", length = 3)
   private String executionPriceCurrency;
 
-  /**
-   * AssetType from TradeExecution / TransactionMetadata. Stored as the V1 {@code asset_type}
-   * column.
-   */
   @Column(name = "asset_type", length = 50)
   private String assetType;
 
@@ -123,11 +123,6 @@ public class TransactionJpaEntity {
   @Column(name = "excluded_reason", columnDefinition = "text")
   private String excludedReason;
 
-  /**
-   * TransactionMetadata.additionalData , free-form key/value pairs. Stored as JSONB. The V1
-   * {@code metadata} column already exists for this. {@code StringMapConverter} serialises
-   * Map&lt;String,String&gt; ↔ JSON text.
-   */
   @Convert(converter = StringMapConverter.class)
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "additional_data", columnDefinition = "jsonb")
@@ -142,9 +137,6 @@ public class TransactionJpaEntity {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
-  /**
-   * Self-referential link for reversals / paired trades.
-   */
   @Column(name = "related_transaction_id", columnDefinition = "uuid")
   private UUID relatedTransactionId;
 
@@ -155,9 +147,9 @@ public class TransactionJpaEntity {
   @Column(name = "version", nullable = false)
   private Long version;
 
-  // fees are always needed with the transaction
-  @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   @BatchSize(size = 50) // Hibernate batch fetching, avoids N+1 for display
+  @Column(name = "transaction_fees")
+  @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<FeeJpaEntity> fees = new ArrayList<>();
 
   public static TransactionJpaEntity create(UUID id, UUID portfolioId, UUID accountId,
@@ -201,8 +193,10 @@ public class TransactionJpaEntity {
   // -------------------------------------------------------------------------
 
   /**
-   * Applies exclusion state from an updated domain record. Transactions are immutable in the domain
-   * , only exclusion metadata changes post-creation, so this is the only mutable operation on this
+   * Applies exclusion state from an updated domain record. Transactions are
+   * immutable in the domain
+   * , only exclusion metadata changes post-creation, so this is the only mutable
+   * operation on this
    * entity.
    */
   public void applyExclusionState(boolean excluded, Instant excludedAt, UUID excludedBy,
@@ -223,9 +217,5 @@ public class TransactionJpaEntity {
 
   public Map<String, String> getAdditionalData() {
     return Collections.unmodifiableMap(additionalData);
-  }
-
-  public List<FeeJpaEntity> getFees() {
-    return Collections.unmodifiableList(fees);
   }
 }

@@ -1,43 +1,43 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+
+import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.domain.Persistable;
+import lombok.ToString;
 
 /**
  * Maps the {@code transaction_fees} table.
  * <p>
- * The domain {@code Fee} record supports multi-currency: it carries both a {@code nativeAmount}
- * (original currency) and an {@code accountAmount} (converted to account currency) plus the
- * {@code ExchangeRate} used. All three are persisted here so they can be reconstructed exactly.
+ * The domain {@code Fee} record supports multi-currency: it carries both a
+ * {@code nativeAmount}
+ * (original currency) and an {@code accountAmount} (converted to account
+ * currency) plus the
+ * {@code ExchangeRate} used. All three are persisted here so they can be
+ * reconstructed exactly.
  * <p>
- * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are rarely needed after
+ * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are
+ * rarely needed after
  * recording and can be reconstructed from the {@code additionalData} JSONB on
  * {@code TransactionJpaEntity} if required.
  */
-@Entity
 @Data
+@Entity
 @Table(name = "transaction_fees")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
-public class FeeJpaEntity implements Persistable<UUID> {
+public class FeeJpaEntity {
 
   @Id
-  @GeneratedValue
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;
+
+  @ToString.Exclude
+  @EqualsAndHashCode.Exclude
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "transaction_id", nullable = false)
   private TransactionJpaEntity transaction;
@@ -67,20 +67,14 @@ public class FeeJpaEntity implements Persistable<UUID> {
   @Version
   @Column(name = "version", nullable = false)
   private Long version;
-  @Transient
-  private boolean isNew = true;
 
-  public static FeeJpaEntity createEmpty() {
-    return new FeeJpaEntity();
-  }
-
-  public static FeeJpaEntity create(UUID id, TransactionJpaEntity transaction, String feeType,
+  public static FeeJpaEntity create(TransactionJpaEntity transaction, String feeType,
       BigDecimal nativeAmount, String nativeCurrency, BigDecimal accountAmount,
       String accountAmountCurrency, BigDecimal exchangeRate, String fromCurrency, String toCurrency,
       Instant exchangeRateDate, Instant occurredAt) {
 
     FeeJpaEntity e = new FeeJpaEntity();
-    e.id = id;
+    e.id = null; // let DB/app assign later
     e.transaction = transaction;
     e.feeType = feeType;
     e.nativeAmount = nativeAmount;
@@ -92,15 +86,11 @@ public class FeeJpaEntity implements Persistable<UUID> {
     e.toCurrency = toCurrency;
     e.exchangeRateDate = exchangeRateDate;
     e.occurredAt = occurredAt;
+    e.version = 0L;
     return e;
   }
 
   public void setTransaction(TransactionJpaEntity transaction) {
     this.transaction = transaction;
-  }
-
-  @Override
-  public boolean isNew() {
-    return isNew;
   }
 }

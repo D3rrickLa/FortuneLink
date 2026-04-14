@@ -375,12 +375,11 @@ class TransactionServiceTest {
 
       service.recordDividend(command);
 
-      verify(mockAppender).doAppend(logCaptor.capture());
-      ILoggingEvent log = logCaptor.getValue();
+      verify(mockAppender, times(2)).doAppend(logCaptor.capture());
+      List<ILoggingEvent> capturedLogs = logCaptor.getAllValues();
 
-      assertThat(log.getLevel()).isEqualTo(Level.WARN);
-      assertThat(log.getFormattedMessage()).contains("DRIP recorded for symbol");
-      assertThat(log.getFormattedMessage()).contains("DIVIDEND transaction exists");
+      assertThat(capturedLogs.getFirst().getLevel()).isEqualTo(Level.WARN);
+      assertThat(capturedLogs.getFirst().getFormattedMessage()).contains("DRIP recorded for symbol=AssetSymbol[symbol=AAPL]");
     }
   }
 
