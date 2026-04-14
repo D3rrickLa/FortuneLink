@@ -1,15 +1,19 @@
 package com.laderrco.fortunelink.portfolio.api.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeReopenedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.AuthorizationException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.CsvImportCommitException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
-import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
@@ -26,6 +30,9 @@ import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbo
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
 import jakarta.validation.ConstraintViolationException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,36 +48,23 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 /**
  * Unit tests for GlobalExceptionHandler.
- *
- * Strategy: instantiate the handler directly and invoke each method, asserting
- * on status code, error code, and message. No Spring context needed — these
- * are plain method calls.
- *
- * NOTE TO REVIEWER: A few issues were found in the handler during test
- * authoring
- * that should be addressed:
- *
- * 1. HttpStatus.UNPROCESSABLE_CONTENT does not exist in Spring's HttpStatus
- * enum.
- * The correct constant is HttpStatus.UNPROCESSABLE_ENTITY (422). Tests use
- * the raw status value (422) to avoid coupling to a constant that likely
- * causes a compile error.
- *
- * 2. handleHeaderException and handleMissingBody return raw types (Map and
- * String)
- * instead of ResponseEntity<ErrorResponse>. This breaks uniform client error
- * handling. These should be standardized.
- *
+ * <p>
+ * Strategy: instantiate the handler directly and invoke each method, asserting on status code,
+ * error code, and message. No Spring context needed — these are plain method calls.
+ * <p>
+ * NOTE TO REVIEWER: A few issues were found in the handler during test authoring that should be
+ * addressed:
+ * <p>
+ * 1. HttpStatus.UNPROCESSABLE_CONTENT does not exist in Spring's HttpStatus enum. The correct
+ * constant is HttpStatus.UNPROCESSABLE_ENTITY (422). Tests use the raw status value (422) to avoid
+ * coupling to a constant that likely causes a compile error.
+ * <p>
+ * 2. handleHeaderException and handleMissingBody return raw types (Map and String) instead of
+ * ResponseEntity<ErrorResponse>. This breaks uniform client error handling. These should be
+ * standardized.
+ * <p>
  * 3. handlePortfolioStateConflicts takes RuntimeException but is annotated with
  * PortfolioAlreadyDeletedException — functional but misleading.
  */
@@ -98,7 +92,8 @@ class GlobalExceptionHandlerTest {
       List<String> errors = List.of("portfolioId: must not be null", "name: must not be blank");
       var ex = new InvalidCommandException("Invalid createPortfolio command", errors);
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidCommand(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidCommand(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
       assertThat(response.getBody()).isNotNull();
@@ -112,7 +107,8 @@ class GlobalExceptionHandlerTest {
     void invalidCommandException_emptyErrorsList_returns400() {
       var ex = new InvalidCommandException("Bad command", List.of());
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidCommand(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidCommand(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
       assertThat(response.getBody().errors()).isEmpty();
@@ -123,7 +119,8 @@ class GlobalExceptionHandlerTest {
     void domainArgumentException_returns400WithMessage() {
       var ex = new DomainArgumentException("Quantity cannot be negative");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleDomainArgument(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleDomainArgument(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
       assertThat(response.getBody().code()).isEqualTo("DOMAIN_VALIDATION_ERROR");
@@ -135,33 +132,33 @@ class GlobalExceptionHandlerTest {
     @DisplayName("MethodArgumentNotValidException 400 VALIDATION_ERROR with field-level errors")
     void methodArgumentNotValidException_returns400WithFieldErrors() {
       BindingResult bindingResult = mock(BindingResult.class);
-      when(bindingResult.getFieldErrors()).thenReturn(List.of(
-          new FieldError("createPortfolioRequest", "name", "must not be blank"),
-          new FieldError("createPortfolioRequest", "currency", "size must be 3")));
+      when(bindingResult.getFieldErrors()).thenReturn(
+          List.of(new FieldError("createPortfolioRequest", "name", "must not be blank"),
+              new FieldError("createPortfolioRequest", "currency", "size must be 3")));
       MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
       when(ex.getBindingResult()).thenReturn(bindingResult);
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMethodArgumentNotValid(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMethodArgumentNotValid(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
       assertThat(response.getBody().code()).isEqualTo("VALIDATION_ERROR");
       assertThat(response.getBody().message()).isEqualTo("Request validation failed");
-      assertThat(response.getBody().errors())
-          .containsExactlyInAnyOrder(
-              "name: must not be blank",
-              "currency: size must be 3");
+      assertThat(response.getBody().errors()).containsExactlyInAnyOrder("name: must not be blank",
+          "currency: size must be 3");
     }
 
     @Test
     @DisplayName("MethodArgumentNotValidException with single field error formats correctly")
     void methodArgumentNotValidException_singleFieldError_formatsCorrectly() {
       BindingResult bindingResult = mock(BindingResult.class);
-      when(bindingResult.getFieldErrors()).thenReturn(List.of(
-          new FieldError("request", "symbol", "must not be blank")));
+      when(bindingResult.getFieldErrors()).thenReturn(
+          List.of(new FieldError("request", "symbol", "must not be blank")));
       MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
       when(ex.getBindingResult()).thenReturn(bindingResult);
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMethodArgumentNotValid(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMethodArgumentNotValid(
+          ex);
 
       assertThat(response.getBody().errors()).containsExactly("symbol: must not be blank");
     }
@@ -171,7 +168,8 @@ class GlobalExceptionHandlerTest {
     void illegalArgumentException_returns400() {
       var ex = new IllegalArgumentException("Page cannot be negative: -1");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalArgument(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalArgument(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
       assertThat(response.getBody().code()).isEqualTo("BAD_REQUEST");
@@ -202,9 +200,11 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("InvalidDateRangeException 400 INVALID_DATE_RANGE with original message")
     void invalidDateRangeException_returns400() {
-      var ex = new InvalidDateRangeException("Start date cannot be after end date: start=2024-12-01, end=2024-01-01");
+      var ex = new InvalidDateRangeException(
+          "Start date cannot be after end date: start=2024-12-01, end=2024-01-01");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidDateRange(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidDateRange(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
       assertThat(response.getBody().code()).isEqualTo("INVALID_DATE_RANGE");
@@ -236,7 +236,8 @@ class GlobalExceptionHandlerTest {
     void authenticationException_returns401() {
       var ex = new AuthenticationException("No authenticated user");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAuthentication(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAuthentication(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
       assertThat(response.getBody().code()).isEqualTo("UNAUTHORIZED");
@@ -248,7 +249,8 @@ class GlobalExceptionHandlerTest {
     void authenticationException_jwtMissingClaim_returns401() {
       var ex = new AuthenticationException("JWT missing subject claim");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAuthentication(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAuthentication(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
       assertThat(response.getBody().message()).isEqualTo("JWT missing subject claim");
@@ -268,11 +270,13 @@ class GlobalExceptionHandlerTest {
     void authorizationException_returns403() {
       var ex = new AuthorizationException("Access denied: user does not own this portfolio");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAuthorization(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAuthorization(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
       assertThat(response.getBody().code()).isEqualTo("FORBIDDEN");
-      assertThat(response.getBody().message()).isEqualTo("Access denied: user does not own this portfolio");
+      assertThat(response.getBody().message()).isEqualTo(
+          "Access denied: user does not own this portfolio");
     }
 
     @Test
@@ -280,7 +284,8 @@ class GlobalExceptionHandlerTest {
     void springAccessDeniedException_returns403WithGenericMessage() {
       var ex = new AccessDeniedException("Full authentication is required");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleSpringAccessDenied(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleSpringAccessDenied(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
       assertThat(response.getBody().code()).isEqualTo("FORBIDDEN");
@@ -302,7 +307,8 @@ class GlobalExceptionHandlerTest {
     void portfolioNotFoundException_returns404() {
       var ex = new PortfolioNotFoundException("Portfolio with id abc-123 cannot be found");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioNotFound(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioNotFound(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
       assertThat(response.getBody().code()).isEqualTo("PORTFOLIO_NOT_FOUND");
@@ -315,7 +321,8 @@ class GlobalExceptionHandlerTest {
       AccountNotFoundException ex = mock(AccountNotFoundException.class);
       when(ex.getMessage()).thenReturn("Account not found for portfolioId=abc");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountNotFound(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountNotFound(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
       assertThat(response.getBody().code()).isEqualTo("ACCOUNT_NOT_FOUND");
@@ -328,7 +335,8 @@ class GlobalExceptionHandlerTest {
       TransactionNotFoundException ex = mock(TransactionNotFoundException.class);
       when(ex.getMessage()).thenReturn("Transaction not found with id: tx-999");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleTransactionNotFound(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleTransactionNotFound(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
       assertThat(response.getBody().code()).isEqualTo("TRANSACTION_NOT_FOUND");
@@ -340,7 +348,8 @@ class GlobalExceptionHandlerTest {
     void assetNotFoundException_returns404() {
       var ex = new AssetNotFoundException("No position found for symbol AAPL");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAssetNotFound(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAssetNotFound(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
       assertThat(response.getBody().code()).isEqualTo("ASSET_NOT_FOUND");
@@ -361,7 +370,8 @@ class GlobalExceptionHandlerTest {
     void portfolioLimitReachedException_returns409() {
       var ex = new PortfolioLimitReachedException("User already has an active portfolio");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioLimit(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioLimit(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("PORTFOLIO_LIMIT_REACHED");
@@ -374,7 +384,8 @@ class GlobalExceptionHandlerTest {
       PortfolioNotEmptyException ex = mock(PortfolioNotEmptyException.class);
       when(ex.getMessage()).thenReturn("Portfolio still has 2 active accounts");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioNotEmpty(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioNotEmpty(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("PORTFOLIO_NOT_EMPTY");
@@ -385,7 +396,8 @@ class GlobalExceptionHandlerTest {
     void portfolioDeletionException_returns409() {
       var ex = new PortfolioDeletionException("Cannot delete portfolio with 1 active account(s)");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioDeletion(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioDeletion(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("PORTFOLIO_DELETION_ERROR");
@@ -398,7 +410,8 @@ class GlobalExceptionHandlerTest {
       PortfolioAlreadyDeletedException ex = mock(PortfolioAlreadyDeletedException.class);
       when(ex.getMessage()).thenReturn("Portfolio has already been deleted");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioStateConflicts(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handlePortfolioStateConflicts(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("PORTFOLIO_STATE_ERROR");
@@ -407,9 +420,11 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("AccountCannotBeClosedException 409 ACCOUNT_CANNOT_BE_CLOSED")
     void accountCannotBeClosedException_returns409() {
-      var ex = new AccountCannotBeClosedException("Cannot close account: account has 3 open positions");
+      var ex = new AccountCannotBeClosedException(
+          "Cannot close account: account has 3 open positions");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountCannotBeClosed(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountCannotBeClosed(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("ACCOUNT_CANNOT_BE_CLOSED");
@@ -419,9 +434,11 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("AccountCannotBeReopenedException 409 ACCOUNT_CANNOT_BE_REOPENED")
     void accountCannotBeReopenedException_returns409() {
-      var ex = new AccountCannotBeReopenedException("Cannot reopen account: account is ACTIVE not CLOSED");
+      var ex = new AccountCannotBeReopenedException(
+          "Cannot reopen account: account is ACTIVE not CLOSED");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountCannotBeReopened(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountCannotBeReopened(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("ACCOUNT_CANNOT_BE_REOPENED");
@@ -433,7 +450,8 @@ class GlobalExceptionHandlerTest {
       AccountClosedException ex = mock(AccountClosedException.class);
       when(ex.getMessage()).thenReturn("Account is closed: acct-abc123");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountClosed(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccountClosed(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("ACCOUNT_CLOSED");
@@ -444,7 +462,8 @@ class GlobalExceptionHandlerTest {
     void invalidTransactionException_returns409() {
       var ex = new InvalidTransactionException("Transaction already excluded");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidTransaction(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInvalidTransaction(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("INVALID_TRANSACTION_STATE");
@@ -456,7 +475,8 @@ class GlobalExceptionHandlerTest {
     void illegalStateException_returns409() {
       var ex = new IllegalStateException("Cannot apply split: no open position found for AAPL");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalState(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalState(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("CONFLICT");
@@ -466,9 +486,11 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("ObjectOptimisticLockingFailureException 409 CONCURRENT_MODIFICATION with retry message")
     void objectOptimisticLockingFailureException_returns409() {
-      ObjectOptimisticLockingFailureException ex = mock(ObjectOptimisticLockingFailureException.class);
+      ObjectOptimisticLockingFailureException ex = mock(
+          ObjectOptimisticLockingFailureException.class);
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleOptimisticLock(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleOptimisticLock(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
       assertThat(response.getBody().code()).isEqualTo("CONCURRENT_MODIFICATION");
@@ -491,9 +513,11 @@ class GlobalExceptionHandlerTest {
     @DisplayName("InsufficientFundsException 422 INSUFFICIENT_FUNDS with original message")
     void insufficientFundsException_returns422() {
       InsufficientFundsException ex = mock(InsufficientFundsException.class);
-      when(ex.getMessage()).thenReturn("Insufficient cash for buy. Required: CAD 500.00, Available: CAD 100.00");
+      when(ex.getMessage()).thenReturn(
+          "Insufficient cash for buy. Required: CAD 500.00, Available: CAD 100.00");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInsufficientFunds(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInsufficientFunds(
+          ex);
 
       assertThat(response.getStatusCode().value()).isEqualTo(422);
       assertThat(response.getBody().code()).isEqualTo("INSUFFICIENT_FUNDS");
@@ -505,7 +529,8 @@ class GlobalExceptionHandlerTest {
     void insufficientQuantityException_returns422() {
       var ex = new InsufficientQuantityException("Cannot sell 100. Position only holds: 50");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInsufficientQuantity(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleInsufficientQuantity(
+          ex);
 
       assertThat(response.getStatusCode().value()).isEqualTo(422);
       assertThat(response.getBody().code()).isEqualTo("INSUFFICIENT_QUANTITY");
@@ -518,7 +543,8 @@ class GlobalExceptionHandlerTest {
       CurrencyMismatchException ex = mock(CurrencyMismatchException.class);
       when(ex.getMessage()).thenReturn("Quote currency USD does not match account currency CAD");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleCurrencyMismatch(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleCurrencyMismatch(
+          ex);
 
       assertThat(response.getStatusCode().value()).isEqualTo(422);
       assertThat(response.getBody().code()).isEqualTo("CURRENCY_MISMATCH");
@@ -530,7 +556,8 @@ class GlobalExceptionHandlerTest {
     void unknownSymbolException_returns422() {
       var ex = new UnknownSymbolException("NOTAREAL");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleUnknownSymbol(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleUnknownSymbol(
+          ex);
 
       assertThat(response.getStatusCode().value()).isEqualTo(422);
       assertThat(response.getBody().code()).isEqualTo("UNKNOWN_SYMBOL");
@@ -544,7 +571,8 @@ class GlobalExceptionHandlerTest {
           "Row 12 failed on commit: Cannot sell AAPL, no open position",
           new RuntimeException("domain failure"));
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleCsvCommitFailure(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleCsvCommitFailure(
+          ex);
 
       assertThat(response.getStatusCode().value()).isEqualTo(422);
       assertThat(response.getBody().code()).isEqualTo("CSV_COMMIT_FAILED");
@@ -563,13 +591,16 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("ResponseStatusException preserves its status code and reason")
     void responseStatusException_preservesStatusAndReason() {
-      var ex = new ResponseStatusException(HttpStatus.NOT_FOUND, "Symbol not found or not supported: INVALID");
+      var ex = new ResponseStatusException(HttpStatus.NOT_FOUND,
+          "Symbol not found or not supported: INVALID");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResponseStatus(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResponseStatus(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
       assertThat(response.getBody().code()).isEqualTo("REQUEST_ERROR");
-      assertThat(response.getBody().message()).isEqualTo("Symbol not found or not supported: INVALID");
+      assertThat(response.getBody().message()).isEqualTo(
+          "Symbol not found or not supported: INVALID");
     }
 
     @Test
@@ -577,7 +608,8 @@ class GlobalExceptionHandlerTest {
     void responseStatusException_400_preserves400() {
       var ex = new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: lower");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResponseStatus(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResponseStatus(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -588,7 +620,8 @@ class GlobalExceptionHandlerTest {
       var ex = new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
           "Exchange rate service is temporarily unavailable");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResponseStatus(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResponseStatus(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
@@ -651,11 +684,13 @@ class GlobalExceptionHandlerTest {
     void fmpApiException_returns503() {
       var ex = new FmpApiException("FMP rate limit exceeded (250/day)");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
       assertThat(response.getBody().code()).isEqualTo("MARKET_DATA_UNAVAILABLE");
-      assertThat(response.getBody().message()).isEqualTo("Market data service is temporarily unavailable");
+      assertThat(response.getBody().message()).isEqualTo(
+          "Market data service is temporarily unavailable");
       // Internal FMP detail must not leak
       assertThat(response.getBody().message()).doesNotContain("250/day");
     }
@@ -665,7 +700,8 @@ class GlobalExceptionHandlerTest {
     void bocApiException_returns503() {
       var ex = new BocApiException("Bank of Canada server encountered an internal error");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
       assertThat(response.getBody().code()).isEqualTo("MARKET_DATA_UNAVAILABLE");
@@ -676,7 +712,8 @@ class GlobalExceptionHandlerTest {
     void bocApiException_withStatusCode_returns503() {
       var ex = new BocApiException("BOC API Error 500");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
       assertThat(response.getBody().code()).isEqualTo("MARKET_DATA_UNAVAILABLE");
@@ -687,11 +724,13 @@ class GlobalExceptionHandlerTest {
     void marketDataException_returns503() {
       var ex = new MarketDataException("Redis quote cache is unavailable");
 
-      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(ex);
+      ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleMarketDataError(
+          ex);
 
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
       assertThat(response.getBody().code()).isEqualTo("MARKET_DATA_UNAVAILABLE");
-      assertThat(response.getBody().message()).isEqualTo("Market data service is temporarily unavailable");
+      assertThat(response.getBody().message()).isEqualTo(
+          "Market data service is temporarily unavailable");
     }
 
     @Test
@@ -705,13 +744,10 @@ class GlobalExceptionHandlerTest {
       var bocResponse = handler.handleMarketDataError(bocEx);
       var marketResponse = handler.handleMarketDataError(marketEx);
 
-      assertThat(fmpResponse.getBody().code())
-          .isEqualTo(bocResponse.getBody().code())
-          .isEqualTo(marketResponse.getBody().code())
-          .isEqualTo("MARKET_DATA_UNAVAILABLE");
+      assertThat(fmpResponse.getBody().code()).isEqualTo(bocResponse.getBody().code())
+          .isEqualTo(marketResponse.getBody().code()).isEqualTo("MARKET_DATA_UNAVAILABLE");
 
-      assertThat(fmpResponse.getBody().message())
-          .isEqualTo(bocResponse.getBody().message())
+      assertThat(fmpResponse.getBody().message()).isEqualTo(bocResponse.getBody().message())
           .isEqualTo(marketResponse.getBody().message());
     }
   }
@@ -740,7 +776,8 @@ class GlobalExceptionHandlerTest {
     void withErrors_populatesAllFields() {
       List<String> errors = List.of("field1: required", "field2: invalid");
 
-      var response = GlobalExceptionHandler.ErrorResponse.withErrors("VALIDATION_ERROR", "Validation failed", errors);
+      var response = GlobalExceptionHandler.ErrorResponse.withErrors("VALIDATION_ERROR",
+          "Validation failed", errors);
 
       assertThat(response.code()).isEqualTo("VALIDATION_ERROR");
       assertThat(response.message()).isEqualTo("Validation failed");
@@ -755,8 +792,7 @@ class GlobalExceptionHandlerTest {
 
       assertThat(response.errors()).isEmpty();
       // List.of() returns an unmodifiable list — this is the contract we want
-      org.junit.jupiter.api.Assertions.assertThrows(
-          UnsupportedOperationException.class,
+      org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class,
           () -> response.errors().add("should not work"));
     }
 

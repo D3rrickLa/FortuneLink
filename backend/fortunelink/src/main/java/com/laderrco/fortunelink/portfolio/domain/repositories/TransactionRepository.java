@@ -11,44 +11,39 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
- * Repository responsible for persistence and lifecycle operations on
- * {@link Transaction} entities.
+ * Repository responsible for persistence and lifecycle operations on {@link Transaction} entities.
  * <p>
  * <b>Read/Query Separation:</b> Paginated and filtered list queries live in
- * {@link TransactionQueryRepository} in the application layer. This interface
- * owns single-record
+ * {@link TransactionQueryRepository} in the application layer. This interface owns single-record
  * lookups, mutations, aggregations, and cleanup.
  */
 public interface TransactionRepository {
   /**
-   * Persists a transaction. {@code portfolioId} is required for new transactions
-   * because it is
-   * stored as a denormalized column for efficient joins in the recalculation
-   * engine. For
-   * exclusion/restore updates to existing transactions, the portfolio ID is
-   * already on the managed
-   * JPA entity , it is still required here to satisfy the contract uniformly and
-   * to avoid a
+   * Persists a transaction. {@code portfolioId} is required for new transactions because it is
+   * stored as a denormalized column for efficient joins in the recalculation engine. For
+   * exclusion/restore updates to existing transactions, the portfolio ID is already on the managed
+   * JPA entity , it is still required here to satisfy the contract uniformly and to avoid a
    * secondary lookup.
    *
    * <p>
-   * The caller always has the portfolioId available in the command or context
-   * object, so passing it
+   * The caller always has the portfolioId available in the command or context object, so passing it
    * here costs nothing and eliminates an extra DB round-trip.
    *
    * @param transaction The transaction entity to save.
-   * @param portfolioId The owning portfolio , used for the denormalized column on
-   *                    inserts.
+   * @param portfolioId The owning portfolio , used for the denormalized column on inserts.
    * @return The persisted {@link Transaction} instance.
    */
   Transaction save(Transaction transaction, PortfolioId portfolioId, UUID idempotencyKey);
 
   /**
-   * Removes excluded transactions for a specific account that occurred before the
-   * cutoff date.
+   * Removes excluded transactions for a specific account that occurred before the cutoff date.
    */
   int deleteExpiredTransactions(AccountId accountId, Instant cutoff);
 
@@ -82,19 +77,16 @@ public interface TransactionRepository {
       PortfolioId portfolioId, UserId userId, AccountId accountId);
 
   /**
-   * Sums BUY transaction fees by asset symbol for a single account. This is the
-   * cacheable
-   * single-account variant. Callers should prefer this over the batch method for
-   * read paths to
+   * Sums BUY transaction fees by asset symbol for a single account. This is the cacheable
+   * single-account variant. Callers should prefer this over the batch method for read paths to
    * benefit from caching.
    */
   Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId);
 
   /**
-   * Sums BUY transaction fees grouped by account and symbol for a set of
-   * accounts.
-   * Not cached, callers that need caching should fall back to the single-account
-   * variant per account, or manage eviction at the call site.
+   * Sums BUY transaction fees grouped by account and symbol for a set of accounts. Not cached,
+   * callers that need caching should fall back to the single-account variant per account, or manage
+   * eviction at the call site.
    */
   Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(Set<AccountId> accountId);
 
@@ -103,16 +95,16 @@ public interface TransactionRepository {
 
   Optional<Transaction> findByIdempotencyKey(UUID idempotencyKey);
 
-  Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId);
+  Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey,
+      PortfolioId portfolioId);
 
   /**
-   * Returns the number of transactions in this account that:
-   * (a) have been excluded from position calculations, AND
-   * (b) are of a type that affects positions or income.
-   *
-   * Used to populate AccountView.hasCashImbalance. A non-zero count means
-   * the account's displayed cash balance may not reconcile against its
-   * position history, because cash movements were NOT reversed on exclusion.
+   * Returns the number of transactions in this account that: (a) have been excluded from position
+   * calculations, AND (b) are of a type that affects positions or income.
+   * <p>
+   * Used to populate AccountView.hasCashImbalance. A non-zero count means the account's displayed
+   * cash balance may not reconcile against its position history, because cash movements were NOT
+   * reversed on exclusion.
    *
    * @return count, never negative
    */

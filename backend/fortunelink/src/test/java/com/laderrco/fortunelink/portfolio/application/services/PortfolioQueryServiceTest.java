@@ -110,8 +110,6 @@ public class PortfolioQueryServiceTest {
     Account account = new Account(accountId, "Test Account", AccountType.TFSA, CAD,
         PositionStrategy.ACB);
 
-    
-    
     if (!symbols.isEmpty()) {
       Account spy = org.mockito.Mockito.spy(account);
       Collection<Map.Entry<AssetSymbol, Position>> entries = symbols.stream()
@@ -146,8 +144,9 @@ public class PortfolioQueryServiceTest {
   }
 
   private AccountView buildAccountView(AccountId accountId) {
-    return new AccountView(accountId, "Test Account", AccountType.TFSA, AccountLifecycleState.ACTIVE, 
-      List.of(), CAD, Money.zero(CAD), Money.zero(CAD), Instant.now(), false, 0);
+    return new AccountView(accountId, "Test Account", AccountType.TFSA,
+        AccountLifecycleState.ACTIVE, List.of(), CAD, Money.zero(CAD), Money.zero(CAD),
+        Instant.now(), false, 0);
   }
 
   @Nested
@@ -179,7 +178,6 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result).isEqualTo(expected);
 
-      
       verify(marketDataService, never()).getBatchQuotes(anySet());
     }
 
@@ -209,7 +207,6 @@ public class PortfolioQueryServiceTest {
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
-      
       verify(marketDataService, times(1)).getBatchQuotes(any());
     }
 
@@ -231,15 +228,13 @@ public class PortfolioQueryServiceTest {
       when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
           eq(quotes))).thenReturn(totalValue);
       when(portfolioViewMapper.toPortfolioView(eq(portfolio), any(), eq(totalValue),
-          eq(true))) 
-          .thenReturn(expected);
+          eq(true))).thenReturn(expected);
 
       PortfolioView result = portfolioQueryService.getPortfolioById(
           new GetPortfolioByIdQuery(portfolioId, userId));
 
       assertThat(result).isEqualTo(expected);
 
-      
       verify(portfolioViewMapper).toPortfolioView(eq(portfolio), any(), eq(totalValue), eq(true));
     }
 
@@ -258,7 +253,6 @@ public class PortfolioQueryServiceTest {
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(quotes);
 
-      
       when(accountViewBuilder.build(eq(account), eq(quotes), eq(Map.of()))).thenReturn(accountView);
 
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
@@ -268,7 +262,6 @@ public class PortfolioQueryServiceTest {
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
-      
       verify(accountViewBuilder).build(eq(account), eq(quotes), eq(Map.of()));
     }
 
@@ -280,10 +273,9 @@ public class PortfolioQueryServiceTest {
       Account account = buildAccount(accountId, Set.of(aapl));
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(account));
 
-      
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(Map.of());
-      
+
       when(accountViewBuilder.build(eq(account), any(), eq(Map.of()))).thenReturn(
           buildAccountView(accountId));
       when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
@@ -319,7 +311,6 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result.isEmpty()).isTrue();
 
-      
       verifyNoInteractions(marketDataService, portfolioValuationService);
     }
 
@@ -403,9 +394,7 @@ public class PortfolioQueryServiceTest {
     }
   }
 
-  
-  
-  
+
   @Nested
   @DisplayName("getNetWorth")
   class GetNetWorthTests {
@@ -434,7 +423,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result.totalAssets()).isEqualTo(totalAssets);
       assertThat(result.totalLiabilities()).isEqualTo(Money.zero(CAD));
-      assertThat(result.netWorth()).isEqualTo(totalAssets); 
+      assertThat(result.netWorth()).isEqualTo(totalAssets);
       assertThat(result.displayCurrency()).isEqualTo(CAD);
     }
 

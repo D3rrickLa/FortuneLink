@@ -38,23 +38,18 @@ public class SecurityConfig {
 
   @Bean
   public WebSecurityCustomizer webSecurityCustomizer() {
-    return (web) -> web.ignoring()
-        .requestMatchers("/api/v1/public/**")
+    return (web) -> web.ignoring().requestMatchers("/api/v1/public/**")
         .requestMatchers("/actuator/health/**");
   }
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf(AbstractHttpConfigurer::disable)
+    http.csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/v1/public/**").permitAll()
-            .requestMatchers("/actuator/health").permitAll()
-            .anyRequest().authenticated())
+        .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/public/**").permitAll()
+            .requestMatchers("/actuator/health").permitAll().anyRequest().authenticated())
         // .httpBasic(Customizer.withDefaults());
-        .oauth2ResourceServer(oauth -> oauth
-            .jwt(Customizer.withDefaults())
+        .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults())
             .authenticationEntryPoint(jwtAuthEntryPoint));
 
     return http.build();

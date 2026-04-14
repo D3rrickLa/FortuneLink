@@ -3,7 +3,10 @@ package com.laderrco.fortunelink.portfolio.application.mappers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
@@ -25,7 +28,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
@@ -45,7 +47,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("PortfolioViewMapper Unit Tests")
 class PortfolioViewMapperTest {
 
-  
+
   private static final PortfolioId PORTFOLIOID = PortfolioId.newId();
   private static final AccountId ACCOUNTID = AccountId.newId();
   private static final UserId USERID = UserId.random();
@@ -230,13 +232,13 @@ class PortfolioViewMapperTest {
       Money pricePerUnitCad = Money.of(135, CAD);
 
       when(exchangeRateService.convert(pricePerUnitUsd, CAD)).thenReturn(pricePerUnitCad);
-      when(position.currentValue(argThat(p -> p != null &&
-          p.pricePerUnit().amount().stripTrailingZeros().equals(new BigDecimal("135")) &&
-          p.currency().equals(CAD)))).thenReturn(Money.of(1350, CAD));
+      when(position.currentValue(argThat(
+          p -> p != null && p.pricePerUnit().amount().stripTrailingZeros()
+              .equals(new BigDecimal("135")) && p.currency().equals(CAD)))).thenReturn(
+          Money.of(1350, CAD));
 
       PositionView result = mapper.toPositionView(position, usdQuote);
 
-      
       // Use isEqualByComparingTo for BigDecimals to ignore scale (135 vs 135.00)
       assertThat(result.currentPrice().amount()).isEqualByComparingTo("135");
       assertThat(result.currentPrice().currency()).isEqualTo(CAD);
@@ -253,14 +255,14 @@ class PortfolioViewMapperTest {
     @Test
     @DisplayName("calculateReturnPercentage should return ZERO when cost basis is zero (prevent division by zero)")
     void calculateReturnPercentageShouldHandleZeroCostBasis() {
-      
+
       AcbPosition position = mock(AcbPosition.class);
       MarketAssetQuote quote = mock(MarketAssetQuote.class);
       Price price = mock(Price.class);
 
       when(position.symbol()).thenReturn(new AssetSymbol(SYMBOL));
       when(position.accountCurrency()).thenReturn(CAD);
-      when(position.totalCostBasis()).thenReturn(Money.zero(CAD)); 
+      when(position.totalCostBasis()).thenReturn(Money.zero(CAD));
       when(position.costPerUnit()).thenReturn(Money.zero(CAD));
       when(position.totalQuantity()).thenReturn(Quantity.of(0));
       when(price.currency()).thenReturn(CAD);
@@ -282,7 +284,7 @@ class PortfolioViewMapperTest {
       when(fifoPos.totalCostBasis()).thenReturn(Money.zero(CAD));
       when(fifoPos.costPerUnit()).thenReturn(Money.zero(CAD));
       when(fifoPos.totalQuantity()).thenReturn(Quantity.of(0));
-      when(fifoPos.lots()).thenReturn(Collections.emptyList()); 
+      when(fifoPos.lots()).thenReturn(Collections.emptyList());
 
       PositionView result = mapper.toPositionView(fifoPos, null);
 
@@ -342,10 +344,8 @@ class PortfolioViewMapperTest {
       when(position.costPerUnit()).thenReturn(Money.zero(CAD));
       when(position.totalQuantity()).thenReturn(Quantity.of(0));
 
-      
       PositionView result = mapper.toPositionView(position, null, null);
 
-      
       assertThat(result.totalFeesIncurred()).isNotNull();
       assertThat(result.totalFeesIncurred().isZero()).isTrue();
       assertThat(result.totalFeesIncurred().currency()).isEqualTo(CAD);

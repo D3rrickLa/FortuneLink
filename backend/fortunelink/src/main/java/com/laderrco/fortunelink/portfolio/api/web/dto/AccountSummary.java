@@ -17,17 +17,10 @@ public record AccountSummary(
     int excludedTransactionCount) {
 
   public static AccountSummary fromView(AccountView view) {
-    return new AccountSummary(
-        view.accountId().toString(),
-        view.name(),
-        view.type().name(),
-        view.status().name(),
-        view.baseCurrency().getCode(),
-        view.cashBalance().amount().doubleValue(),
-        view.totalValue().amount().doubleValue(),
-        view.assets().size(),
-        view.creationDate(),
-        view.hasCashImbalance(),
+    return new AccountSummary(view.accountId().toString(), view.name(), view.type().name(),
+        view.status().name(), view.baseCurrency().getCode(),
+        view.cashBalance().amount().doubleValue(), view.totalValue().amount().doubleValue(),
+        view.assets().size(), view.creationDate(), view.hasCashImbalance(),
         view.excludedTransactionCount());
   }
 }

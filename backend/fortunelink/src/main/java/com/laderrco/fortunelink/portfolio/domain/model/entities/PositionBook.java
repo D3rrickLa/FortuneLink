@@ -14,8 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Encapculsates the position ledger for an Account is private pacakte, only
- * Accoutn should
+ * Encapculsates the position ledger for an Account is private pacakte, only Accoutn should
  * construct or mutate this directly.
  */
 final class PositionBook {
@@ -41,8 +40,7 @@ final class PositionBook {
   }
 
   /**
-   * Apply the result from a TransactionApplier. If the pos closes out, it's auto
-   * removed. Callers
+   * Apply the result from a TransactionApplier. If the pos closes out, it's auto removed. Callers
    * never manipulate the map directly
    *
    * @param symbol
@@ -98,7 +96,7 @@ final class PositionBook {
     return switch (strategy) {
       case ACB -> AcbPosition.empty(symbol, type, currency);
       case FIFO, LIFO, SPECIFIC_ID ->
-        throw new IllegalArgumentException(strategy + " not supported");
+          throw new IllegalArgumentException(strategy + " not supported");
     };
   }
 }

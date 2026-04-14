@@ -9,23 +9,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Represents a service charge or transaction fee applied to an asset or
- * account. This record
- * supports multi-currency scenarios by tracking both the fee in its original
- * (native) currency and
+ * Represents a service charge or transaction fee applied to an asset or account. This record
+ * supports multi-currency scenarios by tracking both the fee in its original (native) currency and
  * its converted value in the account's base currency.
  *
- * @param feeType       The classification of the fee (e.g., COMMISSION, TAX,
- *                      SPREAD).
- * @param nativeAmount  The fee amount in the currency it was originally
- *                      charged.
- * @param accountAmount The fee amount converted into the user's account
- *                      currency.
- * @param exchangeRate  The specific rate used to convert nativeAmount to
- *                      accountAmount.
+ * @param feeType       The classification of the fee (e.g., COMMISSION, TAX, SPREAD).
+ * @param nativeAmount  The fee amount in the currency it was originally charged.
+ * @param accountAmount The fee amount converted into the user's account currency.
+ * @param exchangeRate  The specific rate used to convert nativeAmount to accountAmount.
  * @param occurredAt    The timestamp of when the fee was incurred.
- * @param metadata      Additional key-value pairs for audit trails or
- *                      vendor-specific data.
+ * @param metadata      Additional key-value pairs for audit trails or vendor-specific data.
  */
 public record Fee(
     FeeType feeType,
@@ -67,16 +60,14 @@ public record Fee(
   /**
    * Calculates the total sum of a list of fees in the target account currency.
    * <p>
-   * This method prioritizes {@code accountAmount}. If a fee only has a
-   * {@code nativeAmount}, it
+   * This method prioritizes {@code accountAmount}. If a fee only has a {@code nativeAmount}, it
    * will be used only if its currency matches the target {@code accountCurrency}.
    * </p>
    *
    * @param fees            The list of fees to sum (null-safe).
    * @param accountCurrency The target currency for the total.
    * @return The total sum as a {@link Money} object.
-   * @throws IllegalArgumentException if a fee's currency does not match the
-   *                                  account currency.
+   * @throws IllegalArgumentException if a fee's currency does not match the account currency.
    */
   public static Money totalInAccountCurrency(List<Fee> fees, Currency accountCurrency) {
     if (fees == null || fees.isEmpty()) {
@@ -98,12 +89,12 @@ public record Fee(
   // Ensure the convertedAmount currency actually matches the rate's target
   // currency
   public Fee withAccountAmount(Money convertedAmount, ExchangeRate rate) {
-    return new Fee(this.feeType, this.nativeAmount, convertedAmount, rate, this.occurredAt, this.metadata);
+    return new Fee(this.feeType, this.nativeAmount, convertedAmount, rate, this.occurredAt,
+        this.metadata);
   }
 
   /**
-   * Extensible container for supplementary fee information. Used for storing
-   * vendor IDs, tax codes,
+   * Extensible container for supplementary fee information. Used for storing vendor IDs, tax codes,
    * or transaction references.
    */
   public record FeeMetadata(Map<String, String> values) {

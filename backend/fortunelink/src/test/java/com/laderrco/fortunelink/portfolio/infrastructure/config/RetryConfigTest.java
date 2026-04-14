@@ -1,22 +1,10 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.config;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.ConcurrentModificationException;
-import java.util.List;
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.CacheManager;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.mappers.TransactionViewMapper;
@@ -39,12 +27,23 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
-
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ConcurrentModificationException;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
-@SpringBootTest(classes = { TransactionService.class, RetryConfig.class })
+@SpringBootTest(classes = {TransactionService.class, RetryConfig.class})
 class TransactionServiceRetryTest {
   private static final UserId USER_ID = UserId.random();
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
@@ -88,20 +87,17 @@ class TransactionServiceRetryTest {
   void shouldRetryThreeTimesThenRecover() {
     RecordPurchaseCommand cmd = createSampleCommand();
 
-    doThrow(new ObjectOptimisticLockingFailureException(Portfolio.class, "123"))
-        .when(validator).validate(any(RecordPurchaseCommand.class));
+    doThrow(new ObjectOptimisticLockingFailureException(Portfolio.class, "123")).when(validator)
+        .validate(any(RecordPurchaseCommand.class));
 
-    
-    assertThatThrownBy(() -> transactionService.recordPurchase(cmd))
-        .isInstanceOf(ConcurrentModificationException.class);
+    assertThatThrownBy(() -> transactionService.recordPurchase(cmd)).isInstanceOf(
+        ConcurrentModificationException.class);
 
-    
     verify(validator, times(3)).validate(any(RecordPurchaseCommand.class));
   }
 
   private RecordPurchaseCommand createSampleCommand() {
-    return new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID,
-        USER_ID, ACCOUNT_ID, "AAPL", ASSET_TYPE, Quantity.of(10), new Price(AMOUNT),
-        List.of(), NOW, NOTES, false);
+    return new RecordPurchaseCommand(IDEMPOTENCY_KEY, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL",
+        ASSET_TYPE, Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false);
   }
 }

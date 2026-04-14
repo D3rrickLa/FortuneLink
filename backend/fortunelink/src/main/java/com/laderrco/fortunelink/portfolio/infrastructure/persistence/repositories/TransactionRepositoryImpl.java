@@ -15,10 +15,17 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.Tr
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers.TransactionDomainMapper;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobjects.FeeAggregationResult;
 import java.time.Instant;
-import java.util.*;
-
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
@@ -28,7 +35,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class TransactionRepositoryImpl implements TransactionRepository, TransactionQueryRepository {
+public class TransactionRepositoryImpl implements TransactionRepository,
+    TransactionQueryRepository {
   private final JpaTransactionRepository jpaRepository;
   private final TransactionDomainMapper mapper;
   private final CacheManager cacheManager;
@@ -42,14 +50,12 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
    *
    * <p>
    * <b>Existing transactions (exclusion/restore path):</b> The managed JPA entity
-   * is fetched by primary key, then only the exclusion state columns are updated
-   * in-place. The
+   * is fetched by primary key, then only the exclusion state columns are updated in-place. The
    * portfolioId is already on the managed entity from the original insert.
    *
    * <p>
    * <b>Why portfolioId is required even for updates:</b> The interface contract
-   * is uniform. The caller always has it available (from the command), so
-   * requiring it here
+   * is uniform. The caller always has it available (from the command), so requiring it here
    * prevents future callers from accidentally triggering the old lookup pattern.
    */
   @Override
@@ -129,7 +135,8 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   }
 
   @Override
-  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(Set<AccountId> accountIds) {
+  public Map<AccountId, Map<AssetSymbol, Money>> sumBuyFeesBySymbolForAccounts(
+      Set<AccountId> accountIds) {
     if (accountIds == null || accountIds.isEmpty()) {
       return Map.of();
     }
@@ -194,12 +201,8 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public Page<Transaction> findTransactionsDynamic(AccountId accountId, AssetSymbol symbol,
       Instant start, Instant end, Pageable pageable) {
-    return jpaRepository.findTransactionsDynamic(
-        accountId.id(),
-        symbol != null ? symbol.symbol() : null,
-        start,
-        end,
-        pageable).map(mapper::toDomain);
+    return jpaRepository.findTransactionsDynamic(accountId.id(),
+        symbol != null ? symbol.symbol() : null, start, end, pageable).map(mapper::toDomain);
   }
 
   @Override
@@ -215,13 +218,15 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   }
 
   @Override
-  public Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey, PortfolioId portfolioId) {
-    return jpaRepository.findByIdempotencyKeyAndPortfolioId(idempotencyKey.toString(), portfolioId.id())
-        .map(mapper::toDomain);
+  public Optional<Transaction> findByIdempotencyKeyAndPortfolioId(UUID idempotencyKey,
+      PortfolioId portfolioId) {
+    return jpaRepository.findByIdempotencyKeyAndPortfolioId(idempotencyKey.toString(),
+        portfolioId.id()).map(mapper::toDomain);
   }
 
   @Override
   public int countExcludedPositionAffecting(AccountId accountId) {
-    return (int) jpaRepository.countExcludedPositionAffecting(UUID.fromString(accountId.toString()));
+    return (int) jpaRepository.countExcludedPositionAffecting(
+        UUID.fromString(accountId.toString()));
   }
 }

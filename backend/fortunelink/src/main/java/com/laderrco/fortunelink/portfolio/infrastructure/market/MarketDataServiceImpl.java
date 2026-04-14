@@ -11,7 +11,14 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.redis.CacheKeyFa
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -63,13 +70,12 @@ public class MarketDataServiceImpl implements MarketDataService {
 
   @Override
   public Map<AssetSymbol, MarketAssetQuote> getBatchQuotes(Set<AssetSymbol> symbols) {
-    if (symbols.isEmpty())
+    if (symbols.isEmpty()) {
       return Map.of();
+    }
 
     List<AssetSymbol> symbolList = new ArrayList<>(symbols);
-    List<String> keys = symbolList.stream()
-        .map(s -> keyFactory.price(s.symbol()))
-        .toList();
+    List<String> keys = symbolList.stream().map(s -> keyFactory.price(s.symbol())).toList();
 
     List<MarketAssetQuote> cachedList = quoteRedis.opsForValue().multiGet(keys);
 
@@ -88,9 +94,9 @@ public class MarketDataServiceImpl implements MarketDataService {
     if (!misses.isEmpty()) {
 
       // Get currencies in ONE DB call
-      Map<AssetSymbol, Currency> currencies = infoRepository.findBySymbols(misses)
-          .entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
-              e -> e.getValue().tradingCurrency()));
+      Map<AssetSymbol, Currency> currencies = infoRepository.findBySymbols(misses).entrySet()
+          .stream()
+          .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().tradingCurrency()));
 
       Map<AssetSymbol, MarketAssetQuote> fetched = provider.fetchBatchQuotes(misses, currencies);
 
@@ -108,13 +114,12 @@ public class MarketDataServiceImpl implements MarketDataService {
 
   @Override
   public Map<AssetSymbol, MarketAssetInfo> getBatchAssetInfo(Set<AssetSymbol> symbols) {
-    if (symbols.isEmpty())
+    if (symbols.isEmpty()) {
       return Map.of();
+    }
 
     List<AssetSymbol> symbolList = new ArrayList<>(symbols);
-    List<String> keys = symbolList.stream()
-        .map(s -> keyFactory.assetInfo(s.symbol()))
-        .toList();
+    List<String> keys = symbolList.stream().map(s -> keyFactory.assetInfo(s.symbol())).toList();
 
     List<MarketAssetInfo> cachedList = infoRedis.opsForValue().multiGet(keys);
 
@@ -190,12 +195,11 @@ public class MarketDataServiceImpl implements MarketDataService {
   @Override
   public Currency getTradingCurrency(AssetSymbol symbol) {
     // Fallback safety (should rarely happen)
-    return getAssetInfo(symbol)
-        .map(MarketAssetInfo::tradingCurrency).orElseGet(() -> {
-          Currency fetched = provider.fetchTradingCurrency(symbol);
-          log.warn("Currency fallback used for {}", symbol.symbol());
-          return fetched;
-        });
+    return getAssetInfo(symbol).map(MarketAssetInfo::tradingCurrency).orElseGet(() -> {
+      Currency fetched = provider.fetchTradingCurrency(symbol);
+      log.warn("Currency fallback used for {}", symbol.symbol());
+      return fetched;
+    });
   }
 
   @Override
@@ -210,13 +214,13 @@ public class MarketDataServiceImpl implements MarketDataService {
 
   @Override
   public MarketAssetInfo validateAndGet(AssetSymbol symbol) {
-    return getAssetInfo(symbol)
-        .orElseThrow(() -> new UnknownSymbolException(symbol.symbol()));
+    return getAssetInfo(symbol).orElseThrow(() -> new UnknownSymbolException(symbol.symbol()));
   }
 
   private void writeAssetInfoToCache(Map<String, MarketAssetInfo> data) {
-    if (data.isEmpty())
+    if (data.isEmpty()) {
       return;
+    }
 
     infoRedis.opsForValue().multiSet(data);
     data.keySet().forEach(k -> infoRedis.expire(k, Duration.ofSeconds(assetInfoTtl)));

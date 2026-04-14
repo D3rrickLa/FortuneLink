@@ -121,7 +121,7 @@ public class Portfolio {
     }
 
     Account account = getAccount(accountId);
-    
+
     if (account.getState() == AccountLifecycleState.CLOSED) {
       throw new IllegalStateException("Cannot rename a closed account.");
     }

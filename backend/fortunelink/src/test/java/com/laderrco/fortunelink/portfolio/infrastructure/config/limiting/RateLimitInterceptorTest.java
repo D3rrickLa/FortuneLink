@@ -1,7 +1,11 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.config.limiting;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,9 +15,7 @@ import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.distributed.BucketProxy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.distributed.proxy.RemoteBucketBuilder;
-
 import java.util.function.Supplier;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,17 +48,14 @@ class RateLimitInterceptorTest {
 
   @BeforeEach
   void setUp() {
-    RateLimitInterceptor interceptor = new RateLimitInterceptor(
-        proxyManager, globalConfig, marketConfig, csvConfig);
+    RateLimitInterceptor interceptor = new RateLimitInterceptor(proxyManager, globalConfig,
+        marketConfig, csvConfig);
 
-    this.mockMvc = MockMvcBuilders
-        .standaloneSetup(new TestController())
-        .addInterceptors(interceptor)
-        .build();
+    this.mockMvc = MockMvcBuilders.standaloneSetup(new TestController())
+        .addInterceptors(interceptor).build();
 
     when(proxyManager.builder()).thenReturn(bucketBuilder);
-    when(bucketBuilder.build(anyString(), any(Supplier.class)))
-        .thenReturn(mockBucket);
+    when(bucketBuilder.build(anyString(), any(Supplier.class))).thenReturn(mockBucket);
   }
 
   @Test
@@ -65,9 +64,7 @@ class RateLimitInterceptorTest {
     when(probe.isConsumed()).thenReturn(true);
     when(probe.getRemainingTokens()).thenReturn(5L);
 
-    mockMvc.perform(get("/api/v1/any-url")
-        .remoteAddress("127.0.0.1"))
-        .andExpect(status().isOk())
+    mockMvc.perform(get("/api/v1/any-url").remoteAddress("127.0.0.1")).andExpect(status().isOk())
         .andExpect(header().string("X-Rate-Limit-Remaining", "5"));
   }
 
@@ -76,12 +73,9 @@ class RateLimitInterceptorTest {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(true);
 
-    
-    mockMvc.perform(get("/api/v1/portfolios/123/details")
-        .remoteAddress("2.2.2.2"))
+    mockMvc.perform(get("/api/v1/portfolios/123/details").remoteAddress("2.2.2.2"))
         .andExpect(status().isOk());
 
-    
     verify(bucketBuilder).build(eq("2.2.2.2:global"), any(java.util.function.Supplier.class));
   }
 
@@ -90,12 +84,9 @@ class RateLimitInterceptorTest {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(true);
 
-    mockMvc.perform(get("/api/v1/other")
-        .remoteAddress("3.3.3.3"))
-        .andExpect(status().isOk());
+    mockMvc.perform(get("/api/v1/other").remoteAddress("3.3.3.3")).andExpect(status().isOk());
 
-    verify(bucketBuilder).build(
-        eq("3.3.3.3:global"),
+    verify(bucketBuilder).build(eq("3.3.3.3:global"),
         argThat((Supplier<BucketConfiguration> s) -> s.get() == globalConfig));
   }
 
@@ -103,10 +94,9 @@ class RateLimitInterceptorTest {
   void shouldRejectWith429WhenLimitExceeded() throws Exception {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(false);
-    when(probe.getNanosToWaitForRefill()).thenReturn(5_000_000_000L); 
+    when(probe.getNanosToWaitForRefill()).thenReturn(5_000_000_000L);
 
-    mockMvc.perform(get("/api/v1/any-url")
-        .remoteAddress("127.0.0.1"))
+    mockMvc.perform(get("/api/v1/any-url").remoteAddress("127.0.0.1"))
         .andExpect(status().isTooManyRequests())
         .andExpect(header().string("X-Rate-Limit-Retry-After-Seconds", "5"));
   }
@@ -116,8 +106,7 @@ class RateLimitInterceptorTest {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(true);
 
-    mockMvc.perform(get("/api/v1/market-data/price")
-        .remoteAddress("192.168.1.1"))
+    mockMvc.perform(get("/api/v1/market-data/price").remoteAddress("192.168.1.1"))
         .andExpect(status().isOk());
 
     verify(bucketBuilder).build(eq("192.168.1.1:market"), any(java.util.function.Supplier.class));
@@ -128,14 +117,13 @@ class RateLimitInterceptorTest {
     when(mockBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
     when(probe.isConsumed()).thenReturn(true);
 
-    mockMvc.perform(get("/api/v1/portfolios/123/import")
-        .remoteAddress("1.1.1.1"))
+    mockMvc.perform(get("/api/v1/portfolios/123/import").remoteAddress("1.1.1.1"))
         .andExpect(status().isOk());
 
     verify(bucketBuilder).build(eq("1.1.1.1:csvImport"), any(java.util.function.Supplier.class));
   }
 
-  
+
   @RestController
   private static class TestController {
     @GetMapping("/**")

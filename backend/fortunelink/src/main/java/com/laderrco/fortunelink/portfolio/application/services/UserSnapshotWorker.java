@@ -1,12 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
@@ -19,10 +12,14 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.NetWorthSnapshotRe
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
 import jakarta.transaction.Transactional;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -41,16 +38,15 @@ public class UserSnapshotWorker {
     }
 
     List<Portfolio> portfolios = portfolioRepository.findAllActiveByUserId(userId);
-    if (portfolios.isEmpty())
+    if (portfolios.isEmpty()) {
       return false;
+    }
 
     Set<AssetSymbol> allSymbols = portfolios.stream()
-        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream())
-        .collect(Collectors.toSet());
+        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
-        ? Map.of()
-        : marketDataService.getBatchQuotes(allSymbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache =
+        allSymbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
 
     var primary = portfolios.get(0);
     var displayCurrency = primary.getDisplayCurrency();
@@ -59,11 +55,11 @@ public class UserSnapshotWorker {
         .map(p -> portfolioValuationService.calculateTotalValue(p, displayCurrency, quoteCache))
         .reduce(Money.zero(displayCurrency), Money::add);
 
-    boolean hasStale = portfolios.stream()
-        .flatMap(p -> p.getAccounts().stream())
+    boolean hasStale = portfolios.stream().flatMap(p -> p.getAccounts().stream())
         .anyMatch(Account::isStale);
 
-    var snapshot = NetWorthSnapshot.create(userId, totalAssets, Money.zero(displayCurrency), displayCurrency, hasStale);
+    var snapshot = NetWorthSnapshot.create(userId, totalAssets, Money.zero(displayCurrency),
+        displayCurrency, hasStale);
     snapshotRepository.save(snapshot);
     return true;
   }

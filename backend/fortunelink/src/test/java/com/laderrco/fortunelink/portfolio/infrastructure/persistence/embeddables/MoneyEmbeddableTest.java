@@ -1,10 +1,10 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.embeddables;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.math.BigDecimal;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("MoneyEmbeddable Unit Tests")
 class MoneyEmbeddableTest {
@@ -12,14 +12,12 @@ class MoneyEmbeddableTest {
   @Test
   @DisplayName("Constructor and Getters should preserve values and precision")
   void constructorAndGettersShouldWork() {
-    
+
     BigDecimal amount = new BigDecimal("1234.5678901234");
     String currency = "USD";
 
-    
     MoneyEmbeddable embeddable = new MoneyEmbeddable(amount, currency);
 
-    
     assertThat(embeddable.getAmount()).isEqualByComparingTo(amount);
     assertThat(embeddable.getCurrencyCode()).isEqualTo("USD");
   }
@@ -27,7 +25,7 @@ class MoneyEmbeddableTest {
   @Test
   @DisplayName("JPA requirements: should have a protected no-args constructor")
   void shouldHaveProtectedNoArgsConstructor() {
-    
+
     MoneyEmbeddable embeddable = new MoneyEmbeddable() {
     };
 

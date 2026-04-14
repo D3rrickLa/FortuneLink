@@ -24,16 +24,13 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import org.springframework.data.domain.Persistable;
 
 /**
  * Persistence model for {@code Account}.
  * <p>
- * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and
- * one-directional collections
- * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and
- * {@code RealizedGainJpaEntity}.
+ * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and one-directional collections
+ * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and {@code RealizedGainJpaEntity}.
  */
 @Entity
 @Getter
@@ -46,8 +43,8 @@ public class AccountJpaEntity implements Persistable<UUID> {
   // if a single portoflio lods like 3 years of active trading, that's 100+
   // records, each time they open the portfolio page, each one is 'loaded', LAZY
   // to solve this
-  @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
-      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
+      CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
   private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
   @Id
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
@@ -156,15 +153,12 @@ public class AccountJpaEntity implements Persistable<UUID> {
   }
 
   /**
-   * Appends only NEW realized gain rows, those whose UUID does not already exist
-   * in the persisted
-   * collection. This is the correct operation for append-only domain data. Never
-   * call clear() on
+   * Appends only NEW realized gain rows, those whose UUID does not already exist in the persisted
+   * collection. This is the correct operation for append-only domain data. Never call clear() on
    * realizedGains.
    *
    * <p>
-   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing
-   * only the delta
+   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing only the delta
    * here.
    */
   public void addNewRealizedGains(List<RealizedGainJpaEntity> newGains) {

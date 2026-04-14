@@ -45,7 +45,6 @@ class ValidationUtilsTest {
 
       assertTrue(ex.getMessage().contains("CreateAccount"));
 
-      
       assertEquals(errorList, ex.getErrors());
     }
 
@@ -174,12 +173,11 @@ class ValidationUtilsTest {
   class CurrencyValidationTests {
     @ParameterizedTest
     @CsvSource(value = {"USD, true", "EUR, true", "INVALID, false", "null, false", "' ', false"
-        
+
     }, nullValues = "null")
     @DisplayName("isValidCurrency: should return correct boolean for currency codes including nulls")
     void isValidCurrencyshouldReturnExpectedResult(String code, boolean expected) {
-      
-      
+
       assertEquals(expected, ValidationUtils.isValidCurrency(code));
     }
   }

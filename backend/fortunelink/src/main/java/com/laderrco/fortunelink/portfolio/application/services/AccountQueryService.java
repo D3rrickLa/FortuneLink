@@ -18,8 +18,10 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
-
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,14 +33,11 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Account-level read operations.
  * <p>
- * getAllAccounts: paginated, does NOT load the Portfolio aggregate. Queries
- * accounts table directly
- * -> batch-fetches symbols -> batch-fetches quotes. Three DB/cache hits total
- * regardless of how
+ * getAllAccounts: paginated, does NOT load the Portfolio aggregate. Queries accounts table directly
+ * -> batch-fetches symbols -> batch-fetches quotes. Three DB/cache hits total regardless of how
  * many accounts are on the page.
  * <p>
- * getAccountSummary: single account, DOES load the aggregate because it needs
- * full position detail
+ * getAccountSummary: single account, DOES load the aggregate because it needs full position detail
  * (quantity, cost basis per lot, etc.) for the detail view.
  */
 @Service
@@ -64,9 +63,9 @@ public class AccountQueryService {
 
     List<AccountSummaryProjection> projections = page.getContent();
 
-    boolean hasActiveAccounts = projections.stream()
-        .anyMatch(p -> !AccountLifecycleState.CLOSED.name().equals(p.getLifecycleState()) &&
-            !AccountLifecycleState.REPLAYING.name().equals(p.getLifecycleState()));
+    boolean hasActiveAccounts = projections.stream().anyMatch(
+        p -> !AccountLifecycleState.CLOSED.name().equals(p.getLifecycleState())
+            && !AccountLifecycleState.REPLAYING.name().equals(p.getLifecycleState()));
 
     if (!hasActiveAccounts) {
       List<AccountView> content = projections.stream()
@@ -76,26 +75,23 @@ public class AccountQueryService {
     }
 
     List<AccountId> accountIds = projections.stream()
-        .map(a -> AccountId.fromString(a.getId().toString()))
-        .toList();
+        .map(a -> AccountId.fromString(a.getId().toString())).toList();
 
-    Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository
-        .findQuantitiesForAccounts(accountIds);
+    Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository.findQuantitiesForAccounts(
+        accountIds);
 
     Set<AssetSymbol> allSymbols = quantitiesByAccount.values().stream()
-        .flatMap(m -> m.keySet().stream())
-        .collect(Collectors.toSet());
+        .flatMap(m -> m.keySet().stream()).collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
-        ? Map.of()
-        : marketDataService.getBatchQuotes(allSymbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache =
+        allSymbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
 
     List<AccountView> content = projections.stream().map(projection -> {
       AccountId currentId = AccountId.fromString(projection.getId().toString());
       var accountQuantities = quantitiesByAccount.getOrDefault(currentId, Map.of());
 
-      return accountViewBuilder.buildFromProjection(
-          projection, accountQuantities, quoteCache, Map.of());
+      return accountViewBuilder.buildFromProjection(projection, accountQuantities, quoteCache,
+          Map.of());
     }).toList();
 
     return new PageImpl<>(content, pageable, page.getTotalElements());
@@ -105,7 +101,7 @@ public class AccountQueryService {
     Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
     Account account = accountQueryRepository.findByIdWithDetails(query.accountId(),
-        query.portfolioId(), query.userId())
+            query.portfolioId(), query.userId())
         .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));
 
     if (account.getPositionCount() == 0) {

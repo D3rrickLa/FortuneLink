@@ -11,7 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Profile({ "local", "test" })
+@Profile({"local", "test"})
 @Order(1)
 @Configuration
 @EnableWebSecurity
@@ -20,8 +20,8 @@ public class LocalSecurityConfig {
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable).authorizeHttpRequests(
-        auth -> auth.requestMatchers("/actuator/health", "/public/health").permitAll().anyRequest().authenticated())
-        .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            auth -> auth.requestMatchers("/actuator/health", "/public/health").permitAll().anyRequest()
+                .authenticated()).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
         .build();
   }
 

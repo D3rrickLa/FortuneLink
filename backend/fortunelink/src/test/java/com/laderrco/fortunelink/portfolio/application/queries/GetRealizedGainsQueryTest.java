@@ -49,25 +49,23 @@ class GetRealizedGainsQueryTest {
     @Test
     @DisplayName("Constructor: throws exception when portfolioId is null")
     void throwsOnNullPortfolioId() {
-      assertThatThrownBy(
-          () -> new GetRealizedGainsQuery(null, USER_ID, ACCOUNT_ID, null, null, 0, 10))
-          .isInstanceOf(IllegalArgumentException.class).hasMessage("PortfolioId required");
+      assertThatThrownBy(() -> new GetRealizedGainsQuery(null, USER_ID, ACCOUNT_ID, null, null, 0,
+          10)).isInstanceOf(IllegalArgumentException.class).hasMessage("PortfolioId required");
     }
 
     @Test
     @DisplayName("Constructor: throws exception when userId is null")
     void throwsOnNullUserId() {
       assertThatThrownBy(
-          () -> new GetRealizedGainsQuery(PORTFOLIO_ID, null, ACCOUNT_ID, null, null, 0, 10))
-          .isInstanceOf(IllegalArgumentException.class).hasMessage("UserId required");
+          () -> new GetRealizedGainsQuery(PORTFOLIO_ID, null, ACCOUNT_ID, null, null, 0,
+              10)).isInstanceOf(IllegalArgumentException.class).hasMessage("UserId required");
     }
 
     @Test
     @DisplayName("Constructor: throws exception when accountId is null")
     void throwsOnNullAccountId() {
-      assertThatThrownBy(
-          () -> new GetRealizedGainsQuery(PORTFOLIO_ID, USER_ID, null, null, null, 0, 10))
-          .isInstanceOf(IllegalArgumentException.class).hasMessage("AccountId required");
+      assertThatThrownBy(() -> new GetRealizedGainsQuery(PORTFOLIO_ID, USER_ID, null, null, null, 0,
+          10)).isInstanceOf(IllegalArgumentException.class).hasMessage("AccountId required");
     }
 
     @Test
@@ -87,7 +85,8 @@ class GetRealizedGainsQueryTest {
       assertThat(pageable.getPageNumber()).isEqualTo(2);
       assertThat(pageable.getPageSize()).isEqualTo(50);
       assertThat(pageable.getSort().getOrderFor("occurredAt")).isNotNull();
-      assertThat(pageable.getSort().getOrderFor("occurredAt").getDirection()).isEqualTo(Sort.Direction.DESC);
+      assertThat(pageable.getSort().getOrderFor("occurredAt").getDirection()).isEqualTo(
+          Sort.Direction.DESC);
     }
   }
 }

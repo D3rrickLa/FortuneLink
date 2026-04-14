@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import nl.altindag.log.LogCaptor;
@@ -27,13 +28,11 @@ class AccountHealthServiceTest {
     AccountId accountId = AccountId.newId();
     LogCaptor logCaptor = LogCaptor.forClass(AccountHealthService.class);
 
-    
     accountHealthService.markStale(accountId);
 
-    
     verify(portfolioRepository).markAccountStale(accountId);
-    assertThat(logCaptor.getInfoLogs())
-        .contains("Account " + accountId + " marked as STALE due to calculation failure.");
+    assertThat(logCaptor.getInfoLogs()).contains(
+        "Account " + accountId + " marked as STALE due to calculation failure.");
   }
 
   @Test
@@ -42,16 +41,11 @@ class AccountHealthServiceTest {
     AccountId accountId = AccountId.newId();
     LogCaptor logCaptor = LogCaptor.forClass(AccountHealthService.class);
 
-    
-    doThrow(new RuntimeException("DB Error"))
-        .when(portfolioRepository).markAccountStale(accountId);
+    doThrow(new RuntimeException("DB Error")).when(portfolioRepository).markAccountStale(accountId);
 
-    
     accountHealthService.markStale(accountId);
 
-    
-    assertThat(logCaptor.getErrorLogs())
-        .hasSize(1)
+    assertThat(logCaptor.getErrorLogs()).hasSize(1)
         .anyMatch(log -> log.contains("Failed to mark account " + accountId + " as stale"));
   }
 }

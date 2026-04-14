@@ -8,11 +8,6 @@ import org.springframework.core.convert.converter.Converter;
 class CaseInsensitiveEnumConverterFactoryTest {
 
   private final CaseInsensitiveEnumConverterFactory factory = new CaseInsensitiveEnumConverterFactory();
-  enum TestStatus {
-    ACTIVE,
-    IN_PROGRESS,
-    COMPLETED
-  }
 
   @Test
   void shouldConvertLowerCaseToEnum() {
@@ -48,18 +43,24 @@ class CaseInsensitiveEnumConverterFactoryTest {
   void shouldReturnNullForInvalidEnumValue() {
     Converter<String, TestStatus> converter = factory.getConverter(TestStatus.class);
 
-    
     assertThat(converter.convert("NOT_A_STATUS")).isNull();
   }
 
   @Test
   void shouldCreateConverterForDifferentEnumTypes() {
-    
+
     enum AnotherEnum {
-      YES, NO
+      YES,
+      NO
     }
 
     Converter<String, AnotherEnum> converter = factory.getConverter(AnotherEnum.class);
     assertThat(converter.convert("yes")).isEqualTo(AnotherEnum.YES);
+  }
+
+  enum TestStatus {
+    ACTIVE,
+    IN_PROGRESS,
+    COMPLETED
   }
 }

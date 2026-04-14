@@ -24,11 +24,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class AccountLifecycleCommandValidatorTest {
 
-  
+
   private static final String VALID_NAME = "Standard Investment Account";
-  
+
   private static final String LONG_NAME = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-  
+
   private static final String NAME_100_CHARS = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
   private static final PortfolioId PORTFOLIO_ID = PortfolioId.newId();
   private static final UserId USER_ID = UserId.random();
@@ -61,7 +61,7 @@ class AccountLifecycleCommandValidatorTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "   ", LONG_NAME })
+    @ValueSource(strings = {"", "   ", LONG_NAME})
     @DisplayName("validate: failure on invalid account names")
     void validateFailureOnInvalidNames(String invalidName) {
       var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, invalidName,
@@ -87,11 +87,13 @@ class AccountLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: failure when strategy is FIFO and not ACB")
     void validateFailureOnFifoStrategy() {
-      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, null, PositionStrategy.FIFO, null);
+      var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, null,
+          PositionStrategy.FIFO, null);
 
       ValidationResult result = validator.validate(command);
 
-      assertThat(result.errors()).contains("Strategy FIFO is not yet supported. Current tax regulations only support ACB.");
+      assertThat(result.errors()).contains(
+          "Strategy FIFO is not yet supported. Current tax regulations only support ACB.");
     }
 
     @Test
@@ -134,7 +136,7 @@ class AccountLifecycleCommandValidatorTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "", "   " })
+    @ValueSource(strings = {"", "   "})
     @DisplayName("validate: failure on invalid names during update")
     void validateFailureOnInvalidNames(String invalidName) {
       var command = new UpdateAccountCommand(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, invalidName);
@@ -189,13 +191,13 @@ class AccountLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: failure when portfolio or user IDs are invalid")
     void validateFailureOnInvalidContextIds() {
-      
+
       var command = new ReopenAccountCommand(ACCOUNT_ID, null, null);
 
       ValidationResult result = validator.validate(command);
 
       assertThat(result.isValid()).isFalse();
-      
+
       assertThat(result.errors()).hasSizeGreaterThanOrEqualTo(2);
     }
 
@@ -212,8 +214,6 @@ class AccountLifecycleCommandValidatorTest {
     void validateFailureOnInvalidCurrencyCode() {
       Currency invalidCurrency = mock(Currency.class);
 
-      
-      
       when(invalidCurrency.getCode()).thenReturn("JUNK_CODE");
 
       var command = new CreateAccountCommand(PORTFOLIO_ID, USER_ID, VALID_NAME, AccountType.RESP,
@@ -232,7 +232,7 @@ class AccountLifecycleCommandValidatorTest {
     @Test
     @DisplayName("validate: throws NullPointerException when command is null")
     void validateThrowsNpeOnNullCommand() {
-      
+
       org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
         validator.validate((CreateAccountCommand) null);
       });

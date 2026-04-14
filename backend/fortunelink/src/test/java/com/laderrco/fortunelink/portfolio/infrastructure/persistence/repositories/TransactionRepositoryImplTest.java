@@ -1,12 +1,35 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.TransactionJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers.TransactionDomainMapper;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.valueobjects.FeeAggregationResult;
-
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,18 +43,21 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.*;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransactionRepositoryImpl Unit Tests")
 class TransactionRepositoryImplTest {
 
+  private static final Pageable PAGEABLE = PageRequest.of(0, 10);
+  private static final UUID TX_UUID = UUID.randomUUID();
+  private static final UUID PORTFOLIO_UUID = UUID.randomUUID();
+  private static final UUID USER_UUID = UUID.randomUUID();
+  private static final UUID ACCOUNT_UUID = UUID.randomUUID();
+  private static final UUID IDEM_UUID = UUID.randomUUID();
+  private static final TransactionId TX_ID = new TransactionId(TX_UUID);
+  private static final PortfolioId PORTFOLIO_ID = PortfolioId.fromString(PORTFOLIO_UUID.toString());
+  private static final UserId USER_ID = new UserId(USER_UUID);
+  private static final AccountId ACCOUNT_ID = new AccountId(ACCOUNT_UUID);
+  private static final AssetSymbol SYMBOL = new AssetSymbol("MSFT");
   @Mock
   private JpaTransactionRepository jpaRepository;
   @Mock
@@ -40,22 +66,14 @@ class TransactionRepositoryImplTest {
   private CacheManager cacheManager;
   @Mock
   private Cache cache;
-
   @InjectMocks
   private TransactionRepositoryImpl repository;
 
-  private static final Pageable PAGEABLE = PageRequest.of(0, 10);
-  private static final UUID TX_UUID = UUID.randomUUID();
-  private static final UUID PORTFOLIO_UUID = UUID.randomUUID();
-  private static final UUID USER_UUID = UUID.randomUUID();
-  private static final UUID ACCOUNT_UUID = UUID.randomUUID();
-  private static final UUID IDEM_UUID = UUID.randomUUID();
-
-  private static final TransactionId TX_ID = new TransactionId(TX_UUID);
-  private static final PortfolioId PORTFOLIO_ID = PortfolioId.fromString(PORTFOLIO_UUID.toString());
-  private static final UserId USER_ID = new UserId(USER_UUID);
-  private static final AccountId ACCOUNT_ID = new AccountId(ACCOUNT_UUID);
-  private static final AssetSymbol SYMBOL = new AssetSymbol("MSFT");
+  private TransactionJpaEntity createTransaction() {
+    return TransactionJpaEntity.create(TX_UUID, PORTFOLIO_UUID, ACCOUNT_UUID, "BUY", null, null,
+        null, null, null, null, null, null, null, null, false, null, IDEM_UUID, null, null, null,
+        null, ACCOUNT_UUID, null);
+  }
 
   @Nested
   @DisplayName("Save Logic Branching")
@@ -108,17 +126,15 @@ class TransactionRepositoryImplTest {
       void findByAccountIdAndSymbolShouldReturnMappedList() {
 
         TransactionJpaEntity entity = createTransaction();
-        when(jpaRepository.findByAccountIdAndExecutionSymbol(ACCOUNT_UUID, "MSFT"))
-            .thenReturn(List.of(entity));
+        when(jpaRepository.findByAccountIdAndExecutionSymbol(ACCOUNT_UUID, "MSFT")).thenReturn(
+            List.of(entity));
 
         Transaction domainMock = mock(Transaction.class);
         when(mapper.toDomain(entity)).thenReturn(domainMock);
 
         List<Transaction> results = repository.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL);
 
-        assertThat(results)
-            .hasSize(1)
-            .containsExactly(domainMock);
+        assertThat(results).hasSize(1).containsExactly(domainMock);
 
         verify(jpaRepository).findByAccountIdAndExecutionSymbol(ACCOUNT_UUID, "MSFT");
         verify(mapper).toDomain(entity);
@@ -128,8 +144,8 @@ class TransactionRepositoryImplTest {
       @DisplayName("findByAccountIdAndSymbol should return empty list when no transactions found")
       void findByAccountIdAndSymbolShouldReturnEmptyList() {
 
-        when(jpaRepository.findByAccountIdAndExecutionSymbol(any(), anyString()))
-            .thenReturn(Collections.emptyList());
+        when(jpaRepository.findByAccountIdAndExecutionSymbol(any(), anyString())).thenReturn(
+            Collections.emptyList());
 
         List<Transaction> results = repository.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL);
 
@@ -150,7 +166,8 @@ class TransactionRepositoryImplTest {
       Map<AssetSymbol, Money> cachedData = Map.of(SYMBOL, mock(Money.class));
       when(cache.get("account:" + ACCOUNT_UUID, Map.class)).thenReturn(cachedData);
 
-      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(Set.of(ACCOUNT_ID));
+      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(
+          Set.of(ACCOUNT_ID));
 
       assertThat(result).containsKey(ACCOUNT_ID);
       assertThat(result.get(ACCOUNT_ID)).isEqualTo(cachedData);
@@ -162,9 +179,11 @@ class TransactionRepositoryImplTest {
     void sumBuyFeesShouldFetchFromDbOnMiss() {
       when(cacheManager.getCache("fees:buy")).thenReturn(cache);
       when(cache.get(anyString(), eq(Map.class))).thenReturn(null);
-      when(jpaRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(Collections.emptyList());
+      when(jpaRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(
+          Collections.emptyList());
 
-      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(Set.of(ACCOUNT_ID));
+      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(
+          Set.of(ACCOUNT_ID));
 
       assertThat(result).containsKey(ACCOUNT_ID);
       verify(jpaRepository).sumBuyFeesByAccountAndSymbol(List.of(ACCOUNT_UUID));
@@ -231,14 +250,16 @@ class TransactionRepositoryImplTest {
     @DisplayName("findByPortfolioIdAndUserIdAndAccountId should map results to domain")
     void findByPortfolioIdAndUserIdAndAccountIdShouldReturnDomainList() {
       TransactionJpaEntity entity = createTransaction();
-      when(jpaRepository.findByPortfolioIdAndUserIdAndAccountId(PORTFOLIO_UUID, USER_UUID, ACCOUNT_UUID))
-          .thenReturn(List.of(entity));
+      when(jpaRepository.findByPortfolioIdAndUserIdAndAccountId(PORTFOLIO_UUID, USER_UUID,
+          ACCOUNT_UUID)).thenReturn(List.of(entity));
       when(mapper.toDomain(entity)).thenReturn(mock(Transaction.class));
 
-      List<Transaction> results = repository.findByPortfolioIdAndUserIdAndAccountId(PORTFOLIO_ID, USER_ID, ACCOUNT_ID);
+      List<Transaction> results = repository.findByPortfolioIdAndUserIdAndAccountId(PORTFOLIO_ID,
+          USER_ID, ACCOUNT_ID);
 
       assertThat(results).hasSize(1);
-      verify(jpaRepository).findByPortfolioIdAndUserIdAndAccountId(PORTFOLIO_UUID, USER_UUID, ACCOUNT_UUID);
+      verify(jpaRepository).findByPortfolioIdAndUserIdAndAccountId(PORTFOLIO_UUID, USER_UUID,
+          ACCOUNT_UUID);
     }
 
     @Test
@@ -246,8 +267,8 @@ class TransactionRepositoryImplTest {
     void findByAccountIdAndDateRangeShouldReturnDomainList() {
       Instant start = Instant.now().minusSeconds(3600);
       Instant end = Instant.now();
-      when(jpaRepository.findByAccountIdAndOccurredAtBetween(ACCOUNT_UUID, start, end))
-          .thenReturn(List.of(createTransaction()));
+      when(jpaRepository.findByAccountIdAndOccurredAtBetween(ACCOUNT_UUID, start, end)).thenReturn(
+          List.of(createTransaction()));
       when(mapper.toDomain(any())).thenReturn(mock(Transaction.class));
 
       List<Transaction> results = repository.findByAccountIdAndDateRange(ACCOUNT_ID, start, end);
@@ -259,12 +280,12 @@ class TransactionRepositoryImplTest {
     @DisplayName("findByIdAndPortfolioIdAndUserIdAndAccountId should map optional domain")
     void findByIdAndPortfolioIdAndUserIdAndAccountIdShouldReturnOptional() {
       TransactionJpaEntity entity = createTransaction();
-      when(jpaRepository.findByIdAndPortfolioIdAndAccountId(TX_UUID, PORTFOLIO_UUID, ACCOUNT_UUID))
-          .thenReturn(Optional.of(entity));
+      when(jpaRepository.findByIdAndPortfolioIdAndAccountId(TX_UUID, PORTFOLIO_UUID,
+          ACCOUNT_UUID)).thenReturn(Optional.of(entity));
       when(mapper.toDomain(entity)).thenReturn(mock(Transaction.class));
 
-      Optional<Transaction> result = repository.findByIdAndPortfolioIdAndUserIdAndAccountId(TX_ID, PORTFOLIO_ID,
-          USER_ID, ACCOUNT_ID);
+      Optional<Transaction> result = repository.findByIdAndPortfolioIdAndUserIdAndAccountId(TX_ID,
+          PORTFOLIO_ID, USER_ID, ACCOUNT_ID);
 
       assertThat(result).isPresent();
     }
@@ -279,8 +300,8 @@ class TransactionRepositoryImplTest {
     void findTransactionsDynamicShouldCallJpa() {
       Instant start = Instant.now();
       Instant end = Instant.now();
-      when(jpaRepository.findTransactionsDynamic(ACCOUNT_UUID, "MSFT", start, end, PAGEABLE))
-          .thenReturn(Page.empty());
+      when(jpaRepository.findTransactionsDynamic(ACCOUNT_UUID, "MSFT", start, end,
+          PAGEABLE)).thenReturn(Page.empty());
 
       repository.findTransactionsDynamic(ACCOUNT_ID, SYMBOL, start, end, PAGEABLE);
 
@@ -308,12 +329,13 @@ class TransactionRepositoryImplTest {
     @Test
     @DisplayName("findByIdempotencyKeyAndPortfolioId should convert key to string")
     void findByIdempotencyKeyAndPortfolioIdShouldCallJpa() {
-      when(jpaRepository.findByIdempotencyKeyAndPortfolioId(IDEM_UUID.toString(), PORTFOLIO_UUID))
-          .thenReturn(Optional.empty());
+      when(jpaRepository.findByIdempotencyKeyAndPortfolioId(IDEM_UUID.toString(),
+          PORTFOLIO_UUID)).thenReturn(Optional.empty());
 
       repository.findByIdempotencyKeyAndPortfolioId(IDEM_UUID, PORTFOLIO_ID);
 
-      verify(jpaRepository).findByIdempotencyKeyAndPortfolioId(IDEM_UUID.toString(), PORTFOLIO_UUID);
+      verify(jpaRepository).findByIdempotencyKeyAndPortfolioId(IDEM_UUID.toString(),
+          PORTFOLIO_UUID);
     }
 
     @Test
@@ -353,10 +375,10 @@ class TransactionRepositoryImplTest {
       when(mockResult.getTotalFees()).thenReturn(new BigDecimal("10.50"));
       when(mockResult.getCurrency()).thenReturn("USD");
 
-      when(jpaRepository.sumBuyFeesByAccountAndSymbol(anyList()))
-          .thenReturn(List.of(mockResult));
+      when(jpaRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(List.of(mockResult));
 
-      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(Set.of(ACCOUNT_ID));
+      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(
+          Set.of(ACCOUNT_ID));
 
       assertThat(result).containsKey(ACCOUNT_ID);
       Map<AssetSymbol, Money> accountFees = result.get(ACCOUNT_ID);
@@ -371,7 +393,8 @@ class TransactionRepositoryImplTest {
       when(cacheManager.getCache("fees:buy")).thenReturn(null);
       when(jpaRepository.sumBuyFeesByAccountAndSymbol(anyList())).thenReturn(List.of());
 
-      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(Set.of(ACCOUNT_ID));
+      Map<AccountId, Map<AssetSymbol, Money>> result = repository.sumBuyFeesBySymbolForAccounts(
+          Set.of(ACCOUNT_ID));
 
       assertThat(result).containsKey(ACCOUNT_ID);
       assertThat(result.get(ACCOUNT_ID)).isEmpty();
@@ -390,10 +413,5 @@ class TransactionRepositoryImplTest {
 
       verify(cache).put(eq("account:" + ACCOUNT_UUID), anyMap());
     }
-  }
-
-  private TransactionJpaEntity createTransaction() {
-    return TransactionJpaEntity.create(TX_UUID, PORTFOLIO_UUID, ACCOUNT_UUID, "BUY", null, null, null, null, null, null,
-        null, null, null, null, false, null, IDEM_UUID, null, null, null, null, ACCOUNT_UUID, null);
   }
 }

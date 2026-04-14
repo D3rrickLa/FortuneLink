@@ -3,9 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.views;
 import java.util.List;
 
 public record CsvImportResult(
-    boolean success,
-    int rowsCommitted,
-    List<CsvRowError> errors) {
+    boolean success, int rowsCommitted, List<CsvRowError> errors) {
 
   public static CsvImportResult success(int count) {
     return new CsvImportResult(true, count, List.of());

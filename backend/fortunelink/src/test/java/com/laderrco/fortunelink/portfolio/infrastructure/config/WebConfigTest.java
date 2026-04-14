@@ -4,7 +4,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUserResolver;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +21,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUserResolver;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @WebMvcTest(controllers = TestController.class)
 @Import(WebConfig.class)
@@ -45,7 +43,7 @@ class WebConfigTest {
 
   @BeforeEach
   void setUp() {
-    
+
     when(authenticatedUserResolver.supportsParameter(any())).thenReturn(false);
   }
 
@@ -53,8 +51,7 @@ class WebConfigTest {
   void shouldRegisterRateLimitInterceptor() throws Exception {
     when(rateLimitInterceptor.preHandle(any(), any(), any())).thenReturn(true);
 
-    mockMvc.perform(get("/api/test").with(user("test")))
-        .andExpect(status().isOk()); 
+    mockMvc.perform(get("/api/test").with(user("test"))).andExpect(status().isOk());
 
     verify(rateLimitInterceptor, atLeastOnce()).preHandle(any(), any(), any());
   }

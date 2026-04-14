@@ -32,7 +32,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Transaction;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetInfo;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.MarketAssetInfoRepository;
@@ -42,7 +47,6 @@ import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.TransactionRecordingService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempotency.IdempotencyCache;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
@@ -51,7 +55,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +95,8 @@ public class TransactionService {
   private final IdempotencyCache idempotencyCache; // Inject the Caffeine bean
 
   @Recover
-  public TransactionView recover(ObjectOptimisticLockingFailureException ex, TransactionCommand cmd) {
+  public TransactionView recover(ObjectOptimisticLockingFailureException ex,
+      TransactionCommand cmd) {
     log.warn("Triggering recovery");
     return handleOptimisticLockFailure(ex, cmd.accountId());
   }
@@ -112,7 +116,8 @@ public class TransactionService {
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
       // 1. Process and convert the fees here
-      List<Fee> convertedFees = processFees(command.fees(), ctx.account(), command.transactionDate());
+      List<Fee> convertedFees = processFees(command.fees(), ctx.account(),
+          command.transactionDate());
 
       // 2. Pass the convertedFees (not command.fees()) to the recording service
       return transactionRecordingService.recordBuy(ctx.account(), symbol, resolvedType,
@@ -131,7 +136,8 @@ public class TransactionService {
       Price price = resolvePrice(command.price(), ctx.account().getAccountCurrency());
 
       // 1. Process and convert the fees here
-      List<Fee> convertedFees = processFees(command.fees(), ctx.account(), command.transactionDate());
+      List<Fee> convertedFees = processFees(command.fees(), ctx.account(),
+          command.transactionDate());
 
       // 2. Pass the convertedFees to the recording service
       return transactionRecordingService.recordSell(ctx.account(), symbol, command.quantity(),
@@ -159,7 +165,8 @@ public class TransactionService {
 
   public TransactionView recordInterest(RecordInterestCommand command) {
     return execute(command, validator::validate, "recordInterest", ctx -> {
-      AssetSymbol symbol = command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
+      AssetSymbol symbol =
+          command.isAssetInterest() ? new AssetSymbol(command.assetSymbol()) : null;
       return transactionRecordingService.recordInterest(ctx.account(), symbol, command.amount(),
           command.notes(), command.transactionDate());
     });
@@ -207,8 +214,8 @@ public class TransactionService {
 
   public TransactionView recordTransferIn(RecordTransferInCommand command) {
     return execute(command, validator::validate, "recordTransferIn",
-        ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(), command.notes(),
-            command.transactionDate()));
+        ctx -> transactionRecordingService.recordTransferIn(ctx.account(), command.amount(),
+            command.notes(), command.transactionDate()));
   }
 
   public TransactionView recordTransferOut(RecordTransferOutCommand command) {
@@ -275,8 +282,7 @@ public class TransactionService {
     return executeWithIdempotency(command, () -> {
       PortfolioContext ctx = getPortfolioContext(command);
       Transaction tx = recordFn.apply(ctx);
-      log.info("DEBUG: account {} has {} positions after record",
-          ctx.account().getAccountId(),
+      log.info("DEBUG: account {} has {} positions after record", ctx.account().getAccountId(),
           ctx.account().getPositionEntries().size());
       persistChanges(ctx, tx, command.idempotencyKey());
       return transactionViewMapper.toTransactionView(tx);
@@ -291,8 +297,7 @@ public class TransactionService {
   }
 
   /**
-   * Persists both the portfolio aggregate and the new transaction. The
-   * portfolioId is taken
+   * Persists both the portfolio aggregate and the new transaction. The portfolioId is taken
    * directly from the in-memory context , no DB lookup.
    */
   private void persistChanges(PortfolioContext ctx, Transaction tx, UUID idempotencyKey) {
@@ -310,7 +315,7 @@ public class TransactionService {
 
   private Transaction loadTransaction(IdentifiedTransactionCommand command) {
     return transactionRepository.findByIdAndPortfolioIdAndUserIdAndAccountId(
-        command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
+            command.transactionId(), command.portfolioId(), command.userId(), command.accountId())
         .orElseThrow(() -> new TransactionNotFoundException(command.transactionId()));
   }
 
@@ -330,13 +335,10 @@ public class TransactionService {
   }
 
   /**
-   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client
-   * hint, trusted only
-   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last
-   * resort
+   * Resolution order: 1. DB/cache, authoritative for known symbols 2. Client hint, trusted only
+   * when structurally valid (not CASH, not null) 3. STOCK, safe fallback of last resort
    * <p>
-   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded
-   * into
+   * A client claiming AAPL is CRYPTO will be corrected once the symbol is seeded into
    * market_asset_info. Until then, their hint is used.
    */
   private AssetType resolveAssetType(AssetSymbol symbol, AssetType clientHint) {
@@ -359,22 +361,16 @@ public class TransactionService {
   }
 
   /**
-   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol
-   * within 24 hours of this
+   * Warns (not throws) if a DIVIDEND transaction exists for the same symbol within 24 hours of this
    * DRIP event.
    * <p>
-   * DRIP and DIVIDEND are mutually exclusive for the same event: -
-   * DIVIDEND_REINVEST = broker
-   * automatically reinvests, no cash lands - DIVIDEND = cash lands in account,
-   * user reinvests
+   * DRIP and DIVIDEND are mutually exclusive for the same event: - DIVIDEND_REINVEST = broker
+   * automatically reinvests, no cash lands - DIVIDEND = cash lands in account, user reinvests
    * manually (records as separate BUY)
    * <p>
-   * Recording both for the same event will overstate cash balance. This check is
-   * a runtime warning
-   * only , enforcement is the caller's responsibility. Callers that intentionally
-   * bypass this
-   * (e.g., CSV import correction flows) should be aware of the accounting
-   * implication.
+   * Recording both for the same event will overstate cash balance. This check is a runtime warning
+   * only , enforcement is the caller's responsibility. Callers that intentionally bypass this
+   * (e.g., CSV import correction flows) should be aware of the accounting implication.
    */
   private void warnIfDuplicateExists(AccountId accountId, TransactionType transactionType,
       AssetSymbol assetSymbol, Instant transactionDate) {
@@ -387,9 +383,9 @@ public class TransactionService {
 
     if (hasConflict) {
       log.warn("DRIP recorded for symbol={} on {} but a DIVIDEND transaction exists "
-          + "within 24 hours for the same symbol in accountId={}. "
-          + "If this is the same event, the DIVIDEND transaction will overstate "
-          + "cash balance. Review transaction history before proceeding.", assetSymbol,
+              + "within 24 hours for the same symbol in accountId={}. "
+              + "If this is the same event, the DIVIDEND transaction will overstate "
+              + "cash balance. Review transaction history before proceeding.", assetSymbol,
           transactionDate, accountId);
     }
   }
@@ -401,11 +397,12 @@ public class TransactionService {
     // 1. Initial Checks (Still good to have for performance)
     if (key != null) {
       TransactionView cached = idempotencyCache.get(key.toString());
-      if (cached != null)
+      if (cached != null) {
         return cached;
+      }
 
-      Optional<Transaction> existing = transactionRepository
-          .findByIdempotencyKeyAndPortfolioId(key, command.portfolioId());
+      Optional<Transaction> existing = transactionRepository.findByIdempotencyKeyAndPortfolioId(key,
+          command.portfolioId());
 
       if (existing.isPresent()) {
         TransactionView view = transactionViewMapper.toTransactionView(existing.get());
@@ -429,8 +426,7 @@ public class TransactionService {
       // If we hit this, it means another thread JUST saved this exact key.
       // Instead of erroring out, we act like we found it in the first place.
       if (key != null) {
-        return transactionRepository
-            .findByIdempotencyKeyAndPortfolioId(key, command.portfolioId())
+        return transactionRepository.findByIdempotencyKeyAndPortfolioId(key, command.portfolioId())
             .map(transactionViewMapper::toTransactionView)
             .orElseThrow(() -> ex); // If we still can't find it, rethrow the original error
       }
@@ -448,8 +444,7 @@ public class TransactionService {
     return fees.stream().map(fee -> {
       // If already in account currency, just stamp it with an identity rate
       if (fee.nativeAmount().currency().equals(accountCurrency)) {
-        return fee.withAccountAmount(
-            fee.nativeAmount(),
+        return fee.withAccountAmount(fee.nativeAmount(),
             ExchangeRate.identity(accountCurrency, txDate));
       }
 
@@ -458,9 +453,9 @@ public class TransactionService {
           .map(rate -> {
             Money converted = rate.convert(fee.nativeAmount());
             return fee.withAccountAmount(converted, rate);
-          })
-          .orElseThrow(() -> new ExchangeRateUnavailableException(fee.nativeAmount().currency().getCode(),
-              accountCurrency.getCode(), txDate));
+          }).orElseThrow(
+              () -> new ExchangeRateUnavailableException(fee.nativeAmount().currency().getCode(),
+                  accountCurrency.getCode(), txDate));
     }).toList();
   }
 

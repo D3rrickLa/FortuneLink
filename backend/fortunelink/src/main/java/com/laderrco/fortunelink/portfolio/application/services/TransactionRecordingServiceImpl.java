@@ -100,8 +100,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
         .cashDelta(amount).fees(List.of()).notes(notes).occurredAt(date).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol()))
-        .build();
+                .with(TransactionMetadata.KEY_SYMBOL, symbol.symbol())).build();
 
     account.deposit(amount, REASON_DIVIDEND + symbol.symbol());
     return tx;
@@ -138,8 +137,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
         .accountId(account.getAccountId()).transactionType(TransactionType.FEE)
         .cashDelta(amount.negate()).fees(List.of()).notes(notes).occurredAt((date)).metadata(
             TransactionMetadata.manual(AssetType.CASH)
-                .with(TransactionMetadata.KEY_FEE_TYPE, feeType.name()))
-        .build();
+                .with(TransactionMetadata.KEY_FEE_TYPE, feeType.name())).build();
 
     account.applyFee(amount, REASON_FEE + amount.amount().toString());
     return tx;

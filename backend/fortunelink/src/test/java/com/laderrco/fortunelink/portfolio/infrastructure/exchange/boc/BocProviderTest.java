@@ -2,9 +2,18 @@ package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.dtos.BocExchangeResponse;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -16,23 +25,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
-import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.dtos.BocExchangeResponse;
-import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BocProvider Orchestration Tests")
 class BocProviderTest {
 
+  private final Currency usd = Currency.of("USD");
+  private final Currency cad = Currency.of("CAD");
   @Mock
   private BocClient bocClient;
   @Mock
   private BocResponseMapper mapper;
-
   private BocProvider bocProvider;
-  private final Currency usd = Currency.of("USD");
-  private final Currency cad = Currency.of("CAD");
 
   @BeforeEach
   void setUp() {
@@ -50,6 +53,19 @@ class BocProviderTest {
     verifyNoInteractions(bocClient, mapper);
   }
 
+  @Test
+  @DisplayName("should throw exception if mapper returns empty list")
+  void shouldThrowExceptionWhenMapperReturnsEmpty() {
+    Instant now = Instant.now();
+    BocExchangeResponse response = new BocExchangeResponse();
+
+    when(bocClient.getLatestExchangeRate(anyString(), anyString())).thenReturn(response);
+    when(mapper.toExchangeRates(any(), anyString(), anyString())).thenReturn(List.of());
+
+    assertThatThrownBy(() -> bocProvider.getExchangeRate(usd, cad, now)).isInstanceOf(
+        ExchangeRateUnavailableException.class);
+  }
+
   @Nested
   @DisplayName("Latest Rate Logic")
   class LatestRateTests {
@@ -61,8 +77,8 @@ class BocProviderTest {
       ExchangeRate mockRate = new ExchangeRate(usd, cad, java.math.BigDecimal.valueOf(1.3), now);
 
       when(bocClient.getLatestExchangeRate(anyString(), anyString())).thenReturn(mockResponse);
-      when(mapper.toExchangeRates(eq(mockResponse), anyString(), anyString()))
-          .thenReturn(List.of(mockRate));
+      when(mapper.toExchangeRates(eq(mockResponse), anyString(), anyString())).thenReturn(
+          List.of(mockRate));
 
       ExchangeRate result = bocProvider.getExchangeRate(usd, cad, now);
 
@@ -88,14 +104,12 @@ class BocProviderTest {
 
       ExchangeRate finalRate = new ExchangeRate(usd, cad, java.math.BigDecimal.ONE, asOf);
 
-      when(bocClient.getHistoricalExchangeRate(eq("USD"), eq("CAD"), any(), any()))
-          .thenReturn(emptyResponse)
-          .thenReturn(emptyResponse)
-          .thenReturn(emptyResponse)
+      when(bocClient.getHistoricalExchangeRate(eq("USD"), eq("CAD"), any(), any())).thenReturn(
+              emptyResponse).thenReturn(emptyResponse).thenReturn(emptyResponse)
           .thenReturn(successResponse);
 
-      when(mapper.toExchangeRates(eq(successResponse), eq("USD"), eq("CAD")))
-          .thenReturn(List.of(finalRate));
+      when(mapper.toExchangeRates(eq(successResponse), eq("USD"), eq("CAD"))).thenReturn(
+          List.of(finalRate));
 
       bocProvider.getExchangeRate(usd, cad, asOf);
 
@@ -109,26 +123,13 @@ class BocProviderTest {
       BocExchangeResponse emptyResponse = new BocExchangeResponse();
       emptyResponse.setObservations(Collections.emptyList());
 
-      when(bocClient.getHistoricalExchangeRate(anyString(), anyString(), any(), any()))
-          .thenReturn(emptyResponse);
+      when(bocClient.getHistoricalExchangeRate(anyString(), anyString(), any(), any())).thenReturn(
+          emptyResponse);
 
-      assertThatThrownBy(() -> bocProvider.getExchangeRate(usd, cad, asOf))
-          .isInstanceOf(ExchangeRateUnavailableException.class);
+      assertThatThrownBy(() -> bocProvider.getExchangeRate(usd, cad, asOf)).isInstanceOf(
+          ExchangeRateUnavailableException.class);
 
       verify(bocClient, times(8)).getHistoricalExchangeRate(anyString(), anyString(), any(), any());
     }
-  }
-
-  @Test
-  @DisplayName("should throw exception if mapper returns empty list")
-  void shouldThrowExceptionWhenMapperReturnsEmpty() {
-    Instant now = Instant.now();
-    BocExchangeResponse response = new BocExchangeResponse();
-
-    when(bocClient.getLatestExchangeRate(anyString(), anyString())).thenReturn(response);
-    when(mapper.toExchangeRates(any(), anyString(), anyString())).thenReturn(List.of());
-
-    assertThatThrownBy(() -> bocProvider.getExchangeRate(usd, cad, now))
-        .isInstanceOf(ExchangeRateUnavailableException.class);
   }
 }

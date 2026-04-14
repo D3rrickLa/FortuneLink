@@ -8,7 +8,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.infrastructure.market.MarketDataProvider;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -143,13 +142,14 @@ public class FmpProvider implements MarketDataProvider {
   }
 
   private boolean tryReserve(int count) {
-    String key = "quota:fmp:" + LocalDate.now(ZoneOffset.UTC).toString();
+    String key = "quota:fmp:" + LocalDate.now(ZoneOffset.UTC);
 
     // Atomically increment
     Long current = redisTemplate.opsForValue().increment(key, count);
 
-    if (current == null)
+    if (current == null) {
       return false;
+    }
 
     // If this is the first call of the day, set expiration so Redis cleans up
     if (current <= count) {

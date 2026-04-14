@@ -18,14 +18,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
-
-import lombok.RequiredArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -34,13 +32,11 @@ public class PortfolioViewMapper {
   private final ExchangeRateService exchangeRateService; // New Dependency
 
   /**
-   * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost
-   * basis is zero/null
+   * Calculates return percentage: (gain / cost basis) * 100 Returns zero if cost basis is zero/null
    * to avoid division by zero.
    *
-   * @implNote: PercentageChange stores decimal form: 0.10 = 10%. Do NOT multiply
-   *            by 100 here,
-   *            toPercent() does that
+   * @implNote: PercentageChange stores decimal form: 0.10 = 10%. Do NOT multiply by 100 here,
+   * toPercent() does that
    */
   private static PercentageChange calculateReturnPercentage(Money gain, Money costBasis) {
     if (costBasis == null || costBasis.isZero()) {
@@ -55,8 +51,7 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Determines the cost basis methodology used by the position. Returns "ACB" for
-   * Canadian tax
+   * Determines the cost basis methodology used by the position. Returns "ACB" for Canadian tax
    * method or "FIFO" for US tax method.
    */
   private static String determineMethodology(Position position) {
@@ -67,12 +62,10 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Extracts the earliest acquisition date from the position. For ACB: would need
-   * to track
+   * Extracts the earliest acquisition date from the position. For ACB: would need to track
    * separately if you want this For FIFO: first lot's acquisition date
    * <p>
-   * NOTE: Your Position interface doesn't expose this yet. You may need to add
-   * this to the
+   * NOTE: Your Position interface doesn't expose this yet. You may need to add this to the
    * interface or track separately.
    */
   private static Instant extractFirstAcquiredDate(Position position) {
@@ -86,12 +79,10 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Extracts the most recent modification date. This would typically come from
-   * the aggregate root
+   * Extracts the most recent modification date. This would typically come from the aggregate root
    * or event sourcing.
    * <p>
-   * NOTE: Your Position interface doesn't expose this. Consider adding
-   * lastModifiedAt to Position
+   * NOTE: Your Position interface doesn't expose this. Consider adding lastModifiedAt to Position
    * interface or tracking at Account level.
    */
   private static Instant extractLastModifiedDate(Position position) {
@@ -134,23 +125,13 @@ public class PortfolioViewMapper {
   public AccountView toAccountView(Account account, List<PositionView> positionViews,
       Money totalValue, Money cashBalance, boolean hasCashImbalance, int excludedTransactionCount) {
 
-    return new AccountView(
-        account.getAccountId(),
-        account.getName(),
-        account.getAccountType(),
-        account.getState(),
-        positionViews,
-        account.getAccountCurrency(),
-        cashBalance,
-        totalValue,
-        account.getCreationDate(),
-        hasCashImbalance,
-        excludedTransactionCount);
+    return new AccountView(account.getAccountId(), account.getName(), account.getAccountType(),
+        account.getState(), positionViews, account.getAccountCurrency(), cashBalance, totalValue,
+        account.getCreationDate(), hasCashImbalance, excludedTransactionCount);
   }
 
   /**
-   * Maps a position to its view with no fee data. Used for summary screens where
-   * tax data is not
+   * Maps a position to its view with no fee data. Used for summary screens where tax data is not
    * needed. totalFeesIncurred will be Price.zero.
    */
   public PositionView toPositionView(Position position, MarketAssetQuote quote) {
@@ -158,30 +139,28 @@ public class PortfolioViewMapper {
   }
 
   /**
-   * Maps a position to its view. * Fee Display Note: Following Canadian Tax Law
-   * (CRA), fees ARE
-   * included in the position's totalCostBasis. The feesForSymbol parameter is
-   * used strictly for
+   * Maps a position to its view. * Fee Display Note: Following Canadian Tax Law (CRA), fees ARE
+   * included in the position's totalCostBasis. The feesForSymbol parameter is used strictly for
    * breakdown/display purposes (transparency).
    * <p>
-   * UI contract: Holdings screen -> totalCostBasis (already includes fees) Tax /
-   * ACB screen ->
+   * UI contract: Holdings screen -> totalCostBasis (already includes fees) Tax / ACB screen ->
    * totalCostBasis (this IS the effective ACB)
    *
    * @param position      the position value object
-   * @param quote         current market quote (nullable, falls back to cost
-   *                      basis)
+   * @param quote         current market quote (nullable, falls back to cost basis)
    * @param feesForSymbol cumulative BUY fees for this symbol in account currency
    */
-  public PositionView toPositionView(Position position, MarketAssetQuote quote, Money feesForSymbol) {
+  public PositionView toPositionView(Position position, MarketAssetQuote quote,
+      Money feesForSymbol) {
     AssetSymbol symbol = position.symbol();
     Currency currency = position.accountCurrency();
 
-    Money fees = (feesForSymbol != null && feesForSymbol.currency().equals(currency))
-        ? feesForSymbol
-        : Money.zero(currency);
+    Money fees =
+        (feesForSymbol != null && feesForSymbol.currency().equals(currency)) ? feesForSymbol
+            : Money.zero(currency);
 
-    if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit().isZero()) {
+    if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit()
+        .isZero()) {
       return new PositionView(symbol.symbol(), position.type(), position.totalQuantity(),
           new Price(position.totalCostBasis()), new Price(position.costPerUnit()), fees,
           // fees even when quote unavailable
@@ -208,13 +187,12 @@ public class PortfolioViewMapper {
     // in 'currency'
     Money unrealizedPnL = marketValue.subtract(position.totalCostBasis());
 
-    PercentageChange returnPct = calculateReturnPercentage(unrealizedPnL, position.totalCostBasis());
+    PercentageChange returnPct = calculateReturnPercentage(unrealizedPnL,
+        position.totalCostBasis());
 
-    return new PositionView(
-        symbol.symbol(), position.type(), position.totalQuantity(),
-        new Price(position.totalCostBasis()), new Price(position.costPerUnit()),
-        fees, normalizedPrice, marketValue, unrealizedPnL, returnPct,
-        determineMethodology(position), extractFirstAcquiredDate(position),
-        extractLastModifiedDate(position));
+    return new PositionView(symbol.symbol(), position.type(), position.totalQuantity(),
+        new Price(position.totalCostBasis()), new Price(position.costPerUnit()), fees,
+        normalizedPrice, marketValue, unrealizedPnL, returnPct, determineMethodology(position),
+        extractFirstAcquiredDate(position), extractLastModifiedDate(position));
   }
 }

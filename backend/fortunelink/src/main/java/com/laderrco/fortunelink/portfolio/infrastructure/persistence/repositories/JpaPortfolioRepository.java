@@ -14,33 +14,29 @@ import org.springframework.stereotype.Repository;
 /**
  * Spring Data JPA repository for {@code PortfolioJpaEntity}.
  * <p>
- * Only this interface and {@code PortfolioRepositoryImpl} interact with JPA
- * directly. The rest of
- * the application sees the domain-level {@code PortfolioRepository} interface
- * only.
+ * Only this interface and {@code PortfolioRepositoryImpl} interact with JPA directly. The rest of
+ * the application sees the domain-level {@code PortfolioRepository} interface only.
  */
 @Repository
 public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity, UUID> {
 
-  Optional<PortfolioJpaEntity> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+  Optional<PortfolioJpaEntity> findByIdAndUserId(@Param("id") UUID id,
+      @Param("userId") UUID userId);
 
   /**
-   * Fetches the portfolio with its complete account graph (accounts → positions +
-   * realized gains).
-   * Used for both reads and writes so Hibernate tracks the managed instances for
-   * dirty-checking on
+   * Fetches the portfolio with its complete account graph (accounts → positions + realized gains).
+   * Used for both reads and writes so Hibernate tracks the managed instances for dirty-checking on
    * save.
    */
-  @EntityGraph(attributePaths = { "accounts", "accounts.positions", "accounts.realizedGains" })
+  @EntityGraph(attributePaths = {"accounts", "accounts.positions", "accounts.realizedGains"})
   Optional<PortfolioJpaEntity> findWithAccountsByIdAndUserId(@Param("id") UUID id,
       @Param("userId") UUID userId);
 
   /**
-   * Returns all non-deleted portfolios for a user. Soft-deleted rows
-   * ({@code deleted = true}) are
+   * Returns all non-deleted portfolios for a user. Soft-deleted rows ({@code deleted = true}) are
    * intentionally excluded.
    */
-  @EntityGraph(attributePaths = { "accounts", "accounts.positions", "accounts.realizedGains" })
+  @EntityGraph(attributePaths = {"accounts", "accounts.positions", "accounts.realizedGains"})
   @Query("""
       SELECT p FROM PortfolioJpaEntity p
       WHERE p.userId = :userId
@@ -93,12 +89,10 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
       @Param("userId") UUID userId, @Param("accountId") UUID accountId);
 
   /**
-   * Count of active (non-deleted) portfolios per user. Used to enforce the
-   * one-portfolio-per-user
+   * Count of active (non-deleted) portfolios per user. Used to enforce the one-portfolio-per-user
    * limit.
    * <p>
-   * IMPORTANT: must exclude soft-deleted rows. See {@code PortfolioRepository}
-   * interface Javadoc
+   * IMPORTANT: must exclude soft-deleted rows. See {@code PortfolioRepository} interface Javadoc
    * for the rationale.
    */
   @Query("""
@@ -110,13 +104,11 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
   Long countActiveByUserId(@Param("userId") UUID userId);
 
   /**
-   * Loads the full aggregate graph by portfolio ID only. Ownership is
-   * pre-validated by
-   * PortfolioLoader before save is called , repeating the userId check here is
-   * redundant and costs
+   * Loads the full aggregate graph by portfolio ID only. Ownership is pre-validated by
+   * PortfolioLoader before save is called , repeating the userId check here is redundant and costs
    * a round-trip.
    */
-  @EntityGraph(attributePaths = { "accounts", "accounts.positions", "accounts.realizedGains" })
+  @EntityGraph(attributePaths = {"accounts", "accounts.positions", "accounts.realizedGains"})
   @Query("SELECT p FROM PortfolioJpaEntity p WHERE p.id = :id")
   Optional<PortfolioJpaEntity> findWithAccountsById(@Param("id") UUID id);
 

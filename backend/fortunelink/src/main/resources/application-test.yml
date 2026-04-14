@@ -25,19 +25,19 @@ spring:
       - public
     locations: classpath:db/migration
     baseline-on-migrate: true # This prevents Flyway from failing if @BeforeAll already did something
-    
+
 management:
   endpoints:
     web:
       exposure:
-        include: "health,info,metrics" 
+        include: "health,info,metrics"
   endpoint:
     health:
       show-details: always
 
 postgres:
   version: ${POSTGRES_VERSION}
-  
+
 logging:
   level:
     "[org.hibernate.SQL]": debug

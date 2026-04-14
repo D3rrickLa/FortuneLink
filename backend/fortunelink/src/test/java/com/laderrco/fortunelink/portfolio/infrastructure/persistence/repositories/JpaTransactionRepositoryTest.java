@@ -31,13 +31,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class JpaTransactionRepositoryTest {
   @Container
   @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-      .withDatabaseName("testdb")
-      .withUsername("test")
-      .withPassword("test")
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+      "postgres:17.9-alpine").withDatabaseName("testdb").withUsername("test").withPassword("test")
       // This runs BEFORE Flyway starts
-      .withInitScript("init-auth.sql")
-      .withInitScript("seed_user_portfolio.sql");;
+      .withInitScript("init-auth.sql").withInitScript("seed_user_portfolio.sql");
 
   static {
     postgres.start(); // Manual start to ensure we can run commands before Flyway

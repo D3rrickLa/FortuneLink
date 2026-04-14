@@ -1,11 +1,22 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers.PortfolioDomainMapper;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,37 +25,29 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PortfolioRepositoryImpl Unit Tests")
 class PortfolioRepositoryImplTest {
 
-  @Mock
-  private JpaPortfolioRepository jpaRepository;
-
-  @Mock
-  private PortfolioDomainMapper mapper;
-
-  @InjectMocks
-  private PortfolioRepositoryImpl repository;
-
-  private static String CAD = "CAD";
   private static final UUID RAW_PORTFOLIO_ID = UUID.randomUUID();
   private static final UUID RAW_USER_ID = UUID.randomUUID();
   private static final UUID RAW_ACCOUNT_ID = UUID.randomUUID();
-
-  private static final PortfolioId PORTFOLIO_ID = PortfolioId.fromString(RAW_PORTFOLIO_ID.toString());
+  private static final PortfolioId PORTFOLIO_ID = PortfolioId.fromString(
+      RAW_PORTFOLIO_ID.toString());
   private static final UserId USER_ID = UserId.fromString(RAW_USER_ID.toString());
   private static final AccountId ACCOUNT_ID = AccountId.fromString(RAW_ACCOUNT_ID.toString());
+  private static final String CAD = "CAD";
+  @Mock
+  private JpaPortfolioRepository jpaRepository;
+  @Mock
+  private PortfolioDomainMapper mapper;
+  @InjectMocks
+  private PortfolioRepositoryImpl repository;
+
+  private PortfolioJpaEntity create() {
+    return PortfolioJpaEntity.create(RAW_PORTFOLIO_ID, RAW_USER_ID, "Portfolio Name", "Desc", CAD,
+        false, null, null, Instant.now(), Instant.now());
+  }
 
   @Nested
   @DisplayName("Save Operations")
@@ -53,22 +56,21 @@ class PortfolioRepositoryImplTest {
     @Test
     @DisplayName("save should merge with existing entity and return domain object")
     void saveShouldMergeWithExistingEntity() {
-      
+
       Portfolio domain = mock(Portfolio.class);
       PortfolioJpaEntity existingEntity = create();
       PortfolioJpaEntity updatedEntity = create();
       updatedEntity.update("Updated Name", "new desc", CAD, false, null, null, Instant.now());
 
       when(domain.getPortfolioId()).thenReturn(PORTFOLIO_ID);
-      when(jpaRepository.findWithAccountsById(RAW_PORTFOLIO_ID)).thenReturn(Optional.of(existingEntity));
+      when(jpaRepository.findWithAccountsById(RAW_PORTFOLIO_ID)).thenReturn(
+          Optional.of(existingEntity));
       when(mapper.toEntity(domain, existingEntity)).thenReturn(updatedEntity);
       when(jpaRepository.save(updatedEntity)).thenReturn(updatedEntity);
       when(mapper.toDomain(updatedEntity)).thenReturn(domain);
 
-      
       Portfolio result = repository.save(domain);
 
-      
       assertThat(result).isEqualTo(domain);
       assertThat(result.getAccounts().size()).isEqualTo(0);
       assertThat(existingEntity.getAccounts().size()).isEqualTo(0);
@@ -79,8 +81,7 @@ class PortfolioRepositoryImplTest {
     @Test
     @DisplayName("save should throw exception when domain is null")
     void saveShouldThrowExceptionWhenDomainIsNull() {
-      assertThatThrownBy(() -> repository.save(null))
-          .isInstanceOf(NullPointerException.class)
+      assertThatThrownBy(() -> repository.save(null)).isInstanceOf(NullPointerException.class)
           .hasMessageContaining("Portfolio cannot be null");
     }
   }
@@ -95,7 +96,8 @@ class PortfolioRepositoryImplTest {
       PortfolioJpaEntity entity = create();
       Portfolio domain = mock(Portfolio.class);
 
-      when(jpaRepository.findByIdAndUserId(RAW_PORTFOLIO_ID, RAW_USER_ID)).thenReturn(Optional.of(entity));
+      when(jpaRepository.findByIdAndUserId(RAW_PORTFOLIO_ID, RAW_USER_ID)).thenReturn(
+          Optional.of(entity));
       when(mapper.toDomain(entity)).thenReturn(domain);
 
       Optional<Portfolio> result = repository.findByIdAndUserId(PORTFOLIO_ID, USER_ID);
@@ -121,8 +123,8 @@ class PortfolioRepositoryImplTest {
       PortfolioJpaEntity entity = create();
       Portfolio domain = mock(Portfolio.class);
 
-      when(jpaRepository.findWithAccountsByIdAndUserId(RAW_PORTFOLIO_ID, RAW_USER_ID))
-          .thenReturn(Optional.of(entity));
+      when(jpaRepository.findWithAccountsByIdAndUserId(RAW_PORTFOLIO_ID, RAW_USER_ID)).thenReturn(
+          Optional.of(entity));
       when(mapper.toDomain(entity)).thenReturn(domain);
 
       Optional<Portfolio> result = repository.findWithAccountsByIdAndUserId(PORTFOLIO_ID, USER_ID);
@@ -139,13 +141,15 @@ class PortfolioRepositoryImplTest {
     @Test
     @DisplayName("existsByIdAndUserIdAndAccountId should call jpaRepository")
     void existsByIdAndUserIdAndAccountIdShouldCallJpa() {
-      when(jpaRepository.existsByIdAndUserIdAndAccountId(RAW_PORTFOLIO_ID, RAW_USER_ID, RAW_ACCOUNT_ID))
-          .thenReturn(true);
+      when(jpaRepository.existsByIdAndUserIdAndAccountId(RAW_PORTFOLIO_ID, RAW_USER_ID,
+          RAW_ACCOUNT_ID)).thenReturn(true);
 
-      boolean exists = repository.existsByIdAndUserIdAndAccountId(PORTFOLIO_ID, USER_ID, ACCOUNT_ID);
+      boolean exists = repository.existsByIdAndUserIdAndAccountId(PORTFOLIO_ID, USER_ID,
+          ACCOUNT_ID);
 
       assertThat(exists).isTrue();
-      verify(jpaRepository).existsByIdAndUserIdAndAccountId(RAW_PORTFOLIO_ID, RAW_USER_ID, RAW_ACCOUNT_ID);
+      verify(jpaRepository).existsByIdAndUserIdAndAccountId(RAW_PORTFOLIO_ID, RAW_USER_ID,
+          RAW_ACCOUNT_ID);
     }
 
     @Test
@@ -221,12 +225,5 @@ class PortfolioRepositoryImplTest {
       assertThat(result).hasSize(1);
       assertThat(result.get(0)).isEqualTo(USER_ID);
     }
-  }
-
-  private PortfolioJpaEntity create() {
-    return PortfolioJpaEntity.create(
-        RAW_PORTFOLIO_ID, RAW_USER_ID,
-        "Portfolio Name", "Desc", CAD, false, null, null,
-        Instant.now(), Instant.now());
   }
 }

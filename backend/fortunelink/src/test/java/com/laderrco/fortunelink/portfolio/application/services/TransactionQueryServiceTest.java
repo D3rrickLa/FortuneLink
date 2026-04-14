@@ -120,18 +120,15 @@ public class TransactionQueryServiceTest {
     @Test
     @DisplayName("getTransactionHistory: successfully calls dynamic repository with all filters")
     void getTransactionHistoryCallsDynamicRepository() {
-      
+
       GetTransactionHistoryQuery query = createHistoryQuery(START, END, SYMBOL);
       Page<Transaction> mockPage = new PageImpl<>(List.of());
 
-      
       when(transactionQueryRepository.findTransactionsDynamic(eq(ACCOUNT_ID), eq(SYMBOL), eq(START),
           eq(END), any())).thenReturn(mockPage);
 
-      
       transactionQueryService.getTransactionHistory(query);
 
-      
       verify(portfolioLoader).validatePortfolioAndAccountOwnership(PORTFOLIO_ID, USER_ID,
           ACCOUNT_ID);
       verify(transactionQueryRepository).findTransactionsDynamic(eq(ACCOUNT_ID), eq(SYMBOL),
@@ -141,17 +138,15 @@ public class TransactionQueryServiceTest {
     @Test
     @DisplayName("getTransactionHistory: handles null filters correctly")
     void getTransactionHistoryHandlesNullFilters() {
-      
+
       GetTransactionHistoryQuery query = createHistoryQuery(null, null, null);
       Page<Transaction> mockPage = new PageImpl<>(List.of());
 
       when(transactionQueryRepository.findTransactionsDynamic(eq(ACCOUNT_ID), isNull(), isNull(),
           isNull(), any())).thenReturn(mockPage);
 
-      
       transactionQueryService.getTransactionHistory(query);
 
-      
       verify(transactionQueryRepository).findTransactionsDynamic(eq(ACCOUNT_ID), isNull(), isNull(),
           isNull(), any());
     }
@@ -159,7 +154,7 @@ public class TransactionQueryServiceTest {
     @Test
     @DisplayName("getTransactionHistory: throws exception for invalid date range")
     void getTransactionHistoryThrowsOnInvalidDates() {
-      
+
       GetTransactionHistoryQuery query = createHistoryQuery(END, START, null);
 
       assertThatThrownBy(() -> transactionQueryService.getTransactionHistory(query)).isInstanceOf(
@@ -196,7 +191,7 @@ public class TransactionQueryServiceTest {
     @Test
     @DisplayName("getTransactionsForCalculation: throws exception for invalid date range")
     void getTransactionsForCalculationThrowsOnInvalidDates() {
-      
+
       GetTransactionForCalculationQuery query = createCalcQuery(END, START);
 
       assertThatThrownBy(
@@ -209,8 +204,6 @@ public class TransactionQueryServiceTest {
     void getTransactionsForCalculationValidatesOwnership() {
       GetTransactionForCalculationQuery query = createCalcQuery(START, END);
 
-      
-      
       Mockito.doThrow(new SecurityException("Unauthorized")).when(portfolioLoader)
           .validatePortfolioAndAccountOwnership(PORTFOLIO_ID, USER_ID, ACCOUNT_ID);
 
@@ -223,7 +216,7 @@ public class TransactionQueryServiceTest {
     @DisplayName("getTransactionsForCalculation: throws NPE on null query parameters")
     void getTransactionsForCalculationGuardChecks() {
       GetTransactionForCalculationQuery nullQuery = createCalcQuery(null, null);
-      
+
       assertThatThrownBy(
           () -> transactionQueryService.getTransactionsForCalculation(nullQuery)).isInstanceOf(
           NullPointerException.class);

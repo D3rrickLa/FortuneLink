@@ -1,14 +1,31 @@
 package com.laderrco.fortunelink.portfolio.api.web;
 
-import com.laderrco.fortunelink.portfolio.application.exceptions.*;
-import com.laderrco.fortunelink.portfolio.domain.exceptions.*;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeClosedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AccountCannotBeReopenedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AssetNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AuthenticationException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.AuthorizationException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.CsvImportCommitException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidCommandException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidDateRangeException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.InvalidTransactionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioDeletionException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
+import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountClosedException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.CurrencyMismatchException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.DomainArgumentException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioAlreadyDeletedException;
+import com.laderrco.fortunelink.portfolio.domain.exceptions.PortfolioNotEmptyException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.MarketDataException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
-
 import jakarta.validation.ConstraintViolationException;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -193,9 +210,10 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-  public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
-    return ResponseEntity.status(HttpStatus.CONFLICT)
-        .body(ErrorResponse.of("CONCURRENT_MODIFICATION",
+  public ResponseEntity<ErrorResponse> handleOptimisticLock(
+      ObjectOptimisticLockingFailureException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(
+        ErrorResponse.of("CONCURRENT_MODIFICATION",
             "The record was updated by another process. Please refresh and try again."));
   }
 
@@ -265,11 +283,12 @@ public class GlobalExceptionHandler {
   // -------------------------------------------------------------------------
   // 503 - third party APIs
   // -------------------------------------------------------------------------
-  @ExceptionHandler({ FmpApiException.class, BocApiException.class, MarketDataException.class })
+  @ExceptionHandler({FmpApiException.class, BocApiException.class, MarketDataException.class})
   public ResponseEntity<ErrorResponse> handleMarketDataError(RuntimeException ex) {
     log.error("External Provider Error: {}", ex.getMessage());
-    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(ErrorResponse.of("MARKET_DATA_UNAVAILABLE", "Market data service is temporarily unavailable"));
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+        ErrorResponse.of("MARKET_DATA_UNAVAILABLE",
+            "Market data service is temporarily unavailable"));
   }
 
   // -------------------------------------------------------------------------

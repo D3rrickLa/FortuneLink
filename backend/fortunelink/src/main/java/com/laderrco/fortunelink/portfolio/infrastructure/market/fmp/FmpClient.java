@@ -4,10 +4,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProf
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpSearchResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
-
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,8 +25,8 @@ import tools.jackson.databind.type.TypeFactory;
 /**
  * Low-level HTTP client for FMP API.
  * <p>
- * Responsibilities: - Construct FMP API URLs, Execute HTTP requests, Parse
- * JSON responses - Handle HTTP errors
+ * Responsibilities: - Construct FMP API URLs, Execute HTTP requests, Parse JSON responses - Handle
+ * HTTP errors
  *
  */
 @Slf4j
@@ -148,7 +146,8 @@ public class FmpClient {
 
   private String buildUrl(String path) {
     String sanitizedPath = path.startsWith("/") ? path.substring(1) : path;
-    String sanitizedBase = config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
+    String sanitizedBase =
+        config.getBaseUrl().endsWith("/") ? config.getBaseUrl() : config.getBaseUrl() + "/";
 
     return UriComponentsBuilder.fromUriString(sanitizedBase).path(sanitizedPath)
         .queryParam("apikey", config.getApiKey()).build().toUriString();
@@ -162,9 +161,9 @@ public class FmpClient {
   FmpQuoteResponse getQuoteFallback(String symbol, Throwable t) {
     log.warn("FMP circuit open for quote symbol={}, cause: {}", symbol, t.getMessage());
     return null; // caller must handle null
-}
+  }
 
-  
+
   FmpProfileResponse getProfileFallback(String symbol, Throwable t) {
     log.warn("FMP circuit open for profile symbol={}", symbol);
     return null;

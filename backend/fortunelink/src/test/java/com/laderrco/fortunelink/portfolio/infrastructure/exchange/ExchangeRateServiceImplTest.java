@@ -4,8 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
@@ -15,22 +22,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ExchangeRate;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
 @ExtendWith(MockitoExtension.class)
 class ExchangeRateServiceImplTest {
-
-  @Mock
-  private ExchangeRateProvider provider;
-
-  private ExchangeRateServiceImpl exchangeRateService;
 
   private final Currency usd = Currency.of("USD");
   private final Currency cad = Currency.of("CAD");
   private final Instant now = Instant.now();
+  @Mock
+  private ExchangeRateProvider provider;
+  private ExchangeRateServiceImpl exchangeRateService;
 
   @BeforeEach
   void setUp() {
@@ -41,8 +41,7 @@ class ExchangeRateServiceImplTest {
   void getRateShouldReturnRateOnSuccess() {
 
     ExchangeRate mockRate = mock(ExchangeRate.class);
-    when(provider.getExchangeRate(eq(usd), eq(cad), any(Instant.class)))
-        .thenReturn(mockRate);
+    when(provider.getExchangeRate(eq(usd), eq(cad), any(Instant.class))).thenReturn(mockRate);
 
     Optional<ExchangeRate> result = exchangeRateService.getRate(usd, cad);
 
@@ -52,8 +51,7 @@ class ExchangeRateServiceImplTest {
   @Test
   void getRateShouldReturnEmptyOnProviderFailure() {
 
-    when(provider.getExchangeRate(any(), any(), any()))
-        .thenThrow(new RuntimeException("API Down"));
+    when(provider.getExchangeRate(any(), any(), any())).thenThrow(new RuntimeException("API Down"));
 
     Optional<ExchangeRate> result = exchangeRateService.getRate(usd, cad);
 
@@ -91,12 +89,11 @@ class ExchangeRateServiceImplTest {
   void convertShouldThrowCustomExceptionWhenRateUnavailable() {
 
     Money amount = new Money(new BigDecimal("100.00"), usd);
-    when(provider.getExchangeRate(any(), any(), any()))
-        .thenThrow(new RuntimeException("Connection Timeout"));
+    when(provider.getExchangeRate(any(), any(), any())).thenThrow(
+        new RuntimeException("Connection Timeout"));
 
-    assertThatThrownBy(() -> exchangeRateService.convert(amount, cad))
-        .isInstanceOf(ExchangeRateUnavailableException.class)
-        .hasMessageContaining("USD")
+    assertThatThrownBy(() -> exchangeRateService.convert(amount, cad)).isInstanceOf(
+            ExchangeRateUnavailableException.class).hasMessageContaining("USD")
         .hasMessageContaining("CAD");
   }
 
@@ -107,8 +104,8 @@ class ExchangeRateServiceImplTest {
     RuntimeException originalException = new RuntimeException("Specific API Error");
     when(provider.getExchangeRate(any(), any(), any())).thenThrow(originalException);
 
-    assertThatThrownBy(() -> exchangeRateService.convert(amount, cad, now))
-        .isSameAs(originalException);
+    assertThatThrownBy(() -> exchangeRateService.convert(amount, cad, now)).isSameAs(
+        originalException);
   }
 
   @Test
@@ -149,10 +146,9 @@ class ExchangeRateServiceImplTest {
     Instant specificDate = Instant.now();
     RuntimeException providerError = new RuntimeException("BOC API Timeout");
 
-    when(provider.getExchangeRate(eq(usd), eq(cad), eq(specificDate)))
-        .thenThrow(providerError);
+    when(provider.getExchangeRate(eq(usd), eq(cad), eq(specificDate))).thenThrow(providerError);
 
-    assertThatThrownBy(() -> exchangeRateService.convert(amount, cad, specificDate))
-        .isSameAs(providerError);
+    assertThatThrownBy(() -> exchangeRateService.convert(amount, cad, specificDate)).isSameAs(
+        providerError);
   }
 }

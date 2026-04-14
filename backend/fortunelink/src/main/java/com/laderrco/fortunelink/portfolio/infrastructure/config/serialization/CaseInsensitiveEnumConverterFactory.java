@@ -11,20 +11,20 @@ public class CaseInsensitiveEnumConverterFactory implements ConverterFactory<Str
   }
 
   private record CaseInsensitiveEnumConverter<T extends Enum<?>>(Class<T> enumType) implements
-        Converter<String, T> {
+      Converter<String, T> {
 
     @Override
-      @SuppressWarnings({"rawtypes"})
-      public T convert(String source) {
-        if (source.isBlank()) {
-          return null;
-        }
-        try {
-          // This does the heavy lifting: forced uppercase match
-          return (T) Enum.valueOf((Class) enumType, source.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-          return null; // Spring will throw a 400 Bad Request
-        }
+    @SuppressWarnings({"rawtypes"})
+    public T convert(String source) {
+      if (source.isBlank()) {
+        return null;
+      }
+      try {
+        // This does the heavy lifting: forced uppercase match
+        return (T) Enum.valueOf((Class) enumType, source.trim().toUpperCase());
+      } catch (IllegalArgumentException e) {
+        return null; // Spring will throw a 400 Bad Request
       }
     }
+  }
 }

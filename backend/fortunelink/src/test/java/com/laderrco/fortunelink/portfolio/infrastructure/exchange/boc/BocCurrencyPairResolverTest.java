@@ -20,9 +20,7 @@ class BocCurrencyPairResolverTest {
     void shouldResolveWhenTargetIsCad() {
       List<String> result = BocCurrencyPairResolver.resolveSeries("USD", "CAD");
 
-      assertThat(result)
-          .hasSize(1)
-          .containsExactly("FXUSDCAD");
+      assertThat(result).hasSize(1).containsExactly("FXUSDCAD");
     }
 
     @Test
@@ -30,9 +28,7 @@ class BocCurrencyPairResolverTest {
     void shouldResolveWhenBaseIsCad() {
       List<String> result = BocCurrencyPairResolver.resolveSeries("CAD", "USD");
 
-      assertThat(result)
-          .hasSize(1)
-          .containsExactly("FXCADUSD");
+      assertThat(result).hasSize(1).containsExactly("FXCADUSD");
     }
 
     @Test
@@ -54,9 +50,7 @@ class BocCurrencyPairResolverTest {
       // EUR to USD needs: EUR -> CAD and CAD -> USD
       List<String> result = BocCurrencyPairResolver.resolveSeries("EUR", "USD");
 
-      assertThat(result)
-          .hasSize(2)
-          .containsExactly("FXEURCAD", "FXCADUSD");
+      assertThat(result).hasSize(2).containsExactly("FXEURCAD", "FXCADUSD");
     }
   }
 
@@ -67,9 +61,8 @@ class BocCurrencyPairResolverTest {
     @Test
     @DisplayName("should throw IllegalArgumentException when currencies are the same")
     void shouldThrowExceptionForSameCurrency() {
-      assertThatThrownBy(() -> BocCurrencyPairResolver.resolveSeries("USD", "USD"))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("cannot be the same");
+      assertThatThrownBy(() -> BocCurrencyPairResolver.resolveSeries("USD", "USD")).isInstanceOf(
+          IllegalArgumentException.class).hasMessageContaining("cannot be the same");
     }
   }
 }

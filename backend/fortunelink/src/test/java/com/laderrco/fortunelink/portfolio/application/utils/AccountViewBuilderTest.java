@@ -2,7 +2,10 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -14,7 +17,11 @@ import com.laderrco.fortunelink.portfolio.application.views.PositionView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -83,7 +90,8 @@ class AccountViewBuilderTest {
 
     when(viewMapper.toPositionView(any(), eq(appleQuote), eq(fee))).thenReturn(mockPosView);
     when(valuationService.calculateAccountValue(account, quotes)).thenReturn(zeroMoney);
-    when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(), anyInt())).thenReturn(expectedView);
+    when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(),
+        anyInt())).thenReturn(expectedView);
 
     AccountView result = accountViewBuilder.build(account, quotes, fees);
 
@@ -113,7 +121,8 @@ class AccountViewBuilderTest {
 
     when(viewMapper.toPositionView(any(), eq(appleQuote))).thenReturn(mockPosView);
     when(valuationService.calculateAccountValue(account, quotes)).thenReturn(zeroMoney);
-    when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(), anyInt())).thenReturn(expectedView);
+    when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(),
+        anyInt())).thenReturn(expectedView);
 
     AccountView result = accountViewBuilder.buildSummary(account, quotes);
 
@@ -133,7 +142,7 @@ class AccountViewBuilderTest {
     @Test
     @DisplayName("buildFromProjection: successfully creates AccountView with empty positions")
     void buildsViewFromProjectionSuccessfully() {
-      
+
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getName()).thenReturn(accountName);
@@ -143,10 +152,9 @@ class AccountViewBuilderTest {
       when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(projection.getCreatedDate()).thenReturn(createdDate);
 
-      
-      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(), Map.of());
+      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(),
+          Map.of());
 
-      
       assertThat(result.accountId()).isEqualTo(AccountId.fromString(accountUuid.toString()));
       assertThat(result.name()).isEqualTo(accountName);
       assertThat(result.type()).isEqualTo(AccountType.CHEQUING);
@@ -154,7 +162,6 @@ class AccountViewBuilderTest {
       assertThat(result.cashBalance().amount()).isEqualTo(
           cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
 
-      
       assertThat(result.totalValue().amount()).isEqualTo(
           cashBalance.setScale(Precision.MONEY.getDecimalPlaces()));
       assertThat(result.assets()).isEmpty();
@@ -164,7 +171,7 @@ class AccountViewBuilderTest {
     @Test
     @DisplayName("buildFromProjection: correctly maps complex account types")
     void mapsDifferentAccountTypesCorrectly() {
-      
+
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getAccountType()).thenReturn("RRSP");
@@ -172,7 +179,8 @@ class AccountViewBuilderTest {
       when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(projection.getCashBalanceAmount()).thenReturn(BigDecimal.ZERO);
 
-      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(), Map.of());
+      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), Map.of(),
+          Map.of());
 
       assertThat(result.type()).isEqualTo(AccountType.RRSP);
     }
@@ -190,7 +198,8 @@ class AccountViewBuilderTest {
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(symbol, mock(MarketAssetQuote.class));
       Map<AssetSymbol, Money> fees = Map.of(symbol, Money.of(5, "CAD"));
 
-      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), quotes, fees);
+      AccountView result = accountViewBuilder.buildFromProjection(projection, Map.of(), quotes,
+          fees);
       assertThat(result.assets()).isEmpty();
       assertThat(result.totalValue().amount()).isEqualTo(
           BigDecimal.TEN.setScale(Precision.MONEY.getDecimalPlaces()));
@@ -211,11 +220,8 @@ class AccountViewBuilderTest {
       when(projection.getLifecycleState()).thenReturn("ACTIVE");
       when(projection.getId()).thenReturn(accountUuid);
 
-      Map<AssetSymbol, Quantity> quantities = Map.of(
-          apple, Quantity.of(10), 
-          google, Quantity.of(5), 
-          tesla, Quantity.of(2) 
-      );
+      Map<AssetSymbol, Quantity> quantities = Map.of(apple, Quantity.of(10), google, Quantity.of(5),
+          tesla, Quantity.of(2));
 
       MarketAssetQuote appleQuote = mock(MarketAssetQuote.class);
       Price applePrice = new Price(new Money(new BigDecimal("150.00"), cad));
@@ -225,15 +231,15 @@ class AccountViewBuilderTest {
       Price zeroPrice = new Price(Money.zero(cad));
       when(teslaQuote.currentPrice()).thenReturn(zeroPrice);
 
-      Map<AssetSymbol, MarketAssetQuote> allQuotes = Map.of(
-          apple, appleQuote,
-          tesla, teslaQuote);
+      Map<AssetSymbol, MarketAssetQuote> allQuotes = Map.of(apple, appleQuote, tesla, teslaQuote);
 
-      AccountView result = accountViewBuilder.buildFromProjection(projection, quantities, allQuotes, Map.of());
+      AccountView result = accountViewBuilder.buildFromProjection(projection, quantities, allQuotes,
+          Map.of());
 
       BigDecimal expectedTotal = new BigDecimal("1600.00");
       assertEquals(0, expectedTotal.compareTo(result.totalValue().amount()),
-          String.format("Total value should be %s but was %s", expectedTotal, result.totalValue().amount()));
+          String.format("Total value should be %s but was %s", expectedTotal,
+              result.totalValue().amount()));
       assertEquals(0, new BigDecimal("100.00").compareTo(result.cashBalance().amount()));
     }
   }

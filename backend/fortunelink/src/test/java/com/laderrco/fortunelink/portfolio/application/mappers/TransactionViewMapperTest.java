@@ -34,7 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("TransactionViewMapper Unit Tests")
 class TransactionViewMapperTest {
 
-  
+
   private static final TransactionId TX_ID = TransactionId.newId();
   private static final Instant NOW = Instant.now();
   private static final String SYMBOL = "AAPL";
@@ -49,7 +49,7 @@ class TransactionViewMapperTest {
     @Test
     @DisplayName("Should map cash transaction (null execution) correctly")
     void toTransactionView_WhenExecutionIsNull_ShouldMapBasicFields() {
-      
+
       Transaction tx = mock(Transaction.class);
       TransactionMetadata metadata = mock(TransactionMetadata.class);
       List<Fee> fees = List.of(mock(Fee.class));
@@ -57,7 +57,7 @@ class TransactionViewMapperTest {
 
       when(tx.transactionId()).thenReturn(TX_ID);
       when(tx.transactionType()).thenReturn(TransactionType.DEPOSIT);
-      when(tx.execution()).thenReturn(null); 
+      when(tx.execution()).thenReturn(null);
       when(tx.fees()).thenReturn(fees);
       when(tx.cashDelta()).thenReturn(cashDelta);
       when(tx.metadata()).thenReturn(metadata);
@@ -65,10 +65,8 @@ class TransactionViewMapperTest {
       when(tx.occurredAt()).thenReturn(NOW);
       when(tx.notes()).thenReturn("Monthly savings");
 
-      
       TransactionView result = mapper.toTransactionView(tx);
 
-      
       assertThat(result.transactionId()).isEqualTo(TX_ID);
       assertThat(result.symbol()).isNull();
       assertThat(result.quantity()).isNull();
@@ -80,7 +78,7 @@ class TransactionViewMapperTest {
     @Test
     @DisplayName("Should map asset transaction (execution exists) correctly")
     void toTransactionView_WhenExecutionExists_ShouldMapAssetDetails() {
-      
+
       Transaction tx = mock(Transaction.class);
       TradeExecution execution = mock(TradeExecution.class);
       AssetSymbol asset = mock(AssetSymbol.class);
@@ -96,10 +94,8 @@ class TransactionViewMapperTest {
       when(tx.metadata()).thenReturn(metadata);
       when(metadata.asFlatMap()).thenReturn(Collections.emptyMap());
 
-      
       TransactionView result = mapper.toTransactionView(tx);
 
-      
       assertThat(result.symbol()).isEqualTo(SYMBOL);
       assertThat(result.quantity().amount()).isEqualByComparingTo("10");
       assertThat(result.price().amount()).isEqualByComparingTo("150");
@@ -120,18 +116,15 @@ class TransactionViewMapperTest {
     @Test
     @DisplayName("Should map all transactions in the list")
     void toViewList_ShouldMapAllItems() {
-      
+
       Transaction tx1 = mock(Transaction.class);
       Transaction tx2 = mock(Transaction.class);
 
-      
       setupMinimalTx(tx1);
       setupMinimalTx(tx2);
 
-      
       List<TransactionView> results = mapper.toViewList(List.of(tx1, tx2));
 
-      
       assertThat(results).hasSize(2);
       verify(tx1, times(1)).transactionId();
       verify(tx2, times(1)).transactionId();

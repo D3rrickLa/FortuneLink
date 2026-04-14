@@ -119,11 +119,11 @@ class AccountTest {
       Instant now = Instant.now();
       Money balance = Money.of(1000, currency);
 
-      
       AssetSymbol apple = new AssetSymbol("AAPL");
       Map<AssetSymbol, Position> positions = Map.of(apple, mock(AcbPosition.class));
       List<RealizedGainRecord> gains = List.of(
-          RealizedGainRecord.of(accountId, apple, Money.of(50, currency), Money.of(200, currency), now));
+          RealizedGainRecord.of(accountId, apple, Money.of(50, currency), Money.of(200, currency),
+              now));
 
       Account account = Account.reconstitute(accountId, name, type, currency, strategy, health,
           state, null, now, now, balance, positions, gains);
@@ -253,19 +253,15 @@ class AccountTest {
 
     @Test
     void getRealizedGainsForShouldReturnOnlyMatchingRecords() {
-      
+
       Instant now = Instant.now();
 
-      
       RealizedGainRecord appleGain = RealizedGainRecord.of(accountId, apple, Money.of(100, USD),
           Money.of(500, USD), now);
 
-      
-      
       RealizedGainRecord googleGain = RealizedGainRecord.of(accountId, google, Money.of(200, USD),
           Money.of(1000, USD), now);
 
-      
       account.recordRealizedGain(apple, Money.of(100, USD), Money.of(500, USD), now);
       account.recordRealizedGain(google, Money.of(200, USD), Money.of(1000, USD), now);
 

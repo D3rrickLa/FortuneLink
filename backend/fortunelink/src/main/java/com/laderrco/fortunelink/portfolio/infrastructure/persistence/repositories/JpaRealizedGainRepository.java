@@ -4,7 +4,6 @@ import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.GainsAg
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.RealizedGainJpaEntity;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,7 +19,8 @@ public interface JpaRealizedGainRepository extends JpaRepository<RealizedGainJpa
       WHERE r.account.id = :accountId
       ORDER BY r.occurredAt DESC
       """)
-  Page<RealizedGainJpaEntity> findByAccountId(@Param("accountId") UUID accountId, Pageable pageable);
+  Page<RealizedGainJpaEntity> findByAccountId(@Param("accountId") UUID accountId,
+      Pageable pageable);
 
   @Query("""
       SELECT r FROM RealizedGainJpaEntity r
@@ -64,8 +64,6 @@ public interface JpaRealizedGainRepository extends JpaRepository<RealizedGainJpa
         AND (:symbol IS NULL OR r.symbol = :symbol)
         AND (:taxYear IS NULL OR EXTRACT(YEAR FROM r.occurredAt) = :taxYear)
       """)
-  GainsAggregation calculateTotals(
-      @Param("accountId") UUID accountId,
-      @Param("taxYear") Integer taxYear,
-      @Param("symbol") String symbol);
+  GainsAggregation calculateTotals(@Param("accountId") UUID accountId,
+      @Param("taxYear") Integer taxYear, @Param("symbol") String symbol);
 }

@@ -43,12 +43,11 @@ public class GetTransactionHistoryQueryTest {
     @Test
     @DisplayName("validatePagination: should throw exception when size is zero or negative")
     void shouldThrowWhenSizeIsInvalid() {
-      
+
       assertThatThrownBy(
           () -> new GetTransactionHistoryQuery(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL, null,
               null, 0, 0)).isInstanceOf(IllegalArgumentException.class);
 
-      
       assertThatThrownBy(
           () -> new GetTransactionHistoryQuery(PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL, null,
               null, 0, -5)).isInstanceOf(IllegalArgumentException.class);

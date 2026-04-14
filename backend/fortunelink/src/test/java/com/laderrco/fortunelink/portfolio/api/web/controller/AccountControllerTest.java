@@ -1,5 +1,22 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.laderrco.fortunelink.portfolio.application.commands.CreateAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeleteAccountCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.ReopenAccountCommand;
@@ -24,8 +41,9 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import tools.jackson.databind.json.JsonMapper;
-
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,29 +58,18 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Slice test for AccountController.
  *
  * <p>
- * Security filters are disabled — we are testing controller routing and
- * service delegation, not auth. Security is covered by a separate integration
- * test suite.
+ * Security filters are disabled — we are testing controller routing and service delegation, not
+ * auth. Security is covered by a separate integration test suite.
  *
  * <p>
- * RateLimitInterceptor is mocked and configured to always pass. Its Redis
- * dependencies are not available in a slice test and are irrelevant here.
+ * RateLimitInterceptor is mocked and configured to always pass. Its Redis dependencies are not
+ * available in a slice test and are irrelevant here.
  */
 @WebMvcTest(controllers = AccountController.class)
 @Import(AuthenticatedUserResolver.class)
@@ -95,11 +102,29 @@ class AccountControllerTest {
 
     when(authenticationUserService.getCurrentUser()).thenReturn(USER_UUID);
 
-    when(rateLimitInterceptor.preHandle(
-        any(HttpServletRequest.class),
-        any(HttpServletResponse.class),
-        any()))
-        .thenReturn(true);
+    when(rateLimitInterceptor.preHandle(any(HttpServletRequest.class),
+        any(HttpServletResponse.class), any())).thenReturn(true);
+  }
+
+  private String validCreateRequest() {
+    return """
+        {
+            "accountName": "My TFSA",
+            "accountType": "TFSA",
+            "strategy": "ACB",
+            "currency": "CAD"
+        }
+        """;
+  }
+
+  private AccountView buildAccountView(String accountId, String accountTypeName,
+      AccountLifecycleState state) {
+    Currency cad = Currency.of("CAD");
+    Money zero = Money.zero(cad);
+
+    return new AccountView(AccountId.fromString(accountId), "Test Account",
+        AccountType.valueOf(accountTypeName), state, List.of(), cad, zero, zero, Instant.now(),
+        false, 0);
   }
 
   @Nested
@@ -112,9 +137,8 @@ class AccountControllerTest {
       AccountView view = buildAccountView(ACCOUNT_ID, "TFSA", AccountLifecycleState.ACTIVE);
       when(lifecycleService.createAccount(any(CreateAccountCommand.class))).thenReturn(view);
 
-      mockMvc.perform(post(BASE_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(validCreateRequest()))
+      mockMvc.perform(
+              post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
           .andExpect(status().isCreated());
 
       verify(lifecycleService, times(1)).createAccount(any(CreateAccountCommand.class));
@@ -126,11 +150,11 @@ class AccountControllerTest {
       AccountView view = buildAccountView(ACCOUNT_ID, "TFSA", AccountLifecycleState.ACTIVE);
       when(lifecycleService.createAccount(any(CreateAccountCommand.class))).thenReturn(view);
 
-      ArgumentCaptor<CreateAccountCommand> captor = ArgumentCaptor.forClass(CreateAccountCommand.class);
+      ArgumentCaptor<CreateAccountCommand> captor = ArgumentCaptor.forClass(
+          CreateAccountCommand.class);
 
-      mockMvc.perform(post(BASE_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(validCreateRequest()))
+      mockMvc.perform(
+              post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
           .andExpect(status().isCreated());
 
       verify(lifecycleService).createAccount(captor.capture());
@@ -155,9 +179,7 @@ class AccountControllerTest {
           }
           """;
 
-      mockMvc.perform(post(BASE_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(body))
+      mockMvc.perform(post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(body))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
@@ -174,9 +196,7 @@ class AccountControllerTest {
           }
           """;
 
-      mockMvc.perform(post(BASE_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(body))
+      mockMvc.perform(post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(body))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
@@ -193,9 +213,7 @@ class AccountControllerTest {
           }
           """;
 
-      mockMvc.perform(post(BASE_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(body))
+      mockMvc.perform(post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(body))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
@@ -212,9 +230,7 @@ class AccountControllerTest {
           }
           """;
 
-      mockMvc.perform(post(BASE_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content(body))
+      mockMvc.perform(post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(body))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
@@ -223,9 +239,7 @@ class AccountControllerTest {
     @Test
     @DisplayName("400 when request body is entirely absent")
     void returns400WhenBodyAbsent() throws Exception {
-      mockMvc.perform(post(BASE_URL)
-          .with(jwt())
-          .contentType(MediaType.APPLICATION_JSON))
+      mockMvc.perform(post(BASE_URL).with(jwt()).contentType(MediaType.APPLICATION_JSON))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
@@ -241,10 +255,8 @@ class AccountControllerTest {
     void returns204OnSuccess() throws Exception {
       doNothing().when(lifecycleService).updateAccount(any(UpdateAccountCommand.class));
 
-      mockMvc.perform(put(ACCOUNT_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content("{\"accountName\": \"Renamed TFSA\"}"))
-          .andExpect(status().isNoContent());
+      mockMvc.perform(put(ACCOUNT_URL).contentType(MediaType.APPLICATION_JSON)
+          .content("{\"accountName\": \"Renamed TFSA\"}")).andExpect(status().isNoContent());
     }
 
     @Test
@@ -252,12 +264,11 @@ class AccountControllerTest {
     void commandIsConstructedCorrectly() throws Exception {
       doNothing().when(lifecycleService).updateAccount(any(UpdateAccountCommand.class));
 
-      ArgumentCaptor<UpdateAccountCommand> captor = ArgumentCaptor.forClass(UpdateAccountCommand.class);
+      ArgumentCaptor<UpdateAccountCommand> captor = ArgumentCaptor.forClass(
+          UpdateAccountCommand.class);
 
-      mockMvc.perform(put(ACCOUNT_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content("{\"accountName\": \"Renamed TFSA\"}"))
-          .andExpect(status().isNoContent());
+      mockMvc.perform(put(ACCOUNT_URL).contentType(MediaType.APPLICATION_JSON)
+          .content("{\"accountName\": \"Renamed TFSA\"}")).andExpect(status().isNoContent());
 
       verify(lifecycleService).updateAccount(captor.capture());
       UpdateAccountCommand cmd = captor.getValue();
@@ -271,10 +282,8 @@ class AccountControllerTest {
     @Test
     @DisplayName("400 when accountName is null")
     void returns400WhenNameNull() throws Exception {
-      mockMvc.perform(put(ACCOUNT_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content("{\"accountName\": null}"))
-          .andExpect(status().isBadRequest());
+      mockMvc.perform(put(ACCOUNT_URL).contentType(MediaType.APPLICATION_JSON)
+          .content("{\"accountName\": null}")).andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
     }
@@ -282,9 +291,7 @@ class AccountControllerTest {
     @Test
     @DisplayName("400 when body is empty")
     void returns400WhenBodyEmpty() throws Exception {
-      mockMvc.perform(put(ACCOUNT_URL)
-          .contentType(MediaType.APPLICATION_JSON)
-          .content("{}"))
+      mockMvc.perform(put(ACCOUNT_URL).contentType(MediaType.APPLICATION_JSON).content("{}"))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(lifecycleService);
@@ -300,8 +307,7 @@ class AccountControllerTest {
     void returns204OnSuccess() throws Exception {
       doNothing().when(lifecycleService).deleteAccount(any(DeleteAccountCommand.class));
 
-      mockMvc.perform(delete(ACCOUNT_URL))
-          .andExpect(status().isNoContent());
+      mockMvc.perform(delete(ACCOUNT_URL)).andExpect(status().isNoContent());
     }
 
     @Test
@@ -309,10 +315,10 @@ class AccountControllerTest {
     void commandIsConstructedCorrectly() throws Exception {
       doNothing().when(lifecycleService).deleteAccount(any(DeleteAccountCommand.class));
 
-      ArgumentCaptor<DeleteAccountCommand> captor = ArgumentCaptor.forClass(DeleteAccountCommand.class);
+      ArgumentCaptor<DeleteAccountCommand> captor = ArgumentCaptor.forClass(
+          DeleteAccountCommand.class);
 
-      mockMvc.perform(delete(ACCOUNT_URL))
-          .andExpect(status().isNoContent());
+      mockMvc.perform(delete(ACCOUNT_URL)).andExpect(status().isNoContent());
 
       verify(lifecycleService).deleteAccount(captor.capture());
       DeleteAccountCommand cmd = captor.getValue();
@@ -325,11 +331,10 @@ class AccountControllerTest {
     @Test
     @DisplayName("409 when account has open positions or non-zero balance")
     void returns409WhenCannotClose() throws Exception {
-      doThrow(new AccountCannotBeClosedException("Account has open positions"))
-          .when(lifecycleService).deleteAccount(any(DeleteAccountCommand.class));
+      doThrow(new AccountCannotBeClosedException("Account has open positions")).when(
+          lifecycleService).deleteAccount(any(DeleteAccountCommand.class));
 
-      mockMvc.perform(delete(ACCOUNT_URL))
-          .andExpect(status().isConflict())
+      mockMvc.perform(delete(ACCOUNT_URL)).andExpect(status().isConflict())
           .andExpect(jsonPath("$.code").value("ACCOUNT_CANNOT_BE_CLOSED"));
     }
   }
@@ -345,8 +350,7 @@ class AccountControllerTest {
     void returns204OnSuccess() throws Exception {
       doNothing().when(lifecycleService).reopenAccount(any(ReopenAccountCommand.class));
 
-      mockMvc.perform(patch(REOPEN_URL))
-          .andExpect(status().isNoContent());
+      mockMvc.perform(patch(REOPEN_URL)).andExpect(status().isNoContent());
     }
 
     @Test
@@ -354,10 +358,10 @@ class AccountControllerTest {
     void commandIsConstructedCorrectly() throws Exception {
       doNothing().when(lifecycleService).reopenAccount(any(ReopenAccountCommand.class));
 
-      ArgumentCaptor<ReopenAccountCommand> captor = ArgumentCaptor.forClass(ReopenAccountCommand.class);
+      ArgumentCaptor<ReopenAccountCommand> captor = ArgumentCaptor.forClass(
+          ReopenAccountCommand.class);
 
-      mockMvc.perform(patch(REOPEN_URL))
-          .andExpect(status().isNoContent());
+      mockMvc.perform(patch(REOPEN_URL)).andExpect(status().isNoContent());
 
       verify(lifecycleService).reopenAccount(captor.capture());
       ReopenAccountCommand cmd = captor.getValue();
@@ -370,11 +374,10 @@ class AccountControllerTest {
     @Test
     @DisplayName("409 when account is not in CLOSED state")
     void returns409WhenCannotReopen() throws Exception {
-      doThrow(new AccountCannotBeReopenedException("Account is not closed"))
-          .when(lifecycleService).reopenAccount(any(ReopenAccountCommand.class));
+      doThrow(new AccountCannotBeReopenedException("Account is not closed")).when(lifecycleService)
+          .reopenAccount(any(ReopenAccountCommand.class));
 
-      mockMvc.perform(patch(REOPEN_URL))
-          .andExpect(status().isConflict())
+      mockMvc.perform(patch(REOPEN_URL)).andExpect(status().isConflict())
           .andExpect(jsonPath("$.code").value("ACCOUNT_CANNOT_BE_REOPENED"));
     }
   }
@@ -390,8 +393,7 @@ class AccountControllerTest {
       Page<AccountView> page = new PageImpl<>(List.of(view));
       when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(page);
 
-      mockMvc.perform(get(BASE_URL))
-          .andExpect(status().isOk())
+      mockMvc.perform(get(BASE_URL)).andExpect(status().isOk())
           .andExpect(jsonPath("$.content").isArray())
           .andExpect(jsonPath("$.content.length()").value(1))
           .andExpect(jsonPath("$.totalElements").value(1));
@@ -401,10 +403,10 @@ class AccountControllerTest {
     @DisplayName("200 and returns empty page when no accounts exist")
     void returns200WithEmptyPage() throws Exception {
       Page<AccountView> emptyPage = Page.empty();
-      when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(emptyPage);
+      when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(
+          emptyPage);
 
-      mockMvc.perform(get(BASE_URL))
-          .andExpect(status().isOk())
+      mockMvc.perform(get(BASE_URL)).andExpect(status().isOk())
           .andExpect(jsonPath("$.content").isArray())
           .andExpect(jsonPath("$.content.length()").value(0));
     }
@@ -413,9 +415,11 @@ class AccountControllerTest {
     @DisplayName("GetAllAccountsQuery uses page/size from Pageable query params")
     void queryUsesPageableParams() throws Exception {
       Page<AccountView> emptyPage = Page.empty();
-      when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(emptyPage);
+      when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(
+          emptyPage);
 
-      ArgumentCaptor<GetAllAccountsQuery> captor = ArgumentCaptor.forClass(GetAllAccountsQuery.class);
+      ArgumentCaptor<GetAllAccountsQuery> captor = ArgumentCaptor.forClass(
+          GetAllAccountsQuery.class);
 
       mockMvc.perform(get(BASE_URL).param("page", "2").param("size", "10"))
           .andExpect(status().isOk());
@@ -433,12 +437,13 @@ class AccountControllerTest {
     @DisplayName("GetAllAccountsQuery defaults to page 0 when no params given")
     void queryDefaultsToPageZero() throws Exception {
       Page<AccountView> emptyPage = Page.empty();
-      when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(emptyPage);
+      when(accountQueryService.getAllAccounts(any(GetAllAccountsQuery.class))).thenReturn(
+          emptyPage);
 
-      ArgumentCaptor<GetAllAccountsQuery> captor = ArgumentCaptor.forClass(GetAllAccountsQuery.class);
+      ArgumentCaptor<GetAllAccountsQuery> captor = ArgumentCaptor.forClass(
+          GetAllAccountsQuery.class);
 
-      mockMvc.perform(get(BASE_URL))
-          .andExpect(status().isOk());
+      mockMvc.perform(get(BASE_URL)).andExpect(status().isOk());
 
       verify(accountQueryService).getAllAccounts(captor.capture());
       assertThat(captor.getValue().page()).isEqualTo(0);
@@ -453,22 +458,23 @@ class AccountControllerTest {
     @DisplayName("200 and returns AccountView on success")
     void returns200OnSuccess() throws Exception {
       AccountView view = buildAccountView(ACCOUNT_ID, "TFSA", AccountLifecycleState.ACTIVE);
-      when(accountQueryService.getAccountSummary(any(GetAccountSummaryQuery.class))).thenReturn(view);
+      when(accountQueryService.getAccountSummary(any(GetAccountSummaryQuery.class))).thenReturn(
+          view);
 
-      mockMvc.perform(get(ACCOUNT_URL))
-          .andExpect(status().isOk());
+      mockMvc.perform(get(ACCOUNT_URL)).andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("GetAccountSummaryQuery carries the correct IDs")
     void queryIsConstructedCorrectly() throws Exception {
       AccountView view = buildAccountView(ACCOUNT_ID, "TFSA", AccountLifecycleState.ACTIVE);
-      when(accountQueryService.getAccountSummary(any(GetAccountSummaryQuery.class))).thenReturn(view);
+      when(accountQueryService.getAccountSummary(any(GetAccountSummaryQuery.class))).thenReturn(
+          view);
 
-      ArgumentCaptor<GetAccountSummaryQuery> captor = ArgumentCaptor.forClass(GetAccountSummaryQuery.class);
+      ArgumentCaptor<GetAccountSummaryQuery> captor = ArgumentCaptor.forClass(
+          GetAccountSummaryQuery.class);
 
-      mockMvc.perform(get(ACCOUNT_URL))
-          .andExpect(status().isOk());
+      mockMvc.perform(get(ACCOUNT_URL)).andExpect(status().isOk());
 
       verify(accountQueryService).getAccountSummary(captor.capture());
       GetAccountSummaryQuery query = captor.getValue();
@@ -481,45 +487,12 @@ class AccountControllerTest {
     @Test
     @DisplayName("404 when account does not exist or belongs to another user")
     void returns404WhenNotFound() throws Exception {
-      when(accountQueryService.getAccountSummary(any(GetAccountSummaryQuery.class)))
-          .thenThrow(new AccountNotFoundException(
-              AccountId.fromString(ACCOUNT_ID),
+      when(accountQueryService.getAccountSummary(any(GetAccountSummaryQuery.class))).thenThrow(
+          new AccountNotFoundException(AccountId.fromString(ACCOUNT_ID),
               PortfolioId.fromString(PORTFOLIO_ID)));
 
-      mockMvc.perform(get(ACCOUNT_URL))
-          .andExpect(status().isNotFound())
+      mockMvc.perform(get(ACCOUNT_URL)).andExpect(status().isNotFound())
           .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_FOUND"));
     }
-  }
-
-  private String validCreateRequest() {
-    return """
-        {
-            "accountName": "My TFSA",
-            "accountType": "TFSA",
-            "strategy": "ACB",
-            "currency": "CAD"
-        }
-        """;
-  }
-
-  private AccountView buildAccountView(String accountId,
-      String accountTypeName,
-      AccountLifecycleState state) {
-    Currency cad = Currency.of("CAD");
-    Money zero = Money.zero(cad);
-
-    return new AccountView(
-        AccountId.fromString(accountId),
-        "Test Account",
-        AccountType.valueOf(accountTypeName),
-        state,
-        List.of(),
-        cad,
-        zero,
-        zero,
-        Instant.now(),
-        false,
-        0);
   }
 }

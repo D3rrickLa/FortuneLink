@@ -1,11 +1,22 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
@@ -13,12 +24,9 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
-import nl.altindag.log.LogCaptor;
-
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-
+import nl.altindag.log.LogCaptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -73,12 +81,13 @@ class PositionRecalculationServiceTest {
   void debounceLogicSetsKey() {
     PositionRecalculationRequestedEvent event = createEvent();
 
-    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
-        .thenReturn(true);
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(
+        true);
 
     recalculationService.onRecalculationRequested(event);
 
-    verify(valueOperations).setIfAbsent(startsWith("recalc:"), anyString(), eq(Duration.ofSeconds(3)));
+    verify(valueOperations).setIfAbsent(startsWith("recalc:"), anyString(),
+        eq(Duration.ofSeconds(3)));
 
   }
 
@@ -87,8 +96,8 @@ class PositionRecalculationServiceTest {
   void subsequentRequestsUpdateToken() {
     PositionRecalculationRequestedEvent event = createEvent();
 
-    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
-        .thenReturn(false);
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(
+        false);
 
     recalculationService.onRecalculationRequested(event);
 
@@ -102,8 +111,8 @@ class PositionRecalculationServiceTest {
     RLock mockLock = mock(RLock.class);
 
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
-        .thenThrow(new RuntimeException("Redis down"));
+    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenThrow(
+        new RuntimeException("Redis down"));
 
     ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "test-lock", event);
 
@@ -117,8 +126,9 @@ class PositionRecalculationServiceTest {
     doThrow(new RuntimeException("Failed")).when(executor)
         .scheduleRecalculation(any(), any(), any(), any());
 
-    assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(recalculationService, "runRecalculation", event))
-        .isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(
+        () -> ReflectionTestUtils.invokeMethod(recalculationService, "runRecalculation",
+            event)).isInstanceOf(RuntimeException.class);
 
     verify(accountHealthService).markStale(event.accountId());
   }
@@ -128,14 +138,12 @@ class PositionRecalculationServiceTest {
   void onRecalculationRequestedSchedulesFirst() {
     PositionRecalculationRequestedEvent event = createEvent();
 
-    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
-        .thenReturn(true);
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(
+        true);
 
     recalculationService.onRecalculationRequested(event);
 
-    verify(valueOperations).setIfAbsent(
-        contains(SYMBOL.symbol()),
-        anyString(),
+    verify(valueOperations).setIfAbsent(contains(SYMBOL.symbol()), anyString(),
         eq(Duration.ofSeconds(3)));
   }
 
@@ -144,8 +152,8 @@ class PositionRecalculationServiceTest {
   void onRecalculationRequestedUpdatesDuplicate() {
     PositionRecalculationRequestedEvent event = createEvent();
 
-    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
-        .thenReturn(false);
+    when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(
+        false);
 
     recalculationService.onRecalculationRequested(event);
 
@@ -208,8 +216,8 @@ class PositionRecalculationServiceTest {
     RLock mockLock = mock(RLock.class);
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
 
-    when(mockLock.tryLock(anyLong(), anyLong(), any()))
-        .thenThrow(new RuntimeException("Redis connection lost"));
+    when(mockLock.tryLock(anyLong(), anyLong(), any())).thenThrow(
+        new RuntimeException("Redis connection lost"));
 
     ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event);
 
@@ -225,8 +233,9 @@ class PositionRecalculationServiceTest {
     doThrow(new RuntimeException("Math error")).when(executor)
         .scheduleRecalculation(any(), any(), any(), any());
 
-    assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(recalculationService, "runRecalculation", event))
-        .isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(
+        () -> ReflectionTestUtils.invokeMethod(recalculationService, "runRecalculation",
+            event)).isInstanceOf(RuntimeException.class);
 
     verify(accountHealthService).markStale(event.accountId());
   }
@@ -238,11 +247,12 @@ class PositionRecalculationServiceTest {
     RLock mockLock = mock(RLock.class);
     when(redissonClient.getLock(anyString())).thenReturn(mockLock);
 
-    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class)))
-        .thenThrow(new InterruptedException("Simulation"));
+    when(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenThrow(
+        new InterruptedException("Simulation"));
 
-    assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event))
-        .hasCauseInstanceOf(InterruptedException.class);
+    assertThatThrownBy(
+        () -> ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key",
+            event)).hasCauseInstanceOf(InterruptedException.class);
 
     assertTrue(Thread.interrupted(), "Interrupt flag should be restored");
   }
@@ -262,8 +272,7 @@ class PositionRecalculationServiceTest {
 
     ReflectionTestUtils.invokeMethod(recalculationService, "runIfLatest", event, key, token);
 
-    assertThat(logCaptor.getErrorLogs())
-        .anyMatch(l -> l.contains("Interrupted"));
+    assertThat(logCaptor.getErrorLogs()).anyMatch(l -> l.contains("Interrupted"));
   }
 
   @Test
@@ -275,11 +284,11 @@ class PositionRecalculationServiceTest {
 
     when(mockLock.tryLock(anyLong(), anyLong(), any())).thenReturn(true);
 
-    doThrow(new IllegalMonitorStateException("Lock already released"))
-        .when(mockLock).unlock();
+    doThrow(new IllegalMonitorStateException("Lock already released")).when(mockLock).unlock();
 
     assertDoesNotThrow(
-        () -> ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event));
+        () -> ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key",
+            event));
 
     verify(mockLock).unlock();
 
@@ -295,8 +304,7 @@ class PositionRecalculationServiceTest {
 
     ReflectionTestUtils.invokeMethod(recalculationService, "acquireAndRun", "lock-key", event);
 
-    assertThat(logCaptor.getWarnLogs())
-        .anyMatch(l -> l.contains("Lock busy for accountId"));
+    assertThat(logCaptor.getWarnLogs()).anyMatch(l -> l.contains("Lock busy for accountId"));
 
     verifyNoInteractions(executor);
   }

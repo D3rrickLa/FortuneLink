@@ -6,7 +6,6 @@ import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -19,9 +18,10 @@ public class RateLimitInterceptor implements HandlerInterceptor {
   private final BucketConfiguration marketDataPriceConfig; // Inject the specific bean
   private final BucketConfiguration csvImportConfig; // Inject the specific bean
 
-  public RateLimitInterceptor(ProxyManager<String> proxyManager, BucketConfiguration globalBucketConfig,
+  public RateLimitInterceptor(ProxyManager<String> proxyManager,
+      BucketConfiguration globalBucketConfig,
       @Qualifier("marketDataPriceConfig") BucketConfiguration marketDataPriceConfig,
-    @Qualifier("csvImportConfig") BucketConfiguration csvImportConfig) {
+      @Qualifier("csvImportConfig") BucketConfiguration csvImportConfig) {
     this.proxyManager = proxyManager;
     this.globalBucketConfig = globalBucketConfig;
     this.marketDataPriceConfig = marketDataPriceConfig;

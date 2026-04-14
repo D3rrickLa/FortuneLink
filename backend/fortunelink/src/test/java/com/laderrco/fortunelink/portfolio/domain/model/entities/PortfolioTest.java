@@ -195,9 +195,9 @@ class PortfolioTest {
       Account account = createAccount(portfolio, "Test");
       portfolio.closeAccount(account.getAccountId());
 
-      assertThatThrownBy(() ->portfolio.renameAccount(account.getAccountId(), "Valid Name"))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Cannot rename a closed account.");
+      assertThatThrownBy(
+          () -> portfolio.renameAccount(account.getAccountId(), "Valid Name")).isInstanceOf(
+          IllegalStateException.class).hasMessageContaining("Cannot rename a closed account.");
       assertThat(account.getName()).isEqualTo("Test");
     }
 
@@ -401,14 +401,12 @@ class PortfolioTest {
     @Test
     @DisplayName("reportRecalculationSuccess should restore health only if account was stale")
     void reportRecalculationSuccess_RestoresStaleAccount() {
-      
+
       portfolio.reportRecalculationFailure(accountId);
       Instant afterFailure = portfolio.getLastUpdatedAt();
 
-      
       portfolio.reportRecalculationSuccess(accountId);
 
-      
       assertThat(account.isStale()).isFalse();
       assertThat(portfolio.getLastUpdatedAt()).isAfterOrEqualTo(afterFailure);
     }
@@ -416,13 +414,12 @@ class PortfolioTest {
     @Test
     @DisplayName("reportRecalculationSuccess should not touch portfolio if account was already healthy")
     void reportRecalculationSuccess_NoOpForHealthyAccount() {
-      
+
       assertThat(account.isStale()).isFalse();
       Instant initialTime = portfolio.getLastUpdatedAt();
 
       portfolio.reportRecalculationSuccess(accountId);
 
-      
       assertThat(portfolio.getLastUpdatedAt()).isEqualTo(initialTime);
     }
 

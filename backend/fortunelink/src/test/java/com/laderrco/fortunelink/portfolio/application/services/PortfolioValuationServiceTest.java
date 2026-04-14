@@ -288,19 +288,19 @@ class PortfolioValuationServiceTest {
       Currency accountCurrency = Currency.of("USD");
 
       Money priceInCad = Money.of(100, "CAD");
-      MarketAssetQuote cadQuote = new MarketAssetQuote(
-          AAPL, new Price(priceInCad), null, null, null,
-          null, null, null, null, null, "Test Source", Instant.now());
+      MarketAssetQuote cadQuote = new MarketAssetQuote(AAPL, new Price(priceInCad), null, null,
+          null, null, null, null, null, null, "Test Source", Instant.now());
 
-      Account account = createMockAccount(accountCurrency, Money.zero(accountCurrency), Map.of(AAPL, pos));
+      Account account = createMockAccount(accountCurrency, Money.zero(accountCurrency),
+          Map.of(AAPL, pos));
 
       Money priceInUsd = Money.of(75, "USD");
       when(exchangeRateService.convert(priceInCad, accountCurrency)).thenReturn(priceInUsd);
 
       Money expectedFinalValue = Money.of(750, "USD");
 
-      when(pos.currentValue(argThat(p -> p.currency().equals(accountCurrency) && p.amount().doubleValue() == 75.0)))
-          .thenReturn(expectedFinalValue);
+      when(pos.currentValue(argThat(p -> p.currency().equals(accountCurrency)
+          && p.amount().doubleValue() == 75.0))).thenReturn(expectedFinalValue);
 
       Money result = valuationService.calculatePositionsValue(account, Map.of(AAPL, cadQuote));
 

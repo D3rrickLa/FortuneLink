@@ -4,10 +4,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.dtos.BocEx
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocParsingException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -111,7 +109,7 @@ public class BocClient {
       case 404 -> "BOC API endpoint or series not found: " + url;
       case 500 -> "Bank of Canada server encountered an internal error.";
       default ->
-        String.format("BOC API returned unexpected status: %d - %s", status, response.body());
+          String.format("BOC API returned unexpected status: %d - %s", status, response.body());
     };
 
     log.error(errorMessage);

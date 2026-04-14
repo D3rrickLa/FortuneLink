@@ -1,16 +1,18 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.market.fmp;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpProfileResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpQuoteResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.dtos.FmpSearchResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.market.fmp.exceptions.FmpApiException;
-
-import tools.jackson.databind.ObjectMapper;
-
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.List;
@@ -21,24 +23,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FMP Client API Tests")
 class FmpClientTest {
 
+  private final ObjectMapper objectMapper = new ObjectMapper();
   @Mock
   private FmpClientConfig config;
   @Mock
   private HttpClient httpClient;
   @Mock
   private HttpResponse<Object> httpResponse;
-
-  private final ObjectMapper objectMapper = new ObjectMapper();
   private FmpClient fmpClient;
 
   @BeforeEach
   void setUp() {
-    
+
     lenient().when(config.getBaseUrl()).thenReturn("https://api.test.com");
     lenient().when(config.getApiKey()).thenReturn("test-key");
     lenient().when(config.getTimeoutSeconds()).thenReturn(10);
@@ -53,7 +55,7 @@ class FmpClientTest {
     @Test
     @DisplayName("getQuote: should parse FMP array wrapper correctly")
     void shouldParseSingleArrayWrapper() throws Exception {
-      
+
       String jsonResponse = "[{\"symbol\": \"AAPL\", \"price\": 150.00}]";
 
       when(httpResponse.statusCode()).thenReturn(200);
@@ -87,8 +89,7 @@ class FmpClientTest {
       when(httpResponse.statusCode()).thenReturn(429);
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
-          .isInstanceOf(FmpApiException.class)
+      assertThatThrownBy(() -> fmpClient.getQuote("AAPL")).isInstanceOf(FmpApiException.class)
           .hasMessageContaining("Rate limit exceeded");
     }
 
@@ -98,8 +99,7 @@ class FmpClientTest {
       when(httpResponse.statusCode()).thenReturn(401);
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
-          .isInstanceOf(FmpApiException.class)
+      assertThatThrownBy(() -> fmpClient.getQuote("AAPL")).isInstanceOf(FmpApiException.class)
           .hasMessageContaining("Invalid FMP API key");
     }
 
@@ -110,8 +110,7 @@ class FmpClientTest {
       when(httpResponse.body()).thenReturn("Server Exploded");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
-          .isInstanceOf(FmpApiException.class)
+      assertThatThrownBy(() -> fmpClient.getQuote("AAPL")).isInstanceOf(FmpApiException.class)
           .hasMessageContaining("FMP API Error: 500");
     }
   }
@@ -123,11 +122,9 @@ class FmpClientTest {
     @Test
     @DisplayName("getBatchQuotes: should filter out nulls and return list")
     void shouldProcessBatchSequentially() throws Exception {
-      
+
       when(httpResponse.statusCode()).thenReturn(200);
-      when(httpResponse.body())
-          .thenReturn("[{\"symbol\": \"AAPL\"}]") 
-          .thenReturn("[]"); 
+      when(httpResponse.body()).thenReturn("[{\"symbol\": \"AAPL\"}]").thenReturn("[]");
 
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -168,76 +165,64 @@ class FmpClientTest {
     @Test
     @DisplayName("isDebugLogging: should trigger debug log branch")
     void testDebugLoggingBranch() throws Exception {
-      
+
       when(config.isDebugLogging()).thenReturn(true);
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      
       fmpClient.getQuote("AAPL");
 
-      
       verify(config).isDebugLogging();
-      
-      
-      
+
+
     }
 
     @Test
     @DisplayName("handleErrorResponse: should throw 404 specific exception")
     void shouldThrow404Error() throws Exception {
-      
+
       when(httpResponse.statusCode()).thenReturn(404);
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      
-      assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
-          .isInstanceOf(FmpApiException.class)
+      assertThatThrownBy(() -> fmpClient.getQuote("AAPL")).isInstanceOf(FmpApiException.class)
           .hasMessageContaining("Endpoint not found");
     }
 
     @Test
     @DisplayName("executeAndParseList: should handle InterruptedException")
     void shouldHandleInterruptedException() throws Exception {
-      
+
       when(httpClient.send(any(), any())).thenThrow(new InterruptedException("Interrupted!"));
 
-      
-      assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
-          .isInstanceOf(FmpApiException.class)
+      assertThatThrownBy(() -> fmpClient.getQuote("AAPL")).isInstanceOf(FmpApiException.class)
           .hasMessageContaining("Request interrupted");
 
-      assertThat(Thread.interrupted()).isTrue(); 
+      assertThat(Thread.interrupted()).isTrue();
     }
 
     @Test
     @DisplayName("executeAndParseList: should handle SocketTimeoutException")
     void shouldHandleTimeoutException() throws Exception {
-      
+
       when(httpClient.send(any(), any())).thenThrow(new java.net.SocketTimeoutException("Timeout"));
 
-      
-      assertThatThrownBy(() -> fmpClient.getQuote("AAPL"))
-          .isInstanceOf(FmpApiException.class)
+      assertThatThrownBy(() -> fmpClient.getQuote("AAPL")).isInstanceOf(FmpApiException.class)
           .hasMessageContaining("request timed out");
     }
 
     @Test
     @DisplayName("buildUrl: should handle paths with and without leading slashes")
     void testBuildUrlPathSanitization() throws Exception {
-      
-      
+
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      
       fmpClient.getQuote("/AAPL");
-      
+
       fmpClient.getQuote("AAPL");
 
-      
       when(config.getBaseUrl()).thenReturn("https://api.test.com/");
       fmpClient.getProfile("AAPL");
 
@@ -247,15 +232,13 @@ class FmpClientTest {
     @Test
     @DisplayName("getBatchProfiles: should fetch and filter profiles")
     void testGetBatchProfiles() throws Exception {
-      
+
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[{\"symbol\": \"AAPL\"}]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      
       List<FmpProfileResponse> results = fmpClient.getBatchProfiles(List.of("AAPL"));
 
-      
       assertThat(results).hasSize(1);
       assertThat(fmpClient.getBatchProfiles(null)).isEmpty();
     }
@@ -263,15 +246,13 @@ class FmpClientTest {
     @Test
     @DisplayName("getSearch: should build search URL and return list")
     void testGetSearch() throws Exception {
-      
+
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("[{\"symbol\": \"AAPL\", \"name\": \"Apple\"}]");
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
-      
       List<FmpSearchResponse> results = fmpClient.getSearch("Apple");
 
-      
       assertThat(results).hasSize(1);
       assertThat(results.get(0).getSymbol()).isEqualTo("AAPL");
     }

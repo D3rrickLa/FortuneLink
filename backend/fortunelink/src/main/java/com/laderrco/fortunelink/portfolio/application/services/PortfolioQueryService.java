@@ -68,19 +68,22 @@ public class PortfolioQueryService {
         .collect(Collectors.toSet());
     Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(symbols);
 
-    Set<AccountId> accountIds = accounts.stream().map(Account::getAccountId).collect(Collectors.toSet());
-    
-    Map<AccountId, Map<AssetSymbol, Money>> allFeesByAccount = 
-      transactionRepository.sumBuyFeesBySymbolForAccounts(accountIds);
+    Set<AccountId> accountIds = accounts.stream().map(Account::getAccountId)
+        .collect(Collectors.toSet());
 
-    List<AccountView> accountViews = accounts.stream().map(account -> accountViewBuilder.build(
-            account, quoteCache, allFeesByAccount.getOrDefault(account.getAccountId(), Map.of()))).toList();
+    Map<AccountId, Map<AssetSymbol, Money>> allFeesByAccount = transactionRepository.sumBuyFeesBySymbolForAccounts(
+        accountIds);
 
-    Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency, quoteCache);
+    List<AccountView> accountViews = accounts.stream().map(
+        account -> accountViewBuilder.build(account, quoteCache,
+            allFeesByAccount.getOrDefault(account.getAccountId(), Map.of()))).toList();
+
+    Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency,
+        quoteCache);
     boolean hasStaleData = accounts.stream().anyMatch(Account::isStale);
 
     return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue, hasStaleData);
-    
+
   }
 
   public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {

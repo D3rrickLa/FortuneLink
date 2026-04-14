@@ -18,7 +18,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
-
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -39,14 +38,14 @@ public class FifoPositionProjectorTest {
   @Test
   @DisplayName("project: successfully accumulates fifo position state")
   void projectAccumulatesPositionStateCorrectly() {
-    
+
     Transaction buy = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
         .occurredAt(Instant.parse("2023-01-01T10:00:00Z")).build();
 
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
         .occurredAt(Instant.parse("2023-01-02T10:00:00Z")).build();
 
-    FifoPosition result = projector.project(List.of(sell, buy)); 
+    FifoPosition result = projector.project(List.of(sell, buy));
 
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
@@ -56,14 +55,10 @@ public class FifoPositionProjectorTest {
   void projectSortsByIdWhenTimestampsMatch() {
     Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
     Transaction txA = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
-        .transactionId(TransactionId.newId())
-        .occurredAt(sameTime)
-        .build();
+        .transactionId(TransactionId.newId()).occurredAt(sameTime).build();
 
     Transaction txB = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
-        .transactionId(TransactionId.newId())
-        .occurredAt(sameTime)
-        .build();
+        .transactionId(TransactionId.newId()).occurredAt(sameTime).build();
 
     FifoPosition result = projector.project(List.of(txB, txA));
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
@@ -80,19 +75,12 @@ public class FifoPositionProjectorTest {
 
     try (MockedStatic<TransactionApplier> utilities = mockStatic(TransactionApplier.class)) {
 
-      
-      
       AcbPosition wrongPosition = mock(AcbPosition.class);
 
-      
-      
       ApplyResult<Position> resultWithWrongType = new ApplyResult.Adjustment<>(wrongPosition);
 
-      
       utilities.when(() -> TransactionApplier.apply(any(), any())).thenReturn(resultWithWrongType);
 
-      
-      
       assertThrows(IllegalStateException.class, () -> {
         projector.project(List.of(mock(Transaction.class)));
       });

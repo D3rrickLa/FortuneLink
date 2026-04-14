@@ -2,9 +2,8 @@ package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.dtos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.math.BigDecimal;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,8 @@ class BocExchangeResponseTest {
         }
         """;
 
-    BocExchangeResponse.Observation observation = objectMapper.readValue(json, BocExchangeResponse.Observation.class);
+    BocExchangeResponse.Observation observation = objectMapper.readValue(json,
+        BocExchangeResponse.Observation.class);
 
     assertThat(observation.getDate()).isEqualTo("2024-01-01");
 
@@ -35,8 +35,7 @@ class BocExchangeResponseTest {
     assertThat(observation.getRates()).containsKey("FXUSDCAD");
     assertThat(observation.getRates()).containsKey("FXEURCAD");
 
-    assertThat(observation.getRates().get("FXUSDCAD").getValue())
-        .isEqualByComparingTo("1.3521");
+    assertThat(observation.getRates().get("FXUSDCAD").getValue()).isEqualByComparingTo("1.3521");
 
     assertThat(observation.getRates()).doesNotContainKey("d");
   }
@@ -47,7 +46,8 @@ class BocExchangeResponseTest {
 
     String json = "{ \"d\": \"2024-01-01\" }";
 
-    BocExchangeResponse.Observation observation = objectMapper.readValue(json, BocExchangeResponse.Observation.class);
+    BocExchangeResponse.Observation observation = objectMapper.readValue(json,
+        BocExchangeResponse.Observation.class);
 
     assertThat(observation.getDate()).isEqualTo("2024-01-01");
     assertThat(observation.getRates()).isEmpty();

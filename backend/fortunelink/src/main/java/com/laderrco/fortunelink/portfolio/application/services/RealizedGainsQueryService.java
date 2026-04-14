@@ -13,7 +13,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,10 +28,12 @@ public class RealizedGainsQueryService {
   public RealizedGainsSummaryView getRealizedGains(GetRealizedGainsQuery query) {
     Objects.requireNonNull(query, "GetRealizedGainsQuery cannot be null");
 
-    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(), query.accountId());
+    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
+        query.accountId());
 
     Page<RealizedGainRecord> recordPage = fetchRecords(query);
-    GainsAggregation totals = repository.calculateTotals(query.accountId(), query.taxYear(), query.symbol());
+    GainsAggregation totals = repository.calculateTotals(query.accountId(), query.taxYear(),
+        query.symbol());
 
     Currency currency = resolveCurrency(query.accountId());
 
@@ -45,7 +46,8 @@ public class RealizedGainsQueryService {
     boolean hasSymbol = query.symbol() != null;
 
     if (hasYear && hasSymbol) {
-      return repository.findByAccountIdAndYearAndSymbol(query.accountId(), query.taxYear(), query.symbol(), pageable);
+      return repository.findByAccountIdAndYearAndSymbol(query.accountId(), query.taxYear(),
+          query.symbol(), pageable);
     } else if (hasYear) {
       return repository.findByAccountIdAndYear(query.accountId(), query.taxYear(), pageable);
     } else if (hasSymbol) {
@@ -64,10 +66,9 @@ public class RealizedGainsQueryService {
       GainsAggregation totals, Currency currency, Integer taxYear) {
 
     // Convert domain records to views for the current page
-    List<RealizedGainView> views = recordPage.getContent().stream()
-        .map(r -> new RealizedGainView(r.symbol().symbol(), r.realizedGainLoss(),
-            r.costBasisSold(), r.occurredAt(), r.isGain()))
-        .toList();
+    List<RealizedGainView> views = recordPage.getContent().stream().map(
+        r -> new RealizedGainView(r.symbol().symbol(), r.realizedGainLoss(), r.costBasisSold(),
+            r.occurredAt(), r.isGain())).toList();
 
     // Use the totals calculated by the DB aggregation
     Money totalGains = new Money(totals.sumGains(), currency);

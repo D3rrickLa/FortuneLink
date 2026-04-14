@@ -32,10 +32,10 @@ public abstract class BasePositionProjector<P extends Position> implements
   public P project(List<Transaction> transactions) {
     P current = getEmptyPosition(symbol, type, accountCurrency);
 
-    List<Transaction> sorted = transactions.stream()
-        .sorted(Comparator.comparing(Transaction::occurredAt)
-            .thenComparing(tx -> tx.transactionType() == TransactionType.BUY ? 0 : 1)
-            .thenComparing(tx -> tx.transactionId().id())) // UUID gives stable, deterministic tie-break
+    List<Transaction> sorted = transactions.stream().sorted(
+            Comparator.comparing(Transaction::occurredAt)
+                .thenComparing(tx -> tx.transactionType() == TransactionType.BUY ? 0 : 1).thenComparing(
+                    tx -> tx.transactionId().id())) // UUID gives stable, deterministic tie-break
         .toList();
 
     for (Transaction tx : sorted) {

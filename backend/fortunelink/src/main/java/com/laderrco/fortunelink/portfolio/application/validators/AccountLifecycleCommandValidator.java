@@ -7,7 +7,6 @@ import com.laderrco.fortunelink.portfolio.application.commands.UpdateAccountComm
 import com.laderrco.fortunelink.portfolio.application.utils.ValidationUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.annotations.HasAccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,8 +30,8 @@ public class AccountLifecycleCommandValidator {
     if (command.strategy() == null) {
       errors.add("Strategy is required");
     } else if (command.strategy() != PositionStrategy.ACB) {
-      errors.add("Strategy " + command.strategy() + " is not yet supported. " +
-          "Current tax regulations only support ACB.");
+      errors.add("Strategy " + command.strategy() + " is not yet supported. "
+          + "Current tax regulations only support ACB.");
     }
 
     if (command.baseCurrency() == null) {

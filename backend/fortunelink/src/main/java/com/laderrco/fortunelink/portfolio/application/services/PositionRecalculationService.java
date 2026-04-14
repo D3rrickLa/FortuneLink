@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
-
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,9 +30,7 @@ public class PositionRecalculationService {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Async("recalculationExecutor")
   public void onRecalculationRequested(PositionRecalculationRequestedEvent event) {
-    String key = String.format("recalc:%s:%s",
-        event.accountId().id(),
-        event.symbol().symbol());
+    String key = String.format("recalc:%s:%s", event.accountId().id(), event.symbol().symbol());
 
     String token = UUID.randomUUID().toString();
 
@@ -47,9 +44,8 @@ public class PositionRecalculationService {
   }
 
   private void schedule(PositionRecalculationRequestedEvent event, String key, String token) {
-    CompletableFuture.delayedExecutor(
-        DEBOUNCE_WINDOW.toMillis(),
-        TimeUnit.MILLISECONDS).execute(() -> runIfLatest(event, key, token));
+    CompletableFuture.delayedExecutor(DEBOUNCE_WINDOW.toMillis(), TimeUnit.MILLISECONDS)
+        .execute(() -> runIfLatest(event, key, token));
   }
 
   private void runIfLatest(PositionRecalculationRequestedEvent event, String key, String token) {
@@ -64,9 +60,7 @@ public class PositionRecalculationService {
     redisTemplate.delete(key);
 
     try {
-      acquireAndRun(
-          String.format("lock:account:%s", event.accountId().id()),
-          event);
+      acquireAndRun(String.format("lock:account:%s", event.accountId().id()), event);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       log.error("Interrupted", e);

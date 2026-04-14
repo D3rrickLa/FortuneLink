@@ -19,7 +19,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
-
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -47,7 +46,7 @@ class AcbPositionProjectorTest {
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(5), Price.of("15", CAD))
         .occurredAt(Instant.parse("2023-01-02T10:00:00Z")).build();
 
-    AcbPosition result = projector.project(List.of(sell, buy)); 
+    AcbPosition result = projector.project(List.of(sell, buy));
 
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("5");
   }
@@ -59,14 +58,10 @@ class AcbPositionProjectorTest {
     TransactionId buyId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5d");
     TransactionId buyId2 = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5c");
     Transaction txA = TransactionFactory.buyBuilder(Quantity.of(10), Price.of("10", CAD))
-        .transactionId(buyId)
-        .occurredAt(sameTime)
-        .build();
+        .transactionId(buyId).occurredAt(sameTime).build();
 
     Transaction txB = TransactionFactory.buyBuilder(Quantity.of(5), Price.of("15", CAD))
-        .transactionId(buyId2)
-        .occurredAt(sameTime)
-        .build();
+        .transactionId(buyId2).occurredAt(sameTime).build();
 
     AcbPosition result = projector.project(List.of(txB, txA));
     assertThat(result.totalQuantity().amount()).isEqualByComparingTo("15");
@@ -77,7 +72,6 @@ class AcbPositionProjectorTest {
   void projectPrioritizesBuyOverSell() {
     Instant sameTime = Instant.parse("2023-01-01T10:00:00Z");
 
-    
     TransactionId buyId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5d");
     TransactionId sellId = TransactionId.fromString("63fdb51b-dfa6-47d6-93ea-6142e7a02d5c");
 
@@ -86,7 +80,6 @@ class AcbPositionProjectorTest {
     Transaction sell = TransactionFactory.sellBuilder(Quantity.of(10), Price.of("60", CAD))
         .transactionId(sellId).occurredAt(sameTime).build();
 
-    
     assertDoesNotThrow(() -> projector.project(List.of(sell, buy)));
   }
 

@@ -47,8 +47,6 @@ class TransactionPurgeServiceTest {
       Instant capturedCutoff = cutoffCaptor.getValue();
       Instant expectedApprox = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
 
-      
-      
       long diffSeconds = Math.abs(
           capturedCutoff.getEpochSecond() - expectedApprox.getEpochSecond());
       assert (diffSeconds < 2);

@@ -2,17 +2,19 @@ package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.dtos.BocExchangeResponse;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocParsingException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
-
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -24,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BocClient Integration Logic Tests")
@@ -58,18 +62,19 @@ class BocClientTest {
       String mockJson = "{\"observations\": []}";
       BocExchangeResponse expectedResponse = new BocExchangeResponse();
 
-      when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-          .thenReturn((HttpResponse<Object>) httpResponse);
+      when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(
+          httpResponse);
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn(mockJson);
-      when(objectMapper.readValue(mockJson, BocExchangeResponse.class))
-          .thenReturn(expectedResponse);
+      when(objectMapper.readValue(mockJson, BocExchangeResponse.class)).thenReturn(
+          expectedResponse);
 
       BocExchangeResponse result = bocClient.getLatestExchangeRate("CAD", "USD");
 
       assertThat(result).isEqualTo(expectedResponse);
-      verify(httpClient).send(argThat(request -> request.uri().toString().contains("FXUSDCAD") &&
-          request.method().equals("GET")), any());
+      verify(httpClient).send(argThat(
+          request -> request.uri().toString().contains("FXUSDCAD") && request.method()
+              .equals("GET")), any());
     }
   }
 
@@ -84,19 +89,16 @@ class BocClientTest {
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
       when(httpResponse.statusCode()).thenReturn(404);
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("not found");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("not found");
 
       when(httpResponse.statusCode()).thenReturn(500);
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("internal error");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("internal error");
 
       when(httpResponse.statusCode()).thenReturn(418);
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("418");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("418");
     }
 
     @Test
@@ -104,9 +106,8 @@ class BocClientTest {
     void shouldHandleNetworkFailure() throws Exception {
       when(httpClient.send(any(), any())).thenThrow(new java.io.IOException("Connection refused"));
 
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("Connection failed");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("Connection failed");
     }
   }
 
@@ -124,8 +125,8 @@ class BocClientTest {
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn(mockJson);
-      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class)))
-          .thenReturn(new BocExchangeResponse());
+      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class))).thenReturn(
+          new BocExchangeResponse());
 
       bocClient.getLatestExchangeRate("CAD", "USD");
 
@@ -142,12 +143,11 @@ class BocClientTest {
       when(httpResponse.statusCode()).thenReturn(299);
       when(httpResponse.body()).thenReturn(malformedJson);
 
-      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class)))
-          .thenThrow(JacksonException.class);
+      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class))).thenThrow(
+          JacksonException.class);
 
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("Failed to process BOC latest rate request");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("Failed to process BOC latest rate request");
     }
   }
 
@@ -166,8 +166,8 @@ class BocClientTest {
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn(mockJson);
-      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class)))
-          .thenReturn(new BocExchangeResponse());
+      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class))).thenReturn(
+          new BocExchangeResponse());
 
       bocClient.getHistoricalExchangeRate("CAD", "USD", start, end);
 
@@ -185,11 +185,11 @@ class BocClientTest {
       when(httpResponse.statusCode()).thenReturn(200);
       when(httpResponse.body()).thenReturn("bad-data");
 
-      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class)))
-          .thenThrow(JacksonException.class);
+      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class))).thenThrow(
+          JacksonException.class);
 
-      assertThatThrownBy(() -> bocClient.getHistoricalExchangeRate("CAD", "USD", Instant.now(), Instant.now()))
-          .isInstanceOf(BocParsingException.class)
+      assertThatThrownBy(() -> bocClient.getHistoricalExchangeRate("CAD", "USD", Instant.now(),
+          Instant.now())).isInstanceOf(BocParsingException.class)
           .hasMessageContaining("Malformed or inaccessible data from BOC");
     }
   }
@@ -204,9 +204,8 @@ class BocClientTest {
 
       when(httpClient.send(any(), any())).thenThrow(new InterruptedException("Interrupted!"));
 
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("interrupted");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("interrupted");
 
       assertThat(Thread.interrupted()).isTrue();
     }
@@ -218,9 +217,8 @@ class BocClientTest {
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
       when(httpResponse.statusCode()).thenReturn(400);
 
-      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD"))
-          .isInstanceOf(BocApiException.class)
-          .hasMessageContaining("Invalid inputs for BOC request");
+      assertThatThrownBy(() -> bocClient.getLatestExchangeRate("CAD", "USD")).isInstanceOf(
+          BocApiException.class).hasMessageContaining("Invalid inputs for BOC request");
     }
 
     @Test
@@ -231,8 +229,8 @@ class BocClientTest {
       when(httpClient.send(any(), any())).thenReturn(httpResponse);
       when(httpResponse.statusCode()).thenReturn(202);
       when(httpResponse.body()).thenReturn(mockJson);
-      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class)))
-          .thenReturn(new BocExchangeResponse());
+      when(objectMapper.readValue(anyString(), eq(BocExchangeResponse.class))).thenReturn(
+          new BocExchangeResponse());
 
       BocExchangeResponse result = bocClient.getLatestExchangeRate("CAD", "USD");
 
@@ -259,9 +257,8 @@ class BocClientTest {
     void testLatestRateFallbackLogic() {
       Throwable cause = new RuntimeException("API Down");
 
-      assertThatThrownBy(() -> bocClient.getLatestRateFallback("CAD", "USD", cause))
-          .isInstanceOf(ExchangeRateUnavailableException.class)
-          .hasMessageContaining("USD")
+      assertThatThrownBy(() -> bocClient.getLatestRateFallback("CAD", "USD", cause)).isInstanceOf(
+              ExchangeRateUnavailableException.class).hasMessageContaining("USD")
           .hasMessageContaining("CAD");
     }
   }

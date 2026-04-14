@@ -1,5 +1,14 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.laderrco.fortunelink.portfolio.application.utils.valueobjects.GainsAggregation;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
@@ -7,6 +16,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.AccountJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.RealizedGainJpaEntity;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,25 +33,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RealizedGainsQueryRepositoryImpl Unit Tests")
 class RealizedGainsQueryRepositoryImplTest {
-
-  @Mock
-  private JpaRealizedGainRepository jpaRepository;
-
-  @InjectMocks
-  private RealizedGainsQueryRepositoryImpl repository;
 
   private static final String CAD = "CAD";
   private static final UUID RAW_PORTFOLIO_ID = UUID.randomUUID();
@@ -47,6 +45,26 @@ class RealizedGainsQueryRepositoryImplTest {
   private static final AssetSymbol SYMBOL = new AssetSymbol("AAPL");
   private static final int TAX_YEAR = 2024;
   private static final Pageable PAGEABLE = PageRequest.of(0, 10);
+  @Mock
+  private JpaRealizedGainRepository jpaRepository;
+  @InjectMocks
+  private RealizedGainsQueryRepositoryImpl repository;
+
+  private PortfolioJpaEntity createPortfolio() {
+    return PortfolioJpaEntity.create(RAW_PORTFOLIO_ID, RAW_USER_ID, "Portfolio Name", "Desc", CAD,
+        false, null, null, Instant.now(), Instant.now());
+  }
+
+  private AccountJpaEntity createAccount() {
+    return AccountJpaEntity.create(RAW_ACCOUNT_ID, createPortfolio(), "name", "TFSA", CAD, "ACB",
+        "HEALTHY", "ACTIVE", null, CAD, null, Instant.now(), Instant.now());
+  }
+
+  private RealizedGainJpaEntity createMockEntity() {
+    RealizedGainJpaEntity entity = RealizedGainJpaEntity.create(UUID.randomUUID(), createAccount(),
+        "AAPL", BigDecimal.ZERO, CAD, BigDecimal.ZERO, CAD, Instant.now());
+    return entity;
+  }
 
   @Nested
   @DisplayName("Paginated Query Operations")
@@ -68,8 +86,9 @@ class RealizedGainsQueryRepositoryImplTest {
     @Test
     @DisplayName("findByAccountIdAndYear should delegate with correct parameters")
     void findByAccountIdAndYearShouldDelegate() {
-      when(jpaRepository.findByAccountIdAndYear(eq(RAW_ACCOUNT_ID), eq(TAX_YEAR), any()))
-          .thenReturn(Page.empty());
+      when(
+          jpaRepository.findByAccountIdAndYear(eq(RAW_ACCOUNT_ID), eq(TAX_YEAR), any())).thenReturn(
+          Page.empty());
 
       repository.findByAccountIdAndYear(ACCOUNT_ID, TAX_YEAR, PAGEABLE);
 
@@ -79,8 +98,9 @@ class RealizedGainsQueryRepositoryImplTest {
     @Test
     @DisplayName("findByAccountIdAndSymbol should delegate with raw string symbol")
     void findByAccountIdAndSymbolShouldDelegate() {
-      when(jpaRepository.findByAccountIdAndSymbol(eq(RAW_ACCOUNT_ID), eq("AAPL"), any()))
-          .thenReturn(Page.empty());
+      when(
+          jpaRepository.findByAccountIdAndSymbol(eq(RAW_ACCOUNT_ID), eq("AAPL"), any())).thenReturn(
+          Page.empty());
 
       repository.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL, PAGEABLE);
 
@@ -90,12 +110,13 @@ class RealizedGainsQueryRepositoryImplTest {
     @Test
     @DisplayName("findByAccountIdAndYearAndSymbol should delegate with all parameters")
     void findByAccountIdAndYearAndSymbolShouldDelegate() {
-      when(jpaRepository.findByAccountIdAndYearAndSymbol(any(), anyInt(), anyString(), any()))
-          .thenReturn(Page.empty());
+      when(jpaRepository.findByAccountIdAndYearAndSymbol(any(), anyInt(), anyString(),
+          any())).thenReturn(Page.empty());
 
       repository.findByAccountIdAndYearAndSymbol(ACCOUNT_ID, TAX_YEAR, SYMBOL, PAGEABLE);
 
-      verify(jpaRepository).findByAccountIdAndYearAndSymbol(RAW_ACCOUNT_ID, TAX_YEAR, "AAPL", PAGEABLE);
+      verify(jpaRepository).findByAccountIdAndYearAndSymbol(RAW_ACCOUNT_ID, TAX_YEAR, "AAPL",
+          PAGEABLE);
     }
   }
 
@@ -107,8 +128,8 @@ class RealizedGainsQueryRepositoryImplTest {
     @DisplayName("calculateTotals should handle null symbol and return aggregation")
     void calculateTotalsShouldHandleNullSymbol() {
       GainsAggregation expectedAggregation = mock(GainsAggregation.class);
-      when(jpaRepository.calculateTotals(RAW_ACCOUNT_ID, TAX_YEAR, null))
-          .thenReturn(expectedAggregation);
+      when(jpaRepository.calculateTotals(RAW_ACCOUNT_ID, TAX_YEAR, null)).thenReturn(
+          expectedAggregation);
 
       GainsAggregation result = repository.calculateTotals(ACCOUNT_ID, TAX_YEAR, null);
 
@@ -132,30 +153,5 @@ class RealizedGainsQueryRepositoryImplTest {
 
       assertThat(result).contains("USD");
     }
-  }
-
-  
-  private PortfolioJpaEntity createPortfolio() {
-    return PortfolioJpaEntity.create(
-        RAW_PORTFOLIO_ID, RAW_USER_ID, "Portfolio Name", "Desc", CAD, false, null, null,
-        Instant.now(), Instant.now());
-  }
-
-  private AccountJpaEntity createAccount() {
-    return AccountJpaEntity.create(RAW_ACCOUNT_ID, createPortfolio(), "name", "TFSA", CAD, "ACB", "HEALTHY", "ACTIVE",
-        null, CAD, null, Instant.now(), Instant.now());
-  }
-
-  private RealizedGainJpaEntity createMockEntity() {
-    RealizedGainJpaEntity entity = RealizedGainJpaEntity.create(
-        UUID.randomUUID(),
-        createAccount(),
-        "AAPL",
-        BigDecimal.ZERO,
-        CAD,
-        BigDecimal.ZERO,
-        CAD,
-        Instant.now());
-    return entity;
   }
 }

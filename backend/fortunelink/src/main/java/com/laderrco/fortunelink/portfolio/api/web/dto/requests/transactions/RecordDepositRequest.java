@@ -5,9 +5,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public record RecordDepositRequest(
-    @NotNull BigDecimal amount,
-    @NotNull String currency,
-    Instant transactionDate,
-    String notes) {
+    @NotNull BigDecimal amount, @NotNull String currency, Instant transactionDate, String notes) {
 
 }

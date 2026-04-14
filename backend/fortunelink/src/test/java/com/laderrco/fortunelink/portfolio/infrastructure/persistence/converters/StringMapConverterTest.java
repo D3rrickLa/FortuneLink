@@ -1,23 +1,21 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.converters;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
-
-import java.util.Map;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @DisplayName("StringMapConverter Unit Tests")
 class StringMapConverterTest {
@@ -27,6 +25,17 @@ class StringMapConverterTest {
   @BeforeEach
   void setUp() {
     converter = new StringMapConverter();
+  }
+
+  @Test
+  @DisplayName("Round-trip: Entity -> DB -> Entity should preserve data")
+  void roundTripTest() {
+    Map<String, String> original = Map.of("id", "123", "type", "test");
+
+    String dbColumn = converter.convertToDatabaseColumn(original);
+    Map<String, String> result = converter.convertToEntityAttribute(dbColumn);
+
+    assertThat(result).isEqualTo(original);
   }
 
   @Nested
@@ -67,9 +76,7 @@ class StringMapConverterTest {
       String json = "{\"tag\":\"growth\",\"source\":\"manual\"}";
       Map<String, String> result = converter.convertToEntityAttribute(json);
 
-      assertThat(result)
-          .hasSize(2)
-          .containsEntry("tag", "growth")
+      assertThat(result).hasSize(2).containsEntry("tag", "growth")
           .containsEntry("source", "manual");
     }
 
@@ -78,9 +85,8 @@ class StringMapConverterTest {
     void shouldThrowExceptionOnInvalidJson() {
       String invalidJson = "{not-json}";
 
-      assertThatThrownBy(() -> converter.convertToEntityAttribute(invalidJson))
-          .isInstanceOf(RuntimeException.class)
-          .hasMessageContaining("JSON decoding error");
+      assertThatThrownBy(() -> converter.convertToEntityAttribute(invalidJson)).isInstanceOf(
+          RuntimeException.class).hasMessageContaining("JSON decoding error");
     }
   }
 
@@ -89,7 +95,8 @@ class StringMapConverterTest {
 
     @Test
     @DisplayName("convertToDatabaseColumn should wrap JacksonException in RuntimeException")
-    void convertToDatabaseColumnShouldThrowRuntimeExceptionOnJacksonError() throws JacksonException {
+    void convertToDatabaseColumnShouldThrowRuntimeExceptionOnJacksonError()
+        throws JacksonException {
 
       StringMapConverter converter = new StringMapConverter();
 
@@ -100,39 +107,26 @@ class StringMapConverterTest {
       JacksonException mockException = mock(JacksonException.class);
       when(mockMapper.writeValueAsString(any())).thenThrow(mockException);
 
-      assertThatThrownBy(() -> converter.convertToDatabaseColumn(Map.of("key", "value")))
-          .isInstanceOf(RuntimeException.class)
-          .hasMessage("JSON encoding error")
-          .hasCause(mockException);
+      assertThatThrownBy(
+          () -> converter.convertToDatabaseColumn(Map.of("key", "value"))).isInstanceOf(
+          RuntimeException.class).hasMessage("JSON encoding error").hasCause(mockException);
     }
 
     @Test
     @DisplayName("convertToEntityAttribute should wrap JacksonException in RuntimeException")
-    void convertToEntityAttributeShouldThrowRuntimeExceptionOnJacksonError() throws JacksonException {
+    void convertToEntityAttributeShouldThrowRuntimeExceptionOnJacksonError()
+        throws JacksonException {
 
       StringMapConverter converter = new StringMapConverter();
       ObjectMapper mockMapper = mock(ObjectMapper.class);
       ReflectionTestUtils.setField(converter, "mapper", mockMapper);
 
       JacksonException mockException = mock(JacksonException.class);
-      when(mockMapper.readValue(anyString(), any(TypeReference.class)))
-          .thenThrow(mockException);
+      when(mockMapper.readValue(anyString(), any(TypeReference.class))).thenThrow(mockException);
 
-      assertThatThrownBy(() -> converter.convertToEntityAttribute("{\"key\":\"value\"}"))
-          .isInstanceOf(RuntimeException.class)
-          .hasMessage("JSON decoding error")
-          .hasCause(mockException);
+      assertThatThrownBy(
+          () -> converter.convertToEntityAttribute("{\"key\":\"value\"}")).isInstanceOf(
+          RuntimeException.class).hasMessage("JSON decoding error").hasCause(mockException);
     }
-  }
-
-  @Test
-  @DisplayName("Round-trip: Entity -> DB -> Entity should preserve data")
-  void roundTripTest() {
-    Map<String, String> original = Map.of("id", "123", "type", "test");
-
-    String dbColumn = converter.convertToDatabaseColumn(original);
-    Map<String, String> result = converter.convertToEntityAttribute(dbColumn);
-
-    assertThat(result).isEqualTo(original);
   }
 }

@@ -1,12 +1,11 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.config.redis;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class CacheKeyFactoryTest {
 
@@ -15,7 +14,7 @@ class CacheKeyFactoryTest {
   @BeforeEach
   void setUp() {
     factory = new CacheKeyFactory();
-    
+
     ReflectionTestUtils.setField(factory, "pricesPrefix", "prices");
     ReflectionTestUtils.setField(factory, "assetInfoPrefix", "assets");
     ReflectionTestUtils.setField(factory, "historicalPrefix", "hist");

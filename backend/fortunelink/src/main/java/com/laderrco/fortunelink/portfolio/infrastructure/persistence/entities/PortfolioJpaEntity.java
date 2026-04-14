@@ -23,14 +23,12 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import org.springframework.data.domain.Persistable;
 
 /**
  * Pure persistence model for the {@code Portfolio} aggregate root.
  * <p>
- * Zero domain logic lives here. No business methods, no invariant checks. The
- * only responsibility
+ * Zero domain logic lives here. No business methods, no invariant checks. The only responsibility
  * is mapping columns -> Java fields and managing the JPA relationship graph.
  */
 @Entity
@@ -39,56 +37,42 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class PortfolioJpaEntity implements Persistable<UUID> {
 
-  @Id
-  @Column(columnDefinition = "uuid", updatable = false, nullable = false)
-  private UUID id;
-
-  @Column(name = "user_id", nullable = false)
-  private UUID userId;
-
-  @Column(name = "name", nullable = false, length = 255)
-  private String name;
-
-  @Column(name = "description", length = 255)
-  private String description;
-
   /**
-   * ISO-4217 code of the display currency preference (e.g. "CAD", "USD").
-   * Reconstructed into a
-   * {@code Currency} domain object by the mapper.
-   */
-  @Column(name = "display_currency_code", nullable = false, length = 3)
-  private String displayCurrencyCode;
-
-  @Column(name = "deleted", nullable = false)
-  private boolean deleted;
-
-  @Column(name = "deleted_at")
-  private Instant deletedAt;
-
-  @Column(name = "deleted_by")
-  private UUID deletedBy;
-
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
-
-  @Transient
-  private boolean isNew = true; // Unified strategy
-
-  @Version
-  @Column(name = "version", nullable = false)
-  private Long version;
-
-  /**
-   * LAZY by default. Load eagerly only when you need accounts in the same request
-   * (use the
+   * LAZY by default. Load eagerly only when you need accounts in the same request (use the
    * {@code @EntityGraph} on the repo for that).
    */
   @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   private final Set<AccountJpaEntity> accounts = new LinkedHashSet<>();
+  @Id
+  @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+  private UUID id;
+  @Column(name = "user_id", nullable = false)
+  private UUID userId;
+  @Column(name = "name", nullable = false, length = 255)
+  private String name;
+  @Column(name = "description", length = 255)
+  private String description;
+  /**
+   * ISO-4217 code of the display currency preference (e.g. "CAD", "USD"). Reconstructed into a
+   * {@code Currency} domain object by the mapper.
+   */
+  @Column(name = "display_currency_code", nullable = false, length = 3)
+  private String displayCurrencyCode;
+  @Column(name = "deleted", nullable = false)
+  private boolean deleted;
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
+  @Column(name = "deleted_by")
+  private UUID deletedBy;
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt;
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
+  @Transient
+  private boolean isNew = true; // Unified strategy
+  @Version
+  @Column(name = "version", nullable = false)
+  private Long version;
 
   // -------------------------------------------------------------------------
   // Factory, called by the domain mapper when persisting a new Portfolio

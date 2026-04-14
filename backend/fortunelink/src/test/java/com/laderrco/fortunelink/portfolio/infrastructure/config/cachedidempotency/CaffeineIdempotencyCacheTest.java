@@ -2,13 +2,6 @@ package com.laderrco.fortunelink.portfolio.infrastructure.config.cachedidempoten
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -16,6 +9,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class CaffeineIdempotencyCacheTest {
 
@@ -30,17 +29,9 @@ class CaffeineIdempotencyCacheTest {
   void shouldStoreAndRetrieveValue() {
 
     String key = "idempotency-key-" + UUID.randomUUID();
-    TransactionView view = new TransactionView(
-        TransactionId.newId(),
-        TransactionType.BUY,
-        "AAPL",
-        Quantity.of(10),
-        Price.of("100", Currency.CAD),
-        List.of(),
-        Money.of(1000, Currency.CAD),
-        Map.of(),
-        Instant.now(),
-        "notes");
+    TransactionView view = new TransactionView(TransactionId.newId(), TransactionType.BUY, "AAPL",
+        Quantity.of(10), Price.of("100", Currency.CAD), List.of(), Money.of(1000, Currency.CAD),
+        Map.of(), Instant.now(), "notes");
 
     idempotencyCache.put(key, view);
     TransactionView retrieved = idempotencyCache.get(key);
@@ -59,28 +50,12 @@ class CaffeineIdempotencyCacheTest {
   @Test
   void shouldOverwriteExistingValue() {
     String key = "shared-key";
-    TransactionView firstView = new TransactionView(
-        TransactionId.newId(),
-        TransactionType.BUY,
-        "AAPL",
-        Quantity.of(10),
-        Price.of("100", Currency.CAD),
-        List.of(),
-        Money.of(1000, Currency.CAD),
-        Map.of(),
-        Instant.now(),
-        "notes");
-    TransactionView secondView = new TransactionView(
-        TransactionId.newId(),
-        TransactionType.BUY,
-        "AAPL",
-        Quantity.of(12),
-        Price.of("100", Currency.CAD),
-        List.of(),
-        Money.of(1000, Currency.CAD),
-        Map.of(),
-        Instant.now(),
-        "notes");
+    TransactionView firstView = new TransactionView(TransactionId.newId(), TransactionType.BUY,
+        "AAPL", Quantity.of(10), Price.of("100", Currency.CAD), List.of(),
+        Money.of(1000, Currency.CAD), Map.of(), Instant.now(), "notes");
+    TransactionView secondView = new TransactionView(TransactionId.newId(), TransactionType.BUY,
+        "AAPL", Quantity.of(12), Price.of("100", Currency.CAD), List.of(),
+        Money.of(1000, Currency.CAD), Map.of(), Instant.now(), "notes");
 
     idempotencyCache.put(key, firstView);
     idempotencyCache.put(key, secondView);

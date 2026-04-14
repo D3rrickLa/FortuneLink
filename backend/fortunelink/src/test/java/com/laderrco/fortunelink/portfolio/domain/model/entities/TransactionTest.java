@@ -122,7 +122,7 @@ public class TransactionTest {
       var split = new Ratio(12, 1);
       var ex = assertThrows(IllegalArgumentException.class, () -> validBuy().split(split).build());
       assertThat(ex.getMessage()).contains("cannot have split details");
-      
+
       assertThat(split.multiplier()).isEqualByComparingTo(BigDecimal.valueOf(12)
           .setScale(Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode()));
     }
@@ -182,7 +182,7 @@ public class TransactionTest {
     @Test
     @DisplayName("BUY: throws when cash delta does not match gross + fees")
     void buyThrowsOnDeltaMismatch() {
-      
+
       var ex = assertThrows(IllegalArgumentException.class,
           () -> validBuy().cashDelta(Money.of(1350, "USD")).build());
       assertThat(ex.getMessage()).contains("Cash delta mismatch");
@@ -191,9 +191,7 @@ public class TransactionTest {
     @Test
     @DisplayName("SPLIT: cash delta validation routes to NONE branch (expects zero)")
     void splitCashDeltaMustBeZero() {
-      
-      
-      
+
       var ex = assertThrows(IllegalArgumentException.class,
           () -> validBuy().transactionType(TransactionType.SPLIT).cashDelta(Money.of(1350, "USD"))
               .build());
@@ -204,7 +202,7 @@ public class TransactionTest {
     @DisplayName("Transaction: throw exception if cashDelta sign is wrong for BUY")
     void transactionThrowsOnWrongSign() {
       assertThatThrownBy(() -> Transaction.builder().transactionType(TransactionType.BUY)
-          .cashDelta(Money.of(1000, USD)) 
+          .cashDelta(Money.of(1000, USD))
           .execution(new TradeExecution(AAPL, Quantity.of(10), Price.of("100", USD)))
           .build()).isInstanceOf(DomainArgumentException.class);
     }
@@ -220,13 +218,12 @@ public class TransactionTest {
           ExchangeRate.identity(USD, Instant.now()), Instant.now(), new FeeMetadata(Map.of()));
 
       var cadFee = new Fee(FeeType.BROKERAGE, Money.of(5, "CAD"), Money.of(3.25, "USD"),
-          
+
           new ExchangeRate(Currency.CAD, USD, BigDecimal.valueOf(0.65), Instant.now()),
           Instant.now(), new FeeMetadata(Map.of()));
 
-      var tx = validBuy().cashDelta(Money.of(-1358.25, "USD")) 
-          .fees(List.of(usdFee, cadFee)).metadata(TransactionMetadata.manual(AssetType.STOCK))
-          .build();
+      var tx = validBuy().cashDelta(Money.of(-1358.25, "USD")).fees(List.of(usdFee, cadFee))
+          .metadata(TransactionMetadata.manual(AssetType.STOCK)).build();
 
       var total = tx.totalFeesInAccountCurrency();
       assertAll(() -> assertEquals(Money.of(8.25, "USD"), total),

@@ -1,13 +1,13 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("PositionJpaEntity Unit Tests")
 class PositionJpaEntityTest {
@@ -15,18 +15,14 @@ class PositionJpaEntityTest {
   @Test
   @DisplayName("create() should correctly initialize all fields")
   void createShouldInitializeFields() {
-    
+
     UUID id = UUID.randomUUID();
     AccountJpaEntity account = mock(AccountJpaEntity.class);
     Instant now = Instant.now();
 
-    
-    PositionJpaEntity entity = PositionJpaEntity.create(
-        id, account, "MARKET", "AAPL", "STOCK",
-        new BigDecimal("10.5"), new BigDecimal("1500.00"),
-        "USD", now, now);
+    PositionJpaEntity entity = PositionJpaEntity.create(id, account, "MARKET", "AAPL", "STOCK",
+        new BigDecimal("10.5"), new BigDecimal("1500.00"), "USD", now, now);
 
-    
     assertThat(entity.getId()).isEqualTo(id);
     assertThat(entity.getAccount()).isEqualTo(account);
     assertThat(entity.getIdentifierType()).isEqualTo("MARKET");
@@ -42,28 +38,20 @@ class PositionJpaEntityTest {
   @Test
   @DisplayName("applyFrom() should update mutable fields but ignore identity (id/symbol/account)")
   void applyFromShouldUpdateFields() {
-    
-    PositionJpaEntity target = PositionJpaEntity.create(
-        UUID.randomUUID(), mock(AccountJpaEntity.class), "MARKET", "AAPL", "STOCK",
-        BigDecimal.ONE, BigDecimal.TEN, "USD", Instant.MIN, Instant.MIN);
+
+    PositionJpaEntity target = PositionJpaEntity.create(UUID.randomUUID(),
+        mock(AccountJpaEntity.class), "MARKET", "AAPL", "STOCK", BigDecimal.ONE, BigDecimal.TEN,
+        "USD", Instant.MIN, Instant.MIN);
 
     Instant newTime = Instant.now();
-    PositionJpaEntity source = PositionJpaEntity.create(
-        UUID.randomUUID(), 
-        mock(AccountJpaEntity.class), 
-        "CRYPTO", "BTC", 
-        "CRYPTO_ASSET",
-        new BigDecimal("2.5"), new BigDecimal("50000.00"),
-        "BTC", newTime, newTime);
+    PositionJpaEntity source = PositionJpaEntity.create(UUID.randomUUID(),
+        mock(AccountJpaEntity.class), "CRYPTO", "BTC", "CRYPTO_ASSET", new BigDecimal("2.5"),
+        new BigDecimal("50000.00"), "BTC", newTime, newTime);
 
-    
     target.applyFrom(source);
 
-    
-    
     assertThat(target.getSymbol()).isEqualTo("AAPL");
 
-    
     assertThat(target.getIdentifierType()).isEqualTo("CRYPTO");
     assertThat(target.getAssetType()).isEqualTo("CRYPTO_ASSET");
     assertThat(target.getQuantity()).isEqualByComparingTo("2.5");
@@ -76,14 +64,12 @@ class PositionJpaEntityTest {
   @Test
   @DisplayName("setAccount() should update the account reference")
   void setAccountShouldUpdateReference() {
-    
+
     PositionJpaEntity entity = new PositionJpaEntity();
     AccountJpaEntity newAccount = mock(AccountJpaEntity.class);
 
-    
     entity.setAccount(newAccount);
 
-    
     assertThat(entity.getAccount()).isEqualTo(newAccount);
   }
 }

@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc;
 
 import java.util.List;
-
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

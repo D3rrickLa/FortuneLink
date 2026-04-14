@@ -47,7 +47,6 @@ class TransactionMetadataTest {
 
     var meta = new TransactionMetadata(AssetType.STOCK, "SOURCE", null, originalData);
 
-    
     originalData.put("key", "changed");
 
     assertEquals("value", meta.get("key"), "Metadata should retain the original value");

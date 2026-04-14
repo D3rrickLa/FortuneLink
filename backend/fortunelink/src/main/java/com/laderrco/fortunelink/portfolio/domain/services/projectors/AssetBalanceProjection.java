@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public interface AssetBalanceProjection {
-  UUID getAccountId();
+  UUID accountId();
 
-  String getSymbol();
+  String symbol();
 
-  BigDecimal getQuantity();
+  BigDecimal quantity();
 }

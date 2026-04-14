@@ -31,8 +31,7 @@ public class PositionRecalculationExecutor {
   private final PortfolioLoader portfolioLoader;
 
   /**
-   * Surgical recalculation for a single symbol.` Corrects ACB/Position but leaves
-   * Cash Balance
+   * Surgical recalculation for a single symbol.` Corrects ACB/Position but leaves Cash Balance
    * as-is.
    * <p>
    * This filters to affectsHolding() before calling replayTransaction()
@@ -71,7 +70,7 @@ public class PositionRecalculationExecutor {
     Account account = portfolio.getAccount(accountId);
 
     List<Transaction> allActive = transactionRepository.findByPortfolioIdAndUserIdAndAccountId(
-        portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
+            portfolioId, userId, accountId).stream().filter(tx -> !tx.isExcluded())
         .sorted(Comparator.comparing(Transaction::occurredAt)).toList();
 
     try {
@@ -79,8 +78,8 @@ public class PositionRecalculationExecutor {
       portfolio.reportRecalculationSuccess(accountId);
       portfolioRepository.save(portfolio);
     } catch (Exception e) {
-      log.error("Full account replay failed for account {} [{}]: {}",
-          accountId, e.getClass().getSimpleName(), e.getMessage());
+      log.error("Full account replay failed for account {} [{}]: {}", accountId,
+          e.getClass().getSimpleName(), e.getMessage());
       accountHealthService.markStale(accountId);
       throw e;
     }

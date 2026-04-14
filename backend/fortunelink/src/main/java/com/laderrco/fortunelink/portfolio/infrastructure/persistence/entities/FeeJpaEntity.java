@@ -1,27 +1,30 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-
-import org.springframework.data.domain.Persistable;
-
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 /**
  * Maps the {@code transaction_fees} table.
  * <p>
- * The domain {@code Fee} record supports multi-currency: it carries both a
- * {@code nativeAmount}
- * (original currency) and an {@code accountAmount} (converted to account
- * currency) plus the
- * {@code ExchangeRate} used. All three are persisted here so they can be
- * reconstructed exactly.
+ * The domain {@code Fee} record supports multi-currency: it carries both a {@code nativeAmount}
+ * (original currency) and an {@code accountAmount} (converted to account currency) plus the
+ * {@code ExchangeRate} used. All three are persisted here so they can be reconstructed exactly.
  * <p>
- * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are
- * rarely needed after
+ * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are rarely needed after
  * recording and can be reconstructed from the {@code additionalData} JSONB on
  * {@code TransactionJpaEntity} if required.
  */

@@ -1,7 +1,12 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -10,8 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Net Worth Snapshot Service Unit Tests")

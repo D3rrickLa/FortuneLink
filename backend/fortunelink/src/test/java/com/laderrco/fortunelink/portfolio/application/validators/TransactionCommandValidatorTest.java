@@ -106,7 +106,6 @@ class TransactionCommandValidatorTest {
     }
   }
 
-  
 
   @Nested
   @DisplayName("validateSale: sale validation")
@@ -122,7 +121,6 @@ class TransactionCommandValidatorTest {
     }
   }
 
-  
 
   @Nested
   @DisplayName("validateDeposit: deposit validation")
@@ -313,16 +311,13 @@ class TransactionCommandValidatorTest {
   class ExcludeTests {
     private static Stream<Arguments> provideInvalidReasons() {
       return Stream.of(
-          
+
           Arguments.of(null, "Reason is required"),
 
-          
           Arguments.of("", "Reason is required"),
 
-          
           Arguments.of("   ", "Reason is required"), Arguments.of("\n\n", "Reason is required"),
 
-          
           Arguments.of("a".repeat(501), "Reason must be 500 characters or less"));
     }
 

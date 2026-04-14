@@ -59,7 +59,7 @@ class AuthenticationUserServiceTest {
 
   @AfterEach
   void tearDown() {
-    
+
     SecurityContextHolder.clearContext();
   }
 
@@ -71,11 +71,10 @@ class AuthenticationUserServiceTest {
       Jwt mockJwtWithBadSub = mock(Jwt.class);
       when(mockJwtWithBadSub.getSubject()).thenReturn("not-a-uuid");
 
-      return Stream.of(Arguments.of(null, AuthenticationException.class), 
-          Arguments.of("not-a-jwt", AuthenticationException.class), 
-          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class), 
-          Arguments.of(mock(Jwt.class), AuthenticationException.class) 
-      );
+      return Stream.of(Arguments.of(null, AuthenticationException.class),
+          Arguments.of("not-a-jwt", AuthenticationException.class),
+          Arguments.of(mockJwtWithBadSub, IllegalArgumentException.class),
+          Arguments.of(mock(Jwt.class), AuthenticationException.class));
     }
 
     @Test

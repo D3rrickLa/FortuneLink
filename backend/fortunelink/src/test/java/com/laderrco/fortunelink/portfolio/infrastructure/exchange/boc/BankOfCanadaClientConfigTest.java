@@ -26,7 +26,7 @@ class BankOfCanadaClientConfigTest {
     @Test
     @DisplayName("should pass validation with default URL")
     void shouldPassWithDefaultUrl() {
-      
+
       config.validate();
     }
 
@@ -35,8 +35,7 @@ class BankOfCanadaClientConfigTest {
     void shouldFailWhenUrlIsNull() {
       config.setBaseUrl(null);
 
-      assertThatThrownBy(() -> config.validate())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> config.validate()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("cannot be blank");
     }
 
@@ -45,8 +44,7 @@ class BankOfCanadaClientConfigTest {
     void shouldFailWhenUrlIsBlank() {
       config.setBaseUrl("   ");
 
-      assertThatThrownBy(() -> config.validate())
-          .isInstanceOf(IllegalStateException.class)
+      assertThatThrownBy(() -> config.validate()).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("cannot be blank");
     }
   }
@@ -58,13 +56,11 @@ class BankOfCanadaClientConfigTest {
     @Test
     @DisplayName("should create HttpClient with configured timeout")
     void shouldCreateHttpClient() {
-      
+
       config.setTimeoutSeconds(5);
 
-      
       HttpClient client = config.bocHttpClient(config);
 
-      
       assertThat(client).isNotNull();
       assertThat(client.connectTimeout()).isPresent().contains(Duration.ofSeconds(5));
       assertThat(client.followRedirects()).isEqualTo(HttpClient.Redirect.NORMAL);

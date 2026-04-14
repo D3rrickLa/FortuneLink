@@ -3,7 +3,9 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
@@ -131,7 +133,7 @@ class PortfolioLoaderTest {
   @DisplayName("Common Edge Cases: Parameterized missing data")
   class EdgeCaseTests {
     @ParameterizedTest
-    @CsvSource({ "loadUserPortfolio", "loadUserPortfolioWithGraph" })
+    @CsvSource({"loadUserPortfolio", "loadUserPortfolioWithGraph"})
     @DisplayName("loadingMethods: should throw PortfolioNotFoundException when repository returns empty")
     void loadingMethodsshouldThrowWhenEmpty(String methodName) {
       if (methodName.equals("loadUserPortfolio")) {
@@ -147,15 +149,18 @@ class PortfolioLoaderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "loadUserPortfolio", "loadUserPortfolioWithGraph" })
+    @CsvSource({"loadUserPortfolio", "loadUserPortfolioWithGraph"})
     @DisplayName("Loading methods should throw PortfolioNotFoundException when repository returns empty")
     void loadingMethodsShouldThrowWhenEmpty(String methodName) {
       if (methodName.equals("loadUserPortfolio")) {
         when(portfolioRepository.findByIdAndUserId(PID, UID)).thenReturn(Optional.empty());
-        assertThrows(PortfolioNotFoundException.class, () -> portfolioLoader.loadUserPortfolio(PID, UID));
+        assertThrows(PortfolioNotFoundException.class,
+            () -> portfolioLoader.loadUserPortfolio(PID, UID));
       } else {
-        when(portfolioRepository.findWithAccountsByIdAndUserId(PID, UID)).thenReturn(Optional.empty());
-        assertThrows(PortfolioNotFoundException.class, () -> portfolioLoader.loadUserPortfolioWithGraph(PID, UID));
+        when(portfolioRepository.findWithAccountsByIdAndUserId(PID, UID)).thenReturn(
+            Optional.empty());
+        assertThrows(PortfolioNotFoundException.class,
+            () -> portfolioLoader.loadUserPortfolioWithGraph(PID, UID));
       }
     }
 
@@ -165,8 +170,8 @@ class PortfolioLoaderTest {
       Portfolio deletedPortfolio = mock(Portfolio.class);
       when(deletedPortfolio.isDeleted()).thenReturn(true);
 
-      when(portfolioRepository.findWithAccountsByIdAndUserId(PID, UID))
-          .thenReturn(Optional.of(deletedPortfolio));
+      when(portfolioRepository.findWithAccountsByIdAndUserId(PID, UID)).thenReturn(
+          Optional.of(deletedPortfolio));
 
       assertThrows(PortfolioNotFoundException.class,
           () -> portfolioLoader.loadUserPortfolioWithGraph(PID, UID));
@@ -180,8 +185,8 @@ class PortfolioLoaderTest {
       Portfolio activePortfolio = mock(Portfolio.class);
       when(activePortfolio.isDeleted()).thenReturn(false);
 
-      when(portfolioRepository.findWithAccountsByIdAndUserId(PID, UID))
-          .thenReturn(Optional.of(activePortfolio));
+      when(portfolioRepository.findWithAccountsByIdAndUserId(PID, UID)).thenReturn(
+          Optional.of(activePortfolio));
 
       Portfolio result = portfolioLoader.loadUserPortfolioWithGraph(PID, UID);
 
@@ -197,31 +202,28 @@ class PortfolioLoaderTest {
     @Test
     @DisplayName("validateOwnership: should complete normally when ownership exists")
     void validateOwnershipshouldSucceedWhenOwnershipExists() {
-      
+
       when(portfolioRepository.existsByIdAndUserId(PID, UID)).thenReturn(true);
 
-      
       portfolioLoader.validateOwnership(PID, UID);
-      
+
     }
 
     @Test
     @DisplayName("validateAccountOwnershipToPortfolio: should complete normally when account belongs to portfolio")
     void validateAccountOwnershipToPortfolioshouldSucceedWhenRelationExists() {
-      
+
       when(portfolioRepository.existsByPortfolioIdAndAccountId(PID, AID)).thenReturn(true);
 
-      
       portfolioLoader.validateAccountOwnershipToPortfolio(PID, AID);
     }
 
     @Test
     @DisplayName("validatePortfolioAndAccountOwnership: should complete normally when tripartite link is valid")
     void validatePortfolioAndAccountOwnershipshouldSucceedWhenAllLinksExist() {
-      
+
       when(portfolioRepository.existsByIdAndUserIdAndAccountId(PID, UID, AID)).thenReturn(true);
 
-      
       portfolioLoader.validatePortfolioAndAccountOwnership(PID, UID, AID);
     }
   }

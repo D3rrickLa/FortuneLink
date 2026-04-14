@@ -1,18 +1,16 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
-
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.NetWorthSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -20,14 +18,13 @@ import lombok.NoArgsConstructor;
  * Persistence model for {@code NetWorthSnapshot}.
  *
  * <p>
- * Append-only. Rows are never updated , one row per user per calendar day
- * (enforced by the unique index on (user_id, DATE(snapshot_date))).
+ * Append-only. Rows are never updated , one row per user per calendar day (enforced by the unique
+ * index on (user_id, DATE(snapshot_date))).
  *
  * <p>
- * No @Version / optimistic locking needed because this entity is write-once
- * from a single scheduled job. If the job fires twice on the same day, the DB
- * constraint prevents the second write , no concurrent mutation scenario
- * exists.
+ * No @Version / optimistic locking needed because this entity is write-once from a single scheduled
+ * job. If the job fires twice on the same day, the DB constraint prevents the second write , no
+ * concurrent mutation scenario exists.
  */
 @Entity
 @Getter
@@ -99,14 +96,10 @@ public class NetWorthSnapshotJpaEntity {
 
   public NetWorthSnapshot toDomain() {
     Currency displayCurrency = Currency.of(displayCurrencyCode);
-    return new NetWorthSnapshot(
-        id,
-        UserId.fromString(userId.toString()),
+    return new NetWorthSnapshot(id, UserId.fromString(userId.toString()),
         new Money(totalAssetsAmount, Currency.of(totalAssetsCurrency)),
         new Money(totalLiabilitiesAmount, Currency.of(totalLiabCurrency)),
-        new Money(netWorthAmount, Currency.of(netWorthCurrency)),
-        displayCurrency,
-        hasStaleData,
+        new Money(netWorthAmount, Currency.of(netWorthCurrency)), displayCurrency, hasStaleData,
         snapshotDate);
   }
 }

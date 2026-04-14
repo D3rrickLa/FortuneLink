@@ -1,187 +1,189 @@
-{"properties": [
-  {
-    "name": "fortunelink.cache.enabled",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.enabled'"
-  },
-  {
-    "name": "fortunelink.cache.ttl.current-prices",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.ttl.current-prices'"
-  },
-  {
-    "name": "fortunelink.cache.ttl.historical-prices",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.ttl.historical-prices'"
-  },
-  {
-    "name": "fortunelink.cache.ttl.asset-info",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.ttl.asset-info'"
-  },
-  {
-    "name": "fortunelink.cache.ttl.trading-currency",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.ttl.trading-currency'"
-  },
-  {
-    "name": "fortunelink.cache.ttl.exchange-rates",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.ttl.exchange-rates'"
-  },
-  {
-    "name": "fortunelink.cache.key-prefix.prices",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.key-prefix.prices'"
-  },
-  {
-    "name": "fortunelink.cache.key-prefix.historical",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.key-prefix.historical'"
-  },
-  {
-    "name": "fortunelink.cache.key-prefix.asset-info",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.key-prefix.asset-info'"
-  },
-  {
-    "name": "fortunelink.cache.key-prefix.currency",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.key-prefix.currency'"
-  },
-  {
-    "name": "fortunelink.purge.excluded-transaction-retention-days",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.purge.excluded-transaction-retention-days'"
-  },
-  {
-    "name": "fortunelink.rate-limit.enabled",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.enabled'"
-  },
-  {
-    "name": "fortunelink.rate-limit.global.requests-per-minute",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.global.requests-per-minute'"
-  },
-  {
-    "name": "fortunelink.rate-limit.global.requests-per-hour",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.global.requests-per-hour'"
-  },
-  {
-    "name": "fortunelink.rate-limit.global.requests-per-day",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.global.requests-per-day'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.market-data-price.requests-per-minute",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-price.requests-per-minute'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.market-data-price.requests-per-hour",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-price.requests-per-hour'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.market-data-batch.requests-per-minute",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-batch.requests-per-minute'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.market-data-batch.requests-per-hour",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-batch.requests-per-hour'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.portfolio-read.requests-per-minute",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-read.requests-per-minute'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.portfolio-read.requests-per-hour",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-read.requests-per-hour'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.portfolio-write.requests-per-minute",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-write.requests-per-minute'"
-  },
-  {
-    "name": "fortunelink.rate-limit.endpoints.portfolio-write.requests-per-hour",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-write.requests-per-hour'"
-  },
-  {
-    "name": "fortunelink.rate-limit.fmp-quota.daily-limit",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.fmp-quota.daily-limit'"
-  },
-  {
-    "name": "fortunelink.rate-limit.fmp-quota.warning-threshold",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.fmp-quota.warning-threshold'"
-  },
-  {
-    "name": "fortunelink.rate-limit.fmp-quota.reserve-buffer",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.rate-limit.fmp-quota.reserve-buffer'"
-  },
-  {
-    "name": "fortunelink.cache.ttl.buy-fees",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.ttl.buy-fees'"
-  },
-  {
-    "name": "fortunelink.cache.key-prefix.buy-fees",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cache.key-prefix.buy-fees'"
-  },
-  {
-    "name": "postgres.version",
-    "type": "java.lang.String",
-    "description": "A description for 'postgres.version'"
-  },
-  {
-    "name": "fortunelink.cors.allowed-origins",
-    "type": "java.lang.String",
-    "description": "A description for 'fortunelink.cors.allowed-origins'"
-  },
-  {
-    "name": "boc.base-url",
-    "type": "java.lang.String",
-    "description": "A description for 'boc.base-url'"
-  },
-  {
-    "name": "boc.timeout-seconds",
-    "type": "java.lang.String",
-    "description": "A description for 'boc.timeout-seconds'"
-  },
-  {
-    "name": "boc.debug-logging",
-    "type": "java.lang.String",
-    "description": "A description for 'boc.debug-logging'"
-  },
-  {
-    "name": "fmp.base-url",
-    "type": "java.lang.String",
-    "description": "A description for 'fmp.base-url'"
-  },
-  {
-    "name": "fmp.api-key",
-    "type": "java.lang.String",
-    "description": "A description for 'fmp.api-key'"
-  },
-  {
-    "name": "fmp.timeout-seconds",
-    "type": "java.lang.String",
-    "description": "A description for 'fmp.timeout-seconds'"
-  },
-  {
-    "name": "fmp.debug-logging",
-    "type": "java.lang.String",
-    "description": "A description for 'fmp.debug-logging'"
-  }
-]}
+{
+  "properties": [
+    {
+      "name": "fortunelink.cache.enabled",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.enabled'"
+    },
+    {
+      "name": "fortunelink.cache.ttl.current-prices",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.ttl.current-prices'"
+    },
+    {
+      "name": "fortunelink.cache.ttl.historical-prices",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.ttl.historical-prices'"
+    },
+    {
+      "name": "fortunelink.cache.ttl.asset-info",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.ttl.asset-info'"
+    },
+    {
+      "name": "fortunelink.cache.ttl.trading-currency",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.ttl.trading-currency'"
+    },
+    {
+      "name": "fortunelink.cache.ttl.exchange-rates",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.ttl.exchange-rates'"
+    },
+    {
+      "name": "fortunelink.cache.key-prefix.prices",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.key-prefix.prices'"
+    },
+    {
+      "name": "fortunelink.cache.key-prefix.historical",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.key-prefix.historical'"
+    },
+    {
+      "name": "fortunelink.cache.key-prefix.asset-info",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.key-prefix.asset-info'"
+    },
+    {
+      "name": "fortunelink.cache.key-prefix.currency",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.key-prefix.currency'"
+    },
+    {
+      "name": "fortunelink.purge.excluded-transaction-retention-days",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.purge.excluded-transaction-retention-days'"
+    },
+    {
+      "name": "fortunelink.rate-limit.enabled",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.enabled'"
+    },
+    {
+      "name": "fortunelink.rate-limit.global.requests-per-minute",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.global.requests-per-minute'"
+    },
+    {
+      "name": "fortunelink.rate-limit.global.requests-per-hour",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.global.requests-per-hour'"
+    },
+    {
+      "name": "fortunelink.rate-limit.global.requests-per-day",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.global.requests-per-day'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.market-data-price.requests-per-minute",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-price.requests-per-minute'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.market-data-price.requests-per-hour",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-price.requests-per-hour'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.market-data-batch.requests-per-minute",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-batch.requests-per-minute'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.market-data-batch.requests-per-hour",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.market-data-batch.requests-per-hour'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.portfolio-read.requests-per-minute",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-read.requests-per-minute'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.portfolio-read.requests-per-hour",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-read.requests-per-hour'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.portfolio-write.requests-per-minute",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-write.requests-per-minute'"
+    },
+    {
+      "name": "fortunelink.rate-limit.endpoints.portfolio-write.requests-per-hour",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.endpoints.portfolio-write.requests-per-hour'"
+    },
+    {
+      "name": "fortunelink.rate-limit.fmp-quota.daily-limit",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.fmp-quota.daily-limit'"
+    },
+    {
+      "name": "fortunelink.rate-limit.fmp-quota.warning-threshold",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.fmp-quota.warning-threshold'"
+    },
+    {
+      "name": "fortunelink.rate-limit.fmp-quota.reserve-buffer",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.rate-limit.fmp-quota.reserve-buffer'"
+    },
+    {
+      "name": "fortunelink.cache.ttl.buy-fees",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.ttl.buy-fees'"
+    },
+    {
+      "name": "fortunelink.cache.key-prefix.buy-fees",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cache.key-prefix.buy-fees'"
+    },
+    {
+      "name": "postgres.version",
+      "type": "java.lang.String",
+      "description": "A description for 'postgres.version'"
+    },
+    {
+      "name": "fortunelink.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "A description for 'fortunelink.cors.allowed-origins'"
+    },
+    {
+      "name": "boc.base-url",
+      "type": "java.lang.String",
+      "description": "A description for 'boc.base-url'"
+    },
+    {
+      "name": "boc.timeout-seconds",
+      "type": "java.lang.String",
+      "description": "A description for 'boc.timeout-seconds'"
+    },
+    {
+      "name": "boc.debug-logging",
+      "type": "java.lang.String",
+      "description": "A description for 'boc.debug-logging'"
+    },
+    {
+      "name": "fmp.base-url",
+      "type": "java.lang.String",
+      "description": "A description for 'fmp.base-url'"
+    },
+    {
+      "name": "fmp.api-key",
+      "type": "java.lang.String",
+      "description": "A description for 'fmp.api-key'"
+    },
+    {
+      "name": "fmp.timeout-seconds",
+      "type": "java.lang.String",
+      "description": "A description for 'fmp.timeout-seconds'"
+    },
+    {
+      "name": "fmp.debug-logging",
+      "type": "java.lang.String",
+      "description": "A description for 'fmp.debug-logging'"
+    }
+  ]
+}

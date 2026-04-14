@@ -1,11 +1,10 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
+import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-
-import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
 
 public record RecordSaleRequest(
     @NotNull String symbol,

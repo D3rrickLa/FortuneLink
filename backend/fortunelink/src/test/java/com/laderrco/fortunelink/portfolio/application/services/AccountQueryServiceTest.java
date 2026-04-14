@@ -8,8 +8,8 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -87,8 +87,8 @@ class AccountQueryServiceTest {
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
-          .thenReturn(Page.empty());
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
+          any(Pageable.class))).thenReturn(Page.empty());
 
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
@@ -113,18 +113,19 @@ class AccountQueryServiceTest {
       when(projection.getId()).thenReturn(accountUuid);
       when(projection.getLifecycleState()).thenReturn("ACTIVE");
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
-          .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
+          any(Pageable.class))).thenReturn(
+          new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
 
       Map<AssetSymbol, Quantity> quantities = Map.of(new AssetSymbol("BTC"), Quantity.of(1));
-      when(accountQueryRepository.findQuantitiesForAccounts(anyList()))
-          .thenReturn(Map.of(accountId, quantities));
+      when(accountQueryRepository.findQuantitiesForAccounts(anyList())).thenReturn(
+          Map.of(accountId, quantities));
 
       when(marketDataService.getBatchQuotes(anySet())).thenReturn(Map.of());
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(eq(projection), eq(quantities), anyMap(), eq(Map.of())))
-          .thenReturn(expectedView);
+      when(accountViewBuilder.buildFromProjection(eq(projection), eq(quantities), anyMap(),
+          eq(Map.of()))).thenReturn(expectedView);
 
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
@@ -138,8 +139,8 @@ class AccountQueryServiceTest {
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 5, 10);
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
-          .thenReturn(new PageImpl<>(List.of(), PageRequest.of(5, 10), 2));
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
+          any(Pageable.class))).thenReturn(new PageImpl<>(List.of(), PageRequest.of(5, 10), 2));
 
       Page<AccountView> result = accountQueryService.getAllAccounts(query);
 
@@ -162,11 +163,13 @@ class AccountQueryServiceTest {
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
 
-      when(accountQueryRepository.findByPortfolioId(eq(portfolioId), any(Pageable.class)))
-          .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
+      when(accountQueryRepository.findByPortfolioId(eq(portfolioId),
+          any(Pageable.class))).thenReturn(
+          new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
 
       AccountView expectedView = mock(AccountView.class);
-      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap())).thenReturn(expectedView);
+      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap())).thenReturn(
+          expectedView);
 
       accountQueryService.getAllAccounts(query);
 
@@ -181,11 +184,11 @@ class AccountQueryServiceTest {
       UserId userId = UserId.random();
       GetAllAccountsQuery query = new GetAllAccountsQuery(portfolioId, userId, 0, 10);
 
-      doThrow(new RuntimeException("Unauthorized"))
-          .when(portfolioLoader).validateOwnership(portfolioId, userId);
+      doThrow(new RuntimeException("Unauthorized")).when(portfolioLoader)
+          .validateOwnership(portfolioId, userId);
 
-      assertThatThrownBy(() -> accountQueryService.getAllAccounts(query))
-          .isInstanceOf(RuntimeException.class);
+      assertThatThrownBy(() -> accountQueryService.getAllAccounts(query)).isInstanceOf(
+          RuntimeException.class);
 
       verifyNoInteractions(accountQueryRepository, transactionRepository, marketDataService);
     }
@@ -199,13 +202,14 @@ class AccountQueryServiceTest {
       AccountSummaryProjection closedAcc = mock(AccountSummaryProjection.class);
       when(closedAcc.getLifecycleState()).thenReturn(AccountLifecycleState.CLOSED.name());
 
-      when(accountQueryRepository.findByPortfolioId(any(), any()))
-          .thenReturn(new PageImpl<>(List.of(replayingAcc, closedAcc)));
+      when(accountQueryRepository.findByPortfolioId(any(), any())).thenReturn(
+          new PageImpl<>(List.of(replayingAcc, closedAcc)));
 
-      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap()))
-          .thenReturn(mock(AccountView.class));
+      when(accountViewBuilder.buildFromProjection(any(), anyMap(), anyMap(), anyMap())).thenReturn(
+          mock(AccountView.class));
 
-      accountQueryService.getAllAccounts(new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
+      accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
 
       verify(accountQueryRepository, never()).findQuantitiesForAccounts(any());
     }
@@ -221,13 +225,13 @@ class AccountQueryServiceTest {
       when(activeAcc.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());
       when(activeAcc.getId()).thenReturn(UUID.randomUUID());
 
-      when(accountQueryRepository.findByPortfolioId(any(), any()))
-          .thenReturn(new PageImpl<>(List.of(closedAcc, activeAcc)));
+      when(accountQueryRepository.findByPortfolioId(any(), any())).thenReturn(
+          new PageImpl<>(List.of(closedAcc, activeAcc)));
       when(accountQueryRepository.findQuantitiesForAccounts(any())).thenReturn(Map.of());
 
-      accountQueryService.getAllAccounts(new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
+      accountQueryService.getAllAccounts(
+          new GetAllAccountsQuery(PortfolioId.newId(), UserId.random(), 0, 10));
 
-      
       verify(accountQueryRepository, times(1)).findQuantitiesForAccounts(any());
     }
   }
@@ -245,14 +249,12 @@ class AccountQueryServiceTest {
     void getAccountSummaryValidIdReturnsMappedView() {
       AssetSymbol shop = new AssetSymbol("SHOP.TO");
 
-      
       Account account = new Account(accountId, "Resp", AccountType.RESP, Currency.CAD,
           PositionStrategy.ACB);
       AcbPosition updated = new AcbPosition(shop, AssetType.STOCK, Currency.CAD, Quantity.of(100),
           Money.of(2010, "CAD"), Instant.now(), Instant.now());
       account.applyPositionResult(shop, updated);
 
-      
       when(accountQueryRepository.findByIdWithDetails(accountId, portfolioId, userId)).thenReturn(
           Optional.of(account));
 
@@ -277,8 +279,7 @@ class AccountQueryServiceTest {
 
       assertThatThrownBy(() -> accountQueryService.getAccountSummary(
           new GetAccountSummaryQuery(portfolioId, userId, accountId))).isInstanceOf(
-              AccountNotFoundException.class)
-          .hasMessageContaining(accountId.toString());
+          AccountNotFoundException.class).hasMessageContaining(accountId.toString());
     }
 
     @Test

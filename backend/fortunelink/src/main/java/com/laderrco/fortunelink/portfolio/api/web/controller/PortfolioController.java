@@ -81,11 +81,12 @@ public class PortfolioController {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     boolean isAdmin = auth != null && auth.getAuthorities().stream()
         .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-    boolean finalSoftDelete = isAdmin ? softDelete : true;
+    boolean finalSoftDelete = !isAdmin || softDelete;
 
     // Allow 'recursive' regardless,it just means "mark all children as deleted too"
-    lifecycleService.deletePortfolio(new DeletePortfolioCommand(PortfolioId.fromString(portfolioId),
-        userId, finalSoftDelete, recursive));
+    lifecycleService.deletePortfolio(
+        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, finalSoftDelete,
+            recursive));
   }
 
   // --- Portfolio Queries ---
