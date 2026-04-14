@@ -6,7 +6,7 @@ spring:
         jwt:
           issuer-uri: http://localhost:9000
   datasource:
-    url: jdbc:tc:postgresql:16-alpine:///testdb
+    url: jdbc:tc:postgresql:17.9-alpine:///testdb
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     username: postgres
     password: postgres

@@ -79,11 +79,9 @@ public class AccountQueryService {
         .map(a -> AccountId.fromString(a.getId().toString()))
         .toList();
 
-    // Still need quantities for Total Value calculation
     Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository
         .findQuantitiesForAccounts(accountIds);
 
-    // Get all symbols just for current price quotes
     Set<AssetSymbol> allSymbols = quantitiesByAccount.values().stream()
         .flatMap(m -> m.keySet().stream())
         .collect(Collectors.toSet());
@@ -92,14 +90,10 @@ public class AccountQueryService {
         ? Map.of()
         : marketDataService.getBatchQuotes(allSymbols);
 
-    // REMOVED: symbolsByAccount query
-    // REMOVED: feesByAccount query (The Big Win)
-
     List<AccountView> content = projections.stream().map(projection -> {
       AccountId currentId = AccountId.fromString(projection.getId().toString());
       var accountQuantities = quantitiesByAccount.getOrDefault(currentId, Map.of());
 
-      // Pass Map.of() for fees since the builder doesn't use them anyway
       return accountViewBuilder.buildFromProjection(
           projection, accountQuantities, quoteCache, Map.of());
     }).toList();
@@ -110,7 +104,6 @@ public class AccountQueryService {
   public AccountView getAccountSummary(GetAccountSummaryQuery query) {
     Objects.requireNonNull(query, "GetAccountSummaryQuery cannot be null");
 
-    // Repository handles ownership check and domain mapping
     Account account = accountQueryRepository.findByIdWithDetails(query.accountId(),
         query.portfolioId(), query.userId())
         .orElseThrow(() -> new AccountNotFoundException(query.accountId(), query.portfolioId()));

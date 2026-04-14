@@ -9,13 +9,13 @@ import java.time.Instant;
 import java.util.List;
 
 public record RecordPurchaseRequest(
-    @NotNull String accountId,
+    // @NotNull String accountId, // this is not needed as it should be in the part var
     @NotNull String symbol,
     @NotNull AssetType type,
     @NotNull @DecimalMin("0.00000001") BigDecimal quantity,
     @NotNull @DecimalMin("0.01") BigDecimal price,
     @NotNull String currency,
     List<FeeRequest> fees,
-    @NotNull Instant transactionDate,
+    Instant transactionDate,
     String notes) {
 }

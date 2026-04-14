@@ -41,16 +41,13 @@ public class ValidationUtils {
     }
   }
 
-  public static void validateDate(Instant date, Instant accountCreatedAt, List<String> errors) {
+  public static void validateDate(Instant date, List<String> errors) {
     if (date == null) {
       errors.add("Transaction date is required");
       return;
     }
     if (date.isAfter(Instant.now())) {
       errors.add("Transaction date cannot be in the future");
-    }
-    if (accountCreatedAt != null && date.isBefore(accountCreatedAt)) {
-      errors.add("Transaction date predates account creation");
     }
   }
 

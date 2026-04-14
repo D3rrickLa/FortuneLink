@@ -30,7 +30,7 @@ public record RecordStandaloneFeeRequest(
 
     @NotNull(message = "Fee type is required") FeeType feeType,
 
-    @NotNull(message = "Transaction date is required") Instant transactionDate,
+    Instant transactionDate,
 
     String notes) {
 }

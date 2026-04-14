@@ -7,7 +7,7 @@ import java.time.Instant;
 public record RecordDepositRequest(
     @NotNull BigDecimal amount,
     @NotNull String currency,
-    @NotNull Instant transactionDate,
+    Instant transactionDate,
     String notes) {
 
 }

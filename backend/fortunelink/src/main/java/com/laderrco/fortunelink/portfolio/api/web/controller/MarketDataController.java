@@ -123,9 +123,8 @@ public class MarketDataController {
 
     MarketAssetQuote quote = quotes.get(assetSymbol);
     if (quote == null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-          "No quote available for symbol: " + symbol
-              + ". Record a transaction first to seed the asset cache.");
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No quote available for symbol: " + symbol
+          + ". Record a transaction first to seed the asset cache.");
     }
 
     return MarketQuoteResponse.fromDomain(quote);

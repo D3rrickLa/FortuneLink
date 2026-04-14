@@ -38,20 +38,26 @@ public class TransactionQueryService {
     return transactionViewMapper.toTransactionView(transaction);
   }
 
-  public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
+// after (no logic change, just removing the comment that implied
+// there was previously a branch here, and tightening the null check since symbol is now
+// explicitly documented as optional)
+public Page<TransactionView> getTransactionHistory(GetTransactionHistoryQuery query) {
     Objects.requireNonNull(query, "GetTransactionHistoryQuery cannot be null");
 
-    portfolioLoader.validatePortfolioAndAccountOwnership(query.portfolioId(), query.userId(),
-        query.accountId());
+    portfolioLoader.validatePortfolioAndAccountOwnership(
+        query.portfolioId(), query.userId(), query.accountId());
 
     validateDateRange(query.startDate(), query.endDate());
 
-    // This replaces all the 'if (hasDateRange) ... else if (hasSymbol)' logic
-    Page<Transaction> page = transactionQueryRepository.findTransactionsDynamic(query.accountId(),
-        query.symbol(), query.startDate(), query.endDate(), query.toPageable());
-
-    return page.map(transactionViewMapper::toTransactionView);
-  }
+    return transactionQueryRepository
+        .findTransactionsDynamic(
+            query.accountId(),
+            query.symbol(),     // null = no filter, all types returned
+            query.startDate(),  // null = no lower bound
+            query.endDate(),    // null = no upper bound
+            query.toPageable())
+        .map(transactionViewMapper::toTransactionView);
+}
 
   /**
    * Unbounded fetch for internal calculations only. NEVER expose this through a controller

@@ -1,28 +1,27 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+
+import org.springframework.data.domain.Persistable;
+
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
  * Maps the {@code transaction_fees} table.
  * <p>
- * The domain {@code Fee} record supports multi-currency: it carries both a {@code nativeAmount}
- * (original currency) and an {@code accountAmount} (converted to account currency) plus the
- * {@code ExchangeRate} used. All three are persisted here so they can be reconstructed exactly.
+ * The domain {@code Fee} record supports multi-currency: it carries both a
+ * {@code nativeAmount}
+ * (original currency) and an {@code accountAmount} (converted to account
+ * currency) plus the
+ * {@code ExchangeRate} used. All three are persisted here so they can be
+ * reconstructed exactly.
  * <p>
- * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are rarely needed after
+ * {@code FeeMetadata} key/value pairs are NOT persisted separately , they are
+ * rarely needed after
  * recording and can be reconstructed from the {@code additionalData} JSONB on
  * {@code TransactionJpaEntity} if required.
  */
@@ -30,7 +29,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Table(name = "transaction_fees")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
-public class FeeJpaEntity {
+public class FeeJpaEntity implements Persistable<UUID> {
 
   @Id
   @GeneratedValue
@@ -65,6 +64,8 @@ public class FeeJpaEntity {
   @Version
   @Column(name = "version", nullable = false)
   private Long version;
+  @Transient
+  private boolean isNew = true;
 
   public static FeeJpaEntity createEmpty() {
     return new FeeJpaEntity();
@@ -93,5 +94,10 @@ public class FeeJpaEntity {
 
   public void setTransaction(TransactionJpaEntity transaction) {
     this.transaction = transaction;
+  }
+
+  @Override
+  public boolean isNew() {
+    return isNew;
   }
 }

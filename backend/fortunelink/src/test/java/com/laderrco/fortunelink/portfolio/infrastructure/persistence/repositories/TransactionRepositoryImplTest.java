@@ -17,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -100,31 +99,6 @@ class TransactionRepositoryImplTest {
   @Nested
   @DisplayName("Paginated and List Queries")
   class QueryOperations {
-
-    @Test
-    @DisplayName("findByAccountId should map result page to domain")
-    void findByAccountIdShouldMapToDomain() {
-      TransactionJpaEntity entity = createTransaction();
-      Page<TransactionJpaEntity> page = new PageImpl<>(List.of(entity));
-      when(jpaRepository.findByAccountId(ACCOUNT_UUID, PageRequest.of(0, 10))).thenReturn(page);
-      when(mapper.toDomain(entity)).thenReturn(mock(Transaction.class));
-
-      Page<Transaction> result = repository.findByAccountId(ACCOUNT_ID, PageRequest.of(0, 10));
-
-      assertThat(result.getContent()).hasSize(1);
-    }
-
-    @Test
-    @DisplayName("findByAccountIdAndSymbol should use symbol string and mapped page")
-    void findByAccountIdAndSymbolShouldCallJpa() {
-      when(jpaRepository.findByAccountIdAndExecutionSymbol(eq(ACCOUNT_UUID), eq("MSFT"), any()))
-          .thenReturn(Page.empty());
-
-      repository.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL, PageRequest.of(0, 10));
-
-      verify(jpaRepository).findByAccountIdAndExecutionSymbol(ACCOUNT_UUID, "MSFT", PageRequest.of(0, 10));
-    }
-
     @Nested
     @DisplayName("Symbol Based Queries")
     class SymbolQueries {
@@ -299,22 +273,6 @@ class TransactionRepositoryImplTest {
   @Nested
   @DisplayName("Query Repository - Advanced Filtering")
   class AdvancedQueryOperations {
-
-    @Test
-    @DisplayName("findByAccountIdAndDateRange with Pageable should map page")
-    void findByAccountIdAndDateRangeWithPageableShouldReturnMappedPage() {
-      Instant start = Instant.now();
-      Instant end = Instant.now();
-      Page<TransactionJpaEntity> page = new PageImpl<>(List.of(createTransaction()));
-
-      when(jpaRepository.findByAccountIdAndOccurredAtBetween(ACCOUNT_UUID, start, end, PAGEABLE))
-          .thenReturn(page);
-      when(mapper.toDomain(any())).thenReturn(mock(Transaction.class));
-
-      Page<Transaction> result = repository.findByAccountIdAndDateRange(ACCOUNT_ID, start, end, PAGEABLE);
-
-      assertThat(result.getContent()).hasSize(1);
-    }
 
     @Test
     @DisplayName("findTransactionsDynamic should pass all parameters to JPA")

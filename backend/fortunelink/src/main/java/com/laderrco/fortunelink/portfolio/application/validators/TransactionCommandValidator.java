@@ -37,7 +37,7 @@ public class TransactionCommandValidator {
       ValidationUtils.validateQuantity(command.quantity(), errors);
       ValidationUtils.validateAmount(command.price().amount(), errors);
       validateFees(command.fees(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -47,21 +47,21 @@ public class TransactionCommandValidator {
       ValidationUtils.validateQuantity(command.quantity(), errors);
       ValidationUtils.validateAmount(command.price().amount(), errors);
       validateFees(command.fees(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
   public ValidationResult validate(RecordDepositCommand command) {
     return validateCommand(command, errors -> {
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
   public ValidationResult validate(RecordWithdrawalCommand command) {
     return validateCommand(command, errors -> {
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -74,7 +74,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateSymbol(command.assetSymbol(), errors);
       }
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -82,7 +82,7 @@ public class TransactionCommandValidator {
     return validateCommand(command, errors -> {
       ValidationUtils.validateSymbol(command.assetSymbol(), errors);
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -95,7 +95,7 @@ public class TransactionCommandValidator {
         ValidationUtils.validateAmount(command.execution().pricePerShare().amount(), errors);
         ValidationUtils.validateQuantity(command.execution().sharesPurchased(), errors);
       }
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -107,7 +107,7 @@ public class TransactionCommandValidator {
       } else if (command.ratio().numerator() == command.ratio().denominator()) {
         errors.add("Ratio: A 1:1 split is a no-op and is not permitted");
       }
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -116,7 +116,7 @@ public class TransactionCommandValidator {
       ValidationUtils.validateSymbol(command.assetSymbol(), errors);
       ValidationUtils.validateAmount(command.distributionPerUnit().amount(), errors);
       ValidationUtils.validateQuantity(command.heldQuantity(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -126,7 +126,7 @@ public class TransactionCommandValidator {
         errors.add("Fee type is required");
       }
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
@@ -145,15 +145,15 @@ public class TransactionCommandValidator {
 
   public ValidationResult validate(RecordTransferInCommand command) {
     return validateCommand(command, errors -> {
-        ValidationUtils.validateAmount(command.amount().amount(), errors);
-        ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateAmount(command.amount().amount(), errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 
   public ValidationResult validate(RecordTransferOutCommand command) {
     return validateCommand(command, errors -> {
       ValidationUtils.validateAmount(command.amount().amount(), errors);
-      ValidationUtils.validateDate(command.transactionDate(), null, errors);
+      ValidationUtils.validateDate(command.transactionDate(), errors);
     });
   }
 

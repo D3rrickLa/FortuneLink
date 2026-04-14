@@ -49,7 +49,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       boolean skipCashCheck) {
     validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     List<Fee> feeList = getFeeList(fees);
     Money gross = price.calculateValue(quantity);
@@ -77,7 +77,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordDeposit(Account account, Money amount, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.DEPOSIT)
@@ -94,7 +94,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     validateIsActive(account);
     Objects.requireNonNull(symbol, "symbol cannot be null");
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.DIVIDEND)
@@ -112,7 +112,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       Quantity quantity, Price price, String notes, Instant date) {
     validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     AssetType type = account.getPosition(symbol).map(Position::type).orElse(AssetType.STOCK);
 
@@ -131,7 +131,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
     Objects.requireNonNull(feeType, "feeType cannot be null");
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
@@ -150,7 +150,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     TransactionMetadata metadata = TransactionMetadata.manual(AssetType.CASH);
     if (symbol != null) {
@@ -174,7 +174,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Objects.requireNonNull(ratio, "ratio cannot be null");
     Objects.requireNonNull(notes, "notes cannot be null");
     Objects.requireNonNull(date, "date cannot be null");
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Position existingPosition = account.getPosition(symbol).orElseThrow(
         () -> new IllegalStateException(
@@ -208,7 +208,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       Price price, String notes, Instant date) {
     validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
     // NOTE: this and Sell have same signatures, maybe DRY it
     Position existingPosition = account.getPosition(symbol).orElseThrow(
         () -> new IllegalStateException(
@@ -237,7 +237,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       List<Fee> fees, String notes, Instant date) {
     validateIsActive(account);
     validateTradeInputs(account, symbol, quantity, price, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Position existingPosition = account.getPosition(symbol).orElseThrow(
         () -> new IllegalStateException("Cannot sell: no open position for " + symbol.symbol()));
@@ -273,7 +273,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordTransferIn(Account account, Money amount, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.TRANSFER_IN)
@@ -288,7 +288,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordTransferOut(Account account, Money amount, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.TRANSFER_OUT)
@@ -303,7 +303,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   public Transaction recordWithdrawal(Account account, Money amount, String notes, Instant date) {
     validateIsActive(account);
     validateCashInputs(account, amount, notes, date);
-    validateTransactionDate(date, account);
+    validateTransactionDate(date);
 
     Transaction tx = Transaction.builder().transactionId(TransactionId.newId())
         .accountId(account.getAccountId()).transactionType(TransactionType.WITHDRAWAL)
@@ -426,9 +426,9 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     Objects.requireNonNull(date, "date cannot be null");
   }
 
-  private void validateTransactionDate(Instant date, Account account) {
+  private void validateTransactionDate(Instant date) {
     List<String> errors = new ArrayList<>();
-    ValidationUtils.validateDate(date, account.getCreationDate(), errors);
+    ValidationUtils.validateDate(date, errors);
     if (!errors.isEmpty()) {
       throw new IllegalArgumentException(errors.getFirst());
     }

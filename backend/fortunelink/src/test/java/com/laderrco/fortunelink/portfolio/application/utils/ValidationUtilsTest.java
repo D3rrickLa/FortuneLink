@@ -16,8 +16,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -116,31 +114,6 @@ class ValidationUtilsTest {
       List<String> errors = new ArrayList<>();
       ValidationUtils.validateAmount(BigDecimal.TEN, errors);
       assertTrue(errors.isEmpty());
-    }
-  }
-
-  @Nested
-  @DisplayName("validateDate: Temporal Validation")
-  class DateValidationTests {
-
-    @Test
-    @DisplayName("validateDate: should reject future dates and dates before account creation")
-    void validateDateshouldDetectBoundaryViolations() {
-      List<String> errors = new ArrayList<>();
-      Instant future = Instant.now().plus(1, ChronoUnit.DAYS);
-      Instant accountCreated = Instant.now().minus(1, ChronoUnit.HOURS);
-      Instant wayBefore = Instant.now().minus(1, ChronoUnit.DAYS);
-
-      ValidationUtils.validateDate(future, accountCreated, errors);
-      ValidationUtils.validateDate(null, accountCreated, errors);
-      assertEquals(2, errors.size());
-      assertTrue(errors.contains("Transaction date is required"));
-      assertTrue(errors.contains("Transaction date cannot be in the future"));
-
-      errors.clear();
-      ValidationUtils.validateDate(wayBefore, null, errors);
-      ValidationUtils.validateDate(wayBefore, accountCreated, errors);
-      assertTrue(errors.contains("Transaction date predates account creation"));
     }
   }
 

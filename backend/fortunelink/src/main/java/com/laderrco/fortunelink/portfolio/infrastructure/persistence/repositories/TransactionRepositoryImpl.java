@@ -122,28 +122,6 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   // =========================================================================
   // TransactionQueryRepository (paginated reads)
   // =========================================================================
-
-  @Override
-  public Page<Transaction> findByAccountId(AccountId accountId, Pageable pageable) {
-    return jpaRepository.findByAccountId(UUID.fromString(accountId.toString()), pageable)
-        .map(mapper::toDomain);
-  }
-
-  @Override
-  public Page<Transaction> findByAccountIdAndDateRange(AccountId accountId, Instant start,
-      Instant end, Pageable pageable) {
-    return jpaRepository.findByAccountIdAndOccurredAtBetween(accountId.id(), start, end, pageable)
-        .map(mapper::toDomain);
-  }
-
-  @Override
-  public Page<Transaction> findByAccountIdAndSymbol(AccountId accountId, AssetSymbol symbol,
-      Pageable pageable) {
-    // Uses corrected method name: findByAccountIdAndExecutionSymbol
-    return jpaRepository.findByAccountIdAndExecutionSymbol(UUID.fromString(accountId.toString()),
-        symbol.symbol(), pageable).map(mapper::toDomain);
-  }
-
   @Override
   @Cacheable(value = "fees:buy", key = "'account:' + #accountId.id()")
   public Map<AssetSymbol, Money> sumBuyFeesBySymbolForAccount(AccountId accountId) {
@@ -216,7 +194,11 @@ public class TransactionRepositoryImpl implements TransactionRepository, Transac
   @Override
   public Page<Transaction> findTransactionsDynamic(AccountId accountId, AssetSymbol symbol,
       Instant start, Instant end, Pageable pageable) {
-    return jpaRepository.findTransactionsDynamic(accountId.id(), symbol.symbol(), start, end,
+    return jpaRepository.findTransactionsDynamic(
+        accountId.id(),
+        symbol != null ? symbol.symbol() : null,
+        start,
+        end,
         pageable).map(mapper::toDomain);
   }
 

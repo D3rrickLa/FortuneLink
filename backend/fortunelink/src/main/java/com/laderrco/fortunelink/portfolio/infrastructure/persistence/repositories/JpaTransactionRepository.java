@@ -82,13 +82,16 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionJpaEn
   @Query("""
       SELECT t FROM TransactionJpaEntity t
       WHERE t.accountId = :accountId
-        AND (:symbol IS NULL OR t.executionSymbol = :symbol)
-        AND (:startDate IS NULL OR t.occurredAt >= :startDate)
-        AND (:endDate IS NULL OR t.occurredAt <= :endDate)
+        AND (CAST(:symbol AS string) IS NULL OR t.executionSymbol = :symbol)
+        AND (CAST(:startDate AS instant) IS NULL OR t.occurredAt >= :startDate)
+        AND (CAST(:endDate AS instant) IS NULL OR t.occurredAt <= :endDate)
       """)
-  Page<TransactionJpaEntity> findTransactionsDynamic(@Param("accountId") UUID accountId,
-      @Param("symbol") String symbol, @Param("startDate") Instant startDate,
-      @Param("endDate") Instant endDate, Pageable pageable);
+  Page<TransactionJpaEntity> findTransactionsDynamic(
+      @Param("accountId") UUID accountId,
+      @Param("symbol") String symbol,
+      @Param("startDate") Instant startDate,
+      @Param("endDate") Instant endDate,
+      Pageable pageable);
 
   // --- Deletion Logic ---
   @Modifying

@@ -29,7 +29,8 @@ import org.springframework.data.domain.Persistable;
 /**
  * Pure persistence model for the {@code Portfolio} aggregate root.
  * <p>
- * Zero domain logic lives here. No business methods, no invariant checks. The only responsibility
+ * Zero domain logic lives here. No business methods, no invariant checks. The
+ * only responsibility
  * is mapping columns -> Java fields and managing the JPA relationship graph.
  */
 @Entity
@@ -52,7 +53,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   private String description;
 
   /**
-   * ISO-4217 code of the display currency preference (e.g. "CAD", "USD"). Reconstructed into a
+   * ISO-4217 code of the display currency preference (e.g. "CAD", "USD").
+   * Reconstructed into a
    * {@code Currency} domain object by the mapper.
    */
   @Column(name = "display_currency_code", nullable = false, length = 3)
@@ -81,7 +83,8 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
   private Long version;
 
   /**
-   * LAZY by default. Load eagerly only when you need accounts in the same request (use the
+   * LAZY by default. Load eagerly only when you need accounts in the same request
+   * (use the
    * {@code @EntityGraph} on the repo for that).
    */
   @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -137,7 +140,12 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
     for (AccountJpaEntity a : incoming) {
       AccountJpaEntity current = existing.get(a.getId());
       if (current != null) {
-        current.applyFrom(a); // in-place update , Hibernate tracks the managed instance
+        if (current != a) {
+          // Different objects — sync fields from incoming to managed instance
+          // so Hibernate's dirty-checking tracks the managed reference
+          current.applyFrom(a);
+        }
+        // If current == a: accountToEntity already mutated it in place, nothing to do
         merged.add(current);
       } else {
         a.setPortfolio(this);
@@ -145,14 +153,12 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
       }
     }
 
-    // Remove accounts that no longer exist in the domain
     Set<UUID> incomingIds = new HashSet<>();
     for (AccountJpaEntity a : incoming) {
       incomingIds.add(a.getId());
     }
     this.accounts.removeIf(a -> !incomingIds.contains(a.getId()));
 
-    // Add new ones
     for (AccountJpaEntity a : merged) {
       this.accounts.add(a);
     }

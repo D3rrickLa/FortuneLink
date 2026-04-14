@@ -97,14 +97,15 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), request.transactionDate());
+    Instant validatedDate = resolveTransactionDate(request.transactionDate());
+    List<Fee> fees = mapFees(request.fees(), validatedDate);
 
     return transactionService.recordPurchase(
         new RecordPurchaseCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), request.type(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
-            request.transactionDate(), emptyIfNull(request.notes()), false));
+            validatedDate, emptyIfNull(request.notes()), false));
   }
 
   @PostMapping("/sell")
@@ -114,14 +115,15 @@ public class TransactionController {
       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
 
-    List<Fee> fees = mapFees(request.fees(), request.transactionDate());
+    Instant validatedDate = resolveTransactionDate(request.transactionDate());
+    List<Fee> fees = mapFees(request.fees(), validatedDate);
 
     return transactionService.recordSale(
         new RecordSaleCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), new Quantity(request.quantity()),
             Price.of(request.price(), Currency.of(request.currency())), fees,
-            request.transactionDate(), emptyIfNull(request.notes())));
+            validatedDate, emptyIfNull(request.notes())));
   }
 
   @PostMapping("/split")
@@ -135,7 +137,7 @@ public class TransactionController {
         new RecordSplitCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.symbol(), new Ratio(request.numerator(), request.denominator()),
-            request.transactionDate(), emptyIfNull(request.notes())));
+            resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/return-of-capital")
@@ -150,7 +152,7 @@ public class TransactionController {
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol(),
             Price.of(request.distributionPerUnit(), Currency.of(request.currency())),
-            new Quantity(request.heldQuantity()), request.transactionDate(),
+            new Quantity(request.heldQuantity()), resolveTransactionDate(request.transactionDate()),
             emptyIfNull(request.notes())));
   }
 
@@ -168,7 +170,7 @@ public class TransactionController {
     return transactionService.recordDeposit(
         new RecordDepositCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            Money.of(request.amount(), request.currency()), request.transactionDate(),
+            Money.of(request.amount(), request.currency()), resolveTransactionDate(request.transactionDate()),
             emptyIfNull(request.notes())));
   }
 
@@ -182,7 +184,7 @@ public class TransactionController {
     return transactionService.recordWithdrawal(
         new RecordWithdrawalCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            Money.of(request.amount(), request.currency()), request.transactionDate(),
+            Money.of(request.amount(), request.currency()), resolveTransactionDate(request.transactionDate()),
             emptyIfNull(request.notes())));
   }
 
@@ -197,7 +199,7 @@ public class TransactionController {
         new RecordFeeCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             Money.of(request.amount(), request.currency()), request.feeType(),
-            request.transactionDate(), emptyIfNull(request.notes())));
+            resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/transfer-in")
@@ -210,7 +212,7 @@ public class TransactionController {
     return transactionService.recordTransferIn(
         new RecordTransferInCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            Money.of(request.amount(), request.currency()), request.transactionDate(),
+            Money.of(request.amount(), request.currency()), resolveTransactionDate(request.transactionDate()),
             emptyIfNull(request.notes())));
   }
 
@@ -224,7 +226,7 @@ public class TransactionController {
     return transactionService.recordTransferOut(
         new RecordTransferOutCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
-            Money.of(request.amount(), request.currency()), request.transactionDate(),
+            Money.of(request.amount(), request.currency()), resolveTransactionDate(request.transactionDate()),
             emptyIfNull(request.notes())));
   }
 
@@ -245,7 +247,7 @@ public class TransactionController {
         new RecordInterestCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.isAssetInterest() ? request.assetSymbol() : null,
-            Money.of(request.amount(), request.currency()), request.transactionDate(),
+            Money.of(request.amount(), request.currency()), resolveTransactionDate(request.transactionDate()),
             emptyIfNull(request.notes())));
   }
 
@@ -260,7 +262,7 @@ public class TransactionController {
         new RecordDividendCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol(), Money.of(request.amount(), request.currency()),
-            request.transactionDate(), emptyIfNull(request.notes())));
+            resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
   @PostMapping("/drip")
@@ -277,7 +279,7 @@ public class TransactionController {
             new RecordDividendReinvestmentCommand.DripExecution(
                 new Quantity(request.sharesPurchased()),
                 Price.of(request.pricePerShare(), Currency.of(request.currency()))),
-            request.transactionDate(), emptyIfNull(request.notes())));
+            resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
   // =========================================================================
@@ -389,5 +391,9 @@ public class TransactionController {
 
   private String emptyIfNull(String value) {
     return value != null ? value : "";
+  }
+
+  private Instant resolveTransactionDate(Instant requested) {
+    return requested != null ? requested : Instant.now();
   }
 }
