@@ -25,7 +25,10 @@ spring:
       - public
     locations: classpath:db/migration
     baseline-on-migrate: true # This prevents Flyway from failing if @BeforeAll already did something
-
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 management:
   endpoints:
     web:
