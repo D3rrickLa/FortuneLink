@@ -17,6 +17,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: unused
+          POSTGRES_USER: unused
+          POSTGRES_PASSWORD: unused
+        ports:
+          - 5432:5432
     permissions:
       contents: write
 
