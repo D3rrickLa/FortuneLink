@@ -82,13 +82,14 @@ class FmpProviderTest {
     }
 
     @Test
-    @DisplayName("should return false when daily limit is exceeded")
+    @DisplayName("should return true (blocked) when daily limit is exceeded")
     void shouldBlockWhenLimitExceeded() {
       when(valueOps.increment(anyString(), anyLong())).thenReturn(251L);
 
-      boolean result = ReflectionTestUtils.invokeMethod(fmpProvider, "tryReserve", 1);
+      boolean isBlocked = Boolean.TRUE.equals(
+          ReflectionTestUtils.invokeMethod(fmpProvider, "tryReserve", 1));
 
-      assertThat(result).isFalse();
+      assertThat(isBlocked).isTrue();
     }
   }
 

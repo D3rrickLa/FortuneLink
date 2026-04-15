@@ -35,18 +35,19 @@ public class FmpProvider implements MarketDataProvider {
   private final FmpClient fmpClient;
   private final FmpResponseMapper responseMapper;
   private final StringRedisTemplate redisTemplate;
+
   @Value("${fortunelink.rate-limit.fmp-quota.daily-limit:250}")
   private int fmpDailyLimit;
 
   @Override
   public Map<AssetSymbol, MarketAssetQuote> fetchBatchQuotes(Set<AssetSymbol> symbols,
       Map<AssetSymbol, Currency> knownCurrencies) {
-
     if (symbols == null || symbols.isEmpty()) {
       return Map.of();
     }
 
-    if (!tryReserve(symbols.size())) {
+    int count = symbols.size();
+    if (tryReserve(count)) {
       return Map.of();
     }
 
@@ -55,6 +56,7 @@ public class FmpProvider implements MarketDataProvider {
       try {
         FmpQuoteResponse raw = fmpClient.getQuote(symbol.symbol());
         if (raw == null) {
+          undoReserve(1); // Refund if provider returns nothing
           continue;
         }
 
@@ -62,31 +64,33 @@ public class FmpProvider implements MarketDataProvider {
         MarketAssetQuote quote = responseMapper.toQuote(raw, currency);
         if (quote != null) {
           results.put(symbol, quote);
+        } else {
+          undoReserve(1); // Refund if mapping fails
         }
       } catch (Exception e) {
         log.warn("Failed to fetch quote for symbol={}: {}", symbol.symbol(), e.getMessage());
+        undoReserve(1); // Refund on network/API error
       }
     }
     return Collections.unmodifiableMap(results);
   }
 
   @Override
-  public Optional<MarketAssetQuote> fetchHistoricalQuote(AssetSymbol symbol, Instant date) {
-    log.warn("Historical quotes not implemented for FMP (Free Tier limitation)");
-    return Optional.empty();
-  }
-
-  @Override
   public Optional<MarketAssetInfo> fetchAssetInfo(AssetSymbol symbol) {
-    if (!tryReserve(1)) {
+    if (tryReserve(1)) {
       return Optional.empty();
     }
 
     try {
       FmpProfileResponse response = fmpClient.getProfile(symbol.symbol());
+      if (response == null) {
+        undoReserve(1);
+        return Optional.empty();
+      }
       return Optional.ofNullable(responseMapper.toAssetInfo(response));
     } catch (Exception e) {
       log.warn("FMP failed to fetch asset info for {}: {}", symbol.symbol(), e.getMessage());
+      undoReserve(1); // Refund on failure
       return Optional.empty();
     }
   }
@@ -97,12 +101,22 @@ public class FmpProvider implements MarketDataProvider {
       return Collections.emptyMap();
     }
 
-    List<String> tickerStrings = symbols.stream().map(AssetSymbol::symbol).toList();
+    // Note: Logic here depends on how fmpClient.getBatchProfiles is implemented.
+    // Assuming it is one bulk API call:
+    if (tryReserve(1)) {
+      return Collections.emptyMap();
+    }
 
-    // Note: Ensure your FmpClient has a getBatchProfiles method that iterates
-    return fmpClient.getBatchProfiles(tickerStrings).stream().map(responseMapper::toAssetInfo)
-        .filter(Objects::nonNull).collect(Collectors.toMap(MarketAssetInfo::symbol, info -> info,
-            (existing, replacement) -> existing));
+    try {
+      List<String> tickerStrings = symbols.stream().map(AssetSymbol::symbol).toList();
+      return fmpClient.getBatchProfiles(tickerStrings).stream().map(responseMapper::toAssetInfo)
+          .filter(Objects::nonNull)
+          .collect(Collectors.toMap(MarketAssetInfo::symbol, info -> info, (ex, rep) -> ex));
+    } catch (Exception e) {
+      log.error("Batch asset info failed", e);
+      undoReserve(1);
+      return Collections.emptyMap();
+    }
   }
 
   @Override
@@ -111,29 +125,28 @@ public class FmpProvider implements MarketDataProvider {
       return List.of();
     }
 
+    // Search also consumes 1 credit usually
+    if (tryReserve(1)) {
+      return List.of();
+    }
+
     try {
-      return fmpClient.getSearch(query).stream().map(responseMapper::toSearchResult)
-          .filter(Objects::nonNull).toList();
+      return fmpClient.getSearch(query).stream().map(responseMapper::toSearchResult).toList();
     } catch (Exception e) {
       log.error("FMP symbol search failed for query='{}': {}", query, e.getMessage());
-      return List.of(); // search failure is non-fatal, return empty list
+      undoReserve(1);
+      return List.of();
     }
   }
 
   @Override
   public Currency fetchTradingCurrency(AssetSymbol symbol) {
-    // Defensive check: Try to get currency from profile, fallback to USD
     return fetchAssetInfo(symbol).map(MarketAssetInfo::tradingCurrency).orElse(Currency.of("USD"));
   }
 
   @Override
   public boolean supportsSymbol(AssetSymbol symbol) {
-    if (symbol == null || symbol.symbol() == null) {
-      return false;
-    }
-    // Matches standard tickers, tickers with dots (BRK.B), or hyphens
-    // (indices/crypto)
-    return symbol.symbol().matches("[A-Z0-9\\.\\-^]+");
+    return symbol != null && symbol.symbol() != null && symbol.symbol().matches("[A-Z0-9\\.\\-^]+");
   }
 
   @Override
@@ -141,25 +154,44 @@ public class FmpProvider implements MarketDataProvider {
     return "FMP";
   }
 
+  /**
+   * Attempts to reserve quota from Redis.
+   */
   private boolean tryReserve(int count) {
     String key = "quota:fmp:" + LocalDate.now(ZoneOffset.UTC);
-
-    // Atomically increment
     Long current = redisTemplate.opsForValue().increment(key, count);
 
     if (current == null) {
-      return false;
+      return true;
     }
 
-    // If this is the first call of the day, set expiration so Redis cleans up
     if (current <= count) {
       redisTemplate.expire(key, Duration.ofHours(25));
     }
 
     if (current > fmpDailyLimit) {
       log.warn("FMP daily quota reached. Current: {}, Limit: {}", current, fmpDailyLimit);
-      return false;
+      undoReserve(count); // Immediately refund the overage attempt
+      return true;
     }
-    return true;
+    return false;
+  }
+
+  /**
+   * Refunds unused quota back to Redis.
+   */
+  private void undoReserve(int count) {
+    try {
+      String key = "quota:fmp:" + LocalDate.now(ZoneOffset.UTC);
+      redisTemplate.opsForValue().decrement(key, count);
+    } catch (Exception e) {
+      log.error("Failed to refund FMP quota to Redis", e);
+    }
+  }
+
+  @Override
+  public Optional<MarketAssetQuote> fetchHistoricalQuote(AssetSymbol symbol, Instant date) {
+    log.warn("Historical quotes not implemented for FMP (Free Tier limitation)");
+    return Optional.empty();
   }
 }

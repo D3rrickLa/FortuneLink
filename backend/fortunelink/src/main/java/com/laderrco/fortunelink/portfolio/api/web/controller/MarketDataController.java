@@ -10,6 +10,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
+
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -30,9 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Public-facing market data endpoints.ks
+ * NOTE: remember to do the routes properly because a GET of quotes/batch is different to 
+ * POST quotes/batch
+ * Public-facing market data endpoints
  * <p>
- * Rate-limit notes (enforced by RateLimitInterceptor): - /search : lenient - lightweight
+ * Rate-limit notes (enforced by RateLimitInterceptor): /search: lenient - lightweight
  * autocomplete, no external API call if cached - /quotes : moderate - single symbol, Redis-cached,
  * may fan out to FMP - /batch : strict - each call may burn N FMP quota requests; must be short -
  * /info : lenient - long TTL in DB, rarely hits FMP - /validate : moderate - always hits FMP if
@@ -103,8 +107,7 @@ public class MarketDataController {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: " + symbol);
     }
 
-    Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(
-        Set.of(assetSymbol));
+    Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(Set.of(assetSymbol));
 
     MarketAssetQuote quote = quotes.get(assetSymbol);
     if (quote == null) {
@@ -136,12 +139,7 @@ public class MarketDataController {
    * page loads only.
    */
   @PostMapping("/quotes/batch")
-  public Map<String, MarketQuoteResponse> getBatchQuotes(@RequestBody BatchQuoteRequest request) {
-    if (request.symbols().size() > 20) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-          "Batch quote requests are limited to 20 symbols. Got: " + request.symbols().size());
-    }
-
+  public Map<String, MarketQuoteResponse> getBatchQuotes(@Valid @RequestBody BatchQuoteRequest request) {
     Set<AssetSymbol> symbols = request.symbols().stream().map(s -> {
       try {
         return new AssetSymbol(s);
@@ -150,13 +148,16 @@ public class MarketDataController {
       }
     }).filter(Objects::nonNull).collect(Collectors.toSet());
 
+    for (AssetSymbol assetSymbol : symbols) {
+      IO.print("CONTROLLER: " + assetSymbol.symbol());
+    }
+
     if (symbols.isEmpty()) {
       return Map.of();
     }
 
     return marketDataService.getBatchQuotes(symbols).entrySet().stream().collect(
-        Collectors.toMap(e -> e.getKey().symbol(),
-            e -> MarketQuoteResponse.fromDomain(e.getValue())));
+        Collectors.toMap(e -> e.getKey().symbol(), e -> MarketQuoteResponse.fromDomain(e.getValue())));
   }
 
   // -------------------------------------------------------------------------

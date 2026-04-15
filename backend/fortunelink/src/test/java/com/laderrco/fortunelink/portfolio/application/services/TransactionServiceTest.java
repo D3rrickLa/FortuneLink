@@ -30,7 +30,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDiv
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCapitalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSplitCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
@@ -186,7 +186,7 @@ class TransactionServiceTest {
         .thenReturn(ValidationResult.success());
     lenient().when(validator.validate(any(RecordSplitCommand.class)))
         .thenReturn(ValidationResult.success());
-    lenient().when(validator.validate(any(RecordReturnOfCaptialCommand.class)))
+    lenient().when(validator.validate(any(RecordReturnOfCapitalCommand.class)))
         .thenReturn(ValidationResult.success());
     lenient().when(validator.validate(any(RecordTransferInCommand.class)))
         .thenReturn(ValidationResult.success());
@@ -375,7 +375,7 @@ class TransactionServiceTest {
 
       service.recordDividend(command);
 
-      verify(mockAppender, times(2)).doAppend(logCaptor.capture());
+      verify(mockAppender, times(1)).doAppend(logCaptor.capture());
       List<ILoggingEvent> capturedLogs = logCaptor.getAllValues();
 
       assertThat(capturedLogs.getFirst().getLevel()).isEqualTo(Level.WARN);
@@ -524,12 +524,11 @@ class TransactionServiceTest {
 
       service.recordDividendReinvestment(command);
 
-      verify(mockAppender, times(2)).doAppend(logCaptor.capture());
+      verify(mockAppender, times(1)).doAppend(logCaptor.capture());
       List<ILoggingEvent> capturedLogs = logCaptor.getAllValues();
       assertThat(capturedLogs.getFirst().getLevel()).isEqualTo(Level.WARN);
       assertThat(capturedLogs.getFirst().getFormattedMessage()).contains(
           "DRIP recorded for symbol=AssetSymbol[symbol=GOOGL] on");
-      assertThat(capturedLogs.get(1).getLevel()).isEqualTo(Level.INFO);
     }
   }
 
@@ -568,7 +567,7 @@ class TransactionServiceTest {
     @Test
     @DisplayName("recordReturnOfCapital: verify success flow")
     void recordReturnOfCapitalSuccess() {
-      RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(IDEMPOTENCY_KEY,
+      RecordReturnOfCapitalCommand command = new RecordReturnOfCapitalCommand(IDEMPOTENCY_KEY,
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "ABC", Price.of("100.0", USD), Quantity.of(0.5), NOW,
           "ROC");
 

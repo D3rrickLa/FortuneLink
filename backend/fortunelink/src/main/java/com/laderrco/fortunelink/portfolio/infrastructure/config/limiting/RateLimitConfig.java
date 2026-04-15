@@ -11,6 +11,7 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.command.CommandAsyncExecutor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,14 +32,10 @@ public class RateLimitConfig {
   private int globalRequestsPerDay;
 
   @Bean
-  public CommandAsyncExecutor commandAsyncExecutor(RedissonClient redisson) {
-    return ((Redisson) redisson).getCommandExecutor();
-  }
-
-  @Bean
+  @ConditionalOnBean(CommandAsyncExecutor.class)
   public ProxyManager<String> bucketProxyManager(CommandAsyncExecutor executor) {
-    return Bucket4jRedisson.casBasedBuilder(executor).expirationAfterWrite(
-            ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofDays(1)))
+    return Bucket4jRedisson.casBasedBuilder(executor)
+        .expirationAfterWrite(ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofDays(1)))
         .build();
   }
 
@@ -66,5 +63,4 @@ public class RateLimitConfig {
     return BucketConfiguration.builder().addLimit(
         Bandwidth.builder().capacity(3).refillIntervally(3, Duration.ofMinutes(1)).build()).build();
   }
-
 }

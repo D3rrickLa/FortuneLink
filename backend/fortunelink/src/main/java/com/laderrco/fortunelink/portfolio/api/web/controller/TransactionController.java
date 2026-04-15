@@ -22,7 +22,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDiv
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCapitalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSplitCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
@@ -153,7 +153,7 @@ public class TransactionController {
       @RequestBody @Valid RecordReturnOfCapitalRequest request) {
 
     return transactionService.recordReturnOfCapital(
-        new RecordReturnOfCaptialCommand(validateUuid(idempotencyKey),
+        new RecordReturnOfCapitalCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol(),
             Price.of(request.distributionPerUnit(), Currency.of(request.currency())),

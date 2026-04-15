@@ -53,7 +53,7 @@ class FmpClientConfigTest {
   @DisplayName("should verify default configuration values")
   void shouldHaveCorrectDefaults() {
 
-    assertThat(config.getBaseUrl()).isEqualTo("https://financialmodelingprep.com/api/v3");
+    assertThat(config.getBaseUrl()).isEqualTo("https://financialmodelingprep.com/stable");
     assertThat(config.getTimeoutSeconds()).isEqualTo(10);
     assertThat(config.isDebugLogging()).isFalse();
   }

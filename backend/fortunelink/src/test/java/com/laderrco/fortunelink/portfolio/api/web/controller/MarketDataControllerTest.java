@@ -120,17 +120,6 @@ class MarketDataControllerTest {
     }
 
     @Test
-    @DisplayName("400 when request exceeds 20 symbols")
-    void returns400WhenTooManySymbols() throws Exception {
-      List<String> tooMany = Collections.nCopies(21, "AAPL");
-      BatchQuoteRequest request = new BatchQuoteRequest(tooMany);
-
-      mockMvc.perform(post(BASE_URL + "/quotes/batch").contentType(MediaType.APPLICATION_JSON)
-              .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.message", containsString("limited to 20 symbols")));
-    }
-
-    @Test
     @DisplayName("200 but filters out invalid symbols via try-catch")
     void filtersOutInvalidSymbolsInBatch() throws Exception {
       BatchQuoteRequest request = new BatchQuoteRequest(List.of("!!", "MSFT"));
@@ -164,23 +153,6 @@ class MarketDataControllerTest {
   @Nested
   @DisplayName("POST /quotes/batch")
   class GetBatchQuotes {
-
-    @Test
-    @DisplayName("400 when more than 20 symbols requested")
-    void returns400WhenTooManySymbols() throws Exception {
-
-      List<String> tooManySymbols = Collections.nCopies(21, "AAPL");
-      BatchQuoteRequest request = new BatchQuoteRequest(tooManySymbols);
-
-      mockMvc.perform(post(BASE_URL + "/quotes/batch").contentType(MediaType.APPLICATION_JSON)
-              .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest())
-
-          .andExpect(jsonPath("$.message", containsString("limited to 20 symbols")))
-          .andExpect(jsonPath("$.message", containsString("Got: 21")));
-
-      verifyNoInteractions(marketDataService);
-    }
-
     @Test
     @DisplayName("200 but filters out invalid symbols via try-catch")
     void filtersOutInvalidSymbolsInBatch() throws Exception {

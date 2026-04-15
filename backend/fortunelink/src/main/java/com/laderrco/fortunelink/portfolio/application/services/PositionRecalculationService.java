@@ -1,14 +1,14 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.events.PositionRecalculationRequestedEvent;
+import com.laderrco.fortunelink.portfolio.application.services.redislock.DistributedLock;
+import com.laderrco.fortunelink.portfolio.application.services.redislock.DistributedLockProvider;
 import com.laderrco.fortunelink.portfolio.application.utils.PositionRecalculationExecutor;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,7 +25,7 @@ public class PositionRecalculationService {
   private final StringRedisTemplate redisTemplate;
   private final PositionRecalculationExecutor executor;
   private final AccountHealthService accountHealthService;
-  private final RedissonClient redisson; // Injected by Spring Boot Starter
+  private final DistributedLockProvider lockProvider;
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Async("recalculationExecutor")
@@ -69,10 +69,10 @@ public class PositionRecalculationService {
 
   private void acquireAndRun(String lockKey, PositionRecalculationRequestedEvent event)
       throws InterruptedException {
-    RLock lock = redisson.getLock(lockKey);
+
+    DistributedLock lock = lockProvider.getLock(lockKey);
     boolean acquired = false;
 
-    // --- STEP 1: LOCKING ---
     try {
       acquired = lock.tryLock(10, 30, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
@@ -81,10 +81,9 @@ public class PositionRecalculationService {
     } catch (Exception redisEx) {
       log.error("Redis unavailable. Marking account STALE.", redisEx);
       accountHealthService.markStale(event.accountId());
-      return; // Fail-fast: No lock, no execution.
+      return;
     }
 
-    // --- STEP 2: EXECUTION ---
     if (acquired) {
       try {
         runRecalculation(event);

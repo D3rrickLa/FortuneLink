@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDiv
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCapitalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSplitCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
@@ -111,7 +111,7 @@ public class TransactionCommandValidator {
     });
   }
 
-  public ValidationResult validate(RecordReturnOfCaptialCommand command) {
+  public ValidationResult validate(RecordReturnOfCapitalCommand command) {
     return validateCommand(command, errors -> {
       ValidationUtils.validateSymbol(command.assetSymbol(), errors);
       ValidationUtils.validateAmount(command.distributionPerUnit().amount(), errors);

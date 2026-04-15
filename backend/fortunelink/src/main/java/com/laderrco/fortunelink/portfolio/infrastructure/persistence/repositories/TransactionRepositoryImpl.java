@@ -76,7 +76,6 @@ public class TransactionRepositoryImpl implements TransactionRepository,
       //  an unnecessary extra query on every single transaction record.
       entity = mapper.toEntity(domain, portfolioId.id(), idempotencyKey.toString());
     }
-    IO.println("DEBUG ENTITY: " + entity.toString());
     TransactionJpaEntity saved = jpaRepository.save(entity);
     return mapper.toDomain(saved);
   }

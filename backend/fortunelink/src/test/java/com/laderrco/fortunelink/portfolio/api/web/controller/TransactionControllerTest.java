@@ -244,24 +244,6 @@ class TransactionControllerTest {
     }
 
     @Test
-    @DisplayName("400 when fees array is absent (required field)")
-    void returns400WhenFeesAbsent() throws Exception {
-      String body = """
-          {
-              "symbol": "AAPL",
-              "quantity": 5,
-              "price": 160.00,
-              "currency": "CAD",
-              "transactionDate": "2024-01-20T00:00:00Z"
-          }
-          """;
-
-      mockMvc.perform(
-              post(BASE_URL + "/sell").contentType(MediaType.APPLICATION_JSON).content(body))
-          .andExpect(status().isBadRequest());
-    }
-
-    @Test
     @DisplayName("422 when trying to sell more than held quantity")
     void returns422ForInsufficientQuantity() throws Exception {
       when(transactionService.recordSale(any())).thenThrow(

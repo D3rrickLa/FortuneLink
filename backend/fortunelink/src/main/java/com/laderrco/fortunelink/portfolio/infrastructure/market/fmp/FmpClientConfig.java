@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "fmp")
 public class FmpClientConfig {
   private String apiKey;
-  private String baseUrl = "https://financialmodelingprep.com/api/v3";
+  private String baseUrl = "https://financialmodelingprep.com/stable";
   private int timeoutSeconds = 10;
   private boolean debugLogging = false;
 

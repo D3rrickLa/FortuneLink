@@ -73,7 +73,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     if (symbols.isEmpty()) {
       return Map.of();
     }
-
+    
     List<AssetSymbol> symbolList = new ArrayList<>(symbols);
     List<String> keys = symbolList.stream().map(s -> keyFactory.price(s.symbol())).toList();
 
@@ -92,14 +92,11 @@ public class MarketDataServiceImpl implements MarketDataService {
     }
 
     if (!misses.isEmpty()) {
-
-      // Get currencies in ONE DB call
       Map<AssetSymbol, Currency> currencies = infoRepository.findBySymbols(misses).entrySet()
           .stream()
           .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().tradingCurrency()));
 
       Map<AssetSymbol, MarketAssetQuote> fetched = provider.fetchBatchQuotes(misses, currencies);
-
       result.putAll(fetched);
 
       // Cache results

@@ -9,7 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import java.time.Instant;
 import java.util.UUID;
 
-public record RecordReturnOfCaptialCommand(
+public record RecordReturnOfCapitalCommand(
     UUID idempotencyKey,
     PortfolioId portfolioId,
     UserId userId,

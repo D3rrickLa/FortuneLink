@@ -1,9 +1,11 @@
 package com.laderrco.fortunelink;
 
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -14,6 +16,9 @@ class FortunelinkApplicationTests {
   @Container
   @ServiceConnection
   static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.9-alpine");
+
+  @MockitoBean
+  private ProxyManager<String> proxyManager;
 
   @BeforeAll
   static void setup() throws Exception {

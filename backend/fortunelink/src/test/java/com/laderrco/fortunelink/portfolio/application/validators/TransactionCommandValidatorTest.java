@@ -13,7 +13,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDiv
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCapitalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSplitCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
@@ -271,7 +271,7 @@ class TransactionCommandValidatorTest {
     @Test
     @DisplayName("shouldPassWithValidCommand")
     void shouldPassWithValidCommand() {
-      RecordReturnOfCaptialCommand command = new RecordReturnOfCaptialCommand(IDEMPOTENCY_KEY,
+      RecordReturnOfCapitalCommand command = new RecordReturnOfCapitalCommand(IDEMPOTENCY_KEY,
           PORTFOLIO_ID, USER_ID, ACCOUNT_ID, "AAPL", new Price(validMoney()), Quantity.of(1), NOW,
           null);
 

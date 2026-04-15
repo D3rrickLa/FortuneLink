@@ -64,7 +64,7 @@ public class FmpResponseMapper {
     }
 
     return new SymbolSearchResult(new AssetSymbol(fmp.getSymbol()), fmp.getName(),
-        fmp.getExchangeFullName(), Currency.of(fmp.getCurrency()));
+        fmp.getExchangeFullName(), Currency.of(fmp.getCurrency().toUpperCase()));
   }
 
   private String mapToAssetType(FmpProfileResponse fmp) {

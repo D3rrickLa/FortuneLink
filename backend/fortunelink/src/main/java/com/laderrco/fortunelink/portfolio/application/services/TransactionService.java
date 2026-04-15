@@ -8,7 +8,7 @@ import com.laderrco.fortunelink.portfolio.application.commands.records.RecordDiv
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordFeeCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
-import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCaptialCommand;
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordReturnOfCapitalCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSaleCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordSplitCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.records.RecordTransferInCommand;
@@ -205,7 +205,7 @@ public class TransactionService {
     });
   }
 
-  public TransactionView recordReturnOfCapital(RecordReturnOfCaptialCommand command) {
+  public TransactionView recordReturnOfCapital(RecordReturnOfCapitalCommand command) {
     return execute(command, validator::validate, "recordReturnOfCapital",
         ctx -> transactionRecordingService.recordReturnOfCapital(ctx.account(),
             new AssetSymbol(command.assetSymbol()), command.heldQuantity(),
