@@ -27,14 +27,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: unused
-          POSTGRES_USER: unused
-          POSTGRES_PASSWORD: unused
-        ports:
-          - 5432:5432
     permissions:
       contents: write
 
@@ -60,6 +52,6 @@ jobs:
         FMP_API_KEY: test_key
         REDIS_HOST: localhost
         REDIS_PORT: 6379
-        REDIS_PASSWORD: unused
+        REDIS_PASSWORD: ""
         SUPABASE_PROJ_URL: http://localhost:9000
         SPRING_PROFILES_ACTIVE: test
