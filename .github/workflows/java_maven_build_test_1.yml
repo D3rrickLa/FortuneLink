@@ -10,7 +10,7 @@ name: Java Spring Backend CI with Maven
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "cleanup" ]
   pull_request:
     branches: [ "main" ]
 
@@ -38,6 +38,7 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+          
       - name: Build and Test with Maven
         working-directory: ./backend/fortunelink
         run: mvn -B clean test package -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
