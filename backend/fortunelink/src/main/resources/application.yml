@@ -199,3 +199,11 @@ logging:
     "[io.lettuce.core]": INFO
     "[org.hibernate.SQL]": ERROR
     "[org.hibernate.type.descriptor.sql]": ERROR
+# ============================================
+# DOCUMENTATIONS
+# ============================================
+springdoc:
+  api-docs:
+    path: /api-docs         # Now at http://localhost:8080/api-docs
+  swagger-ui:
+    path: /docs             # Now at http://localhost:8080/docs

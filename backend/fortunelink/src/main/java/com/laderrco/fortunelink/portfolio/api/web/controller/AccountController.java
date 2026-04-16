@@ -16,6 +16,14 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -37,14 +45,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts")
+@Tag(name = "Accounts", description = "Lifecycle and query operations for portfolio accounts")
 public class AccountController {
   private final AccountLifecycleService lifecycleService;
   private final AccountQueryService accountQueryService;
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public AccountView createAccount(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId, @RequestBody @Valid CreateAccountRequest request) {
+  @Operation(summary = "Create a new account", description = "Initializes a new account within a portfolio with a specific currency and strategy.")
+  @ApiResponse(responseCode = "201", description = "Account created successfully")
+  public AccountView createAccount(
+      @PathVariable @Schema(example = "p-123") String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @RequestBody @Valid CreateAccountRequest request) {
 
     return lifecycleService.createAccount(
         new CreateAccountCommand(PortfolioId.fromString(portfolioId), userId, request.accountName(),
@@ -53,80 +66,65 @@ public class AccountController {
 
   @PutMapping("/{accountId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void updateAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
-      @PathVariable String accountId, @RequestBody @Valid UpdateAccountRequest request) {
+  @Operation(summary = "Update account details", description = "Updates mutable properties of an account like its display name.")
+  public void updateAccount(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      @PathVariable String accountId,
+      @RequestBody @Valid UpdateAccountRequest request) {
 
     lifecycleService.updateAccount(
         new UpdateAccountCommand(PortfolioId.fromString(portfolioId), userId,
             AccountId.fromString(accountId), request.accountName()));
   }
 
-  /**
-   * Closes an account (soft delete / lifecycle transition to CLOSED).
-   * <p>
-   * Requires the account to have zero positions and zero cash balance. Returns 409
-   * ACCOUNT_CANNOT_BE_CLOSED if these conditions are not met.
-   * <p>
-   * A closed account can be reopened via PATCH /{accountId}/reopen. Closed accounts remain visible
-   * in read queries and their transaction history is preserved permanently.
-   */
   @DeleteMapping("/{accountId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void closeAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
+  @Operation(summary = "Close an account", description = "Transitions account to CLOSED state. Requires zero balance and no open positions.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "204", description = "Account closed"),
+      @ApiResponse(responseCode = "409", description = "Conflict: Account has remaining balance or positions")
+  })
+  public void closeAccount(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
       @PathVariable String accountId) {
     lifecycleService.deleteAccount(
         new DeleteAccountCommand(PortfolioId.fromString(portfolioId), userId,
             AccountId.fromString(accountId)));
   }
 
-  /**
-   * Reopens a previously closed account.
-   * <p>
-   * The account transitions from CLOSED back to ACTIVE. All historical data (transactions,
-   * positions, realized gains) is preserved exactly as it was.
-   * <p>
-   * Use cases: - Account was closed in error - Seasonal account (e.g. annual RRSP contribution
-   * account) - Migration: closed old account, then re-importing historical data
-   * <p>
-   * Returns 409 ACCOUNT_CANNOT_BE_REOPENED if the account is not in CLOSED state (e.g. trying to
-   * reopen an ACTIVE or REPLAYING account).
-   */
   @PatchMapping("/{accountId}/reopen")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void reopenAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
+  @Operation(summary = "Reopen a closed account", description = "Transitions a CLOSED account back to ACTIVE, preserving all history.")
+  public void reopenAccount(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
       @PathVariable String accountId) {
 
     lifecycleService.reopenAccount(new ReopenAccountCommand(AccountId.fromString(accountId),
         PortfolioId.fromString(portfolioId), userId));
   }
 
-  /**
-   * Returns all accounts in a portfolio with their current positions and balances.
-   * <p>
-   * This fires one batch market data call for all symbols across all accounts. It is not paginated
-   * , the MVP enforces one portfolio per user and the expected account count per portfolio is low
-   * (< 20). Add pagination when the multi-portfolio feature ships.
-   * <p>
-   * Performance note: each call fetches fresh market quotes for all positions. Cache aggressively
-   * on the client , the underlying Redis TTL is 5 minutes.
-   */
   @GetMapping
-  // Spring automatically populates this from query params
-  public Page<AccountView> getAllAccounts(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId, Pageable pageable) {
+  @Operation(summary = "List all accounts", description = "Returns all accounts in the portfolio. Note: Fetches fresh market data; cache results where possible.")
+  @Parameter(name = "pageable", hidden = true) // Hides the complex Spring object
+  @Parameter(in = ParameterIn.QUERY, name = "page", description = "Zero-based page index", schema = @Schema(type = "integer", defaultValue = "0"))
+  @Parameter(in = ParameterIn.QUERY, name = "size", description = "Page size", schema = @Schema(type = "integer", defaultValue = "20"))
+  public Page<AccountView> getAllAccounts(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
+      Pageable pageable) {
     return accountQueryService.getAllAccounts(
         new GetAllAccountsQuery(PortfolioId.fromString(portfolioId), userId,
             pageable.getPageNumber(), pageable.getPageSize()));
   }
 
-  /**
-   * Returns a single account with its current positions, balances, and market values.
-   * <p>
-   * Fires a targeted market data batch call scoped to this account's symbols only. Use this for the
-   * account detail page. Prefer /portfolios/{id} for a full overview.
-   */
   @GetMapping("/{accountId}")
-  public AccountView getAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
+  @Operation(summary = "Get account summary", description = "Returns a single account with current positions and live market valuation.")
+  public AccountView getAccount(
+      @PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId,
       @PathVariable String accountId) {
     return accountQueryService.getAccountSummary(
         new GetAccountSummaryQuery(PortfolioId.fromString(portfolioId), userId,

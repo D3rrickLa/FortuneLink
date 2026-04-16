@@ -9,6 +9,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -44,67 +50,68 @@ import org.springframework.web.server.ResponseStatusException;
  * different user'sportfolio returns*404(not 403),we intentionally do not
  * confirm that the account exists.
  */
-@Validated
+/**
+ * Read-only ledger for realized capital gains and losses.
+ * Gains are computed during SELL or Return of Capital (ROC) events and
+ * persisted as
+ * an immutable ledger. This endpoint provides high-performance access for tax
+ * reporting and P&L analysis.
+ * Authorization: Requires a three-way ownership check (User -> Portfolio ->
+ * Account).
+ * Invalid combinations return 404 to prevent account enumeration.
+ */
 @RestController
+@Validated
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/realized-gains")
+@Tag(name = "Tax & Realized Gains", description = "Endpoints for capital gains reporting and historical P&L.")
 public class RealizedGainsController {
-
-  // Earliest reasonable tax year , prevents accidental full-history queries
-  // being disguised as year queries with obviously wrong inputs.
   private static final int MIN_TAX_YEAR = 2000;
-
   private final RealizedGainsQueryService realizedGainsQueryService;
 
-  /**
-   * Returns realized capital gains and losses for an account.
-   * <p>
-   * Optionally filtered by tax year and/or symbol.
-   * <p>
-   * Response includes: - Line-item breakdown (items) sorted by occurredAt descending - Pre-computed
-   * totals: totalGains, totalLosses, netGainLoss - The account's base currency (all amounts are in
-   * this currency) - The taxYear filter that was applied (null = no year filter)
-   *
-   * @param taxYear Optional. Calendar year (UTC) to filter by. Min 2000.
-   * @param symbol  Optional. ISO symbol to filter by (e.g. "AAPL", "BTC-USD"). Must match
-   *                AssetSymbol validation rules: [A-Z0-9.-], max 20 chars.
-   *                <p>
-   *                Examples: GET .../realized-gains → all time, all symbols GET
-   *                .../realized-gains?taxYear=2024 → 2024 only, all symbols GET
-   *                .../realized-gains?symbol=AAPL → all time, AAPL only GET
-   *                .../realized-gains?taxYear=2024&symbol=AAPL → 2024 AAPL only
-   */
+
+  @Operation(summary = "Get realized gains ledger", description = "Returns a breakdown of capital gains and losses, including pre-computed totals. "
+      + "Results are sorted by occurrence date (descending). Database-backed and safe for high-frequency polling.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Ledger retrieved successfully"),
+      @ApiResponse(responseCode = "400", description = "Invalid tax year or symbol format"),
+      @ApiResponse(responseCode = "404", description = "Account not found or access denied")
+  })
   @GetMapping
-  public RealizedGainsSummaryResponse getRealizedGains(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId, @PathVariable String accountId,
+  public RealizedGainsSummaryResponse getRealizedGains(
+      @Parameter(description = "The unique ID of the portfolio") @PathVariable String portfolioId,
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
+      @Parameter(description = "The unique ID of the account") @PathVariable String accountId,
+      @Parameter(description = "Filter by UTC tax year (e.g., 2024). Cannot be in the future.") @RequestParam(required = false) @Min(value = MIN_TAX_YEAR, message = "Tax year must be "
+          + MIN_TAX_YEAR + " or later") @Max(value = 9999, message = "Tax year must be a 4-digit year") Integer taxYear,
+      @Parameter(description = "Filter by specific ticker (e.g., AAPL).") @RequestParam(required = false) @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Invalid symbol format") String symbol,
+      @Parameter(description = "Page number for pagination") @RequestParam(defaultValue = "0") int page,
+      @Parameter(description = "Items per page") @RequestParam(defaultValue = "20") int size) {
 
-      @RequestParam(required = false) @Min(value = MIN_TAX_YEAR, message = "Tax year must be "
-          + MIN_TAX_YEAR
-          + " or later") @Max(value = 9999, message = "Tax year must be a 4-digit year") Integer taxYear,
-
-      @RequestParam(required = false) @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Symbol must be 1-20 uppercase letters, digits, dots, or hyphens") String symbol,
-      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-
-    // Reject future tax years , no trades can have settled in a future year
+    // Validate Year
     if (taxYear != null && taxYear > Year.now().getValue()) {
-      throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
-          "Tax year cannot be in the future: " + taxYear);
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tax year cannot be in the future.");
     }
 
-    AssetSymbol assetSymbol = null;
-    if (symbol != null && !symbol.isBlank()) {
-      try {
-        assetSymbol = new AssetSymbol(symbol.trim().toUpperCase());
-      } catch (IllegalArgumentException e) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-            "Invalid symbol format: " + symbol);
-      }
-    }
+    // Parse Symbol
+    AssetSymbol assetSymbol = parseAssetSymbol(symbol);
 
+    // Execute Query
     GetRealizedGainsQuery query = new GetRealizedGainsQuery(PortfolioId.fromString(portfolioId),
         userId, AccountId.fromString(accountId), taxYear, assetSymbol, page, size);
 
     RealizedGainsSummaryView view = realizedGainsQueryService.getRealizedGains(query);
     return RealizedGainsSummaryResponse.from(view);
+  }
+
+  private AssetSymbol parseAssetSymbol(String symbol) {
+    if (symbol == null || symbol.isBlank()) {
+      return null;
+    }
+    try {
+      return new AssetSymbol(symbol.trim().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: " + symbol);
+    }
   }
 }

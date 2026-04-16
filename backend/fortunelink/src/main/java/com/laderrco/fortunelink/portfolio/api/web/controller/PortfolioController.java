@@ -17,6 +17,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,35 +41,38 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@Validated
 @RestController
+@Validated
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/portfolios")
+@Tag(name = "Portfolios", description = "Endpoints for managing investment portfolios and viewing net worth analytics.")
 public class PortfolioController {
   private final PortfolioLifecycleService lifecycleService;
   private final PortfolioQueryService queryService;
 
-  // --- Portfolio Lifecycle ---
-
+  @Operation(summary = "Create a new portfolio", description = "Initializes a portfolio for the authenticated user. Can optionally create a default account automatically.")
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public PortfolioResponse createPortfolio(@AuthenticatedUser UserId userId,
+  public PortfolioResponse createPortfolio(@Parameter(hidden = true) @AuthenticatedUser UserId userId,
       @RequestBody @Valid CreatePortfolioRequest request) {
 
-    var command = new CreatePortfolioCommand(userId, request.name(), request.description(),
+    var command = new CreatePortfolioCommand(
+        userId, request.name(), request.description(),
         Currency.of(request.currency()), request.createDefaultAccount(),
         request.defaultAccountType(), request.defaultStrategy());
 
     var view = lifecycleService.createPortfolio(command);
-
     return PortfolioResponse.fromView(view);
   }
 
+  @Operation(summary = "Update portfolio details", description = "Updates the name, description, or base currency of an existing portfolio.")
   @PatchMapping("/{portfolioId}")
   public PortfolioResponse updatePortfolio(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId, @RequestBody @Valid UpdatePortfolioRequest request) {
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
+      @RequestBody @Valid UpdatePortfolioRequest request) {
 
-    var command = new UpdatePortfolioCommand(PortfolioId.fromString(portfolioId), userId,
+    var command = new UpdatePortfolioCommand(
+        PortfolioId.fromString(portfolioId), userId,
         request.name(), request.description(),
         request.currency() != null ? Currency.of(request.currency()) : null);
 
@@ -71,45 +80,54 @@ public class PortfolioController {
     return PortfolioResponse.fromView(view);
   }
 
+  @Operation(summary = "Delete a portfolio", description = "Removes a portfolio. Standard users are forced to soft-delete. "
+      + "Admins may toggle hard-delete. 'Recursive' will affect all child accounts.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "204", description = "Portfolio successfully deleted"),
+      @ApiResponse(responseCode = "403", description = "Unauthorized access to portfolio")
+  })
   @DeleteMapping("/{portfolioId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void deletePortfolio(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
-      @RequestParam(defaultValue = "true") boolean softDelete,
-      @RequestParam(defaultValue = "false") boolean recursive) {
+  public void deletePortfolio(@PathVariable String portfolioId,
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
+      @Parameter(description = "If true, data is hidden but not wiped. Forced to true for non-admins.") @RequestParam(defaultValue = "true") boolean softDelete,
+      @Parameter(description = "If true, deletes all associated accounts and transactions.") @RequestParam(defaultValue = "false") boolean recursive) {
 
-    // Force soft-delete unless user is an ADMIN
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     boolean isAdmin = auth != null && auth.getAuthorities().stream()
         .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
     boolean finalSoftDelete = !isAdmin || softDelete;
 
-    // Allow 'recursive' regardless,it just means "mark all children as deleted too"
     lifecycleService.deletePortfolio(
-        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, finalSoftDelete,
-            recursive));
+        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, finalSoftDelete, recursive));
   }
 
-  // --- Portfolio Queries ---
-
+  @Operation(summary = "List all portfolios", description = "Returns a summary list of all portfolios owned by the authenticated user.")
   @GetMapping
-  public List<PortfolioSummaryResponse> getPortfolios(@AuthenticatedUser UserId userId) {
-    var summaries = queryService.getPortfolioSummaries(new GetPortfoliosByUserIdQuery(userId));
+  public List<PortfolioSummaryResponse> getPortfolios(@Parameter(hidden = true) @AuthenticatedUser UserId userId) {
 
+    var summaries = queryService.getPortfolioSummaries(new GetPortfoliosByUserIdQuery(userId));
     return summaries.stream().map(PortfolioSummaryResponse::fromView).toList();
   }
 
+  @Operation(summary = "Get portfolio details", description = "Returns full details for a specific portfolio, including configuration and status.")
   @GetMapping("/{portfolioId}")
   public PortfolioResponse getPortfolio(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId) {
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId) {
+
     var view = queryService.getPortfolioById(
         new GetPortfolioByIdQuery(PortfolioId.fromString(portfolioId), userId));
 
     return PortfolioResponse.fromView(view);
   }
 
+  @Operation(summary = "Get portfolio net worth", description = "Calculates the total valuation of the portfolio in its base currency. "
+      + "Triggers real-time valuation of all underlying assets.")
   @GetMapping("/{portfolioId}/net-worth")
   public NetWorthResponse getNetWorth(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId) {
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId) {
+
     var view = queryService.getNetWorth(
         new GetNetWorthQuery(PortfolioId.fromString(portfolioId), userId));
 

@@ -46,6 +46,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -70,22 +76,19 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Full transaction lifecycle controller.
  * <p>
- * All endpoints follow the same authentication pattern: @AuthenticatedUser UserId userId. All
- * mutations return the created/modified TransactionView. All paths:
- * /api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions/...
+ * All endpoints follow the same authentication pattern: @AuthenticatedUser
+ * UserId userId.
+ * All mutations return the created/modified TransactionView.
  * <p>
- * Transaction type → endpoint mapping: BUY → POST /buy SELL → POST /sell DEPOSIT → POST /deposit
- * WITHDRAWAL → POST /withdrawal FEE → POST /fee INTEREST → POST /interest DIVIDEND → POST /dividend
- * DIVIDEND_REINVEST → POST /drip SPLIT → POST /split RETURN_OF_CAPITAL → POST /return-of-capital
- * TRANSFER_IN → POST /transfer-in TRANSFER_OUT → POST /transfer-out (exclusion) → PATCH
- * /{id}/exclude (restore) → PATCH /{id}/restore
- * <p>
- * Reads: GET / → paginated history with optional filters GET /{id} → single transaction by ID
+ * This controller manages the ledger for a specific investment account,handling
+ * everything from trade execution (BUY/SELL) to corporate actions (SPLITS) and
+ * cash management (DEPOSIT/WITHDRAWAL).
  */
 @RestController
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Transactions", description = "Full lifecycle management for trades, cash movements, and income events.")
 public class TransactionController {
 
   private final TransactionService transactionService;
@@ -95,11 +98,18 @@ public class TransactionController {
   // Trade transactions (affect positions AND cash)
   // =========================================================================
 
+/**
+   * Records a new asset purchase.
+   * <p>
+   * Decreases the account's cash balance and increases the position quantity for
+   * the given symbol.
+   */
   @PostMapping("/buy")
   @ResponseStatus(HttpStatus.CREATED)
-  public TransactionView recordBuy(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+  @Operation(summary = "Record a BUY", description = "Decreases cash and increases asset quantity.")
+  public TransactionView recordBuy(@PathVariable String portfolioId, @PathVariable String accountId,
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordPurchaseRequest request) {
 
     Instant validatedDate = resolveTransactionDate(request.transactionDate());
@@ -113,11 +123,18 @@ public class TransactionController {
             emptyIfNull(request.notes()), false));
   }
 
+  /**
+   * Records an asset sale.
+   * <p>
+   * Increases the account's cash balance and decreases the position quantity.
+   * This action triggers realized gain/loss calculations.
+   */
   @PostMapping("/sell")
   @ResponseStatus(HttpStatus.CREATED)
-  public TransactionView recordSell(@PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+  @Operation(summary = "Record a SELL", description = "Increases cash and decreases asset quantity. Triggers realized gain/loss calculation.")
+  public TransactionView recordSell(@PathVariable String portfolioId, @PathVariable String accountId,
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
 
     Instant validatedDate = resolveTransactionDate(request.transactionDate());
@@ -131,11 +148,18 @@ public class TransactionController {
             emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a stock split or reverse split.
+   * <p>
+   * Adjusts the quantity and cost basis of a position based on the provided ratio
+   * (e.g., 2:1 for a split, 1:10 for a reverse split). No cash impact.
+   */
   @PostMapping("/split")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record a SPLIT", description = "Adjusts asset quantity and basis via a ratio. No cash impact.")
   public TransactionView recordSplit(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSplitRequest request) {
 
     return transactionService.recordSplit(
@@ -145,11 +169,18 @@ public class TransactionController {
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a return of capital distribution.
+   * <p>
+   * Reduces the cost basis of the position. If the basis reaches zero,
+   * subsequent distributions are treated as capital gains.
+   */
   @PostMapping("/return-of-capital")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record Return of Capital", description = "Reduces asset cost basis. Triggers cash increase.")
   public TransactionView recordReturnOfCapital(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordReturnOfCapitalRequest request) {
 
     return transactionService.recordReturnOfCapital(
@@ -165,11 +196,15 @@ public class TransactionController {
   // Cash-only transactions (affect cash balance, no position change)
   // =========================================================================
 
+  /**
+   * Records a manual cash deposit into the account.
+   */
   @PostMapping("/deposit")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record a Deposit", description = "Increases account cash balance.")
   public TransactionView recordDeposit(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDepositRequest request) {
 
     return transactionService.recordDeposit(
@@ -178,11 +213,15 @@ public class TransactionController {
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a manual cash withdrawal from the account.
+   */
   @PostMapping("/withdrawal")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record a Withdrawal", description = "Decreases account cash balance.")
   public TransactionView recordWithdrawal(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordWithdrawalRequest request) {
 
     return transactionService.recordWithdrawal(
@@ -192,11 +231,15 @@ public class TransactionController {
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a standalone fee (e.g., account maintenance, wire fee).
+   */
   @PostMapping("/fee")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record a Fee", description = "Records an expense/fee against the cash balance.")
   public TransactionView recordFee(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordStandaloneFeeRequest request) {
 
     return transactionService.recordFee(
@@ -206,11 +249,15 @@ public class TransactionController {
             emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a cash transfer into the account from an external source.
+   */
   @PostMapping("/transfer-in")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record Transfer In", description = "Records cash moving into the account.")
   public TransactionView recordTransferIn(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordTransferInRequest request) {
 
     return transactionService.recordTransferIn(
@@ -220,11 +267,15 @@ public class TransactionController {
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a cash transfer out of the account to an external destination.
+   */
   @PostMapping("/transfer-out")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record Transfer Out", description = "Records cash moving out of the account.")
   public TransactionView recordTransferOut(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordTransferOutRequest request) {
 
     return transactionService.recordTransferOut(
@@ -238,15 +289,19 @@ public class TransactionController {
   // Income transactions (cash in, associated with a holding)
   // =========================================================================
 
+  /**
+   * Records interest income.
+   * <p>
+   * Can be associated with a specific asset or the cash balance itself.
+   */
   @PostMapping("/interest")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record Interest", description = "Records interest earned on cash or a specific asset.")
   public TransactionView recordInterest(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordInterestRequest request) {
 
-    // RecordInterestCommand.cashInterest() / .assetInterest() are the factories
-    // but the command accepts null assetSymbol for cash-level interest
     return transactionService.recordInterest(
         new RecordInterestCommand(validateUuid(idempotencyKey), PortfolioId.fromString(portfolioId),
             userId, AccountId.fromString(accountId),
@@ -255,11 +310,15 @@ public class TransactionController {
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a cash dividend payment for a specific asset holding.
+   */
   @PostMapping("/dividend")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record a Dividend", description = "Records cash income from an asset dividend.")
   public TransactionView recordDividend(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDividendRequest request) {
 
     return transactionService.recordDividend(
@@ -269,19 +328,26 @@ public class TransactionController {
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
+  /**
+   * Records a Dividend Reinvestment (DRIP).
+   * <p>
+   * This is a composite action that records a dividend and uses the proceeds
+   * to purchase additional shares of the same asset.
+   */
   @PostMapping("/drip")
   @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Record a DRIP", description = "Dividend reinvestment; creates an income and buy event.")
   public TransactionView recordDividendReinvestment(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+      @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDRIPRequest request) {
 
     return transactionService.recordDividendReinvestment(
         new RecordDividendReinvestmentCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol(), new RecordDividendReinvestmentCommand.DripExecution(
-            new Quantity(request.sharesPurchased()),
-            Price.of(request.pricePerShare(), Currency.of(request.currency()))),
+                new Quantity(request.sharesPurchased()),
+                Price.of(request.pricePerShare(), Currency.of(request.currency()))),
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
@@ -289,21 +355,20 @@ public class TransactionController {
   // Read operations
   // =========================================================================
 
-  /**
-   * Returns a paginated list of transactions for an account.
-   * <p>
-   * Supports optional filtering by symbol and date range. Results are sorted by occurredAt
-   * descending (most recent first). Page size is capped at 100 per request.
-   * <p>
-   * All filters are optional and can be combined: ?symbol=AAPL → AAPL transactions only
-   * ?startDate=...&endDate=... → date range ?symbol=AAPL&startDate=... → AAPL in range
-   */
+/**
+ * Returns a paginated list of transactions for an account.
+ * <p>
+ * Supports optional filtering by symbol and date range. Results are sorted by
+ * occurredAt descending (most recent first). Page size is capped at 100 per
+ * request.
+ */
   @GetMapping
+  @Operation(summary = "Get transaction history", description = "Paginated list of transactions with optional filtering.")
   public Page<TransactionView> getTransactionHistory(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
-      @RequestParam(required = false) String symbol,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
+      @Parameter(description = "Filter by ticker symbol") @RequestParam(required = false) String symbol,
+      @Parameter(description = "Filter by start date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+      @Parameter(description = "Filter by end date") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
 
     return transactionQueryService.getTransactionHistory(
@@ -315,11 +380,16 @@ public class TransactionController {
   /**
    * Returns a single transaction by ID.
    * <p>
-   * The transaction must belong to the specified account and portfolio. Returns 404 if the
-   * transaction does not exist or belongs to a different user's account , we do not differentiate
-   * to avoid information leakage.
+   * The transaction must belong to the specified account and portfolio. Returns
+   * 404 if the transaction does not exist or belongs to a different user's
+   * account.
    */
   @GetMapping("/{transactionId}")
+  @Operation(summary = "Get single transaction", description = "Retrieves a transaction by its unique ID.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Transaction found"),
+      @ApiResponse(responseCode = "404", description = "Transaction not found or access denied")
+  })
   public TransactionView getTransaction(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @PathVariable String transactionId) {
@@ -331,16 +401,17 @@ public class TransactionController {
 
   // =========================================================================
   // Exclusion lifecycle (mutations on existing transactions)
-  // =========================================================================
 
   /**
    * Excludes a transaction from position and capital gains calculations.
    * <p>
-   * Cash balance is NOT reversed , see ExcludeTransactionCommand for rationale. Triggers an async
-   * position recalculation for the affected symbol.
+   * Cash balance is NOT reversed. Triggers an async position recalculation for
+   * the affected symbol.
    */
   @PatchMapping("/{transactionId}/exclude")
-  public TransactionView excludeTransaction(@RequestHeader("Idempotency-Key") String idempotencyKey,
+  @Operation(summary = "Exclude transaction", description = "Soft-removes a transaction from P&L and position calculations.")
+  public TransactionView excludeTransaction(
+      @Parameter(description = "UUID for safe retries") @RequestHeader("Idempotency-Key") String idempotencyKey,
       @PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @PathVariable String accountId, @PathVariable String transactionId,
       @RequestBody @Valid ExcludeTransactionRequest request) {
@@ -352,11 +423,13 @@ public class TransactionController {
   }
 
   /**
-   * Restores a previously excluded transaction back into calculations. Triggers an async position
-   * recalculation for the affected symbol.
+   * Restores a previously excluded transaction back into calculations.
+   * Triggers an async position recalculation for the affected symbol.
    */
   @PatchMapping("/{transactionId}/restore")
-  public TransactionView restoreTransaction(@RequestHeader("Idempotency-Key") String idempotencyKey,
+  @Operation(summary = "Restore transaction", description = "Re-activates a previously excluded transaction.")
+  public TransactionView restoreTransaction(
+      @Parameter(description = "UUID for safe retries") @RequestHeader("Idempotency-Key") String idempotencyKey,
       @PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @PathVariable String accountId, @PathVariable String transactionId) {
 
@@ -377,7 +450,8 @@ public class TransactionController {
 
     return feeRequests.stream().map(
         f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()), txDate,
-            new FeeMetadata(Map.of()))).toList();
+            new FeeMetadata(Map.of())))
+        .toList();
   }
 
   private UUID validateUuid(String idempotencyKey) {

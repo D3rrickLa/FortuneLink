@@ -11,6 +11,11 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.infrastructure.exceptions.UnknownSymbolException;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -32,196 +37,122 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * NOTE: remember to do the routes properly because a GET of quotes/batch is different to 
- * POST quotes/batch
- * Public-facing market data endpoints
+ * @implNote: remember to do the routes properly because a GET of quotes/batch is
+ * different to POST quotes/batch Public-facing market data endpoints
  * <p>
- * Rate-limit notes (enforced by RateLimitInterceptor): /search: lenient - lightweight
- * autocomplete, no external API call if cached - /quotes : moderate - single symbol, Redis-cached,
- * may fan out to FMP - /batch : strict - each call may burn N FMP quota requests; must be short -
- * /info : lenient - long TTL in DB, rarely hits FMP - /validate : moderate - always hits FMP if
- * symbol is uncached; used pre-transaction
+ * Rate-limit notes (enforced by RateLimitInterceptor): /search: lenient -
+ * lightweight
+ * autocomplete, no external API call if cached - /quotes : moderate - single
+ * symbol, Redis-cached,
+ * may fan out to FMP - /batch : strict - each call may burn N FMP quota
+ * requests; must be short -
+ * /info : lenient - long TTL in DB, rarely hits FMP - /validate : moderate -
+ * always hits FMP if symbol is uncached; used pre-transaction
  * <p>
- * All endpoints are authenticated. Market data is never public - it would be trivial to scrape the
- * full symbol list otherwise.
+ * All endpoints are authenticated. Market data is never public - it would be
+ * trivial to scrape the full symbol list otherwise.
  * <p>
- * The controller deliberately stays thin. No business logic lives here. Shape mapping (domain →
- * response DTO) is done inline for now; if it grows, extract a MarketDataResponseMapper.
+ * The controller deliberately stays thin. No business logic lives here. Shape
+ * mapping (domain → response DTO) is done inline for now; if it grows, extract a
+ * MarketDataResponseMapper.
  */
+
 @Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/market")
+@Tag(name = "Market Data", description = "Endpoints for searching assets and retrieving real-time pricing.")
 public class MarketDataController {
   private final MarketDataService marketDataService;
 
-  // -------------------------------------------------------------------------
-  // Symbol search - autocomplete for the UI "add transaction" flow
-  // -------------------------------------------------------------------------
-
-  /**
-   * Searches for tradeable symbols matching a query string.
-   * <p>
-   * This is the UI autocomplete endpoint. It returns shallow results only - name, exchange, trading
-   * currency. Full asset info requires /info/{symbol}.
-   * <p>
-   * Do NOT use this to validate a symbol before recording a transaction. Use /validate/{symbol} for
-   * that - it has different caching semantics and guarantees the symbol is actually known to the
-   * backend.
-   * <p>
-   * Rate limit: lenient (30/min). Results are not cached by this layer; the client should debounce
-   * aggressively (300ms minimum).
-   */
+  @Operation(summary = "Autocomplete symbol search", description = "Searches for tradeable symbols. Returns shallow results (name, exchange). "
+      + "Client should debounce at least 300ms. Rate limit: 30/min.")
   @GetMapping("/search")
   public List<SymbolSearchResponse> searchSymbols(
-      @RequestParam @Size(min = 1, max = 50) String query) {
+      @Parameter(description = "Search query (ticker or company name)") @RequestParam @Size(min = 1, max = 50) String query) {
 
-    if (query.isBlank()) {
+    if (query.isBlank())
       return List.of();
-    }
 
     List<SymbolSearchResult> results = marketDataService.searchSymbols(query.trim());
     return results.stream().map(SymbolSearchResponse::fromDomain).toList();
   }
 
-  // -------------------------------------------------------------------------
-  // Single quote - used when displaying a specific position's current value
-  // -------------------------------------------------------------------------
-
-  /**
-   * Returns the current market quote for a single symbol.
-   * <p>
-   * This is Redis-cached with a 5-minute TTL. If the cache is cold, this will fire one FMP API
-   * call. Clients should prefer /batch when loading a full account or portfolio view.
-   * <p>
-   * Returns 404 if the symbol has no known trading currency in the DB (i.e. no transaction has ever
-   * been recorded for it). This is intentional - you cannot display a meaningful price without a
-   * known account currency for conversion.
-   */
-  @GetMapping("/quotes/{symbol}")
-  public MarketQuoteResponse getQuote(@PathVariable @NotBlank String symbol) {
-    AssetSymbol assetSymbol;
+  @Operation(summary = "Validate and seed a symbol", description = "Must be called before a BUY transaction. Checks DB cache, then FMP API. "
+      + "Seeds the internal database if found. Rate limit: 20/min.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Symbol validated"),
+      @ApiResponse(responseCode = "404", description = "Symbol not found in external provider")
+  })
+  @GetMapping("/validate/{symbol}")
+  public AssetInfoResponse validateSymbol(@PathVariable @NotBlank String symbol) {
+    AssetSymbol assetSymbol = parseSymbol(symbol);
     try {
-      assetSymbol = new AssetSymbol(symbol);
-    } catch (IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: " + symbol);
+      MarketAssetInfo info = marketDataService.validateAndGet(assetSymbol);
+      return AssetInfoResponse.fromDomain(info);
+    } catch (UnknownSymbolException e) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Symbol not supported: " + symbol);
     }
-
-    Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(Set.of(assetSymbol));
-
-    MarketAssetQuote quote = quotes.get(assetSymbol);
-    if (quote == null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-          "No quote available for symbol: " + symbol
-              + ". Record a transaction first to seed the asset cache.");
-    }
-
-    return MarketQuoteResponse.fromDomain(quote);
   }
 
-  // -------------------------------------------------------------------------
-  // Batch quotes - primary endpoint for portfolio / account page loads
-  // -------------------------------------------------------------------------
+  @Operation(summary = "Get asset metadata", description = "Returns slow-changing data (sector, type, currency). DB-cached for 7 days.")
+  @GetMapping("/info/{symbol}")
+  public AssetInfoResponse getAssetInfo(@PathVariable @NotBlank String symbol) {
+    AssetSymbol assetSymbol = parseSymbol(symbol);
+    return marketDataService.getAssetInfo(assetSymbol)
+        .map(AssetInfoResponse::fromDomain)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Asset info not found."));
+  }
 
-  /**
-   * Returns quotes for a set of symbols in a single round-trip.
-   * <p>
-   * This is the endpoint the frontend should call when rendering portfolio or account views. The
-   * backend batches Redis lookups (MGET) and fans out to FMP only for cache misses.
-   * <p>
-   * Hard limit: 20 symbols per request. The FMP free tier burns 1 quota request per symbol on a
-   * cold cache. Enforced here, not just documented.
-   * <p>
-   * Symbols not found in the cache and not supported by FMP are silently excluded from the
-   * response. The caller must handle partial results.
-   * <p>
-   * Rate limit: strict (10/min). Use /quotes/{symbol} for single-symbol polling; batch is for bulk
-   * page loads only.
-   */
+  @Operation(summary = "Get batch quotes", description = "Primary endpoint for portfolio views. 20 symbol limit. " +
+      "Uses Redis MGET; fans out to FMP on cache miss. Rate limit: 10/min.")
   @PostMapping("/quotes/batch")
-  public Map<String, MarketQuoteResponse> getBatchQuotes(@Valid @RequestBody BatchQuoteRequest request) {
-    Set<AssetSymbol> symbols = request.symbols().stream().map(s -> {
-      try {
-        return new AssetSymbol(s);
-      } catch (IllegalArgumentException e) {
-        return null;
-      }
-    }).filter(Objects::nonNull).collect(Collectors.toSet());
+  public Map<String, MarketQuoteResponse> getBatchQuotes(
+      @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "List of symbols (max 20)") @Valid @RequestBody BatchQuoteRequest request) {
 
-    for (AssetSymbol assetSymbol : symbols) {
-      IO.print("CONTROLLER: " + assetSymbol.symbol());
-    }
+    Set<AssetSymbol> symbols = request.symbols().stream()
+        .map(this::tryParseSymbol)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
 
-    if (symbols.isEmpty()) {
+    if (symbols.isEmpty())
       return Map.of();
-    }
 
     return marketDataService.getBatchQuotes(symbols).entrySet().stream().collect(
         Collectors.toMap(e -> e.getKey().symbol(), e -> MarketQuoteResponse.fromDomain(e.getValue())));
   }
 
-  // -------------------------------------------------------------------------
-  // Asset info - slow-changing metadata, long TTL
-  // -------------------------------------------------------------------------
+  @Operation(summary = "Get single quote", description = "Redis-cached (5m TTL). Returns 404 if symbol has no historical transaction.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Quote retrieved"),
+      @ApiResponse(responseCode = "404", description = "No quote found or asset unseeded")
+  })
+  @GetMapping("/quotes/{symbol}")
+  public MarketQuoteResponse getQuote(@PathVariable @NotBlank String symbol) {
+    AssetSymbol assetSymbol = parseSymbol(symbol);
+    Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(Set.of(assetSymbol));
 
-  /**
-   * Returns descriptive metadata for a symbol: name, exchange, sector, asset type, trading
-   * currency.
-   * <p>
-   * Cached in DB (market_asset_info) with a 7-day TTL. Very rarely hits the external API. Use this
-   * to populate the "asset details" panel in the UI after a user has recorded a transaction for the
-   * symbol.
-   * <p>
-   * Returns 404 if the symbol is completely unknown (has never been validated).
-   */
-  @GetMapping("/info/{symbol}")
-  public AssetInfoResponse getAssetInfo(@PathVariable @NotBlank String symbol) {
-    AssetSymbol assetSymbol;
-    try {
-      assetSymbol = new AssetSymbol(symbol);
-    } catch (IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: " + symbol);
+    MarketAssetQuote quote = quotes.get(assetSymbol);
+    if (quote == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Record a transaction first to seed the asset.");
     }
 
-    return marketDataService.getAssetInfo(assetSymbol).map(AssetInfoResponse::fromDomain)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-            "No asset information found for symbol: " + symbol));
+    return MarketQuoteResponse.fromDomain(quote);
   }
 
-  // -------------------------------------------------------------------------
-  // Validate + seed - must be called before recording a BUY transaction
-  // -------------------------------------------------------------------------
-
-  /**
-   * Validates that a symbol is real and seeds it into the asset info cache.
-   * <p>
-   * This endpoint MUST be called from the frontend before the user submits a BUY transaction. It:
-   * 1. Checks market_asset_info DB cache. 2. If not found, calls FMP /profile/{symbol}. 3. If FMP
-   * returns data, seeds the cache and returns the info. 4. If FMP returns nothing, returns 404.
-   * <p>
-   * This is the contract that makes TransactionService.recordPurchase() safe to call - by the time
-   * the user submits the form, the symbol is known. The TransactionService still calls
-   * validateAndGet() internally but this pre-flight prevents the UI from presenting an unresolvable
-   * symbol to the user.
-   * <p>
-   * Rate limit: moderate (20/min). Each cold call burns one FMP quota request. The frontend should
-   * only call this once per symbol per session (cache client-side).
-   */
-  @GetMapping("/validate/{symbol}")
-  public AssetInfoResponse validateSymbol(@PathVariable @NotBlank String symbol) {
-    AssetSymbol assetSymbol;
+  private AssetSymbol parseSymbol(String symbol) {
     try {
-      assetSymbol = new AssetSymbol(symbol);
+      return new AssetSymbol(symbol);
     } catch (IllegalArgumentException e) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid symbol format: " + symbol);
     }
+  }
 
+  private AssetSymbol tryParseSymbol(String symbol) {
     try {
-      MarketAssetInfo info = marketDataService.validateAndGet(assetSymbol);
-      return AssetInfoResponse.fromDomain(info);
-    } catch (UnknownSymbolException e) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-          "Symbol not found or not supported: " + symbol);
+      return new AssetSymbol(symbol);
+    } catch (IllegalArgumentException e) {
+      return null;
     }
   }
 }
