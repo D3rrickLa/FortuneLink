@@ -223,7 +223,7 @@ class MarketDataControllerTest {
       when(marketDataService.getAssetInfo(any())).thenReturn(Optional.empty());
 
       mockMvc.perform(get(BASE_URL + "/info/UNKNOWN")).andExpect(status().isNotFound())
-          .andExpect(jsonPath("$.message", containsString("No asset information found")));
+          .andExpect(jsonPath("$.message", containsString("Asset info not found.")));
     }
   }
 
