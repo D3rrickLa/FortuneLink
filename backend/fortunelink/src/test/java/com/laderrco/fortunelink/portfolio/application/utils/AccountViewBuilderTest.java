@@ -27,6 +27,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
 import com.laderrco.fortunelink.shared.enums.Precision;
@@ -54,6 +55,9 @@ class AccountViewBuilderTest {
   private PortfolioViewMapper viewMapper;
   @Mock
   private TransactionRepository transactionRepository;
+  @Mock
+  private ExchangeRateService exchangeRateService;
+
   @InjectMocks
   private AccountViewBuilder accountViewBuilder;
   private Account account;
@@ -219,6 +223,13 @@ class AccountViewBuilderTest {
       when(projection.getAccountType()).thenReturn("FHSA");
       when(projection.getLifecycleState()).thenReturn("ACTIVE");
       when(projection.getId()).thenReturn(accountUuid);
+      when(exchangeRateService.convert(any(Money.class), any(Currency.class)))
+          .thenAnswer(invocation -> {
+            Money originalMoney = invocation.getArgument(0);
+            Currency targetCurrency = invocation.getArgument(1);
+            // Just return the original amount but with the target currency for the test
+            return new Money(originalMoney.amount(), targetCurrency);
+          });
 
       Map<AssetSymbol, Quantity> quantities = Map.of(apple, Quantity.of(10), google, Quantity.of(5),
           tesla, Quantity.of(2));
