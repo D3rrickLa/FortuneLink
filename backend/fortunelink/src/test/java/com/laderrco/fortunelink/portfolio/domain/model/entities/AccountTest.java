@@ -242,7 +242,7 @@ class AccountTest {
       account.prepareForRecalculation(AAPL);
 
       assertAll(() -> assertEquals(1, account.getRealizedGains().size()),
-          () -> assertEquals(TSLA, account.getRealizedGains().get(0).symbol()));
+          () -> assertEquals(TSLA, account.getRealizedGains().getFirst().symbol()));
     }
 
     @Test
@@ -292,8 +292,8 @@ class AccountTest {
       assertAll(() -> assertTrue(account.hasPosition(apple)),
           () -> assertEquals(1, account.getPositionCount()),
           () -> assertEquals(pos, account.getPosition(apple).orElseThrow()),
-          () -> assertEquals(account.getRealizedGainsFor(apple).size(), 0),
-          () -> assertEquals(account.getPositionEntries().size(), 1));
+          () -> assertEquals(0, account.getRealizedGainsFor(apple).size()),
+          () -> assertEquals(1, account.getPositionEntries().size()));
     }
 
     @Test
