@@ -32,26 +32,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
-
-    - name: Build and Test with Maven
-      working-directory: ./backend/fortunelink
-      run: mvn -B clean test package -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
-      env:
-        POSTGRES_VERSION: 16-alpine
-        DB_USERNAME: unused
-        DB_PASSWORD: unused
-        DB_URL: jdbc:postgresql://localhost:5432/unused
-        FMP_BASE_URL: http://localhost
-        FMP_API_KEY: test_key
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        REDIS_PASSWORD: ""
-        SUPABASE_PROJ_URL: http://localhost:9000
-        SPRING_PROFILES_ACTIVE: test
+      - name: Build and Test with Maven
+        working-directory: ./backend/fortunelink
+        run: mvn -B clean test package -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
+        env:
+          POSTGRES_VERSION: 16-alpine
+          DB_USERNAME: unused
+          DB_PASSWORD: unused
+          DB_URL: jdbc:postgresql://localhost:5432/unused
+          FMP_BASE_URL: http://localhost
+          FMP_API_KEY: test_key
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          REDIS_PASSWORD: ""
+          SUPABASE_PROJ_URL: http://localhost:9000
+          SPRING_PROFILES_ACTIVE: test
