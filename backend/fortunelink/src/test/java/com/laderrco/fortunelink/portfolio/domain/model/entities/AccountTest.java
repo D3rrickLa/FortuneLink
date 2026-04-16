@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +30,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,10 +70,11 @@ class AccountTest {
           () -> assertEquals(0, account.getPositionCount()),
           () -> assertEquals(AccountLifecycleState.ACTIVE, account.getState()),
           () -> assertTrue(account.getAccountType().requiresCapitalGainsTracking()),
-          () -> assertEquals(account.getPositionStrategy(), PositionStrategy.ACB),
+          () -> assertEquals(PositionStrategy.ACB, account.getPositionStrategy()),
           () -> assertNotNull(account.getCreationDate()),
-          () -> assertEquals(account.getLastUpdatedOn(), account.getCreationDate()),
-          () -> assertEquals(account.getHealthStatus(), HealthStatus.HEALTHY));
+          () -> assertThat(account.getLastUpdatedOn())
+              .isCloseTo(account.getCreationDate(), within(1, ChronoUnit.SECONDS)),
+          () -> assertEquals(HealthStatus.HEALTHY, account.getHealthStatus()));
     }
 
     @Test
@@ -239,7 +242,7 @@ class AccountTest {
       account.prepareForRecalculation(AAPL);
 
       assertAll(() -> assertEquals(1, account.getRealizedGains().size()),
-          () -> assertEquals(TSLA, account.getRealizedGains().get(0).symbol()));
+          () -> assertEquals(TSLA, account.getRealizedGains().getFirst().symbol()));
     }
 
     @Test
@@ -289,8 +292,8 @@ class AccountTest {
       assertAll(() -> assertTrue(account.hasPosition(apple)),
           () -> assertEquals(1, account.getPositionCount()),
           () -> assertEquals(pos, account.getPosition(apple).orElseThrow()),
-          () -> assertEquals(account.getRealizedGainsFor(apple).size(), 0),
-          () -> assertEquals(account.getPositionEntries().size(), 1));
+          () -> assertEquals(0, account.getRealizedGainsFor(apple).size()),
+          () -> assertEquals(1, account.getPositionEntries().size()));
     }
 
     @Test

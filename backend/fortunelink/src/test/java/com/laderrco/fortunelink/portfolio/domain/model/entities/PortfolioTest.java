@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.entities;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,6 +19,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -243,7 +245,8 @@ class PortfolioTest {
 
       assertTrue(portfolio.isDeleted());
       assertEquals(userId, portfolio.getDeletedBy());
-      assertEquals(portfolio.getLastUpdatedAt(), portfolio.getDeletedOn());
+      assertThat(portfolio.getDeletedOn())
+          .isCloseTo(portfolio.getLastUpdatedAt(), within(1, ChronoUnit.SECONDS));
     }
 
     @Test

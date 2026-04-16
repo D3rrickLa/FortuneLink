@@ -10,7 +10,7 @@ name: Java Spring Backend CI with Maven
 
 on:
   push:
-    branches: [ "main", "feature/portfolio_management_v7" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -19,18 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: redis
+        image: redis:alpine
         ports:
           - 6379:6379
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: unused
-          POSTGRES_USER: unused
-          POSTGRES_PASSWORD: unused
-        ports:
-          - 5432:5432
-
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     permissions:
       contents: write
 
@@ -44,18 +40,18 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build and Test with Maven
-        working-directory: ./backend/fortunelink
-        run: mvn -B clean test package -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
-        env:
-          POSTGRES_VERSION: 16-alpine
-          DB_USERNAME: unused
-          DB_PASSWORD: unused
-          DB_URL: jdbc:postgresql://localhost:5432/unused
-          FMP_BASE_URL: http://localhost
-          FMP_API_KEY: test_key
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-          REDIS_PASSWORD: unused
-          SUPABASE_PROJ_URL: http://localhost:9000
-          SPRING_PROFILES_ACTIVE: test
+    - name: Build and Test with Maven
+      working-directory: ./backend/fortunelink
+      run: mvn -B clean test package -Dspring.jpa.show-sql=false -Dlogging.level.org.hibernate.SQL=ERROR --file pom.xml
+      env:
+        POSTGRES_VERSION: 16-alpine
+        DB_USERNAME: unused
+        DB_PASSWORD: unused
+        DB_URL: jdbc:postgresql://localhost:5432/unused
+        FMP_BASE_URL: http://localhost
+        FMP_API_KEY: test_key
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        REDIS_PASSWORD: ""
+        SUPABASE_PROJ_URL: http://localhost:9000
+        SPRING_PROFILES_ACTIVE: test
