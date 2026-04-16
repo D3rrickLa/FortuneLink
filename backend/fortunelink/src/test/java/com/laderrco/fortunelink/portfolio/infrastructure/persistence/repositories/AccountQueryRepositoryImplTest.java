@@ -69,7 +69,7 @@ class AccountQueryRepositoryImplTest {
   }
 
   private record TestAssetBalanceProjection(
-      UUID accountId, String symbol, BigDecimal quantity) implements AssetBalanceProjection {
+      UUID getAccountId, String getSymbol, BigDecimal getQuantity) implements AssetBalanceProjection {
     }
 
   @Nested

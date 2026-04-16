@@ -54,7 +54,7 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
     // Group by accountId, collect symbols into a Set per account.
     Map<AccountId, Set<AssetSymbol>> result = new LinkedHashMap<>();
     for (AccountSymbolProjection row : rows) {
-      AccountId accountId = AccountId.fromString(row.getAccountId().toString());
+      AccountId accountId = new AccountId(row.getAccountId());
       result.computeIfAbsent(accountId, k -> new LinkedHashSet<>())
           .add(new AssetSymbol(row.getSymbol()));
     }
@@ -73,6 +73,7 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
   @Override
   public Map<AccountId, Map<AssetSymbol, Quantity>> findQuantitiesForAccounts(
       List<AccountId> accountIds) {
+    IO.print("DEBUG: " + accountIds.toString());
     if (accountIds == null || accountIds.isEmpty()) {
       return Map.of();
     }
@@ -83,9 +84,9 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
 
     Map<AccountId, Map<AssetSymbol, Quantity>> result = new LinkedHashMap<>();
     for (AssetBalanceProjection row : rows) {
-      AccountId accountId = AccountId.fromString(row.accountId().toString());
-      AssetSymbol symbol = new AssetSymbol(row.symbol());
-      Quantity qty = new Quantity(row.quantity());
+      AccountId accountId = new AccountId(row.getAccountId());
+      AssetSymbol symbol = new AssetSymbol(row.getSymbol());
+      Quantity qty = new Quantity(row.getQuantity());
       result.computeIfAbsent(accountId, k -> new LinkedHashMap<>()).put(symbol, qty);
     }
     return Collections.unmodifiableMap(result);

@@ -75,10 +75,10 @@ public class AccountQueryService {
     }
 
     List<AccountId> accountIds = projections.stream()
-        .map(a -> AccountId.fromString(a.getId().toString())).toList();
+        .map(a -> new AccountId(a.getId())).toList();
 
-    Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository.findQuantitiesForAccounts(
-        accountIds);
+    Map<AccountId, Map<AssetSymbol, Quantity>> quantitiesByAccount = accountQueryRepository
+      .findQuantitiesForAccounts(accountIds);
 
     Set<AssetSymbol> allSymbols = quantitiesByAccount.values().stream()
         .flatMap(m -> m.keySet().stream()).collect(Collectors.toSet());

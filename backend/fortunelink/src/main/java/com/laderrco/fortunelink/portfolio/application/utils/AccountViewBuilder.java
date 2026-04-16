@@ -13,6 +13,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Qu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AccountViewBuilder {
   private final PortfolioValuationService portfolioValuationService;
+  private final ExchangeRateService exchangeRateService;
   private final PortfolioViewMapper portfolioViewMapper;
   private final TransactionRepository transactionRepository;
 
@@ -77,12 +79,21 @@ public class AccountViewBuilder {
     Currency currency = Currency.of(projection.getBaseCurrencyCode());
     Money cashBalance = new Money(projection.getCashBalanceAmount(), currency);
 
+    // Money marketValue = quantities.entrySet().stream().map(entry -> {
+    //   MarketAssetQuote quote = allQuotes.get(entry.getKey());
+    //   if (quote == null || quote.currentPrice().isZero()) {
+    //     return Money.zero(currency);
+    //   }
+    //   return quote.currentPrice().calculateValue(entry.getValue());
+    // }).reduce(Money.zero(currency), Money::add);
+
     Money marketValue = quantities.entrySet().stream().map(entry -> {
       MarketAssetQuote quote = allQuotes.get(entry.getKey());
       if (quote == null || quote.currentPrice().isZero()) {
         return Money.zero(currency);
       }
-      return quote.currentPrice().calculateValue(entry.getValue());
+      Money value = quote.currentPrice().calculateValue(entry.getValue());
+      return exchangeRateService.convert(value, currency);
     }).reduce(Money.zero(currency), Money::add);
 
     Money totalValue = cashBalance.add(marketValue);
