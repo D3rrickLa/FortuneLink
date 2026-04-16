@@ -32,7 +32,7 @@ public class RedissonConfig {
         .setConnectionPoolSize(10).setTimeout(2000).setRetryAttempts(3)
         .setRetryDelay(new EqualJitterDelay(Duration.ofMillis(500), Duration.ofMillis(1000)));
 
-    if (!password.isBlank()) {
+    if (password != null && !password.trim().isEmpty()) {
       config.setPassword(password);
     }
 

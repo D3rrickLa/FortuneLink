@@ -35,9 +35,11 @@ class RateLimitConfigTest {
           AutoConfigurations.of(RateLimitConfig.class))
       .withPropertyValues("fortunelink.rate-limit.enabled=false");
 
-  private final ApplicationContextRunner enabledRunner = new ApplicationContextRunner()
-      .withConfiguration(AutoConfigurations.of(RateLimitConfig.class))
-      .withBean(CommandAsyncExecutor.class, NoOpCommandAsyncExecutor::new);
+private final ApplicationContextRunner enabledRunner = new ApplicationContextRunner()
+    .withConfiguration(AutoConfigurations.of(RateLimitConfig.class))
+    .withBean(RedissonClient.class, () -> Mockito.mock(RedissonClient.class))
+    .withBean(CommandAsyncExecutor.class, NoOpCommandAsyncExecutor::new);
+
   @Test
   void shouldNotLoadConfigWhenDisabled() {
     disabledRunner.run(context -> {
