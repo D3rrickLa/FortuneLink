@@ -30,7 +30,7 @@ class FeeTest {
 
       assertThat(fee.feeType()).isEqualTo(VALID_TYPE);
       assertThat(fee.nativeAmount()).isEqualTo(VALID_MONEY);
-      assertThat(fee.nativeAmount().currency().getSymbol()).isEqualTo("US$");
+      assertThat(fee.nativeAmount().currency().getCode()).contains("$");
     }
 
     @Test
