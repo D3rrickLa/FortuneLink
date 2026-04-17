@@ -1,6 +1,9 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.responses;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.RealizedGainRecord;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.Instant;
 
 /**
@@ -11,6 +14,7 @@ import java.time.Instant;
  * year in Eastern Time. This is not handled server-side and is documented in
  * RealizedGainsSummaryResponse.
  */
+@Schema(description = "Individual line item for a realized capital gain/loss")
 public record RealizedGainItemResponse(
     String symbol,
     MoneyResponse realizedGainLoss,
