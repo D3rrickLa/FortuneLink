@@ -52,11 +52,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
       return amount;
     }
 
-    try {
-      ExchangeRate rate = provider.getExchangeRate(amount.currency(), targetCurrency, asOfDate);
-      return rate.convert(amount);
-    } catch (Exception ex) {
-      throw ex;
-    }
+    ExchangeRate rate = provider.getExchangeRate(amount.currency(), targetCurrency, asOfDate);
+    return rate.convert(amount);
   }
 }

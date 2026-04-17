@@ -7,7 +7,6 @@ import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.redisson.Bucket4jRedisson;
 import java.time.Duration;
 import lombok.Data;
-
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.command.CommandAsyncExecutor;
@@ -43,8 +42,8 @@ public class RateLimitConfig {
 
   @Bean
   public ProxyManager<String> bucketProxyManager(CommandAsyncExecutor commandAsyncExecutor) {
-    return Bucket4jRedisson.casBasedBuilder(commandAsyncExecutor)
-        .expirationAfterWrite(ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofDays(1)))
+    return Bucket4jRedisson.casBasedBuilder(commandAsyncExecutor).expirationAfterWrite(
+            ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofDays(1)))
         .build();
   }
 
@@ -53,20 +52,17 @@ public class RateLimitConfig {
   public BucketConfiguration globalBucketConfig() {
     return BucketConfiguration.builder().addLimit(
         Bandwidth.builder().capacity(globalRequestsPerMinute)
-            .refillIntervally(globalRequestsPerMinute, Duration.ofMinutes(1)).build())
-        .addLimit(
-            Bandwidth.builder().capacity(globalRequestsPerHour)
-                .refillIntervally(globalRequestsPerHour, Duration.ofHours(1)).build())
-        .addLimit(
-            Bandwidth.builder().capacity(globalRequestsPerDay)
-                .refillIntervally(globalRequestsPerDay, Duration.ofDays(1)).build())
-        .build();
+            .refillIntervally(globalRequestsPerMinute, Duration.ofMinutes(1)).build()).addLimit(
+        Bandwidth.builder().capacity(globalRequestsPerHour)
+            .refillIntervally(globalRequestsPerHour, Duration.ofHours(1)).build()).addLimit(
+        Bandwidth.builder().capacity(globalRequestsPerDay)
+            .refillIntervally(globalRequestsPerDay, Duration.ofDays(1)).build()).build();
   }
 
   @Bean("marketDataPriceConfig")
   public BucketConfiguration marketDataPriceConfig() {
     return BucketConfiguration.builder().addLimit(
-        Bandwidth.builder().capacity(30).refillIntervally(30, Duration.ofMinutes(1)).build())
+            Bandwidth.builder().capacity(30).refillIntervally(30, Duration.ofMinutes(1)).build())
         .build();
   }
 

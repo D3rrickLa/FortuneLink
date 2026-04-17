@@ -16,7 +16,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -54,10 +53,8 @@ public class AccountController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(summary = "Create a new account", description = "Initializes a new account within a portfolio with a specific currency and strategy.")
   @ApiResponse(responseCode = "201", description = "Account created successfully")
-  public AccountView createAccount(
-      @PathVariable @Schema(example = "p-123") String portfolioId,
-      @AuthenticatedUser UserId userId,
-      @RequestBody @Valid CreateAccountRequest request) {
+  public AccountView createAccount(@PathVariable @Schema(example = "p-123") String portfolioId,
+      @AuthenticatedUser UserId userId, @RequestBody @Valid CreateAccountRequest request) {
 
     return lifecycleService.createAccount(
         new CreateAccountCommand(PortfolioId.fromString(portfolioId), userId, request.accountName(),
@@ -67,11 +64,8 @@ public class AccountController {
   @PutMapping("/{accountId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(summary = "Update account details", description = "Updates mutable properties of an account like its display name.")
-  public void updateAccount(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
-      @PathVariable String accountId,
-      @RequestBody @Valid UpdateAccountRequest request) {
+  public void updateAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
+      @PathVariable String accountId, @RequestBody @Valid UpdateAccountRequest request) {
 
     lifecycleService.updateAccount(
         new UpdateAccountCommand(PortfolioId.fromString(portfolioId), userId,
@@ -81,13 +75,9 @@ public class AccountController {
   @DeleteMapping("/{accountId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(summary = "Close an account", description = "Transitions account to CLOSED state. Requires zero balance and no open positions.")
-  @ApiResponses({
-      @ApiResponse(responseCode = "204", description = "Account closed"),
-      @ApiResponse(responseCode = "409", description = "Conflict: Account has remaining balance or positions")
-  })
-  public void closeAccount(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
+  @ApiResponses({@ApiResponse(responseCode = "204", description = "Account closed"),
+      @ApiResponse(responseCode = "409", description = "Conflict: Account has remaining balance or positions")})
+  public void closeAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @PathVariable String accountId) {
     lifecycleService.deleteAccount(
         new DeleteAccountCommand(PortfolioId.fromString(portfolioId), userId,
@@ -97,9 +87,7 @@ public class AccountController {
   @PatchMapping("/{accountId}/reopen")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(summary = "Reopen a closed account", description = "Transitions a CLOSED account back to ACTIVE, preserving all history.")
-  public void reopenAccount(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
+  public void reopenAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @PathVariable String accountId) {
 
     lifecycleService.reopenAccount(new ReopenAccountCommand(AccountId.fromString(accountId),
@@ -111,10 +99,8 @@ public class AccountController {
   @Parameter(name = "pageable", hidden = true) // Hides the complex Spring object
   @Parameter(in = ParameterIn.QUERY, name = "page", description = "Zero-based page index", schema = @Schema(type = "integer", defaultValue = "0"))
   @Parameter(in = ParameterIn.QUERY, name = "size", description = "Page size", schema = @Schema(type = "integer", defaultValue = "20"))
-  public Page<AccountView> getAllAccounts(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
-      Pageable pageable) {
+  public Page<AccountView> getAllAccounts(@PathVariable String portfolioId,
+      @AuthenticatedUser UserId userId, Pageable pageable) {
     return accountQueryService.getAllAccounts(
         new GetAllAccountsQuery(PortfolioId.fromString(portfolioId), userId,
             pageable.getPageNumber(), pageable.getPageSize()));
@@ -122,9 +108,7 @@ public class AccountController {
 
   @GetMapping("/{accountId}")
   @Operation(summary = "Get account summary", description = "Returns a single account with current positions and live market valuation.")
-  public AccountView getAccount(
-      @PathVariable String portfolioId,
-      @AuthenticatedUser UserId userId,
+  public AccountView getAccount(@PathVariable String portfolioId, @AuthenticatedUser UserId userId,
       @PathVariable String accountId) {
     return accountQueryService.getAccountSummary(
         new GetAccountSummaryQuery(PortfolioId.fromString(portfolioId), userId,

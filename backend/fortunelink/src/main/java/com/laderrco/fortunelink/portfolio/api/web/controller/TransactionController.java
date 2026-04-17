@@ -46,7 +46,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.TransactionId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -76,13 +75,12 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Full transaction lifecycle controller.
  * <p>
- * All endpoints follow the same authentication pattern: @AuthenticatedUser
- * UserId userId.
- * All mutations return the created/modified TransactionView.
+ * All endpoints follow the same authentication pattern: @AuthenticatedUser UserId. All
+ * mutations return the created/modified TransactionView.
  * <p>
- * This controller manages the ledger for a specific investment account,handling
- * everything from trade execution (BUY/SELL) to corporate actions (SPLITS) and
- * cash management (DEPOSIT/WITHDRAWAL).
+ * This controller manages the ledger for a specific investment account,handling everything from
+ * trade execution (BUY/SELL) to corporate actions (SPLITS) and cash management
+ * (DEPOSIT/WITHDRAWAL).
  */
 @RestController
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions")
@@ -98,11 +96,10 @@ public class TransactionController {
   // Trade transactions (affect positions AND cash)
   // =========================================================================
 
-/**
+  /**
    * Records a new asset purchase.
    * <p>
-   * Decreases the account's cash balance and increases the position quantity for
-   * the given symbol.
+   * Decreases the account's cash balance and increases the position quantity for the given symbol.
    */
   @PostMapping("/buy")
   @ResponseStatus(HttpStatus.CREATED)
@@ -126,14 +123,14 @@ public class TransactionController {
   /**
    * Records an asset sale.
    * <p>
-   * Increases the account's cash balance and decreases the position quantity.
-   * This action triggers realized gain/loss calculations.
+   * Increases the account's cash balance and decreases the position quantity. This action triggers
+   * realized gain/loss calculations.
    */
   @PostMapping("/sell")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(summary = "Record a SELL", description = "Increases cash and decreases asset quantity. Triggers realized gain/loss calculation.")
-  public TransactionView recordSell(@PathVariable String portfolioId, @PathVariable String accountId,
-      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
+  public TransactionView recordSell(@PathVariable String portfolioId,
+      @PathVariable String accountId, @Parameter(hidden = true) @AuthenticatedUser UserId userId,
       @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordSaleRequest request) {
 
@@ -151,8 +148,8 @@ public class TransactionController {
   /**
    * Records a stock split or reverse split.
    * <p>
-   * Adjusts the quantity and cost basis of a position based on the provided ratio
-   * (e.g., 2:1 for a split, 1:10 for a reverse split). No cash impact.
+   * Adjusts the quantity and cost basis of a position based on the provided ratio (e.g., 2:1 for a
+   * split, 1:10 for a reverse split). No cash impact.
    */
   @PostMapping("/split")
   @ResponseStatus(HttpStatus.CREATED)
@@ -172,8 +169,8 @@ public class TransactionController {
   /**
    * Records a return of capital distribution.
    * <p>
-   * Reduces the cost basis of the position. If the basis reaches zero,
-   * subsequent distributions are treated as capital gains.
+   * Reduces the cost basis of the position. If the basis reaches zero, subsequent distributions are
+   * treated as capital gains.
    */
   @PostMapping("/return-of-capital")
   @ResponseStatus(HttpStatus.CREATED)
@@ -331,8 +328,8 @@ public class TransactionController {
   /**
    * Records a Dividend Reinvestment (DRIP).
    * <p>
-   * This is a composite action that records a dividend and uses the proceeds
-   * to purchase additional shares of the same asset.
+   * This is a composite action that records a dividend and uses the proceeds to purchase additional
+   * shares of the same asset.
    */
   @PostMapping("/drip")
   @ResponseStatus(HttpStatus.CREATED)
@@ -346,8 +343,8 @@ public class TransactionController {
         new RecordDividendReinvestmentCommand(validateUuid(idempotencyKey),
             PortfolioId.fromString(portfolioId), userId, AccountId.fromString(accountId),
             request.assetSymbol(), new RecordDividendReinvestmentCommand.DripExecution(
-                new Quantity(request.sharesPurchased()),
-                Price.of(request.pricePerShare(), Currency.of(request.currency()))),
+            new Quantity(request.sharesPurchased()),
+            Price.of(request.pricePerShare(), Currency.of(request.currency()))),
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));
   }
 
@@ -355,13 +352,12 @@ public class TransactionController {
   // Read operations
   // =========================================================================
 
-/**
- * Returns a paginated list of transactions for an account.
- * <p>
- * Supports optional filtering by symbol and date range. Results are sorted by
- * occurredAt descending (most recent first). Page size is capped at 100 per
- * request.
- */
+  /**
+   * Returns a paginated list of transactions for an account.
+   * <p>
+   * Supports optional filtering by symbol and date range. Results are sorted by occurredAt
+   * descending (most recent first). Page size is capped at 100 per request.
+   */
   @GetMapping
   @Operation(summary = "Get transaction history", description = "Paginated list of transactions with optional filtering.")
   public Page<TransactionView> getTransactionHistory(@PathVariable String portfolioId,
@@ -380,16 +376,13 @@ public class TransactionController {
   /**
    * Returns a single transaction by ID.
    * <p>
-   * The transaction must belong to the specified account and portfolio. Returns
-   * 404 if the transaction does not exist or belongs to a different user's
-   * account.
+   * The transaction must belong to the specified account and portfolio. Returns 404 if the
+   * transaction does not exist or belongs to a different user's account.
    */
   @GetMapping("/{transactionId}")
   @Operation(summary = "Get single transaction", description = "Retrieves a transaction by its unique ID.")
-  @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Transaction found"),
-      @ApiResponse(responseCode = "404", description = "Transaction not found or access denied")
-  })
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "Transaction found"),
+      @ApiResponse(responseCode = "404", description = "Transaction not found or access denied")})
   public TransactionView getTransaction(@PathVariable String portfolioId,
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @PathVariable String transactionId) {
@@ -405,8 +398,8 @@ public class TransactionController {
   /**
    * Excludes a transaction from position and capital gains calculations.
    * <p>
-   * Cash balance is NOT reversed. Triggers an async position recalculation for
-   * the affected symbol.
+   * Cash balance is NOT reversed. Triggers an async position recalculation for the affected
+   * symbol.
    */
   @PatchMapping("/{transactionId}/exclude")
   @Operation(summary = "Exclude transaction", description = "Soft-removes a transaction from P&L and position calculations.")
@@ -423,8 +416,8 @@ public class TransactionController {
   }
 
   /**
-   * Restores a previously excluded transaction back into calculations.
-   * Triggers an async position recalculation for the affected symbol.
+   * Restores a previously excluded transaction back into calculations. Triggers an async position
+   * recalculation for the affected symbol.
    */
   @PatchMapping("/{transactionId}/restore")
   @Operation(summary = "Restore transaction", description = "Re-activates a previously excluded transaction.")
@@ -450,8 +443,7 @@ public class TransactionController {
 
     return feeRequests.stream().map(
         f -> Fee.of(f.feeType(), Money.of(f.amount(), f.currency()), txDate,
-            new FeeMetadata(Map.of())))
-        .toList();
+            new FeeMetadata(Map.of()))).toList();
   }
 
   private UUID validateUuid(String idempotencyKey) {

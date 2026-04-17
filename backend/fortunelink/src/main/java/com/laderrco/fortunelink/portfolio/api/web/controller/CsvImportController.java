@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,7 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
  * <p>
  * GET /template , download the CSV template POST / , upload a CSV file for import
  * <p>
- * The import is intentionally synchronous for MVP. At scale you'd want to push the file to S3 and
+ * The import is intentionally synchronous for MVP. At scale, you'd want to push the file to S3 and
  * process it async via SQS/queue. For the user base you're targeting (hundreds, not millions),
  * synchronous is fine and far simpler to debug and reason about.
  */
@@ -36,7 +37,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions/import")
 public class CsvImportController {
-
   private final CsvImportService csvImportService;
 
   /**
@@ -44,7 +44,7 @@ public class CsvImportController {
    * on the template , it contains no user data.
    */
   @GetMapping("/template")
-  public ResponseEntity<byte[]> getTemplate() {
+  public ResponseEntity<byte @NotNull []> getTemplate() {
     byte[] content = csvImportService.generateTemplate().getBytes(StandardCharsets.UTF_8);
 
     HttpHeaders headers = new HttpHeaders();

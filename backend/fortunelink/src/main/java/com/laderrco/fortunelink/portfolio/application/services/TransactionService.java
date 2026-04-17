@@ -389,7 +389,8 @@ public class TransactionService {
     }
   }
 
-  private TransactionView executeWithIdempotency(TransactionCommand command, Supplier<TransactionView> businessLogic) {
+  private TransactionView executeWithIdempotency(TransactionCommand command,
+      Supplier<TransactionView> businessLogic) {
     UUID key = command.idempotencyKey();
 
     // 1. Initial Checks (Still good to have for performance)

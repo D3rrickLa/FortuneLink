@@ -28,7 +28,7 @@ public interface JpaNetWorthSnapshotRepository extends
 
   /**
    * Day-boundary check. NEVER use DATE() in JPQL against a TIMESTAMPTZ column , the cast behavior
-   * is JVM-timezone-dependent. Instead pass explicit UTC bounds computed by the caller (start of
+   * is JVM-timezone-dependent. Instead, pass explicit UTC bounds computed by the caller (start of
    * today UTC, start of tomorrow UTC).
    *
    * <p>

@@ -196,7 +196,7 @@ class MarketDataControllerTest {
       when(marketDataService.getBatchQuotes(Set.of(assetSymbol))).thenReturn(Map.of());
 
       mockMvc.perform(get(BASE_URL + "/quotes/AAPL")).andExpect(status().isNotFound())
-          .andExpect(jsonPath("$.message", containsString("No quote available for symbol")));
+          .andExpect(jsonPath("$.message", containsString("Record a transaction first to seed the asset.")));
     }
   }
 
@@ -223,7 +223,7 @@ class MarketDataControllerTest {
       when(marketDataService.getAssetInfo(any())).thenReturn(Optional.empty());
 
       mockMvc.perform(get(BASE_URL + "/info/UNKNOWN")).andExpect(status().isNotFound())
-          .andExpect(jsonPath("$.message", containsString("No asset information found")));
+          .andExpect(jsonPath("$.message", containsString("Asset info not found.")));
     }
   }
 
@@ -252,7 +252,7 @@ class MarketDataControllerTest {
           new UnknownSymbolException("Symbol not found"));
 
       mockMvc.perform(get(BASE_URL + "/validate/FAKE")).andExpect(status().isNotFound())
-          .andExpect(jsonPath("$.message", containsString("Symbol not found or not supported")));
+          .andExpect(jsonPath("$.message", containsString("Symbol not supported: FAKE")));
     }
 
     @Test

@@ -223,8 +223,8 @@ class AccountViewBuilderTest {
       when(projection.getAccountType()).thenReturn("FHSA");
       when(projection.getLifecycleState()).thenReturn("ACTIVE");
       when(projection.getId()).thenReturn(accountUuid);
-      when(exchangeRateService.convert(any(Money.class), any(Currency.class)))
-          .thenAnswer(invocation -> {
+      when(exchangeRateService.convert(any(Money.class), any(Currency.class))).thenAnswer(
+          invocation -> {
             Money originalMoney = invocation.getArgument(0);
             Currency targetCurrency = invocation.getArgument(1);
             // Just return the original amount but with the target currency for the test

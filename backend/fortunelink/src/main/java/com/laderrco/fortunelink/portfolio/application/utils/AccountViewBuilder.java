@@ -79,14 +79,6 @@ public class AccountViewBuilder {
     Currency currency = Currency.of(projection.getBaseCurrencyCode());
     Money cashBalance = new Money(projection.getCashBalanceAmount(), currency);
 
-    // Money marketValue = quantities.entrySet().stream().map(entry -> {
-    //   MarketAssetQuote quote = allQuotes.get(entry.getKey());
-    //   if (quote == null || quote.currentPrice().isZero()) {
-    //     return Money.zero(currency);
-    //   }
-    //   return quote.currentPrice().calculateValue(entry.getValue());
-    // }).reduce(Money.zero(currency), Money::add);
-
     Money marketValue = quantities.entrySet().stream().map(entry -> {
       MarketAssetQuote quote = allQuotes.get(entry.getKey());
       if (quote == null || quote.currentPrice().isZero()) {

@@ -73,7 +73,6 @@ public class AccountQueryRepositoryImpl implements AccountQueryRepository {
   @Override
   public Map<AccountId, Map<AssetSymbol, Quantity>> findQuantitiesForAccounts(
       List<AccountId> accountIds) {
-    IO.print("DEBUG: " + accountIds.toString());
     if (accountIds == null || accountIds.isEmpty()) {
       return Map.of();
     }
