@@ -143,9 +143,7 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
     }
     this.accounts.removeIf(a -> !incomingIds.contains(a.getId()));
 
-    for (AccountJpaEntity a : merged) {
-      this.accounts.add(a);
-    }
+    this.accounts.addAll(merged);
   }
 
   // -------------------------------------------------------------------------
