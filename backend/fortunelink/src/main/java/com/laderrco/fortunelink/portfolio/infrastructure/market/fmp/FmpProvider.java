@@ -146,7 +146,7 @@ public class FmpProvider implements MarketDataProvider {
 
   @Override
   public boolean supportsSymbol(AssetSymbol symbol) {
-    return symbol != null && symbol.symbol() != null && symbol.symbol().matches("[A-Z0-9\\.\\-^]+");
+    return symbol != null && symbol.symbol() != null && symbol.symbol().matches("[A-Z0-9.\\-^]+");
   }
 
   @Override

@@ -90,6 +90,7 @@ class StringMapConverterTest {
     }
   }
 
+  @Nested
   @DisplayName("StringMapConverter Error Handling")
   class StringMapConverterExceptionTest {
 

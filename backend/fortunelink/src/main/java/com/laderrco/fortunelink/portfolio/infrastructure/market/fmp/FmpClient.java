@@ -25,8 +25,7 @@ import tools.jackson.databind.type.TypeFactory;
 /**
  * Low-level HTTP client for FMP API.
  * <p>
- * Responsibilities: - Construct FMP API URLs, Execute HTTP requests, Parse JSON
- * responses - Handle
+ * Responsibilities: - Construct FMP API URLs, Execute HTTP requests, Parse JSON responses - Handle
  * HTTP errors
  *
  */
@@ -50,11 +49,9 @@ public class FmpClient {
   @Retry(name = "fmp-api")
   @CircuitBreaker(name = "fmp-api", fallbackMethod = "getQuoteFallback")
   public FmpQuoteResponse getQuote(String symbol) {
-    String url = UriComponentsBuilder.fromUriString(config.getBaseUrl())
-        .path("/quote")
-        .queryParam("symbol", symbol)
-        .queryParam("apikey", config.getApiKey())
-        .build().toUriString();
+    String url = UriComponentsBuilder.fromUriString(config.getBaseUrl()).path("/quote")
+        .queryParam("symbol", symbol).queryParam("apikey", config.getApiKey()).build()
+        .toUriString();
     return executeAndParseSingle(url, FmpQuoteResponse.class);
   }
 
@@ -72,11 +69,9 @@ public class FmpClient {
   @Retry(name = "fmp-api")
   @CircuitBreaker(name = "fmp-api", fallbackMethod = "getProfileFallback")
   public FmpProfileResponse getProfile(String symbol) {
-    String url = UriComponentsBuilder.fromUriString(config.getBaseUrl())
-        .path("/profile")
-        .queryParam("symbol", symbol)
-        .queryParam("apikey", config.getApiKey())
-        .build().toUriString();
+    String url = UriComponentsBuilder.fromUriString(config.getBaseUrl()).path("/profile")
+        .queryParam("symbol", symbol).queryParam("apikey", config.getApiKey()).build()
+        .toUriString();
     return executeAndParseSingle(url, FmpProfileResponse.class);
   }
 
@@ -90,11 +85,8 @@ public class FmpClient {
   }
 
   public List<FmpSearchResponse> getSearch(String query) {
-    String url = UriComponentsBuilder.fromUriString(config.getBaseUrl())
-        .path("/search-symbol")
-        .queryParam("query", query)
-        .queryParam("apikey", config.getApiKey())
-        .build().toUriString();
+    String url = UriComponentsBuilder.fromUriString(config.getBaseUrl()).path("/search-symbol")
+        .queryParam("query", query).queryParam("apikey", config.getApiKey()).build().toUriString();
 
     return executeAndParseList(url, FmpSearchResponse.class);
   }
@@ -127,7 +119,7 @@ public class FmpClient {
       CollectionType listType = tf.constructCollectionType(List.class, responseType);
 
       return objectMapper.readValue(response.body(), listType);
-      
+
 
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -145,7 +137,7 @@ public class FmpClient {
     if (code == 200) {
       return;
     }
-    
+
     log.error("FMP API error. status={} url={} body={}", code, url, response.body());
 
     throw switch (code) {

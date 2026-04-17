@@ -397,8 +397,7 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
   }
 
   private List<Fee> getFeeList(List<Fee> fees) {
-    List<Fee> feeList = fees != null ? fees : List.of();
-    return feeList;
+    return fees != null ? fees : List.of();
   }
 
   private void validateIsActive(Account account) {

@@ -27,14 +27,7 @@ public final class TransactionApplier {
   private static ApplyResult<? extends Position> applyBuy(Position p, Transaction tx) {
     return p.buy(tx.execution().quantity(), tx.cashDelta().abs(), tx.occurredAt());
   }
-
-  /**
-   * Records a sale of assets from this position.
-   *
-   * @param quantity The amount of the asset to sell.
-   * @param proceeds The NET proceeds received (Gross - Fees). MUST be a positive absolute value.
-   * @param at       The timestamp of the sale.
-   */
+  
   private static ApplyResult<? extends Position> applySell(Position p, Transaction tx) {
     return p.sell(tx.execution().quantity(), tx.cashDelta(), tx.occurredAt());
   }

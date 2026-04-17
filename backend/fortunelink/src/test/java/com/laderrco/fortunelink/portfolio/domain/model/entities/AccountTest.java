@@ -72,8 +72,8 @@ class AccountTest {
           () -> assertTrue(account.getAccountType().requiresCapitalGainsTracking()),
           () -> assertEquals(PositionStrategy.ACB, account.getPositionStrategy()),
           () -> assertNotNull(account.getCreationDate()),
-          () -> assertThat(account.getLastUpdatedOn())
-              .isCloseTo(account.getCreationDate(), within(1, ChronoUnit.SECONDS)),
+          () -> assertThat(account.getLastUpdatedOn()).isCloseTo(account.getCreationDate(),
+              within(1, ChronoUnit.SECONDS)),
           () -> assertEquals(HealthStatus.HEALTHY, account.getHealthStatus()));
     }
 

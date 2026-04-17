@@ -74,22 +74,15 @@ public interface PortfolioRepository {
 
   /**
    * Ownership check if Portfolio has this account id in it or not. NOTE: this should be used after
-   * checking if the Portfolio is apart of the user id via {@Link existsByIdAndUserId()}
+   * checking if the Portfolio is a part of the user id via {@Link existsByIdAndUserId()}
    *
-   * @param id
-   * @param accountId
+   * @param id is the Portfolio id
+   * @param accountId is the account id
    * @return True if the account belongs to the portfolio, false otherwise.
    */
   boolean existsByPortfolioIdAndAccountId(PortfolioId id, AccountId accountId);
 
-  /**
-   * Ownership check if account belongs to portfolio which belongs to user.
-   *
-   * @param portfolioId
-   * @param userId
-   * @param accountId
-   * @return
-   */
+
   boolean existsByIdAndUserIdAndAccountId(PortfolioId portfolioId, UserId userId,
       AccountId accountId);
 
@@ -102,7 +95,7 @@ public interface PortfolioRepository {
    * soft-deleted portfolios are counted, a user who deletes their portfolio to start anew, will be
    * permanently locked out of creating a new one.
    * @implNote JPA implementation example: @Query("SELECT COUNT(p) FROM Portfolio p WHERE p.userId =
-   * :userId AND p.deleted = false") Long countActiveByUserId(@Param("userId") UserId userId);
+   * :userId AND p.deleted = false") Long countActiveByUserId(@Param("userId") UserId);
    */
   Long countByUserId(UserId userId);
 }

@@ -45,7 +45,7 @@ public class TransactionPurgeService {
       }
     } catch (Exception e) {
       // Don't rethrow - let the scheduler continue running on future ticks.
-      // In production you'd fire an alert here.
+      // In production, you'd fire an alert here.
       log.error("Transaction purge failed - manual review required", e);
     }
   }

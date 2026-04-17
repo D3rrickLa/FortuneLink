@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
 
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 

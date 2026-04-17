@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.infrastructure.config.SecurityTestsSuite;
+package com.laderrco.fortunelink.portfolio.infrastructure.config.securitytestsuite;
 
 import java.time.Instant;
 import java.util.UUID;

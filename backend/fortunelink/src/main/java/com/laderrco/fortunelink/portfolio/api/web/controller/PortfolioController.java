@@ -17,7 +17,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -53,11 +52,11 @@ public class PortfolioController {
   @Operation(summary = "Create a new portfolio", description = "Initializes a portfolio for the authenticated user. Can optionally create a default account automatically.")
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public PortfolioResponse createPortfolio(@Parameter(hidden = true) @AuthenticatedUser UserId userId,
+  public PortfolioResponse createPortfolio(
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId,
       @RequestBody @Valid CreatePortfolioRequest request) {
 
-    var command = new CreatePortfolioCommand(
-        userId, request.name(), request.description(),
+    var command = new CreatePortfolioCommand(userId, request.name(), request.description(),
         Currency.of(request.currency()), request.createDefaultAccount(),
         request.defaultAccountType(), request.defaultStrategy());
 
@@ -71,8 +70,7 @@ public class PortfolioController {
       @Parameter(hidden = true) @AuthenticatedUser UserId userId,
       @RequestBody @Valid UpdatePortfolioRequest request) {
 
-    var command = new UpdatePortfolioCommand(
-        PortfolioId.fromString(portfolioId), userId,
+    var command = new UpdatePortfolioCommand(PortfolioId.fromString(portfolioId), userId,
         request.name(), request.description(),
         request.currency() != null ? Currency.of(request.currency()) : null);
 
@@ -80,12 +78,11 @@ public class PortfolioController {
     return PortfolioResponse.fromView(view);
   }
 
-  @Operation(summary = "Delete a portfolio", description = "Removes a portfolio. Standard users are forced to soft-delete. "
-      + "Admins may toggle hard-delete. 'Recursive' will affect all child accounts.")
-  @ApiResponses({
-      @ApiResponse(responseCode = "204", description = "Portfolio successfully deleted"),
-      @ApiResponse(responseCode = "403", description = "Unauthorized access to portfolio")
-  })
+  @Operation(summary = "Delete a portfolio", description =
+      "Removes a portfolio. Standard users are forced to soft-delete. "
+          + "Admins may toggle hard-delete. 'Recursive' will affect all child accounts.")
+  @ApiResponses({@ApiResponse(responseCode = "204", description = "Portfolio successfully deleted"),
+      @ApiResponse(responseCode = "403", description = "Unauthorized access to portfolio")})
   @DeleteMapping("/{portfolioId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void deletePortfolio(@PathVariable String portfolioId,
@@ -100,12 +97,14 @@ public class PortfolioController {
     boolean finalSoftDelete = !isAdmin || softDelete;
 
     lifecycleService.deletePortfolio(
-        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, finalSoftDelete, recursive));
+        new DeletePortfolioCommand(PortfolioId.fromString(portfolioId), userId, finalSoftDelete,
+            recursive));
   }
 
   @Operation(summary = "List all portfolios", description = "Returns a summary list of all portfolios owned by the authenticated user.")
   @GetMapping
-  public List<PortfolioSummaryResponse> getPortfolios(@Parameter(hidden = true) @AuthenticatedUser UserId userId) {
+  public List<PortfolioSummaryResponse> getPortfolios(
+      @Parameter(hidden = true) @AuthenticatedUser UserId userId) {
 
     var summaries = queryService.getPortfolioSummaries(new GetPortfoliosByUserIdQuery(userId));
     return summaries.stream().map(PortfolioSummaryResponse::fromView).toList();
@@ -122,8 +121,9 @@ public class PortfolioController {
     return PortfolioResponse.fromView(view);
   }
 
-  @Operation(summary = "Get portfolio net worth", description = "Calculates the total valuation of the portfolio in its base currency. "
-      + "Triggers real-time valuation of all underlying assets.")
+  @Operation(summary = "Get portfolio net worth", description =
+      "Calculates the total valuation of the portfolio in its base currency. "
+          + "Triggers real-time valuation of all underlying assets.")
   @GetMapping("/{portfolioId}/net-worth")
   public NetWorthResponse getNetWorth(@PathVariable String portfolioId,
       @Parameter(hidden = true) @AuthenticatedUser UserId userId) {

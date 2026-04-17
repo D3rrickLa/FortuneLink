@@ -93,7 +93,7 @@ public class TransactionDomainMapper {
    * changes), so there is no update path here , use {@link #applyExclusionState} for exclusion
    * mutations on an existing managed entity.
    *
-   * @param domain      the domain transaction record
+   * @param tx      the domain transaction record
    * @param portfolioId the owning portfolio UUID (denormalized for query efficiency)
    */
   public TransactionJpaEntity toEntity(Transaction tx, UUID portfolioId, String idempotencyKey) {
@@ -197,7 +197,8 @@ public class TransactionDomainMapper {
 
   private FeeJpaEntity toFeeEntity(TransactionJpaEntity parent, Fee fee) {
     String type = fee.feeType() != null ? fee.feeType().name() : "UNKNOWN";
-    java.math.BigDecimal nativeAmt = fee.nativeAmount() != null ? fee.nativeAmount().amount() : null;
+    java.math.BigDecimal nativeAmt =
+        fee.nativeAmount() != null ? fee.nativeAmount().amount() : null;
     String nativeCur = fee.nativeAmount() != null ? fee.nativeAmount().currency().getCode() : null;
 
     java.math.BigDecimal accAmt = fee.accountAmount() != null ? fee.accountAmount().amount() : null;

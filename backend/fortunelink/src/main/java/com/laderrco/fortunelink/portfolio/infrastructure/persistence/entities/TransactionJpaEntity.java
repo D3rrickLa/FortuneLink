@@ -9,8 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,7 +17,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -193,10 +196,8 @@ public class TransactionJpaEntity {
   // -------------------------------------------------------------------------
 
   /**
-   * Applies exclusion state from an updated domain record. Transactions are
-   * immutable in the domain
-   * , only exclusion metadata changes post-creation, so this is the only mutable
-   * operation on this
+   * Applies exclusion state from an updated domain record. Transactions are immutable in the domain
+   * , only exclusion metadata changes post-creation, so this is the only mutable operation on this
    * entity.
    */
   public void applyExclusionState(boolean excluded, Instant excludedAt, UUID excludedBy,

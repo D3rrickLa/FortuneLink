@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioLifecycleService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioQueryService;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.SecurityTestsSuite.TestSecurityConfig;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.securitytestsuite.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;

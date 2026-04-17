@@ -47,8 +47,8 @@ public class SecurityConfig {
     http.csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/public/**").permitAll()
-            .requestMatchers("/actuator/health").permitAll()
-            .requestMatchers("/api-docs", "/docs").permitAll().anyRequest().authenticated())
+            .requestMatchers("/actuator/health").permitAll().requestMatchers("/api-docs", "/docs")
+            .permitAll().anyRequest().authenticated())
         // .httpBasic(Customizer.withDefaults());
         .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults())
             .authenticationEntryPoint(jwtAuthEntryPoint));

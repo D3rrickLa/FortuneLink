@@ -265,8 +265,6 @@ public class Account {
   }
 
   public void prepareForRecalculation(AssetSymbol symbol) {
-    // log.info("Resetting state for symbol {} in account {} for recalculation",
-    // symbol, this.id);
     clearPositionForRecalculation(symbol);
     clearRealizedGainsForSymbol(symbol);
   }

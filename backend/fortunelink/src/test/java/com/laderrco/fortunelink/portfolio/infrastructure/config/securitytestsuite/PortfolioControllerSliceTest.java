@@ -1,4 +1,4 @@
-package com.laderrco.fortunelink.portfolio.infrastructure.config.SecurityTestsSuite;
+package com.laderrco.fortunelink.portfolio.infrastructure.config.securitytestsuite;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;

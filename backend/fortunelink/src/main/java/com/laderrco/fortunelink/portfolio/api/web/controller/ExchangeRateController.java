@@ -6,7 +6,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.BocApiException;
 import com.laderrco.fortunelink.portfolio.infrastructure.exchange.boc.exceptions.ExchangeRateUnavailableException;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -36,12 +35,10 @@ public class ExchangeRateController {
 
   @GetMapping("/current")
   @Operation(summary = "Get current exchange rate", description = "Returns the rate for '1 {from} = X {to}'. Rates are sourced from Bank of Canada and cached for 1 hour. Cross-pairs (e.g. EUR/USD) are computed via CAD triangulation.")
-  @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "Successful rate lookup"),
-    @ApiResponse(responseCode = "400", description = "Invalid ISO-4217 currency code format"),
-    @ApiResponse(responseCode = "404", description = "Currency pair not supported by source"),
-    @ApiResponse(responseCode = "503", description = "Source API (BOC) unreachable - client should use cost-basis fallback")
-  })
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "Successful rate lookup"),
+      @ApiResponse(responseCode = "400", description = "Invalid ISO-4217 currency code format"),
+      @ApiResponse(responseCode = "404", description = "Currency pair not supported by source"),
+      @ApiResponse(responseCode = "503", description = "Source API (BOC) unreachable - client should use cost-basis fallback")})
   public ExchangeRateResponse getCurrentRate(
       @RequestParam @Parameter(description = "Base currency code (e.g., USD)", example = "USD") @NotBlank @Pattern(regexp = ISO_CURRENCY_PATTERN) String from,
 

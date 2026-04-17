@@ -379,7 +379,8 @@ class TransactionServiceTest {
       List<ILoggingEvent> capturedLogs = logCaptor.getAllValues();
 
       assertThat(capturedLogs.getFirst().getLevel()).isEqualTo(Level.WARN);
-      assertThat(capturedLogs.getFirst().getFormattedMessage()).contains("DRIP recorded for symbol=AssetSymbol[symbol=AAPL]");
+      assertThat(capturedLogs.getFirst().getFormattedMessage()).contains(
+          "DRIP recorded for symbol=AssetSymbol[symbol=AAPL]");
     }
   }
 

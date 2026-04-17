@@ -245,8 +245,8 @@ class PortfolioTest {
 
       assertTrue(portfolio.isDeleted());
       assertEquals(userId, portfolio.getDeletedBy());
-      assertThat(portfolio.getDeletedOn())
-          .isCloseTo(portfolio.getLastUpdatedAt(), within(1, ChronoUnit.SECONDS));
+      assertThat(portfolio.getDeletedOn()).isCloseTo(portfolio.getLastUpdatedAt(),
+          within(1, ChronoUnit.SECONDS));
     }
 
     @Test

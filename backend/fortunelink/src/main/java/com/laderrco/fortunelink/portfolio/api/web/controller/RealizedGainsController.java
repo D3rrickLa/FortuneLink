@@ -9,7 +9,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -50,15 +49,13 @@ import org.springframework.web.server.ResponseStatusException;
  * different user'sportfolio returns*404(not 403),we intentionally do not
  * confirm that the account exists.
  */
+
 /**
- * Read-only ledger for realized capital gains and losses.
- * Gains are computed during SELL or Return of Capital (ROC) events and
- * persisted as
- * an immutable ledger. This endpoint provides high-performance access for tax
- * reporting and P&L analysis.
- * Authorization: Requires a three-way ownership check (User -> Portfolio ->
- * Account).
- * Invalid combinations return 404 to prevent account enumeration.
+ * Read-only ledger for realized capital gains and losses. Gains are computed during SELL or Return
+ * of Capital (ROC) events and persisted as an immutable ledger. This endpoint provides
+ * high-performance access for tax reporting and P&L analysis. Authorization: Requires a three-way
+ * ownership check (User -> Portfolio -> Account). Invalid combinations return 404 to prevent
+ * account enumeration.
  */
 @RestController
 @Validated
@@ -70,27 +67,28 @@ public class RealizedGainsController {
   private final RealizedGainsQueryService realizedGainsQueryService;
 
 
-  @Operation(summary = "Get realized gains ledger", description = "Returns a breakdown of capital gains and losses, including pre-computed totals. "
-      + "Results are sorted by occurrence date (descending). Database-backed and safe for high-frequency polling.")
-  @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Ledger retrieved successfully"),
+  @Operation(summary = "Get realized gains ledger", description =
+      "Returns a breakdown of capital gains and losses, including pre-computed totals. "
+          + "Results are sorted by occurrence date (descending). Database-backed and safe for high-frequency polling.")
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "Ledger retrieved successfully"),
       @ApiResponse(responseCode = "400", description = "Invalid tax year or symbol format"),
-      @ApiResponse(responseCode = "404", description = "Account not found or access denied")
-  })
+      @ApiResponse(responseCode = "404", description = "Account not found or access denied")})
   @GetMapping
   public RealizedGainsSummaryResponse getRealizedGains(
       @Parameter(description = "The unique ID of the portfolio") @PathVariable String portfolioId,
       @Parameter(hidden = true) @AuthenticatedUser UserId userId,
       @Parameter(description = "The unique ID of the account") @PathVariable String accountId,
-      @Parameter(description = "Filter by UTC tax year (e.g., 2024). Cannot be in the future.") @RequestParam(required = false) @Min(value = MIN_TAX_YEAR, message = "Tax year must be "
-          + MIN_TAX_YEAR + " or later") @Max(value = 9999, message = "Tax year must be a 4-digit year") Integer taxYear,
+      @Parameter(description = "Filter by UTC tax year (e.g., 2024). Cannot be in the future.") @RequestParam(required = false) @Min(value = MIN_TAX_YEAR, message =
+          "Tax year must be " + MIN_TAX_YEAR
+              + " or later") @Max(value = 9999, message = "Tax year must be a 4-digit year") Integer taxYear,
       @Parameter(description = "Filter by specific ticker (e.g., AAPL).") @RequestParam(required = false) @Pattern(regexp = "^[A-Z0-9.\\-]{1,20}$", message = "Invalid symbol format") String symbol,
       @Parameter(description = "Page number for pagination") @RequestParam(defaultValue = "0") int page,
       @Parameter(description = "Items per page") @RequestParam(defaultValue = "20") int size) {
 
     // Validate Year
     if (taxYear != null && taxYear > Year.now().getValue()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tax year cannot be in the future.");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Tax year cannot be in the future.");
     }
 
     // Parse Symbol

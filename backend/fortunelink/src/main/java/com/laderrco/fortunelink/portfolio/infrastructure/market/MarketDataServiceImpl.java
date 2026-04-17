@@ -73,7 +73,7 @@ public class MarketDataServiceImpl implements MarketDataService {
     if (symbols.isEmpty()) {
       return Map.of();
     }
-    
+
     List<AssetSymbol> symbolList = new ArrayList<>(symbols);
     List<String> keys = symbolList.stream().map(s -> keyFactory.price(s.symbol())).toList();
 

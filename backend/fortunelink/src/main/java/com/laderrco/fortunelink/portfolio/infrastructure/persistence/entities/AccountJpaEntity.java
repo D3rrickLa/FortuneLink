@@ -29,7 +29,7 @@ import org.springframework.data.domain.Persistable;
 /**
  * Persistence model for {@code Account}.
  * <p>
- * Owns a bi-directional relationship to {@code PortfolioJpaEntity} and one-directional collections
+ * Owns a bidirectional relationship to {@code PortfolioJpaEntity} and one-directional collections
  * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and {@code RealizedGainJpaEntity}.
  */
 @Entity
@@ -40,9 +40,8 @@ public class AccountJpaEntity implements Persistable<UUID> {
 
   @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
-  // if a single portoflio lods like 3 years of active trading, that's 100+
-  // records, each time they open the portfolio page, each one is 'loaded', LAZY
-  // to solve this
+  // if a single portfolio loads 3 years of active trading, that's 100+
+  // records, each time they open the portfolio page, each one is 'loaded', LAZY to solve this
   @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
       CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
   private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
