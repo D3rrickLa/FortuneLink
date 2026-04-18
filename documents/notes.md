@@ -137,3 +137,13 @@ class AssetAllocationService {
     +calculateAllocationByAccount(Portfolio) Map~AccountType, Percentage~
 }
 ```
+
+
+--- frontend ---
+Build order:
+
+1. Auth (Supabase JWT -> attach to Axios headers)
+2. Portfolio dashboard (net worth, account list)
+3. Transaction recording forms
+4. Charts and allocation views
+5. Goals: when the backend bounded context is actually built
