@@ -14,8 +14,8 @@ export default async function Home() {
       <h1 className="text-4xl font-bold">FortuneLink</h1>
       <p className="text-muted-foreground">Take control of your financial journey</p>
       <div className="flex gap-4">
-        <Link href="/login" className="btn">Login</Link>
-        <Link href="/register" className="btn">Register</Link>
+        <Link href="/auth/login" className="btn">Login</Link>
+        <Link href="/auth/register" className="btn">Register</Link>
       </div>
     </main>
   );
