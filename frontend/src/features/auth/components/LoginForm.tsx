@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -21,8 +22,8 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    router.push("/dashboard");
-    router.refresh(); // forces server components to re-render with new session
+    router.replace("/dashboard"); // replace, not push — no going back to login
+    router.refresh();
   }
 
   return (
@@ -34,20 +35,22 @@ export function LoginForm() {
         placeholder="Email"
         value={email}
         onChange={e => setEmail(e.target.value)}
-        className="border rounded px-3 py-2"
+        className="border rounded px-3 py-2 bg-background text-foreground"
+        disabled={loading}
       />
       <input
         type="password"
         placeholder="Password"
         value={password}
         onChange={e => setPassword(e.target.value)}
-        className="border rounded px-3 py-2"
+        className="border rounded px-3 py-2 bg-background text-foreground"
+        disabled={loading}
       />
-      <button onClick={handleLogin} disabled={loading}>
+      <Button onClick={handleLogin} disabled={loading}>
         {loading ? "Signing in..." : "Sign in"}
-      </button>
+      </Button>
       <p className="text-sm text-center">
-        No account? <a href="/register" className="underline">Register</a>
+        No account? <a href="/auth/register" className="underline">Register</a>
       </p>
     </div>
   );

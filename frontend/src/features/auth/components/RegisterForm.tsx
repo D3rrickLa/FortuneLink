@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -21,7 +22,7 @@ export function RegisterForm() {
       setLoading(false);
       return;
     }
-    router.push("/dashboard");
+    router.replace("/dashboard");
     router.refresh();
   }
 
@@ -43,9 +44,9 @@ export function RegisterForm() {
         onChange={e => setPassword(e.target.value)}
         className="border rounded px-3 py-2"
       />
-      <button onClick={handleRegister} disabled={loading}>
+      <Button onClick={handleRegister} disabled={loading}>
         {loading ? "Creating account..." : "Create account"}
-      </button>
+      </Button>
       <p className="text-sm text-center">
         Have an account? <a href="/login" className="underline">Sign in</a>
       </p>
