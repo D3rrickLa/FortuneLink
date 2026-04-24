@@ -1,4 +1,3 @@
-# DON'T DELETE THIS, THIS IS MEANT FOR OUR JPA REPO TESTS
 spring:
   security:
     oauth2:
@@ -12,23 +11,48 @@ spring:
     password: postgres
   jpa:
     hibernate:
-      ddl-auto: none   # Use Flyway for schema creation, not Hibernate
-    show-sql: true
+      ddl-auto: none
+    show-sql: false
     properties:
       hibernate:
-        "[format_sql]": true
+        "[format_sql]": false
         jdbc:
           "[time_zone]": UTC
   flyway:
     enabled: true
-    schemas:
-      - public
+    schemas: public
+    default-schema: public
     locations: classpath:db/migration
-    baseline-on-migrate: true # This prevents Flyway from failing if @BeforeAll already did something
+    baseline-on-migrate: true
+    baseline-version: 0
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300s
+      cache-null-values: false
+
+fortunelink:
+  rate-limit:
+    enabled: false # never rate limit in tests
+  cors:
+    allowed-origins: http://localhost:3000
+
+fmp:
+  base-url: ${FMP_BASE_URL:http://localhost}
+  api-key: ${FMP_API_KEY:test_key}
+  timeout-seconds: 5
+  debug-logging: false
+
+boc:
+  base-url: ${BOC_BASE_URL:http://localhost}
+  timeout-seconds: 5
+  debug-logging: false
+
 management:
   endpoints:
     web:
@@ -38,10 +62,7 @@ management:
     health:
       show-details: always
 
-postgres:
-  version: ${POSTGRES_VERSION}
-
 logging:
   level:
-    "[org.hibernate.SQL]": debug
-    
+    "[org.hibernate.SQL]": ERROR
+    "[com.laderrco.fortunelink]": INFO

@@ -1,51 +1,70 @@
 spring:
-  application:
-    name: fortunelink
-  
+  config:
+    import: "optional:file:.env[.properties]"
   datasource:
     url: jdbc:postgresql://localhost:5432/fortunelink_dev
-    username: fortunelink_user
-    password: PASSWORD123
+    username: ${LOCAL_DB_USERNAME:fortunelink_user}
+    password: ${LOCAL_DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
-
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate # matches prod, catch drift locally not in prod
     show-sql: true
     properties:
       hibernate:
         "[format_sql]": true
         jdbc:
           "[time_zone]": UTC
-
   flyway:
-    enabled: false
+    enabled: true # always run migrations locally too
+    schemas: public
+    default-schema: public
     locations: classpath:db/migration
     baseline-on-migrate: true
-
+    baseline-version: 0
   data:
     redis:
       host: localhost
       port: 6379
-      password:
-
+      password: # empty, local Redis has no auth
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300s
+      cache-null-values: false
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: ${SUPABASE_PROJ_URL}
-          audiences: authenticated
+          # remove audiences here unless your Supabase JWT actually contains it
+          # audiences: authenticated
+
+fortunelink:
+  cors:
+    allowed-origins: http://localhost:3000
+  rate-limit:
+    enabled: true
+
+fmp:
+  base-url: ${FMP_BASE_URL}
+  api-key: ${FMP_API_KEY}
+  timeout-seconds: 10
+  debug-logging: true
+
+boc:
+  base-url: ${BOC_BASE_URL:https://www.bankofcanada.ca}
+  timeout-seconds: 10
+  debug-logging: true
 
 logging:
   level:
-    web: DEBUG
-    #    root: DEBUG
     "[org.springframework.web]": DEBUG
     "[com.laderrco.fortunelink]": DEBUG
     "[org.hibernate.SQL]": DEBUG
     "[org.springframework.security]": DEBUG
     "[org.springframework.security.oauth2]": DEBUG
-    "[org.hibernate.type.descriptor.sql.BasicBinder]": TRACE # Shows parameter values in logs
-
-postgres:
-  version: "16-alpine" # Hardcoded for local use since env vars might be missing
+    "[org.hibernate.type.descriptor.sql.BasicBinder]": TRACE
