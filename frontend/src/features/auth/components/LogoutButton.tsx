@@ -1,7 +1,8 @@
-// features/auth/components/LogoutButton.tsx
 "use client";
 import { createClient } from "@/lib/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
 
 export function LogoutButton() {
   const router = useRouter();
@@ -14,8 +15,8 @@ export function LogoutButton() {
   }
 
   return (
-    <button onClick={handleLogout}>
+    <Button onClick={handleLogout}>
       Sign out
-    </button>
+    </Button>
   );
 }

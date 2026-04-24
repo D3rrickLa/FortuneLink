@@ -7,7 +7,7 @@ import { createClient } from "@/lib/utils/supabase/client";
 // reactively responde to a login/logout event (i.e. navbar avatar or session expiry redirection)
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // ← was missing
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
