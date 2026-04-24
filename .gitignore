@@ -28,5 +28,6 @@ replay_pid*
 *.env.*
 .vscode
 
-application-local.yml
-
+application-prod.yml
+.env
+*.env

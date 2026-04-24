@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: fortunelink
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fortunelink_dev
+    username: fortunelink_user
+    password: PASSWORD123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+        jdbc:
+          "[time_zone]": UTC
+
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_PROJ_URL}
+          audiences: authenticated
+
+logging:
+  level:
+    web: DEBUG
+    #    root: DEBUG
+    "[org.springframework.web]": DEBUG
+    "[com.laderrco.fortunelink]": DEBUG
+    "[org.hibernate.SQL]": DEBUG
+    "[org.springframework.security]": DEBUG
+    "[org.springframework.security.oauth2]": DEBUG
+    "[org.hibernate.type.descriptor.sql.BasicBinder]": TRACE # Shows parameter values in logs
+
+postgres:
+  version: "16-alpine" # Hardcoded for local use since env vars might be missing

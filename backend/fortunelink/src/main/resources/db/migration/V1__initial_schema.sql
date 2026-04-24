@@ -13,6 +13,16 @@
 -- ============================================================
  
 -- ============================================================
+-- USER, an account
+-- ============================================================
+CREATE TABLE users (
+    id          UUID        PRIMARY KEY,  -- matches auth.users.id from Supabase
+    email       VARCHAR(255) NOT NULL UNIQUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_sign_in_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
 -- PORTFOLIOS , aggregate root
 -- ============================================================
 CREATE TABLE portfolios (
@@ -59,7 +69,7 @@ CREATE TABLE accounts (
     closed_date             TIMESTAMPTZ,
     created_date            TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_updated_on         TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    version                 INTEGER         NOT NULL DEFAULT 0,
+    version                 BIGINT         NOT NULL DEFAULT 0,
  
     CONSTRAINT fk_account_portfolio
         FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE,
@@ -115,7 +125,7 @@ CREATE TABLE positions (
     cost_basis_currency     VARCHAR(3)      NOT NULL,
     first_acquired_at       TIMESTAMPTZ     NOT NULL,        -- AcbPosition.firstAcquiredAt
     last_modified_at        TIMESTAMPTZ     NOT NULL,        -- AcbPosition.lastModifiedAt
-    version                 INTEGER         NOT NULL DEFAULT 0,
+    version                 BIGINT         NOT NULL DEFAULT 0,
  
     CONSTRAINT fk_position_account
         FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
@@ -172,7 +182,7 @@ CREATE TABLE transactions (
     occurred_at             TIMESTAMPTZ     NOT NULL,
     related_transaction_id  UUID            REFERENCES transactions(id) ON DELETE SET NULL,
     created_at              TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    version                 INTEGER         NOT NULL DEFAULT 0,
+    version                 BIGINT         NOT NULL DEFAULT 0,
  
     CONSTRAINT fk_tx_portfolio
         FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE,
@@ -228,7 +238,7 @@ CREATE TABLE transaction_fees (
     exchange_rate_date          TIMESTAMPTZ,
  
     occurred_at                 TIMESTAMPTZ     NOT NULL,
-    version                     INTEGER         NOT NULL DEFAULT 0,
+    version                     BIGINT         NOT NULL DEFAULT 0,
  
     CONSTRAINT fk_fee_transaction
       FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
