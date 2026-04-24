@@ -15,7 +15,7 @@ CREATE TABLE net_worth_snapshots (
     snapshot_date            TIMESTAMPTZ     NOT NULL,
     created_at               TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
  
-    CONSTRAINT fk_snapshot_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+    CONSTRAINT fk_snapshot_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
  
 -- The primary access pattern: "give me 90 days of snapshots for user X"

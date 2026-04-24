@@ -2,16 +2,16 @@ spring:
   config:
     import: "optional:file:.env[.properties]"
   datasource:
-    url: jdbc:postgresql://localhost:5432/fortunelink_dev
+    url: ${LOCAL_DB_URL:jdbc:postgresql://localhost:5432/fortunelink_dev}
     username: ${LOCAL_DB_USERNAME:fortunelink_user}
-    password: ${LOCAL_DB_PASSWORD:changeme}
+    password: ${LOCAL_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
   jpa:
     hibernate:
-      ddl-auto: validate # matches prod, catch drift locally not in prod
+      ddl-auto: update # matches prod, catch drift locally not in prod
     show-sql: true
     properties:
       hibernate:
@@ -24,12 +24,13 @@ spring:
     default-schema: public
     locations: classpath:db/migration
     baseline-on-migrate: true
+    repair-on-migrate: true
     baseline-version: 0
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: # empty, local Redis has no auth
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   cache:
     type: redis
     redis:

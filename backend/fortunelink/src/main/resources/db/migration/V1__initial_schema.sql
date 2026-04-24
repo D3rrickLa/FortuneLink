@@ -19,7 +19,7 @@ CREATE TABLE users (
     id          UUID        PRIMARY KEY,  -- matches auth.users.id from Supabase
     email       VARCHAR(255) NOT NULL UNIQUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_sign_in_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    last_sign_in_at  TIMESTAMPTZ
 );
 
 -- ============================================================
@@ -38,7 +38,7 @@ CREATE TABLE portfolios (
     updated_at              TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version                 BIGINT          NOT NULL DEFAULT 0, -- optimistic locking
  
-    CONSTRAINT fk_portfolio_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_portfolio_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
  
     CONSTRAINT chk_portfolio_soft_delete CHECK (
         (deleted = FALSE AND deleted_at IS NULL  AND deleted_by IS NULL) OR
@@ -291,7 +291,8 @@ CREATE TABLE market_asset_info (
     sector              VARCHAR(100),
     description         TEXT,
     fetched_at          TIMESTAMPTZ     NOT NULL,
-    expires_at          TIMESTAMPTZ     NOT NULL             -- TTL managed by TransactionPurgeService
+    expires_at          TIMESTAMPTZ     NOT NULL,             -- TTL managed by TransactionPurgeService
+    version                     BIGINT         NOT NULL DEFAULT 0
 );
  
 COMMENT ON TABLE market_asset_info IS
