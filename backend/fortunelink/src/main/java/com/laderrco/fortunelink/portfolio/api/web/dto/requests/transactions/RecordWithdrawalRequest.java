@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Request body for recording a cash withdrawal.
  * <p>
@@ -19,12 +21,9 @@ import java.time.Instant;
  * currency must match the account's base currency. Cross-currency withdrawals are not supported ,
  * withdraw in the account's base currency only.
  */
+@Schema(description = "Request to record a manual cash withdrawal")
 public record RecordWithdrawalRequest(
-    @NotNull(message = "Amount is required") @DecimalMin(value = "0.01", message = "Withdrawal amount must be greater than zero") BigDecimal amount,
-
-    @NotBlank(message = "Currency is required") @Size(min = 3, max = 3, message = "Currency must be a 3-letter ISO-4217 code") String currency,
-
+    @Schema(example = "100.00") @NotNull @DecimalMin("0.01") BigDecimal amount,
+    @Schema(example = "USD") @NotBlank @Size(min = 3, max = 3) String currency,
     Instant transactionDate,
-
-    String notes) {
-}
+    String notes) {}

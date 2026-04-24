@@ -1,6 +1,9 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.responses;
 
 import com.laderrco.fortunelink.portfolio.application.views.RealizedGainsSummaryView;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
 /**
@@ -20,6 +23,7 @@ import java.util.List;
  * Cross-currency gains are already converted at transaction recording time using the ExchangeRate
  * applied when the trade was executed.
  */
+@Schema(description = "Aggregated capital gains report for a specific tax year")
 public record RealizedGainsSummaryResponse(
     List<RealizedGainItemResponse> items,
     MoneyResponse totalGains,

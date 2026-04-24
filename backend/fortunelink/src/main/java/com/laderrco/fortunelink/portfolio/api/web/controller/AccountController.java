@@ -53,7 +53,7 @@ public class AccountController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(summary = "Create a new account", description = "Initializes a new account within a portfolio with a specific currency and strategy.")
   @ApiResponse(responseCode = "201", description = "Account created successfully")
-  public AccountView createAccount(@PathVariable @Schema(example = "p-123") String portfolioId,
+  public AccountView createAccount(@PathVariable @Schema(example = "UUID") String portfolioId,
       @AuthenticatedUser UserId userId, @RequestBody @Valid CreateAccountRequest request) {
 
     return lifecycleService.createAccount(

@@ -1,8 +1,12 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto;
 
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.Instant;
 
+@Schema(description = "Financial summary of a specific account within a portfolio")
 public record AccountSummary(
     String id,
     String name,

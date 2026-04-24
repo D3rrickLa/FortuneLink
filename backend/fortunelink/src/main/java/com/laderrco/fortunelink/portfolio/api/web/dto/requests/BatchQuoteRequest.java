@@ -4,13 +4,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-/**
- * Request body for the batch quote endpoint.
- * <p>
- * Limited to 20 symbols server-side. The controller enforces this independently of this annotation
- * so there are two layers of protection , annotation handles the Spring validation pipeline,
- * controller handles the FMP quota concern.
- */
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Request body for retrieving multiple asset quotes in one call")
 public record BatchQuoteRequest(
-    @NotNull @Size(min = 1, max = 20, message = "Batch quote requests are limited to 20 symbols") List<String> symbols) {
+    @Schema(description = "List of ticker symbols (e.g., AAPL, BTC-USD)", example = "[\"AAPL\", \"MSFT\"]") @NotNull @Size(min = 1, max = 20, message = "Batch quote requests are limited to 20 symbols") List<String> symbols) {
 }
