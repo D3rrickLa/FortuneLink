@@ -3,44 +3,42 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
-export function LoginForm() {
+export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  async function handleLogin() {
-    setLoading(false);
+  async function handleRegister() {
+    setLoading(true);
     setError(null);
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({ email, password });
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-    router.push("/dashboard");
-    router.refresh(); // forces server components to re-render with new session
+    router.replace("/dashboard");
+    router.refresh();
   }
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Enter your email to sign in to your account</CardDescription>
+        <CardTitle className="text-2xl">Create your account</CardTitle>
+        <CardDescription>Register an email and enter a password to begin</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -48,31 +46,28 @@ export function LoginForm() {
             type="email"
             placeholder="m@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={e => setEmail(e.target.value)}
           />
         </div>
-
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
           <Input
             id="password"
             type="password"
+            placeholder="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={e => setPassword(e.target.value)}
           />
         </div>
-
-        <Button className="w-full" onClick={handleLogin} disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+        <Button onClick={handleRegister} disabled={loading}>
+          {loading ? "Creating account..." : "Create account"}
         </Button>
         <p className="text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link href="register" className="hover:text-primary underline underline-offset-4 transition-colors">
-            Register Here
+          Have an account?{" "}
+          <Link href="/login" className="hover:text-primary underline underline-offset-4 transition-colors">
+            Sign in
           </Link>
         </p>
       </CardContent>
     </Card>
   );
-
 }
