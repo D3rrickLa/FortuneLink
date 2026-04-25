@@ -32,30 +32,40 @@ export function LoginForm() {
   }
 
   return (
-    // <div className="flex flex-col gap-4 w-full max-w-sm">
-    //   <h2 className="text-2xl font-semibold">Welcome back</h2>
-    //   {error && <p className="text-sm text-destructive">{error}</p>}
-    //   <input
-    //     type="email"
-    //     placeholder="Email"
-    //     value={email}
-    //     onChange={e => setEmail(e.target.value)}
-    //     className="border rounded px-3 py-2"
-    //   />
-    //   <input
-    //     type="password"
-    //     placeholder="Password"
-    //     value={password}
-    //     onChange={e => setPassword(e.target.value)}
-    //     className="border rounded px-3 py-2"
-    //   />
-    //   <button onClick={handleLogin} disabled={loading}>
-    //     {loading ? "Signing in..." : "Sign in"}
-    //   </button>
-    //   <p className="text-sm text-center">
-    //     No account? <a href="/register" className="underline">Register</a>
-    //   </p>
-    // </div>
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl">Welcome back</CardTitle>
+        <CardDescription>Enter your email to sign in to your account</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="m@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        <Button className="w-full" onClick={handleLogin} disabled={loading}>
+          {loading ? "Signing in..." : "Sign in"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 
 }
