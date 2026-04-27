@@ -29,7 +29,7 @@ apiClient.interceptors.request.use(async (config) => {
   return Promise.reject(error);
 });
 
-// Centralised error handling, extend this as you learn what your backend returns
+// Centralised error handling, extend this as you learn what your backend returns + refresh
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
