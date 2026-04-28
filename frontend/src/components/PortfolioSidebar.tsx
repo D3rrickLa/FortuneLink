@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Briefcase, Plus, TrendingUp, TrendingDown, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { CreatePortfolioRequest } from "@/lib/api/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 export interface Portfolio {
   id: string;
@@ -20,24 +22,27 @@ interface PortfolioSidebarProps {
   portfolios: Portfolio[];
   activePortfolioId: string;
   onSelectPortfolio: (id: string) => void;
-  onCreatePortfolio: (name: string) => void;
+  onCreatePortfolio: (data: CreatePortfolioRequest) => void;
 }
 
-export function PortfolioSidebar({
-  portfolios,
-  activePortfolioId,
-  onSelectPortfolio,
-  onCreatePortfolio,
-}: PortfolioSidebarProps) {
+export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfolio, onCreatePortfolio }: PortfolioSidebarProps) {
   const [open, setOpen] = useState(false);
-  const [newPortfolioName, setNewPortfolioName] = useState('');
+  const [formData, setFormData] = useState<CreatePortfolioRequest>({
+    name: '',
+    description: '',
+    currency: 'USD',
+    createDefaultAccount: true,
+    defaultAccountType: 'TAXABLE_INVESTMENT',
+    defaultStrategy: 'ACB'
+  });
 
-  const handleCreatePortfolio = (e: React.FormEvent) => {
+  const handleCreatePortfolio = (e: React.SubmitEvent) => {
     e.preventDefault();
-    if (newPortfolioName.trim()) {
-      onCreatePortfolio(newPortfolioName.trim());
-      setNewPortfolioName('');
+    if (formData.name.trim()) {
+      onCreatePortfolio(formData); // Pass the whole object
       setOpen(false);
+      // Reset form
+      setFormData({ ...formData, name: '', description: '' });
     }
   };
 
@@ -56,6 +61,7 @@ export function PortfolioSidebar({
             <Briefcase className="h-5 w-5" />
             <h2 className="font-semibold">Portfolios</h2>
           </div>
+
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="ghost">
@@ -65,26 +71,61 @@ export function PortfolioSidebar({
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Create New Portfolio</DialogTitle>
-                <DialogDescription> Create a new portfolio</DialogDescription>
+                <DialogDescription>Set up a new investment portfolio and default account.</DialogDescription>
               </DialogHeader>
+
               <form onSubmit={handleCreatePortfolio} className="space-y-4">
+                {/* Portfolio Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="portfolio-name">Portfolio Name</Label>
+                  <Label htmlFor="name">Portfolio Name</Label>
                   <Input
-                    id="portfolio-name"
-                    placeholder="e.g., Long-term Growth"
-                    value={newPortfolioName}
-                    onChange={(e) => setNewPortfolioName(e.target.value)}
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Retirement"
                     required
                   />
-                  <Label htmlFor="position-strategy">Position Strategy</Label>
-                  <RadioGroup defaultValue="ACB" className="w-fit">
+                </div>
+
+                {/* Account Type Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="account-type">Default Account Type</Label>
+                  <Select
+                    value={formData.defaultAccountType}
+                    onValueChange={(val: any) => setFormData({ ...formData, defaultAccountType: val })}
+                  >
+                    <SelectTrigger id="account-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TAXABLE_INVESTMENT">Taxable Investment</SelectItem>
+                      <SelectItem value="TFSA">TFSA</SelectItem>
+                      <SelectItem value="RRSP">RRSP</SelectItem>
+                      <SelectItem value="MARGIN">Margin</SelectItem>
+                      <SelectItem value="ROTH_IRA">Roth IRA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Strategy Radio Group */}
+                <div className="space-y-2">
+                  <Label>Position Strategy</Label>
+                  <RadioGroup
+                    value={formData.defaultStrategy}
+                    onValueChange={(val: any) => setFormData({ ...formData, defaultStrategy: val })}
+                    className="flex flex-col gap-2"
+                  >
                     <div className="flex items-center gap-3">
-                      <RadioGroupItem value="ACB" id="r1" />
-                      <Label htmlFor="r1">Adjusted Cost Basis (ACB)</Label>
+                      <RadioGroupItem value="ACB" id="acb" />
+                      <Label htmlFor="acb" className="font-normal">Adjusted Cost Basis (ACB)</Label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value="FIFO" id="fifo" />
+                      <Label htmlFor="fifo" className="font-normal">First-In, First-Out (FIFO)</Label>
                     </div>
                   </RadioGroup>
                 </div>
+
                 <Button type="submit" className="w-full">
                   Create Portfolio
                 </Button>

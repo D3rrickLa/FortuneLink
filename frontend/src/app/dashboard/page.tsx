@@ -36,13 +36,7 @@ export default function DashboardPage() {
             portfolios={portfolios}
             activePortfolioId={activePortfolioId}
             onSelectPortfolio={setActivePortfolioId}
-            onCreatePortfolio={(name) =>
-              createPortfolio({
-                name,
-                currency: "USD",
-                createDefaultAccount: true,
-              })
-            }
+            onCreatePortfolio={(data) => createPortfolio(data)}
           />
         </aside>
 
