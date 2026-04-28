@@ -52,4 +52,13 @@ apiClient.interceptors.response.use(
   }
 );
 
+export const userIdParam = (userId: string) => ({ userId });
+
+export const newIdempotencyKey = () => {
+  return typeof window !== "undefined" 
+    ? crypto.randomUUID() 
+    : "server-side-key";
+};
+
 export default apiClient;
+

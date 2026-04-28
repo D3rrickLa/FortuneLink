@@ -1,116 +1,104 @@
 import apiClient from "@/lib/api/client";
 import type {
-  AccountView,
-  PageAccountView,
   CreateAccountRequest,
   UpdateAccountRequest,
-  PaginationParams,
+  AccountView,
+  PageAccountView,
+  RealizedGainsSummaryResponse,
 } from "@/lib/api/types";
 
-/**
- * NOTE on `userId`:
- * The backend expects a `userId` query parameter (UUID string) on most account
- * endpoints. This is separate from the JWT, the backend uses it for ownership
- * scoping. Pass `user.id` from the Supabase session here.
- *
- * If the backend changes to resolve userId purely from the JWT, remove these params.
- */
+const base = (portfolioId: string) =>
+  `/api/v1/portfolios/${portfolioId}/accounts`;
 
-export interface GetAllAccountsParams extends PaginationParams {
-  userId: string;
+// ─── Queries ──────────────────────────────────────────────────────────────────
+
+export async function getAllAccounts(
+  userId: string,
+  portfolioId: string,
+  page = 0,
+  size = 20
+): Promise<PageAccountView> {
+  const { data } = await apiClient.get<PageAccountView>(base(portfolioId), {
+    params: { ...userIdParam(userId), page, size },
+  });
+  return data;
 }
 
-export const accountService = {
-  /**
-   * Returns all accounts in the portfolio with live market valuation.
-   * Cache results where possible — this hits market data on every call.
-   */
-  getAll: async (
-    portfolioId: string,
-    params: GetAllAccountsParams
-  ): Promise<PageAccountView> => {
-    const { data } = await apiClient.get<PageAccountView>(
-      `/api/v1/portfolios/${portfolioId}/accounts`,
-      { params }
-    );
-    return data;
-  },
+export async function getAccount(
+  userId: string,
+  portfolioId: string,
+  accountId: string
+): Promise<AccountView> {
+  const { data } = await apiClient.get<AccountView>(
+    `${base(portfolioId)}/${accountId}`,
+    { params: userIdParam(userId) }
+  );
+  return data;
+}
 
-  /**
-   * Returns a single account with current positions and live market valuation.
-   */
-  getOne: async (
-    portfolioId: string,
-    accountId: string,
-    userId: string
-  ): Promise<AccountView> => {
-    const { data } = await apiClient.get<AccountView>(
-      `/api/v1/portfolios/${portfolioId}/accounts/${accountId}`,
-      { params: { userId } }
-    );
-    return data;
-  },
+export async function getRealizedGains(
+  portfolioId: string,
+  accountId: string,
+  opts: {
+    taxYear?: number;
+    symbol?: string;
+    page?: number;
+    size?: number;
+  } = {}
+): Promise<RealizedGainsSummaryResponse> {
+  const { data } = await apiClient.get<RealizedGainsSummaryResponse>(
+    `${base(portfolioId)}/${accountId}/realized-gains`,
+    { params: opts }
+  );
+  return data;
+}
 
-  /**
-   * Initializes a new account within a portfolio.
-   */
-  create: async (
-    portfolioId: string,
-    userId: string,
-    body: CreateAccountRequest
-  ): Promise<AccountView> => {
-    const { data } = await apiClient.post<AccountView>(
-      `/api/v1/portfolios/${portfolioId}/accounts`,
-      body,
-      { params: { userId } }
-    );
-    return data;
-  },
+// ─── Mutations ────────────────────────────────────────────────────────────────
 
-  /**
-   * Updates mutable properties of an account (currently just display name).
-   * Returns 204 — no response body.
-   */
-  update: async (
-    portfolioId: string,
-    accountId: string,
-    userId: string,
-    body: UpdateAccountRequest
-  ): Promise<void> => {
-    await apiClient.put(
-      `/api/v1/portfolios/${portfolioId}/accounts/${accountId}`,
-      body,
-      { params: { userId } }
-    );
-  },
+export async function createAccount(
+  userId: string,
+  portfolioId: string,
+  body: CreateAccountRequest
+): Promise<AccountView> {
+  const { data } = await apiClient.post<AccountView>(base(portfolioId), body, {
+    params: userIdParam(userId),
+  });
+  return data;
+}
 
-  /**
-   * Transitions account to CLOSED state.
-   * Requires zero cash balance and no open positions — will 409 otherwise.
-   */
-  close: async (
-    portfolioId: string,
-    accountId: string,
-    userId: string
-  ): Promise<void> => {
-    await apiClient.delete(
-      `/api/v1/portfolios/${portfolioId}/accounts/${accountId}`,
-      { params: { userId } }
-    );
-  },
+export async function updateAccount(
+  userId: string,
+  portfolioId: string,
+  accountId: string,
+  body: UpdateAccountRequest
+): Promise<void> {
+  await apiClient.put(
+    `${base(portfolioId)}/${accountId}`,
+    body,
+    { params: userIdParam(userId) }
+  );
+}
 
-  /**
-   * Transitions a CLOSED account back to ACTIVE, preserving all history.
-   */
-  reopen: async (
-    portfolioId: string,
-    accountId: string,
-    userId: string
-  ): Promise<void> => {
-    await apiClient.patch(
-      `/api/v1/portfolios/${portfolioId}/accounts/${accountId}/reopen`,
-      null,
-      { params: { userId } }
-    );
-  },
-};
+/** Transitions the account to CLOSED. Requires zero balance + no positions. */
+export async function closeAccount(
+  userId: string,
+  portfolioId: string,
+  accountId: string
+): Promise<void> {
+  await apiClient.delete(`${base(portfolioId)}/${accountId}`, {
+    params: userIdParam(userId),
+  });
+}
+
+/** Re-activates a CLOSED account, preserving all transaction history. */
+export async function reopenAccount(
+  userId: string,
+  portfolioId: string,
+  accountId: string
+): Promise<void> {
+  await apiClient.patch(
+    `${base(portfolioId)}/${accountId}/reopen`,
+    null,
+    { params: userIdParam(userId) }
+  );
+}
