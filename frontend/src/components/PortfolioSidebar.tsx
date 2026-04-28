@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Briefcase, Plus, TrendingUp, TrendingDown, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 export interface Portfolio {
   id: string;
@@ -64,6 +65,7 @@ export function PortfolioSidebar({
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Create New Portfolio</DialogTitle>
+                <DialogDescription> Create a new portfolio</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreatePortfolio} className="space-y-4">
                 <div className="space-y-2">
@@ -75,6 +77,13 @@ export function PortfolioSidebar({
                     onChange={(e) => setNewPortfolioName(e.target.value)}
                     required
                   />
+                  <Label htmlFor="position-strategy">Position Strategy</Label>
+                  <RadioGroup defaultValue="ACB" className="w-fit">
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value="ACB" id="r1" />
+                      <Label htmlFor="r1">Adjusted Cost Basis (ACB)</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 <Button type="submit" className="w-full">
                   Create Portfolio

@@ -36,7 +36,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     BucketConfiguration config;
     String limitType;
-
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        return true; // Let the preflight request reach the CORS config
+    }
     if (uri.startsWith("/api/v1/market-data/price")) {
       config = marketDataPriceConfig;
       limitType = "market";
