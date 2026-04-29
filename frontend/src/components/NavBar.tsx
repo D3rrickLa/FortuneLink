@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useUserDisplay } from "@/features/auth/hooks/useUserDisplay";
 
 interface NavbarProps {
   onLogout: () => void;
@@ -26,13 +27,12 @@ interface NavbarProps {
 }
 
 export function Navbar({ onLogout, onOpenSettings }: NavbarProps) {
+  const { displayName, displayEmail, initials } = useUserDisplay();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
-
-        {/* Left Side: Logo & Navigation */}
         <div className="flex items-center gap-8">
-          {/* Logo from Figma */}
           <Link href="/dashboard" className="flex items-center gap-2 transition-opacity hover:opacity-90">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <span className="font-bold text-primary-foreground">P</span>
@@ -51,20 +51,18 @@ export function Navbar({ onLogout, onOpenSettings }: NavbarProps) {
           </NavigationMenu>
         </div>
 
-        {/* Right Side: Actions (Bell + Profile) */}
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* User Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex h-auto items-center gap-3 rounded-lg p-2 hover:bg-accent">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    JD
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
-                  <p className="text-xs text-muted-foreground">john@example.com</p>
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
+                  <p className="text-xs text-muted-foreground">{displayEmail}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -91,7 +89,6 @@ export function Navbar({ onLogout, onOpenSettings }: NavbarProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
       </div>
     </header>
   );

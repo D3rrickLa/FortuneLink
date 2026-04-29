@@ -18,6 +18,7 @@ import Link from "next/link";
 export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,7 +29,13 @@ export function RegisterForm() {
     setError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email, password, options: {
+        data: {
+          full_name: fullName // This goes into user_metadata
+        }
+      }
+    });
 
     if (error) {
       setError(error.message);

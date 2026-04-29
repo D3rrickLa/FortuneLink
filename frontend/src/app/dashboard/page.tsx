@@ -14,11 +14,13 @@ import { PerformanceChart } from "@/features/portfolio/components/PerformanceCha
 import { AllocationChart } from "@/features/portfolio/components/AllocationChart";
 import { TransactionHistory } from "@/features/portfolio/components/TransactionHistory";
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
+import { useAddTransaction } from "@/features/portfolio/hooks/useAddTransaction";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState('all');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { portfolios, isLoading, createPortfolio } = usePortfolios();
+  const { mutate: addTransaction } = useAddTransaction();
   const { logout } = useLogout();
 
   const isAllPortfoliosView = activePortfolioId === 'all';
@@ -39,7 +41,12 @@ export default function DashboardPage() {
   const handleCreatePortfolio = (data: { name: string; description?: string; currency: string; createDefaultAccount: boolean; defaultAccountType?: "FHSA" | "TFSA" | "RRSP" | "RESP" | "ROTH_IRA" | "SOLO_401K" | "CHEQUING" | "SAVINGS" | "MARGIN" | "TAXABLE_INVESTMENT" | "NON_REGISTERED_INVESTMENT"; defaultStrategy?: "ACB" | "FIFO" | "LIFO" | "SPECIFIC_ID"; }) => createPortfolio(data);
   const handleAddTransaction = (data: any) => {
     console.log("Adding transaction to:", activePortfolioId, data);
-    // Add your mutation logic here
+    // Ensure you are passing the activePortfolioId so the 
+    // transaction knows which portfolio it belongs to
+    addTransaction({
+      ...data,
+      portfolio_id: activePortfolioId,
+    });
   };
 
   if (isLoading) {
@@ -88,6 +95,7 @@ export default function DashboardPage() {
                   <AddTransactionDialog onAddTransaction={handleAddTransaction} />
                 )}
               </div>
+
               {/* Key Stats Grid */}
               <PortfolioOverview
                 totalValue={totalValue}
