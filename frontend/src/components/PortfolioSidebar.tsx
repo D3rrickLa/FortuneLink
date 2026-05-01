@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Briefcase, Plus, TrendingUp, TrendingDown, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { CreatePortfolioRequest } from "@/lib/api/types";
+import { CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 export interface Portfolio {
@@ -18,16 +18,35 @@ export interface Portfolio {
   gainLossPercent: number;
 }
 
+export interface Account {
+  id: string;
+  name: string;
+  totalValue: number;
+  gainLoss: number;
+  gainLossPercent: number;
+}
+
 interface PortfolioSidebarProps {
   portfolios: Portfolio[];
   activePortfolioId: string;
+  activeAccountId?: string | null;
   onSelectPortfolio: (id: string) => void;
+  onSelectAccount: (portfolioId: string, accountId: string) => void;
   onCreatePortfolio: (data: CreatePortfolioRequest) => void;
+  onCreateAccount: (data: CreateAccountRequest) => void;
 }
 
-export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfolio, onCreatePortfolio }: PortfolioSidebarProps) {
-  const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState<CreatePortfolioRequest>({
+export function PortfolioSidebar({
+  portfolios,
+  activePortfolioId,
+  activeAccountId,
+  onSelectPortfolio,
+  onSelectAccount,
+  onCreatePortfolio,
+  onCreateAccount,
+}: PortfolioSidebarProps) {
+  const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
+  const [portfolioFormData, setPortfolioFormData] = useState<CreatePortfolioRequest>({
     name: '',
     description: '',
     currency: 'USD',
@@ -35,15 +54,48 @@ export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfo
     defaultAccountType: 'TAXABLE_INVESTMENT',
     defaultStrategy: 'ACB'
   });
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [accountFormData, setAccountFormData] = useState<CreateAccountRequest>({
+    accountName: '',
+    accountType: 'CHEQUING',
+    strategy: 'ACB',
+    currency: 'USD'
+  });
+  const [selectedPortfolioForAccount, setSelectedPortfolioForAccount] = useState<string>('');
+  const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set(portfolios.map(p => p.id)));
 
   const handleCreatePortfolio = (e: React.SubmitEvent) => {
     e.preventDefault();
-    if (formData.name.trim()) {
-      onCreatePortfolio(formData); // Pass the whole object
-      setOpen(false);
+    if (portfolioFormData.name.trim()) {
+      onCreatePortfolio(portfolioFormData); // Pass the whole object
+      setPortfolioDialogOpen(false);
       // Reset form
-      setFormData({ ...formData, name: '', description: '' });
+      setPortfolioFormData({ ...portfolioFormData, name: '', description: '' });
     }
+  };
+
+  const handleCreateAccount = (e: React.SubmitEvent) => {
+    e.preventDefault();
+    if (accountFormData.accountName.trim() && selectedPortfolioForAccount) {
+      onCreateAccount(accountFormData);
+      setAccountDialogOpen(false);
+      setAccountFormData({ ...accountFormData, accountName: '', accountType: 'CHEQUING', strategy: 'ACB', currency: '' });
+    }
+  };
+
+  const togglePortfolioExpand = (portfolioId: string) => {
+    const newExpanded = new Set(expandedPortfolios);
+    if (newExpanded.has(portfolioId)) {
+      newExpanded.delete(portfolioId);
+    } else {
+      newExpanded.add(portfolioId);
+    }
+    setExpandedPortfolios(newExpanded);
+  };
+
+  const openAccountDialog = (portfolioId: string) => {
+    setSelectedPortfolioForAccount(portfolioId);
+    setAccountDialogOpen(true);
   };
 
   // Calculate combined totals
@@ -62,7 +114,7 @@ export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfo
             <h2 className="font-semibold">Portfolios</h2>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={portfolioDialogOpen} onOpenChange={setPortfolioDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="ghost">
                 <Plus className="h-4 w-4" />
@@ -80,8 +132,8 @@ export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfo
                   <Label htmlFor="name">Portfolio Name</Label>
                   <Input
                     id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={portfolioFormData.name}
+                    onChange={(e) => setPortfolioFormData({ ...portfolioFormData, name: e.target.value })}
                     placeholder="e.g., Retirement"
                     required
                   />
@@ -91,8 +143,8 @@ export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfo
                 <div className="space-y-2">
                   <Label htmlFor="account-type">Default Account Type</Label>
                   <Select
-                    value={formData.defaultAccountType}
-                    onValueChange={(val: any) => setFormData({ ...formData, defaultAccountType: val })}
+                    value={portfolioFormData.defaultAccountType}
+                    onValueChange={(val: any) => setPortfolioFormData({ ...portfolioFormData, defaultAccountType: val })}
                   >
                     <SelectTrigger id="account-type">
                       <SelectValue placeholder="Select type" />
@@ -111,8 +163,8 @@ export function PortfolioSidebar({ portfolios, activePortfolioId, onSelectPortfo
                 <div className="space-y-2">
                   <Label>Position Strategy</Label>
                   <RadioGroup
-                    value={formData.defaultStrategy}
-                    onValueChange={(val: any) => setFormData({ ...formData, defaultStrategy: val })}
+                    value={portfolioFormData.defaultStrategy}
+                    onValueChange={(val: any) => setPortfolioFormData({ ...portfolioFormData, defaultStrategy: val })}
                     className="flex flex-col gap-2"
                   >
                     <div className="flex items-center gap-3">

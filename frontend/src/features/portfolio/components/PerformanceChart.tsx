@@ -123,7 +123,7 @@ export function PerformanceChart({ data = [] }: PerformanceChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[300px]" style={{ width: '100%', height: '400px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" />

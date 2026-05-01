@@ -33,7 +33,7 @@ export function AllocationChart({ data = [], portfolioId = 'all' }: AllocationCh
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[300px]" style={{ width: '100%', height: '400px' }}>
           {/* Ensure there is data to render to avoid Recharts errors */}
           {data && data.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">

@@ -18,6 +18,7 @@ import { useAddTransaction } from "@/features/portfolio/hooks/useAddTransaction"
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState('all');
+  const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { portfolios, isLoading, createPortfolio } = usePortfolios();
   const { mutate: addTransaction } = useAddTransaction();
@@ -48,6 +49,16 @@ export default function DashboardPage() {
       portfolio_id: activePortfolioId,
     });
   };
+  // Update selection handler to clear account if portfolio changes
+  const handleSelectPortfolio = (id: string) => {
+    setActivePortfolioId(id);
+    setActiveAccountId(null);
+  };
+
+  const handleSelectAccount = (portfolioId: string, accountId: string) => {
+    setActivePortfolioId(portfolioId);
+    setActiveAccountId(accountId);
+  };
 
   if (isLoading) {
     return (
@@ -70,7 +81,9 @@ export default function DashboardPage() {
           <PortfolioSidebar
             portfolios={portfolios}
             activePortfolioId={activePortfolioId}
-            onSelectPortfolio={setActivePortfolioId}
+            activeAccountId={activeAccountId} 
+            onSelectPortfolio={handleSelectPortfolio}
+            onSelectAccount={handleSelectAccount}
             onCreatePortfolio={handleCreatePortfolio}
           />
         </aside>
@@ -91,7 +104,7 @@ export default function DashboardPage() {
                       : 'Track your investments and cash flow'}
                   </p>
                 </div>
-                {!isAllPortfoliosView && (
+                {!activeAccountId && (
                   <AddTransactionDialog onAddTransaction={handleAddTransaction} />
                 )}
               </div>
