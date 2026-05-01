@@ -10,7 +10,7 @@ name: Java Spring Backend CI with Maven
 
 on:
   push:
-    branches: [ "main", "cleanup" ]
+    branches: [ "main", "feature/front_end_v4" ]
   pull_request:
     branches: [ "main" ]
 
