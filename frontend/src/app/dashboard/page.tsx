@@ -16,14 +16,30 @@ import { TransactionHistory } from "@/features/portfolio/components/TransactionH
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
 import { useAddTransaction } from "@/features/portfolio/hooks/useAddTransaction";
 import { CreateAccountRequest } from "@/lib/api/types";
+import { createAccount } from "@/features/portfolio/services/account.services";
+import { useAuth } from "@/features/auth/hooks/userAuth";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { toast } from "sonner";
+import { useAccount } from "@/features/portfolio/queries/useAccount";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState('all');
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Hooks
   const { portfolios, isLoading, createPortfolio } = usePortfolios();
   const { mutate: addTransaction } = useAddTransaction();
   const { logout } = useLogout();
+  const { user } = useAuth(); // NEW: Get user context
+  const queryClient = useQueryClient(); // NEW: Access the query cache
+
+  const { data: activeAccountData } = useAccount(
+    activePortfolioId,
+    activeAccountId ?? "",
+    { enabled: Boolean(activeAccountId) }
+  );
 
   const isAllPortfoliosView = activePortfolioId === 'all';
 
@@ -31,26 +47,48 @@ export default function DashboardPage() {
     return portfolios?.find((p) => p.id == activePortfolioId);
   }, [portfolios, activePortfolioId]);
 
-  // Placeholder logic for your "Figma" stats
-  // In production, these should come from your API or a useMemo calculation
   const totalValue = isAllPortfoliosView ? 125000.50 : activePortfolio?.totalValue || 0;
   const cashBalance = activePortfolio?.totalValue || 5000;
   const totalGainLoss = 1240.20;
   const totalGainLossPercent = 5.2;
 
-  // 3. Handlers
+  // --- HANDLERS ---
   const handleOpenSettings = () => setSettingsOpen(true);
-  const handleCreatePortfolio = (data: { name: string; description?: string; currency: string; createDefaultAccount: boolean; defaultAccountType?: "FHSA" | "TFSA" | "RRSP" | "RESP" | "ROTH_IRA" | "SOLO_401K" | "CHEQUING" | "SAVINGS" | "MARGIN" | "TAXABLE_INVESTMENT" | "NON_REGISTERED_INVESTMENT"; defaultStrategy?: "ACB" | "FIFO" | "LIFO" | "SPECIFIC_ID"; }) => createPortfolio(data);
+
+  const handleCreatePortfolio = (data: any) => createPortfolio(data);
+
+  // --- NEW: Account Creation Logic ---
+  const handleCreateAccount = async (portfolioId: string, data: CreateAccountRequest) => {
+    if (!user) {
+      toast.error("You must be logged in to create an account");
+      return;
+    }
+
+    try {
+      await createAccount(user.id, portfolioId, data);
+
+      // Invalidate the specific query so the sidebar updates automatically
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.all(portfolioId),
+      });
+
+      // Optional: Also invalidate portfolios if the count/total changes
+      queryClient.invalidateQueries({ queryKey: queryKeys.portfolios.all() });
+
+      toast.success("Account created successfully");
+    } catch (error) {
+      toast.error("Failed to create account");
+      console.error(error);
+    }
+  };
+
   const handleAddTransaction = (data: any) => {
-    console.log("Adding transaction to:", activePortfolioId, data);
-    // Ensure you are passing the activePortfolioId so the 
-    // transaction knows which portfolio it belongs to
     addTransaction({
       ...data,
       portfolio_id: activePortfolioId,
     });
   };
-  // Update selection handler to clear account if portfolio changes
+
   const handleSelectPortfolio = (id: string) => {
     setActivePortfolioId(id);
     setActiveAccountId(null);
@@ -75,43 +113,44 @@ export default function DashboardPage() {
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <Toaster />
 
-
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-80 flex-shirnk-0 border-r bg-card">
+        <aside className="w-80 flex-shrink-0 border-r bg-card">
           <PortfolioSidebar
             portfolios={portfolios}
             activePortfolioId={activePortfolioId}
             activeAccountId={activeAccountId}
             onSelectPortfolio={handleSelectPortfolio}
             onSelectAccount={handleSelectAccount}
-            onCreatePortfolio={handleCreatePortfolio} onCreateAccount={function (data: CreateAccountRequest): void {
-              throw new Error("Function not implemented.");
-            } }          />
+            onCreatePortfolio={handleCreatePortfolio}
+            onCreateAccount={handleCreateAccount} // NEW PROB ADDED HERE
+          />
         </aside>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-auto bg-slate-50/30">
           <div className="p-4 md:p-8">
-            <div className="mx-auto ax-w-7xl space-y-8">
-              {/* Header Section */}
+            <div className="mx-auto max-w-7xl space-y-8">
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
-                    {isAllPortfoliosView ? 'All Portfolios' : activePortfolio?.name}
+                    {activeAccountId
+                      ? (activeAccountData?.name ?? "Account View")
+                      : isAllPortfoliosView
+                        ? "All Portfolios"
+                        : activePortfolio?.name}
                   </h1>
                   <p className="text-muted-foreground">
-                    {isAllPortfoliosView
-                      ? 'Consolidated view of all your investments'
-                      : 'Track your investments and cash flow'}
+                    {activeAccountId
+                      ? "Manage transactions for this account"
+                      : isAllPortfoliosView
+                        ? "Consolidated view of all your investments"
+                        : "Track your investments and cash flow"}
                   </p>
                 </div>
-                {!activeAccountId && (
+                {activeAccountId && (
                   <AddTransactionDialog onAddTransaction={handleAddTransaction} />
                 )}
               </div>
 
-              {/* Key Stats Grid */}
               <PortfolioOverview
                 totalValue={totalValue}
                 cashBalance={cashBalance}
@@ -119,13 +158,11 @@ export default function DashboardPage() {
                 totalGainLossPercent={totalGainLossPercent}
               />
 
-              {/* Charts Grid */}
               <div className="grid gap-8 lg:grid-cols-2">
                 <PerformanceChart portfolioId={activePortfolioId} />
                 <AllocationChart portfolioId={activePortfolioId} />
               </div>
 
-              {/* Detailed Tables */}
               <Tabs defaultValue="holdings" className="space-y-4">
                 <TabsList className="grid w-full max-w-md grid-cols-2">
                   <TabsTrigger value="holdings">Stock Holdings</TabsTrigger>

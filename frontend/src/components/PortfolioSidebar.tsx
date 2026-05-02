@@ -1,14 +1,53 @@
+"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Briefcase, Plus, TrendingUp, TrendingDown, LayoutGrid, ChevronDown, ChevronRight, Building2 } from "lucide-react";
+import {
+  Briefcase,
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  LayoutGrid,
+  ChevronDown,
+  ChevronRight,
+  Building2,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { useAccounts } from "@/features/portfolio/queries/useAccount";
+
+// ─── UI-layer types ───────────────────────────────────────────────────────────
+
+export interface Account {
+  id: string;
+  name: string;
+  type: string;
+  totalValue: number;
+  cashBalance: number;
+  // Gain/loss not available from the account list endpoint.
+  // Future: wire up realized gains or a dedicated performance endpoint.
+  gainLoss: number;
+  gainLossPercent: number;
+}
 
 export interface Portfolio {
   id: string;
@@ -16,16 +55,11 @@ export interface Portfolio {
   totalValue: number;
   gainLoss: number;
   gainLossPercent: number;
+  // Always initialized as [], accounts are fetched lazily inside PortfolioItem.
   accounts: Account[];
 }
 
-export interface Account {
-  id: string;
-  name: string;
-  totalValue: number;
-  gainLoss: number;
-  gainLossPercent: number;
-}
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface PortfolioSidebarProps {
   portfolios: Portfolio[];
@@ -34,8 +68,187 @@ interface PortfolioSidebarProps {
   onSelectPortfolio: (id: string) => void;
   onSelectAccount: (portfolioId: string, accountId: string) => void;
   onCreatePortfolio: (data: CreatePortfolioRequest) => void;
-  onCreateAccount: (data: CreateAccountRequest) => void;
+  onCreateAccount: (portfolioId: string, data: CreateAccountRequest) => void;
 }
+
+// ─── PortfolioItem ─────────────────────────────────────────────────────────────
+// Fetches its own accounts lazily, only when the row is expanded.
+// This avoids N+1 requests on mount and keeps the sidebar snappy.
+
+interface PortfolioItemProps {
+  portfolio: Portfolio;
+  isActive: boolean;
+  activeAccountId?: string | null;
+  onSelectPortfolio: (id: string) => void;
+  onSelectAccount: (portfolioId: string, accountId: string) => void;
+  onAddAccount: (portfolioId: string) => void;
+}
+
+function PortfolioItem({
+  portfolio,
+  isActive,
+  activeAccountId,
+  onSelectPortfolio,
+  onSelectAccount,
+  onAddAccount,
+}: PortfolioItemProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Only fires when expanded — React Query will cache this after the first call.
+  const { data: accountsPage, isLoading: accountsLoading } = useAccounts(
+    portfolio.id,
+    0,
+    50,
+    { enabled: expanded }
+  );
+
+  const accounts = accountsPage?.content ?? [];
+  const isPositive = portfolio.gainLoss >= 0;
+
+  return (
+    <div className="space-y-1">
+      <div className={cn("w-full rounded-lg p-3 transition-colors", isActive && "bg-muted")}>
+        <div className="flex items-center justify-between gap-2">
+          {/* Expand/collapse toggle */}
+          <button
+            onClick={() => setExpanded((prev) => !prev)}
+            className="flex items-center gap-1 hover:opacity-70 transition-opacity"
+            aria-label={expanded ? "Collapse accounts" : "Expand accounts"}
+          >
+            {expanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+
+          {/* Portfolio row — click to select */}
+          <button
+            onClick={() => {
+              onSelectPortfolio(portfolio.id);
+              setExpanded(true); // auto-expand on select
+            }}
+            className="flex-1 text-left"
+          >
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{portfolio.name}</span>
+                {isActive && !activeAccountId && (
+                  <div className="h-2 w-2 rounded-full bg-blue-600" />
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                ${portfolio.totalValue.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+              <div
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  isPositive ? "text-green-600" : "text-red-600"
+                )}
+              >
+                {isPositive ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span>
+                  {isPositive ? "+" : ""}$
+                  {Math.abs(portfolio.gainLoss).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                <span className="text-muted-foreground">
+                  ({isPositive ? "+" : ""}{portfolio.gainLossPercent.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+          </button>
+
+          {/* Add account button */}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 shrink-0"
+            onClick={() => onAddAccount(portfolio.id)}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Accounts list — only rendered when expanded */}
+      {expanded && (
+        <div className="ml-4 space-y-1 border-l-2 border-muted pl-2">
+          {accountsLoading ? (
+            <div className="flex items-center gap-2 p-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Loading accounts...
+            </div>
+          ) : accounts.length === 0 ? (
+            <div className="p-2 text-xs italic text-muted-foreground">
+              No accounts, add one with the + button
+            </div>
+          ) : (
+            accounts.map((account) => {
+              const accountId = account.accountId?.id ?? "";
+              const isAccountActive = accountId === activeAccountId;
+              const totalValue = account.totalValue?.amount ?? 0;
+              const cashBalance = account.cashBalance?.amount ?? 0;
+
+              return (
+                <button
+                  key={accountId}
+                  onClick={() => onSelectAccount(portfolio.id, accountId)}
+                  className={cn(
+                    "w-full rounded-lg p-2 text-left transition-colors hover:bg-muted",
+                    isAccountActive && "bg-muted border-l-2 border-blue-600"
+                  )}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className="text-sm font-medium truncate">
+                        {account.name ?? "Unnamed Account"}
+                      </span>
+                      {isAccountActive && (
+                        <div className="ml-auto h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {account.type ?? "—"} · {account.baseCurrency?.code ?? "—"}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        ${totalValue.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    {cashBalance > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Cash: ${cashBalance.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PortfolioSidebar ─────────────────────────────────────────────────────────
 
 export function PortfolioSidebar({
   portfolios,
@@ -48,43 +261,42 @@ export function PortfolioSidebar({
 }: PortfolioSidebarProps) {
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
-  const [portfolioFormData, setPortfolioFormData] = useState<CreatePortfolioRequest>({
-    name: '', description: '', currency: 'USD', createDefaultAccount: true,
-    defaultAccountType: 'TAXABLE_INVESTMENT', defaultStrategy: 'ACB'
-  });
-  const [accountFormData, setAccountFormData] = useState<CreateAccountRequest>({
-    accountName: '', accountType: 'CHEQUING', strategy: 'ACB', currency: 'USD'
-  });
-  const [selectedPortfolioForAccount, setSelectedPortfolioForAccount] = useState<string>('');
-  const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set(portfolios.map(p => p.id)));
+  const [selectedPortfolioForAccount, setSelectedPortfolioForAccount] =
+    useState<string>("");
 
-  const handleCreatePortfolio = (e: React.SubmitEvent) => {
+  const [portfolioFormData, setPortfolioFormData] =
+    useState<CreatePortfolioRequest>({
+      name: "",
+      description: "",
+      currency: "CAD",
+      createDefaultAccount: true,
+      defaultAccountType: "TAXABLE_INVESTMENT",
+      defaultStrategy: "ACB",
+    });
+
+  const [accountFormData, setAccountFormData] = useState<CreateAccountRequest>({
+    accountName: "",
+    accountType: "TAXABLE_INVESTMENT",
+    strategy: "ACB",
+    currency: "CAD",
+  });
+
+  const handleCreatePortfolio = (e: React.FormEvent) => {
     e.preventDefault();
     if (portfolioFormData.name.trim()) {
-      onCreatePortfolio(portfolioFormData); // Pass the whole object
+      onCreatePortfolio(portfolioFormData);
       setPortfolioDialogOpen(false);
-      // Reset form
-      setPortfolioFormData({ ...portfolioFormData, name: '', description: '' });
+      setPortfolioFormData((prev) => ({ ...prev, name: "", description: "" }));
     }
   };
 
-  const handleCreateAccount = (e: React.SubmitEvent) => {
+  const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (accountFormData.accountName.trim() && selectedPortfolioForAccount) {
-      onCreateAccount(accountFormData);
+      onCreateAccount(selectedPortfolioForAccount, accountFormData);
       setAccountDialogOpen(false);
-      setAccountFormData({ ...accountFormData, accountName: '', accountType: 'CHEQUING', strategy: 'ACB', currency: '' });
+      setAccountFormData((prev) => ({ ...prev, accountName: "" }));
     }
-  };
-
-  const togglePortfolioExpand = (portfolioId: string) => {
-    const newExpanded = new Set(expandedPortfolios);
-    if (newExpanded.has(portfolioId)) {
-      newExpanded.delete(portfolioId);
-    } else {
-      newExpanded.add(portfolioId);
-    }
-    setExpandedPortfolios(newExpanded);
   };
 
   const openAccountDialog = (portfolioId: string) => {
@@ -92,17 +304,19 @@ export function PortfolioSidebar({
     setAccountDialogOpen(true);
   };
 
-
-
-  // Calculate combined totals
   const combinedValue = portfolios.reduce((sum, p) => sum + p.totalValue, 0);
   const combinedGainLoss = portfolios.reduce((sum, p) => sum + p.gainLoss, 0);
-  const combinedGainLossPercent = portfolios.reduce((sum, p) => sum + (p.gainLoss), 0) /
-    portfolios.reduce((sum, p) => sum + (p.totalValue - p.gainLoss), 0) * 100;
+  const costBasis = portfolios.reduce(
+    (sum, p) => sum + (p.totalValue - p.gainLoss),
+    0
+  );
+  const combinedGainLossPercent =
+    costBasis > 0 ? (combinedGainLoss / costBasis) * 100 : 0;
   const isCombinedPositive = combinedGainLoss >= 0;
 
   return (
     <div className="flex h-full flex-col border-r bg-muted/10">
+      {/* Header */}
       <div className="border-b p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -119,56 +333,97 @@ export function PortfolioSidebar({
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Create New Portfolio</DialogTitle>
-                <DialogDescription>Set up a new investment portfolio and default account.</DialogDescription>
+                <DialogDescription>
+                  Set up a new investment portfolio with a default account.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreatePortfolio} className="space-y-4">
-                {/* Portfolio Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">Portfolio Name</Label>
+                  <Label htmlFor="port-name">Portfolio Name</Label>
                   <Input
-                    id="name"
+                    id="port-name"
                     value={portfolioFormData.name}
-                    onChange={(e) => setPortfolioFormData({ ...portfolioFormData, name: e.target.value })}
+                    onChange={(e) =>
+                      setPortfolioFormData((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
                     placeholder="e.g., Retirement"
                     required
                   />
                 </div>
 
-                {/* Account Type Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="port-currency">Base Currency</Label>
+                  <Select
+                    value={portfolioFormData.currency}
+                    onValueChange={(val) =>
+                      setPortfolioFormData((prev) => ({ ...prev, currency: val }))
+                    }
+                  >
+                    <SelectTrigger id="port-currency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CAD">CAD</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="account-type">Default Account Type</Label>
                   <Select
                     value={portfolioFormData.defaultAccountType}
-                    onValueChange={(val: any) => setPortfolioFormData({ ...portfolioFormData, defaultAccountType: val })}
+                    onValueChange={(val) =>
+                      setPortfolioFormData((prev) => ({
+                        ...prev,
+                        defaultAccountType: val as CreatePortfolioRequest["defaultAccountType"],
+                      }))
+                    }
                   >
                     <SelectTrigger id="account-type">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="TAXABLE_INVESTMENT">Taxable Investment</SelectItem>
+                      <SelectItem value="NON_REGISTERED_INVESTMENT">Non-Registered</SelectItem>
                       <SelectItem value="TFSA">TFSA</SelectItem>
                       <SelectItem value="RRSP">RRSP</SelectItem>
+                      <SelectItem value="FHSA">FHSA</SelectItem>
+                      <SelectItem value="RESP">RESP</SelectItem>
                       <SelectItem value="MARGIN">Margin</SelectItem>
                       <SelectItem value="ROTH_IRA">Roth IRA</SelectItem>
+                      <SelectItem value="CHEQUING">Chequing</SelectItem>
+                      <SelectItem value="SAVINGS">Savings</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Strategy Radio Group */}
                 <div className="space-y-2">
-                  <Label>Position Strategy</Label>
+                  <Label>Cost Basis Strategy</Label>
                   <RadioGroup
                     value={portfolioFormData.defaultStrategy}
-                    onValueChange={(val: any) => setPortfolioFormData({ ...portfolioFormData, defaultStrategy: val })}
+                    onValueChange={(val) =>
+                      setPortfolioFormData((prev) => ({
+                        ...prev,
+                        defaultStrategy: val as CreatePortfolioRequest["defaultStrategy"],
+                      }))
+                    }
                     className="flex flex-col gap-2"
                   >
                     <div className="flex items-center gap-3">
                       <RadioGroupItem value="ACB" id="acb" />
-                      <Label htmlFor="acb" className="font-normal">Adjusted Cost Basis (ACB)</Label>
+                      <Label htmlFor="acb" className="font-normal">
+                        Adjusted Cost Basis (ACB) — recommended for Canadians
+                      </Label>
                     </div>
                     <div className="flex items-center gap-3">
                       <RadioGroupItem value="FIFO" id="fifo" />
-                      <Label htmlFor="fifo" className="font-normal">First-In, First-Out (FIFO)</Label>
+                      <Label htmlFor="fifo" className="font-normal">
+                        First-In, First-Out (FIFO)
+                      </Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -179,40 +434,18 @@ export function PortfolioSidebar({
               </form>
             </DialogContent>
           </Dialog>
-
-          <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create New Account</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateAccount} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="account-name">Account Name</Label>
-                  <Input
-                    id="account-name"
-                    placeholder="e.g., Roth IRA"
-                    value={accountFormData.accountName}
-                    onChange={(e) => setAccountFormData({ ...accountFormData, accountName: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Create Account
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
+      {/* List */}
       <div className="flex-1 overflow-auto p-2">
         <div className="space-y-1">
-          {/* All Portfolios Overview */}
+          {/* All Portfolios aggregate row */}
           <button
-            onClick={() => onSelectPortfolio('all')}
+            onClick={() => onSelectPortfolio("all")}
             className={cn(
               "w-full rounded-lg border-2 border-dashed p-3 text-left transition-colors hover:bg-muted",
-              activePortfolioId === 'all' && "border-blue-600 bg-muted"
+              activePortfolioId === "all" && "border-blue-600 bg-muted"
             )}
           >
             <div className="space-y-1">
@@ -221,27 +454,37 @@ export function PortfolioSidebar({
                   <LayoutGrid className="h-4 w-4" />
                   <span className="font-medium">All Portfolios</span>
                 </div>
-                {activePortfolioId === 'all' && (
+                {activePortfolioId === "all" && (
                   <div className="h-2 w-2 rounded-full bg-blue-600" />
                 )}
               </div>
               <div className="text-sm text-muted-foreground">
-                ${combinedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${combinedValue.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
-              <div className={cn(
-                "flex items-center gap-1 text-xs",
-                isCombinedPositive ? "text-green-600" : "text-red-600"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  isCombinedPositive ? "text-green-600" : "text-red-600"
+                )}
+              >
                 {isCombinedPositive ? (
                   <TrendingUp className="h-3 w-3" />
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
                 <span>
-                  {isCombinedPositive ? '+' : ''}${Math.abs(combinedGainLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {isCombinedPositive ? "+" : ""}$
+                  {Math.abs(combinedGainLoss).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
                 <span className="text-muted-foreground">
-                  ({isCombinedPositive ? '+' : ''}{combinedGainLossPercent.toFixed(2)}%)
+                  ({isCombinedPositive ? "+" : ""}
+                  {combinedGainLossPercent.toFixed(2)}%)
                 </span>
               </div>
             </div>
@@ -249,159 +492,136 @@ export function PortfolioSidebar({
 
           <div className="my-2 border-t" />
 
-          {portfolios.map((portfolio) => {
-            const isActive = portfolio.id === activePortfolioId && !activeAccountId;
-            const isPortfolioExpanded = expandedPortfolios.has(portfolio.id);
-            const isPositive = portfolio.gainLoss >= 0;
-
-            return (
-              <div key={portfolio.id} className="space-y-1">
-                <div className={cn("w-full rounded-lg p-3 transition-colors", isActive && "bg-muted")}>
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => togglePortfolioExpand(portfolio.id)}
-                      className="flex items-center gap-1 hover:opacity-70"
-                    >
-                      {isPortfolioExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        onSelectPortfolio(portfolio.id);
-                        setExpandedPortfolios(prev => new Set(prev).add(portfolio.id));
-                      }}
-                      className="flex-1 text-left"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{portfolio.name}</span>
-                          {isActive && (
-                            <div className="h-2 w-2 rounded-full bg-blue-600" />
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          ${portfolio.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className={cn(
-                          "flex items-center gap-1 text-xs",
-                          isPositive ? "text-green-600" : "text-red-600"
-                        )}>
-                          {isPositive ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          <span>
-                            {isPositive ? '+' : ''}${Math.abs(portfolio.gainLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                          <span className="text-muted-foreground">
-                            ({isPositive ? '+' : ''}{portfolio.gainLossPercent.toFixed(2)}%)
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={() => openAccountDialog(portfolio.id)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Conditional Rendering of Accounts */}
-                {isPortfolioExpanded && (
-                  <div className="ml-4 space-y-1 border-l-2 border-muted pl-2">
-                    {portfolio.accounts && portfolio.accounts.length > 0 ? (
-                      portfolio.accounts.map((account) => {
-                        const isAccountActive = account.id === activeAccountId;
-                        const isAccountPositive = account.gainLoss >= 0;
-
-                        return (
-                          <button
-                            key={account.id}
-                            onClick={() => onSelectAccount(portfolio.id, account.id)}
-                            className={cn(
-                              "w-full rounded-lg p-2 text-left transition-colors hover:bg-muted",
-                              isAccountActive && "bg-muted border-l-2 border-blue-600"
-                            )}
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm font-medium">
-                                  {account.name}
-                                </span>
-                                {isAccountActive && (
-                                  <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
-                                )}
-                              </div>
-
-                              <div className="text-xs text-muted-foreground">
-                                ${account.totalValue.toLocaleString('en-US', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2
-                                })}
-                              </div>
-
-                              <div className={cn(
-                                "flex items-center gap-1 text-xs",
-                                isAccountPositive ? "text-green-600" : "text-red-600"
-                              )}>
-                                {isAccountPositive ? (
-                                  <TrendingUp className="h-3 w-3" />
-                                ) : (
-                                  <TrendingDown className="h-3 w-3" />
-                                )}
-                                <span>
-                                  {isAccountPositive ? '+' : ''}
-                                  ${Math.abs(account.gainLoss).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  ({isAccountPositive ? '+' : ''}
-                                  {account.gainLossPercent.toFixed(2)}%)
-                                </span>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      /* The "Else" case for the ternary operator */
-                      <div className="text-xs text-muted-foreground p-2 italic">
-                        No accounts found
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {/* Per-portfolio rows with lazy account fetching */}
+          {portfolios.map((portfolio) => (
+            <PortfolioItem
+              key={portfolio.id}
+              portfolio={portfolio}
+              isActive={portfolio.id === activePortfolioId}
+              activeAccountId={activeAccountId}
+              onSelectPortfolio={onSelectPortfolio}
+              onSelectAccount={onSelectAccount}
+              onAddAccount={openAccountDialog}
+            />
+          ))}
         </div>
       </div>
 
+      {/* Footer summary */}
       <div className="border-t p-4">
         <div className="space-y-1 text-sm">
           <div className="flex justify-between text-muted-foreground">
-            <span>Total Accounts:</span>
+            <span>Portfolios:</span>
             <span className="font-medium text-foreground">{portfolios.length}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
             <span>Combined Value:</span>
             <span className="font-medium text-foreground">
-              ${portfolios.reduce((sum, p) => sum + p.totalValue, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${combinedValue.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
           </div>
         </div>
       </div>
+
+      {/* Add Account dialog — shared, opened via openAccountDialog() */}
+      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Account</DialogTitle>
+            <DialogDescription>
+              Add a new account to the selected portfolio.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateAccount} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="acct-name">Account Name</Label>
+              <Input
+                id="acct-name"
+                placeholder="e.g., TFSA Growth"
+                value={accountFormData.accountName}
+                onChange={(e) =>
+                  setAccountFormData((prev) => ({
+                    ...prev,
+                    accountName: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="acct-type">Account Type</Label>
+              <Select
+                value={accountFormData.accountType}
+                onValueChange={(val: CreateAccountRequest["accountType"]) =>
+                  setAccountFormData((prev) => ({ ...prev, accountType: val }))
+                }
+              >
+                <SelectTrigger id="acct-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TAXABLE_INVESTMENT">Taxable Investment</SelectItem>
+                  <SelectItem value="NON_REGISTERED_INVESTMENT">Non-Registered</SelectItem>
+                  <SelectItem value="TFSA">TFSA</SelectItem>
+                  <SelectItem value="RRSP">RRSP</SelectItem>
+                  <SelectItem value="FHSA">FHSA</SelectItem>
+                  <SelectItem value="RESP">RESP</SelectItem>
+                  <SelectItem value="MARGIN">Margin</SelectItem>
+                  <SelectItem value="ROTH_IRA">Roth IRA</SelectItem>
+                  <SelectItem value="CHEQUING">Chequing</SelectItem>
+                  <SelectItem value="SAVINGS">Savings</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="acct-currency">Currency</Label>
+              <Select
+                value={accountFormData.currency}
+                onValueChange={(val) =>
+                  setAccountFormData((prev) => ({ ...prev, currency: val }))
+                }
+              >
+                <SelectTrigger id="acct-currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CAD">CAD</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cost Basis Strategy</Label>
+              <RadioGroup
+                value={accountFormData.strategy}
+                onValueChange={(val: CreateAccountRequest["strategy"]) =>
+                  setAccountFormData((prev) => ({ ...prev, strategy: val }))
+                }
+                className="flex flex-col gap-2"
+              >
+                <div className="flex items-center gap-3">
+                  <RadioGroupItem value="ACB" id="acct-acb" />
+                  <Label htmlFor="acct-acb" className="font-normal">ACB</Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <RadioGroupItem value="FIFO" id="acct-fifo" />
+                  <Label htmlFor="acct-fifo" className="font-normal">FIFO</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <Button type="submit" className="w-full">
+              Add Account
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

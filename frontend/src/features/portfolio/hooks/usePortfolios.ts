@@ -8,32 +8,35 @@ type CreatePortfolioRequest = components["schemas"]["CreatePortfolioRequest"];
 
 export function usePortfolios() {
   const queryClient = useQueryClient();
-
+ 
   const query = useQuery({
     queryKey: ["portfolios"],
     queryFn: getPortfolios,
   });
-
-  // TRANSFORM: Map the backend objects to UI objects
+ 
+  // PortfolioSummaryResponse intentionally has no accounts, it's a list view.
+  // Accounts are fetched lazily per portfolio inside PortfolioItem via useAccounts.
+  // We seed accounts: [] here so the sidebar never hits undefined.map().
   const portfolios: Portfolio[] = (query.data || []).map((p) => ({
     id: p.id ?? "",
-    name: p.name ?? "New Portfolio",
+    name: p.name ?? "Unnamed Portfolio",
     totalValue: p.totalValue ?? 0,
-    // Add the missing properties required by your Figma UI
-    gainLoss: 0, 
+    gainLoss: 0,
     gainLossPercent: 0,
+    accounts: [],
   }));
-
+ 
   const createMutation = useMutation({
     mutationFn: (data: CreatePortfolioRequest) => createPortfolio(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     },
   });
-
+ 
   return {
-    portfolios, // This is now a clean Portfolio[] array
+    portfolios,
     isLoading: query.isLoading,
     createPortfolio: createMutation.mutate,
   };
 }
+ 

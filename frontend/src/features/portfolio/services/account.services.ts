@@ -10,6 +10,8 @@ import type {
 const base = (portfolioId: string) =>
   `/api/v1/portfolios/${portfolioId}/accounts`;
 
+const userIdParam = (userId: string) => ({ userId });
+
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 export async function getAllAccounts(
