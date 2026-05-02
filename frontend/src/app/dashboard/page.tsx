@@ -15,34 +15,13 @@ import { AllocationChart } from "@/features/portfolio/components/AllocationChart
 import { TransactionHistory } from "@/features/portfolio/components/TransactionHistory";
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
 import { useAddTransaction } from "@/features/portfolio/hooks/useAddTransaction";
-import { useAccount, useAccounts, useCreateAccount } from "@/features/portfolio/queries/useAccount";
+import { CreateAccountRequest } from "@/lib/api/types";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState('all');
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { portfolios, isLoading, createPortfolio } = usePortfolios();
-
-  // 1. Fetch Accounts for the sidebar
-  const { data: accountsPage } = useAccounts(activePortfolioId);
-  const accounts = accountsPage?.content?.map((account) => ({
-    ...account,
-    id: account.accountId ?? "",
-    gainLoss: account.totalValue ?? 0,
-    gainLossPercent: account.totalValue ?? 0,
-  })) || [];
-
-  // 2. Setup the Create Mutation
-  // Note: This hook will re-sync whenever activePortfolioId changes
-  const { mutate: createAccount } = useCreateAccount(activePortfolioId);
-
-  // 3. Setup the Account Detail (for the main view)
-  const { data: activeAccount } = useAccount(
-    activePortfolioId,
-    activeAccountId as string,
-    { enabled: !!activeAccountId }
-  );
-
   const { mutate: addTransaction } = useAddTransaction();
   const { logout } = useLogout();
 
@@ -62,7 +41,6 @@ export default function DashboardPage() {
   // 3. Handlers
   const handleOpenSettings = () => setSettingsOpen(true);
   const handleCreatePortfolio = (data: { name: string; description?: string; currency: string; createDefaultAccount: boolean; defaultAccountType?: "FHSA" | "TFSA" | "RRSP" | "RESP" | "ROTH_IRA" | "SOLO_401K" | "CHEQUING" | "SAVINGS" | "MARGIN" | "TAXABLE_INVESTMENT" | "NON_REGISTERED_INVESTMENT"; defaultStrategy?: "ACB" | "FIFO" | "LIFO" | "SPECIFIC_ID"; }) => createPortfolio(data);
-  const handleCreateAccount = (data: => createAccount(data));
   const handleAddTransaction = (data: any) => {
     console.log("Adding transaction to:", activePortfolioId, data);
     // Ensure you are passing the activePortfolioId so the 
@@ -100,16 +78,16 @@ export default function DashboardPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-80 flex-shrink-0 border-r bg-card">
+        <aside className="w-80 flex-shirnk-0 border-r bg-card">
           <PortfolioSidebar
             portfolios={portfolios}
             activePortfolioId={activePortfolioId}
             activeAccountId={activeAccountId}
             onSelectPortfolio={handleSelectPortfolio}
             onSelectAccount={handleSelectAccount}
-            onCreatePortfolio={handleCreatePortfolio}
-            onCreateAccount={handleCreateAccount} // Use the specific handler
-          />
+            onCreatePortfolio={handleCreatePortfolio} onCreateAccount={function (data: CreateAccountRequest): void {
+              throw new Error("Function not implemented.");
+            } }          />
         </aside>
 
         {/* Main Content Area */}
