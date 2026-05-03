@@ -8,7 +8,6 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -41,12 +40,6 @@ public class SecurityConfig {
     requestFactory.setReadTimeout(5000);
     restTemplate.setRequestFactory(requestFactory);
     return NimbusJwtDecoder.withIssuerLocation(issuerUri).restOperations(restTemplate).build();
-  }
-
-  @Bean
-  public WebSecurityCustomizer webSecurityCustomizer() {
-    return (web) -> web.ignoring().requestMatchers("/api/v1/public/**")
-        .requestMatchers("/actuator/health/**");
   }
 
   @Bean

@@ -1,4 +1,4 @@
-from eclipse-temurin:25.0.3_9-jdk-alpine-3.23
+FROM eclipse-temurin:25.0.3_9-jdk-alpine-3.23
 WORKDIR /app
 # Ensure the user isn't root for better security
 RUN addgroup -S spring && adduser -S spring -G spring
