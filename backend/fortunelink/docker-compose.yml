@@ -1,5 +1,4 @@
 services:
-  # Redis for caching
   redis:
     image: redis:8.6.2-alpine
     container_name: fortunelink-redis
@@ -15,23 +14,19 @@ services:
       retries: 5
     networks:
       - fortunelink-network
-    restart: unless-stopped
+    restart: unless-stopped    
 
-  # Optional: Redis Commander (GUI for viewing cache)
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: fortunelink-redis-commander
-    environment:
-      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-fortunelink_dev_password}
+  backend:
+    build: .
+    container_name: fortunelink-backend
     ports:
-      - "8081:8081"
-    networks:
-      - fortunelink-network
+      - "8080:8080"
+    env_file:
+      - .env
     depends_on:
       - redis
-    restart: unless-stopped
-    profiles:
-      - dev  # Only start in dev mode
+    networks:
+      - fortunelink-network
 
 volumes:
   redis-data:
@@ -40,6 +35,49 @@ volumes:
 networks:
   fortunelink-network:
     driver: bridge
+
+# services:
+#   # Redis for caching
+#   redis:
+#     image: redis:8.6.2-alpine
+#     container_name: fortunelink-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis-data:/data
+#     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-fortunelink_dev_password}
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-fortunelink_dev_password}", "ping"]
+#       interval: 10s
+#       timeout: 3s
+#       retries: 5
+#     networks:
+#       - fortunelink-network
+#     restart: unless-stopped
+
+#   # Optional: Redis Commander (GUI for viewing cache)
+#   redis-commander:
+#     image: rediscommander/redis-commander:latest
+#     container_name: fortunelink-redis-commander
+#     environment:
+#       - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-fortunelink_dev_password}
+#     ports:
+#       - "8081:8081"
+#     networks:
+#       - fortunelink-network
+#     depends_on:
+#       - redis
+#     restart: unless-stopped
+#     profiles:
+#       - dev  # Only start in dev mode
+
+# volumes:
+#   redis-data:
+#     driver: local
+
+# networks:
+#   fortunelink-network:
+#     driver: bridge
 
 # Usage:
 # Start Redis only:          docker-compose up -d redis

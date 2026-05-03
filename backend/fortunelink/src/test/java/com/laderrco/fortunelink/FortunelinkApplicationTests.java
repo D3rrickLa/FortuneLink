@@ -22,7 +22,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLim
 class FortunelinkApplicationTests {
   @Container
   @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.0-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.9-alpine");
 
   @MockitoBean
   private ProxyManager<String> proxyManager;
