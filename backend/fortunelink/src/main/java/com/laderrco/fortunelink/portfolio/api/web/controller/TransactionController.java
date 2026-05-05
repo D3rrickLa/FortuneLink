@@ -112,6 +112,8 @@ public class TransactionController {
     Instant validatedDate = resolveTransactionDate(request.transactionDate());
     List<Fee> fees = mapFees(request.fees(), validatedDate);
 
+    IO.println("DEBUGGING: buy hit");
+
     return transactionService.recordPurchase(
         new RecordPurchaseCommand(validateUuid(idempotencyKey), PortfolioId.fromString(portfolioId),
             userId, AccountId.fromString(accountId), request.symbol(), request.type(),
@@ -203,8 +205,7 @@ public class TransactionController {
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDepositRequest request) {
-
-    return transactionService.recordDeposit(
+    return transactionService.recordDeposit(  
         new RecordDepositCommand(validateUuid(idempotencyKey), PortfolioId.fromString(portfolioId),
             userId, AccountId.fromString(accountId), Money.of(request.amount(), request.currency()),
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));

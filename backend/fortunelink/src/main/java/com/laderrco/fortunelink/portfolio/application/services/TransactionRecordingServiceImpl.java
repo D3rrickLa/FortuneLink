@@ -354,12 +354,13 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       return;
     }
 
+    IO.println("DEBUGGING: "+tx.toString());
+
     AssetSymbol symbol = tx.execution().asset();
     AssetType type = tx.metadata().assetType();
 
     // BUY/DRIP: creation is valid and expected
-    if (tx.transactionType() == TransactionType.BUY
-        || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
+    if (tx.transactionType() == TransactionType.BUY || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
       account.ensurePosition(symbol, type);
     }
 
@@ -377,6 +378,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       account.recordRealizedGain(symbol, roc.excessCapitalGain(),
           Money.zero(account.getAccountCurrency()), tx.occurredAt());
     }
+
+    IO.println(account.getPosition(symbol).toString());
   }
 
   private void executeReplayStep(Account account, Transaction tx) {

@@ -29,8 +29,10 @@ import org.springframework.data.domain.Persistable;
 /**
  * Persistence model for {@code Account}.
  * <p>
- * Owns a bidirectional relationship to {@code PortfolioJpaEntity} and one-directional collections
- * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and {@code RealizedGainJpaEntity}.
+ * Owns a bidirectional relationship to {@code PortfolioJpaEntity} and
+ * one-directional collections
+ * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and
+ * {@code RealizedGainJpaEntity}.
  */
 @Entity
 @Getter
@@ -38,12 +40,13 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class AccountJpaEntity implements Persistable<UUID> {
 
-  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "account", cascade = {CascadeType.MERGE, CascadeType.PERSIST}, orphanRemoval = true, fetch = FetchType.LAZY)
   private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
   // if a single portfolio loads 3 years of active trading, that's 100+
-  // records, each time they open the portfolio page, each one is 'loaded', LAZY to solve this
-  @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
-      CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
+  // records, each time they open the portfolio page, each one is 'loaded', LAZY
+  // to solve this
+  @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
+      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
   private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
   @Id
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
@@ -131,33 +134,40 @@ public class AccountJpaEntity implements Persistable<UUID> {
   }
 
   public void replacePositions(Set<PositionJpaEntity> incoming) {
-    Map<UUID, PositionJpaEntity> existing = new HashMap<>();
+    Map<String, PositionJpaEntity> existingBySymbol = new HashMap<>();
+
     for (PositionJpaEntity p : this.positions) {
-      existing.put(p.getId(), p);
+      existingBySymbol.put(p.getSymbol(), p);
     }
 
     this.positions.clear();
-    for (PositionJpaEntity p : incoming) {
-      PositionJpaEntity cur = existing.get(p.getId());
-      if (cur != null && cur != p) {
-        cur.applyFrom(p);
-        this.positions.add(cur);
-      } else if (cur == p) {
-        this.positions.add(cur); // already the managed instance
+
+    for (PositionJpaEntity incomingPos : incoming) {
+
+      PositionJpaEntity existing = existingBySymbol.get(incomingPos.getSymbol());
+
+      if (existing != null) {
+        // UPDATE managed entity instead of inserting new one
+        existing.applyFrom(incomingPos);
+        this.positions.add(existing);
+
       } else {
-        p.setAccount(this);
-        this.positions.add(p);
+        incomingPos.setAccount(this);
+        this.positions.add(incomingPos);
       }
     }
   }
 
   /**
-   * Appends only NEW realized gain rows, those whose UUID does not already exist in the persisted
-   * collection. This is the correct operation for append-only domain data. Never call clear() on
+   * Appends only NEW realized gain rows, those whose UUID does not already exist
+   * in the persisted
+   * collection. This is the correct operation for append-only domain data. Never
+   * call clear() on
    * realizedGains.
    *
    * <p>
-   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing only the delta
+   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing
+   * only the delta
    * here.
    */
   public void addNewRealizedGains(List<RealizedGainJpaEntity> newGains) {

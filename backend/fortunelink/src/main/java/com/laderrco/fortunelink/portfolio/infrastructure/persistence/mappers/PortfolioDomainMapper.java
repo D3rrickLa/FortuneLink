@@ -34,7 +34,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * Bidirectional mapper between the {@code Portfolio} aggregate and its JPA entities.
+ * Bidirectional mapper between the {@code Portfolio} aggregate and its JPA
+ * entities.
  * <p>
  * Mapping direction conventions:
  * <ul>
@@ -88,8 +89,7 @@ public class PortfolioDomainMapper {
       accountMap.put(account.getAccountId(), account);
     }
 
-    UserId deletedBy =
-        entity.getDeletedBy() != null ? UserId.fromString(entity.getDeletedBy().toString()) : null;
+    UserId deletedBy = entity.getDeletedBy() != null ? UserId.fromString(entity.getDeletedBy().toString()) : null;
 
     return Portfolio.reconstitute(PortfolioId.fromString(entity.getId().toString()),
         UserId.fromString(entity.getUserId().toString()), entity.getName(), entity.getDescription(),
@@ -104,8 +104,7 @@ public class PortfolioDomainMapper {
   public PortfolioJpaEntity toEntity(Portfolio domain, PortfolioJpaEntity existing) {
     Objects.requireNonNull(domain, "Portfolio domain object cannot be null");
 
-    UUID deletedBy =
-        domain.getDeletedBy() != null ? UUID.fromString(domain.getDeletedBy().toString()) : null;
+    UUID deletedBy = domain.getDeletedBy() != null ? UUID.fromString(domain.getDeletedBy().toString()) : null;
 
     PortfolioJpaEntity entity;
     if (existing == null) {
@@ -122,9 +121,10 @@ public class PortfolioDomainMapper {
 
     List<AccountJpaEntity> accountEntities = new ArrayList<>();
     for (Account account : domain.getAccounts()) {
-      AccountJpaEntity existingAccount = existing == null ? null : existing.getAccounts().stream()
-          .filter(ae -> ae.getId().equals(UUID.fromString(account.getAccountId().toString())))
-          .findFirst().orElse(null);
+      AccountJpaEntity existingAccount = existing == null ? null
+          : existing.getAccounts().stream()
+              .filter(ae -> ae.getId().equals(UUID.fromString(account.getAccountId().toString())))
+              .findFirst().orElse(null);
 
       accountEntities.add(accountToEntity(account, entity, existingAccount));
     }
@@ -191,12 +191,27 @@ public class PortfolioDomainMapper {
     for (Map.Entry<AssetSymbol, Position> entry : domain.getPositionEntries()) {
       AssetSymbol sym = entry.getKey();
       Position pos = entry.getValue();
-      UUID posId = findExistingPositionId(existing, sym.symbol());
-      positionEntities.add(
-          positionToEntity(posId != null ? posId : UUID.randomUUID(), entity, pos));
-    }
-    entity.replacePositions(positionEntities);
 
+      PositionJpaEntity existingPosition = findExistingPositionEntity(existing, sym.symbol());
+
+      PositionJpaEntity entityToUse;
+
+      if (existingPosition != null) {
+        // UPDATE EXISTING ENTITY (NO NEW ID)
+        entityToUse = existingPosition;
+        entityToUse.applyFrom(positionToEntity(existingPosition.getId(), entity, pos));
+      } else {
+        // ONLY CREATE NEW IF SYMBOL DOES NOT EXIST
+        entityToUse = positionToEntity(
+            UUID.randomUUID(), // safe only for truly new symbol
+            entity,
+            pos);
+      }
+
+      positionEntities.add(entityToUse);
+    }
+
+    entity.replacePositions(positionEntities);
     // Realized gains , append-only. NEVER clear and re-insert.
     //
     // 1. Collect the UUIDs that are already persisted in the DB.
@@ -252,8 +267,10 @@ public class PortfolioDomainMapper {
   // =========================================================================
 
   /**
-   * Reconstitutes a domain record from a DB row, threading the stable UUID through. This must use
-   * RealizedGainRecord.reconstitute() , NOT of() , so the ID matches the persisted row and the
+   * Reconstitutes a domain record from a DB row, threading the stable UUID
+   * through. This must use
+   * RealizedGainRecord.reconstitute() , NOT of() , so the ID matches the
+   * persisted row and the
    * mapper can skip re-inserting on the next save.
    */
   private RealizedGainRecord realizedGainToDomain(RealizedGainJpaEntity ge) {
@@ -266,8 +283,10 @@ public class PortfolioDomainMapper {
   }
 
   /**
-   * Converts a domain realized gain to a JPA entity for persistence. The id parameter MUST be
-   * rg.id() , it is passed explicitly to make it impossible to accidentally pass UUID.randomUUID()
+   * Converts a domain realized gain to a JPA entity for persistence. The id
+   * parameter MUST be
+   * rg.id() , it is passed explicitly to make it impossible to accidentally pass
+   * UUID.randomUUID()
    * here again.
    */
   private RealizedGainJpaEntity realizedGainToEntity(UUID id, AccountJpaEntity accountEntity,
@@ -275,5 +294,14 @@ public class PortfolioDomainMapper {
     return RealizedGainJpaEntity.create(id, accountEntity, rg.symbol().symbol(),
         rg.realizedGainLoss().amount(), rg.realizedGainLoss().currency().getCode(),
         rg.costBasisSold().amount(), rg.costBasisSold().currency().getCode(), rg.occurredAt());
+  }
+
+  private PositionJpaEntity findExistingPositionEntity(AccountJpaEntity existing, String symbol) {
+    if (existing == null) {
+      return null;
+    }
+
+    return existing.getPositions().stream().filter(p -> p.getSymbol().equals(symbol))
+        .findFirst().orElse(null);
   }
 }

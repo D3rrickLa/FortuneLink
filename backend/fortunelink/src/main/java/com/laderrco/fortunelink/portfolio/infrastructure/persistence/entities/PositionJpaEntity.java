@@ -1,16 +1,10 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -27,10 +21,14 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Getter
-@Table(name = "positions")
+@Table(name = "positions",   uniqueConstraints = {@UniqueConstraint(name = "uq_position_account_symbol",columnNames = {"account_id", "symbol"})})
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // for JPA
 public class PositionJpaEntity {
 
+  /**
+   * Surrogate DB identifier only.
+   * Business identity is (account_id, symbol).
+   */
   @Id
   @Column(name = "id", columnDefinition = "uuid", updatable = false, nullable = false)
   private UUID id;

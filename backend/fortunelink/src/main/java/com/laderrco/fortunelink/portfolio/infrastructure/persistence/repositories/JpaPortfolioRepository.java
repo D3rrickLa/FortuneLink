@@ -1,13 +1,14 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.PortfolioJpaEntity;
+
+import jakarta.persistence.LockModeType;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -107,7 +108,10 @@ public interface JpaPortfolioRepository extends JpaRepository<PortfolioJpaEntity
    * Loads the full aggregate graph by portfolio ID only. Ownership is pre-validated by
    * PortfolioLoader before save is called , repeating the userId check here is redundant and costs
    * a round-trip.
+   * 
+   * we need to lock because when we runt the PortfolioContext, it calls
    */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
   @EntityGraph(attributePaths = {"accounts", "accounts.positions", "accounts.realizedGains"})
   @Query("SELECT p FROM PortfolioJpaEntity p WHERE p.id = :id")
   Optional<PortfolioJpaEntity> findWithAccountsById(@Param("id") UUID id);

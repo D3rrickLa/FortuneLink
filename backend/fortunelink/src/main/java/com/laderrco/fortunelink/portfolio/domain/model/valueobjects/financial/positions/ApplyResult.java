@@ -26,4 +26,11 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
 
   record NoChange<P extends Position>(P newPosition) implements ApplyResult<P> {
   }
+
+  record Updated<P extends Position>(P newPosition) implements ApplyResult<P> {
+  }
+
+  static ApplyResult<? extends Position> updated(Position p) {
+    return new ApplyResult.Updated<Position>(p);
+  }
 }
