@@ -168,67 +168,67 @@ public class PortfolioDomainMapper {
 
     AccountJpaEntity entity;
     if (existing == null) {
-      entity = AccountJpaEntity.create(UUID.fromString(domain.getAccountId().toString()),
-          portfolioEntity, domain.getName(), domain.getAccountType().name(),
-          domain.getAccountCurrency().getCode(), domain.getPositionStrategy().name(),
-          domain.getHealthStatus().name(), domain.getState().name(),
-          domain.getCashBalance().amount(), domain.getCashBalance().currency().getCode(),
-          domain.getCloseDate(), domain.getCreationDate(), domain.getLastUpdatedOn());
+      entity = AccountJpaEntity.create(
+          UUID.fromString(domain.getAccountId().toString()),
+          portfolioEntity,
+          domain.getName(),
+          domain.getAccountType().name(),
+          domain.getAccountCurrency().getCode(),
+          domain.getPositionStrategy().name(),
+          domain.getHealthStatus().name(),
+          domain.getState().name(),
+          domain.getCashBalance().amount(),
+          domain.getCashBalance().currency().getCode(),
+          domain.getCloseDate(),
+          domain.getCreationDate(),
+          domain.getLastUpdatedOn());
     } else {
-      AccountJpaEntity updated = AccountJpaEntity.create(existing.getId(), portfolioEntity,
-          domain.getName(), domain.getAccountType().name(), domain.getAccountCurrency().getCode(),
-          domain.getPositionStrategy().name(), domain.getHealthStatus().name(),
-          domain.getState().name(), domain.getCashBalance().amount(),
-          domain.getCashBalance().currency().getCode(), domain.getCloseDate(),
-          domain.getCreationDate(), domain.getLastUpdatedOn());
-      existing.applyFrom(updated);
+      // Apply only scalar field updates. Positions and realized gains are
+      // append/diff operations handled below — do NOT let applyFrom touch them.
+      existing.applyScalarFields(
+          domain.getName(),
+          domain.getAccountType().name(),
+          domain.getPositionStrategy().name(),
+          domain.getHealthStatus().name(),
+          domain.getState().name(),
+          domain.getCashBalance().amount(),
+          domain.getCashBalance().currency().getCode(),
+          domain.getCloseDate(),
+          domain.getLastUpdatedOn());
       entity = existing;
     }
 
-    // Positions , full replace is correct here because positions are always
-    // fully rebuilt from transactions by PositionRecalculationService.
+    // --- Positions: diff against managed collection, update in place ---
     Set<PositionJpaEntity> positionEntities = new LinkedHashSet<>();
     for (Map.Entry<AssetSymbol, Position> entry : domain.getPositionEntries()) {
       AssetSymbol sym = entry.getKey();
       Position pos = entry.getValue();
 
+      // existing.getPositions() is intact because applyScalarFields does not
+      // touch the collection. This diff is now always correct.
       PositionJpaEntity existingPosition = findExistingPositionEntity(existing, sym.symbol());
 
       PositionJpaEntity entityToUse;
-
       if (existingPosition != null) {
-        // UPDATE EXISTING ENTITY (NO NEW ID)
+        existingPosition.applyFrom(positionToEntity(existingPosition.getId(), entity, pos));
         entityToUse = existingPosition;
-        entityToUse.applyFrom(positionToEntity(existingPosition.getId(), entity, pos));
       } else {
-        // ONLY CREATE NEW IF SYMBOL DOES NOT EXIST
-        entityToUse = positionToEntity(
-            UUID.randomUUID(), // safe only for truly new symbol
-            entity,
-            pos);
+        entityToUse = positionToEntity(UUID.randomUUID(), entity, pos);
       }
-
       positionEntities.add(entityToUse);
     }
 
     entity.replacePositions(positionEntities);
-    // Realized gains , append-only. NEVER clear and re-insert.
-    //
-    // 1. Collect the UUIDs that are already persisted in the DB.
-    // 2. Filter domain gains to only those not yet persisted.
-    // 3. Append only the delta.
-    //
-    // This works because RealizedGainRecord carries a stable UUID generated at
-    // the moment Account.recordRealizedGain() is called, and reconstituted from
-    // the DB row UUID when the account is loaded. The IDs are stable across saves.
+
+    // --- Realized gains: append-only, never clear ---
     Set<UUID> persistedGainIds = existing == null ? Collections.emptySet()
-        : existing.getRealizedGains().stream().map(RealizedGainJpaEntity::getId)
+        : existing.getRealizedGains().stream()
+            .map(RealizedGainJpaEntity::getId)
             .collect(Collectors.toSet());
 
     List<RealizedGainJpaEntity> newGainEntities = new ArrayList<>();
     for (RealizedGainRecord rg : domain.getRealizedGains()) {
       if (!persistedGainIds.contains(rg.id())) {
-        // Use rg.id() , NOT UUID.randomUUID() , so the ID is stable across saves.
         newGainEntities.add(realizedGainToEntity(rg.id(), entity, rg));
       }
     }
