@@ -122,10 +122,10 @@ export function PerformanceChart({ data = [] }: PerformanceChartProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px]" style={{ width: '100%', height: '400px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData}>
+      <CardContent className="pt-6">
+        <div className="h-[400px] w-full min-h-0 min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minHeight={300} aspect={2}>
+            <LineChart data={filteredData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"

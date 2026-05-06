@@ -112,8 +112,6 @@ public class TransactionController {
     Instant validatedDate = resolveTransactionDate(request.transactionDate());
     List<Fee> fees = mapFees(request.fees(), validatedDate);
 
-    IO.println("DEBUGGING: buy hit");
-
     return transactionService.recordPurchase(
         new RecordPurchaseCommand(validateUuid(idempotencyKey), PortfolioId.fromString(portfolioId),
             userId, AccountId.fromString(accountId), request.symbol(), request.type(),

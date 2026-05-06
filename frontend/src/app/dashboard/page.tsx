@@ -14,7 +14,7 @@ import { PerformanceChart } from "@/features/portfolio/components/PerformanceCha
 import { AllocationChart } from "@/features/portfolio/components/AllocationChart";
 import { TransactionHistory } from "@/features/portfolio/components/TransactionHistory";
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
-import { useNetWorth } from "@/features/portfolio/queries/usePortfolio";
+import { useNetWorth, usePortfolio } from "@/features/portfolio/queries/usePortfolio";
 import { useAccount } from "@/features/portfolio/queries/useAccount";
 import { CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
 
@@ -26,15 +26,28 @@ export default function DashboardPage() {
   const { logout } = useLogout();
 
   const isAllView = activePortfolioId === "all";
-  const hasAccount = !isAllView && activeAccountId !== null;
+  const hasPortfolio = !isAllView;
+  const hasAccount = hasPortfolio && activeAccountId !== null;
 
-  // Live net worth for the selected portfolio
+  // ── Data fetching ───────────────────────────────────────────────────────────
+
+  // Net worth for the selected portfolio — skip on "all" view.
   const { data: netWorth } = useNetWorth(
     isAllView ? "" : activePortfolioId,
-    { enabled: !isAllView }
+    { enabled: hasPortfolio }
   );
 
-  // Account detail for stats when an account is selected
+  // Full portfolio detail — needed to sum cash balances when no account is
+  // selected. PortfolioResponse.accounts is AccountSummary[], each with a
+  // top-level `cashBalance: number` field (pre-converted to base currency).
+  // Only fetch when a specific portfolio is selected but no account is drilled
+  // into, to avoid a redundant call when accountDetail already covers it.
+  const { data: portfolioDetail } = usePortfolio(
+    isAllView ? "" : activePortfolioId,
+    { enabled: hasPortfolio && !hasAccount }
+  );
+
+  // Account detail for granular stats when a specific account is active.
   const { data: accountDetail } = useAccount(
     activePortfolioId,
     activeAccountId ?? "",
@@ -46,26 +59,43 @@ export default function DashboardPage() {
     [portfolios, activePortfolioId]
   );
 
-  // ── Derived display values ─────────────────────────────────────────────────
+  // ── Derived display values ──────────────────────────────────────────────────
 
   const totalValue = hasAccount
     ? (accountDetail?.totalValue?.amount ?? 0)
     : (netWorth?.totalNetWorth ?? activePortfolio?.totalValue ?? 0);
 
-  const cashBalance = hasAccount
-    ? (accountDetail?.cashBalance?.amount ?? 0)
-    : 0;
+  // Cash balance derivation:
+  //  - Account view: pull directly from the AccountView response.
+  //  - Portfolio view: sum all AccountSummary.cashBalance values from the
+  //    PortfolioResponse. These are already converted to the portfolio's base
+  //    currency by the backend, so summing is safe.
+  //  - All-portfolios view: we'd need to sum across N portfolios which means
+  //    N additional requests. Not worth it for the MVP — show 0 and revisit
+  //    if a dedicated aggregate endpoint gets added later.
+  const cashBalance = useMemo(() => {
+    if (hasAccount) {
+      return accountDetail?.cashBalance?.amount ?? 0;
+    }
+    if (hasPortfolio && portfolioDetail?.accounts) {
+      return portfolioDetail.accounts.reduce(
+        (sum, acct) => sum + (acct.cashBalance ?? 0),
+        0
+      );
+    }
+    return 0;
+  }, [hasAccount, hasPortfolio, accountDetail, portfolioDetail]);
 
-  // Gain/loss isn't in the net-worth response; keep as 0 until you wire
-  // a performance endpoint. Honest zeros beat fabricated numbers.
+  // Gain/loss requires a performance endpoint that doesn't exist yet.
+  // Honest zeros beat fabricated numbers.
   const totalGainLoss = 0;
   const totalGainLossPercent = 0;
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleSelectPortfolio = (id: string) => {
     setActivePortfolioId(id);
-    setActiveAccountId(null); // clear account selection when switching portfolios
+    setActiveAccountId(null);
   };
 
   const handleSelectAccount = (portfolioId: string, accountId: string) => {
@@ -76,12 +106,15 @@ export default function DashboardPage() {
   const handleCreatePortfolio = (data: CreatePortfolioRequest) =>
     createPortfolio(data);
 
-  // createAccount is handled inside PortfolioSidebar via its own hook
-  const handleCreateAccount = (portfolioId: string, data: CreateAccountRequest) => {
-    // Intentionally left, sidebar owns this flow
-  };
+  // Account creation is fully owned by PortfolioSidebar via useCreateAccount.
+  // This prop exists for future extensibility (e.g., analytics, toast at page
+  // level) but does not need to trigger any mutation here.
+  const handleCreateAccount = (
+    _portfolioId: string,
+    _data: CreateAccountRequest
+  ) => {};
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Loading state ──────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -142,10 +175,6 @@ export default function DashboardPage() {
                   <p className="mt-1 text-muted-foreground">{pageSubtitle}</p>
                 </div>
 
-                {/*
-                  Only show the Add Transaction button when an account is
-                  selected — transactions are always account-scoped.
-                */}
                 {hasAccount && (
                   <AddTransactionDialog
                     portfolioId={activePortfolioId}
@@ -175,7 +204,10 @@ export default function DashboardPage() {
                   <TabsTrigger value="transactions">Transactions</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="holdings" className="border rounded-xl bg-card p-4">
+                <TabsContent
+                  value="holdings"
+                  className="border rounded-xl bg-card p-4"
+                >
                   {hasAccount ? (
                     <StockHoldings
                       portfolioId={activePortfolioId}
@@ -188,7 +220,10 @@ export default function DashboardPage() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="transactions" className="border rounded-xl bg-card p-4">
+                <TabsContent
+                  value="transactions"
+                  className="border rounded-xl bg-card p-4"
+                >
                   {hasAccount ? (
                     <TransactionHistory
                       portfolioId={activePortfolioId}
@@ -196,12 +231,12 @@ export default function DashboardPage() {
                     />
                   ) : (
                     <p className="py-10 text-center text-sm text-muted-foreground">
-                      Select an account from the sidebar to view its transactions.
+                      Select an account from the sidebar to view its
+                      transactions.
                     </p>
                   )}
                 </TabsContent>
               </Tabs>
-
             </div>
           </div>
         </main>

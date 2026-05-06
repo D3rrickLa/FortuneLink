@@ -354,8 +354,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       return;
     }
 
-    IO.println("DEBUGGING: "+tx.toString());
-
     AssetSymbol symbol = tx.execution().asset();
     AssetType type = tx.metadata().assetType();
 
@@ -378,8 +376,6 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
       account.recordRealizedGain(symbol, roc.excessCapitalGain(),
           Money.zero(account.getAccountCurrency()), tx.occurredAt());
     }
-
-    IO.println(account.getPosition(symbol).toString());
   }
 
   private void executeReplayStep(Account account, Transaction tx) {

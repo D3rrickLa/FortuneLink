@@ -15,12 +15,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const router = useRouter();
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -37,6 +39,9 @@ export function LoginForm() {
       return;
     }
 
+    // wipe any cached data from a prior session before landing on the dashboard.
+    // need this because of stale data belonging to the previous user while background refetches
+    queryClient.clear();
     router.replace("/dashboard"); // replace so back button doesn't return to login
     router.refresh();
   }

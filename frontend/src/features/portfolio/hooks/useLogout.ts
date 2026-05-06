@@ -2,11 +2,13 @@
 import { useRouter } from "next/navigation"; // Ensure you use next/navigation for App Router
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const useLogout = () => {
   // 1. CALL HOOKS AT THE TOP LEVEL
   const router = useRouter(); 
   const supabase = createClient();
+  const queryClient = useQueryClient();
 
   // 2. DEFINE THE LOGIC FUNCTION
   const logout = async () => {
@@ -15,9 +17,10 @@ export const useLogout = () => {
       
       if (error) throw error;
 
-      toast.success("Logged out successfully");
-      
+      queryClient.clear();
+
       // Use the router instance defined above
+      toast.success("Logged out successfully");
       router.push("/");
       router.refresh();
     } catch (error: any) {
