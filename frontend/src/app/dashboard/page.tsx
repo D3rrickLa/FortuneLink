@@ -16,7 +16,8 @@ import { TransactionHistory } from "@/features/portfolio/components/TransactionH
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
 import { useNetWorth, usePortfolio } from "@/features/portfolio/queries/usePortfolio";
 import { useAccount } from "@/features/portfolio/queries/useAccount";
-import { CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
+import { AccountView, CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
+import { EditAccountDialog } from "@/features/portfolio/components/EditAccountDialog";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState("all");
@@ -28,7 +29,6 @@ export default function DashboardPage() {
   const isAllView = activePortfolioId === "all";
   const hasPortfolio = !isAllView;
   const hasAccount = hasPortfolio && activeAccountId !== null;
-
   // ── Data fetching ───────────────────────────────────────────────────────────
 
   // Net worth for the selected portfolio — skip on "all" view.
@@ -59,6 +59,10 @@ export default function DashboardPage() {
     [portfolios, activePortfolioId]
   );
 
+  const activeAccount = accountDetail || portfolios
+    ?.find((p) => p.id === activePortfolioId)
+    ?.accounts?.find((a) => a.id === activeAccountId);
+
   // ── Derived display values ──────────────────────────────────────────────────
 
   const totalValue = hasAccount
@@ -86,10 +90,28 @@ export default function DashboardPage() {
     return 0;
   }, [hasAccount, hasPortfolio, accountDetail, portfolioDetail]);
 
-  // Gain/loss requires a performance endpoint that doesn't exist yet.
-  // Honest zeros beat fabricated numbers.
-  const totalGainLoss = 0;
-  const totalGainLossPercent = 0;
+  const { totalGainLoss, totalGainLossPercent } = useMemo(() => {
+    let gain = 0;
+    let percentage = 0;
+
+    if (hasAccount && accountDetail) {
+      // Calculate for specific account
+      gain = accountDetail.totalGainLoss?.amount ?? 0;
+      percentage = accountDetail.totalGainLossPercentage ?? 0;
+    } else if (hasPortfolio && netWorth) {
+      // Calculate for specific portfolio using netWorth data
+      gain = netWorth.totalGainLoss ?? 0;
+      percentage = netWorth.totalGainLossPercentage ?? 0;
+    } else if (isAllView && portfolios) {
+      // Aggregate gain across all portfolios for the "All Portfolios" view
+      gain = portfolios.reduce((sum, p) => sum + (p.totalGainLoss ?? 0), 0);
+
+      const totalCost = portfolios.reduce((sum, p) => sum + (p.totalCost ?? 0), 0);
+      percentage = totalCost > 0 ? (gain / totalCost) * 100 : 0;
+    }
+
+    return { totalGainLoss: gain, totalGainLossPercent: percentage };
+  }, [hasAccount, accountDetail, hasPortfolio, netWorth, isAllView, portfolios]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -112,7 +134,7 @@ export default function DashboardPage() {
   const handleCreateAccount = (
     _portfolioId: string,
     _data: CreateAccountRequest
-  ) => {};
+  ) => { };
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -169,9 +191,23 @@ export default function DashboardPage() {
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {pageTitle}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      {pageTitle}
+                    </h1>
+
+                    {/* Only show edit actions if we have a valid account selected */}
+                    {hasAccount && activeAccount && (
+                      <EditAccountDialog
+                        portfolioId={activePortfolioId}
+                        accountId={activeAccountId!}
+                        account={activeAccount as AccountView} // Type assertion to bypass the "Summary vs View" check
+                        onAccountClosed={() => {
+                          setActiveAccountId(null); // Reset selection
+                        }}
+                      />
+                    )}
+                  </div>
                   <p className="mt-1 text-muted-foreground">{pageSubtitle}</p>
                 </div>
 
