@@ -13,13 +13,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
-import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetValuationQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
-import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -84,7 +84,8 @@ public class PortfolioQueryServiceTest {
   }
 
   /**
-   * Builds a Portfolio with the given accounts pre-created. Uses reconstitution rather than mocking
+   * Builds a Portfolio with the given accounts pre-created. Uses reconstitution
+   * rather than mocking
    * to keep tests honest about domain behavior.
    */
   private Portfolio buildPortfolio(UserId userId, PortfolioId portfolioId, List<Account> accounts) {
@@ -103,7 +104,8 @@ public class PortfolioQueryServiceTest {
   }
 
   /**
-   * Builds a healthy account with mock positions. Uses a Mockito spy so we can control
+   * Builds a healthy account with mock positions. Uses a Mockito spy so we can
+   * control
    * getPositionEntries() without subclassing.
    */
   private Account buildAccount(AccountId accountId, Set<AssetSymbol> symbols) {
@@ -134,7 +136,8 @@ public class PortfolioQueryServiceTest {
   private MarketAssetQuote buildQuote(AssetSymbol symbol) {
     return new MarketAssetQuote(symbol,
         com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price.of("100.00",
-            CAD), null, null, null, null, null, null, null, null, "TEST", Instant.now());
+            CAD),
+        null, null, null, null, null, null, null, null, "TEST", Instant.now());
   }
 
   private PortfolioView buildPortfolioView(PortfolioId portfolioId, UserId userId) {
@@ -163,14 +166,24 @@ public class PortfolioQueryServiceTest {
 
     @Test
     @DisplayName("returns PortfolioView for portfolio with no accounts")
-    void emptyPortfolio_returnsView() {
+    void emptyPortfolioReturnsView() {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, Collections.emptyList());
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
+      ValuationView view = new ValuationView(
+          Money.zero(CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
-      when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
-          eq(Map.of()))).thenReturn(Money.zero(CAD));
-      when(portfolioViewMapper.toPortfolioView(eq(portfolio), eq(List.of()), eq(Money.zero(CAD)),
+      when(portfolioValuationService.calculatePortfolioValuation(eq(portfolio), eq(CAD),
+          eq(Map.of()))).thenReturn(view);
+      when(portfolioViewMapper.toPortfolioView(eq(portfolio), eq(List.of()), any(),
           eq(false))).thenReturn(expected);
 
       PortfolioView result = portfolioQueryService.getPortfolioById(
@@ -194,16 +207,27 @@ public class PortfolioQueryServiceTest {
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl), googl,
           buildQuote(googl));
 
-      Money totalValue = new Money(new BigDecimal("50000.0000000000"), CAD);
       AccountView view1 = buildAccountView(account1.getAccountId());
       AccountView view2 = buildAccountView(account2.getAccountId());
+      ValuationView valuationView = new ValuationView(
+          Money.of("50000.00", CAD),
+          Money.zero(CAD),
+          Money.of("50000.00", CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl, googl))).thenReturn(quotes);
       when(accountViewBuilder.build(eq(account1), eq(quotes), any())).thenReturn(view1);
       when(accountViewBuilder.build(eq(account2), eq(quotes), any())).thenReturn(view2);
-      when(portfolioValuationService.calculateTotalValue(any(), eq(CAD), eq(quotes))).thenReturn(
-          totalValue);
+      when(portfolioValuationService.calculatePortfolioValuation(
+          eq(portfolio),
+          eq(CAD),
+          eq(quotes))).thenReturn(valuationView);
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
@@ -218,16 +242,27 @@ public class PortfolioQueryServiceTest {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(staleAccount));
 
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl));
-      Money totalValue = Money.of("10000.00", CAD);
       AccountView accountView = buildAccountView(staleAccount.getAccountId());
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
+      ValuationView valuationView = new ValuationView(
+          Money.of("10000.00", CAD),
+          Money.zero(CAD),
+          Money.of("50000.00", CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl))).thenReturn(quotes);
       when(accountViewBuilder.build(eq(staleAccount), eq(quotes), any())).thenReturn(accountView);
-      when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD),
-          eq(quotes))).thenReturn(totalValue);
-      when(portfolioViewMapper.toPortfolioView(eq(portfolio), any(), eq(totalValue),
+      when(portfolioValuationService.calculatePortfolioValuation(
+          eq(portfolio),
+          eq(CAD),
+          eq(quotes))).thenReturn(valuationView);
+      when(portfolioViewMapper.toPortfolioView(eq(portfolio), any(), eq(valuationView),
           eq(true))).thenReturn(expected);
 
       PortfolioView result = portfolioQueryService.getPortfolioById(
@@ -235,7 +270,7 @@ public class PortfolioQueryServiceTest {
 
       assertThat(result).isEqualTo(expected);
 
-      verify(portfolioViewMapper).toPortfolioView(eq(portfolio), any(), eq(totalValue), eq(true));
+      verify(portfolioViewMapper).toPortfolioView(eq(portfolio), any(), eq(valuationView), eq(true));
     }
 
     @Test
@@ -249,16 +284,22 @@ public class PortfolioQueryServiceTest {
       Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl));
       AccountView accountView = buildAccountView(accountId);
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
+      ValuationView view = new ValuationView(
+          Money.zero(CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(quotes);
-
       when(accountViewBuilder.build(eq(account), eq(quotes), eq(Map.of()))).thenReturn(accountView);
-
-      when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
-          Money.zero(CAD));
-      when(portfolioViewMapper.toPortfolioView(any(), any(), any(), anyBoolean())).thenReturn(
-          expected);
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(view);
+      when(portfolioViewMapper.toPortfolioView(any(), any(), any(), anyBoolean())).thenReturn(expected);
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
@@ -272,16 +313,23 @@ public class PortfolioQueryServiceTest {
       AccountId accountId = AccountId.newId();
       Account account = buildAccount(accountId, Set.of(aapl));
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(account));
+      ValuationView view = new ValuationView(
+          Money.zero(CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(Map.of());
-
-      when(accountViewBuilder.build(eq(account), any(), eq(Map.of()))).thenReturn(
-          buildAccountView(accountId));
-      when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
-          Money.zero(CAD));
-      when(portfolioViewMapper.toPortfolioView(any(), any(), any(), anyBoolean())).thenReturn(
-          buildPortfolioView(portfolioId, userId));
+      when(accountViewBuilder.build(eq(account), any(), eq(Map.of()))).thenReturn(buildAccountView(accountId));
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(view);
+      when(portfolioViewMapper.toPortfolioView(any(), any(), any(), anyBoolean()))
+          .thenReturn(buildPortfolioView(portfolioId, userId));
 
       portfolioQueryService.getPortfolioById(new GetPortfolioByIdQuery(portfolioId, userId));
 
@@ -322,27 +370,39 @@ public class PortfolioQueryServiceTest {
 
       PortfolioId pid1 = PortfolioId.newId();
       PortfolioId pid2 = PortfolioId.newId();
-      Portfolio p1 = buildPortfolio(userId, pid1,
-          List.of(buildAccount(AccountId.newId(), Set.of(aapl))));
-      Portfolio p2 = buildPortfolio(userId, pid2,
-          List.of(buildAccount(AccountId.newId(), Set.of(tsla))));
+      Portfolio p1 = buildPortfolio(userId, pid1, List.of(buildAccount(AccountId.newId(), Set.of(aapl))));
+      Portfolio p2 = buildPortfolio(userId, pid2, List.of(buildAccount(AccountId.newId(), Set.of(tsla))));
 
-      Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl), tsla,
-          buildQuote(tsla));
-      Money val1 = Money.of("20000.00", CAD);
-      Money val2 = Money.of("15000.00", CAD);
-
-      PortfolioSummaryView sv1 = new PortfolioSummaryView(pid1, "P1", val1, Instant.now());
-      PortfolioSummaryView sv2 = new PortfolioSummaryView(pid2, "P2", val2, Instant.now());
+      Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(aapl, buildQuote(aapl), tsla, buildQuote(tsla));
+      ValuationView view1 = new ValuationView(
+          Money.of("20000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
+      ValuationView view2 = new ValuationView(
+          Money.of("15000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
+      PortfolioSummaryView sv1 = new PortfolioSummaryView(pid1, "P1", view1.totalValue(), Instant.now());
+      PortfolioSummaryView sv2 = new PortfolioSummaryView(pid2, "P2", view2.totalValue(), Instant.now());
 
       when(portfolioLoader.loadAllUserPortfolios(userId)).thenReturn(List.of(p1, p2));
       when(marketDataService.getBatchQuotes(Set.of(aapl, tsla))).thenReturn(quotes);
-      when(portfolioValuationService.calculateTotalValue(eq(p1), eq(CAD), eq(quotes))).thenReturn(
-          val1);
-      when(portfolioValuationService.calculateTotalValue(eq(p2), eq(CAD), eq(quotes))).thenReturn(
-          val2);
-      when(portfolioViewMapper.toPortfolioSummaryView(p1, val1)).thenReturn(sv1);
-      when(portfolioViewMapper.toPortfolioSummaryView(p2, val2)).thenReturn(sv2);
+      when(portfolioValuationService.calculatePortfolioValuation(eq(p1), eq(CAD), eq(quotes))).thenReturn(view1);
+      when(portfolioValuationService.calculatePortfolioValuation(eq(p2), eq(CAD), eq(quotes))).thenReturn(view2);
+      when(portfolioViewMapper.toPortfolioSummaryView(p1, view1)).thenReturn(sv1);
+      when(portfolioViewMapper.toPortfolioSummaryView(p2, view2)).thenReturn(sv2);
 
       List<PortfolioSummaryView> result = portfolioQueryService.getPortfolioSummaries(
           new GetPortfoliosByUserIdQuery(userId));
@@ -358,12 +418,20 @@ public class PortfolioQueryServiceTest {
       Portfolio p2 = buildPortfolio(userId, PortfolioId.newId(), List.of());
 
       Money zero = Money.zero(CAD);
-      PortfolioSummaryView sv = new PortfolioSummaryView(p1.getPortfolioId(), "P", zero,
+      PortfolioSummaryView sv = new PortfolioSummaryView(p1.getPortfolioId(), "P", zero, Instant.now());
+      ValuationView view = new ValuationView(
+          Money.of("20000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
           Instant.now());
 
       when(portfolioLoader.loadAllUserPortfolios(userId)).thenReturn(List.of(p1, p2));
-      when(portfolioValuationService.calculateTotalValue(any(), any(), eq(Map.of()))).thenReturn(
-          zero);
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), eq(Map.of()))).thenReturn(view);
       when(portfolioViewMapper.toPortfolioSummaryView(any(), any())).thenReturn(sv);
 
       portfolioQueryService.getPortfolioSummaries(new GetPortfoliosByUserIdQuery(userId));
@@ -378,22 +446,29 @@ public class PortfolioQueryServiceTest {
 
       Portfolio cadPortfolio = buildPortfolioWithCurrency(userId, PortfolioId.newId(), CAD);
       Portfolio usdPortfolio = buildPortfolioWithCurrency(userId, PortfolioId.newId(), usd);
+      ValuationView view = new ValuationView(
+          Money.of("20000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
-      when(portfolioLoader.loadAllUserPortfolios(eq(userId))).thenReturn(
-          List.of(cadPortfolio, usdPortfolio));
-      when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
-          Money.zero(CAD));
+      when(portfolioLoader.loadAllUserPortfolios(eq(userId))).thenReturn(List.of(cadPortfolio, usdPortfolio));
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(view);
       when(portfolioViewMapper.toPortfolioSummaryView(any(), any())).thenReturn(
           new PortfolioSummaryView(cadPortfolio.getPortfolioId(), "P", Money.zero(CAD),
               Instant.now()));
 
       portfolioQueryService.getPortfolioSummaries(new GetPortfoliosByUserIdQuery(userId));
 
-      verify(portfolioValuationService).calculateTotalValue(eq(cadPortfolio), eq(CAD), any());
-      verify(portfolioValuationService).calculateTotalValue(eq(usdPortfolio), eq(usd), any());
+      verify(portfolioValuationService).calculatePortfolioValuation(eq(cadPortfolio), eq(CAD), any());
+      verify(portfolioValuationService).calculatePortfolioValuation(eq(usdPortfolio), eq(usd), any());
     }
   }
-
 
   @Nested
   @DisplayName("getNetWorth")
@@ -402,7 +477,7 @@ public class PortfolioQueryServiceTest {
     @Test
     @DisplayName("throws NullPointerException when query is null")
     void nullQuery_throws() {
-      assertThatThrownBy(() -> portfolioQueryService.getNetWorth(null)).isInstanceOf(
+      assertThatThrownBy(() -> portfolioQueryService.getValuation(null)).isInstanceOf(
           NullPointerException.class);
 
       verifyNoInteractions(portfolioLoader, marketDataService);
@@ -412,18 +487,26 @@ public class PortfolioQueryServiceTest {
     @DisplayName("liabilities are currently zero and netWorth equals totalAssets")
     void noLiabilities_netWorthEqualsTotalAssets() {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of());
-      Money totalAssets = Money.of("75000.00", CAD);
+      ValuationView view = new ValuationView(
+          Money.of("75000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
-      when(portfolioValuationService.calculateTotalValue(eq(portfolio), eq(CAD), any())).thenReturn(
-          totalAssets);
+      when(portfolioValuationService.calculatePortfolioValuation(eq(portfolio), eq(CAD), any())).thenReturn(
+          view);
 
-      NetWorthView result = portfolioQueryService.getNetWorth(
-          new GetNetWorthQuery(portfolioId, userId));
+      ValuationView result = portfolioQueryService.getValuation(new GetValuationQuery(portfolioId, userId));
 
-      assertThat(result.totalAssets()).isEqualTo(totalAssets);
-      assertThat(result.totalLiabilities()).isEqualTo(Money.zero(CAD));
-      assertThat(result.netWorth()).isEqualTo(totalAssets);
+      assertThat(result.totalCashBalance()).isEqualTo(Money.zero(CAD));
+      assertThat(result.totalCostBasis()).isEqualTo(Money.zero(CAD));
+      assertThat(result.totalValue()).isEqualTo(Money.of("75000.00", CAD));
       assertThat(result.displayCurrency()).isEqualTo(CAD);
     }
 
@@ -432,15 +515,23 @@ public class PortfolioQueryServiceTest {
     void staleAccount_netWorthViewMarkedStale() {
       Account staleAccount = buildStaleAccount(AccountId.newId(), Set.of());
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(staleAccount));
+      ValuationView view = new ValuationView(
+          Money.of("75000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          true,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
-      when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
-          Money.zero(CAD));
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(view);
 
-      NetWorthView result = portfolioQueryService.getNetWorth(
-          new GetNetWorthQuery(portfolioId, userId));
+      ValuationView result = portfolioQueryService.getValuation(new GetValuationQuery(portfolioId, userId));
 
-      assertThat(result.hasStale()).isTrue();
+      assertThat(result.hasStaleData()).isTrue();
     }
 
     @Test
@@ -448,15 +539,23 @@ public class PortfolioQueryServiceTest {
     void healthyPortfolio_netWorthViewNotStale() {
       Account healthyAccount = buildAccount(AccountId.newId(), Set.of());
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(healthyAccount));
+      ValuationView view = new ValuationView(
+          Money.of("75000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
-      when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
-          Money.zero(CAD));
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(view);
 
-      NetWorthView result = portfolioQueryService.getNetWorth(
-          new GetNetWorthQuery(portfolioId, userId));
+      ValuationView result = portfolioQueryService.getValuation(new GetValuationQuery(portfolioId, userId));
 
-      assertThat(result.hasStale()).isFalse();
+      assertThat(result.hasStaleData()).isFalse();
     }
 
     @Test
@@ -465,12 +564,21 @@ public class PortfolioQueryServiceTest {
       Instant before = Instant.now().minusSeconds(1);
 
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of());
+      ValuationView view = new ValuationView(
+          Money.of("75000.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
+          
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
-      when(portfolioValuationService.calculateTotalValue(any(), any(), any())).thenReturn(
-          Money.zero(CAD));
+      when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(view);
 
-      NetWorthView result = portfolioQueryService.getNetWorth(
-          new GetNetWorthQuery(portfolioId, userId));
+      ValuationView result = portfolioQueryService.getValuation(new GetValuationQuery(portfolioId, userId));
 
       assertThat(result.asOfDate()).isAfter(before);
     }

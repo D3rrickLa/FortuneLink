@@ -1,11 +1,13 @@
 package com.laderrco.fortunelink.portfolio.domain.services;
 
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,32 +18,20 @@ import java.util.Map;
  * API usage.
  */
 public interface PortfolioValuationService {
-  /**
-   * Calculates the total value of a portfolio in the specified currency.
-   *
-   * @param portfolio      the portfolio to value
-   * @param targetCurrency the currency for the final result
-   * @param quoteCache     pre-fetched quotes for all assets in the portfolio
-   * @return total value in the target currency
+ /**
+   * Calculates a full valuation summary for a single account.
    */
-  Money calculateTotalValue(Portfolio portfolio, Currency targetCurrency,
+  ValuationView calculateAccountValuation(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache);
+
+  /**
+   * Calculates a full valuation summary for a portfolio.
+   */
+  ValuationView calculatePortfolioValuation(Portfolio portfolio, Currency targetCurrency,
       Map<AssetSymbol, MarketAssetQuote> quoteCache);
 
   /**
-   * Calculates the total value of an account in its base currency.
-   *
-   * @param account    the account to value
-   * @param quoteCache pre-fetched quotes for all assets in the account
-   * @return total account value in base currency
+   * Calculates a full aggregated valuation across multiple portfolios.
    */
-  Money calculateAccountValue(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache);
-
-  /**
-   * Calculates the market value of all holdings, excluding cash.
-   *
-   * @param account    the account to value
-   * @param quoteCache pre-fetched quotes for all assets in the account
-   * @return total market value of holdings
-   */
-  Money calculatePositionsValue(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache);
+  ValuationView calculateUserValuation(List<Portfolio> portfolios, Currency targetCurrency,
+      Map<AssetSymbol, MarketAssetQuote> quoteCache);
 }

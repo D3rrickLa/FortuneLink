@@ -1,95 +1,125 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Wallet, Minus } from "lucide-react";
 
 interface PortfolioOverviewProps {
   totalValue: number;
   cashBalance: number;
   totalGainLoss: number;
   totalGainLossPercent: number;
+  /**
+   * False when the API doesn't expose gain/loss at the current view level
+   * (portfolio or all-portfolios). The component will render a tasteful
+   * placeholder instead of "$0.00 (0.00%)".
+   */
+  gainLossAvailable?: boolean;
 }
+ 
 
 export function PortfolioOverview({
   totalValue,
   cashBalance,
   totalGainLoss,
-  totalGainLossPercent
+  totalGainLossPercent,
+  gainLossAvailable = true,
 }: PortfolioOverviewProps) {
   const isPositive = totalGainLoss >= 0;
   const investedValue = totalValue - cashBalance;
-
+ 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Total Portfolio Value
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${totalValue.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Combined value of all assets
-          </p>
+          <p className="text-xs text-muted-foreground">Combined value of all assets</p>
         </CardContent>
       </Card>
-
+ 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Cash Balance
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Cash Balance</CardTitle>
           <Wallet className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${cashBalance.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Available for investment
-          </p>
+          <p className="text-xs text-muted-foreground">Available for investment</p>
         </CardContent>
       </Card>
-
+ 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Invested Value
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Invested Value</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${investedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${investedValue.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Current stock holdings
-          </p>
+          <p className="text-xs text-muted-foreground">Current stock holdings</p>
         </CardContent>
       </Card>
-
+ 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Total Gain/Loss
-          </CardTitle>
-          {isPositive ? (
+          <CardTitle className="text-sm font-medium">Unrealized Gain/Loss</CardTitle>
+          {!gainLossAvailable ? (
+            <Minus className="h-4 w-4 text-muted-foreground" />
+          ) : isPositive ? (
             <TrendingUp className="h-4 w-4 text-green-600" />
           ) : (
             <TrendingDown className="h-4 w-4 text-red-600" />
           )}
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {isPositive ? '+' : ''}${totalGainLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <p className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {isPositive ? '+' : ''}{totalGainLossPercent.toFixed(2)}% overall
-          </p>
+          {!gainLossAvailable ? (
+            <>
+              <div className="text-2xl font-bold text-muted-foreground">—</div>
+              <p className="text-xs text-muted-foreground">
+                Select an account to see P&amp;L
+              </p>
+            </>
+          ) : (
+            <>
+              <div
+                className={`text-2xl font-bold ${
+                  isPositive ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {isPositive ? "+" : ""}$
+                {Math.abs(totalGainLoss).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+              <p
+                className={`text-xs ${
+                  isPositive ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {isPositive ? "+" : ""}
+                {totalGainLossPercent.toFixed(2)}% unrealized
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+ 

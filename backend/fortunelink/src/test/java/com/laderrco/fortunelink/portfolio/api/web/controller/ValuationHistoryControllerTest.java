@@ -10,12 +10,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.NetWorthSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.NetWorthSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -29,9 +31,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(controllers = NetWorthHistoryController.class)
+@WebMvcTest(controllers = ValuationHistoryController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class NetWorthHistoryControllerTest {
+class ValuationHistoryControllerTest {
 
   private static final UUID USER_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
   private static final String BASE_URL = "/api/v1/net-worth/history";
@@ -40,7 +42,7 @@ class NetWorthHistoryControllerTest {
   MockMvc mockMvc;
 
   @MockitoBean
-  NetWorthSnapshotRepository snapshotRepository;
+  ValuationSnapshotRepository snapshotRepository;
   @MockitoBean
   AuthenticationUserService authenticationUserService;
   @MockitoBean
@@ -53,12 +55,24 @@ class NetWorthHistoryControllerTest {
         any(HttpServletResponse.class), any())).thenReturn(true);
   }
 
-  private NetWorthSnapshot buildSnapshot() {
+  private ValuationSnapshot buildSnapshot() {
     Currency cad = Currency.of("CAD");
-    Money fifty = new Money(new java.math.BigDecimal("50000"), cad);
-    Money zero = Money.zero(cad);
-    return new NetWorthSnapshot(UUID.randomUUID(), UserId.fromString(USER_UUID.toString()), fifty,
-        zero, fifty, cad, false, Instant.now());
+    Money fifty = new Money(new BigDecimal("50000"), cad);
+    Money zeroMoney = Money.zero(cad);
+
+    return new ValuationSnapshot(
+        UUID.randomUUID(),
+        UserId.fromString(USER_UUID.toString()),
+        fifty, // totalValue
+        zeroMoney, // totalCostBasis
+        fifty, // unrealizedGainLoss
+        BigDecimal.ZERO, // gainLossPercent
+        zeroMoney, // totalCashBalance
+        zeroMoney, // totalInvestedValue
+        cad.getCode(), // displayCurrency
+        false, // hasStaleData
+        Instant.now() // snapshotDate
+    );
   }
 
   @Nested

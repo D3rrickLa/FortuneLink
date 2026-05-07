@@ -27,7 +27,7 @@ class NetWorthSnapshotServiceTest {
   private UserSnapshotWorker worker;
 
   @InjectMocks
-  private NetWorthSnapshotService snapshotService;
+  private ValuationSnapshotJobService snapshotService;
 
   @Nested
   @DisplayName("snapshotAllUsers Orchestration")

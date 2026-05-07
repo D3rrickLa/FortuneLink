@@ -1,9 +1,10 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.NetWorthSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.NetWorthSnapshotRepository;
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.NetWorthSnapshotJpaEntity;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -15,18 +16,18 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class NetWorthSnapshotRepositoryImpl implements NetWorthSnapshotRepository {
-  private final JpaNetWorthSnapshotRepository jpaRepository;
+public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotRepository {
+  private final JpaValuationSnapshotRepository jpaRepository;
 
   @Override
-  public void save(NetWorthSnapshot snapshot) {
-    jpaRepository.save(NetWorthSnapshotJpaEntity.from(snapshot));
+  public void save(ValuationSnapshot snapshot) {
+    jpaRepository.save(ValuationSnapshotJpaEntity.from(snapshot));
   }
 
   @Override
-  public List<NetWorthSnapshot> findByUserIdSince(UserId userId, Instant since) {
+  public List<ValuationSnapshot> findByUserIdSince(UserId userId, Instant since) {
     return jpaRepository.findByUserIdSince(UUID.fromString(userId.toString()), since).stream()
-        .map(NetWorthSnapshotJpaEntity::toDomain).toList();
+        .map(ValuationSnapshotJpaEntity::toDomain).toList();
   }
 
   /**

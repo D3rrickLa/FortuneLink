@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
@@ -68,7 +69,7 @@ class PortfolioValuationServiceTest {
     Money costBasis = Money.of(1200.00, "USD");
     when(pos.totalCostBasis()).thenReturn(costBasis);
 
-    Money result = invokeResolvePositionValue(pos, null, USD);
+    ValuationView result = invokeResolvePositionValue(pos, null, USD);
 
     assertThat(result).isEqualTo(costBasis);
   }
@@ -83,7 +84,7 @@ class PortfolioValuationServiceTest {
     MarketAssetQuote emptyQuote = new MarketAssetQuote(AAPL, null, null, null, null, null, null,
         null, null, null, "Unit testing source", Instant.now());
 
-    Money result = invokeResolvePositionValue(pos, emptyQuote, USD);
+    ValuationView result = invokeResolvePositionValue(pos, emptyQuote, USD);
 
     assertThat(result).isEqualTo(costBasis);
   }
@@ -99,7 +100,7 @@ class PortfolioValuationServiceTest {
     MarketAssetQuote quote = new MarketAssetQuote(AAPL, zeroPrice, null, null, null, null, null,
         null, null, null, "Unit testing source", Instant.now());
 
-    Money result = invokeResolvePositionValue(pos, quote, USD);
+    ValuationView result = invokeResolvePositionValue(pos, quote, USD);
 
     assertThat(result).isEqualTo(costBasis);
   }
@@ -115,7 +116,7 @@ class PortfolioValuationServiceTest {
 
     when(pos.currentValue(validPrice)).thenReturn(marketValue);
 
-    Money result = invokeResolvePositionValue(pos, quote, USD);
+    ValuationView result = invokeResolvePositionValue(pos, quote, USD);
 
     assertThat(result).isEqualTo(marketValue);
   }
@@ -124,7 +125,7 @@ class PortfolioValuationServiceTest {
    * Private helper to trigger the 'resolvePositionValue' logic via the public
    * calculatePositionsValue entry point.
    */
-  private Money invokeResolvePositionValue(Position pos, MarketAssetQuote quote,
+  private ValuationView invokeResolvePositionValue(Position pos, MarketAssetQuote quote,
       Currency currency) {
     Account account = mock(Account.class);
     when(account.getAccountCurrency()).thenReturn(currency);
@@ -133,7 +134,7 @@ class PortfolioValuationServiceTest {
     Map<AssetSymbol, MarketAssetQuote> quotes = new HashMap<>();
     quotes.put(AAPL, quote);
 
-    return valuationService.calculatePositionsValue(account, quotes);
+    return valuationService.calculateAccountValuation(account, quotes);
   }
 
   @Nested
@@ -145,7 +146,7 @@ class PortfolioValuationServiceTest {
       Portfolio portfolio = mock(Portfolio.class);
       when(portfolio.getAccounts()).thenReturn(List.of());
 
-      Money result = valuationService.calculateTotalValue(portfolio, USD, Map.of());
+      ValuationView result = valuationService.calculatePortfolioValuation(portfolio, USD, Map.of());
 
       assertThat(result).isEqualTo(Money.zero(USD));
     }
@@ -161,9 +162,30 @@ class PortfolioValuationServiceTest {
       List.of(usdAcc1, usdAcc2, cadAcc)
           .forEach(acc -> when(acc.getState()).thenReturn(AccountLifecycleState.ACTIVE));
 
-      when(valuationService.calculateAccountValue(usdAcc1, Map.of())).thenReturn(HUNDRED_USD);
-      when(valuationService.calculateAccountValue(usdAcc2, Map.of())).thenReturn(HUNDRED_USD);
-      when(valuationService.calculateAccountValue(cadAcc, Map.of())).thenReturn(HUNDRED_CAD);
+      ValuationView viewUSD = new ValuationView(
+          Money.of("100.00", USD),
+          Money.zero(USD),
+          Money.zero(USD),
+          BigDecimal.ZERO,
+          Money.zero(USD),
+          Money.zero(USD),
+          USD,
+          false,
+          Instant.now());
+      ValuationView viewCAD = new ValuationView(
+          Money.of("100.00", CAD),
+          Money.zero(CAD),
+          Money.zero(CAD),
+          BigDecimal.ZERO,
+          Money.zero(CAD),
+          Money.zero(CAD),
+          CAD,
+          false,
+          Instant.now());
+
+      when(valuationService.calculateAccountValuation(usdAcc1, Map.of())).thenReturn(viewUSD);
+      when(valuationService.calculateAccountValuation(usdAcc2, Map.of())).thenReturn(viewUSD);
+      when(valuationService.calculateAccountValuation(cadAcc, Map.of())).thenReturn(viewCAD);
       when(portfolio.getAccounts()).thenReturn(List.of(usdAcc1, usdAcc2, cadAcc));
 
       when(exchangeRateService.convert(argThat(m -> m != null && m.amount().intValue() == 200),
@@ -171,10 +193,10 @@ class PortfolioValuationServiceTest {
       when(exchangeRateService.convert(argThat(m -> m != null && m.amount().intValue() == 100),
           eq(USD))).thenReturn(Money.of(75, "USD"));
 
-      Money total = valuationService.calculateTotalValue(portfolio, USD, Map.of());
+      ValuationView result = valuationService.calculatePortfolioValuation(portfolio, USD, Map.of());
 
       verify(exchangeRateService, times(2)).convert(any(), eq(USD));
-      assertThat(total).isEqualTo(Money.of(275, "USD"));
+      assertThat(result.totalValue()).isEqualTo(Money.of(275, "USD"));
     }
 
     @Test
@@ -191,9 +213,9 @@ class PortfolioValuationServiceTest {
 
       when(exchangeRateService.convert(any(), eq(USD))).thenReturn(HUNDRED_USD);
 
-      Money total = valuationService.calculateTotalValue(portfolio, USD, Map.of());
+      ValuationView total = valuationService.calculatePortfolioValuation(portfolio, USD, Map.of());
 
-      assertThat(total).isEqualTo(HUNDRED_USD);
+      assertThat(total.totalValue()).isEqualTo(HUNDRED_USD);
 
       verify(exchangeRateService, times(1)).convert(any(), eq(USD));
     }
@@ -213,12 +235,12 @@ class PortfolioValuationServiceTest {
       when(goodAcc.getAccountCurrency()).thenReturn(USD);
       when(portfolio.getAccounts()).thenReturn(List.of(goodAcc, faultyAcc));
 
-      doReturn(HUNDRED_USD).when(serviceSpy).calculateAccountValue(eq(goodAcc), any());
-      doReturn(null).when(serviceSpy).calculateAccountValue(eq(faultyAcc), any());
+      doReturn(HUNDRED_USD).when(serviceSpy).calculateAccountValuation(eq(goodAcc), any());
+      doReturn(null).when(serviceSpy).calculateAccountValuation(eq(faultyAcc), any());
 
       when(exchangeRateService.convert(HUNDRED_USD, USD)).thenReturn(HUNDRED_USD);
 
-      Money total = serviceSpy.calculateTotalValue(portfolio, USD, Map.of());
+      ValuationView total = serviceSpy.calculatePortfolioValuation(portfolio, USD, Map.of());
 
       assertThat(total).isEqualTo(HUNDRED_USD);
       verify(exchangeRateService, times(1)).convert(any(), eq(USD));
@@ -235,7 +257,7 @@ class PortfolioValuationServiceTest {
       when(inactiveAccount.isActive()).thenReturn(false);
       when(inactiveAccount.getAccountCurrency()).thenReturn(USD);
 
-      Money result = valuationService.calculateAccountValue(inactiveAccount, Map.of());
+      ValuationView result = valuationService.calculateAccountValuation(inactiveAccount, Map.of());
 
       assertThat(result).isEqualTo(Money.zero(USD));
     }
@@ -257,9 +279,9 @@ class PortfolioValuationServiceTest {
       when(account.getPositionEntries()).thenReturn(
           Set.of(Map.entry(AAPL, stockPos), Map.entry(new AssetSymbol("CASH"), cashPos)));
 
-      Money result = valuationService.calculatePositionsValue(account, Map.of(AAPL, quote));
+      ValuationView result = valuationService.calculateAccountValuation(account, Map.of(AAPL, quote));
 
-      assertThat(result).isEqualTo(Money.of(150, "USD"));
+      assertThat(result.totalCashBalance()).isEqualTo(Money.of(150, "USD"));
     }
   }
 
@@ -275,9 +297,9 @@ class PortfolioValuationServiceTest {
 
       Account account = createMockAccount(USD, Money.zero(USD), Map.of(AAPL, pos));
 
-      Money result = valuationService.calculatePositionsValue(account, Map.of());
+      ValuationView result = valuationService.calculateAccountValuation(account, Map.of());
 
-      assertThat(result).isEqualTo(costBasis);
+      assertThat(result.totalCostBasis()).isEqualTo(costBasis);
     }
 
     @Test
@@ -302,9 +324,9 @@ class PortfolioValuationServiceTest {
       when(pos.currentValue(argThat(p -> p.currency().equals(accountCurrency)
           && p.amount().doubleValue() == 75.0))).thenReturn(expectedFinalValue);
 
-      Money result = valuationService.calculatePositionsValue(account, Map.of(AAPL, cadQuote));
+      ValuationView result = valuationService.calculateAccountValuation(account, Map.of(AAPL, cadQuote));
 
-      assertThat(result).isEqualTo(expectedFinalValue);
+      assertThat(result.totalValue()).isEqualTo(expectedFinalValue);
       verify(exchangeRateService).convert(priceInCad, accountCurrency);
     }
   }

@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
-import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.NetWorthSnapshotJpaEntity;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -10,8 +11,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface JpaNetWorthSnapshotRepository extends
-    JpaRepository<NetWorthSnapshotJpaEntity, UUID> {
+public interface JpaValuationSnapshotRepository extends
+    JpaRepository<ValuationSnapshotJpaEntity, UUID> {
 
   /**
    * Snapshots in ascending date order for chart rendering (oldest → newest). Caller determines the
@@ -23,7 +24,7 @@ public interface JpaNetWorthSnapshotRepository extends
         AND s.snapshotDate >= :since
       ORDER BY s.snapshotDate ASC
       """)
-  List<NetWorthSnapshotJpaEntity> findByUserIdSince(@Param("userId") UUID userId,
+  List<ValuationSnapshotJpaEntity> findByUserIdSince(@Param("userId") UUID userId,
       @Param("since") Instant since);
 
   /**

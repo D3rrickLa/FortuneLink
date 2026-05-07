@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NetWorthSnapshotService {
+public class ValuationSnapshotJobService {
   private final PortfolioRepository portfolioRepository;
   private final UserSnapshotWorker worker; // Inject the new worker
 

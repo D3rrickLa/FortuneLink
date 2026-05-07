@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.application.utils;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
@@ -49,8 +50,10 @@ public class AccountViewBuilder {
           feesIncurred);
     }).toList();
 
-    Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
-    Money cashBalance = account.getCashBalance();
+    ValuationView valuation = portfolioValuationService.calculateAccountValuation(account, quoteCache);
+
+    Money totalValue = valuation.totalValue();
+    Money cashBalance = valuation.totalCashBalance();
 
     int excludedCount = transactionRepository.countExcludedPositionAffecting(
         account.getAccountId());
@@ -112,8 +115,10 @@ public class AccountViewBuilder {
         entry -> portfolioViewMapper.toPositionView(entry.getValue(),
             quoteCache.get(entry.getKey()))).toList();
 
-    Money totalValue = portfolioValuationService.calculateAccountValue(account, quoteCache);
-    Money cashBalance = account.getCashBalance();
+    ValuationView valuation = portfolioValuationService.calculateAccountValuation(account, quoteCache);
+
+    Money totalValue = valuation.totalValue();
+    Money cashBalance = valuation.totalCashBalance();
 
     return portfolioViewMapper.toAccountView(account, positionViews, totalValue, cashBalance, false,
         0);

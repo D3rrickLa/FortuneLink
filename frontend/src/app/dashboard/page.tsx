@@ -18,6 +18,7 @@ import { useNetWorth, usePortfolio } from "@/features/portfolio/queries/usePortf
 import { useAccount } from "@/features/portfolio/queries/useAccount";
 import { AccountView, CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
 import { EditAccountDialog } from "@/features/portfolio/components/EditAccountDialog";
+import { GainLossSummary, deriveAccountGainLoss, GAIN_LOSS_UNAVAILABLE } from "@/lib/portfolio/gainLoss";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState("all");
@@ -90,28 +91,42 @@ export default function DashboardPage() {
     return 0;
   }, [hasAccount, hasPortfolio, accountDetail, portfolioDetail]);
 
-  const { totalGainLoss, totalGainLossPercent } = useMemo(() => {
-    let gain = 0;
-    let percentage = 0;
+  const gainLossSummary = useMemo((): GainLossSummary => {
+    // Account view: derive by summing unrealizedPnL across positions.
+    // AccountView.assets is already in cache from useAccount — no extra fetch.
+    if (hasAccount && accountDetail?.assets) {
+      const positions = accountDetail.assets;
 
-    if (hasAccount && accountDetail) {
-      // Calculate for specific account
-      gain = accountDetail.totalGainLoss?.amount ?? 0;
-      percentage = accountDetail.totalGainLossPercentage ?? 0;
-    } else if (hasPortfolio && netWorth) {
-      // Calculate for specific portfolio using netWorth data
-      gain = netWorth.totalGainLoss ?? 0;
-      percentage = netWorth.totalGainLossPercentage ?? 0;
-    } else if (isAllView && portfolios) {
-      // Aggregate gain across all portfolios for the "All Portfolios" view
-      gain = portfolios.reduce((sum, p) => sum + (p.totalGainLoss ?? 0), 0);
+      const totalGainLoss = positions.reduce(
+        (sum, pos) => sum + (pos.unrealizedPnL?.amount ?? 0),
+        0
+      );
 
-      const totalCost = portfolios.reduce((sum, p) => sum + (p.totalCost ?? 0), 0);
-      percentage = totalCost > 0 ? (gain / totalCost) * 100 : 0;
+      // Cost basis per position = totalCostBasis.pricePerUnit.amount
+      // This is (avg cost * qty), already computed by the backend
+      const totalCostBasis = positions.reduce(
+        (sum, pos) => sum + (pos.totalCostBasis?.pricePerUnit?.amount ?? 0),
+        0
+      );
+
+      const totalGainLossPercent =
+        totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
+
+      return { totalGainLoss, totalGainLossPercent, isAvailable: true };
     }
 
-    return { totalGainLoss: gain, totalGainLossPercent: percentage };
-  }, [hasAccount, accountDetail, hasPortfolio, netWorth, isAllView, portfolios]);
+    // Portfolio view and all-portfolios view: NetWorthResponse doesn't expose
+    // cost basis or gain/loss yet. Return honest unavailable rather than fake 0.
+    // This unblocks once NetWorthResponse is expanded on the backend.
+    return GAIN_LOSS_UNAVAILABLE;
+  }, [hasAccount, accountDetail]);
+
+  const { totalGainLoss, totalGainLossPercent, isAvailable: gainLossAvailable } = gainLossSummary;
+
+  // Use the activePortfolio.currency which is now passed through from the hook
+  const chartCurrency = hasAccount
+    ? (accountDetail?.baseCurrency?.code ?? "USD")
+    : (activePortfolio?.currency ?? "USD");
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -225,12 +240,19 @@ export default function DashboardPage() {
                 cashBalance={cashBalance}
                 totalGainLoss={totalGainLoss}
                 totalGainLossPercent={totalGainLossPercent}
+                gainLossAvailable={gainLossAvailable}
               />
 
               {/* Charts */}
               <div className="grid gap-8 lg:grid-cols-2">
-                <PerformanceChart portfolioId={activePortfolioId} />
-                <AllocationChart portfolioId={activePortfolioId} />
+                <PerformanceChart
+                  currency={chartCurrency}
+                  account={hasAccount ? accountDetail ?? null : null}
+                />
+                <AllocationChart
+                  account={hasAccount ? accountDetail ?? null : null}
+                  isLoading={hasAccount && !accountDetail}
+                />
               </div>
 
               {/* Detail tables */}

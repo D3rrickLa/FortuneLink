@@ -54,6 +54,7 @@ export interface Account {
 export interface Portfolio {
   id: string;
   name: string;
+  currency: string;
   totalValue: number;
   gainLoss: number;
   gainLossPercent: number;

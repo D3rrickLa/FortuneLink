@@ -65,18 +65,6 @@ public class PortfolioDomainMapper {
   }
 
   // =========================================================================
-  // Portfolio , toEntity (new or update)
-  // =========================================================================
-
-  private static UUID findExistingPositionId(AccountJpaEntity existing, String symbol) {
-    if (existing == null) {
-      return null;
-    }
-    return existing.getPositions().stream().filter(p -> p.getSymbol().equals(symbol))
-        .map(PositionJpaEntity::getId).findFirst().orElse(null);
-  }
-
-  // =========================================================================
   // Account , toDomain
   // =========================================================================
 

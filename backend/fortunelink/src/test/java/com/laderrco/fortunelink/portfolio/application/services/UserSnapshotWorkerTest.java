@@ -12,16 +12,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.NetWorthSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
+
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +50,7 @@ class UserSnapshotWorkerTest {
   private PortfolioRepository portfolioRepository;
 
   @Mock
-  private NetWorthSnapshotRepository snapshotRepository;
+  private ValuationSnapshotRepository snapshotRepository;
 
   @Mock
   private PortfolioValuationService valuationService;
@@ -62,7 +66,7 @@ class UserSnapshotWorkerTest {
     when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
     when(p.getDisplayCurrency()).thenReturn(USD);
-    when(valuationService.calculateTotalValue(any(), any(), any())).thenReturn(Money.zero(USD));
+    when(valuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(mock(ValuationView.class));
 
     snapshotWorker.snapshotForUser(USER_ID);
     verify(marketDataService, never()).getBatchQuotes(any());
@@ -94,17 +98,25 @@ class UserSnapshotWorkerTest {
   void createsSnapshotSuccessfully() {
     Portfolio p = mock(Portfolio.class);
     Account a = mock(Account.class);
+    ValuationView viewUSD = new ValuationView(
+        Money.of("100.00", USD),
+        Money.zero(USD),
+        Money.zero(USD),
+        BigDecimal.ZERO,
+        Money.zero(USD),
+        Money.zero(USD),
+        USD,
+        false,
+        Instant.now());
 
+    boolean result = snapshotWorker.snapshotForUser(USER_ID);
+    
     when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
     when(p.getDisplayCurrency()).thenReturn(USD);
     when(p.getAccounts()).thenReturn(List.of(a));
     when(a.isStale()).thenReturn(true);
-
-    when(valuationService.calculateTotalValue(eq(p), eq(USD), any())).thenReturn(
-        Money.of(100, USD));
-
-    boolean result = snapshotWorker.snapshotForUser(USER_ID);
+    when(valuationService.calculatePortfolioValuation(eq(p), eq(USD), any())).thenReturn(viewUSD);
 
     assertThat(result).isTrue();
 
@@ -115,11 +127,21 @@ class UserSnapshotWorkerTest {
   @DisplayName("snapshotForUser: handles empty symbols list")
   void handlesEmptySymbols() {
     Portfolio p = mock(Portfolio.class);
+    ValuationView viewUSD = new ValuationView(
+        Money.of("0.00", USD),
+        Money.zero(USD),
+        Money.zero(USD),
+        BigDecimal.ZERO,
+        Money.zero(USD),
+        Money.zero(USD),
+        USD,
+        false,
+        Instant.now());
+
     when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
     when(p.getDisplayCurrency()).thenReturn(USD);
-
-    when(valuationService.calculateTotalValue(any(), any(), any())).thenReturn(Money.zero(USD));
+    when(valuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(viewUSD);
 
     snapshotWorker.snapshotForUser(USER_ID);
 

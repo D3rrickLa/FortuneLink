@@ -1,6 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.repositories;
 
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.NetWorthSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
 import java.util.List;
@@ -12,20 +12,20 @@ import java.util.List;
  * index enforces one snapshot per user per day, and the snapshot service uses
  * {@code existsForToday} to skip duplicate runs.
  */
-public interface NetWorthSnapshotRepository {
+public interface ValuationSnapshotRepository {
 
   /**
    * Persists a new snapshot. Will throw a DataIntegrityViolationException if a snapshot already
    * exists for this user on the same calendar day (UTC). Callers should check
    * {@link #existsForToday(UserId)} first.
    */
-  void save(NetWorthSnapshot snapshot);
+  void save(ValuationSnapshot snapshot);
 
   /**
    * Returns all snapshots for a user on or after {@code since}, ordered ascending by snapshotDate.
    * Used to render the FIRE progress chart.
    */
-  List<NetWorthSnapshot> findByUserIdSince(UserId userId, Instant since);
+  List<ValuationSnapshot> findByUserIdSince(UserId userId, Instant since);
 
   /**
    * Returns true if a snapshot already exists for today (UTC calendar day). Used by the scheduled

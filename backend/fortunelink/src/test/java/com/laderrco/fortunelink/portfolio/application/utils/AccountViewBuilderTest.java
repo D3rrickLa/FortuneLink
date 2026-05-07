@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
@@ -88,12 +89,22 @@ class AccountViewBuilderTest {
     Money fee = Money.of(10, USD);
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     Map<AssetSymbol, Money> fees = Map.of(appleSymbol, fee);
+    ValuationView viewUSD = new ValuationView(
+        Money.of("0.00", USD),
+        Money.zero(USD),
+        Money.zero(USD),
+        BigDecimal.ZERO,
+        Money.zero(USD),
+        Money.zero(USD),
+        USD,
+        false,
+        Instant.now());
 
     PositionView mockPosView = mock(PositionView.class);
     AccountView expectedView = mock(AccountView.class);
 
     when(viewMapper.toPositionView(any(), eq(appleQuote), eq(fee))).thenReturn(mockPosView);
-    when(valuationService.calculateAccountValue(account, quotes)).thenReturn(zeroMoney);
+    when(valuationService.calculateAccountValuation(account, quotes)).thenReturn(viewUSD);
     when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(),
         anyInt())).thenReturn(expectedView);
 
@@ -122,9 +133,19 @@ class AccountViewBuilderTest {
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     PositionView mockPosView = mock(PositionView.class);
     AccountView expectedView = mock(AccountView.class);
+    ValuationView viewUSD = new ValuationView(
+        Money.of("0.00", USD),
+        Money.zero(USD),
+        Money.zero(USD),
+        BigDecimal.ZERO,
+        Money.zero(USD),
+        Money.zero(USD),
+        USD,
+        false,
+        Instant.now());
 
     when(viewMapper.toPositionView(any(), eq(appleQuote))).thenReturn(mockPosView);
-    when(valuationService.calculateAccountValue(account, quotes)).thenReturn(zeroMoney);
+    when(valuationService.calculateAccountValuation(account, quotes)).thenReturn(viewUSD);
     when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(),
         anyInt())).thenReturn(expectedView);
 

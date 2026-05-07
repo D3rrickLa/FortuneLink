@@ -1,14 +1,14 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
-import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetValuationQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio.application.utils.AccountViewBuilder;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
-import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
@@ -21,7 +21,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -35,13 +34,15 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Handles portfolio-level read operations only.
  * <p>
- * Responsibilities: portfolio aggregate identity, total valuation, net worth, performance, and
- * allocation.
+ * Responsibilities: portfolio aggregate identity, total valuation, net worth,
+ * performance, and allocation.
  * <p>
  * Account/position detail lives in AccountQueryService.
  * <p>
- * API call discipline: ONE getBatchQuotes() call per request, resolved here at the service layer
- * and passed down into mappers and domain services. Domain services must NOT independently call
+ * API call discipline: ONE getBatchQuotes() call per request, resolved here at
+ * the service layer
+ * and passed down into mappers and domain services. Domain services must NOT
+ * independently call
  * MarketDataService.
  */
 @Service
@@ -60,30 +61,35 @@ public class PortfolioQueryService {
     Objects.requireNonNull(query, "GetPortfolioByIdQuery cannot be null");
 
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
+
     Currency displayCurrency = portfolio.getDisplayCurrency();
+
     Collection<Account> accounts = portfolio.getAccounts();
 
     Set<AssetSymbol> symbols = accounts.stream()
         .flatMap(a -> PortfolioAccessUtils.extractSymbolsByAccount(a).stream())
         .collect(Collectors.toSet());
+
     Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(symbols);
 
-    Set<AccountId> accountIds = accounts.stream().map(Account::getAccountId)
+    Set<AccountId> accountIds = accounts.stream()
+        .map(Account::getAccountId)
         .collect(Collectors.toSet());
 
-    Map<AccountId, Map<AssetSymbol, Money>> allFeesByAccount = transactionRepository.sumBuyFeesBySymbolForAccounts(
-        accountIds);
+    Map<AccountId, Map<AssetSymbol, Money>> allFeesByAccount = transactionRepository
+        .sumBuyFeesBySymbolForAccounts(accountIds);
 
-    List<AccountView> accountViews = accounts.stream().map(
-        account -> accountViewBuilder.build(account, quoteCache,
-            allFeesByAccount.getOrDefault(account.getAccountId(), Map.of()))).toList();
+    List<AccountView> accountViews = accounts.stream()
+        .map(account -> accountViewBuilder.build(
+            account,
+            quoteCache,
+            allFeesByAccount.getOrDefault(account.getAccountId(), Map.of())))
+        .toList();
 
-    Money totalValue = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency,
-        quoteCache);
-    boolean hasStaleData = accounts.stream().anyMatch(Account::isStale);
+    ValuationView valuation = portfolioValuationService.calculatePortfolioValuation(
+        portfolio, displayCurrency, quoteCache);
 
-    return portfolioViewMapper.toPortfolioView(portfolio, accountViews, totalValue, hasStaleData);
-
+    return portfolioViewMapper.toPortfolioView(portfolio, accountViews, valuation, valuation.hasStaleData());
   }
 
   public List<PortfolioSummaryView> getPortfolioSummaries(GetPortfoliosByUserIdQuery query) {
@@ -97,49 +103,52 @@ public class PortfolioQueryService {
 
     Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotesForMultiple(portfolios);
 
-    // PortfolioSummaryView contains only totalValue - fees are position-level
-    // detail and intentionally excluded here. Do NOT add fee loading to this method.
     return portfolios.stream().map(p -> {
-      Money totalValue = portfolioValuationService.calculateTotalValue(p, p.getDisplayCurrency(),
-          quoteCache);
-      return portfolioViewMapper.toPortfolioSummaryView(p, totalValue);
+      ValuationView valuation = portfolioValuationService.calculatePortfolioValuation(p, p.getDisplayCurrency(), quoteCache);
+      return portfolioViewMapper.toPortfolioSummaryView(p, valuation);
     }).toList();
   }
 
   /**
    * Calculates net worth for a user's portfolio. as of 'now'
    * <p>
-   * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL into Loan/Debt
+   * Net Worth = Total Assets - Total Liabilities are currently zero (future: ACL
+   * into Loan/Debt
    * context).
    */
-  public NetWorthView getNetWorth(GetNetWorthQuery query) {
+  // TODO: integrate liabilities via ACL (Loan / Debt context)
+  // Liabilities are zero until the Loan Management bounded context is
+  // implemented.
+  // See LiabilityStub for scope. NetWorthView.includesLiabilities will be false
+  // until that context ships, so the frontend can display an appropriate
+  // disclaimer.
+  // Money totalLiabilities = Money.zero(displayCurrency);
+  // boolean liabilitiesIncluded = false;
+  // boolean isStale =
+  // portfolio.getAccounts().stream().anyMatch(Account::isStale);
+
+  // Money netWorth = totalAssets.subtract(totalLiabilities);
+
+  // // TODO: in frontend, display a warning because we didn't implement this
+  // return new ValuationView(totalAssets, totalLiabilities, netWorth,
+  // displayCurrency,
+  // liabilitiesIncluded, isStale, Instant.now());
+  public ValuationView getValuation(GetValuationQuery query) {
     Objects.requireNonNull(query, "ViewNetWorthQuery cannot be null");
 
     Portfolio portfolio = portfolioLoader.loadUserPortfolio(query.portfolioId(), query.userId());
     Currency displayCurrency = portfolio.getDisplayCurrency();
 
     Map<AssetSymbol, MarketAssetQuote> quoteCache = fetchQuotes(portfolio);
+    ValuationView valuation = portfolioValuationService.calculatePortfolioValuation(
+        portfolio, displayCurrency, quoteCache);
 
-    Money totalAssets = portfolioValuationService.calculateTotalValue(portfolio, displayCurrency,
-        quoteCache);
-
-    // TODO: integrate liabilities via ACL (Loan / Debt context)
-    // Liabilities are zero until the Loan Management bounded context is implemented.
-    // See LiabilityStub for scope. NetWorthView.includesLiabilities will be false
-    // until that context ships, so the frontend can display an appropriate disclaimer.
-    Money totalLiabilities = Money.zero(displayCurrency);
-    boolean liabilitiesIncluded = false;
-    boolean isStale = portfolio.getAccounts().stream().anyMatch(Account::isStale);
-
-    Money netWorth = totalAssets.subtract(totalLiabilities);
-
-    // TODO: in frontend, display a warning because we didn't implement this
-    return new NetWorthView(totalAssets, totalLiabilities, netWorth, displayCurrency,
-        liabilitiesIncluded, isStale, Instant.now());
+    return valuation;
   }
 
   /**
-   * Fetches all market quotes for positions in a portfolio. This is the ONLY place getBatchQuotes()
+   * Fetches all market quotes for positions in a portfolio. This is the ONLY
+   * place getBatchQuotes()
    * should be called for portfolio queries.
    */
   private Map<AssetSymbol, MarketAssetQuote> fetchQuotes(Set<AssetSymbol> symbols) {

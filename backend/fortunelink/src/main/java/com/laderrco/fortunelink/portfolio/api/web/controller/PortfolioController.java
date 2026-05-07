@@ -2,13 +2,13 @@ package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.CreatePortfolioRequest;
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.UpdatePortfolioRequest;
-import com.laderrco.fortunelink.portfolio.api.web.dto.responses.NetWorthResponse;
+import com.laderrco.fortunelink.portfolio.api.web.dto.responses.ValuationResponse;
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.PortfolioResponse;
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.PortfolioSummaryResponse;
 import com.laderrco.fortunelink.portfolio.application.commands.CreatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
-import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetValuationQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioLifecycleService;
@@ -126,12 +126,12 @@ public class PortfolioController {
       "Calculates the total valuation of the portfolio in its base currency. "
           + "Triggers real-time valuation of all underlying assets.")
   @GetMapping("/{portfolioId}/net-worth")
-  public NetWorthResponse getNetWorth(@PathVariable String portfolioId,
+  public ValuationResponse getNetWorth(@PathVariable String portfolioId,
       @Parameter(hidden = true) @AuthenticatedUser UserId userId) {
 
-    var view = queryService.getNetWorth(
-        new GetNetWorthQuery(PortfolioId.fromString(portfolioId), userId));
+    var view = queryService.getValuation(
+        new GetValuationQuery(PortfolioId.fromString(portfolioId), userId));
 
-    return NetWorthResponse.fromView(view);
+    return ValuationResponse.from(view);
   }
 }
