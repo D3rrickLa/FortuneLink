@@ -30,9 +30,14 @@ public class UserSnapshotWorker {
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
 
+  /**
+   * creates a snapshot or the user's portfolio. the snapshot now gets
+   * total cost basis, total cash balance, and total invested value
+   * @param userId is the user
+   * @return boolean if there is a snapshot
+   */
   @Transactional
   public boolean snapshotForUser(UserId userId) {
-
     if (snapshotRepository.existsForToday(userId)) {
       log.debug("Snapshot already exists today for userId={}", userId);
       return false;
@@ -52,7 +57,7 @@ public class UserSnapshotWorker {
         ? Map.of()
         : marketDataService.getBatchQuotes(allSymbols);
 
-    Currency displayCurrency = portfolios.get(0).getDisplayCurrency();
+    Currency displayCurrency = portfolios.getFirst().getDisplayCurrency();
 
     ValuationView valuation = portfolioValuationService.calculateUserValuation(portfolios, displayCurrency, quoteCache);
 

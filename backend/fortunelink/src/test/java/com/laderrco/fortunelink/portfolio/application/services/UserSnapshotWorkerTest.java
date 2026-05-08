@@ -2,8 +2,11 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -17,16 +20,17 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,22 +65,37 @@ class UserSnapshotWorkerTest {
   @Test
   @DisplayName("snapshotForUser: tests quote fetch branching (empty symbols vs symbols present)")
   void snapshotForUserQuoteFetchingBranching() {
-
     Portfolio p = mock(Portfolio.class);
+    AssetSymbol apple = new AssetSymbol("AAPL");
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
+        Instant.now());
+
     when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
     when(p.getDisplayCurrency()).thenReturn(USD);
-    when(valuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(mock(ValuationView.class));
+    when(valuationService.calculateUserValuation(any(), any(), any())).thenReturn(viewUSD);
 
-    snapshotWorker.snapshotForUser(USER_ID);
-    verify(marketDataService, never()).getBatchQuotes(any());
-
-    AssetSymbol apple = new AssetSymbol("AAPL");
+    // --- Part 1: Empty Symbols ---
+    // We use a try-with-resources for the static mock to control exactly when it's active
     try (MockedStatic<PortfolioAccessUtils> utils = mockStatic(PortfolioAccessUtils.class)) {
-      utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of(apple));
+      utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of());
 
       snapshotWorker.snapshotForUser(USER_ID);
 
+      verify(marketDataService, never()).getBatchQuotes(any());
+
+      // Clear invocations so Part 2 starts with a clean slate for verification
+      clearInvocations(marketDataService);
+
+      // --- Part 2: Symbols Present ---
+      utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of(apple));
+      // Optional: you might need to mock the marketDataService return to avoid more NPEs if used
+      when(marketDataService.getBatchQuotes(Set.of(apple))).thenReturn(Map.of());
+
+      snapshotWorker.snapshotForUser(USER_ID);
+
+      // This now checks that it was called exactly once during THIS execution
       verify(marketDataService, times(1)).getBatchQuotes(Set.of(apple));
     }
   }
@@ -98,28 +117,23 @@ class UserSnapshotWorkerTest {
   void createsSnapshotSuccessfully() {
     Portfolio p = mock(Portfolio.class);
     Account a = mock(Account.class);
-    ValuationView viewUSD = new ValuationView(
-        Money.of("100.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
+    ValuationView viewUSD = new ValuationView(Money.of("100.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, true,
         Instant.now());
 
-    boolean result = snapshotWorker.snapshotForUser(USER_ID);
-    
+    // Define behavior BEFORE execution
     when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
     when(p.getDisplayCurrency()).thenReturn(USD);
     when(p.getAccounts()).thenReturn(List.of(a));
-    when(a.isStale()).thenReturn(true);
-    when(valuationService.calculatePortfolioValuation(eq(p), eq(USD), any())).thenReturn(viewUSD);
+
+    // Note: Ensure your service calls calculateUserValuation or calculatePortfolioValuation
+    // Your code shows 'calculateUserValuation' being called in the service
+    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
+
+    boolean result = snapshotWorker.snapshotForUser(USER_ID);
 
     assertThat(result).isTrue();
-
     verify(snapshotRepository).save(argThat(s -> s.userId().equals(USER_ID) && s.hasStaleData()));
   }
 
@@ -127,25 +141,20 @@ class UserSnapshotWorkerTest {
   @DisplayName("snapshotForUser: handles empty symbols list")
   void handlesEmptySymbols() {
     Portfolio p = mock(Portfolio.class);
-    ValuationView viewUSD = new ValuationView(
-        Money.of("0.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
         Instant.now());
 
     when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
     when(p.getDisplayCurrency()).thenReturn(USD);
-    when(valuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(viewUSD);
+
+    // MATCH THIS TO THE SERVICE CALL: calculateUserValuation
+    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
 
     snapshotWorker.snapshotForUser(USER_ID);
 
     verify(marketDataService, never()).getBatchQuotes(any());
-    verify(snapshotRepository).save(any());
+    verify(snapshotRepository).save(any(ValuationSnapshot.class));
   }
 }

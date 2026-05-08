@@ -8,11 +8,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
+import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,13 +40,19 @@ import org.springframework.test.web.servlet.MockMvc;
 class ValuationHistoryControllerTest {
 
   private static final UUID USER_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-  private static final String BASE_URL = "/api/v1/net-worth/history";
+  private static final String BASE_URL = "/api/v1/valuations";
 
   @Autowired
   MockMvc mockMvc;
 
   @MockitoBean
   ValuationSnapshotRepository snapshotRepository;
+  @MockitoBean
+  PortfolioValuationService portfolioValuationService;
+  @MockitoBean
+  MarketDataService marketDataService;
+  @MockitoBean
+  PortfolioLoader portfolioLoader;
   @MockitoBean
   AuthenticationUserService authenticationUserService;
   @MockitoBean
@@ -85,9 +95,9 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of(buildSnapshot()));
 
-      mockMvc.perform(get(BASE_URL)).andExpect(status().isOk())
+      mockMvc.perform(get(BASE_URL+"/history")).andExpect(status().isOk())
           .andExpect(jsonPath("$.length()").value(1))
-          .andExpect(jsonPath("$[0].netWorth").value(50000.0))
+          .andExpect(jsonPath("$[0].totalValue").value(50000.0))
           .andExpect(jsonPath("$[0].currency").value("CAD"))
           .andExpect(jsonPath("$[0].hasStaleData").value(false));
     }
@@ -98,7 +108,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL).param("days", "365")).andExpect(status().isOk())
+      mockMvc.perform(get(BASE_URL+"/history").param("days", "365")).andExpect(status().isOk())
           .andExpect(jsonPath("$.length()").value(0));
     }
 
@@ -108,14 +118,14 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL)).andExpect(status().isOk()).andExpect(jsonPath("$").isArray())
+      mockMvc.perform(get(BASE_URL+"/history")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray())
           .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     @DisplayName("400 when days=0 (below minimum of 1)")
     void returns400ForZeroDays() throws Exception {
-      mockMvc.perform(get(BASE_URL).param("days", "0")).andExpect(status().isBadRequest());
+      mockMvc.perform(get(BASE_URL+"/history").param("days", "0")).andExpect(status().isBadRequest());
 
       verifyNoInteractions(snapshotRepository);
     }
@@ -123,7 +133,7 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("400 when days=1826 (above maximum of 1825)")
     void returns400ForExcessiveDays() throws Exception {
-      mockMvc.perform(get(BASE_URL).param("days", "1826")).andExpect(status().isBadRequest());
+      mockMvc.perform(get(BASE_URL+"/history").param("days", "1826")).andExpect(status().isBadRequest());
 
       verifyNoInteractions(snapshotRepository);
     }
@@ -134,7 +144,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL).param("days", "1825")).andExpect(status().isOk());
+      mockMvc.perform(get(BASE_URL+"/history").param("days", "1825")).andExpect(status().isOk());
     }
 
     @Test
@@ -143,7 +153,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL).param("days", "1")).andExpect(status().isOk());
+      mockMvc.perform(get(BASE_URL+"/history").param("days", "1")).andExpect(status().isOk());
     }
   }
 }
