@@ -22,15 +22,15 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.queries.GetValuationQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetValuationQuery;
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioLifecycleService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioQueryService;
-import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -39,7 +39,6 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -126,15 +125,7 @@ class PortfolioControllerTest {
   private ValuationView buildNetWorthView() {
     Currency cad = Currency.of("CAD");
     Money zero = Money.zero(cad);
-    return new ValuationView(
-        zero, 
-        zero, 
-        zero,
-        BigDecimal.ZERO,
-        zero, 
-        zero, 
-        cad,  
-        false, 
+    return new ValuationView(zero, zero, zero, BigDecimal.ZERO, zero, zero, cad, false,
         Instant.now());
   }
 
@@ -148,7 +139,7 @@ class PortfolioControllerTest {
       when(lifecycleService.createPortfolio(any())).thenReturn(buildPortfolioView());
 
       mockMvc.perform(
-          post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
+              post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
           .andExpect(status().isCreated()).andExpect(jsonPath("$.name").value("My Portfolio"))
           .andExpect(jsonPath("$.currency").value("CAD"))
           .andExpect(jsonPath("$.hasStaleData").value(false));
@@ -160,7 +151,7 @@ class PortfolioControllerTest {
       when(lifecycleService.createPortfolio(any())).thenReturn(buildPortfolioView());
 
       mockMvc.perform(
-          post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
+              post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
           .andExpect(status().isCreated());
 
       var captor = ArgumentCaptor.forClass(
@@ -226,7 +217,7 @@ class PortfolioControllerTest {
           new PortfolioLimitReachedException("User already has an active portfolio"));
 
       mockMvc.perform(
-          post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
+              post(BASE_URL).contentType(MediaType.APPLICATION_JSON).content(validCreateRequest()))
           .andExpect(status().isConflict())
           .andExpect(jsonPath("$.code").value("PORTFOLIO_LIMIT_REACHED"));
     }
@@ -242,7 +233,7 @@ class PortfolioControllerTest {
       when(lifecycleService.updatePortfolio(any())).thenReturn(buildPortfolioView());
 
       mockMvc.perform(patch(PORTFOLIO_URL).contentType(MediaType.APPLICATION_JSON)
-          .content("{\"name\": \"Renamed\", \"description\": \"New desc\"}"))
+              .content("{\"name\": \"Renamed\", \"description\": \"New desc\"}"))
           .andExpect(status().isOk());
     }
 
@@ -253,7 +244,7 @@ class PortfolioControllerTest {
           new PortfolioNotFoundException(PortfolioId.fromString(PORTFOLIO_ID)));
 
       mockMvc.perform(patch(PORTFOLIO_URL).contentType(MediaType.APPLICATION_JSON)
-          .content("{\"name\": \"Renamed\"}")).andExpect(status().isNotFound())
+              .content("{\"name\": \"Renamed\"}")).andExpect(status().isNotFound())
           .andExpect(jsonPath("$.code").value("PORTFOLIO_NOT_FOUND"));
     }
   }

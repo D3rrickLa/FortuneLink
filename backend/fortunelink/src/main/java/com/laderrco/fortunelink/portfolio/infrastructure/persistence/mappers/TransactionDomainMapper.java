@@ -93,7 +93,7 @@ public class TransactionDomainMapper {
    * changes), so there is no update path here , use {@link #applyExclusionState} for exclusion
    * mutations on an existing managed entity.
    *
-   * @param tx      the domain transaction record
+   * @param tx          the domain transaction record
    * @param portfolioId the owning portfolio UUID (denormalized for query efficiency)
    */
   public TransactionJpaEntity toEntity(Transaction tx, UUID portfolioId, String idempotencyKey) {

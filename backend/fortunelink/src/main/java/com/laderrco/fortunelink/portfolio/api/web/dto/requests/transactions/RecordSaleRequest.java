@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;

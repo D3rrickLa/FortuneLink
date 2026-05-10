@@ -8,7 +8,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.laderrco.fortunelink.portfolio.application.views.*;
+import com.laderrco.fortunelink.portfolio.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
+import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -80,15 +84,8 @@ class PortfolioViewMapperTest {
     void toPortfolioSummaryViewShouldMapCorrectly() {
       Portfolio portfolio = mock(Portfolio.class);
       Money totalVal = new Money(new BigDecimal("1500.00"), CAD);
-      ValuationView view = new ValuationView(
-          Money.of("1500.00", CAD),
-          Money.zero(CAD),
-          Money.zero(CAD),
-          BigDecimal.ZERO,
-          Money.zero(CAD),
-          Money.zero(CAD),
-          CAD,
-          false,
+      ValuationView view = new ValuationView(Money.of("1500.00", CAD), Money.zero(CAD),
+          Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
           Instant.now());
       when(portfolio.getPortfolioId()).thenReturn(PORTFOLIOID);
       when(portfolio.getName()).thenReturn("Retirement");
@@ -304,16 +301,9 @@ class PortfolioViewMapperTest {
       Portfolio portfolio = mock(Portfolio.class);
       List<AccountView> accountViews = Collections.emptyList();
       Money totalValue = Money.of(5000, CAD);
-      ValuationView valuationView = new ValuationView(
-        totalValue,
-        Money.of(1000d, "CAD"),
-        Money.of(1000d, "CAD"),
-        BigDecimal.valueOf(10),
-        Money.of(1000d, "CAD"),
-        Money.of(1000d, "CAD"),
-        Currency.of("CAD"),
-        false,
-        Instant.now());
+      ValuationView valuationView = new ValuationView(totalValue, Money.of(1000d, "CAD"),
+          Money.of(1000d, "CAD"), BigDecimal.valueOf(10), Money.of(1000d, "CAD"),
+          Money.of(1000d, "CAD"), Currency.of("CAD"), false, Instant.now());
       boolean hasStaleData = true;
 
       when(portfolio.getPortfolioId()).thenReturn(PORTFOLIOID);

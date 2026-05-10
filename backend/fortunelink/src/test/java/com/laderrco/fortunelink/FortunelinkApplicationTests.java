@@ -1,5 +1,9 @@
 package com.laderrco.fortunelink;
 
+import com.laderrco.fortunelink.portfolio.application.services.PositionRecalculationService;
+import com.laderrco.fortunelink.portfolio.application.services.redislock.RedissonLockProvider;
+import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
@@ -10,11 +14,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import com.laderrco.fortunelink.portfolio.application.services.PositionRecalculationService;
-import com.laderrco.fortunelink.portfolio.application.services.redislock.RedissonLockProvider;
-import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 
 @SpringBootTest
 @Testcontainers
@@ -41,7 +40,6 @@ class FortunelinkApplicationTests {
 
   @MockitoBean
   private RateLimitInterceptor rateLimitInterceptor;
-
 
 
   @Test

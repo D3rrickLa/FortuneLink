@@ -7,7 +7,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,7 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,17 +33,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * @apiNote This was not tested properly via the api/Postman
- *          CSV import endpoints.
- *          <p>
- *          GET /template , download the CSV template POST / , upload a CSV file
- *          for import
- *          <p>
- *          The import is intentionally synchronous for MVP. At scale, you'd
- *          want to push the file to S3 and
- *          process it async via SQS/queue. For the user base you're targeting
- *          (hundreds, not millions),
- *          synchronous is fine and far simpler to debug and reason about.
+ * @apiNote This was not tested properly via the api/Postman CSV import endpoints.
+ * <p>
+ * GET /template , download the CSV template POST / , upload a CSV file for import
+ * <p>
+ * The import is intentionally synchronous for MVP. At scale, you'd want to push the file to S3 and
+ * process it async via SQS/queue. For the user base you're targeting (hundreds, not millions),
+ * synchronous is fine and far simpler to debug and reason about.
  */
 @Validated
 @RestController
@@ -75,11 +69,9 @@ public class CsvImportController {
       @ApiResponse(responseCode = "200", description = "Import successful", content = @Content(schema = @Schema(implementation = CsvImportResult.class))),
       @ApiResponse(responseCode = "422", description = "Validation failed for one or more rows", content = @Content(schema = @Schema(implementation = CsvImportResult.class))),
       @ApiResponse(responseCode = "413", description = "File size exceeds 5MB limit"),
-      @ApiResponse(responseCode = "415", description = "Unsupported file type (must be CSV)")
-  })
+      @ApiResponse(responseCode = "415", description = "Unsupported file type (must be CSV)")})
   public ResponseEntity<CsvImportResult> importCsv(
-      @PathVariable @Schema(example = "p-123") String portfolioId,
-      @AuthenticatedUser UserId userId,
+      @PathVariable @Schema(example = "p-123") String portfolioId, @AuthenticatedUser UserId userId,
       @PathVariable @Schema(example = "acc-456") String accountId,
       @Parameter(description = "The CSV file to upload", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestParam("file") MultipartFile file) {
 
@@ -96,7 +88,7 @@ public class CsvImportController {
     String contentType = file.getContentType();
     if (contentType != null && !contentType.isBlank() && !contentType.contains("text/csv")
         && !contentType.contains("application/octet-stream") && !contentType.contains(
-            "text/plain")) {
+        "text/plain")) {
       return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
           CsvImportResult.failure(java.util.List.of(new CsvRowError(0, "Expected a CSV file"))));
     }

@@ -1,6 +1,10 @@
 package com.laderrco.fortunelink.portfolio.application.mappers;
 
-import com.laderrco.fortunelink.portfolio.application.views.*;
+import com.laderrco.fortunelink.portfolio.application.views.AccountView;
+import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
+import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -96,7 +100,7 @@ public class PortfolioViewMapper {
   }
 
   public PortfolioView toPortfolioView(Portfolio portfolio, List<AccountView> accountViews,
-        ValuationView valuation, boolean hasStaleData) {
+      ValuationView valuation, boolean hasStaleData) {
     Objects.requireNonNull(portfolio, "Portfolio cannot be null");
     Objects.requireNonNull(valuation, "Valuation cannot be null");
     return new PortfolioView(portfolio.getPortfolioId(), portfolio.getUserId(), portfolio.getName(),
@@ -108,8 +112,8 @@ public class PortfolioViewMapper {
     Objects.requireNonNull(portfolio, "Portfolio cannot be null");
     Objects.requireNonNull(valuation, "Valuation cannot be null");
 
-    return new PortfolioSummaryView(portfolio.getPortfolioId(), portfolio.getName(), valuation.totalValue(),
-        portfolio.getLastUpdatedAt());
+    return new PortfolioSummaryView(portfolio.getPortfolioId(), portfolio.getName(),
+        valuation.totalValue(), portfolio.getLastUpdatedAt());
   }
 
   public AccountView toNewAccountView(Account account) {

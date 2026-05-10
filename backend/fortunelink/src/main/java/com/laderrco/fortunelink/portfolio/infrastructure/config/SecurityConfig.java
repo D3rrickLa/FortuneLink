@@ -44,17 +44,12 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.cors(Customizer.withDefaults())
-        .csrf(AbstractHttpConfigurer::disable)
+    http.cors(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/v1/public/**").permitAll()
-            .requestMatchers("/actuator/health").permitAll()
-            .requestMatchers("/api-docs", "/docs").permitAll()
-            .anyRequest().authenticated())
-        .oauth2ResourceServer(oauth -> oauth
-            .jwt(Customizer.withDefaults())
-            .authenticationEntryPoint(jwtAuthEntryPoint));
+        .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/public/**").permitAll()
+            .requestMatchers("/actuator/health").permitAll().requestMatchers("/api-docs", "/docs")
+            .permitAll().anyRequest().authenticated()).oauth2ResourceServer(
+            oauth -> oauth.jwt(Customizer.withDefaults()).authenticationEntryPoint(jwtAuthEntryPoint));
 
     return http.build();
   }

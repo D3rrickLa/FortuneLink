@@ -13,14 +13,12 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Cu
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -70,9 +68,7 @@ class ValuationHistoryControllerTest {
     Money fifty = new Money(new BigDecimal("50000"), cad);
     Money zeroMoney = Money.zero(cad);
 
-    return new ValuationSnapshot(
-        UUID.randomUUID(),
-        UserId.fromString(USER_UUID.toString()),
+    return new ValuationSnapshot(UUID.randomUUID(), UserId.fromString(USER_UUID.toString()),
         fifty, // totalValue
         zeroMoney, // totalCostBasis
         fifty, // unrealizedGainLoss
@@ -95,7 +91,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of(buildSnapshot()));
 
-      mockMvc.perform(get(BASE_URL+"/history")).andExpect(status().isOk())
+      mockMvc.perform(get(BASE_URL + "/history")).andExpect(status().isOk())
           .andExpect(jsonPath("$.length()").value(1))
           .andExpect(jsonPath("$[0].totalValue").value(50000.0))
           .andExpect(jsonPath("$[0].currency").value("CAD"))
@@ -108,7 +104,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL+"/history").param("days", "365")).andExpect(status().isOk())
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "365")).andExpect(status().isOk())
           .andExpect(jsonPath("$.length()").value(0));
     }
 
@@ -118,14 +114,15 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL+"/history")).andExpect(status().isOk()).andExpect(jsonPath("$").isArray())
-          .andExpect(jsonPath("$.length()").value(0));
+      mockMvc.perform(get(BASE_URL + "/history")).andExpect(status().isOk())
+          .andExpect(jsonPath("$").isArray()).andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     @DisplayName("400 when days=0 (below minimum of 1)")
     void returns400ForZeroDays() throws Exception {
-      mockMvc.perform(get(BASE_URL+"/history").param("days", "0")).andExpect(status().isBadRequest());
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "0"))
+          .andExpect(status().isBadRequest());
 
       verifyNoInteractions(snapshotRepository);
     }
@@ -133,7 +130,8 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("400 when days=1826 (above maximum of 1825)")
     void returns400ForExcessiveDays() throws Exception {
-      mockMvc.perform(get(BASE_URL+"/history").param("days", "1826")).andExpect(status().isBadRequest());
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "1826"))
+          .andExpect(status().isBadRequest());
 
       verifyNoInteractions(snapshotRepository);
     }
@@ -144,7 +142,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL+"/history").param("days", "1825")).andExpect(status().isOk());
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "1825")).andExpect(status().isOk());
     }
 
     @Test
@@ -153,7 +151,7 @@ class ValuationHistoryControllerTest {
       when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
           List.of());
 
-      mockMvc.perform(get(BASE_URL+"/history").param("days", "1")).andExpect(status().isOk());
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "1")).andExpect(status().isOk());
     }
   }
 }

@@ -6,7 +6,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
-
 import java.util.List;
 import java.util.Map;
 
@@ -18,10 +17,11 @@ import java.util.Map;
  * API usage.
  */
 public interface PortfolioValuationService {
- /**
+  /**
    * Calculates a full valuation summary for a single account.
    */
-  ValuationView calculateAccountValuation(Account account, Map<AssetSymbol, MarketAssetQuote> quoteCache);
+  ValuationView calculateAccountValuation(Account account,
+      Map<AssetSymbol, MarketAssetQuote> quoteCache);
 
   /**
    * Calculates a full valuation summary for a portfolio.

@@ -1,10 +1,9 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.responses;
 
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
-import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
-
-import io.swagger.v3.oas.annotations.media.Schema;
 // TODO: replace Money with MoneyResponse
 @Schema(description = "Current valuation of a portfolio")
 public record ValuationResponse(
@@ -28,14 +27,10 @@ public record ValuationResponse(
 ) {
 
   public static ValuationResponse from(ValuationView view) {
-    return new ValuationResponse(
-        MoneyResponse.from(view.totalValue()),
-        MoneyResponse.from(view.totalCostBasis()),
-        MoneyResponse.from(view.unrealizedGainLoss()),
-        view.gainLossPercent(),
-        MoneyResponse.from(view.totalCashBalance()),
-        MoneyResponse.from(view.totalInvestedValue()),
-        view.displayCurrency().getCode(),
+    return new ValuationResponse(MoneyResponse.from(view.totalValue()),
+        MoneyResponse.from(view.totalCostBasis()), MoneyResponse.from(view.unrealizedGainLoss()),
+        view.gainLossPercent(), MoneyResponse.from(view.totalCashBalance()),
+        MoneyResponse.from(view.totalInvestedValue()), view.displayCurrency().getCode(),
         view.hasStaleData());
   }
 }

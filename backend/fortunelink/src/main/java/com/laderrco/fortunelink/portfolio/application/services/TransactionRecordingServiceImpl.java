@@ -358,7 +358,8 @@ public class TransactionRecordingServiceImpl implements TransactionRecordingServ
     AssetType type = tx.metadata().assetType();
 
     // BUY/DRIP: creation is valid and expected
-    if (tx.transactionType() == TransactionType.BUY || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
+    if (tx.transactionType() == TransactionType.BUY
+        || tx.transactionType() == TransactionType.DIVIDEND_REINVEST) {
       account.ensurePosition(symbol, type);
     }
 

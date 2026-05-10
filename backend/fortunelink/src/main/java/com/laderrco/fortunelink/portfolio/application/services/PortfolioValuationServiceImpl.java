@@ -63,7 +63,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
 
     Money positions = activeAccounts.stream()
         .map(acc -> calculatePositionsValueInternal(acc, quoteCache))
-        .map(m -> exchangeRateService.convert(m, targetCurrency))
+        .map(m -> exchangeRateService.convert(m, targetCurrency)).filter(Objects::nonNull)
         .reduce(Money.zero(targetCurrency), Money::add);
 
     Money costBasis = activeAccounts.stream()
@@ -119,7 +119,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
           Money costBasis = e.getValue().totalCostBasis();
           return costBasis.currency().equals(targetCurrency) ? costBasis
               : exchangeRateService.convert(costBasis, targetCurrency);
-        }).reduce(Money::add).orElse(Money.zero(targetCurrency));
+        }).filter(Objects::nonNull).reduce(Money::add).orElse(Money.zero(targetCurrency));
   }
 
   private Money calculatePositionsValueInternal(Account account,

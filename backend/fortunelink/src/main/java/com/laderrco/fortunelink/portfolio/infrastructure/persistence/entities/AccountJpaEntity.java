@@ -29,10 +29,8 @@ import org.springframework.data.domain.Persistable;
 /**
  * Persistence model for {@code Account}.
  * <p>
- * Owns a bidirectional relationship to {@code PortfolioJpaEntity} and
- * one-directional collections
- * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and
- * {@code RealizedGainJpaEntity}.
+ * Owns a bidirectional relationship to {@code PortfolioJpaEntity} and one-directional collections
+ * to {@code PositionJpaEntity}, {@code TransactionJpaEntity}, and {@code RealizedGainJpaEntity}.
  */
 @Entity
 @Getter
@@ -40,14 +38,14 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class AccountJpaEntity implements Persistable<UUID> {
 
-  @OneToMany(mappedBy = "account", cascade = { CascadeType.MERGE,
-      CascadeType.PERSIST }, orphanRemoval = true, fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "account", cascade = {CascadeType.MERGE,
+      CascadeType.PERSIST}, orphanRemoval = true, fetch = FetchType.LAZY)
   private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
   // if a single portfolio loads 3 years of active trading, that's 100+
   // records, each time they open the portfolio page, each one is 'loaded', LAZY
   // to solve this
-  @OneToMany(mappedBy = "account", cascade = { CascadeType.PERSIST,
-      CascadeType.MERGE }, orphanRemoval = false, fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
+      CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
   private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
   @Id
   @Column(columnDefinition = "uuid", updatable = false, nullable = false)
@@ -135,10 +133,9 @@ public class AccountJpaEntity implements Persistable<UUID> {
   }
 
   /**
-   * Updates only scalar columns. Positions and realized gains are intentionally
-   * excluded — they have their own diff/append logic in PortfolioDomainMapper.
-   * Calling this is safe at any point in the mapping cycle because it never
-   * clears any collection.
+   * Updates only scalar columns. Positions and realized gains are intentionally excluded — they
+   * have their own diff/append logic in PortfolioDomainMapper. Calling this is safe at any point in
+   * the mapping cycle because it never clears any collection.
    */
   public void applyScalarFields(String name, String accountType, String positionStrategy,
       String healthStatus, String lifecycleState, BigDecimal cashBalanceAmount,
@@ -180,15 +177,12 @@ public class AccountJpaEntity implements Persistable<UUID> {
   }
 
   /**
-   * Appends only NEW realized gain rows, those whose UUID does not already exist
-   * in the persisted
-   * collection. This is the correct operation for append-only domain data. Never
-   * call clear() on
+   * Appends only NEW realized gain rows, those whose UUID does not already exist in the persisted
+   * collection. This is the correct operation for append-only domain data. Never call clear() on
    * realizedGains.
    *
    * <p>
-   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing
-   * only the delta
+   * The mapper is responsible for diffing domain IDs vs persisted IDs and passing only the delta
    * here.
    */
   public void addNewRealizedGains(List<RealizedGainJpaEntity> newGains) {

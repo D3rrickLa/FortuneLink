@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.api.web.dto.requests;
 
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.PositionStrategy;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,14 +10,11 @@ import jakarta.validation.constraints.Size;
 /**
  * Request body for portfolio creation.
  * <p>
- * createDefaultAccount defaults to false if omitted in JSON. When true, both
- * defaultAccountType and
+ * createDefaultAccount defaults to false if omitted in JSON. When true, both defaultAccountType and
  * defaultStrategy are required.
  * <p>
- * The cross-field validation (if createDefaultAccount=true then type/strategy
- * required) is handled
- * in PortfolioLifecycleCommandValidator rather than here, because Jakarta Bean
- * Validation doesn't
+ * The cross-field validation (if createDefaultAccount=true then type/strategy required) is handled
+ * in PortfolioLifecycleCommandValidator rather than here, because Jakarta Bean Validation doesn't
  * support cross-field rules cleanly on records.
  */
 @Schema(description = "Request body for initializing a new investment portfolio")

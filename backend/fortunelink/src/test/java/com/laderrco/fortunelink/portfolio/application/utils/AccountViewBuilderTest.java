@@ -89,15 +89,8 @@ class AccountViewBuilderTest {
     Money fee = Money.of(10, USD);
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     Map<AssetSymbol, Money> fees = Map.of(appleSymbol, fee);
-    ValuationView viewUSD = new ValuationView(
-        Money.of("0.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
         Instant.now());
 
     PositionView mockPosView = mock(PositionView.class);
@@ -119,15 +112,8 @@ class AccountViewBuilderTest {
   void buildShouldUseZeroFeesWhenSymbolMissingInFeeMap() {
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     Map<AssetSymbol, Money> emptyFees = Collections.emptyMap();
-    ValuationView viewUSD = new ValuationView(
-        Money.of("0.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
         Instant.now());
 
     lenient().when(transactionRepository.countExcludedPositionAffecting(any())).thenReturn(2);
@@ -145,15 +131,8 @@ class AccountViewBuilderTest {
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     PositionView mockPosView = mock(PositionView.class);
     AccountView expectedView = mock(AccountView.class);
-    ValuationView viewUSD = new ValuationView(
-        Money.of("0.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
         Instant.now());
 
     when(viewMapper.toPositionView(any(), eq(appleQuote))).thenReturn(mockPosView);

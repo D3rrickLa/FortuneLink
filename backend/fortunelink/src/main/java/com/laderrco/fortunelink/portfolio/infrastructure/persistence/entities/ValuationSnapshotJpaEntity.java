@@ -1,17 +1,17 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
-import jakarta.persistence.*;
-
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
-
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
@@ -142,18 +142,13 @@ public class ValuationSnapshotJpaEntity {
   // toDomain
   // ─────────────────────────────────────────────────────────────
   public ValuationSnapshot toDomain() {
-    return new ValuationSnapshot(
-        id,
-        new UserId(userId),
+    return new ValuationSnapshot(id, new UserId(userId),
         Money.of(totalValueAmount, totalValueCurrency),
         Money.of(totalCashBalanceAmount, totalCostBasisCurrency),
-        Money.of(unrealizedGainLossAmount, unrealizedGainLossCurrency),
-        gainLossPercent,
+        Money.of(unrealizedGainLossAmount, unrealizedGainLossCurrency), gainLossPercent,
         Money.of(totalCashBalanceAmount, totalCashBalanceCurrency),
-        Money.of(totalInvestedValueAmount, totalInvestedValueCurrency),
-        displayCurrencyCode,
-        hasStaleData,
-        snapshotDate);
+        Money.of(totalInvestedValueAmount, totalInvestedValueCurrency), displayCurrencyCode,
+        hasStaleData, snapshotDate);
   }
 
 }

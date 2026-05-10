@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +18,7 @@ public interface JpaValuationSnapshotRepository extends
    * window , typically 90 or 365 days.
    */
   @Query("""
-      SELECT s FROM NetWorthSnapshotJpaEntity s
+      SELECT s FROM ValuationSnapshotJpaEntity s
       WHERE s.userId = :userId
         AND s.snapshotDate >= :since
       ORDER BY s.snapshotDate ASC
@@ -38,7 +37,7 @@ public interface JpaValuationSnapshotRepository extends
    */
   @Query("""
       SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END
-      FROM NetWorthSnapshotJpaEntity s
+      FROM ValuationSnapshotJpaEntity s
       WHERE s.userId = :userId
         AND s.snapshotDate >= :startOfDay
         AND s.snapshotDate < :endOfDay

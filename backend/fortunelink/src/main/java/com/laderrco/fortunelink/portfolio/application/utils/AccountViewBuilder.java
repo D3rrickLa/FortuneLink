@@ -50,7 +50,8 @@ public class AccountViewBuilder {
           feesIncurred);
     }).toList();
 
-    ValuationView valuation = portfolioValuationService.calculateAccountValuation(account, quoteCache);
+    ValuationView valuation = portfolioValuationService.calculateAccountValuation(account,
+        quoteCache);
 
     Money totalValue = valuation.totalValue();
     Money cashBalance = valuation.totalCashBalance();
@@ -115,7 +116,8 @@ public class AccountViewBuilder {
         entry -> portfolioViewMapper.toPositionView(entry.getValue(),
             quoteCache.get(entry.getKey()))).toList();
 
-    ValuationView valuation = portfolioValuationService.calculateAccountValuation(account, quoteCache);
+    ValuationView valuation = portfolioValuationService.calculateAccountValuation(account,
+        quoteCache);
 
     Money totalValue = valuation.totalValue();
     Money cashBalance = valuation.totalCashBalance();

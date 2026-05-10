@@ -8,8 +8,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import jakarta.transaction.Transactional;
@@ -31,8 +31,9 @@ public class UserSnapshotWorker {
   private final PortfolioValuationService portfolioValuationService;
 
   /**
-   * creates a snapshot or the user's portfolio. the snapshot now gets
-   * total cost basis, total cash balance, and total invested value
+   * creates a snapshot or the user's portfolio. the snapshot now gets total cost basis, total cash
+   * balance, and total invested value
+   *
    * @param userId is the user
    * @return boolean if there is a snapshot
    */
@@ -50,16 +51,15 @@ public class UserSnapshotWorker {
     }
 
     Set<AssetSymbol> allSymbols = portfolios.stream()
-        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream())
-        .collect(Collectors.toSet());
+        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
-        ? Map.of()
-        : marketDataService.getBatchQuotes(allSymbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache =
+        allSymbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(allSymbols);
 
     Currency displayCurrency = portfolios.getFirst().getDisplayCurrency();
 
-    ValuationView valuation = portfolioValuationService.calculateUserValuation(portfolios, displayCurrency, quoteCache);
+    ValuationView valuation = portfolioValuationService.calculateUserValuation(portfolios,
+        displayCurrency, quoteCache);
 
     ValuationSnapshot snapshot = ValuationSnapshot.fromView(userId, valuation);
 

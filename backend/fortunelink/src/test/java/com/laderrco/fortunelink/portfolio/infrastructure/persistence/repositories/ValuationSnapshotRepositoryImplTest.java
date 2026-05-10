@@ -11,7 +11,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -38,18 +37,9 @@ class ValuationSnapshotRepositoryImplTest {
   private ValuationSnapshotRepositoryImpl repository;
 
   private ValuationSnapshotJpaEntity createMockEntity() {
-    ValuationSnapshot snapshot = new ValuationSnapshot(
-        UUID.randomUUID(),
-        USER_ID,
-        Money.of(100, CAD),
-        Money.of(0, CAD),
-        Money.of(100, CAD),
-        java.math.BigDecimal.ZERO,
-        Money.zero(CAD),
-        Money.of(100, CAD),
-        CAD.getCode(),
-        false,
-        Instant.now());
+    ValuationSnapshot snapshot = new ValuationSnapshot(UUID.randomUUID(), USER_ID,
+        Money.of(100, CAD), Money.of(0, CAD), Money.of(100, CAD), java.math.BigDecimal.ZERO,
+        Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, Instant.now());
 
     return ValuationSnapshotJpaEntity.from(snapshot);
   }
@@ -60,18 +50,9 @@ class ValuationSnapshotRepositoryImplTest {
     @Test
     @DisplayName("save should delegate to jpaRepository after mapping")
     void saveShouldDelegateToJpaRepository() {
-      ValuationSnapshot snapshot = new ValuationSnapshot(
-          UUID.randomUUID(),
-          USER_ID,
-          Money.of(100, CAD),
-          Money.of(0, CAD),
-          Money.of(100, CAD),
-          java.math.BigDecimal.ZERO,
-          Money.zero(CAD),
-          Money.of(100, CAD),
-          CAD.getCode(),
-          false,
-          Instant.now());
+      ValuationSnapshot snapshot = new ValuationSnapshot(UUID.randomUUID(), USER_ID,
+          Money.of(100, CAD), Money.of(0, CAD), Money.of(100, CAD), java.math.BigDecimal.ZERO,
+          Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, Instant.now());
 
       repository.save(snapshot);
 

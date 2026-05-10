@@ -75,8 +75,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Full transaction lifecycle controller.
  * <p>
- * All endpoints follow the same authentication pattern: @AuthenticatedUser UserId. All
- * mutations return the created/modified TransactionView.
+ * All endpoints follow the same authentication pattern: @AuthenticatedUser UserId. All mutations
+ * return the created/modified TransactionView.
  * <p>
  * This controller manages the ledger for a specific investment account,handling everything from
  * trade execution (BUY/SELL) to corporate actions (SPLITS) and cash management
@@ -203,7 +203,7 @@ public class TransactionController {
       @AuthenticatedUser UserId userId, @PathVariable String accountId,
       @Parameter(description = "Optional UUID for safe retries") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @RequestBody @Valid RecordDepositRequest request) {
-    return transactionService.recordDeposit(  
+    return transactionService.recordDeposit(
         new RecordDepositCommand(validateUuid(idempotencyKey), PortfolioId.fromString(portfolioId),
             userId, AccountId.fromString(accountId), Money.of(request.amount(), request.currency()),
             resolveTransactionDate(request.transactionDate()), emptyIfNull(request.notes())));

@@ -76,7 +76,7 @@ public interface PortfolioRepository {
    * Ownership check if Portfolio has this account id in it or not. NOTE: this should be used after
    * checking if the Portfolio is a part of the user id via {@Link existsByIdAndUserId()}
    *
-   * @param id is the Portfolio id
+   * @param id        is the Portfolio id
    * @param accountId is the account id
    * @return True if the account belongs to the portfolio, false otherwise.
    */

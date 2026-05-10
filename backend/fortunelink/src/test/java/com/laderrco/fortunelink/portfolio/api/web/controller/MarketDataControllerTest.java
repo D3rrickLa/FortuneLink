@@ -195,8 +195,8 @@ class MarketDataControllerTest {
 
       when(marketDataService.getBatchQuotes(Set.of(assetSymbol))).thenReturn(Map.of());
 
-      mockMvc.perform(get(BASE_URL + "/quotes/AAPL")).andExpect(status().isNotFound())
-          .andExpect(jsonPath("$.message", containsString("Record a transaction first to seed the asset.")));
+      mockMvc.perform(get(BASE_URL + "/quotes/AAPL")).andExpect(status().isNotFound()).andExpect(
+          jsonPath("$.message", containsString("Record a transaction first to seed the asset.")));
     }
   }
 

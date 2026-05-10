@@ -1,4 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.views;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 

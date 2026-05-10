@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.requests.FeeRequest;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

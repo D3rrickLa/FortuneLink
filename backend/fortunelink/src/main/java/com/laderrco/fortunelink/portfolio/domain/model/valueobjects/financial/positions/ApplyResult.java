@@ -3,6 +3,10 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.p
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 
 public sealed interface ApplyResult<P extends Position> extends PositionResult {
+  static ApplyResult<? extends Position> updated(Position p) {
+    return new ApplyResult.Updated<Position>(p);
+  }
+
   P newPosition();
 
   @Override
@@ -28,9 +32,5 @@ public sealed interface ApplyResult<P extends Position> extends PositionResult {
   }
 
   record Updated<P extends Position>(P newPosition) implements ApplyResult<P> {
-  }
-
-  static ApplyResult<? extends Position> updated(Position p) {
-    return new ApplyResult.Updated<Position>(p);
   }
 }
