@@ -7,26 +7,21 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { useAuth } from "@/features/auth/hooks/userAuth";
 import {
   getPortfolios,
   getPortfolio,
-  getNetWorth,
-  getNetWorthHistory,
   createPortfolio,
   updatePortfolio,
   deletePortfolio,
-} from "../services/porfolio.services";
+} from "../services/porfolio.services"; // Fixed "porfolio" typo if you renamed the file
 import type {
   CreatePortfolioRequest,
   UpdatePortfolioRequest,
   PortfolioSummaryResponse,
   PortfolioResponse,
-  NetWorthResponse,
-  NetWorthSnapshotResponse,
 } from "@/lib/api/types";
 
-// ─── Queries ──────────────────────────────────────────────────────────────────
+// ─── Portfolio queries ────────────────────────────────────────────────────────
 
 export function usePortfolios(
   options?: Omit<UseQueryOptions<PortfolioSummaryResponse[]>, "queryKey" | "queryFn">
@@ -51,34 +46,6 @@ export function usePortfolio(
   });
 }
 
-export function useNetWorth(
-  portfolioId: string,
-  options?: Omit<UseQueryOptions<NetWorthResponse>, "queryKey" | "queryFn">
-) {
-  return useQuery({
-    queryKey: queryKeys.portfolios.netWorth(portfolioId),
-    queryFn: () => getNetWorth(portfolioId),
-    enabled: Boolean(portfolioId),
-    // Live valuation — keep reasonably fresh but avoid hammering the backend.
-    staleTime: 30_000,
-    ...options,
-  });
-}
-
-export function useNetWorthHistory(
-  days?: number,
-  options?: Omit<UseQueryOptions<NetWorthSnapshotResponse[]>, "queryKey" | "queryFn">
-) {
-  const { user } = useAuth();
-  return useQuery({
-    queryKey: queryKeys.netWorthHistory(days),
-    queryFn: () => getNetWorthHistory(user!.id, days),
-    enabled: Boolean(user?.id),
-    staleTime: 5 * 60_000,
-    ...options,
-  });
-}
-
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export function useCreatePortfolio() {
@@ -87,6 +54,7 @@ export function useCreatePortfolio() {
     mutationFn: (body: CreatePortfolioRequest) => createPortfolio(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.portfolios.list() });
+
     },
   });
 }
@@ -116,6 +84,8 @@ export function useDeletePortfolio() {
     onSuccess: (_data, { portfolioId }) => {
       qc.removeQueries({ queryKey: queryKeys.portfolios.detail(portfolioId) });
       qc.invalidateQueries({ queryKey: queryKeys.portfolios.list() });
+      // A deletion definitely changes the total valuation summary.
+      qc.invalidateQueries({ queryKey: ["valuations"] }); 
     },
   });
 }

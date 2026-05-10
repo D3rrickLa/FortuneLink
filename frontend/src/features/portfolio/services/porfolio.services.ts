@@ -4,8 +4,6 @@ import type {
   UpdatePortfolioRequest,
   PortfolioResponse,
   PortfolioSummaryResponse,
-  NetWorthResponse,
-  NetWorthSnapshotResponse, 
 } from "@/lib/api/types";
 
 const BASE = "/api/v1/portfolios";
@@ -27,19 +25,6 @@ export async function getPortfolio(
 ): Promise<PortfolioResponse> {
   const { data } = await apiClient.get<PortfolioResponse>(
     `${BASE}/${portfolioId}`
-  );
-  return data;
-}
- 
-/**
- * Current net worth for a portfolio.
- * Triggers live market valuation — avoid calling on every keystroke.
- */
-export async function getNetWorth(
-  portfolioId: string
-): Promise<NetWorthResponse> {
-  const { data } = await apiClient.get<NetWorthResponse>(
-    `${BASE}/${portfolioId}/net-worth`
   );
   return data;
 }
@@ -76,23 +61,4 @@ export async function deletePortfolio(
   opts: { softDelete?: boolean; recursive?: boolean } = {}
 ): Promise<void> {
   await apiClient.delete(`${BASE}/${portfolioId}`, { params: opts });
-}
- 
-// ─── Analytics ───────────────────────────────────────────────────────────────
- 
-/**
- * Time-series net worth snapshots.
- * Endpoint: GET /api/v1/net-worth/history
- * Scoped to the authenticated user (not a specific portfolio).
- * Maximum range: 1825 days (5 years).
- */
-export async function getNetWorthHistory(
-  userId: string,
-  days?: number
-): Promise<NetWorthSnapshotResponse[]> {
-  const { data } = await apiClient.get<NetWorthSnapshotResponse[]>(
-    "/api/v1/net-worth/history",
-    { params: { id: userId, ...(days != null && { days }) } }
-  );
-  return data;
 }

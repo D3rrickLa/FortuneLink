@@ -23,6 +23,7 @@ export function usePortfolios() {
     totalValue: p.totalValue ?? 0,
     gainLoss: 0,
     gainLossPercent: 0,
+    currency: p.currency ?? "USD",
     accounts: [],
   }));
  

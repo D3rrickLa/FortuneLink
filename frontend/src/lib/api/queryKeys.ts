@@ -1,102 +1,77 @@
 /**
- * Centralised React Query key factory.
+ * Centralised React Query cache key factory.
  *
  * Rules:
- *   1. Always use these keys — never inline strings in useQuery/useMutation.
- *   2. Broader keys are prefixes of narrower ones, so invalidating a parent
- *      also invalidates all children (queryClient.invalidateQueries).
- *   3. Keys are `as const` tuples for strict type inference.
+ * - Every key is a const tuple so TypeScript narrows it correctly.
+ * - Hierarchical: broader keys nest narrower ones so a single
+ *   queryClient.invalidateQueries({ queryKey: queryKeys.portfolios.all })
+ *   wipes everything portfolio-related without listing every sub-key.
+ * - No magic strings outside this file.
  */
 
 export const queryKeys = {
   // ── Portfolios ────────────────────────────────────────────────────────────
   portfolios: {
-    all: () => ["portfolios"] as const,
-    list: () => ["portfolios", "list"] as const,
-    detail: (portfolioId: string) =>
-      ["portfolios", portfolioId] as const,
-    netWorth: (portfolioId: string) =>
-      ["portfolios", portfolioId, "net-worth"] as const,
+    all: ["portfolios"] as const,
+    list: () => [...queryKeys.portfolios.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.portfolios.all, "detail", id] as const,
+    netWorth: (id: string) => [...queryKeys.portfolios.all, "netWorth", id] as const,
   },
 
   // ── Accounts ──────────────────────────────────────────────────────────────
   accounts: {
-    all: (portfolioId: string) =>
-      ["portfolios", portfolioId, "accounts"] as const,
+    all: (portfolioId: string) => ["accounts", portfolioId] as const,
+    list: (portfolioId: string) =>
+      [...queryKeys.accounts.all(portfolioId), "list"] as const,
     detail: (portfolioId: string, accountId: string) =>
-      ["portfolios", portfolioId, "accounts", accountId] as const,
-    realizedGains: (
-      portfolioId: string,
-      accountId: string,
-      taxYear?: number,
-      symbol?: string
-    ) =>
-      [
-        "portfolios",
-        portfolioId,
-        "accounts",
-        accountId,
-        "realized-gains",
-        { taxYear, symbol },
-      ] as const,
+      [...queryKeys.accounts.all(portfolioId), "detail", accountId] as const,
   },
 
   // ── Transactions ──────────────────────────────────────────────────────────
   transactions: {
-    list: (
-      portfolioId: string,
-      accountId: string,
-      filters?: {
-        symbol?: string;
-        startDate?: string;
-        endDate?: string;
-        page?: number;
-        size?: number;
-      }
-    ) =>
+    all: (portfolioId: string, accountId: string) =>
+      ["transactions", portfolioId, accountId] as const,
+    list: (portfolioId: string, accountId: string) =>
+      [...queryKeys.transactions.all(portfolioId, accountId), "list"] as const,
+    detail: (portfolioId: string, accountId: string, transactionId: string) =>
       [
-        "portfolios",
-        portfolioId,
-        "accounts",
-        accountId,
-        "transactions",
-        filters ?? {},
-      ] as const,
-    detail: (
-      portfolioId: string,
-      accountId: string,
-      transactionId: string
-    ) =>
-      [
-        "portfolios",
-        portfolioId,
-        "accounts",
-        accountId,
-        "transactions",
+        ...queryKeys.transactions.all(portfolioId, accountId),
+        "detail",
         transactionId,
       ] as const,
   },
 
-  // ── Net worth history (user-scoped, not portfolio-scoped) ─────────────────
-  netWorthHistory: (days?: number) =>
-    ["net-worth", "history", { days }] as const,
+  // ── Valuations ────────────────────────────────────────────────────────────
+  // These are user-scoped (all portfolios), not portfolio-scoped, so they live
+  // at the top level rather than nested under portfolios.
+  valuations: {
+    all: ["valuations"] as const,
+    summary: () => [...queryKeys.valuations.all, "summary"] as const,
+    history: (days: number) =>
+      [...queryKeys.valuations.all, "history", days] as const,
+  },
 
   // ── Market data ───────────────────────────────────────────────────────────
   market: {
-    quote: (symbol: string) => ["market", "quote", symbol] as const,
-    batchQuotes: (symbols: string[]) =>
-      ["market", "quotes", "batch", [...symbols].sort().join(",")] as const,
-    assetInfo: (symbol: string) => ["market", "asset", symbol] as const,
-    validateSymbol: (symbol: string) =>
-      ["market", "validate", symbol] as const,
-    searchSymbols: (query: string) =>
-      ["market", "search", query] as const,
-    supportedCurrencies: () => ["market", "currencies"] as const,
+    all: ["market"] as const,
+    search: (query: string) => [...queryKeys.market.all, "search", query] as const,
+    quote: (symbol: string) => [...queryKeys.market.all, "quote", symbol] as const,
+    info: (symbol: string) => [...queryKeys.market.all, "info", symbol] as const,
   },
 
-  // ── Exchange rates ────────────────────────────────────────────────────────
-  exchangeRates: {
-    current: (from: string, to: string) =>
-      ["exchange-rates", from, to] as const,
+  // ── Realized gains ────────────────────────────────────────────────────────
+  realizedGains: {
+    all: (portfolioId: string, accountId: string) =>
+      ["realizedGains", portfolioId, accountId] as const,
+    list: (portfolioId: string, accountId: string, taxYear?: number) =>
+      [
+        ...queryKeys.realizedGains.all(portfolioId, accountId),
+        "list",
+        taxYear ?? "all",
+      ] as const,
   },
+
+  // ── DEPRECATED — remove once PerformanceChart migration is complete ───────
+  /** @deprecated Use queryKeys.valuations.history instead */
+  netWorthHistory: (days?: number) => ["netWorthHistory", days ?? "all"] as const,
 } as const;

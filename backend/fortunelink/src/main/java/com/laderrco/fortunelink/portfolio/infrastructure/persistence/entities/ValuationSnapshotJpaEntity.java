@@ -144,7 +144,7 @@ public class ValuationSnapshotJpaEntity {
   public ValuationSnapshot toDomain() {
     return new ValuationSnapshot(id, new UserId(userId),
         Money.of(totalValueAmount, totalValueCurrency),
-        Money.of(totalCashBalanceAmount, totalCostBasisCurrency),
+        Money.of(totalCostBasisAmount, totalCostBasisCurrency),
         Money.of(unrealizedGainLossAmount, unrealizedGainLossCurrency), gainLossPercent,
         Money.of(totalCashBalanceAmount, totalCashBalanceCurrency),
         Money.of(totalInvestedValueAmount, totalInvestedValueCurrency), displayCurrencyCode,

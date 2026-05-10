@@ -14,42 +14,38 @@ import { PerformanceChart } from "@/features/portfolio/components/PerformanceCha
 import { AllocationChart } from "@/features/portfolio/components/AllocationChart";
 import { TransactionHistory } from "@/features/portfolio/components/TransactionHistory";
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
-import { useNetWorth, usePortfolio } from "@/features/portfolio/queries/usePortfolio";
+import { useValuation } from "@/features/portfolio/hooks/useValuation";
+import { usePortfolio } from "@/features/portfolio/queries/usePortfolio";
 import { useAccount } from "@/features/portfolio/queries/useAccount";
 import { AccountView, CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
 import { EditAccountDialog } from "@/features/portfolio/components/EditAccountDialog";
-import { GainLossSummary, deriveAccountGainLoss, GAIN_LOSS_UNAVAILABLE } from "@/lib/portfolio/gainLoss";
+import { GainLossSummary, GAIN_LOSS_UNAVAILABLE } from "@/lib/portfolio/gainLoss";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState("all");
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { portfolios, isLoading, createPortfolio } = usePortfolios();
+
+  const { portfolios, isLoading: portfoliosLoading, createPortfolio } = usePortfolios();
   const { logout } = useLogout();
 
   const isAllView = activePortfolioId === "all";
   const hasPortfolio = !isAllView;
   const hasAccount = hasPortfolio && activeAccountId !== null;
+
   // ── Data fetching ───────────────────────────────────────────────────────────
 
-  // Net worth for the selected portfolio — skip on "all" view.
-  const { data: netWorth } = useNetWorth(
+  // Aggregated valuation for the "All Portfolios" view
+  const globalValuation = useValuation();
+
+  // Portfolio detail for specific views
+  const { data: portfolioDetail, isLoading: portfolioLoading } = usePortfolio(
     isAllView ? "" : activePortfolioId,
     { enabled: hasPortfolio }
   );
 
-  // Full portfolio detail — needed to sum cash balances when no account is
-  // selected. PortfolioResponse.accounts is AccountSummary[], each with a
-  // top-level `cashBalance: number` field (pre-converted to base currency).
-  // Only fetch when a specific portfolio is selected but no account is drilled
-  // into, to avoid a redundant call when accountDetail already covers it.
-  const { data: portfolioDetail } = usePortfolio(
-    isAllView ? "" : activePortfolioId,
-    { enabled: hasPortfolio && !hasAccount }
-  );
-
-  // Account detail for granular stats when a specific account is active.
-  const { data: accountDetail } = useAccount(
+  // Account detail for granular stats
+  const { data: accountDetail, isLoading: accountLoading } = useAccount(
     activePortfolioId,
     activeAccountId ?? "",
     { enabled: hasAccount }
@@ -66,67 +62,60 @@ export default function DashboardPage() {
 
   // ── Derived display values ──────────────────────────────────────────────────
 
-  const totalValue = hasAccount
-    ? (accountDetail?.totalValue?.amount ?? 0)
-    : (netWorth?.totalNetWorth ?? activePortfolio?.totalValue ?? 0);
+  const totalValue = useMemo(() => {
+    if (hasAccount) return accountDetail?.totalValue?.amount ?? 0;
+    if (hasPortfolio) return portfolioDetail?.totalValue ?? activePortfolio?.totalValue ?? 0;
+    return globalValuation.totalValue;
+  }, [hasAccount, hasPortfolio, accountDetail, portfolioDetail, activePortfolio, globalValuation]);
 
-  // Cash balance derivation:
-  //  - Account view: pull directly from the AccountView response.
-  //  - Portfolio view: sum all AccountSummary.cashBalance values from the
-  //    PortfolioResponse. These are already converted to the portfolio's base
-  //    currency by the backend, so summing is safe.
-  //  - All-portfolios view: we'd need to sum across N portfolios which means
-  //    N additional requests. Not worth it for the MVP — show 0 and revisit
-  //    if a dedicated aggregate endpoint gets added later.
   const cashBalance = useMemo(() => {
-    if (hasAccount) {
-      return accountDetail?.cashBalance?.amount ?? 0;
-    }
+    if (hasAccount) return accountDetail?.cashBalance?.amount ?? 0;
     if (hasPortfolio && portfolioDetail?.accounts) {
       return portfolioDetail.accounts.reduce(
         (sum, acct) => sum + (acct.cashBalance ?? 0),
         0
       );
     }
+    // Global cash summary would require a backend field in ValuationResponse
     return 0;
   }, [hasAccount, hasPortfolio, accountDetail, portfolioDetail]);
 
   const gainLossSummary = useMemo((): GainLossSummary => {
-    // Account view: derive by summing unrealizedPnL across positions.
-    // AccountView.assets is already in cache from useAccount — no extra fetch.
+    // 1. Account Level
     if (hasAccount && accountDetail?.assets) {
       const positions = accountDetail.assets;
-
       const totalGainLoss = positions.reduce(
         (sum, pos) => sum + (pos.unrealizedPnL?.amount ?? 0),
         0
       );
-
-      // Cost basis per position = totalCostBasis.pricePerUnit.amount
-      // This is (avg cost * qty), already computed by the backend
       const totalCostBasis = positions.reduce(
         (sum, pos) => sum + (pos.totalCostBasis?.pricePerUnit?.amount ?? 0),
         0
       );
-
-      const totalGainLossPercent =
-        totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
-
+      const totalGainLossPercent = totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
       return { totalGainLoss, totalGainLossPercent, isAvailable: true };
     }
 
-    // Portfolio view and all-portfolios view: NetWorthResponse doesn't expose
-    // cost basis or gain/loss yet. Return honest unavailable rather than fake 0.
-    // This unblocks once NetWorthResponse is expanded on the backend.
+    // 2. Global View (Using new consolidated valuation hook)
+    if (isAllView && !globalValuation.isEmpty) {
+      return {
+        totalGainLoss: globalValuation.unrealizedGainLoss,
+        totalGainLossPercent: globalValuation.returnPercentage,
+        isAvailable: true
+      };
+    }
+
+    // 3. Portfolio View fallback
     return GAIN_LOSS_UNAVAILABLE;
-  }, [hasAccount, accountDetail]);
+  }, [hasAccount, accountDetail, isAllView, globalValuation]);
 
   const { totalGainLoss, totalGainLossPercent, isAvailable: gainLossAvailable } = gainLossSummary;
 
-  // Use the activePortfolio.currency which is now passed through from the hook
-  const chartCurrency = hasAccount
-    ? (accountDetail?.baseCurrency?.code ?? "USD")
-    : (activePortfolio?.currency ?? "USD");
+  const chartCurrency = useMemo(() => {
+    if (hasAccount) return accountDetail?.baseCurrency?.code ?? "USD";
+    if (hasPortfolio) return activePortfolio?.currency ?? "USD";
+    return globalValuation.currency;
+  }, [hasAccount, hasPortfolio, accountDetail, activePortfolio, globalValuation]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -143,9 +132,6 @@ export default function DashboardPage() {
   const handleCreatePortfolio = (data: CreatePortfolioRequest) =>
     createPortfolio(data);
 
-  // Account creation is fully owned by PortfolioSidebar via useCreateAccount.
-  // This prop exists for future extensibility (e.g., analytics, toast at page
-  // level) but does not need to trigger any mutation here.
   const handleCreateAccount = (
     _portfolioId: string,
     _data: CreateAccountRequest
@@ -153,7 +139,9 @@ export default function DashboardPage() {
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
-  if (isLoading) {
+  const isInitialLoading = portfoliosLoading || (isAllView && globalValuation.isLoading);
+
+  if (isInitialLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="animate-pulse text-lg text-muted-foreground">
@@ -168,7 +156,7 @@ export default function DashboardPage() {
   let pageTitle = "All Portfolios";
   let pageSubtitle = "Consolidated view of all your investments";
 
-  if (!isAllView && activePortfolio) {
+  if (hasPortfolio && activePortfolio) {
     pageTitle = activePortfolio.name;
     pageSubtitle = "Portfolio overview";
   }

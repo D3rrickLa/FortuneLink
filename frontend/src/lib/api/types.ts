@@ -63,8 +63,8 @@ export type RealizedGainsSummaryResponse = components["schemas"]["RealizedGainsS
 export type RealizedGainItemResponse     = components["schemas"]["RealizedGainItemResponse"];
 
 // ─── Net Worth ────────────────────────────────────────────────────────────────
-export type NetWorthResponse         = components["schemas"]["NetWorthResponse"];
-export type NetWorthSnapshotResponse = components["schemas"]["NetWorthSnapshotResponse"];
+export type ValuationResponse         = components["schemas"]["ValuationResponse"];
+export type ValuationSnapshotResponse = components["schemas"]["ValuationSnapshotResponse"];
 
 // ─── Market ───────────────────────────────────────────────────────────────────
 export type MarketQuoteResponse   = components["schemas"]["MarketQuoteResponse"];

@@ -44,7 +44,6 @@ class PortfolioValuationServiceTest {
   private static final Currency CAD = Currency.of("CAD");
   private static final AssetSymbol AAPL = new AssetSymbol("AAPL");
   private static final Money HUNDRED_USD = Money.of(new BigDecimal("100.00"), "USD");
-  private static final Money HUNDRED_CAD = Money.of(new BigDecimal("100.00"), "CAD");
   @Mock
   private ExchangeRateService exchangeRateService;
   @InjectMocks
