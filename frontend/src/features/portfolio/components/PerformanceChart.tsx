@@ -16,6 +16,7 @@ import { TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useValuationHistory, useValuationSummary } from "@/features/portfolio/queries/useValuation";
 import type { AccountView } from "@/lib/api/types";
+import { safeNum } from "@/utils/number";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,7 +114,7 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
     if (!snapshots?.length) return [];
     return snapshots.map((s) => ({
       date: s.snapshotDate ?? "",
-      value: s.netWorth ?? 0,
+      value: s.totalValue ?? 0,
     }));
   }, [snapshots]);
 
@@ -174,7 +175,7 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
   }
 
   // ---------------------------------------------------------------------------
-  // Empty state — new users have no snapshots until the nightly job runs.
+  // Empty state. New users have no snapshots until the nightly job runs.
   // Be explicit rather than showing a confusing blank chart.
   // ---------------------------------------------------------------------------
 
@@ -214,20 +215,19 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
             {/* Live summary metrics from the /valuations/summary endpoint */}
             {summary && (
               <div
-                className={`flex items-center gap-2 text-sm font-semibold ${
-                  (summary.unrealizedGainLoss ?? 0) >= 0
+                className={`flex items-center gap-2 text-sm font-semibold ${(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0
                     ? "text-green-600"
                     : "text-red-600"
-                }`}
+                  }`}
               >
-                {(summary.unrealizedGainLoss ?? 0) >= 0 ? (
+                {(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0 ? (
                   <TrendingUp className="h-4 w-4" />
                 ) : (
                   <TrendingDown className="h-4 w-4" />
                 )}
                 <span>
-                  {(summary.unrealizedGainLoss ?? 0) >= 0 ? "+" : ""}
-                  {fmt(summary.unrealizedGainLoss ?? 0)}
+                  {(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0 ? "+" : ""}
+                  {fmt(safeNum(summary.unrealizedGainLoss) ?? 0)}
                 </span>
                 <span className="font-normal text-muted-foreground">
                   ({(summary.returnPercentage ?? 0) >= 0 ? "+" : ""}
@@ -239,9 +239,8 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
             {/* Period-level delta as a secondary figure when summary is not available */}
             {!summary && metrics && (
               <div
-                className={`flex items-center gap-2 text-sm font-semibold ${
-                  metrics.isPositive ? "text-green-600" : "text-red-600"
-                }`}
+                className={`flex items-center gap-2 text-sm font-semibold ${metrics.isPositive ? "text-green-600" : "text-red-600"
+                  }`}
               >
                 {metrics.isPositive ? (
                   <TrendingUp className="h-4 w-4" />
@@ -260,7 +259,7 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
             )}
 
             <p className="text-xs text-muted-foreground">
-              Total net worth · all accounts
+              Total net worth
             </p>
           </div>
 
@@ -270,11 +269,10 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
               <button
                 key={p.value}
                 onClick={() => setPeriod(p.value)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                  period === p.value
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${period === p.value
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
+                  }`}
               >
                 {p.label}
               </button>

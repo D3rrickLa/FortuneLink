@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 
-// --- Types (Keep these here if they aren't in a shared types file yet) ---
 export interface ValuationResponse {
   totalValue: number;
   totalCostBasis: number;
@@ -15,12 +14,15 @@ export interface ValuationResponse {
 }
 
 export interface ValuationSnapshotResponse {
-  netWorth: number;
-  totalAssets: number;
-  totalLiabilities: number;
+  totalValue: number;          // Matches Java totalValue / DB total_value_amount
+  totalCostBasis: number;      // Matches Java totalCostBasis
+  unrealizedGainLoss: number;  // Matches Java unrealizedGainLoss
+  gainLossPercent: number;     // Matches Java gainLossPercent
+  totalCashBalance: number;    // Matches Java totalCashBalance
+  totalInvestedValue: number;  // Matches Java totalInvestedValue
   currency: string;
   hasStaleData: boolean;
-  snapshotDate: string; 
+  snapshotDate: string;        // Matches Java snapshotDate
 }
 
 // --- Keys ---

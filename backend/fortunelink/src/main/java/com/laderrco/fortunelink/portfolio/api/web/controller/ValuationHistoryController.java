@@ -7,6 +7,7 @@ import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
@@ -60,8 +61,8 @@ public class ValuationHistoryController {
     Set<AssetSymbol> symbols = portfolios.stream()
         .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache =
-        symbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(symbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty() ? Map.of()
+        : marketDataService.getBatchQuotes(symbols);
 
     ValuationView view = portfolioValuationService.calculateUserValuation(portfolios,
         displayCurrency, quoteCache);
@@ -104,11 +105,25 @@ public class ValuationHistoryController {
   ) {
 
     public static ValuationSnapshotResponse from(ValuationSnapshot s) {
-      return new ValuationSnapshotResponse(s.totalValue().amount(), s.totalCostBasis().amount(),
-          s.unrealizedGainLoss().amount(),
-          s.gainLossPercent() != null ? s.gainLossPercent() : BigDecimal.ZERO,
-          s.totalCashBalance().amount(), s.totalInvestedValue().amount(), s.displayCurrency(),
-          s.hasStaleData(), s.snapshotDate());
+      if (s == null) {
+        return null;
+      }
+
+      return new ValuationSnapshotResponse(
+          safeAmount(s.totalValue()),
+          safeAmount(s.totalCostBasis()),
+          safeAmount(s.unrealizedGainLoss()),
+          s.gainLossPercent(),
+          safeAmount(s.totalCashBalance()),
+          safeAmount(s.totalInvestedValue()),
+          s.displayCurrency(),
+          s.hasStaleData(),
+          s.snapshotDate());
+    }
+
+    // Helper to prevent NullPointerExceptions from Money/Monetary objects
+    private static BigDecimal safeAmount(Money money) {
+      return (money != null) ? money.amount() : BigDecimal.ZERO;
     }
   }
 }
