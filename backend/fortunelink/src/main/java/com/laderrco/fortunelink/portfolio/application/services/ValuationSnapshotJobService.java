@@ -30,7 +30,7 @@ public class ValuationSnapshotJobService {
   private final PortfolioRepository portfolioRepository;
   private final UserSnapshotWorker worker; // Inject the new worker
 
-  @Scheduled(cron = "0 0 2 * * *", zone = "UTC")
+  @Scheduled(cron = "0 0/2 * * * *", zone = "UTC")
   public void snapshotAllUsers() {
     List<UserId> activeUsers = portfolioRepository.findAllActiveUserIds();
     log.info("Net worth snapshot job started for {} users", activeUsers.size());

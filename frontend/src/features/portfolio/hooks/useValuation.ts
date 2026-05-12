@@ -87,7 +87,7 @@ export function useValuationChart(days: number) {
   const points: ChartPoint[] =
     snapshots?.map((s) => ({
       date: s.snapshotDate ?? "",
-      value: s.netWorth ?? 0,
+      value: s.totalValue ?? 0,
     })) ?? [];
 
   return {

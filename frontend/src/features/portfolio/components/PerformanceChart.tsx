@@ -216,8 +216,8 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
             {summary && (
               <div
                 className={`flex items-center gap-2 text-sm font-semibold ${(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
+                  ? "text-green-600"
+                  : "text-red-600"
                   }`}
               >
                 {(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0 ? (
@@ -226,8 +226,8 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
                   <TrendingDown className="h-4 w-4" />
                 )}
                 <span>
-                  {(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0 ? "+" : ""}
-                  {fmt(safeNum(summary.unrealizedGainLoss) ?? 0)}
+                  {summary.unrealizedGainLoss >= 0 ? "+" : ""}
+                  {fmt(summary.unrealizedGainLoss)}
                 </span>
                 <span className="font-normal text-muted-foreground">
                   ({(summary.returnPercentage ?? 0) >= 0 ? "+" : ""}
@@ -270,8 +270,8 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
                 key={p.value}
                 onClick={() => setPeriod(p.value)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${period === p.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
               >
                 {p.label}
