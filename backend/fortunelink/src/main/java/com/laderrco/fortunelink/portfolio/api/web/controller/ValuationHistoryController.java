@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
@@ -31,10 +32,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Validated
 @RestController
@@ -46,6 +44,33 @@ public class ValuationHistoryController {
   private final PortfolioValuationService portfolioValuationService;
   private final MarketDataService marketDataService;
   private final PortfolioLoader portfolioLoader;
+
+  // Add this to ValuationHistoryController.java
+
+  @GetMapping("/{portfolioId}")
+  @Operation(summary = "Get portfolio valuation", description = "Computes live valuation for a specific portfolio.")
+  public ResponseEntity<ValuationResponse> getPortfolioValuation(
+      @AuthenticatedUser UserId userId,
+      @PathVariable String portfolioId // This matches your frontend call
+  ) {
+    // Load specifically by ID
+    Portfolio portfolio = portfolioLoader.loadUserPortfolio(PortfolioId.fromString(portfolioId), userId);
+
+    if (portfolio == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(portfolio);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty() ? Map.of()
+        : marketDataService.getBatchQuotes(symbols);
+
+    ValuationView view = portfolioValuationService.calculatePortfolioValuation(
+        portfolio,
+        portfolio.getDisplayCurrency(),
+        quoteCache);
+
+    return ResponseEntity.ok(ValuationResponse.from(view));
+  }
 
   @GetMapping("/summary")
   @Operation(summary = "Get current valuation", description = "Computes live valuation across all active portfolios for the authenticated user.")
