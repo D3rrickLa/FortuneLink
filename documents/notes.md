@@ -179,6 +179,7 @@ import {
   useCreateAccount,
 } from "@/features/portfolio/queries/useAccount";
 import { toast } from "sonner";
+import { useValuation } from "@/features/portfolio/hooks/useValuation";
 
 // ─── UI-layer types ───────────────────────────────────────────────────────────
 
@@ -186,11 +187,8 @@ export interface Account {
   id: string;
   name: string;
   type: string;
-  // Change these to match the API objects
-  totalValue?: { amount: number; currency: string };
-  cashBalance?: { amount: number; currency: string };
-  baseCurrency?: { code: string };
-  accountId?: { id: string };
+  totalValue: number;
+  cashBalance: number;
   gainLoss: number;
   gainLossPercent: number;
 }
@@ -200,8 +198,8 @@ export interface Portfolio {
   name: string;
   currency: string;
   totalValue: number;
-  gainLoss: number;
-  gainLossPercent: number;
+  // gainLoss: number;
+  // gainLossPercent: number;
   accounts: Account[];
 }
 
@@ -239,41 +237,73 @@ function PortfolioItem({
   onAddAccount,
 }: PortfolioItemProps) {
   const [expanded, setExpanded] = useState(false);
-  const { data: accountsPage, isLoading: accountsLoading } = useAccounts(
-    portfolio.id,
-    0,
-    50,
-    { enabled: expanded }
-  );
-
-  const accounts = accountsPage?.content ?? [];
-
-  const totalValue = accounts.reduce((sum, acc) => {
-    return sum + (acc.totalValue?.amount ?? 0);
-  }, 0);
-
-  const totalGainLoss = portfolio.accounts?.reduce((sum, acc) => {
-    // Use the exact field name from your API (e.g., gainLoss or unrealizedGainLoss)
-    return sum + (acc.gainLoss ?? 0);
-  }, 0) ?? 0;
-
-  // Re-calculate percentages based on the new sums
-  const costBasis = totalValue - totalGainLoss;
-  const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0;
-  const isPositive = totalGainLoss >= 0;
 
   const fmtCurrency = (amount: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: portfolio.currency || "CAD",
+      currency: portfolio.currency || "USD",
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
+
+  const { data: accountsPage, isLoading: accountsLoading } = useAccounts(
+    portfolio.id,
+    0,
+    50,
+    { enabled: expanded || isActive }
+  );
+
+  const accounts = accountsPage?.content ?? [];
+
+  // Keep valuation hook for total values/cash/etc.
+  const valuation = useValuation(
+    portfolio.id,
+    expanded || isActive
+  );
+
+  /**
+   * ----------------------------------------------------------------
+   * FIX:
+   * Aggregate unrealized gain/loss from accounts because the
+   * portfolio valuation endpoint does not currently provide it.
+   * ----------------------------------------------------------------
+   */
+
+  const aggregatedGainLoss = accounts.reduce((sum, account) => {
+    return sum + (account.unrealizedGainLoss?.amount ?? 0);
+  }, 0);
+
+  const aggregatedCostBasis = accounts.reduce((sum, account) => {
+    return sum + (account.costBasis?.amount ?? 0);
+  }, 0);
+
+  const aggregatedReturnPercentage =
+    aggregatedCostBasis > 0
+      ? (aggregatedGainLoss / aggregatedCostBasis) * 100
+      : 0;
+
+  /**
+   * Use valuation totals if available
+   */
+  const displayTotalValue =
+    valuation?.totalValue ?? portfolio.totalValue ?? 0;
+
+  /**
+   * Use aggregated account P&L instead of broken portfolio endpoint
+   */
+  const displayGainLoss = aggregatedGainLoss;
+
+  const displayPercent = aggregatedReturnPercentage;
+
+  const isPositive = displayGainLoss >= 0;
 
   return (
     <div className="space-y-1">
       <div
         className={cn(
-          "group flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted",
-          isActive && !activeAccountId && "bg-muted"
+          "w-full rounded-lg p-3 transition-colors",
+          isActive && "bg-muted"
         )}
       >
         <div className="flex items-center justify-between gap-2">
@@ -282,7 +312,11 @@ function PortfolioItem({
             className="flex items-center gap-1 hover:opacity-70 transition-opacity"
             aria-label={expanded ? "Collapse accounts" : "Expand accounts"}
           >
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {expanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
           </button>
 
           <button
@@ -295,32 +329,41 @@ function PortfolioItem({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-medium">{portfolio.name}</span>
+
                 {isActive && !activeAccountId && (
                   <div className="h-2 w-2 rounded-full bg-blue-600" />
                 )}
               </div>
-              {/* Total Value Display */}
+
               <div className="text-sm text-muted-foreground">
-                {fmtCurrency(totalValue)}
+                {fmtCurrency(displayTotalValue)}
               </div>
 
-              {/* Performance Metrics */}
-              <div className={cn(
-                "flex items-center gap-1 text-xs",
-                isPositive ? "text-green-600" : "text-red-600"
-              )}>
-                {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              <div
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  isPositive ? "text-green-600" : "text-red-600"
+                )}
+              >
+                {isPositive ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+
                 <span>
-                  {isPositive ? "+" : ""}{fmtCurrency(totalGainLoss)}
+                  {isPositive ? "+" : "-"}
+                  {fmtCurrency(Math.abs(displayGainLoss))}
                 </span>
-                <span className="opacity-70">
-                  ({isPositive ? "+" : ""}{gainLossPercent.toFixed(2)}%)
+
+                <span className="text-muted-foreground">
+                  ({isPositive ? "+" : ""}
+                  {displayPercent.toFixed(2)}%)
                 </span>
               </div>
             </div>
           </button>
 
-          {/* Quick Add Account Button */}
           <Button
             size="sm"
             variant="ghost"
@@ -333,7 +376,6 @@ function PortfolioItem({
         </div>
       </div>
 
-      {/* Account List (Children) */}
       {expanded && (
         <div className="ml-4 space-y-1 border-l-2 border-muted pl-2">
           {accountsLoading ? (
@@ -349,39 +391,53 @@ function PortfolioItem({
             accounts.map((account) => {
               const accountId = account.accountId?.id ?? "";
               const isAccountActive = accountId === activeAccountId;
-              const totalValueAmount = account.totalValue?.amount ?? 0;
-              const cashBalanceAmount = account.cashBalance?.amount ?? 0;
 
+              const totalValue = account.totalValue?.amount ?? 0;
+              const cashBalance = account.cashBalance?.amount ?? 0;
 
               return (
                 <button
                   key={accountId}
-                  onClick={() => onSelectAccount(portfolio.id, accountId)}
+                  onClick={() =>
+                    onSelectAccount(portfolio.id, accountId)
+                  }
                   className={cn(
                     "w-full rounded-lg p-2 text-left transition-colors hover:bg-muted",
-                    isAccountActive && "bg-muted border-l-2 border-blue-600"
+                    isAccountActive &&
+                    "bg-muted border-l-2 border-blue-600"
                   )}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
+
                       <span className="text-sm font-medium truncate">
                         {account.name ?? "Unnamed Account"}
                       </span>
+
+                      {isAccountActive && (
+                        <div className="ml-auto h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                      )}
                     </div>
+
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>
-                        {account.type ?? "—"} · {account.baseCurrency?.code ?? "—"}
+                        {account.type ?? "—"} ·{" "}
+                        {account.baseCurrency?.code ?? "—"}
                       </span>
+
                       <span className="font-medium text-foreground">
-                        {/* Use the extracted amount here */}
-                        {fmtCurrency(totalValueAmount)}
+                        {fmtCurrency(totalValue)}
                       </span>
                     </div>
-                    {/* Logic to show Cash if it exists */}
-                    {cashBalanceAmount > 0 && (
+
+                    {cashBalance > 0 && (
                       <div className="text-xs text-muted-foreground">
-                        Cash: {fmtCurrency(cashBalanceAmount)}
+                        Cash: $
+                        {cashBalance.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </div>
                     )}
                   </div>
@@ -471,17 +527,13 @@ export function PortfolioSidebar({
   };
 
   // ── Aggregate sidebar stats ───────────────────────────────────────────────
+  const globalValuation = useValuation();
 
-  const combinedValue = portfolios.reduce((sum, p) => sum + p.totalValue, 0);
-  const combinedGainLoss = portfolios.reduce((sum, p) => sum + p.gainLoss, 0);
-
-  const totalCostBasis = combinedValue - combinedGainLoss;
-  const combinedGainLossPercent = totalCostBasis > 0
-    ? (combinedGainLoss / totalCostBasis) * 100
-    : 0;
-
+  // 2. Replace your manual aggregate calculations with this:
+  const combinedValue = globalValuation?.totalValue ?? 0;
+  const combinedGainLoss = globalValuation?.unrealizedGainLoss ?? 0;
+  const combinedGainLossPercent = globalValuation?.returnPercentage ?? 0;
   const isCombinedPositive = combinedGainLoss >= 0;
-
 
   return (
     <div className="flex h-full flex-col border-r bg-muted/10">
@@ -563,12 +615,8 @@ export function PortfolioSidebar({
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TAXABLE_INVESTMENT">
-                        Taxable Investment
-                      </SelectItem>
-                      <SelectItem value="NON_REGISTERED_INVESTMENT">
-                        Non-Registered
-                      </SelectItem>
+                      <SelectItem value="TAXABLE_INVESTMENT">Taxable Investment</SelectItem>
+                      <SelectItem value="NON_REGISTERED_INVESTMENT">Non-Registered</SelectItem>
                       <SelectItem value="TFSA">TFSA</SelectItem>
                       <SelectItem value="RRSP">RRSP</SelectItem>
                       <SelectItem value="FHSA">FHSA</SelectItem>
@@ -828,9 +876,3 @@ export function PortfolioSidebar({
     </div>
   );
 }
-
-// ... inside PortfolioItem ... const { data: accountsPage, isLoading: accountsLoading } = useAccounts( portfolio.id, 0, 50, { enabled: expanded } ); // This is the fresh data const accounts = accountsPage?.content ?? []; // 1. SUM FROM THE FRESH 'accounts' ARRAY const totalValue = accounts.reduce((sum, acc) => { return sum + (acc.totalValue?.amount ?? 0); }, 0); const totalGainLoss = accounts.reduce((sum, acc) => { // Use the gainLoss field from the account object return sum + (acc.gainLoss ?? 0); }, 0); // 2. Re-calculate logic remains the same const costBasis = totalValue - totalGainLoss; const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0; const isPositive = totalGainLoss >= 0; // ... rest of your component
-
-
-
-was trying to follow this implementation, the totalGainLoss seems a bit broken, along with most of the things
