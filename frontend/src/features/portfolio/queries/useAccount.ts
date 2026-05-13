@@ -65,7 +65,7 @@ export function useRealizedGains(
   options?: Omit<UseQueryOptions<RealizedGainsSummaryResponse>, "queryKey" | "queryFn">
 ) {
   return useQuery({
-    queryKey: queryKeys.accounts.realizedGains(
+    queryKey: queryKeys.realizedGains.list(
       portfolioId,
       accountId,
       opts.taxYear,

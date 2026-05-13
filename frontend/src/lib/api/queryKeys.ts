@@ -63,11 +63,12 @@ export const queryKeys = {
   realizedGains: {
     all: (portfolioId: string, accountId: string) =>
       ["realizedGains", portfolioId, accountId] as const,
-    list: (portfolioId: string, accountId: string, taxYear?: number) =>
+    list: (portfolioId: string, accountId: string, taxYear?: number, symbol?: string | undefined) =>
       [
         ...queryKeys.realizedGains.all(portfolioId, accountId),
         "list",
         taxYear ?? "all",
+        symbol ?? "",
       ] as const,
   },
 

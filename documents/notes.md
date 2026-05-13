@@ -828,3 +828,9 @@ export function PortfolioSidebar({
     </div>
   );
 }
+
+// ... inside PortfolioItem ... const { data: accountsPage, isLoading: accountsLoading } = useAccounts( portfolio.id, 0, 50, { enabled: expanded } ); // This is the fresh data const accounts = accountsPage?.content ?? []; // 1. SUM FROM THE FRESH 'accounts' ARRAY const totalValue = accounts.reduce((sum, acc) => { return sum + (acc.totalValue?.amount ?? 0); }, 0); const totalGainLoss = accounts.reduce((sum, acc) => { // Use the gainLoss field from the account object return sum + (acc.gainLoss ?? 0); }, 0); // 2. Re-calculate logic remains the same const costBasis = totalValue - totalGainLoss; const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0; const isPositive = totalGainLoss >= 0; // ... rest of your component
+
+
+
+was trying to follow this implementation, the totalGainLoss seems a bit broken, along with most of the things

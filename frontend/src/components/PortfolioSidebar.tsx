@@ -96,6 +96,15 @@ function PortfolioItem({
 }: PortfolioItemProps) {
   const [expanded, setExpanded] = useState(false);
 
+  const fmtCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: portfolio.currency || "USD",
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+
   const { data: accountsPage, isLoading: accountsLoading } = useAccounts(
     portfolio.id,
     0,
@@ -104,16 +113,15 @@ function PortfolioItem({
   );
 
   const accounts = accountsPage?.content ?? [];
-  const isPositive = portfolio.gainLoss >= 0;
+
+  const displayTotalValue = portfolio.totalValue ?? 0;
+  const displayGainLoss = portfolio.gainLoss ?? 0;
+  const displayPercent = portfolio.gainLossPercent ?? 0;
+  const isPositive = displayGainLoss >= 0;
 
   return (
     <div className="space-y-1">
-      <div
-        className={cn(
-          "w-full rounded-lg p-3 transition-colors",
-          isActive && "bg-muted"
-        )}
-      >
+      <div className={cn("w-full rounded-lg p-3 transition-colors", isActive && "bg-muted")}>
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => setExpanded((prev) => !prev)}
@@ -142,33 +150,21 @@ function PortfolioItem({
                 )}
               </div>
               <div className="text-sm text-muted-foreground">
-                $
-                {portfolio.totalValue.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {fmtCurrency(displayTotalValue)}
               </div>
-              <div
-                className={cn(
-                  "flex items-center gap-1 text-xs",
-                  isPositive ? "text-green-600" : "text-red-600"
-                )}
-              >
+              <div className={cn("flex items-center gap-1 text-xs",
+                isPositive ? "text-green-600" : "text-red-600"
+              )}>
                 {isPositive ? (
                   <TrendingUp className="h-3 w-3" />
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
                 <span>
-                  {isPositive ? "+" : ""}$
-                  {Math.abs(portfolio.gainLoss).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {isPositive ? "+" : "-"}{fmtCurrency(Math.abs(displayGainLoss))}
                 </span>
                 <span className="text-muted-foreground">
-                  ({isPositive ? "+" : ""}
-                  {portfolio.gainLossPercent.toFixed(2)}%)
+                  ({isPositive ? "+" : ""}{displayPercent.toFixed(2)}%)
                 </span>
               </div>
             </div>
@@ -228,11 +224,7 @@ function PortfolioItem({
                         {account.type ?? "—"} · {account.baseCurrency?.code ?? "—"}
                       </span>
                       <span className="font-medium text-foreground">
-                        $
-                        {totalValue.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {fmtCurrency(totalValue)}
                       </span>
                     </div>
                     {cashBalance > 0 && (
@@ -287,6 +279,16 @@ export function PortfolioSidebar({
     strategy: "ACB",
     currency: "CAD",
   });
+
+  const aggregateCurrency = portfolios[0]?.currency || "USD";
+
+  const fmtAggregate = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: aggregateCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
 
   // ── Account creation mutation ────────────────────────────────────────────
   // Keyed on selectedPortfolioForAccount. This is the fix for accounts never
@@ -422,12 +424,8 @@ export function PortfolioSidebar({
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TAXABLE_INVESTMENT">
-                        Taxable Investment
-                      </SelectItem>
-                      <SelectItem value="NON_REGISTERED_INVESTMENT">
-                        Non-Registered
-                      </SelectItem>
+                      <SelectItem value="TAXABLE_INVESTMENT">Taxable Investment</SelectItem>
+                      <SelectItem value="NON_REGISTERED_INVESTMENT">Non-Registered</SelectItem>
                       <SelectItem value="TFSA">TFSA</SelectItem>
                       <SelectItem value="RRSP">RRSP</SelectItem>
                       <SelectItem value="FHSA">FHSA</SelectItem>

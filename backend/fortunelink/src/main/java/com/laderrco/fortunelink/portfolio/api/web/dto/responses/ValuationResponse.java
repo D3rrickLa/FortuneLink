@@ -4,7 +4,6 @@ import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
-// TODO: replace Money with MoneyResponse
 @Schema(description = "Current valuation of a portfolio")
 public record ValuationResponse(
 
