@@ -1,23 +1,14 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.ValuationResponse;
-import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
-import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
+import com.laderrco.fortunelink.portfolio.application.services.ValuationApplicationService;
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
-import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
@@ -26,9 +17,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -40,69 +28,35 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/valuations")
 @Tag(name = "Valuations", description = "Historical portfolio valuation and performance tracking")
 public class ValuationHistoryController {
+  private final ValuationApplicationService valuationService;
   private final ValuationSnapshotRepository snapshotRepository;
-  private final PortfolioValuationService portfolioValuationService;
-  private final MarketDataService marketDataService;
-  private final PortfolioLoader portfolioLoader;
-
-  // Add this to ValuationHistoryController.java
 
   @GetMapping("/{portfolioId}")
-  @Operation(summary = "Get portfolio valuation", description = "Computes live valuation for a specific portfolio.")
   public ResponseEntity<ValuationResponse> getPortfolioValuation(
       @AuthenticatedUser UserId userId,
-      @PathVariable String portfolioId // This matches your frontend call
-  ) {
-    // Load specifically by ID
-    Portfolio portfolio = portfolioLoader.loadUserPortfolio(PortfolioId.fromString(portfolioId), userId);
+      @PathVariable String portfolioId) {
 
-    if (portfolio == null) {
-      return ResponseEntity.notFound().build();
-    }
-
-    Set<AssetSymbol> symbols = PortfolioAccessUtils.extractSymbols(portfolio);
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty() ? Map.of()
-        : marketDataService.getBatchQuotes(symbols);
-
-    ValuationView view = portfolioValuationService.calculatePortfolioValuation(
-        portfolio,
-        portfolio.getDisplayCurrency(),
-        quoteCache);
+    ValuationView view = valuationService.computePortfolioValuation(
+        PortfolioId.fromString(portfolioId), userId);
 
     return ResponseEntity.ok(ValuationResponse.from(view));
   }
 
   @GetMapping("/summary")
-  @Operation(summary = "Get current valuation", description = "Computes live valuation across all active portfolios for the authenticated user.")
   public ResponseEntity<ValuationResponse> getSummary(@AuthenticatedUser UserId userId) {
-    List<Portfolio> portfolios = portfolioLoader.loadAllUserPortfolios(userId);
-
-    if (portfolios.isEmpty()) {
-      return ResponseEntity.noContent().build();
-    }
-
-    Currency displayCurrency = portfolios.getFirst().getDisplayCurrency();
-
-    Set<AssetSymbol> symbols = portfolios.stream()
-        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
-
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty() ? Map.of()
-        : marketDataService.getBatchQuotes(symbols);
-
-    ValuationView view = portfolioValuationService.calculateUserValuation(portfolios,
-        displayCurrency, quoteCache);
-
+    ValuationView view = valuationService.computeSummaryValuation(userId);
     return ResponseEntity.ok(ValuationResponse.from(view));
   }
 
   @GetMapping("/history")
-  @Operation(summary = "Get historical net worth", description = "Returns a time-series list of net worth snapshots for the authenticated user. Maximum range is 5 years (1825 days).")
-  public List<ValuationSnapshotResponse> getHistory(@AuthenticatedUser UserId userId,
-      @Parameter(description = "Number of days of history to retrieve", example = "90") @RequestParam(defaultValue = "90") @Min(1) @Max(1825) int days) {
+  public List<ValuationSnapshotResponse> getHistory(
+      @AuthenticatedUser UserId userId,
+      @RequestParam(defaultValue = "90") @Min(1) @Max(1825) int days) {
 
     Instant since = Instant.now().minus(days, ChronoUnit.DAYS);
     return snapshotRepository.findByUserIdSince(userId, since).stream()
-        .map(ValuationSnapshotResponse::from).toList();
+        .map(ValuationSnapshotResponse::from)
+        .toList();
   }
 
   @Schema(description = "Historical valuation snapshot")

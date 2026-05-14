@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -8,17 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
-import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
+import com.laderrco.fortunelink.portfolio.application.services.ValuationApplicationService;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
-import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
-import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -33,6 +32,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+
 @WebMvcTest(controllers = ValuationHistoryController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class ValuationHistoryControllerTest {
@@ -41,26 +41,23 @@ class ValuationHistoryControllerTest {
   private static final String BASE_URL = "/api/v1/valuations";
 
   @Autowired
-  MockMvc mockMvc;
+  private MockMvc mockMvc;
 
   @MockitoBean
-  ValuationSnapshotRepository snapshotRepository;
+  private ValuationSnapshotRepository snapshotRepository;
+
   @MockitoBean
-  PortfolioValuationService portfolioValuationService;
+  private ValuationApplicationService valuationApplicationService;
+
   @MockitoBean
-  MarketDataService marketDataService;
+  private AuthenticationUserService authenticationUserService;
   @MockitoBean
-  PortfolioLoader portfolioLoader;
-  @MockitoBean
-  AuthenticationUserService authenticationUserService;
-  @MockitoBean
-  RateLimitInterceptor rateLimitInterceptor;
+  private RateLimitInterceptor rateLimitInterceptor;
 
   @BeforeEach
   void setUp() throws Exception {
     when(authenticationUserService.getCurrentUser()).thenReturn(USER_UUID);
-    when(rateLimitInterceptor.preHandle(any(HttpServletRequest.class),
-        any(HttpServletResponse.class), any())).thenReturn(true);
+    when(rateLimitInterceptor.preHandle(any(), any(), any())).thenReturn(true);
   }
 
   private ValuationSnapshot buildSnapshot() {
@@ -81,8 +78,52 @@ class ValuationHistoryControllerTest {
     );
   }
 
+  @Test
+  @DisplayName("GET /{id} — 200 and delegates to Application Service")
+  void getPortfolioValuation_Returns200() throws Exception {
+    PortfolioId pid = PortfolioId.fromString(UUID.randomUUID().toString());
+    ValuationView view = new ValuationView(
+        new Money(new BigDecimal("500.00"), Currency.CAD),
+        new Money(new BigDecimal("450.00"), Currency.CAD),
+        new Money(new BigDecimal("50.00"), Currency.CAD),
+        BigDecimal.valueOf(11.11),
+        new Money(new BigDecimal("1000.00"), Currency.CAD),
+        new Money(new BigDecimal("10000.00"), Currency.CAD),
+        Currency.CAD,
+        false,
+        Instant.now()
+    );
+
+    when(valuationApplicationService.computePortfolioValuation(any(), any())).thenReturn(view);
+
+    mockMvc.perform(get(BASE_URL + "/" + pid.toString())).andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalValue.amount").value(500.00));
+  }
+
+  @Test
+  @DisplayName("GET /summary, 200 and delegates to Application Service")
+  void getSummary_Returns200() throws Exception {
+    ValuationView view = new ValuationView(
+        new Money(new BigDecimal("500.00"), Currency.CAD),
+        new Money(new BigDecimal("450.00"), Currency.CAD),
+        new Money(new BigDecimal("50.00"), Currency.CAD),
+        BigDecimal.valueOf(11.11),
+        new Money(new BigDecimal("1000.00"), Currency.CAD),
+        new Money(new BigDecimal("10000.00"), Currency.CAD),
+        Currency.CAD,
+        false,
+        Instant.now()
+    );
+
+    when(valuationApplicationService.computeSummaryValuation(any())).thenReturn(view);
+
+    mockMvc.perform(get(BASE_URL + "/summary")).andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalValue.amount").value(500.00))
+        .andExpect(jsonPath("$.currency").value("CAD"));
+  }
+
   @Nested
-  @DisplayName("GET / — getHistory")
+  @DisplayName("GET / getHistory")
   class GetHistory {
 
     @Test
