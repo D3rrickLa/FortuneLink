@@ -18,7 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Search } from "lucide-react";
+import { Popover } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   useRecordBuy,
@@ -29,6 +31,23 @@ import {
 import { useSymbolSearch } from "../hooks/useSymbolSearch";
 import { validateSymbol } from "../services/market.services";
 import type { AssetInfoResponse, AssetType } from "@/lib/api/types";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
+// helper
+function formatDate(date: Date | undefined) {
+  if (!date) return ""
+  return date.toLocaleDateString("en-US", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
+}
+
+function isValidDate(date: Date | undefined) {
+  if (!date) return false
+  return !isNaN(date.getTime())
+}
 
 type TxType = "BUY" | "SELL" | "DEPOSIT" | "WITHDRAWAL";
 
@@ -48,6 +67,12 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [validatedAsset, setValidatedAsset] = useState<AssetInfoResponse | null>(null);
   const [validating, setValidating] = useState(false);
+
+  // data state
+  const [dateOpen, setDateOpen] = useState(false)
+  const [txDate, setTxDate] = useState<Date | undefined>(new Date())
+  const [month, setMonth] = useState<Date | undefined>(new Date())
+  const [dateInputValue, setDateInputValue] = useState(formatDate(new Date()))
 
   // Fields
   const [quantity, setQuantity] = useState("");
@@ -110,6 +135,9 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Ensure we have a valid date. If the user hasn't picked one, we default to "now".
+    const isoDate = (txDate || new Date()).toISOString();
+
     try {
       if (type === "BUY") {
         if (!validatedAsset?.symbol) {
@@ -122,9 +150,11 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
           quantity: parseFloat(quantity),
           price: parseFloat(price),
           currency,
+          transactionDate: isoDate, // Added
           notes: notes.trim() || undefined,
         });
-      } else if (type === "SELL") {
+      }
+      else if (type === "SELL") {
         const sym = validatedAsset?.symbol ?? symbolInput.trim().toUpperCase();
         if (!sym) {
           toast.error("Enter the symbol you want to sell.");
@@ -135,18 +165,23 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
           quantity: parseFloat(quantity),
           price: parseFloat(price),
           currency,
+          transactionDate: isoDate,
           notes: notes.trim() || undefined,
         });
-      } else if (type === "DEPOSIT") {
+      }
+      else if (type === "DEPOSIT") {
         await recordDeposit.mutateAsync({
           amount: parseFloat(amount),
           currency,
+          transactionDate: isoDate,
           notes: notes.trim() || undefined,
         });
-      } else {
+      }
+      else if (type === "WITHDRAWAL") {
         await recordWithdrawal.mutateAsync({
           amount: parseFloat(amount),
           currency,
+          transactionDate: isoDate,
           notes: notes.trim() || undefined,
         });
       }
@@ -154,7 +189,7 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
       toast.success("Transaction recorded.");
       handleClose();
     } catch (err: unknown) {
-      // Backend returns { code, message, errors, timestamp } — never an object
+      // Backend returns { code, message, errors, timestamp } - never an object
       // directly to toast or React will try to render it as a child and crash.
       const data = (err as { response?: { data?: unknown } })?.response?.data;
       let msg = "Failed to record transaction.";
@@ -181,15 +216,19 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
     }
   };
 
+  // Reset, don't reset type so the user can quickly add another of the same kind
   const handleClose = () => {
     setOpen(false);
-    // Reset — don't reset type so the user can quickly add another of the same kind
     setSymbolInput("");
     setValidatedAsset(null);
     setQuantity("");
     setPrice("");
     setAmount("");
     setNotes("");
+    // Reset date to today
+    const today = new Date();
+    setTxDate(today);
+    setDateInputValue(formatDate(today));
   };
 
   const handleTypeChange = (v: string) => {
@@ -395,6 +434,50 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
             </div>
           )}
 
+          {/* Transaction date */}
+          <div className="space-y-1.5">
+            <Label htmlFor="tx-date">Date</Label>
+            <InputGroup>
+              <InputGroupInput
+                id="tx-date"
+                value={dateInputValue}
+                placeholder="Select date"
+                onChange={(e) => {
+                  const d = new Date(e.target.value)
+                  setDateInputValue(e.target.value)
+                  if (isValidDate(d)) {
+                    setTxDate(d)
+                    setMonth(d)
+                  }
+                }}
+              />
+              <InputGroupAddon align="inline-end">
+                <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                  <PopoverTrigger asChild>
+                    <InputGroupButton variant="ghost" size="icon-xs" aria-label="Open calendar">
+                      <CalendarIcon className="h-4 w-4" />
+                    </InputGroupButton>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={txDate}
+                      month={month}
+                      onMonthChange={setMonth}
+                      onSelect={(selected: Date | undefined) => { // Explicitly type or let it infer from ui/calendar
+                        if (selected) {
+                          setTxDate(selected)
+                          setDateInputValue(formatDate(selected))
+                          setDateOpen(false)
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </InputGroupAddon>
+            </InputGroup>
+          </div>
+
           {/* ── Notes ── */}
           <div className="space-y-1.5">
             <Label htmlFor="notes">
@@ -427,6 +510,6 @@ export function AddTransactionDialog({ portfolioId, accountId }: Props) {
           </div>
         </form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }
