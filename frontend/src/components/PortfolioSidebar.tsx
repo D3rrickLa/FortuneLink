@@ -38,6 +38,7 @@ import {
   useCreateAccount,
 } from "@/features/portfolio/queries/useAccount";
 import { toast } from "sonner";
+import { useValuation } from "@/features/portfolio/hooks/useValuation";
 
 // ─── UI-layer types ───────────────────────────────────────────────────────────
 
@@ -56,8 +57,8 @@ export interface Portfolio {
   name: string;
   currency: string;
   totalValue: number;
-  gainLoss: number;
-  gainLossPercent: number;
+  // gainLoss: number;
+  // gainLossPercent: number;
   accounts: Account[];
 }
 
@@ -109,19 +110,30 @@ function PortfolioItem({
     portfolio.id,
     0,
     50,
-    { enabled: expanded }
+    { enabled: expanded || isActive }
   );
 
   const accounts = accountsPage?.content ?? [];
 
-  const displayTotalValue = portfolio.totalValue ?? 0;
-  const displayGainLoss = portfolio.gainLoss ?? 0;
-  const displayPercent = portfolio.gainLossPercent ?? 0;
+  const valuation = useValuation(
+    portfolio.id,
+    expanded || isActive
+  );
+
+  const displayTotalValue = valuation.totalValue ?? 0;
+  const displayGainLoss = valuation.unrealizedGainLoss ?? 0;
+  const displayPercent = valuation.returnPercentage ?? 0;
+
   const isPositive = displayGainLoss >= 0;
 
   return (
     <div className="space-y-1">
-      <div className={cn("w-full rounded-lg p-3 transition-colors", isActive && "bg-muted")}>
+      <div
+        className={cn(
+          "w-full rounded-lg p-3 transition-colors",
+          isActive && "bg-muted"
+        )}
+      >
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => setExpanded((prev) => !prev)}
@@ -145,26 +157,36 @@ function PortfolioItem({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-medium">{portfolio.name}</span>
+
                 {isActive && !activeAccountId && (
                   <div className="h-2 w-2 rounded-full bg-blue-600" />
                 )}
               </div>
+
               <div className="text-sm text-muted-foreground">
                 {fmtCurrency(displayTotalValue)}
               </div>
-              <div className={cn("flex items-center gap-1 text-xs",
-                isPositive ? "text-green-600" : "text-red-600"
-              )}>
+
+              <div
+                className={cn(
+                  "flex items-center gap-1 text-xs",
+                  isPositive ? "text-green-600" : "text-red-600"
+                )}
+              >
                 {isPositive ? (
                   <TrendingUp className="h-3 w-3" />
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
+
                 <span>
-                  {isPositive ? "+" : "-"}{fmtCurrency(Math.abs(displayGainLoss))}
+                  {isPositive ? "+" : "-"}
+                  {fmtCurrency(Math.abs(displayGainLoss))}
                 </span>
+
                 <span className="text-muted-foreground">
-                  ({isPositive ? "+" : ""}{displayPercent.toFixed(2)}%)
+                  ({isPositive ? "+" : ""}
+                  {displayPercent.toFixed(2)}%)
                 </span>
               </div>
             </div>
@@ -197,36 +219,46 @@ function PortfolioItem({
             accounts.map((account) => {
               const accountId = account.accountId?.id ?? "";
               const isAccountActive = accountId === activeAccountId;
+
               const totalValue = account.totalValue?.amount ?? 0;
               const cashBalance = account.cashBalance?.amount ?? 0;
 
               return (
                 <button
                   key={accountId}
-                  onClick={() => onSelectAccount(portfolio.id, accountId)}
+                  onClick={() =>
+                    onSelectAccount(portfolio.id, accountId)
+                  }
                   className={cn(
                     "w-full rounded-lg p-2 text-left transition-colors hover:bg-muted",
-                    isAccountActive && "bg-muted border-l-2 border-blue-600"
+                    isAccountActive &&
+                    "bg-muted border-l-2 border-blue-600"
                   )}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
+
                       <span className="text-sm font-medium truncate">
                         {account.name ?? "Unnamed Account"}
                       </span>
+
                       {isAccountActive && (
                         <div className="ml-auto h-2 w-2 shrink-0 rounded-full bg-blue-600" />
                       )}
                     </div>
+
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>
-                        {account.type ?? "—"} · {account.baseCurrency?.code ?? "—"}
+                        {account.type ?? "—"} ·{" "}
+                        {account.baseCurrency?.code ?? "—"}
                       </span>
+
                       <span className="font-medium text-foreground">
                         {fmtCurrency(totalValue)}
                       </span>
                     </div>
+
                     {cashBalance > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Cash: $
@@ -280,16 +312,6 @@ export function PortfolioSidebar({
     currency: "CAD",
   });
 
-  const aggregateCurrency = portfolios[0]?.currency || "USD";
-
-  const fmtAggregate = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: aggregateCurrency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-
   // ── Account creation mutation ────────────────────────────────────────────
   // Keyed on selectedPortfolioForAccount. This is the fix for accounts never
   // being created — the dashboard's onCreateAccount prop was a no-op. The
@@ -333,15 +355,12 @@ export function PortfolioSidebar({
   };
 
   // ── Aggregate sidebar stats ───────────────────────────────────────────────
+  const globalValuation = useValuation();
 
-  const combinedValue = portfolios.reduce((sum, p) => sum + p.totalValue, 0);
-  const combinedGainLoss = portfolios.reduce((sum, p) => sum + p.gainLoss, 0);
-  const costBasis = portfolios.reduce(
-    (sum, p) => sum + (p.totalValue - p.gainLoss),
-    0
-  );
-  const combinedGainLossPercent =
-    costBasis > 0 ? (combinedGainLoss / costBasis) * 100 : 0;
+  // 2. Replace your manual aggregate calculations with this:
+  const combinedValue = globalValuation?.totalValue ?? 0;
+  const combinedGainLoss = globalValuation?.unrealizedGainLoss ?? 0;
+  const combinedGainLossPercent = globalValuation?.returnPercentage ?? 0;
   const isCombinedPositive = combinedGainLoss >= 0;
 
   return (

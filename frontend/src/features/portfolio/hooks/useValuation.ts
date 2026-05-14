@@ -112,16 +112,7 @@ export function useValuation(
     queryFn: async (): Promise<RawValuationResponse | null> => {
       // Inside useValuation queryFn
       const response = isPortfolioQuery
-        ? await apiClient.get(
-          "/api/v1/valuations/{portfolioId}", // Add the placeholder here!
-          {
-            params: {
-              path: {
-                portfolioId,
-              },
-            },
-          }
-        )
+        ? await apiClient.get(`/api/v1/valuations/${portfolioId}`)
         : await apiClient.get("/api/v1/valuations/summary");
 
       // 204 = empty portfolios
