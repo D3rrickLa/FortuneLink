@@ -44,7 +44,7 @@ export function Navbar({ onLogout, onOpenSettings }: NavbarProps) {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                  <Link href="/analytics">History</Link>
+                  <Link href="/history">History</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
