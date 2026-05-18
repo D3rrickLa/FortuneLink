@@ -1,10 +1,8 @@
 // @/features/portfolio/hooks/usePortfolios.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPortfolios, createPortfolio } from "@/features/portfolio/services"; 
-import { components } from "@/lib/api/schema"; // Import types from your schema
+import { getPortfolios, createPortfolio, updatePortfolio } from "@/features/portfolio/services"; 
 import { Portfolio } from "@/components/PortfolioSidebar";
-
-type CreatePortfolioRequest = components["schemas"]["CreatePortfolioRequest"];
+import { CreatePortfolioRequest, UpdatePortfolioRequest } from "@/lib/api/types";
 
 export function usePortfolios() {
   const queryClient = useQueryClient();
@@ -20,6 +18,7 @@ export function usePortfolios() {
   const portfolios: Portfolio[] = (query.data || []).map((p) => ({
     id: p.id ?? "",
     name: p.name ?? "Unnamed Portfolio",
+    description: "Loading overview...",
     totalValue: p.totalValue ?? 0,
     gainLoss: 0,
     gainLossPercent: 0,

@@ -10,6 +10,7 @@ import java.util.List;
 public record PortfolioResponse(
     String id,
     String name,
+    String description,
     String currency,
     double totalValue,
     boolean hasStaleData,
@@ -18,7 +19,7 @@ public record PortfolioResponse(
     Instant lastUpdated) {
 
   public static PortfolioResponse fromView(PortfolioView view) {
-    return new PortfolioResponse(view.portfolioId().toString(), view.name(),
+    return new PortfolioResponse(view.portfolioId().toString(), view.name(), view.description(),
         view.totalValue().currency().getCode(), view.totalValue().amount().doubleValue(),
         view.hasStaleData(), view.accounts().stream().map(AccountSummary::fromView).toList(),
         view.creationDate(), view.lastUpdated());

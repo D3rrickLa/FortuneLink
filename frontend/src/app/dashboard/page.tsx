@@ -20,6 +20,7 @@ import { useAccount } from "@/features/portfolio/queries/useAccount";
 import { AccountView, CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
 import { EditAccountDialog } from "@/features/portfolio/components/EditAccountDialog";
 import { GainLossSummary, GAIN_LOSS_UNAVAILABLE } from "@/lib/portfolio/gainLoss";
+import { EditPortfolioDialog } from "@/features/portfolio/components/EditPortfolioDialog";
 
 export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState("all");
@@ -158,7 +159,7 @@ export default function DashboardPage() {
 
   if (hasPortfolio && activePortfolio) {
     pageTitle = activePortfolio.name;
-    pageSubtitle = "Portfolio overview";
+    pageSubtitle = portfolioDetail?.description ?? activePortfolio.description ?? "Portfolio overview";
   }
 
   if (hasAccount && accountDetail) {
@@ -198,6 +199,18 @@ export default function DashboardPage() {
                     <h1 className="text-3xl font-bold tracking-tight">
                       {pageTitle}
                     </h1>
+
+                    {/* Render Edit Actions for a Portfolio (when NO account is targeted) */}
+                    {hasPortfolio && !hasAccount && activePortfolio && (
+                      <EditPortfolioDialog
+                        portfolioId={activePortfolioId}
+                        initialData={{
+                          name: activePortfolio.name,
+                          description: portfolioDetail?.description ?? activePortfolio.description,
+                          currency: portfolioDetail?.currency ?? activePortfolio.currency
+                        }}
+                      />
+                    )}
 
                     {/* Only show edit actions if we have a valid account selected */}
                     {hasAccount && activeAccount && (

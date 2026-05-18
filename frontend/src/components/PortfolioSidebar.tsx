@@ -56,6 +56,7 @@ export interface Portfolio {
   id: string;
   name: string;
   currency: string;
+  description: string;
   totalValue: number;
   // gainLoss: number;
   // gainLossPercent: number;
@@ -164,7 +165,7 @@ function PortfolioItem({
               </div>
 
               <div className="text-sm text-muted-foreground">
-                {fmtCurrency(displayTotalValue)}
+                {fmtCurrency(displayTotalValue)} {portfolio.currency} 
               </div>
 
               <div
