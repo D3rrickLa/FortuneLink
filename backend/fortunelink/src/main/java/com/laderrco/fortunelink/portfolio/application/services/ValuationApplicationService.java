@@ -18,7 +18,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.UserPreferencesRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
@@ -31,7 +30,7 @@ public class ValuationApplicationService {
   private final PortfolioLoader portfolioLoader;
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
-  private final UserPreferencesRepository userPreferencesRepository;
+  private final UserPreferenceService userPreferenceService;
 
   /**
    * Individual Portfolio: Respects the Portfolio's displayCurrency.
@@ -54,7 +53,7 @@ public class ValuationApplicationService {
 
     // We use CAD here so that $100 USD + $100 CAD correctly results
     // in ~$235 CAD rather than a broken "200" total.
-    Currency reportingCurrency = userPreferencesRepository.getBaseCurrency(userId);
+    Currency reportingCurrency = userPreferenceService.getBaseCurrency(userId);
     return computeView(portfolios, reportingCurrency);
   }
 

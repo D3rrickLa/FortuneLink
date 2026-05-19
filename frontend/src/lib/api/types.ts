@@ -77,6 +77,10 @@ export type BatchQuoteResponse    = Record<string, MarketQuoteResponse>;
 export type ExchangeRateResponse      = components["schemas"]["ExchangeRateResponse"];
 export type SupportedCurrenciesResponse = components["schemas"]["SupportedCurrenciesResponse"];
 
+// ─── User Preferences ─────────────────────────────────────────────────────────
+export type UpdateCurrencyRequest = components["schemas"]["UpdateCurrencyRequest"];
+export type CurrencyPreferenceResponse  = components["schemas"]["CurrencyPreferenceResponse"];
+
 // ─── Pagination helpers ───────────────────────────────────────────────────────
 export type PageAccountView   = components["schemas"]["PageAccountView"];
 export type PageableObject    = components["schemas"]["PageableObject"];

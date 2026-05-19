@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/api/v1/users/me/preferences/currency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get base currency
+         * @description Returns the authenticated user's preferred reporting currency
+         */
+        get: operations["getBaseCurrency"];
+        /**
+         * Update base currency
+         * @description Updates the authenticated user's preferred reporting currency
+         */
+        put: operations["updateBaseCurrency"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolios/{portfolioId}/accounts/{accountId}": {
         parameters: {
             query?: never;
@@ -724,6 +748,14 @@ export interface components {
             /** Format: uuid */
             id?: string;
         };
+        /** @description Request to update base currency preference */
+        UpdateCurrencyRequest: {
+            /**
+             * @description ISO 4217 currency code (3 uppercase letters)
+             * @example USD
+             */
+            currency: string;
+        };
         UpdateAccountRequest: {
             /**
              * @description The new display name for the account
@@ -1282,6 +1314,14 @@ export interface components {
              */
             snapshotDate?: string;
         };
+        /** @description Base currency preference response */
+        CurrencyPreferenceResponse: {
+            /**
+             * @description ISO 4217 currency code
+             * @example CAD
+             */
+            currency?: string;
+        };
         /** @description High-level portfolio data for list/dashboard views */
         PortfolioSummaryResponse: {
             id?: string;
@@ -1312,11 +1352,11 @@ export interface components {
             /** Format: int64 */
             offset?: number;
             /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
             pageNumber?: number;
-            sort?: components["schemas"]["SortObject"];
+            /** Format: int32 */
+            pageSize?: number;
             paged?: boolean;
+            sort?: components["schemas"]["SortObject"];
             unpaged?: boolean;
         };
         SortObject: {
@@ -1406,6 +1446,74 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getBaseCurrency: {
+        parameters: {
+            query: {
+                userId: components["schemas"]["UserId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Currency retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CurrencyPreferenceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string | {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    updateBaseCurrency: {
+        parameters: {
+            query: {
+                userId: components["schemas"]["UserId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCurrencyRequest"];
+            };
+        };
+        responses: {
+            /** @description Currency updated successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string | {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
     getAccount: {
         parameters: {
             query: {
@@ -1435,9 +1543,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1473,9 +1581,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1507,9 +1615,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description Conflict: Account has remaining balance or positions */
@@ -1545,9 +1653,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1580,9 +1688,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1619,9 +1727,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1659,9 +1767,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1702,9 +1810,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1745,9 +1853,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1788,9 +1896,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1831,9 +1939,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1872,9 +1980,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1915,9 +2023,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -1958,9 +2066,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2005,9 +2113,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description File size exceeds 5MB limit */
@@ -2075,9 +2183,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2118,9 +2226,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2161,9 +2269,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2204,9 +2312,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2245,9 +2353,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2283,9 +2391,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2316,9 +2424,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2352,9 +2460,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description Unauthorized access to portfolio */
@@ -2396,9 +2504,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2436,9 +2544,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2480,9 +2588,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2514,9 +2622,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2549,9 +2657,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2582,9 +2690,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2616,9 +2724,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2649,9 +2757,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2693,9 +2801,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2730,9 +2838,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description Transaction not found or access denied */
@@ -2770,9 +2878,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2815,9 +2923,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description Account not found or access denied */
@@ -2857,9 +2965,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description Symbol not found in external provider */
@@ -2900,9 +3008,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -2933,9 +3041,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description No quote found or asset unseeded */
@@ -2975,9 +3083,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -3006,9 +3114,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
         };
@@ -3048,9 +3156,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
+                    "*/*": string | {
                         [key: string]: string;
-                    } | string;
+                    };
                 };
             };
             /** @description Currency pair not supported by source */

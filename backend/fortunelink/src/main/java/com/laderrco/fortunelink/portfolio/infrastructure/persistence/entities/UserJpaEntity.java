@@ -3,17 +3,21 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 import java.time.Instant;
 import java.util.UUID;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 import jakarta.persistence.*;
 
 @Entity
 @Data
 @Table(name = "users", schema = "public")
+@AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @ToString(of = { "id", "email", "baseCurrency" })
 public class UserJpaEntity {
@@ -52,6 +56,29 @@ public class UserJpaEntity {
     u.createdAt = Instant.now();
     u.lastSignInAt = Instant.now();
     return u;
+  }
+
+  public static User toDomainUser(UserJpaEntity jpaEntity) {
+    return new User(
+      UserId.fromString(jpaEntity.id.toString()),
+      jpaEntity.email,
+      jpaEntity.fullName,
+      Currency.of(jpaEntity.baseCurrency),
+      jpaEntity.createdAt,
+      jpaEntity.updatedAt,
+      jpaEntity.lastSignInAt
+    );
+  }
+
+  public static UserJpaEntity toEntity(User user) {
+    return new UserJpaEntity(
+      user.getUserId().id(), 
+      user.getEmail(), 
+      user.getFullname(), 
+      user.getBaseCurrency().getCode(),
+      user.getCreatedAt(), 
+      user.getUpdatedAt(), 
+      user.getLastSignInAt());
   }
 
   // ── Mutation ──────────────────────────────────────────────────────────────
