@@ -18,6 +18,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Ma
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.repositories.UserPreferencesRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 
@@ -30,15 +31,7 @@ public class ValuationApplicationService {
   private final PortfolioLoader portfolioLoader;
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
-
-  // Default system base for aggregations
-  /*
-   * This was/is still a latent bug. The day a user creates a USD portfolio first
-   * and a CAD
-   * portfolio second, their entire aggregated valuation gets reported in USD with
-   * no conversion. You need a defined strategy here
-   */
-  private static final Currency SYSTEM_DEFAULT_CURRENCY = Currency.CAD;
+  private final UserPreferencesRepository userPreferencesRepository;
 
   /**
    * Individual Portfolio: Respects the Portfolio's displayCurrency.
@@ -61,7 +54,8 @@ public class ValuationApplicationService {
 
     // We use CAD here so that $100 USD + $100 CAD correctly results
     // in ~$235 CAD rather than a broken "200" total.
-    return computeView(portfolios, SYSTEM_DEFAULT_CURRENCY);
+    Currency reportingCurrency = userPreferencesRepository.getBaseCurrency(userId);
+    return computeView(portfolios, reportingCurrency);
   }
 
   private ValuationView computeView(List<Portfolio> portfolios, Currency targetCurrency) {

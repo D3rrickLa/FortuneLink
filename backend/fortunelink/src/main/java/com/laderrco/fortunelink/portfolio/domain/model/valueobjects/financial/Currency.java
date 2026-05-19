@@ -1,5 +1,7 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
+import java.util.Locale;
+
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -17,8 +19,14 @@ public class Currency {
     this.currency = java.util.Currency.getInstance(locale);
   }
 
-  public static Currency of(String locale) {
-    return new Currency(locale);
+  public static Currency of(String currencyCode) {
+    try {
+      return new Currency(currencyCode.toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException ex) {
+      throw new IllegalArgumentException(
+          "Unsupported currency code: " + currencyCode,
+          ex);
+    }
   }
 
   // i.e. USD
