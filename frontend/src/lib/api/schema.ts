@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/api/v1/users/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get user profile
+         * @description Returns the authenticated user's profile
+         */
+        get: operations["getProfile"];
+        /**
+         * Update full name
+         * @description Updates the authenticated user's display name
+         */
+        put: operations["updateProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/me/preferences/currency": {
         parameters: {
             query?: never;
@@ -748,10 +772,18 @@ export interface components {
             /** Format: uuid */
             id?: string;
         };
-        /** @description Request to update base currency preference */
+        /** @description Request to update user profile */
+        UpdateProfileRequest: {
+            /**
+             * @description Updated display name
+             * @example Jane Doe
+             */
+            fullName: string;
+        };
+        /** @description Request to update base currency */
         UpdateCurrencyRequest: {
             /**
-             * @description ISO 4217 currency code (3 uppercase letters)
+             * @description ISO 4217 currency code
              * @example USD
              */
             currency: string;
@@ -1314,6 +1346,14 @@ export interface components {
              */
             snapshotDate?: string;
         };
+        /** @description Authenticated user profile */
+        UserProfileResponse: {
+            /**
+             * @description User display name
+             * @example Jane Doe
+             */
+            fullName?: string;
+        };
         /** @description Base currency preference response */
         CurrencyPreferenceResponse: {
             /**
@@ -1344,20 +1384,20 @@ export interface components {
             last?: boolean;
             /** Format: int32 */
             numberOfElements?: number;
-            pageable?: components["schemas"]["PageableObject"];
             sort?: components["schemas"]["SortObject"];
+            pageable?: components["schemas"]["PageableObject"];
             empty?: boolean;
         };
         PageableObject: {
             /** Format: int64 */
             offset?: number;
+            paged?: boolean;
+            sort?: components["schemas"]["SortObject"];
+            unpaged?: boolean;
             /** Format: int32 */
             pageNumber?: number;
             /** Format: int32 */
             pageSize?: number;
-            paged?: boolean;
-            sort?: components["schemas"]["SortObject"];
-            unpaged?: boolean;
         };
         SortObject: {
             empty?: boolean;
@@ -1378,8 +1418,8 @@ export interface components {
             last?: boolean;
             /** Format: int32 */
             numberOfElements?: number;
-            pageable?: components["schemas"]["PageableObject"];
             sort?: components["schemas"]["SortObject"];
+            pageable?: components["schemas"]["PageableObject"];
             empty?: boolean;
         };
         /** @description Individual line item for a realized capital gain/loss */
@@ -1446,6 +1486,74 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getProfile: {
+        parameters: {
+            query: {
+                userId: components["schemas"]["UserId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Profile retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string | {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query: {
+                userId: components["schemas"]["UserId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Profile updated successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string | {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
     getBaseCurrency: {
         parameters: {
             query: {
@@ -1457,7 +1565,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Currency retrieved successfully */
+            /** @description Currency preference retrieved successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1494,7 +1602,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Currency updated successfully */
+            /** @description Currency preference updated successfully */
             204: {
                 headers: {
                     [name: string]: unknown;

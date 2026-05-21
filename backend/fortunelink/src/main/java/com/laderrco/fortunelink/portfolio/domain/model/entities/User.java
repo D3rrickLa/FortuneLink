@@ -12,7 +12,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class User {
   private final UserId userId;
-  private String email;
+  private String email; // email changes handled directly through frontend -> supabase, it's just easier
   private String fullname;
   private Currency baseCurrency;
   private final Instant createdAt;

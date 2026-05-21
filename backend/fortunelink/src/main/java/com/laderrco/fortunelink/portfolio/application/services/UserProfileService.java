@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import com.laderrco.fortunelink.portfolio.application.exceptions.UserNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.UserRepository;
 
@@ -16,22 +15,22 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class UserPreferenceService {
+public class UserProfileService {
   private final UserRepository userRepository;
 
-  public Currency getBaseCurrency(UserId userId) {
+  public String getProfile(UserId userId) {
     return userRepository.findById(userId)
-        .map(User::getBaseCurrency)
-        .orElse(Currency.CAD); // defensive fallback only
+        .map(User::getFullname)
+        .orElse("");
   }
 
-  public void updateBaseCurrency(UserId userId, Currency currency) {
+  public void updateFullName(UserId userId, String name) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new UserNotFoundException(userId));
 
     user.setUpdatedAt(Instant.now());
-    user.setBaseCurrency(currency);
+    user.setFullname(name.strip());
 
-    userRepository.save(user); // IMPORTANT: explicit persistence
+    userRepository.save(user);
   }
 }

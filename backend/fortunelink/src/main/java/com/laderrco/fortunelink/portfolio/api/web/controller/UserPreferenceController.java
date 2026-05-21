@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
@@ -26,45 +26,46 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users/me/preferences")
-@Tag(name = "User Preferences", description = "Endpoints for managing user-level preferences such as base currency")
+@Tag(name = "User Preferences", description = "Endpoints for managing authenticated user preferences")
 public class UserPreferenceController {
+
   private final UserPreferenceService preferenceService;
 
-  // GET /api/v1/users/me/preferences/currency 
-
   @Operation(summary = "Get base currency", description = "Returns the authenticated user's preferred reporting currency")
-  @ApiResponse(responseCode = "200", description = "Currency retrieved successfully")
+  @ApiResponse(responseCode = "200", description = "Currency preference retrieved successfully")
   @GetMapping("/currency")
   public ResponseEntity<CurrencyPreferenceResponse> getBaseCurrency(
       @AuthenticatedUser UserId userId) {
     Currency currency = preferenceService.getBaseCurrency(userId);
+
     return ResponseEntity.ok(new CurrencyPreferenceResponse(currency.getCode()));
   }
 
-  // PUT /api/v1/users/me/preferences/currency 
-
   @Operation(summary = "Update base currency", description = "Updates the authenticated user's preferred reporting currency")
-  @ApiResponse(responseCode = "204", description = "Currency updated successfully")
+  @ApiResponse(responseCode = "204", description = "Currency preference updated successfully")
   @PutMapping("/currency")
   public ResponseEntity<Void> updateBaseCurrency(
       @AuthenticatedUser UserId userId,
       @Valid @RequestBody UpdateCurrencyRequest request) {
     Currency currency = Currency.of(request.currency().toUpperCase());
+
     preferenceService.updateBaseCurrency(userId, currency);
+
     return ResponseEntity.noContent().build();
   }
 
-  // DTOs -------------------------------
+  // DTOs
 
   @Schema(description = "Base currency preference response")
   public record CurrencyPreferenceResponse(
-      @Schema(example = "CAD", description = "ISO 4217 currency code") String currency) {
+      @Schema(example = "CAD", description = "ISO 4217 currency code") String currency
+
+  ) {
   }
 
-  @Schema(description = "Request to update base currency preference")
+  @Schema(description = "Request to update base currency")
   public record UpdateCurrencyRequest(
-
-      @Schema(example = "USD", description = "ISO 4217 currency code (3 uppercase letters)") @NotNull @Size(min = 3, max = 3) @Pattern(regexp = "[A-Z]{3}") String currency
+      @NotBlank @Size(min = 3, max = 3) @Pattern(regexp = "[A-Z]{3}") @Schema(example = "USD", description = "ISO 4217 currency code") String currency
 
   ) {
   }

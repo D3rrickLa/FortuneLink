@@ -132,7 +132,7 @@ export function useRecordSell(portfolioId: string, accountId: string) {
       invalidate();
       // Realized gains are now stale
       qc.invalidateQueries({
-        queryKey: queryKeys.accounts.realizedGains(portfolioId, accountId),
+        queryKey: queryKeys.realizedGains.all(portfolioId, accountId),
       });
     },
   });
