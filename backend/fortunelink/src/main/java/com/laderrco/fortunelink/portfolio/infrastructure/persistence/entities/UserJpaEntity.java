@@ -3,13 +3,14 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.data.annotation.LastModifiedDate;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 
 import jakarta.persistence.*;
@@ -19,7 +20,7 @@ import jakarta.persistence.*;
 @Table(name = "users", schema = "public")
 @AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-@ToString(of = { "id", "email", "baseCurrency" })
+@ToString(of = { "id", "email" })
 public class UserJpaEntity {
 
   @Id
@@ -29,15 +30,10 @@ public class UserJpaEntity {
   @Column(name = "email", nullable = false, unique = true)
   private String email;
 
-  @Column(name = "full_name")
-  private String fullName;
-
-  @Column(name = "base_currency", nullable = false, length = 3)
-  private String baseCurrency = "CAD";
-
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
+  @LastModifiedDate
   @Column(name = "updated_at")
   private Instant updatedAt;
 
@@ -47,12 +43,10 @@ public class UserJpaEntity {
   // ── Factory ───────────────────────────────────────────────────────────────
 
   /** Called by auth sync trigger handler when a new Supabase user is created. */
-  public static UserJpaEntity create(UUID id, String email, String fullName) {
+  public static UserJpaEntity create(UUID id, String email) {
     UserJpaEntity u = new UserJpaEntity();
     u.id = id;
     u.email = email;
-    u.fullName = fullName;
-    u.baseCurrency = Currency.CAD.getCode(); // safe default
     u.createdAt = Instant.now();
     u.lastSignInAt = Instant.now();
     return u;
@@ -62,8 +56,6 @@ public class UserJpaEntity {
     return new User(
       UserId.fromString(jpaEntity.id.toString()),
       jpaEntity.email,
-      jpaEntity.fullName,
-      Currency.of(jpaEntity.baseCurrency),
       jpaEntity.createdAt,
       jpaEntity.updatedAt,
       jpaEntity.lastSignInAt
@@ -74,29 +66,8 @@ public class UserJpaEntity {
     return new UserJpaEntity(
       user.getUserId().id(), 
       user.getEmail(), 
-      user.getFullname(), 
-      user.getBaseCurrency().getCode(),
       user.getCreatedAt(), 
       user.getUpdatedAt(), 
       user.getLastSignInAt());
-  }
-
-  // ── Mutation ──────────────────────────────────────────────────────────────
-
-  /**
-   * Updates the user's preferred reporting currency.
-   * Validation (is this a supported ISO code?) is enforced at the API boundary;
-   * here we only enforce non-null.
-   */
-  public void updateBaseCurrency(String currency) {
-    if (currency == null)
-      throw new IllegalArgumentException("baseCurrency must not be null");
-    this.baseCurrency = currency;
-    this.lastSignInAt = Instant.now();
-  }
-
-  public void updateProfile(String fullName) {
-    this.fullName = fullName;
-    this.lastSignInAt = Instant.now();
   }
 }

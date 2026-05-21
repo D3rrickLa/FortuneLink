@@ -30,7 +30,7 @@ public class ValuationApplicationService {
   private final PortfolioLoader portfolioLoader;
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
-  private final UserPreferenceService userPreferenceService;
+  private final UserPreferencesService userPreferencesService;
 
   /**
    * Individual Portfolio: Respects the Portfolio's displayCurrency.
@@ -53,7 +53,7 @@ public class ValuationApplicationService {
 
     // We use CAD here so that $100 USD + $100 CAD correctly results
     // in ~$235 CAD rather than a broken "200" total.
-    Currency reportingCurrency = userPreferenceService.getBaseCurrency(userId);
+    Currency reportingCurrency = userPreferencesService.getBaseCurrency(userId);
     return computeView(portfolios, reportingCurrency);
   }
 

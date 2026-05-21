@@ -1,13 +1,10 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.time.Instant;
-
 import org.springframework.stereotype.Service;
 
-import com.laderrco.fortunelink.portfolio.application.exceptions.UserNotFoundException;
-import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserProfile;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.UserRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.UserProfileRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -16,21 +13,17 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class UserProfileService {
-  private final UserRepository userRepository;
+  private final UserProfileRepository repository;
 
-  public String getProfile(UserId userId) {
-    return userRepository.findById(userId)
-        .map(User::getFullname)
-        .orElse("");
+  public String getFullName(UserId userId) {
+    return repository.findById(userId).map(UserProfile::getFullName).orElse("");
   }
 
-  public void updateFullName(UserId userId, String name) {
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new UserNotFoundException(userId));
+  public void updateFullName(UserId userId, String fullName) {
+    UserProfile profile = repository.findById(userId).orElse(new UserProfile(userId, fullName));
 
-    user.setUpdatedAt(Instant.now());
-    user.setFullname(name.strip());
+    profile.updateFullName(fullName);
 
-    userRepository.save(user);
+    repository.save(profile);
   }
 }

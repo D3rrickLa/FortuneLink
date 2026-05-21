@@ -1512,9 +1512,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1547,9 +1547,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1580,9 +1580,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1615,9 +1615,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1651,9 +1651,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1689,9 +1689,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1723,9 +1723,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description Conflict: Account has remaining balance or positions */
@@ -1761,9 +1761,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1796,9 +1796,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1835,9 +1835,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1875,9 +1875,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1918,9 +1918,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -1961,9 +1961,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2004,9 +2004,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2047,9 +2047,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2088,9 +2088,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2131,9 +2131,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2174,9 +2174,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2221,9 +2221,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description File size exceeds 5MB limit */
@@ -2291,9 +2291,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2334,9 +2334,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2377,9 +2377,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2420,9 +2420,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2461,9 +2461,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2499,9 +2499,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2532,9 +2532,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2568,9 +2568,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description Unauthorized access to portfolio */
@@ -2612,9 +2612,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2652,9 +2652,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2696,9 +2696,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2730,9 +2730,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2765,9 +2765,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2798,9 +2798,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2832,9 +2832,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2865,9 +2865,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2909,9 +2909,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -2946,9 +2946,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description Transaction not found or access denied */
@@ -2986,9 +2986,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -3031,9 +3031,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description Account not found or access denied */
@@ -3073,9 +3073,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description Symbol not found in external provider */
@@ -3116,9 +3116,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -3149,9 +3149,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description No quote found or asset unseeded */
@@ -3191,9 +3191,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -3222,9 +3222,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
         };
@@ -3264,9 +3264,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string | {
+                    "*/*": {
                         [key: string]: string;
-                    };
+                    } | string;
                 };
             };
             /** @description Currency pair not supported by source */
