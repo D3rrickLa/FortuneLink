@@ -42,7 +42,7 @@ export function LoginForm() {
     // wipe any cached data from a prior session before landing on the dashboard.
     // need this because of stale data belonging to the previous user while background refetches
     queryClient.clear();
-    router.replace("/dashboard"); // replace so back button doesn't return to login
+    router.replace("/app/dashboard"); // replace so back button doesn't return to login
     router.refresh();
   }
 
