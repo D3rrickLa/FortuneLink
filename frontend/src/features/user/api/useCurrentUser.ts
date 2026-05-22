@@ -5,7 +5,6 @@ import apiClient from "@/lib/api/client";
 
 export interface CurrentUser {
   fullName: string;
-  email: string;
 }
 
 export function useCurrentUser() {

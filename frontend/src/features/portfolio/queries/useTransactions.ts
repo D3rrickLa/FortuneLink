@@ -7,7 +7,7 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { useAuth } from "@/features/auth/hooks/userAuth";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { newIdempotencyKey } from "@/lib/api/client";
 import {
   getTransactionHistory,
@@ -65,27 +65,45 @@ function useTransactionInvalidation(portfolioId: string, accountId: string) {
 }
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
+export interface TransactionHistoryFilters {
+  symbol?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
 
 export function useTransactionHistory(
   portfolioId: string,
   accountId: string,
-  filters: {
-    symbol?: string;
-    startDate?: string;
-    endDate?: string;
-    page?: number;
-    size?: number;
-  } = {},
+  filters: TransactionHistoryFilters = {},
   options?: Omit<UseQueryOptions<PageTransactionView>, "queryKey" | "queryFn">
 ) {
   const { user } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.transactions.list(portfolioId, accountId, filters),
-    queryFn: () =>
-      getTransactionHistory(user!.id, portfolioId, accountId, filters),
+    queryKey:
+      queryKeys.transactions.list(
+        portfolioId,
+        accountId,
+        filters
+      ),
+
+    queryFn: () => {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      return getTransactionHistory(user.id, portfolioId, accountId, filters);
+    },
+
     enabled:
-      Boolean(user?.id) && Boolean(portfolioId) && Boolean(accountId),
+      Boolean(user?.id) &&
+      Boolean(portfolioId) &&
+      Boolean(accountId),
+
     staleTime: 30_000,
+
     ...options,
   });
 }

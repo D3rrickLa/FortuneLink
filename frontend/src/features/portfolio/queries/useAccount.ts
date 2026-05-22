@@ -7,7 +7,7 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { useAuth } from "@/features/auth/hooks/userAuth";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   getAllAccounts,
   getAccount,

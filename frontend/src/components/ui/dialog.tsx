@@ -81,6 +81,7 @@ function DialogContent({
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
+      <DialogDescription></DialogDescription>
     </DialogPortal>
   )
 }

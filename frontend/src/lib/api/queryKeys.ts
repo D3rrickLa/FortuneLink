@@ -9,6 +9,8 @@
  * - No magic strings outside this file.
  */
 
+import { TransactionHistoryFilters } from "@/features/portfolio/queries/useTransactions";
+
 export const queryKeys = {
   // ── Portfolios ────────────────────────────────────────────────────────────
   portfolios: {
@@ -29,13 +31,36 @@ export const queryKeys = {
 
   // ── Transactions ──────────────────────────────────────────────────────────
   transactions: {
-    all: (portfolioId: string, accountId: string) =>
+    all: (
+      portfolioId: string,
+      accountId: string
+    ) =>
       ["transactions", portfolioId, accountId] as const,
-    list: (portfolioId: string, accountId: string) =>
-      [...queryKeys.transactions.all(portfolioId, accountId), "list"] as const,
-    detail: (portfolioId: string, accountId: string, transactionId: string) =>
+
+    list: (
+      portfolioId: string,
+      accountId: string,
+      filters?: TransactionHistoryFilters
+    ) =>
       [
-        ...queryKeys.transactions.all(portfolioId, accountId),
+        ...queryKeys.transactions.all(
+          portfolioId,
+          accountId
+        ),
+        "list",
+        filters ?? {},
+      ] as const,
+
+    detail: (
+      portfolioId: string,
+      accountId: string,
+      transactionId: string
+    ) =>
+      [
+        ...queryKeys.transactions.all(
+          portfolioId,
+          accountId
+        ),
         "detail",
         transactionId,
       ] as const,

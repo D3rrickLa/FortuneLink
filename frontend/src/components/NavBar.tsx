@@ -33,7 +33,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-import { useUserDisplay } from "@/features/auth/hooks/useUserDisplay";
+import { useUserDisplay } from "@/features/account/hooks/useUserDisplay";
 
 import { ProfileDialog } from "@/components/ProfileDialog";
 
@@ -57,7 +57,7 @@ export function Navbar({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
         <div className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-8">
             <Link

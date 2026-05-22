@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 
-import { useAuth } from "./userAuth";
-import { useCurrentUser } from "./useCurrentUser";
+import { useAuth } from "../../auth/hooks/useAuth";
+import { useCurrentUser } from "../../user/api/useCurrentUser";
 
 /**
  * Generates initials from a full name.

@@ -21,8 +21,8 @@ import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
 
-import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
-import { useUpdateUserProfile } from "@/features/auth/hooks/useUserProfile";
+import { useCurrentUser } from "@/features/user/api/useCurrentUser";
+import { useUpdateUserProfile } from "@/features/user/api/useUserProfile";
 
 interface ProfileDialogProps {
   open: boolean;

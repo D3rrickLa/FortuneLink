@@ -33,16 +33,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Input } from "@/components/ui/input";
-
-import { toast } from "sonner";
-
-import { useLocalPreferences } from "@/features/auth/hooks/useLocalPreferences";
+import {
+  useThemePreference,
+} from "@/features/theme/hooks/useThemePreference";
 
 import {
-  useBaseCurrencyPreference,
-  useUpdateBaseCurrency,
-} from "@/features/auth/hooks/useUserPreferences";
+  useUserPreferences,
+  useUpdateUserPreferences,
+} from "@/features/user/api/useUserPreferences";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -54,28 +52,27 @@ export function SettingsDialog({
   onOpenChange,
 }: SettingsDialogProps) {
   /**
-   * Local browser-only preferences
+   * Theme (local/browser)
    */
-  const {
-    getPreferences,
-    savePreferences,
-    applyTheme,
-  } = useLocalPreferences();
+  const { theme, updateTheme } =
+    useThemePreference();
 
   /**
-   * Backend currency preference
+   * Backend preferences
    */
-  const { data: currencyPref } =
-    useBaseCurrencyPreference();
+  const { data: preferences } =
+    useUserPreferences();
 
-  const updateCurrency =
-    useUpdateBaseCurrency();
+  const updatePreferences =
+    useUpdateUserPreferences();
 
   /**
-   * Local UI state
+   * Local form state
    */
-  const [selectedCurrency, setSelectedCurrency] =
-    useState("CAD");
+  const [
+    selectedCurrency,
+    setSelectedCurrency,
+  ] = useState("CAD");
 
   const [
     emailNotifications,
@@ -85,91 +82,57 @@ export function SettingsDialog({
   const [priceAlerts, setPriceAlerts] =
     useState(true);
 
-  const [darkMode, setDarkMode] =
-    useState(false);
-
-  const [alertThreshold, setAlertThreshold] =
-    useState(5);
-
   const [dateFormat, setDateFormat] =
     useState("MM/DD/YYYY");
 
   /**
-   * Load preferences
+   * Sync backend data into form
    */
   useEffect(() => {
-    const prefs = getPreferences();
+    if (!preferences) {
+      return;
+    }
+
+    setSelectedCurrency(
+      preferences.baseCurrency
+    );
 
     setEmailNotifications(
-      prefs.emailNotifications
+      preferences.emailNotifications
     );
 
     setPriceAlerts(
-      prefs.priceAlerts
-    );
-
-    setDarkMode(
-      prefs.darkMode
-    );
-
-    setAlertThreshold(
-      prefs.alertThreshold
+      preferences.priceAlerts
     );
 
     setDateFormat(
-      prefs.dateFormat
+      preferences.dateFormat
     );
-
-    if (currencyPref?.currency) {
-      setSelectedCurrency(
-        currencyPref.currency
-      );
-    }
-  }, [currencyPref]);
+  }, [preferences]);
 
   /**
-   * Save preferences
+   * Save
    */
   const handleSavePreferences =
     async () => {
       try {
         /**
-         * Persist backend currency preference
+         * Persist backend preferences
          */
-        if (
-          selectedCurrency !==
-          currencyPref?.currency
-        ) {
-          await updateCurrency.mutateAsync(
-            selectedCurrency
-          );
-        }
+        await updatePreferences.mutateAsync({
+          baseCurrency:
+            selectedCurrency,
 
-        /**
-         * Save local browser preferences
-         */
-        const success = savePreferences({
           emailNotifications,
+
           priceAlerts,
-          darkMode,
-          alertThreshold,
+
           dateFormat,
         });
 
-        if (!success) {
-          return;
-        }
-
-        /**
-         * Apply theme immediately
-         */
-        applyTheme(darkMode);
-
         onOpenChange(false);
       } catch {
-        toast.error(
-          "Failed to save preferences"
-        );
+        // handled by mutation
       }
     };
 
@@ -252,34 +215,6 @@ export function SettingsDialog({
                   }
                 />
               </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label htmlFor="alert-threshold">
-                  Alert Threshold (%)
-                </Label>
-
-                <Input
-                  id="alert-threshold"
-                  type="number"
-                  value={alertThreshold}
-                  onChange={(e) =>
-                    setAlertThreshold(
-                      Number(
-                        e.target.value
-                      )
-                    )
-                  }
-                  min="1"
-                  max="50"
-                />
-
-                <p className="text-sm text-muted-foreground">
-                  Trigger alerts when price
-                  changes exceed this amount
-                </p>
-              </div>
             </div>
           </TabsContent>
 
@@ -289,6 +224,7 @@ export function SettingsDialog({
             className="space-y-4 mt-4"
           >
             <div className="space-y-4">
+              {/* THEME */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>
@@ -302,15 +238,22 @@ export function SettingsDialog({
                 </div>
 
                 <Switch
-                  checked={darkMode}
-                  onCheckedChange={
-                    setDarkMode
+                  checked={theme === "dark"}
+                  onCheckedChange={(
+                    checked
+                  ) =>
+                    updateTheme(
+                      checked
+                        ? "dark"
+                        : "light"
+                    )
                   }
                 />
               </div>
 
               <Separator />
 
+              {/* CURRENCY */}
               <div className="space-y-2">
                 <Label>
                   Reporting Currency
@@ -344,41 +287,38 @@ export function SettingsDialog({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-
-                <p className="text-xs text-muted-foreground">
-                  Cross-portfolio valuations
-                  are normalized to this
-                  currency.
-                </p>
               </div>
 
+              {/* DATE FORMAT */}
               <div className="space-y-2">
-                <Label htmlFor="date-format">
+                <Label>
                   Date Format
                 </Label>
 
-                <select
-                  id="date-format"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <Select
                   value={dateFormat}
-                  onChange={(e) =>
-                    setDateFormat(
-                      e.target.value
-                    )
+                  onValueChange={
+                    setDateFormat
                   }
                 >
-                  <option value="MM/DD/YYYY">
-                    MM/DD/YYYY
-                  </option>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
 
-                  <option value="DD/MM/YYYY">
-                    DD/MM/YYYY
-                  </option>
+                  <SelectContent>
+                    <SelectItem value="MM/DD/YYYY">
+                      MM/DD/YYYY
+                    </SelectItem>
 
-                  <option value="YYYY-MM-DD">
-                    YYYY-MM-DD
-                  </option>
-                </select>
+                    <SelectItem value="DD/MM/YYYY">
+                      DD/MM/YYYY
+                    </SelectItem>
+
+                    <SelectItem value="YYYY-MM-DD">
+                      YYYY-MM-DD
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </TabsContent>
@@ -397,7 +337,7 @@ export function SettingsDialog({
           <Button
             onClick={handleSavePreferences}
             disabled={
-              updateCurrency.isPending
+              updatePreferences.isPending
             }
           >
             Save Changes

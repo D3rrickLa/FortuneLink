@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { PortfolioSidebar } from "@/components/PortfolioSidebar";
 import { usePortfolios } from "@/features/portfolio/hooks/usePortfolios";
-import { useLogout } from "@/features/portfolio/hooks/useLogout";
+import { useLogout } from "@/features/auth/hooks/useLogout";
 import { Toaster } from "sonner";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { AddTransactionDialog } from "@/features/portfolio/components/AddTransactionDialog";
@@ -188,7 +188,7 @@ export default function DashboardPage() {
         </aside>
 
         {/* ── Main ── */}
-        <main className="flex-1 overflow-auto bg-slate-50/30">
+        <main className="flex-1 overflow-auto bg-muted/20">
           <div className="p-4 md:p-8">
             <div className="mx-auto max-w-7xl space-y-8">
 

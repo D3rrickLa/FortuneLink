@@ -282,11 +282,8 @@ export function PerformanceChart({ currency = "USD", account }: PerformanceChart
       </CardHeader>
 
       <CardContent>
-        {/* Fixed height wrapper — do not put a height on ResponsiveContainer
-            when it is inside a fixed-height div; give the div the height
-            and let the container fill it. */}
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <div>
+          <ResponsiveContainer width="100%" height={300}>
             <LineChart
               data={chartData}
               margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
