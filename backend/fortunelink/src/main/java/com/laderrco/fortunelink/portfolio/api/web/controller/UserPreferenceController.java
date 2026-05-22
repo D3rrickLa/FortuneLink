@@ -3,7 +3,9 @@ package com.laderrco.fortunelink.portfolio.api.web.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.laderrco.fortunelink.portfolio.application.commands.UpdateUserPreferencesCommand;
 import com.laderrco.fortunelink.portfolio.application.services.UserPreferencesService;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserPreferences;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
@@ -28,40 +30,58 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/users/me/preferences")
 @Tag(name = "User Preferences", description = "Endpoints for managing authenticated user preferences")
 public class UserPreferenceController {
+
   private final UserPreferencesService preferencesService;
 
-  @Operation(summary = "Get base currency", description = "Returns the authenticated user's preferred reporting currency")
-  @ApiResponse(responseCode = "200", description = "Currency preference retrieved successfully")
-  @GetMapping("/currency")
-  public ResponseEntity<CurrencyPreferenceResponse> getBaseCurrency(@AuthenticatedUser UserId userId) {
-    Currency currency = preferencesService.getBaseCurrency(userId);
+  @Operation(summary = "Get user preferences", description = "Returns the authenticated user's preferences")
+  @ApiResponse(responseCode = "200", description = "Preferences retrieved successfully")
+  @GetMapping
+  public ResponseEntity<UserPreferencesResponse> getPreferences(
+      @AuthenticatedUser UserId userId) {
 
-    return ResponseEntity.ok(new CurrencyPreferenceResponse(currency.getCode()));
+    UserPreferences preferences = preferencesService.get(userId);
+
+    return ResponseEntity.ok(new UserPreferencesResponse(preferences.getBaseCurrency().getCode(),
+            preferences.isEmailNotifications(), preferences.isPriceAlerts(), preferences.getDateFormat()));
   }
 
-  @Operation(summary = "Update base currency", description = "Updates the authenticated user's preferred reporting currency")
-  @ApiResponse(responseCode = "204", description = "Currency preference updated successfully")
-  @PutMapping("/currency")
-  public ResponseEntity<Void> updateBaseCurrency(@AuthenticatedUser UserId userId,
-      @Valid @RequestBody UpdateCurrencyRequest request) {
-    Currency currency = Currency.of(request.currency().toUpperCase());
+  @Operation(summary = "Update user preferences", description = "Updates the authenticated user's preferences")
+  @ApiResponse(responseCode = "204", description = "Preferences updated successfully")
+  @PutMapping
+  public ResponseEntity<Void> updatePreferences(
+      @AuthenticatedUser UserId userId,
+      @Valid @RequestBody UpdateUserPreferencesRequest request) {
 
-    preferencesService.updateBaseCurrency(userId, currency);
+    preferencesService.updatePreferences(userId, new UpdateUserPreferencesCommand(
+        Currency.of(request.baseCurrency().toUpperCase()), request.emailNotifications(),
+        request.priceAlerts(), request.dateFormat()));
 
     return ResponseEntity.noContent().build();
   }
 
   // DTOs
 
-  @Schema(description = "Base currency preference response")
-  public record CurrencyPreferenceResponse(
-      @Schema(example = "CAD", description = "ISO 4217 currency code") String currency
-  ) {
+  @Schema(description = "User preferences response")
+  public record UserPreferencesResponse(
+
+      @Schema(example = "CAD", description = "ISO 4217 currency code") String baseCurrency,
+
+      @Schema(example = "true", description = "Whether email notifications are enabled") boolean emailNotifications,
+
+      @Schema(example = "true", description = "Whether price alerts are enabled") boolean priceAlerts,
+
+      @Schema(example = "YYYY-MM-DD", description = "Preferred date format") String dateFormat) {
   }
 
-  @Schema(description = "Request to update base currency")
-  public record UpdateCurrencyRequest(
-      @NotBlank @Size(min = 3, max = 3) @Pattern(regexp = "[A-Z]{3}") @Schema(example = "USD", description = "ISO 4217 currency code") String currency
-  ) {
+  @Schema(description = "Request to update user preferences")
+  public record UpdateUserPreferencesRequest(
+
+      @NotBlank @Size(min = 3, max = 3) @Pattern(regexp = "[A-Z]{3}") @Schema(example = "USD", description = "ISO 4217 currency code") String baseCurrency,
+
+      @Schema(example = "true", description = "Whether email notifications are enabled") boolean emailNotifications,
+
+      @Schema(example = "true", description = "Whether price alerts are enabled") boolean priceAlerts,
+
+      @NotBlank @Schema(example = "YYYY-MM-DD", description = "Preferred date format") String dateFormat) {
   }
 }

@@ -53,7 +53,7 @@ public class ValuationApplicationService {
 
     // We use CAD here so that $100 USD + $100 CAD correctly results
     // in ~$235 CAD rather than a broken "200" total.
-    Currency reportingCurrency = userPreferencesService.getBaseCurrency(userId);
+    Currency reportingCurrency = userPreferencesService.get(userId).getBaseCurrency();
     return computeView(portfolios, reportingCurrency);
   }
 

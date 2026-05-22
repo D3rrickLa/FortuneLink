@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import org.springframework.stereotype.Service;
 
+import com.laderrco.fortunelink.portfolio.application.commands.UpdateUserPreferencesCommand;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserPreferences;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
@@ -14,34 +15,37 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class UserPreferencesService {
-  private final UserPreferencesRepository userPreferencesRepository;
+
+  private final UserPreferencesRepository repository;
 
   public UserPreferences get(UserId userId) {
-    return userPreferencesRepository.findById(userId)
+    return repository.findById(userId)
         .orElseThrow(() -> new IllegalStateException("Preferences not initialized"));
   }
 
-  public Currency getBaseCurrency(UserId userId) {
-    return get(userId).getBaseCurrency();
-  }
-
-  public void updateBaseCurrency(UserId userId, Currency currency) {
+  public void updatePreferences(UserId userId, UpdateUserPreferencesCommand command) {
     UserPreferences prefs = get(userId);
-    prefs.setBaseCurrency(currency);
-    userPreferencesRepository.save(prefs);
+
+    prefs.setBaseCurrency(command.baseCurrency());
+    prefs.setEmailNotifications(command.emailNotifications());
+    prefs.setPriceAlerts(command.priceAlerts());
+    prefs.setDateFormat(command.dateFormat());
+
+    repository.save(prefs);
   }
 
-  public void createDefault(UserId userId) {
-    if (userPreferencesRepository.existsById(userId)) return;
+  public UserPreferences createDefault(UserId userId) {
+    if (repository.existsById(userId)) {
+      return get(userId);
+    }
 
-    userPreferencesRepository.save(
-        new UserPreferences(
-            userId,
-            Currency.CAD,
-            true,
-            true,
-            "MM/DD/YYYY"
-        )
-    );
+    UserPreferences defaultPrefs = new UserPreferences(
+        userId,
+        Currency.CAD,
+        true,
+        true,
+        "MM/DD/YYYY");
+
+    return repository.save(defaultPrefs);
   }
 }
