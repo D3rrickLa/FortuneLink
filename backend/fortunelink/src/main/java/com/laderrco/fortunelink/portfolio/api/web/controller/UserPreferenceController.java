@@ -30,14 +30,12 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/users/me/preferences")
 @Tag(name = "User Preferences", description = "Endpoints for managing authenticated user preferences")
 public class UserPreferenceController {
-
   private final UserPreferencesService preferencesService;
 
   @Operation(summary = "Get user preferences", description = "Returns the authenticated user's preferences")
   @ApiResponse(responseCode = "200", description = "Preferences retrieved successfully")
   @GetMapping
-  public ResponseEntity<UserPreferencesResponse> getPreferences(
-      @AuthenticatedUser UserId userId) {
+  public ResponseEntity<UserPreferencesResponse> getPreferences(@AuthenticatedUser UserId userId) {
 
     UserPreferences preferences = preferencesService.get(userId);
 
