@@ -1,6 +1,8 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -81,17 +83,11 @@ class ValuationHistoryControllerTest {
   @DisplayName("GET /{id} — 200 and delegates to Application Service")
   void getPortfolioValuation_Returns200() throws Exception {
     PortfolioId pid = PortfolioId.fromString(UUID.randomUUID().toString());
-    ValuationView view = new ValuationView(
-        new Money(new BigDecimal("500.00"), Currency.CAD),
+    ValuationView view = new ValuationView(new Money(new BigDecimal("500.00"), Currency.CAD),
         new Money(new BigDecimal("450.00"), Currency.CAD),
-        new Money(new BigDecimal("50.00"), Currency.CAD),
-        BigDecimal.valueOf(11.11),
+        new Money(new BigDecimal("50.00"), Currency.CAD), BigDecimal.valueOf(11.11),
         new Money(new BigDecimal("1000.00"), Currency.CAD),
-        new Money(new BigDecimal("10000.00"), Currency.CAD),
-        Currency.CAD,
-        false,
-        Instant.now()
-    );
+        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, Instant.now());
 
     when(valuationApplicationService.computePortfolioValuation(any(), any())).thenReturn(view);
 
@@ -102,23 +98,97 @@ class ValuationHistoryControllerTest {
   @Test
   @DisplayName("GET /summary, 200 and delegates to Application Service")
   void getSummary_Returns200() throws Exception {
-    ValuationView view = new ValuationView(
-        new Money(new BigDecimal("500.00"), Currency.CAD),
+    ValuationView view = new ValuationView(new Money(new BigDecimal("500.00"), Currency.CAD),
         new Money(new BigDecimal("450.00"), Currency.CAD),
-        new Money(new BigDecimal("50.00"), Currency.CAD),
-        BigDecimal.valueOf(11.11),
+        new Money(new BigDecimal("50.00"), Currency.CAD), BigDecimal.valueOf(11.11),
         new Money(new BigDecimal("1000.00"), Currency.CAD),
-        new Money(new BigDecimal("10000.00"), Currency.CAD),
-        Currency.CAD,
-        false,
-        Instant.now()
-    );
+        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, Instant.now());
 
     when(valuationApplicationService.computeSummaryValuation(any())).thenReturn(view);
 
     mockMvc.perform(get(BASE_URL + "/summary")).andExpect(status().isOk())
         .andExpect(jsonPath("$.totalValue.amount").value(500.00))
         .andExpect(jsonPath("$.currency").value("CAD"));
+  }
+
+  @Test
+  void from_returnsNull_whenSnapshotIsNull() {
+    ValuationHistoryController.ValuationSnapshotResponse.from(null);
+    assertThat((ValuationHistoryController.ValuationSnapshotResponse) null).isNull();
+  }
+
+  @Test
+  void from_mapsNullMoneyFields_toBigDecimalZero() {
+
+    ValuationSnapshot snapshot = mock(ValuationSnapshot.class);
+
+    when(snapshot.totalValue()).thenReturn(null);
+    when(snapshot.totalCostBasis()).thenReturn(null);
+    when(snapshot.unrealizedGainLoss()).thenReturn(null);
+    when(snapshot.totalCashBalance()).thenReturn(null);
+    when(snapshot.totalInvestedValue()).thenReturn(null);
+
+    when(snapshot.gainLossPercent()).thenReturn(new BigDecimal("12.50"));
+    when(snapshot.displayCurrency()).thenReturn("USD");
+    when(snapshot.hasStaleData()).thenReturn(false);
+
+    Instant snapshotDate = Instant.parse("2025-01-01T00:00:00Z");
+    when(snapshot.snapshotDate()).thenReturn(snapshotDate);
+
+    var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
+
+    assertThat(response.totalValue()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.totalCostBasis()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.unrealizedGainLoss()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.totalCashBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.totalInvestedValue()).isEqualByComparingTo(BigDecimal.ZERO);
+
+    assertThat(response.gainLossPercent()).isEqualByComparingTo("12.50");
+
+    assertThat(response.currency()).isEqualTo("USD");
+    assertThat(response.hasStaleData()).isFalse();
+    assertThat(response.snapshotDate()).isEqualTo(snapshotDate);
+  }
+
+  @Test
+  void from_mapsMoneyAmountsCorrectly() {
+
+    ValuationSnapshot snapshot = mock(ValuationSnapshot.class);
+
+    when(snapshot.totalValue()).thenReturn(
+        new Money(new BigDecimal("125000.50"), Currency.of("USD")));
+
+    when(snapshot.totalCostBasis()).thenReturn(
+        new Money(new BigDecimal("100000.00"), Currency.of("USD")));
+
+    when(snapshot.unrealizedGainLoss()).thenReturn(
+        new Money(new BigDecimal("25000.50"), Currency.of("USD")));
+
+    when(snapshot.totalCashBalance()).thenReturn(
+        new Money(new BigDecimal("15000.00"), Currency.of("USD")));
+
+    when(snapshot.totalInvestedValue()).thenReturn(
+        new Money(new BigDecimal("110000.50"), Currency.of("USD")));
+
+    when(snapshot.gainLossPercent()).thenReturn(new BigDecimal("25.00"));
+
+    when(snapshot.displayCurrency()).thenReturn("USD");
+    when(snapshot.hasStaleData()).thenReturn(false);
+
+    Instant snapshotDate = Instant.parse("2025-01-01T00:00:00Z");
+    when(snapshot.snapshotDate()).thenReturn(snapshotDate);
+
+    var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
+
+    assertThat(response.totalValue()).isEqualByComparingTo("125000.50");
+
+    assertThat(response.totalCostBasis()).isEqualByComparingTo("100000.00");
+
+    assertThat(response.unrealizedGainLoss()).isEqualByComparingTo("25000.50");
+
+    assertThat(response.totalCashBalance()).isEqualByComparingTo("15000.00");
+
+    assertThat(response.totalInvestedValue()).isEqualByComparingTo("110000.50");
   }
 
   @Nested

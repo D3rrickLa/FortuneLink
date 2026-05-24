@@ -52,7 +52,7 @@ class JpaTransactionRepositoryTest {
     // Seed the user that Supabase usually handles.
     // Flyway has already run by this point, so the table exists.
     jdbcTemplate.execute(String.format(
-        "INSERT INTO users (id, email) VALUES ('%s', 'test@example.com') ON CONFLICT DO NOTHING",
+        "INSERT INTO users (id, email, created_at, updated_at, last_sign_in_at) VALUES ('%s', 'test@example.com', NOW(), NOW(), NOW()) ON CONFLICT DO NOTHING",
         TEST_USER_ID));
   }
 

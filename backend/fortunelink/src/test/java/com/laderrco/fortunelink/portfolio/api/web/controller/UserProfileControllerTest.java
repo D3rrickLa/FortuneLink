@@ -1,121 +1,107 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.application.services.UserProfileService;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUserResolver;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.MethodParameter;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.method.support.ModelAndViewContainer;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest(UserPreferenceController.class)
+@WebMvcTest(controllers = UserProfileController.class)
 @Import(AuthenticatedUserResolver.class)
 @AutoConfigureMockMvc(addFilters = false)
 class UserProfileControllerTest {
-  private final UserId mockUserId = UserId.random();
-  private MockMvc mockMvc;
+
+  private static final UUID USER_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+  private static final String BASE_URL = "/api/v1/users/me/profile";
+
   @Autowired
-  private UserProfileController userProfileController;
+  MockMvc mockMvc;
+
   @Autowired
-  private JsonMapper objectMapper;
+  JsonMapper objectMapper;
+
   @MockitoBean
-  private UserProfileService profileService;
+  UserProfileService profileService;
+
+  // Backing bean for AuthenticatedUserResolver
+  @MockitoBean
+  AuthenticationUserService authenticationUserService;
+
+  // WebConfig dependency
+  @MockitoBean
+  RateLimitInterceptor rateLimitInterceptor;
 
   @BeforeEach
-  void setUp() {
-    // Build MockMvc standalone to resolve the custom @AuthenticatedUser context
-    this.mockMvc = MockMvcBuilders.standaloneSetup(userProfileController)
-        .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
-          @Override
-          public boolean supportsParameter(MethodParameter parameter) {
-            return parameter.hasParameterAnnotation(AuthenticatedUser.class)
-                && parameter.getParameterType().equals(UserId.class);
-          }
+  void setUp() throws Exception {
+    when(authenticationUserService.getCurrentUser()).thenReturn(USER_UUID);
 
-          @Override
-          public Object resolveArgument(MethodParameter parameter,
-              ModelAndViewContainer mavContainer, NativeWebRequest webRequest,
-              WebDataBinderFactory binderFactory) {
-            return mockUserId;
-          }
-        }).build();
+    when(rateLimitInterceptor.preHandle(any(HttpServletRequest.class),
+        any(HttpServletResponse.class), any())).thenReturn(true);
   }
 
-  @Nested
-  @DisplayName("GET /api/v1/users/me/profile")
-  class GetProfile {
+  @Test
+  void getProfile_returnsUserProfile() throws Exception {
+    when(profileService.getFullName(new UserId(USER_UUID))).thenReturn("Jane Doe");
 
-    @Test
-    @DisplayName("Should return 200 and the user's full name")
-    void shouldReturnUserProfile() throws Exception {
-      // Arrange
-      when(profileService.getFullName(any(UserId.class))).thenReturn("Jane Doe");
+    mockMvc.perform(get(BASE_URL)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.fullName").value("Jane Doe"));
 
-      // Act & Assert
-      mockMvc.perform(get("/api/v1/users/me/profile").accept(MediaType.APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.fullName").value("Jane Doe"));
-
-      verify(profileService).getFullName(mockUserId);
-    }
+    verify(profileService).getFullName(new UserId(USER_UUID));
   }
 
-  @Nested
-  @DisplayName("PUT /api/v1/users/me/profile")
-  class UpdateProfile {
+  @Test
+  void updateProfile_updatesFullName() throws Exception {
+    var request = new UserProfileController.UpdateProfileRequest("Jane Doe");
 
-    @Test
-    @DisplayName("Should return 204 and invoke service update when full name is valid")
-    void shouldUpdateProfileWhenValid() throws Exception {
-      // Arrange
-      UserProfileController.UpdateProfileRequest validRequest = new UserProfileController.UpdateProfileRequest(
-          "John Smith");
+    doNothing().when(profileService).updateFullName(new UserId(USER_UUID), "Jane Doe");
 
-      // Act & Assert
-      mockMvc.perform(put("/api/v1/users/me/profile").contentType(MediaType.APPLICATION_JSON)
-              .content(objectMapper.writeValueAsString(validRequest)))
-          .andExpect(status().isNoContent());
+    mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(request))).andExpect(status().isNoContent());
 
-      verify(profileService).updateFullName(eq(mockUserId), eq("John Smith"));
-    }
+    verify(profileService).updateFullName(new UserId(USER_UUID), "Jane Doe");
+  }
 
-    @Test
-    @DisplayName("Should return 400 when full name is blank")
-    void shouldReturn400WhenFullNameIsBlank() throws Exception {
-      // Arrange - empty/blank string violates @NotBlank
-      UserProfileController.UpdateProfileRequest invalidRequest = new UserProfileController.UpdateProfileRequest(
-          "   ");
+  @Test
+  void updateProfile_returnsBadRequest_whenFullNameIsBlank() throws Exception {
 
-      // Act & Assert
-      mockMvc.perform(put("/api/v1/users/me/profile").contentType(MediaType.APPLICATION_JSON)
-              .content(objectMapper.writeValueAsString(invalidRequest)))
-          .andExpect(status().isBadRequest());
-    }
+    var request = new UserProfileController.UpdateProfileRequest("");
 
-    @Test
-    @DisplayName("Should return 400 when full name exceeds 100 characters")
-    void shouldReturn400WhenFullNameIsTooLong() throws Exception {
-      // Arrange - 101 character string violates @Size(max = 100)
-      String excessivelyLongName = "A".repeat(101);
-      UserProfileController.UpdateProfileRequest invalidRequest = new UserProfileController.UpdateProfileRequest(
-          excessivelyLongName);
+    mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest());
+  }
 
-      // Act & Assert
-      mockMvc.perform(put("/api/v1/users/me/profile").contentType(MediaType.APPLICATION_JSON)
-              .content(objectMapper.writeValueAsString(invalidRequest)))
-          .andExpect(status().isBadRequest());
-    }
+  @Test
+  void updateProfile_returnsBadRequest_whenFullNameTooLong() throws Exception {
+
+    String longName = "a".repeat(101);
+
+    var request = new UserProfileController.UpdateProfileRequest(longName);
+
+    mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest());
   }
 }

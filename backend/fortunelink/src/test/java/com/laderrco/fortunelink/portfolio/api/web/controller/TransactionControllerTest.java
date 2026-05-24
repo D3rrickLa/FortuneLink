@@ -2,9 +2,11 @@ package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -12,6 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.laderrco.fortunelink.portfolio.application.commands.records.RecordPurchaseCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.InsufficientQuantityException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.TransactionNotFoundException;
 import com.laderrco.fortunelink.portfolio.application.queries.GetTransactionByIdQuery;
@@ -21,8 +24,10 @@ import com.laderrco.fortunelink.portfolio.application.services.TransactionQueryS
 import com.laderrco.fortunelink.portfolio.application.services.TransactionService;
 import com.laderrco.fortunelink.portfolio.application.views.TransactionView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.InsufficientFundsException;
+import com.laderrco.fortunelink.portfolio.domain.model.enums.FeeType;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.TransactionType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Fee;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Quantity;
@@ -45,7 +50,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
@@ -150,7 +154,7 @@ class TransactionControllerTest {
       when(transactionService.recordPurchase(any())).thenReturn(buildTxView(TransactionType.BUY));
 
       mockMvc.perform(post(BASE_URL + "/buy").header("Idempotency-Key", IDEMPOTENCY_KEY)
-              .contentType(MediaType.APPLICATION_JSON).content(validBuyRequest()))
+              .contentType(APPLICATION_JSON).content(validBuyRequest()))
           .andExpect(status().isCreated());
 
       String s = """
@@ -166,7 +170,7 @@ class TransactionControllerTest {
           """.formatted(ACCOUNT_ID);
       mockMvc.perform(
           post(BASE_URL + "/buy").header("Idempotency-Key", UUID.randomUUID().toString())
-              .contentType(MediaType.APPLICATION_JSON).content(s)).andExpect(status().isCreated());
+              .contentType(APPLICATION_JSON).content(s)).andExpect(status().isCreated());
     }
 
     @Test
@@ -174,8 +178,9 @@ class TransactionControllerTest {
     void returns201WithoutIdempotencyKey() throws Exception {
       when(transactionService.recordPurchase(any())).thenReturn(buildTxView(TransactionType.BUY));
 
-      mockMvc.perform(post(BASE_URL + "/buy").contentType(MediaType.APPLICATION_JSON)
-          .content(validBuyRequest())).andExpect(status().isCreated());
+      mockMvc.perform(
+              post(BASE_URL + "/buy").contentType(APPLICATION_JSON).content(validBuyRequest()))
+          .andExpect(status().isCreated());
     }
 
     @Test
@@ -193,7 +198,7 @@ class TransactionControllerTest {
           }
           """.formatted(ACCOUNT_ID);
 
-      mockMvc.perform(post(BASE_URL + "/buy").contentType(MediaType.APPLICATION_JSON).content(body))
+      mockMvc.perform(post(BASE_URL + "/buy").contentType(APPLICATION_JSON).content(body))
           .andExpect(status().isBadRequest());
 
       verifyNoInteractions(transactionService);
@@ -214,7 +219,7 @@ class TransactionControllerTest {
           }
           """.formatted(ACCOUNT_ID);
 
-      mockMvc.perform(post(BASE_URL + "/buy").contentType(MediaType.APPLICATION_JSON).content(body))
+      mockMvc.perform(post(BASE_URL + "/buy").contentType(APPLICATION_JSON).content(body))
           .andExpect(status().isBadRequest());
     }
 
@@ -224,9 +229,82 @@ class TransactionControllerTest {
       when(transactionService.recordPurchase(any())).thenThrow(
           new InsufficientFundsException("Insufficient cash for buy"));
 
-      mockMvc.perform(post(BASE_URL + "/buy").contentType(MediaType.APPLICATION_JSON)
-              .content(validBuyRequest())).andExpect(status().isUnprocessableContent())
+      mockMvc.perform(
+              post(BASE_URL + "/buy").contentType(APPLICATION_JSON).content(validBuyRequest()))
+          .andExpect(status().isUnprocessableContent())
           .andExpect(jsonPath("$.code").value("INSUFFICIENT_FUNDS"));
+    }
+
+    @Test
+    void recordBuyMapsFeesCorrectly() throws Exception {
+
+      Instant txDate = Instant.parse("2025-01-01T00:00:00Z");
+
+      var request = """
+          {
+            "symbol": "AAPL",
+            "type": "STOCK",
+            "quantity": 10,
+            "price": 150.00,
+            "currency": "USD",
+            "transactionDate": "2025-01-01T00:00:00Z",
+            "notes": "buy test",
+            "fees": [
+              {
+                "feeType": "COMMISSION",
+                "amount": 4.99,
+                "currency": "USD"
+              }
+            ]
+          }
+          """;
+
+      when(transactionService.recordPurchase(any())).thenReturn(mock(TransactionView.class));
+
+      mockMvc.perform(post(BASE_URL + "/buy").contentType(APPLICATION_JSON).content(request))
+          .andExpect(status().isCreated());
+
+      ArgumentCaptor<RecordPurchaseCommand> captor = ArgumentCaptor.forClass(
+          RecordPurchaseCommand.class);
+
+      verify(transactionService).recordPurchase(captor.capture());
+
+      RecordPurchaseCommand command = captor.getValue();
+
+      assertThat(command.fees()).hasSize(1);
+
+      Fee fee = command.fees().getFirst();
+
+      assertThat(fee.feeType()).isEqualTo(FeeType.COMMISSION);
+      assertThat(fee.nativeAmount().amount()).isEqualByComparingTo("4.99");
+      assertThat(fee.nativeAmount().currency()).isEqualTo(Currency.of("USD"));
+      assertThat(fee.occurredAt()).isEqualTo(txDate);
+    }
+
+    @Test
+    void recordBuyMapsEmptyFeesToEmptyList() throws Exception {
+      var request = """
+          {
+            "symbol": "AAPL",
+            "type": "STOCK",
+            "quantity": 10,
+            "price": 150.00,
+            "currency": "USD",
+            "fees": []
+          }
+          """;
+
+      when(transactionService.recordPurchase(any())).thenReturn(mock(TransactionView.class));
+
+      mockMvc.perform(post(BASE_URL + "/buy").contentType(APPLICATION_JSON).content(request))
+          .andExpect(status().isCreated());
+
+      ArgumentCaptor<RecordPurchaseCommand> captor = ArgumentCaptor.forClass(
+          RecordPurchaseCommand.class);
+
+      verify(transactionService).recordPurchase(captor.capture());
+
+      assertThat(captor.getValue().fees()).isEmpty();
     }
   }
 
@@ -239,8 +317,9 @@ class TransactionControllerTest {
     void returns201OnSuccess() throws Exception {
       when(transactionService.recordSale(any())).thenReturn(buildTxView(TransactionType.SELL));
 
-      mockMvc.perform(post(BASE_URL + "/sell").contentType(MediaType.APPLICATION_JSON)
-          .content(validSellRequest())).andExpect(status().isCreated());
+      mockMvc.perform(
+              post(BASE_URL + "/sell").contentType(APPLICATION_JSON).content(validSellRequest()))
+          .andExpect(status().isCreated());
     }
 
     @Test
@@ -249,8 +328,9 @@ class TransactionControllerTest {
       when(transactionService.recordSale(any())).thenThrow(
           new InsufficientQuantityException("Cannot sell 100, only holding 10"));
 
-      mockMvc.perform(post(BASE_URL + "/sell").contentType(MediaType.APPLICATION_JSON)
-              .content(validSellRequest())).andExpect(status().isUnprocessableContent())
+      mockMvc.perform(
+              post(BASE_URL + "/sell").contentType(APPLICATION_JSON).content(validSellRequest()))
+          .andExpect(status().isUnprocessableContent())
           .andExpect(jsonPath("$.code").value("INSUFFICIENT_QUANTITY"));
     }
   }
@@ -264,7 +344,7 @@ class TransactionControllerTest {
     void returns201OnSuccess() throws Exception {
       when(transactionService.recordSplit(any())).thenReturn(buildTxView(TransactionType.SPLIT));
 
-      mockMvc.perform(post(BASE_URL + "/split").contentType(MediaType.APPLICATION_JSON).content("""
+      mockMvc.perform(post(BASE_URL + "/split").contentType(APPLICATION_JSON).content("""
           {
               "symbol": "AAPL",
               "numerator": 2,
@@ -277,7 +357,7 @@ class TransactionControllerTest {
     @Test
     @DisplayName("400 when numerator is zero (below @Min(1))")
     void returns400WhenNumeratorZero() throws Exception {
-      mockMvc.perform(post(BASE_URL + "/split").contentType(MediaType.APPLICATION_JSON).content("""
+      mockMvc.perform(post(BASE_URL + "/split").contentType(APPLICATION_JSON).content("""
           {
               "symbol": "AAPL",
               "numerator": 0,
@@ -299,7 +379,7 @@ class TransactionControllerTest {
           buildTxView(TransactionType.RETURN_OF_CAPITAL));
 
       mockMvc.perform(
-          post(BASE_URL + "/return-of-capital").contentType(MediaType.APPLICATION_JSON).content("""
+          post(BASE_URL + "/return-of-capital").contentType(APPLICATION_JSON).content("""
               {
                   "assetSymbol": "VTI",
                   "distributionPerUnit": 0.05,
@@ -314,7 +394,7 @@ class TransactionControllerTest {
     @DisplayName("400 when assetSymbol is blank")
     void returns400WhenSymbolBlank() throws Exception {
       mockMvc.perform(
-          post(BASE_URL + "/return-of-capital").contentType(MediaType.APPLICATION_JSON).content("""
+          post(BASE_URL + "/return-of-capital").contentType(APPLICATION_JSON).content("""
               {
                   "assetSymbol": "",
                   "distributionPerUnit": 0.05,
@@ -336,17 +416,16 @@ class TransactionControllerTest {
       when(transactionService.recordDeposit(any())).thenReturn(
           buildTxView(TransactionType.DEPOSIT));
 
-      mockMvc.perform(post(BASE_URL + "/deposit").contentType(MediaType.APPLICATION_JSON)
+      mockMvc.perform(post(BASE_URL + "/deposit").contentType(APPLICATION_JSON)
           .content(validCashRequest("1000.00"))).andExpect(status().isCreated());
     }
 
     @Test
     @DisplayName("400 when amount is missing")
     void returns400WhenAmountMissing() throws Exception {
-      mockMvc.perform(
-          post(BASE_URL + "/deposit").contentType(MediaType.APPLICATION_JSON).content("""
-              {"currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
-              """)).andExpect(status().isBadRequest());
+      mockMvc.perform(post(BASE_URL + "/deposit").contentType(APPLICATION_JSON).content("""
+          {"currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
+          """)).andExpect(status().isBadRequest());
     }
   }
 
@@ -360,7 +439,7 @@ class TransactionControllerTest {
       when(transactionService.recordWithdrawal(any())).thenReturn(
           buildTxView(TransactionType.WITHDRAWAL));
 
-      mockMvc.perform(post(BASE_URL + "/withdrawal").contentType(MediaType.APPLICATION_JSON)
+      mockMvc.perform(post(BASE_URL + "/withdrawal").contentType(APPLICATION_JSON)
           .content(validCashRequest("500.00"))).andExpect(status().isCreated());
     }
 
@@ -370,7 +449,7 @@ class TransactionControllerTest {
       when(transactionService.recordWithdrawal(any())).thenThrow(
           new InsufficientFundsException("Insufficient cash"));
 
-      mockMvc.perform(post(BASE_URL + "/withdrawal").contentType(MediaType.APPLICATION_JSON)
+      mockMvc.perform(post(BASE_URL + "/withdrawal").contentType(APPLICATION_JSON)
           .content(validCashRequest("999999.00"))).andExpect(status().isUnprocessableContent());
     }
   }
@@ -384,7 +463,7 @@ class TransactionControllerTest {
     void returns201OnSuccess() throws Exception {
       when(transactionService.recordFee(any())).thenReturn(buildTxView(TransactionType.FEE));
 
-      mockMvc.perform(post(BASE_URL + "/fee").contentType(MediaType.APPLICATION_JSON).content("""
+      mockMvc.perform(post(BASE_URL + "/fee").contentType(APPLICATION_JSON).content("""
           {
               "amount": 10.00,
               "currency": "CAD",
@@ -397,7 +476,7 @@ class TransactionControllerTest {
     @Test
     @DisplayName("400 when feeType is missing")
     void returns400WhenFeeTypeMissing() throws Exception {
-      mockMvc.perform(post(BASE_URL + "/fee").contentType(MediaType.APPLICATION_JSON).content("""
+      mockMvc.perform(post(BASE_URL + "/fee").contentType(APPLICATION_JSON).content("""
           {"amount": 10.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
           """)).andExpect(status().isBadRequest());
     }
@@ -413,10 +492,9 @@ class TransactionControllerTest {
       when(transactionService.recordInterest(any())).thenReturn(
           buildTxView(TransactionType.INTEREST));
 
-      mockMvc.perform(
-          post(BASE_URL + "/interest").contentType(MediaType.APPLICATION_JSON).content("""
-              {"amount": 25.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
-              """)).andExpect(status().isCreated());
+      mockMvc.perform(post(BASE_URL + "/interest").contentType(APPLICATION_JSON).content("""
+          {"amount": 25.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
+          """)).andExpect(status().isCreated());
     }
 
     @Test
@@ -425,15 +503,14 @@ class TransactionControllerTest {
       when(transactionService.recordInterest(any())).thenReturn(
           buildTxView(TransactionType.INTEREST));
 
-      mockMvc.perform(
-          post(BASE_URL + "/interest").contentType(MediaType.APPLICATION_JSON).content("""
-              {
-                  "assetSymbol": "XBB",
-                  "amount": 50.00,
-                  "currency": "CAD",
-                  "transactionDate": "2024-01-15T00:00:00Z"
-              }
-              """)).andExpect(status().isCreated());
+      mockMvc.perform(post(BASE_URL + "/interest").contentType(APPLICATION_JSON).content("""
+          {
+              "assetSymbol": "XBB",
+              "amount": 50.00,
+              "currency": "CAD",
+              "transactionDate": "2024-01-15T00:00:00Z"
+          }
+          """)).andExpect(status().isCreated());
 
       var captor = ArgumentCaptor.forClass(
           com.laderrco.fortunelink.portfolio.application.commands.records.RecordInterestCommand.class);
@@ -453,25 +530,23 @@ class TransactionControllerTest {
       when(transactionService.recordDividend(any())).thenReturn(
           buildTxView(TransactionType.DIVIDEND));
 
-      mockMvc.perform(
-          post(BASE_URL + "/dividend").contentType(MediaType.APPLICATION_JSON).content("""
-              {
-                  "assetSymbol": "AAPL",
-                  "amount": 25.00,
-                  "currency": "CAD",
-                  "transactionDate": "2024-01-15T00:00:00Z"
-              }
-              """)).andExpect(status().isCreated());
+      mockMvc.perform(post(BASE_URL + "/dividend").contentType(APPLICATION_JSON).content("""
+          {
+              "assetSymbol": "AAPL",
+              "amount": 25.00,
+              "currency": "CAD",
+              "transactionDate": "2024-01-15T00:00:00Z"
+          }
+          """)).andExpect(status().isCreated());
     }
 
     @Test
     @DisplayName("400 when assetSymbol is blank")
     void returns400WhenSymbolBlank() throws Exception {
-      mockMvc.perform(
-          post(BASE_URL + "/dividend").contentType(MediaType.APPLICATION_JSON).content("""
-              {"assetSymbol": "", "amount": 25.00, "currency": "CAD",
-               "transactionDate": "2024-01-15T00:00:00Z"}
-              """)).andExpect(status().isBadRequest());
+      mockMvc.perform(post(BASE_URL + "/dividend").contentType(APPLICATION_JSON).content("""
+          {"assetSymbol": "", "amount": 25.00, "currency": "CAD",
+           "transactionDate": "2024-01-15T00:00:00Z"}
+          """)).andExpect(status().isBadRequest());
     }
   }
 
@@ -485,7 +560,7 @@ class TransactionControllerTest {
       when(transactionService.recordDividendReinvestment(any())).thenReturn(
           buildTxView(TransactionType.DIVIDEND_REINVEST));
 
-      mockMvc.perform(post(BASE_URL + "/drip").contentType(MediaType.APPLICATION_JSON).content("""
+      mockMvc.perform(post(BASE_URL + "/drip").contentType(APPLICATION_JSON).content("""
           {
               "assetSymbol": "AAPL",
               "sharesPurchased": 0.15,
@@ -507,10 +582,9 @@ class TransactionControllerTest {
       when(transactionService.recordTransferIn(any())).thenReturn(
           buildTxView(TransactionType.TRANSFER_IN));
 
-      mockMvc.perform(
-          post(BASE_URL + "/transfer-in").contentType(MediaType.APPLICATION_JSON).content("""
-              {"amount": 5000.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
-              """)).andExpect(status().isCreated());
+      mockMvc.perform(post(BASE_URL + "/transfer-in").contentType(APPLICATION_JSON).content("""
+          {"amount": 5000.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
+          """)).andExpect(status().isCreated());
     }
 
     @Test
@@ -519,10 +593,9 @@ class TransactionControllerTest {
       when(transactionService.recordTransferOut(any())).thenReturn(
           buildTxView(TransactionType.TRANSFER_OUT));
 
-      mockMvc.perform(
-          post(BASE_URL + "/transfer-out").contentType(MediaType.APPLICATION_JSON).content("""
-              {"amount": 2000.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
-              """)).andExpect(status().isCreated());
+      mockMvc.perform(post(BASE_URL + "/transfer-out").contentType(APPLICATION_JSON).content("""
+          {"amount": 2000.00, "currency": "CAD", "transactionDate": "2024-01-15T00:00:00Z"}
+          """)).andExpect(status().isCreated());
     }
   }
 
@@ -603,17 +676,17 @@ class TransactionControllerTest {
           buildTxView(TransactionType.BUY));
 
       mockMvc.perform(
-          patch(BASE_URL + "/" + TX_ID + "/exclude").header("Idempotency-Key", IDEMPOTENCY_KEY)
-              .contentType(MediaType.APPLICATION_JSON)
-              .content("{\"reason\": \"Duplicate import\"}")).andExpect(status().isOk());
+              patch(BASE_URL + "/" + TX_ID + "/exclude").header("Idempotency-Key", IDEMPOTENCY_KEY)
+                  .contentType(APPLICATION_JSON).content("{\"reason\": \"Duplicate import\"}"))
+          .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("400 when Idempotency-Key header is absent (required for exclusion)")
     void returns400WhenIdempotencyKeyAbsent() throws Exception {
-      mockMvc.perform(patch(BASE_URL + "/" + TX_ID + "/exclude").with(jwt())
-              .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"Duplicate import\"}"))
-          .andExpect(status().isBadRequest());
+      mockMvc.perform(
+          patch(BASE_URL + "/" + TX_ID + "/exclude").with(jwt()).contentType(APPLICATION_JSON)
+              .content("{\"reason\": \"Duplicate import\"}")).andExpect(status().isBadRequest());
 
       verifyNoInteractions(transactionService);
     }
@@ -622,9 +695,8 @@ class TransactionControllerTest {
     @DisplayName("400 when reason body is absent")
     void returns400WhenReasonAbsent() throws Exception {
       mockMvc.perform(
-              patch(BASE_URL + "/" + TX_ID + "/exclude").header("Idempotency-Key", IDEMPOTENCY_KEY)
-                  .contentType(MediaType.APPLICATION_JSON).content("{}"))
-          .andExpect(status().isBadRequest());
+          patch(BASE_URL + "/" + TX_ID + "/exclude").header("Idempotency-Key", IDEMPOTENCY_KEY)
+              .contentType(APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -635,7 +707,7 @@ class TransactionControllerTest {
 
       mockMvc.perform(
               patch(BASE_URL + "/" + TX_ID + "/exclude").header("Idempotency-Key", IDEMPOTENCY_KEY)
-                  .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"Duplicate\"}"))
+                  .contentType(APPLICATION_JSON).content("{\"reason\": \"Duplicate\"}"))
           .andExpect(status().isNotFound());
     }
   }
