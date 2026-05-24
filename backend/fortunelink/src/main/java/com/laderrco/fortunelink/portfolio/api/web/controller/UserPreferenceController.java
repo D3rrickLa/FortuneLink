@@ -1,15 +1,11 @@
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import com.laderrco.fortunelink.portfolio.application.commands.UpdateUserPreferencesCommand;
 import com.laderrco.fortunelink.portfolio.application.services.UserPreferencesService;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserPreferences;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.AuthenticatedUser;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,11 +15,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Exposes user-level preferences at a dedicated path so callers have a clear
- * contract. Intentionally separate from any portfolio endpoint — preferences
- * live in the Auth bounded context, not Portfolio Management.
+ * Exposes user-level preferences at a dedicated path so callers have a clear contract.
+ * Intentionally separate from any portfolio endpoint — preferences live in the Auth bounded
+ * context, not Portfolio Management.
  */
 @RestController
 @RequiredArgsConstructor
@@ -40,19 +42,19 @@ public class UserPreferenceController {
     UserPreferences preferences = preferencesService.get(userId);
 
     return ResponseEntity.ok(new UserPreferencesResponse(preferences.getBaseCurrency().getCode(),
-            preferences.isEmailNotifications(), preferences.isPriceAlerts(), preferences.getDateFormat()));
+        preferences.isEmailNotifications(), preferences.isPriceAlerts(),
+        preferences.getDateFormat()));
   }
 
   @Operation(summary = "Update user preferences", description = "Updates the authenticated user's preferences")
   @ApiResponse(responseCode = "204", description = "Preferences updated successfully")
   @PutMapping
-  public ResponseEntity<Void> updatePreferences(
-      @AuthenticatedUser UserId userId,
+  public ResponseEntity<Void> updatePreferences(@AuthenticatedUser UserId userId,
       @Valid @RequestBody UpdateUserPreferencesRequest request) {
 
-    preferencesService.updatePreferences(userId, new UpdateUserPreferencesCommand(
-        Currency.of(request.baseCurrency().toUpperCase()), request.emailNotifications(),
-        request.priceAlerts(), request.dateFormat()));
+    preferencesService.updatePreferences(userId,
+        new UpdateUserPreferencesCommand(Currency.of(request.baseCurrency().toUpperCase()),
+            request.emailNotifications(), request.priceAlerts(), request.dateFormat()));
 
     return ResponseEntity.noContent().build();
   }

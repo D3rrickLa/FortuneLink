@@ -1,13 +1,11 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import org.springframework.stereotype.Service;
-
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserProfile;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.UserProfileRepository;
-
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @Transactional

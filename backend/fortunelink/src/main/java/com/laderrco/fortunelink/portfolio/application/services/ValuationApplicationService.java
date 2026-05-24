@@ -1,13 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.laderrco.fortunelink.portfolio.application.exceptions.NoActivePortfoliosException;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
@@ -20,8 +12,13 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -59,15 +56,13 @@ public class ValuationApplicationService {
 
   private ValuationView computeView(List<Portfolio> portfolios, Currency targetCurrency) {
     Set<AssetSymbol> symbols = portfolios.stream()
-        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream())
-        .collect(Collectors.toSet());
+        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty()
-        ? Map.of()
-        : marketDataService.getBatchQuotes(symbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache =
+        symbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(symbols);
 
-    return portfolios.size() == 1
-        ? portfolioValuationService.calculatePortfolioValuation(portfolios.getFirst(), targetCurrency, quoteCache)
+    return portfolios.size() == 1 ? portfolioValuationService.calculatePortfolioValuation(
+        portfolios.getFirst(), targetCurrency, quoteCache)
         : portfolioValuationService.calculateUserValuation(portfolios, targetCurrency, quoteCache);
   }
 }

@@ -7,5 +7,5 @@ public class NoActivePortfoliosException extends RuntimeException {
   public NoActivePortfoliosException(UserId userId) {
     super("No active portfolio in user id: " + userId.id().toString());
   }
-  
+
 }

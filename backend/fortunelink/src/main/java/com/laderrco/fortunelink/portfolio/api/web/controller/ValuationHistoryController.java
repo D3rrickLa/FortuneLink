@@ -20,7 +20,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
@@ -32,8 +36,7 @@ public class ValuationHistoryController {
   private final ValuationSnapshotRepository snapshotRepository;
 
   @GetMapping("/{portfolioId}")
-  public ResponseEntity<ValuationResponse> getPortfolioValuation(
-      @AuthenticatedUser UserId userId,
+  public ResponseEntity<ValuationResponse> getPortfolioValuation(@AuthenticatedUser UserId userId,
       @PathVariable String portfolioId) {
 
     ValuationView view = valuationService.computePortfolioValuation(
@@ -49,14 +52,12 @@ public class ValuationHistoryController {
   }
 
   @GetMapping("/history")
-  public List<ValuationSnapshotResponse> getHistory(
-      @AuthenticatedUser UserId userId,
+  public List<ValuationSnapshotResponse> getHistory(@AuthenticatedUser UserId userId,
       @RequestParam(defaultValue = "90") @Min(1) @Max(1825) int days) {
 
     Instant since = Instant.now().minus(days, ChronoUnit.DAYS);
     return snapshotRepository.findByUserIdSince(userId, since).stream()
-        .map(ValuationSnapshotResponse::from)
-        .toList();
+        .map(ValuationSnapshotResponse::from).toList();
   }
 
   @Schema(description = "Historical valuation snapshot")
@@ -88,16 +89,10 @@ public class ValuationHistoryController {
         return null;
       }
 
-      return new ValuationSnapshotResponse(
-          safeAmount(s.totalValue()),
-          safeAmount(s.totalCostBasis()),
-          safeAmount(s.unrealizedGainLoss()),
-          s.gainLossPercent(),
-          safeAmount(s.totalCashBalance()),
-          safeAmount(s.totalInvestedValue()),
-          s.displayCurrency(),
-          s.hasStaleData(),
-          s.snapshotDate());
+      return new ValuationSnapshotResponse(safeAmount(s.totalValue()),
+          safeAmount(s.totalCostBasis()), safeAmount(s.unrealizedGainLoss()), s.gainLossPercent(),
+          safeAmount(s.totalCashBalance()), safeAmount(s.totalInvestedValue()), s.displayCurrency(),
+          s.hasStaleData(), s.snapshotDate());
     }
 
     // Helper to prevent NullPointerExceptions from Money/Monetary objects

@@ -5,7 +5,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 public class UserNotFoundException extends RuntimeException {
 
   public UserNotFoundException(UserId id) {
-    super(id.id() +" does not exist");
+    super(id.id() + " does not exist");
   }
-  
+
 }

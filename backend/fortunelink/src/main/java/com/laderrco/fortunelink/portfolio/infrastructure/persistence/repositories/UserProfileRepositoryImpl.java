@@ -1,15 +1,12 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
-import java.util.Optional;
-
-import org.springframework.stereotype.Repository;
-
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserProfile;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.UserProfileRepository;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.UserProfileEntity;
-
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor

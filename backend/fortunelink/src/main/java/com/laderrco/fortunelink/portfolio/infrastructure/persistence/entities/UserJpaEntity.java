@@ -1,26 +1,25 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
-
-import org.springframework.data.annotation.LastModifiedDate;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
-import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
-import jakarta.persistence.*;
+import org.springframework.data.annotation.LastModifiedDate;
 
 @Entity
 @Data
 @Table(name = "users", schema = "public")
 @AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-@ToString(of = { "id", "email" })
+@ToString(of = {"id", "email"})
 public class UserJpaEntity {
 
   @Id
@@ -42,7 +41,9 @@ public class UserJpaEntity {
 
   // ── Factory ───────────────────────────────────────────────────────────────
 
-  /** Called by auth sync trigger handler when a new Supabase user is created. */
+  /**
+   * Called by auth sync trigger handler when a new Supabase user is created.
+   */
   public static UserJpaEntity create(UUID id, String email) {
     UserJpaEntity u = new UserJpaEntity();
     u.id = id;
@@ -53,21 +54,12 @@ public class UserJpaEntity {
   }
 
   public static User toDomainUser(UserJpaEntity jpaEntity) {
-    return new User(
-      UserId.fromString(jpaEntity.id.toString()),
-      jpaEntity.email,
-      jpaEntity.createdAt,
-      jpaEntity.updatedAt,
-      jpaEntity.lastSignInAt
-    );
+    return new User(UserId.fromString(jpaEntity.id.toString()), jpaEntity.createdAt,
+        jpaEntity.getEmail(), jpaEntity.updatedAt, jpaEntity.lastSignInAt);
   }
 
   public static UserJpaEntity toEntity(User user) {
-    return new UserJpaEntity(
-      user.getUserId().id(), 
-      user.getEmail(), 
-      user.getCreatedAt(), 
-      user.getUpdatedAt(), 
-      user.getLastSignInAt());
+    return new UserJpaEntity(user.getUserId().id(), user.getEmail(), user.getCreatedAt(),
+        user.getUpdatedAt(), user.getLastSignInAt());
   }
 }

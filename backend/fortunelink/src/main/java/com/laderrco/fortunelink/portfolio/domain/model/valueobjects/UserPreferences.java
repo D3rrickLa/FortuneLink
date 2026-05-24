@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,8 +17,8 @@ public class UserPreferences {
   private boolean priceAlerts;
   private String dateFormat;
 
-  public UserPreferences(UserId userId, Currency baseCurrency, boolean emailNotifications, boolean priceAlerts,
-      String dateFormat) {
+  public UserPreferences(UserId userId, Currency baseCurrency, boolean emailNotifications,
+      boolean priceAlerts, String dateFormat) {
     this.userId = userId;
     this.baseCurrency = baseCurrency;
     this.emailNotifications = emailNotifications;
