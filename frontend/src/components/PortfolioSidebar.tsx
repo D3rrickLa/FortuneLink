@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -96,8 +96,13 @@ function PortfolioItem({
   onSelectAccount,
   onAddAccount,
 }: PortfolioItemProps) {
-  const [expanded, setExpanded] = useState(false);
-
+  const [expanded, setExpanded] = useState(isActive);
+  useEffect(() => {
+    if (isActive) {
+      setExpanded(true);
+    }
+  }, [isActive]);
+  
   const fmtCurrency = (amount: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -111,14 +116,14 @@ function PortfolioItem({
     portfolio.id,
     0,
     50,
-    { enabled: expanded || isActive }
-  );
+    { enabled: true });
 
   const accounts = accountsPage?.content ?? [];
-
   const valuation = useValuation(
-    portfolio.id,
-    expanded || isActive
+    {
+      portfolioId: portfolio.id,
+    },
+    true
   );
 
   const displayTotalValue = valuation.totalValue ?? 0;
@@ -165,7 +170,7 @@ function PortfolioItem({
               </div>
 
               <div className="text-sm text-muted-foreground">
-                {fmtCurrency(displayTotalValue)} {portfolio.currency} 
+                {fmtCurrency(displayTotalValue)} {portfolio.currency}
               </div>
 
               <div

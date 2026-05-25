@@ -14,7 +14,10 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useValuationHistory, useValuationSummary } from "@/features/portfolio/queries/useValuation";
+import {
+  useValuation,
+  useValuationChart,
+} from "@/features/portfolio/hooks/useValuation";
 import type { AccountView } from "@/lib/api/types";
 import { safeNum } from "@/utils/number";
 
@@ -53,12 +56,9 @@ function getDays(period: TimePeriod): number {
 // ---------------------------------------------------------------------------
 
 interface PerformanceChartProps {
-  /** ISO currency code — falls back to USD if not provided. */
   currency?: string;
-  /**
-   * Optional account context. When provided, a cost-basis reference line is
-   * drawn so the user can see how their net worth compares to what they paid.
-   */
+  portfolioId?: string | null;
+  accountId?: string | null;
   account?: AccountView | null;
 }
 
@@ -90,17 +90,37 @@ function makeCompactFmt(currency: string) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function PerformanceChart({ currency = "USD", account }: PerformanceChartProps) {
-  const [period, setPeriod] = useState<TimePeriod>("3m");
+export function PerformanceChart({
+  currency = "USD",
+  portfolioId,
+  accountId,
+  account,
+}: PerformanceChartProps) {
+  const [period, setPeriod] =
+    useState<TimePeriod>("3m");
 
-  // useValuationSummary gives us the live snapshot shown in the header.
-  // useValuationHistory gives us the time-series data for the chart itself.
-  const { data: summary } = useValuationSummary();
-  const {
-    data: snapshots,
-    isLoading,
-    isError,
-  } = useValuationHistory(getDays(period));
+  const scope = {
+    portfolioId,
+    accountId,
+  };
+
+  const valuation = useValuation(scope);
+
+  const history = useValuationChart(
+    getDays(period),
+    scope
+  );
+
+  const summary = valuation;
+
+  const snapshots = history.points.map((p) => ({
+    snapshotDate: p.date,
+    totalValue: p.value,
+  }));
+
+  const isLoading = history.isLoading;
+
+  const isError = history.isError;
 
   // Resolve the currency from the live summary if available — the prop is
   // a fallback for the case where summary has not loaded yet.

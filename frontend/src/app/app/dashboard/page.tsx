@@ -34,7 +34,16 @@ export default function DashboardPage() {
 
   // ── Data fetching ───────────────────────────────────────────────────────────
 
-  const globalValuation = useValuation();
+  const valuationScope = {
+    portfolioId: hasPortfolio
+      ? activePortfolioId
+      : null,
+
+    accountId: activeAccountId,
+  };
+
+  const globalValuation =
+    useValuation(valuationScope);
 
   const { data: portfolioDetail } = usePortfolio(
     isAllView ? "" : activePortfolioId,
@@ -135,7 +144,7 @@ export default function DashboardPage() {
   const handleCreateAccount = (
     _portfolioId: string,
     _data: CreateAccountRequest
-  ) => {};
+  ) => { };
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -251,7 +260,13 @@ export default function DashboardPage() {
             <div className="grid gap-8 lg:grid-cols-2">
               <PerformanceChart
                 currency={chartCurrency}
-                account={hasAccount ? accountDetail ?? null : null}
+                portfolioId={
+                  hasPortfolio
+                    ? activePortfolioId
+                    : null
+                }
+                accountId={activeAccountId}
+                account={accountDetail}
               />
               <AllocationChart
                 account={hasAccount ? accountDetail ?? null : null}
