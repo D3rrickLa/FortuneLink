@@ -239,4 +239,4 @@ export function useValuationChart(
       !query.isLoading &&
       points.length === 0,
   };
-} 
+}

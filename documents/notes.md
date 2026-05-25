@@ -125,412 +125,208 @@ Before a user records a BUY, they need to search for AAPL or BTC-USD. MarketData
 
 How to implement the other stuff
 ```
+old useValuation code
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import apiClient from "@/lib/api/client";
+import { components } from "@/lib/api/schema";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+// ─────────────────────────────────────────────────────────────────────────────
+// Raw API types
+// ─────────────────────────────────────────────────────────────────────────────
 
-import { Label } from "@/components/ui/label";
+type RawValuationResponse =
+  components["schemas"]["ValuationResponse"];
 
-import { Button } from "@/components/ui/button";
+type RawSnapshotResponse =
+  components["schemas"]["ValuationSnapshotResponse"];
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+// ─────────────────────────────────────────────────────────────────────────────
+// Normalized UI types
+// ─────────────────────────────────────────────────────────────────────────────
 
-import { Switch } from "@/components/ui/switch";
+export interface ValuationState {
+  totalValue: number;
+  totalCostBasis: number;
+  unrealizedGainLoss: number;
+  returnPercentage: number;
+  totalCashBalance: number;
+  totalInvestedValue: number;
+  currency: string;
+  hasStaleData: boolean;
 
-import { Separator } from "@/components/ui/separator";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-import { Input } from "@/components/ui/input";
-
-import { toast } from "sonner";
-
-import { useLocalPreferences } from "@/features/theme/hooks/useThemePreference";
-
-import {
-  useBaseCurrencyPreference,
-  useUpdateBaseCurrency,
-} from "@/features/user/api/useUserPreferences";
-
-interface SettingsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isLoading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
 }
 
-export function SettingsDialog({
-  open,
-  onOpenChange,
-}: SettingsDialogProps) {
-  /**
-   * Local browser-only preferences
-   */
-  const {
-    getPreferences,
-    savePreferences,
-    applyTheme,
-  } = useLocalPreferences();
+export interface ChartPoint {
+  date: string;
+  value: number;
+}
 
-  /**
-   * Backend currency preference
-   */
-  const { data: currencyPref } =
-    useBaseCurrencyPreference();
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const updateCurrency =
-    useUpdateBaseCurrency();
+function normalizeValuation(
+  data?: RawValuationResponse | null
+) {
+  if (!data) {
+    return {
+      totalValue: 0,
+      totalCostBasis: 0,
+      unrealizedGainLoss: 0,
+      returnPercentage: 0,
+      totalCashBalance: 0,
+      totalInvestedValue: 0,
+      currency: "CAD",
+      hasStaleData: false,
+    };
+  }
 
-  /**
-   * Local UI state
-   */
-  const [selectedCurrency, setSelectedCurrency] =
-    useState("CAD");
+  return {
+    totalValue: data.totalValue?.amount ?? 0,
 
-  const [
-    emailNotifications,
-    setEmailNotifications,
-  ] = useState(true);
+    totalCostBasis:
+      data.totalCostBasis?.amount ?? 0,
 
-  const [priceAlerts, setPriceAlerts] =
-    useState(true);
+    unrealizedGainLoss:
+      data.unrealizedGainLoss?.amount ?? 0,
 
-  const [darkMode, setDarkMode] =
-    useState(false);
+    returnPercentage:
+      data.gainLossPercent ?? 0,
 
-  const [alertThreshold, setAlertThreshold] =
-    useState(5);
+    totalCashBalance:
+      data.totalCashBalance?.amount ?? 0,
 
-  const [dateFormat, setDateFormat] =
-    useState("MM/DD/YYYY");
+    totalInvestedValue:
+      data.totalInvestedValue?.amount ?? 0,
 
-  /**
-   * Load preferences
-   */
-  useEffect(() => {
-    const prefs = getPreferences();
+    currency:
+      data.currency ??
+      data.totalValue?.currency ??
+      "CAD",
 
-    setEmailNotifications(
-      prefs.emailNotifications
-    );
+    hasStaleData:
+      data.hasStaleData ?? false,
+  };
+}
 
-    setPriceAlerts(
-      prefs.priceAlerts
-    );
+// ─────────────────────────────────────────────────────────────────────────────
+// useValuation
+// ─────────────────────────────────────────────────────────────────────────────
 
-    setDarkMode(
-      prefs.darkMode
-    );
+/**
+ * Global valuation:
+ *   useValuation()
+ *
+ * Portfolio valuation:
+ *   useValuation(portfolioId)
+ */
+export function useValuation(
+  portfolioId?: string,
+  enabled = true
+): ValuationState {
+  const isPortfolioQuery =
+    !!portfolioId && portfolioId !== "all";
 
-    setAlertThreshold(
-      prefs.alertThreshold
-    );
+  const query = useQuery({
+    queryKey: isPortfolioQuery
+      ? ["portfolio-valuation", portfolioId]
+      : ["valuation-summary"],
 
-    setDateFormat(
-      prefs.dateFormat
-    );
+    queryFn: async (): Promise<RawValuationResponse | null> => {
+      // Inside useValuation queryFn
+      const response = isPortfolioQuery
+        ? await apiClient.get(`/api/v1/valuations/${portfolioId}`)
+        : await apiClient.get("/api/v1/valuations/summary");
 
-    if (currencyPref?.currency) {
-      setSelectedCurrency(
-        currencyPref.currency
+      // 204 = empty portfolios
+      if (response.status === 204) {
+        return null;
+      }
+
+      if (response.status >= 400) {
+        throw new Error("Failed to fetch valuation");
+      }
+
+      return response.data as RawValuationResponse;
+    },
+
+    enabled:
+      enabled &&
+      (!isPortfolioQuery || !!portfolioId),
+
+    staleTime: 1000 * 60,
+  });
+
+  const normalized =
+    normalizeValuation(query.data);
+
+  return {
+    ...normalized,
+
+    isLoading: query.isLoading,
+
+    isError: query.isError,
+
+    isEmpty:
+      !query.isLoading &&
+      query.data === null,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useValuationChart
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useValuationChart(days: number) {
+  const query = useQuery({
+    queryKey: ["valuation-history", days],
+
+    queryFn: async (): Promise<
+      RawSnapshotResponse[]
+    > => {
+      const response = await apiClient.get(
+        "/api/v1/valuations/history",
+        {
+          params: {
+            query: { days },
+          },
+        }
       );
-    }
-  }, [currencyPref]);
 
-  /**
-   * Save preferences
-   */
-  const handleSavePreferences =
-    async () => {
-      try {
-        /**
-         * Persist backend currency preference
-         */
-        if (
-          selectedCurrency !==
-          currencyPref?.currency
-        ) {
-          await updateCurrency.mutateAsync(
-            selectedCurrency
-          );
-        }
-
-        /**
-         * Save local browser preferences
-         */
-        const success = savePreferences({
-          emailNotifications,
-          priceAlerts,
-          darkMode,
-          alertThreshold,
-          dateFormat,
-        });
-
-        if (!success) {
-          return;
-        }
-
-        /**
-         * Apply theme immediately
-         */
-        applyTheme(darkMode);
-
-        onOpenChange(false);
-      } catch {
-        toast.error(
-          "Failed to save preferences"
+      if (response.status >= 400) {
+        throw new Error(
+          "Failed to fetch valuation history"
         );
       }
-    };
 
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Settings
-          </DialogTitle>
+      return response.data as RawSnapshotResponse[];
+    },
 
-          <DialogDescription>
-            Manage your application preferences
-          </DialogDescription>
-        </DialogHeader>
+    staleTime: 1000 * 60,
+  });
 
-        <Tabs
-          defaultValue="notifications"
-          className="mt-4"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="notifications">
-              Notifications
-            </TabsTrigger>
+  const points: ChartPoint[] =
+    query.data?.map((snapshot) => ({
+      date: snapshot.snapshotDate ?? "",
 
-            <TabsTrigger value="preferences">
-              Preferences
-            </TabsTrigger>
-          </TabsList>
+      value:
+        Number(snapshot.totalValue) ?? 0,
+    })) ?? [];
 
-          {/* NOTIFICATIONS */}
-          <TabsContent
-            value="notifications"
-            className="space-y-4 mt-4"
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>
-                    Email Notifications
-                  </Label>
+  return {
+    points,
 
-                  <p className="text-sm text-muted-foreground">
-                    Receive portfolio updates
-                    by email
-                  </p>
-                </div>
+    isLoading: query.isLoading,
 
-                <Switch
-                  checked={
-                    emailNotifications
-                  }
-                  onCheckedChange={
-                    setEmailNotifications
-                  }
-                />
-              </div>
+    isError: query.isError,
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>
-                    Price Alerts
-                  </Label>
-
-                  <p className="text-sm text-muted-foreground">
-                    Get notified about major
-                    price changes
-                  </p>
-                </div>
-
-                <Switch
-                  checked={priceAlerts}
-                  onCheckedChange={
-                    setPriceAlerts
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label htmlFor="alert-threshold">
-                  Alert Threshold (%)
-                </Label>
-
-                <Input
-                  id="alert-threshold"
-                  type="number"
-                  value={alertThreshold}
-                  onChange={(e) =>
-                    setAlertThreshold(
-                      Number(
-                        e.target.value
-                      )
-                    )
-                  }
-                  min="1"
-                  max="50"
-                />
-
-                <p className="text-sm text-muted-foreground">
-                  Trigger alerts when price
-                  changes exceed this amount
-                </p>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* PREFERENCES */}
-          <TabsContent
-            value="preferences"
-            className="space-y-4 mt-4"
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>
-                    Dark Mode
-                  </Label>
-
-                  <p className="text-sm text-muted-foreground">
-                    Switch between light and
-                    dark themes
-                  </p>
-                </div>
-
-                <Switch
-                  checked={darkMode}
-                  onCheckedChange={
-                    setDarkMode
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>
-                  Reporting Currency
-                </Label>
-
-                <Select
-                  value={selectedCurrency}
-                  onValueChange={
-                    setSelectedCurrency
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    <SelectItem value="CAD">
-                      CAD — Canadian Dollar
-                    </SelectItem>
-
-                    <SelectItem value="USD">
-                      USD — US Dollar
-                    </SelectItem>
-
-                    <SelectItem value="EUR">
-                      EUR — Euro
-                    </SelectItem>
-
-                    <SelectItem value="GBP">
-                      GBP — British Pound
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <p className="text-xs text-muted-foreground">
-                  Cross-portfolio valuations
-                  are normalized to this
-                  currency.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="date-format">
-                  Date Format
-                </Label>
-
-                <select
-                  id="date-format"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={dateFormat}
-                  onChange={(e) =>
-                    setDateFormat(
-                      e.target.value
-                    )
-                  }
-                >
-                  <option value="MM/DD/YYYY">
-                    MM/DD/YYYY
-                  </option>
-
-                  <option value="DD/MM/YYYY">
-                    DD/MM/YYYY
-                  </option>
-
-                  <option value="YYYY-MM-DD">
-                    YYYY-MM-DD
-                  </option>
-                </select>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button
-            variant="outline"
-            onClick={() =>
-              onOpenChange(false)
-            }
-          >
-            Cancel
-          </Button>
-
-          <Button
-            onClick={handleSavePreferences}
-            disabled={
-              updateCurrency.isPending
-            }
-          >
-            Save Changes
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+    isEmpty:
+      !query.isLoading &&
+      points.length === 0,
+  };
 }
