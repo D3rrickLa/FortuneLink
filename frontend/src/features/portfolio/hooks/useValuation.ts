@@ -15,6 +15,15 @@ type RawSnapshotResponse =
   components["schemas"]["ValuationSnapshotResponse"];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Scope
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ValuationScope {
+  portfolioId?: string | null;
+  accountId?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Normalized UI types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -90,32 +99,43 @@ function normalizeValuation(
 // useValuation
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Global valuation:
- *   useValuation()
- *
- * Portfolio valuation:
- *   useValuation(portfolioId)
- */
 export function useValuation(
-  portfolioId?: string,
+  scope?: ValuationScope,
   enabled = true
 ): ValuationState {
+  const portfolioId = scope?.portfolioId;
+  const accountId = scope?.accountId;
+
+  const isAccountQuery =
+    !!portfolioId && !!accountId;
+
   const isPortfolioQuery =
-    !!portfolioId && portfolioId !== "all";
+    !!portfolioId && !accountId;
 
   const query = useQuery({
-    queryKey: isPortfolioQuery
-      ? ["portfolio-valuation", portfolioId]
-      : ["valuation-summary"],
+    queryKey: [
+      "valuation",
+      portfolioId ?? "all",
+      accountId ?? "all",
+    ],
 
     queryFn: async (): Promise<RawValuationResponse | null> => {
-      // Inside useValuation queryFn
-      const response = isPortfolioQuery
-        ? await apiClient.get(`/api/v1/valuations/${portfolioId}`)
-        : await apiClient.get("/api/v1/valuations/summary");
+      let response;
 
-      // 204 = empty portfolios
+      if (isAccountQuery) {
+        response = await apiClient.get(
+          `/api/v1/valuations/${portfolioId}/accounts/${accountId}`
+        );
+      } else if (isPortfolioQuery) {
+        response = await apiClient.get(
+          `/api/v1/valuations/${portfolioId}`
+        );
+      } else {
+        response = await apiClient.get(
+          "/api/v1/valuations/summary"
+        );
+      }
+
       if (response.status === 204) {
         return null;
       }
@@ -127,9 +147,7 @@ export function useValuation(
       return response.data as RawValuationResponse;
     },
 
-    enabled:
-      enabled &&
-      (!isPortfolioQuery || !!portfolioId),
+    enabled,
 
     staleTime: 1000 * 60,
   });
@@ -154,15 +172,35 @@ export function useValuation(
 // useValuationChart
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function useValuationChart(days: number) {
+export function useValuationChart(
+  days: number,
+  scope?: ValuationScope
+) {
+  const portfolioId = scope?.portfolioId;
+  const accountId = scope?.accountId;
+
   const query = useQuery({
-    queryKey: ["valuation-history", days],
+    queryKey: [
+      "valuation-history",
+      portfolioId ?? "all",
+      accountId ?? "all",
+      days,
+    ],
 
     queryFn: async (): Promise<
       RawSnapshotResponse[]
     > => {
+      let url =
+        "/api/v1/valuations/history";
+
+      if (portfolioId && accountId) {
+        url = `/api/v1/valuations/${portfolioId}/accounts/${accountId}/history`;
+      } else if (portfolioId) {
+        url = `/api/v1/valuations/${portfolioId}/history`;
+      }
+
       const response = await apiClient.get(
-        "/api/v1/valuations/history",
+        url,
         {
           params: {
             query: { days },
@@ -201,4 +239,4 @@ export function useValuationChart(days: number) {
       !query.isLoading &&
       points.length === 0,
   };
-}
+} 

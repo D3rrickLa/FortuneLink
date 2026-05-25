@@ -937,8 +937,8 @@ export interface components {
         };
         PercentageChange: {
             change?: number;
-            gain?: boolean;
             loss?: boolean;
+            gain?: boolean;
         };
         PositionView: {
             symbol?: string;
@@ -1410,23 +1410,23 @@ export interface components {
             content?: components["schemas"]["AccountView"][];
             /** Format: int32 */
             number?: number;
-            first?: boolean;
-            last?: boolean;
+            pageable?: components["schemas"]["PageableObject"];
+            sort?: components["schemas"]["SortObject"];
             /** Format: int32 */
             numberOfElements?: number;
-            sort?: components["schemas"]["SortObject"];
-            pageable?: components["schemas"]["PageableObject"];
+            first?: boolean;
+            last?: boolean;
             empty?: boolean;
         };
         PageableObject: {
             /** Format: int64 */
             offset?: number;
             paged?: boolean;
-            sort?: components["schemas"]["SortObject"];
-            /** Format: int32 */
-            pageNumber?: number;
             /** Format: int32 */
             pageSize?: number;
+            /** Format: int32 */
+            pageNumber?: number;
+            sort?: components["schemas"]["SortObject"];
             unpaged?: boolean;
         };
         SortObject: {
@@ -1444,12 +1444,12 @@ export interface components {
             content?: components["schemas"]["TransactionView"][];
             /** Format: int32 */
             number?: number;
-            first?: boolean;
-            last?: boolean;
+            pageable?: components["schemas"]["PageableObject"];
+            sort?: components["schemas"]["SortObject"];
             /** Format: int32 */
             numberOfElements?: number;
-            sort?: components["schemas"]["SortObject"];
-            pageable?: components["schemas"]["PageableObject"];
+            first?: boolean;
+            last?: boolean;
             empty?: boolean;
         };
         /** @description Individual line item for a realized capital gain/loss */
