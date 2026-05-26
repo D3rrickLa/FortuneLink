@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.embeddable
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import java.math.BigDecimal;
+import lombok.Getter;
 
 /**
  * JPA-side representation of {@code Money}.
@@ -25,6 +26,7 @@ import java.math.BigDecimal;
  * private MoneyEmbeddable cashBalance;
  * </pre>
  */
+@Getter
 @Embeddable
 public class MoneyEmbeddable {
 
@@ -43,11 +45,4 @@ public class MoneyEmbeddable {
     this.currencyCode = currencyCode;
   }
 
-  public BigDecimal getAmount() {
-    return amount;
-  }
-
-  public String getCurrencyCode() {
-    return currencyCode;
-  }
 }
