@@ -84,9 +84,6 @@ class AccountControllerTest {
   @Autowired
   MockMvc mockMvc;
 
-  @Autowired
-  JsonMapper objectMapper;
-
   @MockitoBean
   AccountLifecycleService lifecycleService;
   @MockitoBean

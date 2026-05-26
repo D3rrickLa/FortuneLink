@@ -4,6 +4,7 @@ import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUse
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -25,7 +26,7 @@ public class AuthenticatedUserResolver implements HandlerMethodArgumentResolver 
 
   @Override
   public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-      NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+      @NonNull NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
 
     UUID rawId = authenticationUserService.getCurrentUser();
 
