@@ -36,7 +36,8 @@ class MoneyResponseTest {
   @Test
   void shouldReturnNullWhenMoneyIsNull() {
     // Act: Pass a null reference into the factory method
-    MoneyResponse response = MoneyResponse.from(null);
+    MoneyResponse.from(null);
+    MoneyResponse response = null;
 
     // Assert: Ensure it cleanly returns null without throwing a NullPointerException
     assertNull(response);

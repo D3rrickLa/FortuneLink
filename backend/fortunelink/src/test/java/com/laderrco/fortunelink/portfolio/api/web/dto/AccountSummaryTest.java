@@ -1,7 +1,10 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto;
 
-import static java.time.Instant.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static java.time.Instant.now;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

@@ -3,22 +3,22 @@
 -- ============================================================
 CREATE TABLE portfolio_valuation_snapshots
 (
-    id                            UUID            PRIMARY KEY,
+    id                            UUID PRIMARY KEY,
     user_id                       UUID            NOT NULL,
-    
+
     -- Net Worth
     total_value_amount            NUMERIC(20, 10) NOT NULL,
     total_value_currency          VARCHAR(3)      NOT NULL,
-    
+
     -- Cost Basis
     total_cost_basis_amount       NUMERIC(20, 10) NOT NULL,
     total_cost_basis_currency     VARCHAR(3)      NOT NULL,
-    
+
     -- Unrealized
     unrealized_gain_loss_amount   NUMERIC(20, 10) NOT NULL,
     unrealized_gain_loss_currency VARCHAR(3)      NOT NULL,
     gain_loss_percent             NUMERIC(12, 4),
-    
+
     -- Cash & Invested
     total_cash_balance_amount     NUMERIC(20, 10) NOT NULL,
     total_cash_balance_currency   VARCHAR(3)      NOT NULL,

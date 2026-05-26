@@ -43,46 +43,40 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc(addFilters = false)
 class AccountValuationControllerTest {
 
-  private static final UUID USER_UUID       = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-  private static final UUID PORTFOLIO_UUID  = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-  private static final UUID ACCOUNT_UUID    = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+  private static final UUID USER_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+  private static final UUID PORTFOLIO_UUID = UUID.fromString(
+      "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+  private static final UUID ACCOUNT_UUID = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
 
-  @MockitoBean AuthenticationUserService authenticationUserService;
-  @MockitoBean RateLimitInterceptor rateLimitInterceptor;
-  @MockitoBean AccountValuationApplicationService valuationService;
+  @MockitoBean
+  AuthenticationUserService authenticationUserService;
+  @MockitoBean
+  RateLimitInterceptor rateLimitInterceptor;
+  @MockitoBean
+  AccountValuationApplicationService valuationService;
 
-  @Autowired MockMvc mockMvc;
+  @Autowired
+  MockMvc mockMvc;
 
   @BeforeEach
   void setUp() throws Exception {
     when(authenticationUserService.getCurrentUser()).thenReturn(USER_UUID);
-    when(rateLimitInterceptor.preHandle(
-        any(HttpServletRequest.class),
-        any(HttpServletResponse.class),
-        any()))
-        .thenReturn(true);
+    when(rateLimitInterceptor.preHandle(any(HttpServletRequest.class),
+        any(HttpServletResponse.class), any())).thenReturn(true);
   }
 
   @Test
   void shouldReturnAccountValuation() throws Exception {
-    AccountValuationView view = new AccountValuationView(
-        Money.of(15000, "CAD"),
-        Money.of(10000, "CAD"),
-        Money.of(5000,  "CAD"),
-        BigDecimal.valueOf(50),
-        Money.of(2000,  "CAD"),
-        Money.of(13000, "CAD"),
-        Currency.of("CAD")
-    );
+    AccountValuationView view = new AccountValuationView(Money.of(15000, "CAD"),
+        Money.of(10000, "CAD"), Money.of(5000, "CAD"), BigDecimal.valueOf(50),
+        Money.of(2000, "CAD"), Money.of(13000, "CAD"), Currency.of("CAD"));
 
     when(valuationService.computeAccountValuation(any())).thenReturn(view);
 
-    mockMvc.perform(get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation",
-            PORTFOLIO_UUID, ACCOUNT_UUID)
-            .with(user(USER_UUID.toString())))
-        .andDo(print())
-        .andExpect(status().isOk())
-        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+    mockMvc.perform(
+            get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
+                ACCOUNT_UUID).with(user(USER_UUID.toString()))).andDo(print())
+        .andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.currency").value("CAD"))
         .andExpect(jsonPath("$.gainLossPercent").value(50))
         .andExpect(jsonPath("$.totalValue.amount").value(15000))
@@ -95,31 +89,27 @@ class AccountValuationControllerTest {
 
   @Test
   void shouldReturn404WhenAccountNotFound() throws Exception {
-    when(valuationService.computeAccountValuation(any()))
-        .thenThrow(new AccountNotFoundException(ACCOUNT_UUID.toString()));
+    when(valuationService.computeAccountValuation(any())).thenThrow(
+        new AccountNotFoundException(ACCOUNT_UUID.toString()));
 
-    mockMvc.perform(get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation",
-            PORTFOLIO_UUID, ACCOUNT_UUID)
-            .with(user(USER_UUID.toString())))
-        .andExpect(status().isNotFound());
+    mockMvc.perform(
+        get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
+            ACCOUNT_UUID).with(user(USER_UUID.toString()))).andExpect(status().isNotFound());
   }
 
   @Test
   void shouldVerifyQueryIsConstructedCorrectly() throws Exception {
-    AccountValuationView view = new AccountValuationView(
-        Money.of(1000, "CAD"), Money.of(800, "CAD"), Money.of(200, "CAD"),
-        BigDecimal.valueOf(25), Money.of(100, "CAD"), Money.of(900, "CAD"),
-        Currency.of("CAD")
-    );
+    AccountValuationView view = new AccountValuationView(Money.of(1000, "CAD"),
+        Money.of(800, "CAD"), Money.of(200, "CAD"), BigDecimal.valueOf(25), Money.of(100, "CAD"),
+        Money.of(900, "CAD"), Currency.of("CAD"));
     when(valuationService.computeAccountValuation(any())).thenReturn(view);
 
-    mockMvc.perform(get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation",
-            PORTFOLIO_UUID, ACCOUNT_UUID)
-            .with(user(USER_UUID.toString())))
-        .andExpect(status().isOk());
+    mockMvc.perform(
+        get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
+            ACCOUNT_UUID).with(user(USER_UUID.toString()))).andExpect(status().isOk());
 
-    ArgumentCaptor<GetAccountSummaryQuery> captor =
-        ArgumentCaptor.forClass(GetAccountSummaryQuery.class);
+    ArgumentCaptor<GetAccountSummaryQuery> captor = ArgumentCaptor.forClass(
+        GetAccountSummaryQuery.class);
     verify(valuationService).computeAccountValuation(captor.capture());
 
     GetAccountSummaryQuery query = captor.getValue();

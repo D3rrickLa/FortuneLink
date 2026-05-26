@@ -74,7 +74,7 @@ class RealizedGainsSummaryResponseTest {
     assertEquals(new BigDecimal("3800.00"), response.netGainLoss().amount());
 
     // Assert individual item mappings & inline flag logic
-    RealizedGainItemResponse responseGainItem = response.items().get(0);
+    RealizedGainItemResponse responseGainItem = response.items().getFirst();
     assertEquals("AAPL", responseGainItem.symbol());
     assertTrue(responseGainItem.isGain());
     assertFalse(responseGainItem.isLoss(), "Should not be a loss if isGain is true");

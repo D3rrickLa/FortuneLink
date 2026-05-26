@@ -58,7 +58,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Slice test for AccountController.
