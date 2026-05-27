@@ -124,7 +124,7 @@ export function useValuation(
 
       if (isAccountQuery) {
         response = await apiClient.get(
-          `/api/v1/valuations/${portfolioId}/accounts/${accountId}`
+          `/api/v1/portfolios/${portfolioId}/accounts/${accountId}/valuation`
         );
       } else if (isPortfolioQuery) {
         response = await apiClient.get(
@@ -187,56 +187,58 @@ export function useValuationChart(
       days,
     ],
 
-    queryFn: async (): Promise<
-      RawSnapshotResponse[]
-    > => {
-      let url =
-        "/api/v1/valuations/history";
+    queryFn: async (): Promise<RawSnapshotResponse[]> => {
+      let url = "/api/v1/valuations/history";
 
       if (portfolioId && accountId) {
-        url = `/api/v1/valuations/${portfolioId}/accounts/${accountId}/history`;
+        url = `/api/v1/portfolios/${portfolioId}/accounts/${accountId}/history`;
       } else if (portfolioId) {
-        url = `/api/v1/valuations/${portfolioId}/history`;
+        url = `/api/v1/portfolios/${portfolioId}/history`;
       }
 
-      const response = await apiClient.get(
-        url,
-        {
-          params: {
-            query: { days },
-          },
-        }
-      );
+      try {
+        const response = await apiClient.get(url, {
+          params: { days },
+        });
 
-      if (response.status >= 400) {
-        throw new Error(
-          "Failed to fetch valuation history"
-        );
+        const data = response?.data;
+
+        // ✅ HARD GUARANTEE: must return array
+        if (!data) return [];
+
+        if (Array.isArray(data)) return data;
+
+        if (Array.isArray(data?.data)) return data.data;
+
+        if (Array.isArray(data?.points)) return data.points;
+
+        console.error("Invalid history response shape:", data);
+
+        return [];
+      } catch (err) {
+        console.error("History fetch failed:", err);
+        return [];
       }
-
-      return response.data as RawSnapshotResponse[];
     },
 
     staleTime: 1000 * 60,
+    enabled: true,
   });
 
-  const points: ChartPoint[] =
-    query.data?.map((snapshot) => ({
-      date: snapshot.snapshotDate ?? "",
+  // ✅ GUARANTEE: NEVER trust query.data shape
+  const safeArray: RawSnapshotResponse[] = Array.isArray(query.data)
+    ? query.data
+    : [];
 
-      value:
-        Number(snapshot.totalValue) ?? 0,
-    })) ?? [];
+  const points: ChartPoint[] = safeArray.map((snapshot) => ({
+    date: snapshot.snapshotDate ?? "",
+    value: Number(snapshot.totalValue ?? 0),
+  }));
 
   return {
     points,
-
     isLoading: query.isLoading,
-
     isError: query.isError,
-
-    isEmpty:
-      !query.isLoading &&
-      points.length === 0,
+    isEmpty: !query.isLoading && points.length === 0,
   };
 }

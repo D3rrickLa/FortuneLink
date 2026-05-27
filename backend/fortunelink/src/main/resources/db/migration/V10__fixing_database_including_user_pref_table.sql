@@ -3,7 +3,7 @@ ALTER TABLE users DROP COLUMN IF EXISTS  full_name;
 ALTER TABLE users DROP COLUMN IF EXISTS  base_currency;
 
 -- create new table for preferences
-CREATE TABLE user_preferences
+CREATE TABLE IF NOT EXISTS user_preferences
 (
     user_id             UUID PRIMARY KEY,
 

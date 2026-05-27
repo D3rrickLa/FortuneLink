@@ -1,25 +1,37 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import {
   LineChart,
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
+  CartesianGrid,
 } from "recharts";
-import { TrendingUp, TrendingDown, Clock } from "lucide-react";
+
+import {
+  TrendingUp,
+  TrendingDown,
+  Clock,
+} from "lucide-react";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 import { Skeleton } from "@/components/ui/skeleton";
+
 import {
   useValuation,
+  useAccountValuation,
   useValuationChart,
-} from "@/features/portfolio/hooks/useValuation";
-import type { AccountView } from "@/lib/api/types";
-import { safeNum } from "@/utils/number";
+} from "@/features/portfolio/queries/useValuation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,7 +55,8 @@ function getDays(period: TimePeriod): number {
     case "ytd": {
       const now = new Date();
       return Math.ceil(
-        (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86_400_000
+        (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) /
+        86_400_000
       );
     }
     case "all":
@@ -56,15 +69,13 @@ function getDays(period: TimePeriod): number {
 // ---------------------------------------------------------------------------
 
 interface PerformanceChartProps {
+  portfolioId?: string;
+  accountId?: string;
   currency?: string;
-  portfolioId?: string | null;
-  accountId?: string | null;
-  account?: AccountView | null;
 }
 
 // ---------------------------------------------------------------------------
-// Formatters — defined outside the component so they are not recreated on
-// every render. Accept currency so they stay pure.
+// Formatters
 // ---------------------------------------------------------------------------
 
 function makeFmt(currency: string) {
@@ -73,7 +84,7 @@ function makeFmt(currency: string) {
       style: "currency",
       currency,
       minimumFractionDigits: 2,
-    }).format(v);
+    }).format(v ?? 0);
 }
 
 function makeCompactFmt(currency: string) {
@@ -83,7 +94,38 @@ function makeCompactFmt(currency: string) {
       currency,
       notation: "compact",
       maximumFractionDigits: 1,
-    }).format(v);
+    }).format(v ?? 0);
+}
+
+// ---------------------------------------------------------------------------
+// Metric UI
+// ---------------------------------------------------------------------------
+
+function Metric({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: "gain" | "loss";
+}) {
+  return (
+    <div className="rounded-lg bg-muted/40 px-3 py-2">
+      <p className="text-xs text-muted-foreground">{label}</p>
+
+      <p
+        className={`mt-0.5 text-sm font-semibold tabular-nums ${highlight === "gain"
+          ? "text-green-600"
+          : highlight === "loss"
+            ? "text-red-600"
+            : "text-foreground"
+          }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -91,78 +133,101 @@ function makeCompactFmt(currency: string) {
 // ---------------------------------------------------------------------------
 
 export function PerformanceChart({
-  currency = "USD",
   portfolioId,
   accountId,
-  account,
+  currency = "CAD",
 }: PerformanceChartProps) {
-  const [period, setPeriod] =
-    useState<TimePeriod>("3m");
+  // -------------------------------------------------------------------------
+  // State
+  // -------------------------------------------------------------------------
 
-  const scope = {
-    portfolioId,
-    accountId,
-  };
+  const [period, setPeriod] = useState<TimePeriod>("3m");
+  const accountMode = !!accountId;
 
-  const valuation = useValuation(scope);
+  // -------------------------------------------------------------------------
+  // Hooks (MUST ALL BE ABOVE RETURNS)
+  // -------------------------------------------------------------------------
+
+  const valuation = useValuation(portfolioId, !accountMode);
+  const accountValuation = useAccountValuation(portfolioId, accountId, accountMode);
+
+  const current = accountMode ? accountValuation : valuation;
 
   const history = useValuationChart(
     getDays(period),
-    scope
+    portfolioId,
+    accountId,
+    !accountMode
   );
 
-  const summary = valuation;
+  const resolvedCurrency = current.currency ?? currency;
 
-  const snapshots = history.points.map((p) => ({
-    snapshotDate: p.date,
-    totalValue: p.value,
-  }));
+  const fmt = useMemo(
+    () => makeFmt(resolvedCurrency),
+    [resolvedCurrency]
+  );
 
-  const isLoading = history.isLoading;
+  const fmtCompact = useMemo(
+    () => makeCompactFmt(resolvedCurrency),
+    [resolvedCurrency]
+  );
 
-  const isError = history.isError;
+  const safeFmt = useMemo(() => {
+    return (v: unknown) => {
+      const num = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(num)) return "";
+      return fmt(num);
+    };
+  }, [fmt]);
 
-  // Resolve the currency from the live summary if available — the prop is
-  // a fallback for the case where summary has not loaded yet.
-  const resolvedCurrency = summary?.currency ?? currency;
+  const safeCompactFmt = useMemo(() => {
+    return (v: unknown) => {
+      const num = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(num)) return "";
+      return fmtCompact(num);
+    };
+  }, [fmtCompact]);
 
-  const fmt = useMemo(() => makeFmt(resolvedCurrency), [resolvedCurrency]);
-  const fmtCompact = useMemo(() => makeCompactFmt(resolvedCurrency), [resolvedCurrency]);
-
-  // Normalise snapshots into {date, value} pairs the chart can consume.
   const chartData = useMemo(() => {
-    if (!snapshots?.length) return [];
-    return snapshots.map((s) => ({
-      date: s.snapshotDate ?? "",
-      value: s.totalValue ?? 0,
-    }));
-  }, [snapshots]);
+    if (!history.points || !Array.isArray(history.points)) return [];
+    return history.points.filter(p => p && p.date && typeof p.value === "number");
+  }, [history.points]);
 
-  // Derive the cost-basis reference line from account positions when
-  // an account is in context. This is display-only — the real ACB lives
-  // on the backend.
-  const costBasisLine = useMemo(() => {
-    if (!account?.assets?.length) return null;
-    const total = account.assets.reduce(
-      (sum, pos) => sum + (pos.totalCostBasis?.pricePerUnit?.amount ?? 0),
-      0
-    );
-    return total > 0 ? total : null;
-  }, [account]);
-
-  // Period-over-period change metrics derived from the chart window.
   const metrics = useMemo(() => {
     if (chartData.length < 2) return null;
-    const start = chartData[0].value;
-    const end = chartData[chartData.length - 1].value;
+
+    const start = chartData[0]?.value;
+    const end = chartData[chartData.length - 1]?.value;
+
+    if (typeof start !== "number" || typeof end !== "number") return null;
+
     const change = end - start;
     const pct = start > 0 ? (change / start) * 100 : 0;
-    return { change, pct, isPositive: change >= 0 };
+
+    return {
+      change,
+      pct,
+      isPositive: change >= 0,
+    };
   }, [chartData]);
 
-  // ---------------------------------------------------------------------------
-  // Loading state
-  // ---------------------------------------------------------------------------
+  const strokeColor = useMemo(() => {
+    if (!metrics) return "#6b7280"; // neutral gray while loading/empty
+    return metrics.isPositive ? "#16a34a" : "#dc2626";
+  }, [metrics]);
+  // -------------------------------------------------------------------------
+  // Derived UI states (safe AFTER hooks)
+  // -------------------------------------------------------------------------
+
+  const isLoading =
+    current.isLoading || (!accountMode && history.isLoading);
+
+  const isError =
+    current.isError || (!accountMode && history.isError);
+
+  // -------------------------------------------------------------------------
+  // Loading
+  // -------------------------------------------------------------------------
 
   if (isLoading) {
     return (
@@ -177,9 +242,9 @@ export function PerformanceChart({
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Error state
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Error
+  // -------------------------------------------------------------------------
 
   if (isError) {
     return (
@@ -188,16 +253,66 @@ export function PerformanceChart({
           <CardTitle>Performance</CardTitle>
         </CardHeader>
         <CardContent className="flex h-[300px] items-center justify-center">
-          <p className="text-sm text-destructive">Failed to load performance history.</p>
+          <p className="text-sm text-destructive">
+            Failed to load performance history.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Empty state. New users have no snapshots until the nightly job runs.
-  // Be explicit rather than showing a confusing blank chart.
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // ACCOUNT VIEW
+  // -------------------------------------------------------------------------
+
+  if (accountMode) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Account Performance</CardTitle>
+            <span className="text-xs text-muted-foreground">
+              Current Snapshot
+            </span>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Metric label="Total Value" value={fmt(current.totalValue)} />
+            <Metric label="Cost Basis" value={fmt(current.totalCostBasis)} />
+            <Metric label="Cash Balance" value={fmt(current.totalCashBalance)} />
+            <Metric label="Invested" value={fmt(current.totalInvestedValue)} />
+
+            <Metric
+              label="Unrealized P&L"
+              value={`${current.unrealizedGainLoss >= 0 ? "+" : ""}${fmt(
+                current.unrealizedGainLoss
+              )}`}
+              highlight={current.unrealizedGainLoss >= 0 ? "gain" : "loss"}
+            />
+
+            <Metric
+              label="Return"
+              value={`${current.returnPercentage >= 0 ? "+" : ""}${current.returnPercentage.toFixed(
+                2
+              )}%`}
+              highlight={current.returnPercentage >= 0 ? "gain" : "loss"}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            Historical account charts are not available yet.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // EMPTY STATE
+  // -------------------------------------------------------------------------
 
   if (chartData.length === 0) {
     return (
@@ -205,25 +320,30 @@ export function PerformanceChart({
         <CardHeader>
           <CardTitle>Performance</CardTitle>
         </CardHeader>
+
         <CardContent className="flex h-[300px] flex-col items-center justify-center gap-3 text-center">
           <Clock className="h-8 w-8 text-muted-foreground opacity-40" />
+
           <div className="space-y-1">
             <p className="text-sm font-medium">No history yet</p>
+
             <p className="max-w-[240px] text-xs text-muted-foreground">
               Net worth snapshots are recorded daily. Check back tomorrow once
               your first snapshot has been captured.
             </p>
           </div>
+
+          <p className="text-base font-semibold">
+            Current: {fmt(current.totalValue)}
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Chart
-  // ---------------------------------------------------------------------------
-
-  const strokeColor = metrics?.isPositive ? "#16a34a" : "#dc2626";
+  // -------------------------------------------------------------------------
+  // MAIN CHART
+  // -------------------------------------------------------------------------
 
   return (
     <Card>
@@ -232,58 +352,32 @@ export function PerformanceChart({
           <div className="space-y-1">
             <CardTitle>Performance</CardTitle>
 
-            {/* Live summary metrics from the /valuations/summary endpoint */}
-            {summary && (
-              <div
-                className={`flex items-center gap-2 text-sm font-semibold ${(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0
-                  ? "text-green-600"
-                  : "text-red-600"
-                  }`}
-              >
-                {(safeNum(summary.unrealizedGainLoss) ?? 0) >= 0 ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                <span>
-                  {summary.unrealizedGainLoss >= 0 ? "+" : ""}
-                  {fmt(summary.unrealizedGainLoss)}
-                </span>
-                <span className="font-normal text-muted-foreground">
-                  ({(summary.returnPercentage ?? 0) >= 0 ? "+" : ""}
-                  {(summary.returnPercentage ?? 0).toFixed(2)}%)
-                </span>
-              </div>
-            )}
+            <div
+              className={`flex items-center gap-2 text-sm font-semibold ${current.unrealizedGainLoss >= 0
+                ? "text-green-600"
+                : "text-red-600"
+                }`}
+            >
+              {current.unrealizedGainLoss >= 0 ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
 
-            {/* Period-level delta as a secondary figure when summary is not available */}
-            {!summary && metrics && (
-              <div
-                className={`flex items-center gap-2 text-sm font-semibold ${metrics.isPositive ? "text-green-600" : "text-red-600"
-                  }`}
-              >
-                {metrics.isPositive ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                <span>
-                  {metrics.isPositive ? "+" : ""}
-                  {fmt(metrics.change)}
-                </span>
-                <span className="font-normal text-muted-foreground">
-                  ({metrics.isPositive ? "+" : ""}
-                  {metrics.pct.toFixed(2)}%)
-                </span>
-              </div>
-            )}
+              <span>
+                {current.unrealizedGainLoss >= 0 ? "+" : ""}
+                {fmt(current.unrealizedGainLoss)}
+              </span>
 
-            <p className="text-xs text-muted-foreground">
-              Total net worth
-            </p>
+              <span className="font-normal text-muted-foreground">
+                ({current.returnPercentage >= 0 ? "+" : ""}
+                {current.returnPercentage.toFixed(2)}%)
+              </span>
+            </div>
+
+            <p className="text-xs text-muted-foreground">Total net worth</p>
           </div>
 
-          {/* Period selector */}
           <div className="flex gap-1">
             {PERIODS.map((p) => (
               <button
@@ -302,63 +396,55 @@ export function PerformanceChart({
       </CardHeader>
 
       <CardContent>
-        <div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart
-              data={chartData}
-              margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 11 }}
-                tickFormatter={(iso: string) =>
-                  new Date(iso).toLocaleDateString("en-CA", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                }
-                minTickGap={40}
-              />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                tickFormatter={fmtCompact}
-                width={72}
-              />
-              <Tooltip
-                labelFormatter={(label: any) =>
-                  new Date(label).toLocaleDateString("en-CA", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })
-                }
-                formatter={(value: any) => [fmt(value), "Net Worth"]}
-              />
-              {costBasisLine != null && (
-                <ReferenceLine
-                  y={costBasisLine}
-                  stroke="#94a3b8"
-                  strokeDasharray="4 4"
-                  label={{
-                    value: "Cost Basis",
-                    position: "insideTopRight",
-                    fontSize: 11,
-                    fill: "#94a3b8",
-                  }}
-                />
-              )}
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={strokeColor}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 11 }}
+              tickFormatter={(iso: string) =>
+                new Date(iso).toLocaleDateString("en-CA", {
+                  month: "short",
+                  day: "numeric",
+                })
+              }
+              minTickGap={40}
+            />
+
+            <YAxis
+              tick={{ fontSize: 11 }}
+              tickFormatter={(v) => safeCompactFmt(v as any)}
+              width={72}
+            />
+
+            <Tooltip
+              labelFormatter={(label: any) =>
+                new Date(label).toLocaleDateString("en-CA", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              }
+              formatter={(value: any) => {
+                const num = typeof value === "number" ? value : Number(value);
+                return [Number.isFinite(num) ? fmt(num) : "", "Net Worth"];
+              }}
+            />
+
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke={strokeColor}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );

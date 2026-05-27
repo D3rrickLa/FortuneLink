@@ -564,6 +564,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get account valuation
+         * @description Returns the current valuation snapshot for an account,
+         *     including invested market value, cash balance,
+         *     unrealized gain/loss, and performance metrics.
+         */
+        get: operations["getAccountValuation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions": {
         parameters: {
             query?: never;
@@ -1421,18 +1443,27 @@ export interface components {
         PageableObject: {
             /** Format: int64 */
             offset?: number;
+            unpaged?: boolean;
             paged?: boolean;
             /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
             pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
             sort?: components["schemas"]["SortObject"];
-            unpaged?: boolean;
         };
         SortObject: {
             empty?: boolean;
             sorted?: boolean;
             unsorted?: boolean;
+        };
+        AccountValuationResponse: {
+            totalValue?: components["schemas"]["MoneyResponse"];
+            totalCostBasis?: components["schemas"]["MoneyResponse"];
+            unrealizedGainLoss?: components["schemas"]["MoneyResponse"];
+            gainLossPercent?: number;
+            cashBalance?: components["schemas"]["MoneyResponse"];
+            investedValue?: components["schemas"]["MoneyResponse"];
+            currency?: string;
         };
         PageTransactionView: {
             /** Format: int64 */
@@ -2898,6 +2929,60 @@ export interface operations {
                     "*/*": string | {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    getAccountValuation: {
+        parameters: {
+            query: {
+                userId: components["schemas"]["UserId"];
+            };
+            header?: never;
+            path: {
+                portfolioId: string;
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account valuation retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountValuationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string | {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountValuationResponse"];
+                };
+            };
+            /** @description Account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountValuationResponse"];
                 };
             };
         };

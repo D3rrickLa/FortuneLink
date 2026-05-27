@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
-import com.laderrco.fortunelink.portfolio.application.exceptions.NoActivePortfoliosException;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioLoader;
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
@@ -43,14 +42,15 @@ public class ValuationApplicationService {
    */
   public ValuationView computeSummaryValuation(UserId userId) {
     List<Portfolio> portfolios = portfolioLoader.loadAllUserPortfolios(userId);
+    Currency reportingCurrency = userPreferencesService.get(userId).getBaseCurrency();
 
     if (portfolios.isEmpty()) {
-      throw new NoActivePortfoliosException(userId);
+      // throw new NoActivePortfoliosException(userId);
+      return ValuationView.empty(reportingCurrency);
     }
 
     // We use CAD here so that $100 USD + $100 CAD correctly results
     // in ~$235 CAD rather than a broken "200" total.
-    Currency reportingCurrency = userPreferencesService.get(userId).getBaseCurrency();
     return computeView(portfolios, reportingCurrency);
   }
 

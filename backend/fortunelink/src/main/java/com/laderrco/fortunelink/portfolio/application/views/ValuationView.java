@@ -35,7 +35,20 @@ public record ValuationView(
     }
 
     return numerator.amount().divide(denominator.amount(), Precision.DIVISION.getDecimalPlaces(),
-            Rounding.DIVISION.getMode()).multiply(BigDecimal.valueOf(100))
+        Rounding.DIVISION.getMode()).multiply(BigDecimal.valueOf(100))
         .setScale(Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode());
+  }
+
+  public static ValuationView empty(Currency reportingCurrency) {
+    return new ValuationView(
+        Money.zero(reportingCurrency),
+        Money.zero(reportingCurrency),
+        Money.zero(reportingCurrency),
+        BigDecimal.ZERO,
+        Money.zero(reportingCurrency),
+        Money.zero(reportingCurrency),
+        reportingCurrency,
+        false,
+        Instant.now());
   }
 }

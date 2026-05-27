@@ -15,7 +15,7 @@
 -- ============================================================
 -- USER, an account
 -- ============================================================
-CREATE TABLE users
+CREATE TABLE IF NOT EXISTS users
 (
     id              UUID PRIMARY KEY, -- matches auth.users.id from Supabase
     email           VARCHAR(255) NOT NULL UNIQUE,
@@ -26,7 +26,7 @@ CREATE TABLE users
 -- ============================================================
 -- PORTFOLIOS , aggregate root
 -- ============================================================
-CREATE TABLE portfolios
+CREATE TABLE IF NOT EXISTS portfolios
 (
     id                    UUID PRIMARY KEY,
     user_id               UUID         NOT NULL,           -- one active portfolio per user (MVP)
@@ -59,7 +59,7 @@ ON COLUMN portfolios.display_currency_code IS
 -- ============================================================
 -- ACCOUNTS , child of portfolio
 -- ============================================================
-CREATE TABLE accounts
+CREATE TABLE IF NOT EXISTS accounts
 (
     id                    UUID PRIMARY KEY,
     portfolio_id          UUID            NOT NULL,
@@ -122,7 +122,7 @@ ON COLUMN accounts.health_status IS
 -- POSITIONS , normalized per (account, symbol)
 -- Replaces the old polymorphic 'assets' table entirely.
 -- ============================================================
-CREATE TABLE positions
+CREATE TABLE IF NOT EXISTS positions
 (
     id                  UUID PRIMARY KEY,
     account_id          UUID            NOT NULL,
@@ -158,7 +158,7 @@ ON COLUMN positions.identifier_type IS
 -- ============================================================
 -- TRANSACTIONS , immutable ledger
 -- ============================================================
-CREATE TABLE transactions
+CREATE TABLE IF NOT EXISTS transactions
 (
     id                       UUID PRIMARY KEY,
     portfolio_id             UUID            NOT NULL, -- denormalized for efficient joins
@@ -233,7 +233,7 @@ ON COLUMN transactions.additional_data IS
 -- ============================================================
 -- TRANSACTION FEES , multi-currency fee breakdown per transaction
 -- ============================================================
-CREATE TABLE transaction_fees
+CREATE TABLE IF NOT EXISTS transaction_fees
 (
     id                      UUID PRIMARY KEY,
     transaction_id          UUID            NOT NULL,
@@ -279,7 +279,7 @@ ON TABLE transaction_fees IS
 -- ============================================================
 -- REALIZED GAINS , append-only record of closed positions
 -- ============================================================
-CREATE TABLE realized_gains
+CREATE TABLE IF NOT EXISTS realized_gains
 (
     id                       UUID PRIMARY KEY,
     account_id               UUID            NOT NULL,
@@ -303,7 +303,7 @@ ON TABLE realized_gains IS
 -- ============================================================
 -- MARKET ASSET INFO , cached metadata, NOT financial data
 -- ============================================================
-CREATE TABLE market_asset_info
+CREATE TABLE IF NOT EXISTS market_asset_info
 (
     symbol           VARCHAR(20) PRIMARY KEY, -- AssetSymbol.symbol()
     name             VARCHAR(255) NOT NULL,

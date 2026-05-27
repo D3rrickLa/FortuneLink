@@ -1,5 +1,5 @@
 -- Create profile table
-CREATE TABLE user_profile
+CREATE TABLE IF NOT EXISTS user_profile
 (
     user_id   UUID PRIMARY KEY,
 

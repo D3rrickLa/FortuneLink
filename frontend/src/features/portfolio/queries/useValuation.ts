@@ -2,138 +2,230 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
-import type { components } from "@/lib/api/schema";
+import { components } from "@/lib/api/schema";
 
-// ─── Schema types (what the API actually returns) ─────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Raw API types
+// ─────────────────────────────────────────────────────────────────────────────
 
-type RawValuationResponse = components["schemas"]["ValuationResponse"];
-type RawSnapshotResponse = components["schemas"]["ValuationSnapshotResponse"];
+type RawValuationResponse =
+  components["schemas"]["ValuationResponse"];
 
-// ─── Normalised flat shapes (what our UI consumes) ────────────────────────────
-// All monetary values are unwrapped from MoneyResponse → plain number.
-// Field names are normalised (gainLossPercent → returnPercentage) so every
-// consumer keeps working without a sweep of edits.
+type RawSnapshotResponse =
+  components["schemas"]["ValuationSnapshotResponse"];
 
-export interface ValuationResponse {
+// ─────────────────────────────────────────────────────────────────────────────
+// UI types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ValuationState {
   totalValue: number;
   totalCostBasis: number;
   unrealizedGainLoss: number;
-  /** gainLossPercent from the API, renamed for UI consistency */
   returnPercentage: number;
   totalCashBalance: number;
   totalInvestedValue: number;
   currency: string;
   hasStaleData: boolean;
+
+  isLoading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
 }
 
-export interface ValuationSnapshotResponse {
-  totalValue: number;
-  totalCostBasis: number;
-  unrealizedGainLoss: number;
-  gainLossPercent: number;
-  totalCashBalance: number;
-  totalInvestedValue: number;
-  currency: string;
-  hasStaleData: boolean;
-  snapshotDate: string;
+export interface ChartPoint {
+  date: string;
+  value: number;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * The backend ValuationResponse wraps monetary fields in MoneyResponse objects
- * ({ amount: number, currency: string }).  Extract the raw amount defensively
- * so we don't silently return NaN when the shape is a nested object.
- */
-function toNum(field: unknown): number {
-  if (field === null || field === undefined) return 0;
-  if (typeof field === "number") return Number.isFinite(field) ? field : 0;
-  // MoneyResponse shape: { amount?: number, currency?: string }
-  if (typeof field === "object" && "amount" in (field as object)) {
-    const amt = (field as { amount?: unknown }).amount;
-    if (typeof amt === "number" && Number.isFinite(amt)) return amt;
+function normalizeValuation(
+  data?: RawValuationResponse | null
+) {
+  if (!data) {
+    return {
+      totalValue: 0,
+      totalCostBasis: 0,
+      unrealizedGainLoss: 0,
+      returnPercentage: 0,
+      totalCashBalance: 0,
+      totalInvestedValue: 0,
+      currency: "CAD",
+      hasStaleData: false,
+    };
   }
-  return 0;
-}
 
-function toCurrency(raw: RawValuationResponse): string {
-  if (raw.currency) return raw.currency;
-  // Fallback: pull currency off any MoneyResponse field
-  const anyMoney = raw.totalValue ?? raw.unrealizedGainLoss ?? raw.totalCostBasis;
-  if (anyMoney && typeof anyMoney === "object" && "currency" in anyMoney) {
-    return (anyMoney as { currency?: string }).currency ?? "USD";
-  }
-  return "USD";
-}
-
-function normaliseValuation(raw: RawValuationResponse): ValuationResponse {
-  console.log("Raw API Data:", raw); // Check if it's { amount, currency }
-  const normalized = {
-    totalValue: toNum(raw.totalValue),
-    // ... rest of the fields
-  };
-  console.log("Normalized Data:", normalized); // Check if it's now a flat number
   return {
-    totalValue:        toNum(raw.totalValue),
-    totalCostBasis:    toNum(raw.totalCostBasis),
-    unrealizedGainLoss: toNum(raw.unrealizedGainLoss),
-    // API field is gainLossPercent — rename for consistency with callers
-    returnPercentage:  raw.gainLossPercent ?? 0,
-    totalCashBalance:  toNum(raw.totalCashBalance),
-    totalInvestedValue: toNum(raw.totalInvestedValue),
-    currency:          toCurrency(raw),
-    hasStaleData:      raw.hasStaleData ?? false,
+    totalValue: data.totalValue?.amount ?? 0,
+    totalCostBasis: data.totalCostBasis?.amount ?? 0,
+    unrealizedGainLoss: data.unrealizedGainLoss?.amount ?? 0,
+    returnPercentage: data.gainLossPercent ?? 0,
+    totalCashBalance: data.totalCashBalance?.amount ?? 0,
+    totalInvestedValue: data.totalInvestedValue?.amount ?? 0,
+    currency:
+      data.currency ??
+      data.totalValue?.currency ??
+      "CAD",
+    hasStaleData: data.hasStaleData ?? false,
   };
 }
 
-// ─── Cache keys ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL / PORTFOLIO VALUATION
+// ─────────────────────────────────────────────────────────────────────────────
 
-export const valuationKeys = {
-  all:     ["valuations"] as const,
-  summary: () => [...valuationKeys.all, "summary"] as const,
-  history: (days: number) => [...valuationKeys.all, "history", days] as const,
-};
+export function useValuation(
+  portfolioId?: string,
+  enabled = true
+): ValuationState {
+  const isPortfolioQuery =
+    !!portfolioId && portfolioId !== "all";
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
+  const query = useQuery({
+    queryKey: [
+      "valuation",
+      isPortfolioQuery ? portfolioId : "global",
+    ],
 
-export function useValuationSummary() {
-  return useQuery({
-    queryKey: valuationKeys.summary(),
-    queryFn: async (): Promise<ValuationResponse | null> => {
-      const res = await apiClient.get<RawValuationResponse>(
-        "/api/v1/valuations/summary",
-        { validateStatus: (s) => s === 204 || (s >= 200 && s < 300) }
-      );
-      if (res.status === 204) return null;
-      return normaliseValuation(res.data);
+    queryFn: async (): Promise<RawValuationResponse | null> => {
+      const response = isPortfolioQuery
+        ? await apiClient.get(
+          `/api/v1/valuations/${portfolioId}`
+        )
+        : await apiClient.get(
+          "/api/v1/valuations/summary"
+        );
+
+      if (response.status === 204) return null;
+      if (response.status >= 400) {
+        throw new Error("Failed to fetch valuation");
+      }
+
+      return response.data as RawValuationResponse;
     },
-    staleTime: 5 * 60 * 1000,
+
+    enabled: enabled && (!isPortfolioQuery || !!portfolioId),
+    staleTime: 60_000,
   });
+
+  return {
+    ...normalizeValuation(query.data),
+    isLoading: query.isLoading,
+    isError: query.isError,
+    isEmpty: !query.isLoading && !query.data,
+  };
 }
 
-export function useValuationHistory(days: number) {
-  return useQuery({
-    queryKey: valuationKeys.history(days),
-    queryFn: async (): Promise<ValuationSnapshotResponse[]> => {
-      const res = await apiClient.get<RawSnapshotResponse[]>(
-        "/api/v1/valuations/history",
-        { params: { days } }
+// ─────────────────────────────────────────────────────────────────────────────
+// ACCOUNT VALUATION  (🔥 FIXED ENDPOINT)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useAccountValuation(
+  portfolioId?: string,
+  accountId?: string,
+  enabled = true
+): ValuationState {
+  const query = useQuery({
+    queryKey: [
+      "account-valuation",
+      portfolioId,
+      accountId,
+    ],
+
+    enabled: enabled && !!portfolioId && !!accountId,
+
+    queryFn: async (): Promise<RawValuationResponse | null> => {
+      const response = await apiClient.get(
+        `/api/v1/portfolios/${portfolioId}/accounts/${accountId}/valuation`
       );
-      // Snapshots use plain numbers per schema — still run through toNum
-      // defensively in case the backend ever changes shape.
-      return (res.data ?? []).map((s) => ({
-        totalValue:         toNum(s.totalValue),
-        totalCostBasis:     toNum(s.totalCostBasis),
-        unrealizedGainLoss: toNum(s.unrealizedGainLoss),
-        gainLossPercent:    s.gainLossPercent ?? 0,
-        totalCashBalance:   toNum(s.totalCashBalance),
-        totalInvestedValue: toNum(s.totalInvestedValue),
-        currency:           s.currency ?? "USD",
-        hasStaleData:       s.hasStaleData ?? false,
-        snapshotDate:       s.snapshotDate ?? "",
-      }));
+
+      if (response.status === 204) return null;
+      if (response.status >= 400) {
+        throw new Error("Failed to fetch account valuation");
+      }
+
+      return response.data as RawValuationResponse;
     },
-    staleTime: 10 * 60 * 1000,
-    enabled: days > 0 && days <= 1825,
+
+    staleTime: 60_000,
   });
+
+  return {
+    ...normalizeValuation(query.data),
+    isLoading: query.isLoading,
+    isError: query.isError,
+    isEmpty: !query.isLoading && !query.data,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL HISTORY (OPTIONAL PORTFOLIO SCOPED FIX)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useValuationChart(
+  days: number,
+  portfolioId?: string,
+  accountId?: string,
+  enabled = true
+) {
+  const isAccountHistory = !!portfolioId && !!accountId;
+  const isPortfolioHistory = !!portfolioId && !accountId;
+
+  const query = useQuery({
+    queryKey: [
+      "valuation-history",
+      portfolioId ?? "global",
+      accountId ?? "none",
+      days,
+    ],
+
+    enabled,
+
+    queryFn: async (): Promise<RawSnapshotResponse[]> => {
+      let url = "/api/v1/valuations/history";
+
+      if (isAccountHistory) {
+        url = `/api/v1/portfolios/${portfolioId}/accounts/${accountId}`;
+      } else if (isPortfolioHistory) {
+        url = `/api/v1/valuations/${portfolioId}`;
+      }
+
+      const response = await apiClient.get(url, {
+        params: { days },
+      });
+
+      const data = response?.data;
+
+      if (!data) return [];
+
+      if (Array.isArray(data)) return data;
+
+      if (Array.isArray(data?.content)) return data.content;
+
+      if (Array.isArray(data?.data)) return data.data;
+
+      console.error("Invalid history response shape:", data);
+
+      return [];
+    },
+
+    staleTime: 60_000,
+  });
+
+  const safeData = Array.isArray(query.data) ? query.data : [];
+
+  const points: ChartPoint[] = safeData.map((snapshot) => ({
+    date: snapshot.snapshotDate ?? "",
+    value: Number(snapshot.totalValue ?? 0),
+  }));
+
+  return {
+    points,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    isEmpty: !query.isLoading && points.length === 0,
+  };
 }

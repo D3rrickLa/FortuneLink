@@ -31,17 +31,17 @@ services:
   #     profiles:
   #       - dev  # Only start in dev mode
 
-#  backend:
-#    build: .
-#    container_name: fortunelink-backend
-#    ports:
-#      - "8080:8080"
-#    env_file:
-#      - .env
-#    depends_on:
-#      - redis
-#    networks:
-#      - fortunelink-network
+  backend:
+    build: .
+    container_name: fortunelink-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - fortunelink-network
 
 volumes:
   redis-data:

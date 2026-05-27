@@ -52,12 +52,15 @@ public class ValuationHistoryController {
   }
 
   @GetMapping("/history")
-  public List<ValuationSnapshotResponse> getHistory(@AuthenticatedUser UserId userId,
+  public ResponseEntity<List<ValuationSnapshotResponse>> getHistory(@AuthenticatedUser UserId userId,
       @RequestParam(defaultValue = "90") @Min(1) @Max(1825) int days) {
 
     Instant since = Instant.now().minus(days, ChronoUnit.DAYS);
-    return snapshotRepository.findByUserIdSince(userId, since).stream()
-        .map(ValuationSnapshotResponse::from).toList();
+
+    List<ValuationSnapshotResponse> result = snapshotRepository.findByUserIdSince(userId, since)
+        .stream().map(ValuationSnapshotResponse::from).toList();
+
+    return ResponseEntity.ok(result); // empty list is OK
   }
 
   @Schema(description = "Historical valuation snapshot")

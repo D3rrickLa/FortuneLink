@@ -1,7 +1,7 @@
 -- ============================================================
 -- V4__portfolio_valuation_snapshots.sql
 -- ============================================================
-CREATE TABLE portfolio_valuation_snapshots
+CREATE TABLE IF NOT EXISTS portfolio_valuation_snapshots
 (
     id                            UUID PRIMARY KEY,
     user_id                       UUID            NOT NULL,
