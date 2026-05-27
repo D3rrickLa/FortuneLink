@@ -3,7 +3,7 @@ package com.laderrco.fortunelink.portfolio.api.web.controller;
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.MoneyResponse;
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.services.AccountValuationApplicationService;
-import com.laderrco.fortunelink.portfolio.application.views.AccountValuationView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
@@ -44,7 +44,7 @@ public class AccountValuationController {
       @AuthenticatedUser UserId userId, @PathVariable String portfolioId,
       @PathVariable String accountId) {
 
-    AccountValuationView view = accountValuationService.computeAccountValuation(
+    ValuationView view = accountValuationService.computeAccountValuation(
         new GetAccountSummaryQuery(PortfolioId.fromString(portfolioId), userId,
             AccountId.fromString(accountId)));
 
@@ -64,11 +64,11 @@ public class AccountValuationController {
       MoneyResponse investedValue,
       String currency) {
 
-    public static AccountValuationResponse from(AccountValuationView v) {
+    public static AccountValuationResponse from(ValuationView v) {
       return new AccountValuationResponse(MoneyResponse.from(v.totalValue()),
           MoneyResponse.from(v.totalCostBasis()), MoneyResponse.from(v.unrealizedGainLoss()),
-          v.gainLossPercent(), MoneyResponse.from(v.cashBalance()),
-          MoneyResponse.from(v.investedValue()), v.currency().getCode());
+          v.gainLossPercent(), MoneyResponse.from(v.totalCashBalance()),
+          MoneyResponse.from(v.totalInvestedValue()), v.displayCurrency().getCode());
     }
   }
 }

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.repositories.AccountQueryRepository;
-import com.laderrco.fortunelink.portfolio.application.views.AccountValuationView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
@@ -65,12 +65,12 @@ class AccountValuationApplicationServiceTest {
     when(marketDataService.getBatchQuotes(any())).thenReturn(quote);
     when(repository.findByIdWithDetails(any(), any(), any())).thenReturn(Optional.of(account));
 
-    AccountValuationView result = service.computeAccountValuation(
+    ValuationView result = service.computeAccountValuation(
         new GetAccountSummaryQuery(new PortfolioId(PORTFOLIO_ID), new UserId(USER_UUID),
             new AccountId(ACCOUNT_ID)));
 
     assertThat(result.totalValue()).isNotNull();
-    assertThat(result.currency().getCode()).isEqualTo("CAD");
+    assertThat(result.displayCurrency().getCode()).isEqualTo("CAD");
   }
 
   @Test
@@ -112,7 +112,7 @@ class AccountValuationApplicationServiceTest {
     when(repository.findByIdWithDetails(any(), any(), any())).thenReturn(Optional.of(account));
 
     // Act
-    AccountValuationView result = service.computeAccountValuation(
+    ValuationView result = service.computeAccountValuation(
         new GetAccountSummaryQuery(new PortfolioId(PORTFOLIO_ID), new UserId(USER_UUID),
             new AccountId(ACCOUNT_ID)));
 
@@ -147,7 +147,7 @@ class AccountValuationApplicationServiceTest {
     when(repository.findByIdWithDetails(any(), any(), any())).thenReturn(Optional.of(account));
 
     // Act
-    AccountValuationView result = service.computeAccountValuation(
+    ValuationView result = service.computeAccountValuation(
         new GetAccountSummaryQuery(new PortfolioId(PORTFOLIO_ID), new UserId(USER_UUID), new AccountId(ACCOUNT_ID))
     );
 
@@ -179,7 +179,7 @@ class AccountValuationApplicationServiceTest {
     when(repository.findByIdWithDetails(any(), any(), any())).thenReturn(Optional.of(account));
 
     // Act
-    AccountValuationView result = service.computeAccountValuation(
+    ValuationView result = service.computeAccountValuation(
         new GetAccountSummaryQuery(new PortfolioId(PORTFOLIO_ID), new UserId(USER_UUID), new AccountId(ACCOUNT_ID))
     );
 
@@ -214,13 +214,13 @@ class AccountValuationApplicationServiceTest {
     when(repository.findByIdWithDetails(any(), any(), any())).thenReturn(Optional.of(account));
 
     // Act
-    AccountValuationView result = service.computeAccountValuation(
+    ValuationView result = service.computeAccountValuation(
         new GetAccountSummaryQuery(new PortfolioId(PORTFOLIO_ID), new UserId(USER_UUID), new AccountId(ACCOUNT_ID))
     );
 
     // Assert
     // Everything should safely swap to Money.zero(Currency.CAD) instead of blowing up with an NPE
-    assertThat(result.cashBalance()).isEqualTo(Money.zero(Currency.CAD));
+    assertThat(result.totalCashBalance()).isEqualTo(Money.zero(Currency.CAD));
     assertThat(result.totalCostBasis()).isEqualTo(Money.zero(Currency.CAD));
     assertThat(result.totalValue()).isEqualTo(Money.zero(Currency.CAD));
     assertThat(result.totalValue()).isEqualTo(Money.zero(Currency.CAD));

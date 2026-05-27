@@ -59,6 +59,38 @@ public record PercentageChange(BigDecimal change) implements Comparable<Percenta
   }
 
   /**
+   * Calculates the percentage change based on total value and cost basis.
+   * Formula: (totalValue - costBasis) / costBasis
+   *
+   * @param totalValue The current market value.
+   * @param costBasis  The original cost basis.
+   * @return A new PercentageChange instance.
+   */
+  public static PercentageChange calculate(Money totalValue, Money costBasis) {
+      notNull(totalValue, "total value");
+      notNull(costBasis, "cost basis");
+
+      BigDecimal currentAmount = totalValue.amount();
+      BigDecimal basisAmount = costBasis.amount();
+
+      // Guard against division by zero (e.g., free assets or new accounts)
+      if (basisAmount.signum() == 0) {
+          // If current value is also zero, change is 0%. 
+          // If current value > 0, mathematically it's an infinite gain, but financially 
+          // it is often treated as 0% or 100% depending on business rules.
+          return ZERO; 
+      }
+
+      // (totalValue - costBasis)
+      BigDecimal difference = currentAmount.subtract(basisAmount);
+
+      // (totalValue - costBasis) / costBasis
+      BigDecimal rate = difference.divide(basisAmount, SCALE, MODE);
+
+      return new PercentageChange(rate);
+  }
+
+  /**
    * Converts the internal decimal rate back to a percentage value. * @return The change multiplied
    * by 100 (e.g., -0.25 returns -25.0).
    */

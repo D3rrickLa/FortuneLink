@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.services.AccountValuationApplicationService;
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
-import com.laderrco.fortunelink.portfolio.application.views.AccountValuationView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.exceptions.AccountNotFoundException;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
@@ -26,6 +26,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLim
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,15 +68,23 @@ class AccountValuationControllerTest {
 
   @Test
   void shouldReturnAccountValuation() throws Exception {
-    AccountValuationView view = new AccountValuationView(Money.of(15000, "CAD"),
-        Money.of(10000, "CAD"), Money.of(5000, "CAD"), BigDecimal.valueOf(50),
-        Money.of(2000, "CAD"), Money.of(13000, "CAD"), Currency.of("CAD"));
+    ValuationView view = new ValuationView(
+        Money.of(15000, "CAD"),
+        Money.of(10000, "CAD"),
+        Money.of(5000, "CAD"),
+        BigDecimal.valueOf(50),
+        Money.of(2000, "CAD"),
+        Money.of(13000, "CAD"),
+        Currency.of("CAD"),
+        false,
+        Instant.now());
 
     when(valuationService.computeAccountValuation(any())).thenReturn(view);
 
     mockMvc.perform(
-            get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
-                ACCOUNT_UUID).with(user(USER_UUID.toString()))).andDo(print())
+        get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
+            ACCOUNT_UUID).with(user(USER_UUID.toString())))
+        .andDo(print())
         .andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.currency").value("CAD"))
         .andExpect(jsonPath("$.gainLossPercent").value(50))
@@ -94,19 +103,28 @@ class AccountValuationControllerTest {
 
     mockMvc.perform(
         get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
-            ACCOUNT_UUID).with(user(USER_UUID.toString()))).andExpect(status().isNotFound());
+            ACCOUNT_UUID).with(user(USER_UUID.toString())))
+        .andExpect(status().isNotFound());
   }
 
   @Test
   void shouldVerifyQueryIsConstructedCorrectly() throws Exception {
-    AccountValuationView view = new AccountValuationView(Money.of(1000, "CAD"),
-        Money.of(800, "CAD"), Money.of(200, "CAD"), BigDecimal.valueOf(25), Money.of(100, "CAD"),
-        Money.of(900, "CAD"), Currency.of("CAD"));
+    ValuationView view = new ValuationView(
+        Money.of(1000, "CAD"),
+        Money.of(800, "CAD"),
+        Money.of(200, "CAD"),
+        BigDecimal.valueOf(25),
+        Money.of(100, "CAD"),
+        Money.of(900, "CAD"),
+        Currency.of("CAD"),
+        false,
+        Instant.now());
     when(valuationService.computeAccountValuation(any())).thenReturn(view);
 
     mockMvc.perform(
         get("/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation", PORTFOLIO_UUID,
-            ACCOUNT_UUID).with(user(USER_UUID.toString()))).andExpect(status().isOk());
+            ACCOUNT_UUID).with(user(USER_UUID.toString())))
+        .andExpect(status().isOk());
 
     ArgumentCaptor<GetAccountSummaryQuery> captor = ArgumentCaptor.forClass(
         GetAccountSummaryQuery.class);

@@ -2,7 +2,7 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import com.laderrco.fortunelink.portfolio.application.queries.GetAccountSummaryQuery;
 import com.laderrco.fortunelink.portfolio.application.repositories.AccountQueryRepository;
-import com.laderrco.fortunelink.portfolio.application.views.AccountValuationView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
@@ -13,6 +13,7 @@ import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,10 +28,10 @@ public class AccountValuationApplicationService {
   private final AccountQueryRepository accountQueryRepository;
   private final MarketDataService marketDataService;
 
-  public AccountValuationView computeAccountValuation(GetAccountSummaryQuery query) {
+  public ValuationView computeAccountValuation(GetAccountSummaryQuery query) {
 
     Account account = accountQueryRepository.findByIdWithDetails(query.accountId(),
-            query.portfolioId(), query.userId())
+        query.portfolioId(), query.userId())
         .orElseThrow(() -> new EntityNotFoundException("Account not found: " + query.accountId()));
 
     Currency currency = account.getAccountCurrency();
@@ -64,17 +65,25 @@ public class AccountValuationApplicationService {
 
     Money unrealizedGainLoss = totalMarketValue.subtract(totalCostBasis);
 
-    BigDecimal gainLossPercent =
-        totalCostBasis.amount().compareTo(BigDecimal.ZERO) > 0 ? unrealizedGainLoss.amount()
-            .divide(totalCostBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(),
-                Rounding.PERCENTAGE.getMode()).multiply(BigDecimal.valueOf(100)) : BigDecimal.ZERO;
+    BigDecimal gainLossPercent = totalCostBasis.amount().compareTo(BigDecimal.ZERO) > 0 ? unrealizedGainLoss.amount()
+        .divide(totalCostBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(),
+            Rounding.PERCENTAGE.getMode())
+        .multiply(BigDecimal.valueOf(100)) : BigDecimal.ZERO;
 
     Money cashBalance = nullSafe(account.getCashBalance(), currency);
 
     Money totalAccountValue = totalMarketValue.add(cashBalance);
 
-    return new AccountValuationView(totalAccountValue, totalCostBasis, unrealizedGainLoss,
-        gainLossPercent, cashBalance, totalMarketValue, currency);
+    return new ValuationView(
+        totalAccountValue,
+        totalCostBasis,
+        unrealizedGainLoss,
+        gainLossPercent,
+        cashBalance,
+        totalMarketValue,
+        currency,
+        false,
+        Instant.now());
   }
 
   private Money nullSafe(Money money, Currency currency) {
