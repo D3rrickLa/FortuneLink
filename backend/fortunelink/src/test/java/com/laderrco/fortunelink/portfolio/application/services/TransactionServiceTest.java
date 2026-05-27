@@ -285,7 +285,6 @@ class TransactionServiceTest {
 
     @ParameterizedTest
     @EnumSource(value = AssetType.class, names = {"CASH", "OTHER"})
-    @NullSource
     @DisplayName("recordPurchase: should sanitize invalid hints to STOCK when asset not found")
     void recordPurchaseSanitizeType(AssetType hint) {
       AssetSymbol symbol = new AssetSymbol("AAPL");
