@@ -877,6 +877,25 @@ class TransactionServiceTest {
     }
 
     @Test
+    @DisplayName("recover: Should log warning and rethrow the original DataIntegrityViolationException")
+    void shouldLogAndRethrowOriginalException() {
+      UUID key = UUID.randomUUID();
+      RecordPurchaseCommand command = new RecordPurchaseCommand(
+          key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE,
+          Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false
+      );
+
+      DataIntegrityViolationException originalException =
+          new DataIntegrityViolationException("Unique index violation on idempotency key");
+
+      // Act & Assert
+      // Directly calling the public recover method on your injected service instance
+      assertThatThrownBy(() -> service.recover(originalException, command))
+          .isSameAs(originalException)
+          .hasMessageContaining("Unique index violation on idempotency key");
+    }
+
+    @Test
     @DisplayName("executeWithIdempotency: recovers from DB if cache is empty but key exists")
     void shouldRecoverFromDbOnCacheMiss() {
 

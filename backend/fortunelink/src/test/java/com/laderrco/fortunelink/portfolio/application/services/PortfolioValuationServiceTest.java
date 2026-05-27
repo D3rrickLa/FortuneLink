@@ -1,6 +1,7 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -18,6 +19,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.PercentageChange;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Price;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.AcbPosition;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.positions.Position;
@@ -25,6 +27,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +47,8 @@ class PortfolioValuationServiceTest {
   private static final Currency CAD = Currency.of("CAD");
   private static final AssetSymbol AAPL = new AssetSymbol("AAPL");
   private static final Money HUNDRED_USD = Money.of(new BigDecimal("100.00"), "USD");
+  private final Map<AssetSymbol, MarketAssetQuote> emptyCache = new HashMap<>();
+
   @Mock
   private ExchangeRateService exchangeRateService;
   @InjectMocks
@@ -362,6 +367,134 @@ class PortfolioValuationServiceTest {
       assertThat(result.totalValue()).isEqualTo(expectedFinalValue);
 
       verify(exchangeRateService).convert(priceInCad, accountCurrency);
+    }
+  }
+
+  @Nested
+  @DisplayName("Parameter Validation")
+  class ParameterValidation {
+
+    @Test
+    @DisplayName("Should throw NullPointerException when portfolios list is null")
+    void shouldThrowNpeWhenPortfoliosNull() {
+      assertThatThrownBy(
+          () -> valuationService.calculateUserValuation(null, USD, emptyCache)).isInstanceOf(
+          NullPointerException.class).hasMessage("Portfolios cannot be null");
+    }
+
+    @Test
+    @DisplayName("Should throw NullPointerException when target currency is null")
+    void shouldThrowNpeWhenCurrencyNull() {
+      assertThatThrownBy(
+          () -> valuationService.calculateUserValuation(List.of(), null, emptyCache)).isInstanceOf(
+          NullPointerException.class).hasMessage("Target currency cannot be null");
+    }
+
+    @Test
+    @DisplayName("Should throw NullPointerException when quote cache is null")
+    void shouldThrowNpeWhenCacheNull() {
+      assertThatThrownBy(
+          () -> valuationService.calculateUserValuation(List.of(), USD, null)).isInstanceOf(
+          NullPointerException.class).hasMessage("Quote cache cannot be null");
+    }
+  }
+
+  @Nested
+  @DisplayName("Valuation Calculation Logic")
+  class ValuationCalculation {
+    @Test
+    @DisplayName("Should correctly aggregate values and apply exchange rates across active accounts")
+    void shouldCalculateAggregatedValuation() {
+      // Arrange: Set up Portfolio 1 with an Active Account (in CAD)
+      Portfolio portfolio1 = mock(Portfolio.class);
+      Account account1 = mock(Account.class);
+      when(account1.isActive()).thenReturn(true);
+      when(account1.isStale()).thenReturn(false);
+      when(account1.getCashBalance()).thenReturn(Money.of("100.00", CAD));
+
+      when(account1.getAccountCurrency()).thenReturn(CAD);
+      when(account1.getPositionEntries()).thenReturn(Collections.emptyList());
+
+      when(portfolio1.getAccounts()).thenReturn(List.of(account1));
+
+      // Arrange: Set up Portfolio 2 with an Inactive Account (should be entirely ignored)
+      Portfolio portfolio2 = mock(Portfolio.class);
+      Account inactiveAccount = mock(Account.class);
+      when(inactiveAccount.isActive()).thenReturn(false);
+      when(portfolio2.getAccounts()).thenReturn(List.of(inactiveAccount));
+
+      // Mock currency conversion behavior for Cash and Positions
+      Money positionsInUsd = Money.of("150.00", USD);
+      Money cashInUsd = Money.of("75.00", USD);
+
+      emptyCache.put(new AssetSymbol("AAPL"),
+          new MarketAssetQuote(new AssetSymbol("AAPL"), Price.of("100", USD), Price.of("100", USD),
+              Price.of("100", USD), Price.of("100", USD), Price.of("100", USD),
+              PercentageChange.ZERO, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TWO, "ME",
+              Instant.now()));
+
+      when(exchangeRateService.convert(any(Money.class), eq(USD))).thenAnswer(invocation -> {
+        Money source = invocation.getArgument(0);
+
+        boolean isCad = source.currency() == CAD;
+        boolean isCashAmount =
+            source.amount() != null && source.amount().compareTo(new BigDecimal("100")) == 0;
+
+        if (isCad && isCashAmount) {
+          return cashInUsd; // Returns $75.00
+        }
+
+        return positionsInUsd; // Returns $150.00
+      });
+
+      // Act
+      ValuationView result = valuationService.calculateUserValuation(
+          List.of(portfolio1, portfolio2), USD, emptyCache);
+
+      // Assert
+      assertThat(result.totalCashBalance()).isEqualTo(cashInUsd);
+      assertThat(result.totalInvestedValue()).isEqualTo(positionsInUsd);
+      assertThat(result.totalValue()).isEqualTo(Money.of("225.00", USD));
+      assertThat(result.hasStaleData()).isFalse();
+    }
+  }
+
+  @Nested
+  @DisplayName("Staleness Propagation")
+  class StalenessHandling {
+    @Test
+    @DisplayName("Should mark output valuation as stale if at least one active account is stale")
+    void shouldReturnStaleTrueWhenAnyAccountIsStale() {
+      // Arrange
+      Portfolio portfolio = mock(Portfolio.class);
+      Account freshAccount = mock(Account.class);
+      Account staleAccount = mock(Account.class);
+
+      // Setup Fresh Account
+      when(freshAccount.isActive()).thenReturn(true);
+      when(freshAccount.isStale()).thenReturn(false);
+      when(freshAccount.getCashBalance()).thenReturn(Money.zero(USD));
+      // FIXES HERE
+      when(freshAccount.getAccountCurrency()).thenReturn(USD);
+      when(freshAccount.getPositionEntries()).thenReturn(Collections.emptyList());
+
+      // Setup Stale Account
+      when(staleAccount.isActive()).thenReturn(true);
+      when(staleAccount.isStale()).thenReturn(true);
+      when(staleAccount.getCashBalance()).thenReturn(Money.zero(USD));
+      // FIXES HERE
+      when(staleAccount.getAccountCurrency()).thenReturn(USD);
+      when(staleAccount.getPositionEntries()).thenReturn(Collections.emptyList());
+
+      when(portfolio.getAccounts()).thenReturn(List.of(freshAccount, staleAccount));
+      when(exchangeRateService.convert(any(), any())).thenReturn(Money.zero(USD));
+
+      // Act
+      ValuationView result = valuationService.calculateUserValuation(List.of(portfolio), USD,
+          emptyCache);
+
+      // Assert
+      assertThat(result.hasStaleData()).isTrue();
     }
   }
 }

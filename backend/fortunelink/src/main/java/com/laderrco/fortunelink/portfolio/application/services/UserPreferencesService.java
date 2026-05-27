@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 @Transactional
 @RequiredArgsConstructor
 public class UserPreferencesService {
-
   private final UserPreferencesRepository repository;
 
   public UserPreferences get(UserId userId) {
