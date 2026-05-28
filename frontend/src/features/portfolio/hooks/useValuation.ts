@@ -203,7 +203,6 @@ export function useValuationChart(
 
         const data = response?.data;
 
-        // ✅ HARD GUARANTEE: must return array
         if (!data) return [];
 
         if (Array.isArray(data)) return data;
@@ -225,7 +224,6 @@ export function useValuationChart(
     enabled: true,
   });
 
-  // ✅ GUARANTEE: NEVER trust query.data shape
   const safeArray: RawSnapshotResponse[] = Array.isArray(query.data)
     ? query.data
     : [];

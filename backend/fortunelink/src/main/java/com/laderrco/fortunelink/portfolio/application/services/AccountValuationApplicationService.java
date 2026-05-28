@@ -10,6 +10,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.repositories.AccountValuationSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
@@ -33,6 +34,7 @@ public class AccountValuationApplicationService {
   private final AccountQueryRepository accountQueryRepository;
   private final AccountValuationSnapshotRepository accountSnapshotRepository;
   private final MarketDataService marketDataService;
+  private final ExchangeRateService exchangeRateService;
 
   public ValuationView computeAccountValuation(GetAccountSummaryQuery query) {
 
@@ -53,20 +55,28 @@ public class AccountValuationApplicationService {
     Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(symbols);
 
     Money totalCostBasis = positions.stream()
-        .map(entry -> nullSafe(entry.getValue().totalCostBasis(), currency))
+        .map(entry -> {
+          Money costBasis = nullSafe(entry.getValue().totalCostBasis(), currency);
+          if (!costBasis.currency().equals(currency)) {
+            return exchangeRateService.convert(costBasis, currency);
+          }
+          return costBasis;
+        })
         .reduce(Money.zero(currency), Money::add);
 
     Money totalMarketValue = positions.stream().map(entry -> {
-
       var position = entry.getValue();
-
       MarketAssetQuote quote = quotes.get(position.symbol());
 
       if (quote == null) {
         return Money.zero(currency);
       }
 
-      return nullSafe(position.currentValue(quote.currentPrice()), currency);
+      Money rawCurrentValue = nullSafe(position.currentValue(quote.currentPrice()), currency);
+      if (!rawCurrentValue.currency().equals(currency)) {
+        return exchangeRateService.convert(rawCurrentValue, currency);
+      }
+      return rawCurrentValue;
     }).reduce(Money.zero(currency), Money::add);
 
     Money unrealizedGainLoss = totalMarketValue.subtract(totalCostBasis);
@@ -77,7 +87,9 @@ public class AccountValuationApplicationService {
         .multiply(BigDecimal.valueOf(100)) : BigDecimal.ZERO;
 
     Money cashBalance = nullSafe(account.getCashBalance(), currency);
-
+    if (!cashBalance.currency().equals(currency)) {
+      cashBalance = exchangeRateService.convert(cashBalance, currency);
+    }
     Money totalAccountValue = totalMarketValue.add(cashBalance);
 
     return new ValuationView(
@@ -99,7 +111,7 @@ public class AccountValuationApplicationService {
         .findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId, after)
         .stream()
         .map(snapshot -> new ValuationView(
-            snapshot.totalValue(), 
+            snapshot.totalValue(),
             snapshot.totalCostBasis(),
             snapshot.unrealizedGainLoss(),
             snapshot.gainLossPercent().change(),

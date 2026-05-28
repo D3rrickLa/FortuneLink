@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class AccountValuationController {
   private final AccountValuationApplicationService accountValuationService;
 
+  // BUG: TODO: there is a bug somewhere here, we need to convert the money to the right currency
   @Operation(summary = "Get account valuation", description = """
       Returns the current valuation snapshot for an account,
       including invested market value, cash balance,

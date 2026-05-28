@@ -71,11 +71,11 @@ public class UserSnapshotWorker {
     ValuationView valuation = portfolioValuationService
         .calculateUserValuation(portfolios, displayCurrency, quoteCache);
 
-    // User snapshot commits first — account snapshots reference this as the
+    // User snapshot commits first, account snapshots reference this as the
     // authoritative user-level record for the day
     snapshotRepository.save(ValuationSnapshot.fromView(userId, valuation));
 
-    // Account snapshots run after — a failure here is isolated per account
+    // Account snapshots run after, a failure here is isolated per account
     snapshotAccountsForUser(portfolios, quoteCache);
 
     return true;

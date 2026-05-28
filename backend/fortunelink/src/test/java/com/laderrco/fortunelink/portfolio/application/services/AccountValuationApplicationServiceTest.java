@@ -21,6 +21,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -45,7 +46,10 @@ class AccountValuationApplicationServiceTest {
 
   @Mock
   private MarketDataService marketDataService;
-
+  
+  @Mock
+  private ExchangeRateService exchangeRateService;
+  
   @InjectMocks
   private AccountValuationApplicationService service;
 
