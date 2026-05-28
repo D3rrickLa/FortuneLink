@@ -23,6 +23,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.repositories.AccountValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
@@ -54,6 +55,9 @@ class UserSnapshotWorkerTest {
   private PortfolioRepository portfolioRepository;
 
   @Mock
+  private AccountValuationSnapshotRepository accountSnapshotRepository;
+
+  @Mock
   private ValuationSnapshotRepository snapshotRepository;
 
   @Mock
@@ -77,7 +81,8 @@ class UserSnapshotWorkerTest {
     when(valuationService.calculateUserValuation(any(), any(), any())).thenReturn(viewUSD);
 
     // --- Part 1: Empty Symbols ---
-    // We use a try-with-resources for the static mock to control exactly when it's active
+    // We use a try-with-resources for the static mock to control exactly when it's
+    // active
     try (MockedStatic<PortfolioAccessUtils> utils = mockStatic(PortfolioAccessUtils.class)) {
       utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of());
 
@@ -90,7 +95,8 @@ class UserSnapshotWorkerTest {
 
       // --- Part 2: Symbols Present ---
       utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of(apple));
-      // Optional: you might need to mock the marketDataService return to avoid more NPEs if used
+      // Optional: you might need to mock the marketDataService return to avoid more
+      // NPEs if used
       when(marketDataService.getBatchQuotes(Set.of(apple))).thenReturn(Map.of());
 
       snapshotWorker.snapshotForUser(USER_ID);
@@ -127,7 +133,8 @@ class UserSnapshotWorkerTest {
     when(p.getDisplayCurrency()).thenReturn(USD);
     when(p.getAccounts()).thenReturn(List.of(a));
 
-    // Note: Ensure your service calls calculateUserValuation or calculatePortfolioValuation
+    // Note: Ensure your service calls calculateUserValuation or
+    // calculatePortfolioValuation
     // Your code shows 'calculateUserValuation' being called in the service
     when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
 

@@ -6,13 +6,13 @@ import java.util.UUID;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Getter
+@Data
 @AllArgsConstructor
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@NoArgsConstructor
 @Table(name = "account_valuation_snapshots", uniqueConstraints = @UniqueConstraint(name = "uq_account_snapshot_date", columnNames = {
     "account_id", "snapshot_date" }))
 public class AccountValuationSnapshotJpaEntity {

@@ -125,7 +125,7 @@ public class PortfolioJpaEntity implements Persistable<UUID> {
       AccountJpaEntity current = existing.get(a.getId());
       if (current != null) {
         if (current != a) {
-          // Different objects — sync fields from incoming to managed instance
+          // Different objects. Sync fields from incoming to managed instance
           // so Hibernate's dirty-checking tracks the managed reference
           current.applyFrom(a);
         }
