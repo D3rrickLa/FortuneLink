@@ -330,3 +330,60 @@ export function useValuationChart(days: number) {
       points.length === 0,
   };
 }
+
+
+@Transactional
+public void snapshotForUser(UserId userId) {
+  LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+  
+  // 1. Calculate the fresh, live valuation right now (including any newly added accounts)
+  ValuationView currentValuation = portfolioValuationService.computeLiveValuation(userId);
+
+  // 2. Look to see if we already saved a snapshot for today
+  Optional<ValuationSnapshot> existingSnapshot = 
+      snapshotRepository.findByUserIdAndSnapshotDate(userId, todayUtc);
+
+  if (existingSnapshot.isPresent()) {
+    // 3. UPDATE: Overwrite the existing snapshot with the new, correct totals
+    ValuationSnapshot snapshot = existingSnapshot.get();
+    snapshot.updateValues(currentValuation); 
+    snapshotRepository.save(snapshot);
+    log.debug("Updated existing snapshot for userId={} to include recent changes.", userId);
+  } else {
+    // 4. INSERT: Brand new snapshot for the day
+    ValuationSnapshot newSnapshot = ValuationSnapshot.createNew(userId, todayUtc, currentValuation);
+    snapshotRepository.save(newSnapshot);
+    log.debug("Created fresh daily snapshot for userId={}", userId);
+  }
+}
+
+public ValuationView computeLiveValuation(UserId userId) {
+    // 1. Fetch all portfolios containing their inner accounts for this specific user
+    List<Portfolio> portfolios = portfolioRepository.findAllByUserIdWithDetails(userId);
+    
+    if (portfolios.isEmpty()) {
+        // Fallback if the user has a completely blank profile with 0 portfolios
+        Currency defaultCurrency = Currency.getInstance("CAD");
+        return ValuationView.of(
+            Money.zero(defaultCurrency), Money.zero(defaultCurrency), 
+            Money.zero(defaultCurrency), Money.zero(defaultCurrency), 
+            defaultCurrency, false, Instant.now()
+        );
+    }
+
+    // 2. Select your top-level profile target currency (e.g., from the first portfolio)
+    Currency targetCurrency = portfolios.get(0).getBaseCurrency();
+
+    // 3. Gather every single unique AssetSymbol across ALL portfolios and ALL accounts
+    Set<AssetSymbol> symbols = portfolios.stream()
+        .flatMap(p -> p.getAccounts().stream())
+        .filter(Account::isActive)
+        .flatMap(a -> a.getPositionEntries().keySet().stream())
+        .collect(Collectors.toSet());
+
+    // 4. Batch-fetch the market prices in a single efficient I/O trip
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = marketDataService.getBatchQuotes(symbols);
+
+    // 5. Delegate the complex financial aggregates directly to your service implementation
+    return portfolioValuationService.calculateUserValuation(portfolios, targetCurrency, quoteCache);
+}

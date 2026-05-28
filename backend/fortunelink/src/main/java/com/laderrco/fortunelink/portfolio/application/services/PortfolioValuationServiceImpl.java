@@ -42,7 +42,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
 
     Currency currency = account.getAccountCurrency();
 
-    Money positions = calculatePositionsValueInternal(account, quoteCache);
+    Money positions = calculatePositionsValueInternal(account, currency, quoteCache);
     Money costBasis = calculatePositionsCostBasisInternal(account, currency);
     Money cash = account.isActive() ? account.getCashBalance() : Money.zero(currency);
     Money total = positions.add(cash);
@@ -62,7 +62,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
         .toList();
 
     Money positions = activeAccounts.stream()
-        .map(acc -> calculatePositionsValueInternal(acc, quoteCache))
+        .map(acc -> calculatePositionsValueInternal(acc, acc.getAccountCurrency(), quoteCache))
         .map(m -> exchangeRateService.convert(m, targetCurrency)).filter(Objects::nonNull)
         .reduce(Money.zero(targetCurrency), Money::add);
 
@@ -91,7 +91,7 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
         .filter(Account::isActive).toList();
 
     Money positions = activeAccounts.stream()
-        .map(acc -> calculatePositionsValueInternal(acc, quoteCache))
+        .map(acc -> calculatePositionsValueInternal(acc, acc.getAccountCurrency(), quoteCache))
         .map(m -> exchangeRateService.convert(m, targetCurrency))
         .reduce(Money.zero(targetCurrency), Money::add);
 
@@ -122,14 +122,23 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
         }).filter(Objects::nonNull).reduce(Money::add).orElse(Money.zero(targetCurrency));
   }
 
-  private Money calculatePositionsValueInternal(Account account,
-      Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-    Currency accountCurrency = account.getAccountCurrency();
+private Money calculatePositionsValueInternal(Account account, 
+    Currency targetCurrency, // Add targetCurrency down to the collector
+    Map<AssetSymbol, MarketAssetQuote> quoteCache) {
 
-    return account.getPositionEntries().stream().filter(e -> e.getValue().type() != AssetType.CASH)
-        .map(e -> resolvePositionValue(e.getValue(), quoteCache.get(e.getKey()), accountCurrency))
-        .reduce(Money::add).orElse(Money.zero(accountCurrency));
-  }
+  return account.getPositionEntries().stream()
+      .filter(e -> e.getValue().type() != AssetType.CASH)
+      .map(e -> {
+          // 1. Resolve position value in whatever its current native price structure dictates
+          Money posValue = resolvePositionValue(e.getValue(), quoteCache.get(e.getKey()), account.getAccountCurrency());
+          // 2. Normalize immediately to target calculation currency before reducing
+          return posValue.currency().equals(targetCurrency) ? posValue 
+              : exchangeRateService.convert(posValue, targetCurrency);
+      })
+      .filter(Objects::nonNull)
+      .reduce(Money::add)
+      .orElse(Money.zero(targetCurrency));
+}
 
   private Money resolvePositionValue(Position position, MarketAssetQuote quote,
       Currency accountCurrency) {
