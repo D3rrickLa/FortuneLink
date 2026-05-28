@@ -13,14 +13,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Validated
 @RestController
@@ -38,7 +37,7 @@ public class AccountValuationController {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Account valuation retrieved successfully"),
       @ApiResponse(responseCode = "404", description = "Account not found"),
-      @ApiResponse(responseCode = "403", description = "Forbidden")})
+      @ApiResponse(responseCode = "403", description = "Forbidden") })
   @GetMapping(value = "/{accountId}/valuation", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<AccountValuationResponse> getAccountValuation(
       @AuthenticatedUser UserId userId, @PathVariable String portfolioId,
@@ -49,6 +48,29 @@ public class AccountValuationController {
             AccountId.fromString(accountId)));
 
     return ResponseEntity.ok(AccountValuationResponse.from(view));
+  }
+
+  @Operation(summary = "Get account valuation history", description = """
+      Returns a historical timeline list of valuation snapshots for an account over a given period.
+      """)
+  @GetMapping(value = "/{accountId}/valuation/history", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<AccountValuationResponse>> getAccountValuationHistory(
+      @AuthenticatedUser UserId userId,
+      @PathVariable String portfolioId,
+      @PathVariable String accountId,
+      @RequestParam(defaultValue = "90") int days) {
+
+    // 1. Fetch historical domain views from service
+    List<ValuationView> historyViews = accountValuationService.getAccountValuationHistory(
+        AccountId.fromString(accountId), days);
+
+    // 2. Map the list seamlessly using your existing
+    // AccountValuationResponse.from() method
+    List<AccountValuationResponse> historyResponse = historyViews.stream()
+        .map(AccountValuationResponse::from)
+        .toList();
+
+    return ResponseEntity.ok(historyResponse);
   }
 
   // ─────────────────────────────────────────────────────────────

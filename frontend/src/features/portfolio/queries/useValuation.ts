@@ -167,36 +167,26 @@ export function useValuationChart(
   accountId?: string | null,
   enabled = true
 ) {
+  const isAccountHistory = !!portfolioId && !!accountId;
+
   const query = useQuery({
-    queryKey: [
-      "valuation-history",
-      portfolioId ?? "global",
-      accountId ?? "none",
-      days,
-    ],
-
+    queryKey: ["valuation-history", portfolioId ?? "global", accountId ?? "none", days],
     enabled,
-
     queryFn: async (): Promise<RawSnapshotResponse[]> => {
-      const response = await apiClient.get("/api/v1/valuations/history", {
-        params: { days },
-      });
+      const url = isAccountHistory
+        ? `/api/v1/portfolios/${portfolioId}/accounts/${accountId}/valuation/history`
+        : `/api/v1/valuations/history`;
 
+      const response = await apiClient.get(url, { params: { days } });
       const data = response?.data;
       if (!data) return [];
       if (Array.isArray(data)) return data;
-
-      // Shouldn't happen with a correct endpoint, but guard anyway
-      console.error("[useValuationChart] Unexpected response shape:", data);
       return [];
     },
-
     staleTime: 60_000,
   });
 
-  const safeData: RawSnapshotResponse[] = Array.isArray(query.data)
-    ? query.data
-    : [];
+  const safeData: RawSnapshotResponse[] = Array.isArray(query.data) ? query.data : [];
 
   const points: ChartPoint[] = safeData
     .filter((s) => s.snapshotDate != null && s.totalValue != null)

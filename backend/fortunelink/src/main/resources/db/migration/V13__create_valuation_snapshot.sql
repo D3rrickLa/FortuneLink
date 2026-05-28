@@ -1,4 +1,4 @@
-CREATE TABLE account_valuation_snapshots (
+CREATE TABLE IF NOT EXISTS account_valuation_snapshots (
     id                    UUID          NOT NULL DEFAULT gen_random_uuid(),
     account_id            UUID          NOT NULL,
     snapshot_date         DATE          NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE account_valuation_snapshots (
     gain_loss_percent     NUMERIC(10,4) NOT NULL,
     cash_balance          NUMERIC(19,4) NOT NULL,
     invested_value        NUMERIC(19,4) NOT NULL,
-    currency              CHAR(3)       NOT NULL,
+    currency              VARCHAR(3)    NOT NULL,
     has_stale_data        BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at            TIMESTAMPTZ   NOT NULL DEFAULT now(),
 

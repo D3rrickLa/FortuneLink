@@ -17,12 +17,10 @@ import lombok.NoArgsConstructor;
     "account_id", "snapshot_date" }))
 public class AccountValuationSnapshotJpaEntity {
   @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id;
 
-  @Embedded
-  @Column(name = "account_id", nullable = false)
+  @Column(name = "account_id", nullable = false, updatable = false)
   private UUID accountId;
 
   @Column(name = "snapshot_date", nullable = false)

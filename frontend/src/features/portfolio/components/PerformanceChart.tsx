@@ -141,17 +141,15 @@ export function PerformanceChart({
   const accountMode = !!accountId;
 
   // ── Data hooks ─────────────────────────────────────────────────────────────
-  // Both hooks always run (Rules of Hooks). The `enabled` flags decide whether
-  // they actually fire a network request.
 
   const valuation = useValuation(portfolioId, !accountMode);
   const accountValuation = useAccountValuation(portfolioId, accountId, accountMode);
 
   const current = accountMode ? accountValuation : valuation;
 
-  // History chart is only available for global/portfolio view.
-  // No per-account or per-portfolio history endpoints exist in the current API.
-  const history = useValuationChart(getDays(period), portfolioId, accountId, !accountMode);
+  // History is now fetched dynamically for both account and portfolio scopes
+  const enabled = !!(portfolioId || accountId);
+  const history = useValuationChart(getDays(period), portfolioId, accountId, enabled);
 
   const resolvedCurrency = current.currency ?? currency;
 
@@ -160,11 +158,6 @@ export function PerformanceChart({
     () => makeCompactFmt(resolvedCurrency),
     [resolvedCurrency]
   );
-
-  const safeFmt = (v: unknown) => {
-    const num = typeof v === "number" ? v : Number(v);
-    return Number.isFinite(num) ? fmt(num) : "";
-  };
 
   const safeCompactFmt = (v: unknown) => {
     const num = typeof v === "number" ? v : Number(v);
@@ -187,8 +180,8 @@ export function PerformanceChart({
 
   // ── Derived loading / error states ─────────────────────────────────────────
 
-  const isLoading = current.isLoading || (!accountMode && history.isLoading);
-  const isError = current.isError || (!accountMode && history.isError);
+  const isLoading = current.isLoading || history.isLoading;
+  const isError = current.isError || history.isError;
 
   // ── Loading ────────────────────────────────────────────────────────────────
 
@@ -222,49 +215,6 @@ export function PerformanceChart({
     );
   }
 
-  // ── Account mode — snapshot metrics only (no per-account history endpoint) ─
-
-  if (accountMode) {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Account Performance</CardTitle>
-            <span className="text-xs text-muted-foreground">
-              Current Snapshot
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Metric label="Total Value" value={fmt(current.totalValue)} />
-            <Metric label="Cost Basis" value={fmt(current.totalCostBasis)} />
-            <Metric label="Cash Balance" value={fmt(current.totalCashBalance)} />
-            <Metric label="Invested" value={fmt(current.totalInvestedValue)} />
-            <Metric
-              label="Unrealized P&L"
-              value={`${current.unrealizedGainLoss >= 0 ? "+" : ""}${fmt(
-                current.unrealizedGainLoss
-              )}`}
-              highlight={current.unrealizedGainLoss >= 0 ? "gain" : "loss"}
-            />
-            <Metric
-              label="Return"
-              value={`${current.returnPercentage >= 0 ? "+" : ""}${current.returnPercentage.toFixed(
-                2
-              )}%`}
-              highlight={current.returnPercentage >= 0 ? "gain" : "loss"}
-            />
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            Historical charts are not available at the account level.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // ── Empty state (chart data not yet available) ──────────────────────────────
 
   if (chartData.length === 0) {
@@ -278,7 +228,7 @@ export function PerformanceChart({
           <div className="space-y-1">
             <p className="text-sm font-medium">No history yet</p>
             <p className="max-w-[240px] text-xs text-muted-foreground">
-              Net worth snapshots are recorded daily. Check back tomorrow once
+              Valuation snapshots are recorded daily. Check back tomorrow once
               your first snapshot has been captured.
             </p>
           </div>
@@ -290,7 +240,7 @@ export function PerformanceChart({
     );
   }
 
-  // ── Main chart ─────────────────────────────────────────────────────────────
+  // ── Main chart (Shared across Portfolios and Accounts) ──────────────────────
 
   return (
     <Card>
@@ -319,7 +269,7 @@ export function PerformanceChart({
                 {current.returnPercentage.toFixed(2)}%)
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">Total net worth</p>
+            <p className="text-xs text-muted-foreground">Total value</p>
           </div>
 
           <div className="flex gap-1">
@@ -373,7 +323,7 @@ export function PerformanceChart({
               }
               formatter={(value: unknown) => {
                 const num = typeof value === "number" ? value : Number(value);
-                return [Number.isFinite(num) ? fmt(num) : "", "Net Worth"];
+                return [Number.isFinite(num) ? fmt(num) : "", "Value"];
               }}
             />
             <Line

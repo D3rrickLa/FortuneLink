@@ -48,6 +48,7 @@ public class UserSnapshotWorker {
    */
   @Transactional
   public boolean snapshotForUser(UserId userId) {
+    // known bug: if a user adds an account when this fires already, it won't work
     if (snapshotRepository.existsForToday(userId)) {
       log.debug("Snapshot already exists today for userId={}", userId);
       return false;
@@ -80,10 +81,7 @@ public class UserSnapshotWorker {
     return true;
   }
 
-  private void snapshotAccountsForUser(
-      List<Portfolio> portfolios,
-      Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-
+  private void snapshotAccountsForUser(List<Portfolio> portfolios, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
     LocalDate today = LocalDate.now(ZoneOffset.UTC);
 
     for (Portfolio portfolio : portfolios) {
