@@ -14,7 +14,7 @@ import { PerformanceChart } from "@/features/portfolio/components/PerformanceCha
 import { AllocationChart } from "@/features/portfolio/components/AllocationChart";
 import { TransactionHistory } from "@/features/portfolio/components/TransactionHistory";
 import { StockHoldings } from "@/features/portfolio/components/StockHoldings";
-import { useValuation } from "@/features/portfolio/hooks/useValuation";
+import { useValuation } from "@/features/portfolio/hooks/useValuations";
 import { usePortfolio } from "@/features/portfolio/queries/usePortfolio";
 import { useAccount } from "@/features/portfolio/queries/useAccount";
 import { AccountView, CreateAccountRequest, CreatePortfolioRequest } from "@/lib/api/types";
@@ -266,7 +266,6 @@ export default function DashboardPage() {
                     : null
                 }
                 accountId={activeAccountId}
-                account={accountDetail}
               />
               <AllocationChart
                 account={hasAccount ? accountDetail ?? null : null}

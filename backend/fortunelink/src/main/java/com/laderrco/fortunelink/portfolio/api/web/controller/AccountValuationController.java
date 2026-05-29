@@ -1,3 +1,4 @@
+
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.MoneyResponse;
@@ -13,6 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +32,6 @@ import org.springframework.web.bind.annotation.*;
 public class AccountValuationController {
   private final AccountValuationApplicationService accountValuationService;
 
-  // BUG: TODO: there is a bug somewhere here, we need to convert the money to the right currency
   @Operation(summary = "Get account valuation", description = """
       Returns the current valuation snapshot for an account,
       including invested market value, cash balance,
@@ -55,20 +57,31 @@ public class AccountValuationController {
       Returns a historical timeline list of valuation snapshots for an account over a given period.
       """)
   @GetMapping(value = "/{accountId}/valuation/history", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<AccountValuationResponse>> getAccountValuationHistory(
+  public ResponseEntity<List<AccountHistorySnapshotResponse>> getAccountValuationHistory(
       @AuthenticatedUser UserId userId,
       @PathVariable String portfolioId,
       @PathVariable String accountId,
       @RequestParam(defaultValue = "90") int days) {
 
-    // 1. Fetch historical domain views from service
     List<ValuationView> historyViews = accountValuationService.getAccountValuationHistory(
         AccountId.fromString(accountId), days);
 
-    // 2. Map the list seamlessly using your existing
-    // AccountValuationResponse.from() method
-    List<AccountValuationResponse> historyResponse = historyViews.stream()
-        .map(AccountValuationResponse::from)
+    List<AccountHistorySnapshotResponse> historyResponse = historyViews.stream()
+        .map(v -> {
+          // Convert Instant to LocalDate, defaulting to today's date in UTC if null
+          LocalDate snapshotDate = v.asOfDate() != null
+              ? v.asOfDate().atZone(ZoneOffset.UTC).toLocalDate()
+              : LocalDate.now(ZoneOffset.UTC);
+
+          return new AccountHistorySnapshotResponse(
+              snapshotDate,
+              MoneyResponse.from(v.totalValue()),
+              MoneyResponse.from(v.totalCostBasis()),
+              MoneyResponse.from(v.unrealizedGainLoss()),
+              v.gainLossPercent(),
+              MoneyResponse.from(v.totalCashBalance()),
+              MoneyResponse.from(v.totalInvestedValue()));
+        })
         .toList();
 
     return ResponseEntity.ok(historyResponse);
@@ -77,6 +90,15 @@ public class AccountValuationController {
   // ─────────────────────────────────────────────────────────────
   // DTO
   // ─────────────────────────────────────────────────────────────
+  public record AccountHistorySnapshotResponse(
+      LocalDate snapshotDate,
+      MoneyResponse totalValue,
+      MoneyResponse totalCostBasis,
+      MoneyResponse unrealizedGainLoss,
+      BigDecimal gainLossPercent,
+      MoneyResponse cashBalance,
+      MoneyResponse investedValue) {
+  }
 
   public record AccountValuationResponse(
       MoneyResponse totalValue,

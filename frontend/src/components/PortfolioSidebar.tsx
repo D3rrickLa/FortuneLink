@@ -38,7 +38,7 @@ import {
   useCreateAccount,
 } from "@/features/portfolio/queries/useAccount";
 import { toast } from "sonner";
-import { useValuation } from "@/features/portfolio/hooks/useValuation";
+import { useValuation } from "@/features/portfolio/hooks/useValuations";
 
 // ─── UI-layer types ───────────────────────────────────────────────────────────
 

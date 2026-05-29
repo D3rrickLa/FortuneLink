@@ -586,6 +586,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portfolios/{portfolioId}/accounts/{accountId}/valuation/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get account valuation history
+         * @description Returns a historical timeline list of valuation snapshots for an account over a given period.
+         */
+        get: operations["getAccountValuationHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolios/{portfolioId}/accounts/{accountId}/transactions": {
         parameters: {
             query?: never;
@@ -959,8 +979,8 @@ export interface components {
         };
         PercentageChange: {
             change?: number;
-            loss?: boolean;
             gain?: boolean;
+            loss?: boolean;
         };
         PositionView: {
             symbol?: string;
@@ -1432,24 +1452,24 @@ export interface components {
             content?: components["schemas"]["AccountView"][];
             /** Format: int32 */
             number?: number;
-            pageable?: components["schemas"]["PageableObject"];
-            sort?: components["schemas"]["SortObject"];
-            /** Format: int32 */
-            numberOfElements?: number;
             first?: boolean;
             last?: boolean;
+            /** Format: int32 */
+            numberOfElements?: number;
+            pageable?: components["schemas"]["PageableObject"];
+            sort?: components["schemas"]["SortObject"];
             empty?: boolean;
         };
         PageableObject: {
             /** Format: int64 */
             offset?: number;
-            unpaged?: boolean;
-            paged?: boolean;
-            /** Format: int32 */
-            pageNumber?: number;
             /** Format: int32 */
             pageSize?: number;
+            /** Format: int32 */
+            pageNumber?: number;
+            paged?: boolean;
             sort?: components["schemas"]["SortObject"];
+            unpaged?: boolean;
         };
         SortObject: {
             empty?: boolean;
@@ -1465,6 +1485,16 @@ export interface components {
             investedValue?: components["schemas"]["MoneyResponse"];
             currency?: string;
         };
+        AccountHistorySnapshotResponse: {
+            /** Format: date */
+            snapshotDate?: string;
+            totalValue?: components["schemas"]["MoneyResponse"];
+            totalCostBasis?: components["schemas"]["MoneyResponse"];
+            unrealizedGainLoss?: components["schemas"]["MoneyResponse"];
+            gainLossPercent?: number;
+            cashBalance?: components["schemas"]["MoneyResponse"];
+            investedValue?: components["schemas"]["MoneyResponse"];
+        };
         PageTransactionView: {
             /** Format: int64 */
             totalElements?: number;
@@ -1475,12 +1505,12 @@ export interface components {
             content?: components["schemas"]["TransactionView"][];
             /** Format: int32 */
             number?: number;
-            pageable?: components["schemas"]["PageableObject"];
-            sort?: components["schemas"]["SortObject"];
-            /** Format: int32 */
-            numberOfElements?: number;
             first?: boolean;
             last?: boolean;
+            /** Format: int32 */
+            numberOfElements?: number;
+            pageable?: components["schemas"]["PageableObject"];
+            sort?: components["schemas"]["SortObject"];
             empty?: boolean;
         };
         /** @description Individual line item for a realized capital gain/loss */
@@ -2983,6 +3013,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountValuationResponse"];
+                };
+            };
+        };
+    };
+    getAccountValuationHistory: {
+        parameters: {
+            query: {
+                userId: components["schemas"]["UserId"];
+                days?: number;
+            };
+            header?: never;
+            path: {
+                portfolioId: string;
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountHistorySnapshotResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string | {
+                        [key: string]: string;
+                    };
                 };
             };
         };

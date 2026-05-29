@@ -43,9 +43,6 @@ export type CreateAccountRequest =
 export type UpdateAccountRequest =
   components["schemas"]["UpdateAccountRequest"];
 
-export type AccountValuationResponse =
-  components["schemas"]["AccountValuationResponse"];
-
 export type PositionView =
   components["schemas"]["PositionView"];
 
@@ -131,6 +128,11 @@ export type ValuationResponse =
 
 export type ValuationSnapshotResponse =
   components["schemas"]["ValuationSnapshotResponse"];
+
+export type AccountValuationResponse = components["schemas"]["AccountValuationResponse"];
+
+export type AccountHistorySnapshotResponse =
+  components["schemas"]["AccountHistorySnapshotResponse"];
 
 // ─── Market ───────────────────────────────────────────────────────────────────
 export type MarketQuoteResponse =
