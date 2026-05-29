@@ -40,8 +40,7 @@ public class UserSnapshotWorker {
 
   /**
    * creates a snapshot or the user's portfolio. the snapshot now gets total cost
-   * basis, total cash
-   * balance, and total invested value
+   * basis, total cash balance, and total invested value
    *
    * @param userId is the user
    * @return boolean if there is a snapshot
