@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Repository;
@@ -27,15 +28,23 @@ public class AccountValuationSnapshotRepositoryImpl implements AccountValuationS
   }
 
   @Override
-  public boolean existsByAccountIdAndSnapshotDate(AccountId accountId, LocalDate date) {
-    return jpaRepo.existsByAccountIdAndSnapshotDate(accountId.id(), date);
+  public List<AccountValuationSnapshot> findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(
+      AccountId accountId,
+      LocalDate after) {
+
+    return jpaRepo
+        .findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(
+            accountId.id(),
+            after)
+        .stream()
+        .map(AccountValuationSnapshotDomainMapper::toDomain)
+        .toList();
   }
 
   @Override
-  public List<AccountValuationSnapshot> findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(
-      AccountId accountId, LocalDate after) {
-    return jpaRepo
-        .findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId.id(), after)
-        .stream().map(AccountValuationSnapshotDomainMapper::toDomain).toList();
+  public Optional<AccountValuationSnapshot> findByAccountIdAndSnapshotDate(AccountId accountId, LocalDate date) {
+    return jpaRepo.findByAccountIdAndSnapshotDate(accountId.id(), date)
+        .map(AccountValuationSnapshotDomainMapper::toDomain);
   }
+
 }

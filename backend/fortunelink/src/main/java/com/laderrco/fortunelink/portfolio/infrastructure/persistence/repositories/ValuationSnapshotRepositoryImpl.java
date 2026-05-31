@@ -7,8 +7,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.Va
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -19,8 +19,9 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
   private final JpaValuationSnapshotRepository jpaRepository;
 
   @Override
-  public void save(ValuationSnapshot snapshot) {
+  public ValuationSnapshot save(ValuationSnapshot snapshot) {
     jpaRepository.save(ValuationSnapshotJpaEntity.from(snapshot));
+    return snapshot;
   }
 
   @Override
@@ -29,17 +30,18 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
         .map(ValuationSnapshotJpaEntity::toDomain).toList();
   }
 
-  /**
-   * Computes UTC day boundaries in the impl rather than using DATE() in JPQL. DATE() behavior in
-   * JPQL is JVM-timezone-dependent , on a UTC container this is fine, but it's an invisible trap
-   * when someone runs the app locally with a non-UTC system timezone. Explicit bounds are
-   * unambiguous.
-   */
   @Override
-  public boolean existsForToday(UserId userId) {
-    Instant startOfDay = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
-    Instant endOfDay = startOfDay.plus(1, ChronoUnit.DAYS);
+  public Optional<ValuationSnapshot> findByUserIdAndSnapshotDate(UserId userId, LocalDate date) {
+    Instant startOfDay = date.atStartOfDay(ZoneOffset.UTC).toInstant();
+    Instant endOfDay = date.plusDays(1)
+        .atStartOfDay(ZoneOffset.UTC)
+        .toInstant();
 
-    return jpaRepository.existsBetween(UUID.fromString(userId.toString()), startOfDay, endOfDay);
+    return jpaRepository
+        .findByUserIdAndSnapshotDate(
+            UUID.fromString(userId.toString()),
+            startOfDay,
+            endOfDay)
+        .map(ValuationSnapshotJpaEntity::toDomain);
   }
 }

@@ -4,10 +4,7 @@ import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.AccountValuationSnapshot;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
@@ -32,6 +29,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class UserSnapshotWorker {
+
   private final PortfolioRepository portfolioRepository;
   private final ValuationSnapshotRepository snapshotRepository;
   private final AccountValuationSnapshotRepository accountSnapshotRepository;
@@ -39,68 +37,130 @@ public class UserSnapshotWorker {
   private final PortfolioValuationService portfolioValuationService;
 
   /**
-   * creates a snapshot or the user's portfolio. the snapshot now gets total cost
-   * basis, total cash balance, and total invested value
+   * Creates or refreshes today's valuation snapshots for a user.
    *
-   * @param userId is the user
-   * @return boolean if there is a snapshot
+   * If a snapshot already exists for today it is replaced with the latest
+   * calculated valuation.
    */
   @Transactional
   public boolean snapshotForUser(UserId userId) {
-    // known bug: if a user adds an account when this fires already, it won't work
-    if (snapshotRepository.existsForToday(userId)) {
-      log.debug("Snapshot already exists today for userId={}", userId);
+    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+
+    List<Portfolio> portfolios = portfolioRepository.findAllActiveByUserId(userId);
+
+    if (portfolios.isEmpty()) {
+      log.debug("No portfolios found for userId={}", userId);
       return false;
     }
 
-    List<Portfolio> portfolios = portfolioRepository.findAllActiveByUserId(userId);
-    if (portfolios.isEmpty())
-      return false;
-
-    Set<AssetSymbol> allSymbols = portfolios.stream()
+    Set<AssetSymbol> symbols = portfolios.stream()
         .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream())
         .collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = allSymbols.isEmpty()
+    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty()
         ? Map.of()
-        : marketDataService.getBatchQuotes(allSymbols);
+        : marketDataService.getBatchQuotes(symbols);
 
     Currency displayCurrency = portfolios.getFirst().getDisplayCurrency();
 
-    ValuationView valuation = portfolioValuationService
-        .calculateUserValuation(portfolios, displayCurrency, quoteCache);
+    ValuationView userValuation = portfolioValuationService.calculateUserValuation(
+        portfolios,
+        displayCurrency,
+        quoteCache);
 
-    // User snapshot commits first, account snapshots reference this as the
-    // authoritative user-level record for the day
-    snapshotRepository.save(ValuationSnapshot.fromView(userId, valuation));
+    upsertUserSnapshot(userId, today, userValuation);
 
-    // Account snapshots run after, a failure here is isolated per account
-    snapshotAccountsForUser(portfolios, quoteCache);
+    upsertAccountSnapshots(
+        portfolios,
+        quoteCache,
+        today);
 
     return true;
   }
 
-  private void snapshotAccountsForUser(List<Portfolio> portfolios, Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+  private void upsertUserSnapshot(UserId userId, LocalDate today, ValuationView valuation) {
+
+    ValuationSnapshot snapshot = snapshotRepository.findByUserIdAndSnapshotDate(userId, today)
+        .map(existing -> rebuildUserSnapshot(existing, valuation))
+        .orElseGet(() -> ValuationSnapshot.fromView(userId, valuation));
+
+    snapshotRepository.save(snapshot);
+
+    log.debug(
+        "Upserted user snapshot for userId={} date={}",
+        userId,
+        today);
+  }
+
+  private ValuationSnapshot rebuildUserSnapshot(ValuationSnapshot existing, ValuationView view) {
+    return new ValuationSnapshot(
+        existing.id(),
+        existing.userId(),
+        view.totalValue(),
+        view.totalCostBasis(),
+        view.unrealizedGainLoss(),
+        view.gainLossPercent(),
+        view.totalCashBalance(),
+        view.totalInvestedValue(),
+        view.displayCurrency().getCode(),
+        view.hasStaleData(),
+        view.asOfDate());
+  }
+
+  private void upsertAccountSnapshots(
+      List<Portfolio> portfolios,
+      Map<AssetSymbol, MarketAssetQuote> quoteCache,
+      LocalDate today) {
 
     for (Portfolio portfolio : portfolios) {
-      for (Account account : portfolio.getAccounts()) {
-        AccountId accountId = account.getAccountId();
 
-        if (accountSnapshotRepository.existsByAccountIdAndSnapshotDate(accountId, today)) {
-          log.debug("Account snapshot already exists today for accountId={}", accountId);
+      for (Account account : portfolio.getAccounts()) {
+
+        if (!account.isActive()) {
           continue;
         }
 
         try {
-          ValuationView view = portfolioValuationService
-              .calculateAccountValuation(account, quoteCache);
-          accountSnapshotRepository.save(AccountValuationSnapshot.fromView(accountId, view));
+
+          ValuationView view = portfolioValuationService.calculateAccountValuation(
+              account,
+              quoteCache);
+
+          AccountId accountId = account.getAccountId();
+
+          AccountValuationSnapshot snapshot = accountSnapshotRepository
+              .findByAccountIdAndSnapshotDate(
+                  accountId,
+                  today)
+              .map(existing -> rebuildAccountSnapshot(existing, view))
+              .orElseGet(() -> AccountValuationSnapshot.fromView(
+                  accountId,
+                  view));
+
+          accountSnapshotRepository.save(snapshot);
+
         } catch (Exception e) {
-          // Isolated — user snapshot already committed above
-          log.warn("Account snapshot failed for accountId={}: {}", accountId, e.getMessage());
+
+          log.warn(
+              "Failed account snapshot accountId={}: {}",
+              account.getAccountId(),
+              e.getMessage(),
+              e);
         }
       }
     }
+  }
+
+  private AccountValuationSnapshot rebuildAccountSnapshot(AccountValuationSnapshot existing, ValuationView view) {
+    return new AccountValuationSnapshot(
+        existing.accountId(),
+        existing.snapshotDate(),
+        view.totalValue(),
+        view.totalCostBasis(),
+        view.unrealizedGainLoss(),
+        new PercentageChange(view.gainLossPercent()),
+        view.totalCashBalance(),
+        view.totalInvestedValue(),
+        view.hasStaleData());
   }
 }

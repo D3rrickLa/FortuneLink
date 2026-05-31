@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AccountValuationSnapshotRepositoryImplTest {
+  private static final Currency USD = Currency.USD;
 
   @Mock
   private JpaAccountValuationSnapshotRepository jpaRepo;
@@ -63,17 +65,27 @@ class AccountValuationSnapshotRepositoryImplTest {
   }
 
   @Test
-  @DisplayName("existsByAccountIdAndSnapshotDate: unwraps domain ID and delegates to jpaRepo")
-  void existsDelegatesToJpaRepo() {
-    // Arrange
-    when(jpaRepo.existsByAccountIdAndSnapshotDate(accountId.id(), targetDate)).thenReturn(true);
+  @DisplayName("save: delegates to JPA and preserves snapshot identity semantics")
+  void saveDelegatesCorrectly() {
 
-    // Act
-    boolean exists = repository.existsByAccountIdAndSnapshotDate(accountId, targetDate);
+    AccountValuationSnapshot domain = new AccountValuationSnapshot(
+        accountId,
+        targetDate,
+        Money.of(100, USD),
+        Money.of(50, USD),
+        Money.of(50, USD),
+        PercentageChange.ZERO,
+        Money.of(20, USD),
+        Money.of(80, USD),
+        false);
 
-    // Assert
-    assertThat(exists).isTrue();
-    verify(jpaRepo).existsByAccountIdAndSnapshotDate(accountId.id(), targetDate);
+    when(jpaRepo.save(any(AccountValuationSnapshotJpaEntity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    AccountValuationSnapshot result = repository.save(domain);
+
+    verify(jpaRepo).save(any(AccountValuationSnapshotJpaEntity.class));
+    assertThat(result).isNotNull();
   }
 
   @Test
@@ -120,5 +132,29 @@ class AccountValuationSnapshotRepositoryImplTest {
         .hasSize(2);
 
     verify(jpaRepo).findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId.id(), targetDate);
+  }
+
+  @Test
+  void findByAccountIdAndSnapshotDate_mapsCorrectly() {
+    AccountValuationSnapshotJpaEntity entity = new AccountValuationSnapshotJpaEntity();
+    entity.setId(UUID.randomUUID());
+    entity.setAccountId(accountId.id());
+    entity.setSnapshotDate(targetDate);
+    entity.setTotalValue(new BigDecimal("100.00"));
+    entity.setTotalCostBasis(new BigDecimal("50.00"));
+    entity.setUnrealizedGainLoss(new BigDecimal("50.00"));
+    entity.setGainLossPercent(BigDecimal.ZERO);
+    entity.setCashBalance(new BigDecimal("20.00"));
+    entity.setInvestedValue(new BigDecimal("80.00"));
+    entity.setCurrency("USD");
+    entity.setHasStaleData(false);
+
+    when(jpaRepo.findByAccountIdAndSnapshotDate(accountId.id(), targetDate))
+        .thenReturn(Optional.of(entity));
+
+    Optional<AccountValuationSnapshot> result = repository.findByAccountIdAndSnapshotDate(accountId, targetDate);
+
+    assertThat(result).isPresent();
+    verify(jpaRepo).findByAccountIdAndSnapshotDate(accountId.id(), targetDate);
   }
 }

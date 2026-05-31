@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,8 +11,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Va
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -70,28 +67,6 @@ class ValuationSnapshotRepositoryImplTest {
 
       assertThat(results).hasSize(1);
       verify(jpaRepository).findByUserIdSince(USER_UUID, since);
-    }
-  }
-
-  @Nested
-  @DisplayName("Date Boundary Logic")
-  class DateBoundaryLogic {
-
-    @Test
-    @DisplayName("existsForToday should check between start and end of UTC day")
-    void existsForTodayShouldCheckBetweenStartAndEndOfUtcDay() {
-
-      Instant expectedStart = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC)
-          .toInstant();
-      Instant expectedEnd = expectedStart.plus(1, ChronoUnit.DAYS);
-
-      when(jpaRepository.existsBetween(eq(USER_UUID), any(Instant.class),
-          any(Instant.class))).thenReturn(true);
-
-      boolean exists = repository.existsForToday(USER_ID);
-
-      assertThat(exists).isTrue();
-      verify(jpaRepository).existsBetween(USER_UUID, expectedStart, expectedEnd);
     }
   }
 }

@@ -3,33 +3,26 @@ package com.laderrco.fortunelink.portfolio.domain.repositories;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Domain port for net worth snapshot persistence.
- * <p>
- * Snapshots are append-only. There is intentionally no update or delete operation , the DB unique
- * index enforces one snapshot per user per day, and the snapshot service uses
- * {@code existsForToday} to skip duplicate runs.
+ * Domain port for valuation snapshot persistence.
+ *
+ * A snapshot represents the latest known valuation for a user on a given UTC day.
+ *
+ * At most one snapshot exists per user per day.
+ * Implementations should support upsert semantics:
+ *
+ * - create a snapshot if none exists
+ * - update the snapshot if one already exists
  */
 public interface ValuationSnapshotRepository {
 
-  /**
-   * Persists a new snapshot. Will throw a DataIntegrityViolationException if a snapshot already
-   * exists for this user on the same calendar day (UTC). Callers should check
-   * {@link #existsForToday(UserId)} first.
-   */
-  void save(ValuationSnapshot snapshot);
+  ValuationSnapshot save(ValuationSnapshot snapshot);
 
-  /**
-   * Returns all snapshots for a user on or after {@code since}, ordered ascending by snapshotDate.
-   * Used to render the FIRE progress chart.
-   */
   List<ValuationSnapshot> findByUserIdSince(UserId userId, Instant since);
 
-  /**
-   * Returns true if a snapshot already exists for today (UTC calendar day). Used by the scheduled
-   * job to skip double-execution within the same day.
-   */
-  boolean existsForToday(UserId userId);
+  Optional<ValuationSnapshot> findByUserIdAndSnapshotDate(UserId userId, LocalDate date);
 }

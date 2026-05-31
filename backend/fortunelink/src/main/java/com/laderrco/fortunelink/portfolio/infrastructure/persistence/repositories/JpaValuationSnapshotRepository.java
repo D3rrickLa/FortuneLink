@@ -3,6 +3,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -44,4 +45,15 @@ public interface JpaValuationSnapshotRepository extends
       """)
   boolean existsBetween(@Param("userId") UUID userId, @Param("startOfDay") Instant startOfDay,
       @Param("endOfDay") Instant endOfDay);
+
+  @Query("""
+    SELECT s FROM ValuationSnapshotJpaEntity s
+    WHERE s.userId = :userId
+      AND s.snapshotDate >= :startOfDay
+      AND s.snapshotDate < :endOfDay
+    """)
+  Optional<ValuationSnapshotJpaEntity> findByUserIdAndSnapshotDate(
+    @Param("userId") UUID userId,
+    @Param("startOfDay") Instant startOfDay,
+    @Param("endOfDay") Instant endOfDay);
 }
