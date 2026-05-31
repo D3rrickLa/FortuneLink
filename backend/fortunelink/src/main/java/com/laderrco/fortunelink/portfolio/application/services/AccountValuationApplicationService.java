@@ -119,7 +119,7 @@ public class AccountValuationApplicationService {
             snapshot.investedValue(),
             snapshot.totalValue().currency(),
             snapshot.hasStaleData(),
-            snapshot.snapshotDate().atStartOfDay(ZoneOffset.UTC).toInstant()))
+            snapshot.snapshotDay().atStartOfDay(ZoneOffset.UTC).toInstant()))
         .toList();
   }
 

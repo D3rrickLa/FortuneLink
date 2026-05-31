@@ -9,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -90,6 +92,9 @@ public class ValuationSnapshotJpaEntity {
   @Column(name = "snapshot_date", nullable = false, updatable = false)
   private Instant snapshotDate;
 
+  @Column(name = "snapshot_day", nullable = false)
+  private LocalDate snapshotDay;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -102,36 +107,33 @@ public class ValuationSnapshotJpaEntity {
     ValuationSnapshotJpaEntity e = new ValuationSnapshotJpaEntity();
 
     e.id = domain.id();
-
     e.userId = UUID.fromString(domain.userId().toString());
 
     e.totalValueAmount = domain.totalValue().amount();
-
     e.totalValueCurrency = domain.totalValue().currency().getCode();
 
     e.totalCostBasisAmount = domain.totalCostBasis().amount();
-
     e.totalCostBasisCurrency = domain.totalCostBasis().currency().getCode();
 
     e.unrealizedGainLossAmount = domain.unrealizedGainLoss().amount();
-
     e.unrealizedGainLossCurrency = domain.unrealizedGainLoss().currency().getCode();
 
     e.gainLossPercent = domain.gainLossPercent();
 
     e.totalCashBalanceAmount = domain.totalCashBalance().amount();
-
     e.totalCashBalanceCurrency = domain.totalCashBalance().currency().getCode();
 
     e.totalInvestedValueAmount = domain.totalInvestedValue().amount();
-
     e.totalInvestedValueCurrency = domain.totalInvestedValue().currency().getCode();
 
     e.displayCurrencyCode = domain.displayCurrency();
-
     e.hasStaleData = domain.hasStaleData();
 
-    e.snapshotDate = domain.snapshotDate();
+    // BUSINESS IDENTITY (correct)
+    e.snapshotDay = LocalDate.ofInstant(domain.snapshotDay(), ZoneId.of("UTC"));
+
+    // AUDIT TIMESTAMP (correct)
+    e.snapshotDate = Instant.now();
 
     e.createdAt = Instant.now();
 
@@ -142,13 +144,15 @@ public class ValuationSnapshotJpaEntity {
   // toDomain
   // ─────────────────────────────────────────────────────────────
   public ValuationSnapshot toDomain() {
-    return new ValuationSnapshot(id, new UserId(userId),
+    return new ValuationSnapshot(
+        id,
+        new UserId(userId),
         Money.of(totalValueAmount, totalValueCurrency),
         Money.of(totalCostBasisAmount, totalCostBasisCurrency),
         Money.of(unrealizedGainLossAmount, unrealizedGainLossCurrency), gainLossPercent,
         Money.of(totalCashBalanceAmount, totalCashBalanceCurrency),
         Money.of(totalInvestedValueAmount, totalInvestedValueCurrency), displayCurrencyCode,
-        hasStaleData, snapshotDate);
+        hasStaleData, snapshotDay.atStartOfDay(ZoneId.of("UTC")).toInstant());
   }
 
 }

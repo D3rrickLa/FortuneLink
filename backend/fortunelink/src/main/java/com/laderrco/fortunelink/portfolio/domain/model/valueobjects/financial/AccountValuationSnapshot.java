@@ -9,7 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public record AccountValuationSnapshot(
     AccountId accountId,
-    LocalDate snapshotDate,
+    LocalDate snapshotDay,
     Money totalValue,
     Money totalCostBasis,
     Money unrealizedGainLoss,
@@ -20,7 +20,7 @@ public record AccountValuationSnapshot(
 
   public AccountValuationSnapshot {
     Objects.requireNonNull(accountId, "Account ID cannot be null");
-    Objects.requireNonNull(snapshotDate, "Snapshot date cannot be null");
+    Objects.requireNonNull(snapshotDay, "Snapshot day cannot be null");
     Objects.requireNonNull(totalValue, "Total value cannot be null");
     Objects.requireNonNull(cashBalance, "Cash balance cannot be null");
     Objects.requireNonNull(investedValue, "Invested value cannot be null");
@@ -56,13 +56,12 @@ public record AccountValuationSnapshot(
     return new AccountValuationSnapshot(
         accountId,
         LocalDate.ofInstant(view.asOfDate(), ZoneOffset.UTC),
-        view.totalValue(), // Money totalValue - construct appropriately when Money type/methods are
-                           // available
-        view.totalCostBasis(), // Money totalCostBasis
-        view.unrealizedGainLoss(), // Money unrealizedGainLoss
-        new PercentageChange(view.gainLossPercent()), // BigDecimal gainLossPercent
-        view.totalCashBalance(), // Money totalCashBalance
-        view.totalInvestedValue(), // Money totalInvestedValue
+        view.totalValue(),
+        view.totalCostBasis(),
+        view.unrealizedGainLoss(),
+        new PercentageChange(view.gainLossPercent()),
+        view.totalCashBalance(),
+        view.totalInvestedValue(),
         view.hasStaleData());
   }
 

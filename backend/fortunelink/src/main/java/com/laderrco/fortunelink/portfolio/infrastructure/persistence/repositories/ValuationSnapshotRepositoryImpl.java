@@ -20,7 +20,28 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
 
   @Override
   public ValuationSnapshot save(ValuationSnapshot snapshot) {
-    jpaRepository.save(ValuationSnapshotJpaEntity.from(snapshot));
+    ValuationSnapshotJpaEntity entity = ValuationSnapshotJpaEntity.from(snapshot);
+
+    jpaRepository.upsertSnapshot(
+        entity.getId(),
+        entity.getUserId(),
+        entity.getTotalValueAmount(),
+        entity.getTotalValueCurrency(),
+        entity.getTotalCostBasisAmount(),
+        entity.getTotalCostBasisCurrency(),
+        entity.getUnrealizedGainLossAmount(),
+        entity.getUnrealizedGainLossCurrency(),
+        entity.getGainLossPercent(),
+        entity.getTotalCashBalanceAmount(),
+        entity.getTotalCashBalanceCurrency(),
+        entity.getTotalInvestedValueAmount(),
+        entity.getTotalInvestedValueCurrency(),
+        entity.getDisplayCurrencyCode(),
+        entity.isHasStaleData(),
+        entity.getSnapshotDate(),
+        entity.getSnapshotDay(),
+        entity.getCreatedAt());
+
     return snapshot;
   }
 

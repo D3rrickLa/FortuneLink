@@ -22,7 +22,19 @@ public class AccountValuationSnapshotRepositoryImpl implements AccountValuationS
 
   @Override
   public AccountValuationSnapshot save(AccountValuationSnapshot snapshot) {
-    AccountValuationSnapshotJpaEntity entity = AccountValuationSnapshotDomainMapper.toJpa(UUID.randomUUID(), snapshot);
+    UUID accountId = snapshot.accountId().id();
+    LocalDate date = snapshot.snapshotDay();
+
+    Optional<AccountValuationSnapshotJpaEntity> existing = jpaRepo.findByAccountIdAndSnapshotDate(accountId, date);
+
+    AccountValuationSnapshotJpaEntity entity;
+
+    if (existing.isPresent()) {
+      entity = AccountValuationSnapshotDomainMapper.updateJpa(existing.get(), snapshot);
+    } else {
+      entity = AccountValuationSnapshotDomainMapper.toJpa(UUID.randomUUID(), snapshot);
+    }
+
     AccountValuationSnapshotJpaEntity saved = jpaRepo.save(entity);
     return AccountValuationSnapshotDomainMapper.toDomain(saved);
   }

@@ -95,7 +95,7 @@ public class ValuationHistoryController {
       return new ValuationSnapshotResponse(safeAmount(s.totalValue()),
           safeAmount(s.totalCostBasis()), safeAmount(s.unrealizedGainLoss()), s.gainLossPercent(),
           safeAmount(s.totalCashBalance()), safeAmount(s.totalInvestedValue()), s.displayCurrency(),
-          s.hasStaleData(), s.snapshotDate());
+          s.hasStaleData(), s.snapshotDay());
     }
 
     // Helper to prevent NullPointerExceptions from Money/Monetary objects

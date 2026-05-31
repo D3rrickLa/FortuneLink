@@ -44,7 +44,7 @@ class AccountValuationSnapshotRepositoryImplTest {
     // Arrange
     AccountValuationSnapshot domainInput = mock(AccountValuationSnapshot.class);
     when(domainInput.accountId()).thenReturn(accountId);
-    when(domainInput.snapshotDate()).thenReturn(targetDate);
+    when(domainInput.snapshotDay()).thenReturn(targetDate);
     when(domainInput.totalValue()).thenReturn(Money.of(200, Currency.USD));
     when(domainInput.totalCostBasis()).thenReturn(Money.of(100, Currency.USD));
     when(domainInput.unrealizedGainLoss()).thenReturn(Money.of(100, Currency.USD));
@@ -95,7 +95,7 @@ class AccountValuationSnapshotRepositoryImplTest {
     AccountValuationSnapshotJpaEntity entity1 = new AccountValuationSnapshotJpaEntity();
     entity1.setId(UUID.randomUUID());
     entity1.setAccountId(accountId.id());
-    entity1.setSnapshotDate(targetDate);
+    entity1.setSnapshotDay(targetDate);
     entity1.setTotalValue(new BigDecimal("100.00"));
     entity1.setTotalCostBasis(new BigDecimal("0.00"));
     entity1.setUnrealizedGainLoss(BigDecimal.ZERO);
@@ -109,7 +109,7 @@ class AccountValuationSnapshotRepositoryImplTest {
     AccountValuationSnapshotJpaEntity entity2 = new AccountValuationSnapshotJpaEntity();
     entity2.setId(UUID.randomUUID());
     entity2.setAccountId(accountId.id());
-    entity2.setSnapshotDate(targetDate);
+    entity2.setSnapshotDay(targetDate);
     entity2.setTotalValue(new BigDecimal("200.00"));
     entity2.setTotalCostBasis(new BigDecimal("0.00"));
     entity2.setUnrealizedGainLoss(BigDecimal.ZERO);
@@ -139,7 +139,7 @@ class AccountValuationSnapshotRepositoryImplTest {
     AccountValuationSnapshotJpaEntity entity = new AccountValuationSnapshotJpaEntity();
     entity.setId(UUID.randomUUID());
     entity.setAccountId(accountId.id());
-    entity.setSnapshotDate(targetDate);
+    entity.setSnapshotDay(targetDate);
     entity.setTotalValue(new BigDecimal("100.00"));
     entity.setTotalCostBasis(new BigDecimal("50.00"));
     entity.setUnrealizedGainLoss(new BigDecimal("50.00"));

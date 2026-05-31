@@ -17,7 +17,7 @@ public record ValuationSnapshot(
     Money totalInvestedValue,
     String displayCurrency,
     boolean hasStaleData,
-    Instant snapshotDate) {
+    Instant snapshotDay) {
 
   public static ValuationSnapshot fromView(UserId userId, ValuationView view) {
 

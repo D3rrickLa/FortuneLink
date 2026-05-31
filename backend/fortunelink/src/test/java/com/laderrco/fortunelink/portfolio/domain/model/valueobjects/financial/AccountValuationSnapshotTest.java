@@ -75,7 +75,7 @@ class AccountValuationSnapshotTest {
 
       // Assert
       assertThat(snapshot.accountId()).isEqualTo(accountId);
-      assertThat(snapshot.snapshotDate()).isEqualTo(LocalDate.now());
+      assertThat(snapshot.snapshotDay()).isEqualTo(LocalDate.now());
 
       // 30.00 + 70.00 = 100.00
       assertThat(snapshot.totalValue()).isEqualTo(Money.of("100.00", usd));
@@ -111,7 +111,7 @@ class AccountValuationSnapshotTest {
 
       // Assert
       assertThat(snapshot.accountId()).isEqualTo(accountId);
-      assertThat(snapshot.snapshotDate()).isEqualTo(expectedDate);
+      assertThat(snapshot.snapshotDay()).isEqualTo(expectedDate);
       assertThat(snapshot.totalValue()).isEqualTo(view.totalValue());
       assertThat(snapshot.totalCostBasis()).isEqualTo(view.totalCostBasis());
       assertThat(snapshot.unrealizedGainLoss()).isEqualTo(view.unrealizedGainLoss());

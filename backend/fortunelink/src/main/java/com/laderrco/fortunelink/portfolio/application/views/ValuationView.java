@@ -31,7 +31,7 @@ public record ValuationView(
 
   private static BigDecimal computePercent(Money numerator, Money denominator) {
     if (denominator == null || denominator.isZero()) {
-      return null;
+      return BigDecimal.ZERO;
     }
 
     return numerator.amount().divide(denominator.amount(), Precision.DIVISION.getDecimalPlaces(),

@@ -133,7 +133,7 @@ class ValuationHistoryControllerTest {
     when(snapshot.hasStaleData()).thenReturn(false);
 
     Instant snapshotDate = Instant.parse("2025-01-01T00:00:00Z");
-    when(snapshot.snapshotDate()).thenReturn(snapshotDate);
+    when(snapshot.snapshotDay()).thenReturn(snapshotDate);
 
     var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
 
@@ -176,7 +176,7 @@ class ValuationHistoryControllerTest {
     when(snapshot.hasStaleData()).thenReturn(false);
 
     Instant snapshotDate = Instant.parse("2025-01-01T00:00:00Z");
-    when(snapshot.snapshotDate()).thenReturn(snapshotDate);
+    when(snapshot.snapshotDay()).thenReturn(snapshotDate);
 
     var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
 

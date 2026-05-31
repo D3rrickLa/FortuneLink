@@ -5,7 +5,6 @@ import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.AccountValuationSnapshotRepository;
@@ -80,31 +79,11 @@ public class UserSnapshotWorker {
 
   private void upsertUserSnapshot(UserId userId, LocalDate today, ValuationView valuation) {
 
-    ValuationSnapshot snapshot = snapshotRepository.findByUserIdAndSnapshotDate(userId, today)
-        .map(existing -> rebuildUserSnapshot(existing, valuation))
-        .orElseGet(() -> ValuationSnapshot.fromView(userId, valuation));
+    ValuationSnapshot snapshot = ValuationSnapshot.fromView(userId, valuation);
 
-    snapshotRepository.save(snapshot);
+    snapshotRepository.save(snapshot); // repository handles upsert
 
-    log.debug(
-        "Upserted user snapshot for userId={} date={}",
-        userId,
-        today);
-  }
-
-  private ValuationSnapshot rebuildUserSnapshot(ValuationSnapshot existing, ValuationView view) {
-    return new ValuationSnapshot(
-        existing.id(),
-        existing.userId(),
-        view.totalValue(),
-        view.totalCostBasis(),
-        view.unrealizedGainLoss(),
-        view.gainLossPercent(),
-        view.totalCashBalance(),
-        view.totalInvestedValue(),
-        view.displayCurrency().getCode(),
-        view.hasStaleData(),
-        view.asOfDate());
+    log.debug("Upserted user snapshot for userId={} date={}", userId, today);
   }
 
   private void upsertAccountSnapshots(
@@ -122,25 +101,13 @@ public class UserSnapshotWorker {
 
         try {
 
-          ValuationView view = portfolioValuationService.calculateAccountValuation(
-              account,
-              quoteCache);
+          ValuationView view = portfolioValuationService.calculateAccountValuation(account, quoteCache);
 
-          AccountId accountId = account.getAccountId();
+          AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(account.getAccountId(), view);
 
-          AccountValuationSnapshot snapshot = accountSnapshotRepository
-              .findByAccountIdAndSnapshotDate(
-                  accountId,
-                  today)
-              .map(existing -> rebuildAccountSnapshot(existing, view))
-              .orElseGet(() -> AccountValuationSnapshot.fromView(
-                  accountId,
-                  view));
-
-          accountSnapshotRepository.save(snapshot);
+          accountSnapshotRepository.save(snapshot); // dempotent now
 
         } catch (Exception e) {
-
           log.warn(
               "Failed account snapshot accountId={}: {}",
               account.getAccountId(),
@@ -149,18 +116,5 @@ public class UserSnapshotWorker {
         }
       }
     }
-  }
-
-  private AccountValuationSnapshot rebuildAccountSnapshot(AccountValuationSnapshot existing, ValuationView view) {
-    return new AccountValuationSnapshot(
-        existing.accountId(),
-        existing.snapshotDate(),
-        view.totalValue(),
-        view.totalCostBasis(),
-        view.unrealizedGainLoss(),
-        new PercentageChange(view.gainLossPercent()),
-        view.totalCashBalance(),
-        view.totalInvestedValue(),
-        view.hasStaleData());
   }
 }

@@ -12,7 +12,8 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.Ac
 
 @Repository
 public interface JpaAccountValuationSnapshotRepository extends JpaRepository<AccountValuationSnapshotJpaEntity, UUID> {
-  boolean existsByAccountIdAndSnapshotDate(UUID accountId, LocalDate date);
+  Optional<AccountValuationSnapshotJpaEntity> findByAccountIdAndSnapshotDateBetween(
+      UUID accountId,LocalDate startOfDay,LocalDate endOfDay);
 
   List<AccountValuationSnapshotJpaEntity> findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(
       UUID accountId, LocalDate after);
