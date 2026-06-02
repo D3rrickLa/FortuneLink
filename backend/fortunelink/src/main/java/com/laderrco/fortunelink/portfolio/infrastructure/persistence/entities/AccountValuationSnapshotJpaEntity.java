@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "account_valuation_snapshots", uniqueConstraints = @UniqueConstraint(name = "uq_account_snapshot_date", columnNames = {
-    "account_id", "snapshot_date" }))
+@Table(name = "account_valuation_snapshots", uniqueConstraints = @UniqueConstraint(name = "uq_account_day", columnNames = {
+    "account_id", "snapshot_day" }))
 public class AccountValuationSnapshotJpaEntity {
   @Id
   @Column(name = "id", updatable = false, nullable = false)

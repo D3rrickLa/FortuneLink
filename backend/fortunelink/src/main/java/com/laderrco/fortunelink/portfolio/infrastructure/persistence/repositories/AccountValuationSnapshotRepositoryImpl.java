@@ -25,7 +25,7 @@ public class AccountValuationSnapshotRepositoryImpl implements AccountValuationS
     UUID accountId = snapshot.accountId().id();
     LocalDate date = snapshot.snapshotDay();
 
-    Optional<AccountValuationSnapshotJpaEntity> existing = jpaRepo.findByAccountIdAndSnapshotDate(accountId, date);
+    Optional<AccountValuationSnapshotJpaEntity> existing = jpaRepo.findByAccountIdAndSnapshotDay(accountId, date);
 
     AccountValuationSnapshotJpaEntity entity;
 
@@ -54,8 +54,8 @@ public class AccountValuationSnapshotRepositoryImpl implements AccountValuationS
   }
 
   @Override
-  public Optional<AccountValuationSnapshot> findByAccountIdAndSnapshotDate(AccountId accountId, LocalDate date) {
-    return jpaRepo.findByAccountIdAndSnapshotDate(accountId.id(), date)
+  public Optional<AccountValuationSnapshot> findByAccountIdAndSnapshotDay(AccountId accountId, LocalDate date) {
+    return jpaRepo.findByAccountIdAndSnapshotDay(accountId.id(), date)
         .map(AccountValuationSnapshotDomainMapper::toDomain);
   }
 

@@ -18,7 +18,7 @@ public interface JpaAccountValuationSnapshotRepository extends JpaRepository<Acc
   List<AccountValuationSnapshotJpaEntity> findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(
       UUID accountId, LocalDate after);
 
-  Optional<AccountValuationSnapshotJpaEntity> findByAccountIdAndSnapshotDate(UUID accountId, LocalDate snapshotDate);
+  Optional<AccountValuationSnapshotJpaEntity> findByAccountIdAndSnapshotDay(UUID accountId, LocalDate snapshotDate);
 
   Optional<UUID> findIdByAccountIdAndSnapshotDate(UUID accountId, LocalDate snapshotDate);
 }

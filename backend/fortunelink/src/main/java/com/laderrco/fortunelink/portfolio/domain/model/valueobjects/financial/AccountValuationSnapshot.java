@@ -9,7 +9,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public record AccountValuationSnapshot(
     AccountId accountId,
-    LocalDate snapshotDay,
+    LocalDate snapshotDay, // what day does this snapshot belongs to
     Money totalValue,
     Money totalCostBasis,
     Money unrealizedGainLoss,

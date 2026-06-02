@@ -30,7 +30,7 @@ public class AccountValuationSnapshotDomainMapper {
     return new AccountValuationSnapshotJpaEntity(
         id,
         domain.accountId().id(),
-        LocalDate.now(),
+        domain.snapshotDay(), // snapshot_date
         domain.snapshotDay(),
         domain.totalValue().amount(),
         domain.totalCostBasis().amount(),

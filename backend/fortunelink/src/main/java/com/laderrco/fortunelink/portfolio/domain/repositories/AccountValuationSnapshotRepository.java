@@ -10,7 +10,7 @@ public interface AccountValuationSnapshotRepository {
 
   AccountValuationSnapshot save(AccountValuationSnapshot snapshot);
 
-  Optional<AccountValuationSnapshot> findByAccountIdAndSnapshotDate(
+  Optional<AccountValuationSnapshot> findByAccountIdAndSnapshotDay(
       AccountId accountId,
       LocalDate date);
 
