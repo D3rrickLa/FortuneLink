@@ -4,9 +4,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Va
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,7 +36,6 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
         entity.getTotalInvestedValueCurrency(),
         entity.getDisplayCurrencyCode(),
         entity.isHasStaleData(),
-        entity.getSnapshotDate(),
         entity.getSnapshotDay(),
         entity.getCreatedAt());
 
@@ -46,23 +43,15 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
   }
 
   @Override
-  public List<ValuationSnapshot> findByUserIdSince(UserId userId, Instant since) {
+  public List<ValuationSnapshot> findByUserIdSince(UserId userId, LocalDate since) {
     return jpaRepository.findByUserIdSince(UUID.fromString(userId.toString()), since).stream()
         .map(ValuationSnapshotJpaEntity::toDomain).toList();
   }
 
   @Override
-  public Optional<ValuationSnapshot> findByUserIdAndSnapshotDate(UserId userId, LocalDate date) {
-    Instant startOfDay = date.atStartOfDay(ZoneOffset.UTC).toInstant();
-    Instant endOfDay = date.plusDays(1)
-        .atStartOfDay(ZoneOffset.UTC)
-        .toInstant();
-
+  public Optional<ValuationSnapshot> findByUserIdAndSnapshotDay(UserId userId, LocalDate date) {
     return jpaRepository
-        .findByUserIdAndSnapshotDate(
-            UUID.fromString(userId.toString()),
-            startOfDay,
-            endOfDay)
+        .findByUserIdAndSnapshotDay(UUID.fromString(userId.toString()), date)
         .map(ValuationSnapshotJpaEntity::toDomain);
   }
 }

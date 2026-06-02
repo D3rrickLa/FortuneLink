@@ -12,7 +12,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -164,6 +164,6 @@ private Money calculatePositionsValueInternal(Account account,
   private ValuationView buildValuation(Money total, Money costBasis, Money cash, Money positions,
       Currency currency, boolean hasStaleData) {
     return ValuationView.of(total, costBasis, cash, positions, currency, hasStaleData,
-        Instant.now());
+        LocalDate.now());
   }
 }

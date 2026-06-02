@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -91,8 +91,8 @@ class AccountValuationSnapshotTest {
     @DisplayName("fromView: maps structural properties directly out of a ValuationView object context")
     void fromViewMapsPropertiesCleanly() {
       // Arrange
-      Instant fixedInstant = Instant.parse("2026-05-28T14:30:00Z");
-      LocalDate expectedDate = LocalDate.ofInstant(fixedInstant, ZoneOffset.UTC);
+      LocalDate fixedInstant = LocalDate.ofInstant(Instant.parse("2026-05-28T14:30:00Z"), ZoneId.of("UTC"));
+      LocalDate expectedDate = LocalDate.of(2026, 05, 28);
 
       ValuationView view = new ValuationView(
           Money.of("500.00", usd), // totalValue
@@ -107,7 +107,7 @@ class AccountValuationSnapshotTest {
       );
 
       // Act
-      AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(accountId, view);
+      AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(accountId, LocalDate.now(), view);
 
       // Assert
       assertThat(snapshot.accountId()).isEqualTo(accountId);

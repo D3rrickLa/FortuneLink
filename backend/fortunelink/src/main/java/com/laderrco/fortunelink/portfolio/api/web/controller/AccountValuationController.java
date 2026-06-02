@@ -69,12 +69,12 @@ public class AccountValuationController {
     List<AccountHistorySnapshotResponse> historyResponse = historyViews.stream()
         .map(v -> {
           // Convert Instant to LocalDate, defaulting to today's date in UTC if null
-          LocalDate snapshotDate = v.asOfDate() != null
-              ? v.asOfDate().atZone(ZoneOffset.UTC).toLocalDate()
+          LocalDate snapshotDay = v.asOfDate() != null
+              ? v.asOfDate()
               : LocalDate.now(ZoneOffset.UTC);
 
           return new AccountHistorySnapshotResponse(
-              snapshotDate,
+              snapshotDay,
               MoneyResponse.from(v.totalValue()),
               MoneyResponse.from(v.totalCostBasis()),
               MoneyResponse.from(v.unrealizedGainLoss()),
@@ -91,7 +91,7 @@ public class AccountValuationController {
   // DTO
   // ─────────────────────────────────────────────────────────────
   public record AccountHistorySnapshotResponse(
-      LocalDate snapshotDate,
+      LocalDate snapshotDay,
       MoneyResponse totalValue,
       MoneyResponse totalCostBasis,
       MoneyResponse unrealizedGainLoss,

@@ -1,6 +1,5 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.mappers;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.AccountValuationSnapshot;
@@ -30,7 +29,6 @@ public class AccountValuationSnapshotDomainMapper {
     return new AccountValuationSnapshotJpaEntity(
         id,
         domain.accountId().id(),
-        domain.snapshotDay(), // snapshot_date
         domain.snapshotDay(),
         domain.totalValue().amount(),
         domain.totalCostBasis().amount(),

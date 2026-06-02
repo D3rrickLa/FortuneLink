@@ -2,7 +2,6 @@ package com.laderrco.fortunelink.portfolio.domain.repositories;
 
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +21,7 @@ public interface ValuationSnapshotRepository {
 
   ValuationSnapshot save(ValuationSnapshot snapshot);
 
-  List<ValuationSnapshot> findByUserIdSince(UserId userId, Instant since);
+  List<ValuationSnapshot> findByUserIdSince(UserId userId, LocalDate since);
 
-  Optional<ValuationSnapshot> findByUserIdAndSnapshotDate(UserId userId, LocalDate date);
+  Optional<ValuationSnapshot> findByUserIdAndSnapshotDay(UserId userId, LocalDate date);
 }

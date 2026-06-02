@@ -41,6 +41,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -126,7 +127,7 @@ class PortfolioControllerTest {
     Currency cad = Currency.of("CAD");
     Money zero = Money.zero(cad);
     return new ValuationView(zero, zero, zero, BigDecimal.ZERO, zero, zero, cad, false,
-        Instant.now());
+        LocalDate.now());
   }
 
   @Nested

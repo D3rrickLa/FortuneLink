@@ -42,7 +42,7 @@ class UserPreferencesServiceTest {
     @DisplayName("Should return preferences when they exist in repository")
     void shouldReturnPreferencesWhenTheyExist() {
       // Arrange
-      UserPreferences existingPrefs = new UserPreferences(userId, Currency.CAD, true, true, "MM/DD/YYYY");
+      UserPreferences existingPrefs = new UserPreferences(userId, Currency.CAD, true, true, "MM/DD/YYYY", "America/Toronto");
       when(repository.findById(userId)).thenReturn(Optional.of(existingPrefs));
 
       // Act
@@ -74,7 +74,7 @@ class UserPreferencesServiceTest {
     @DisplayName("Should update all preference fields and save when preferences exist")
     void shouldUpdatePreferencesSuccessfully() {
       // Arrange
-      UserPreferences existingPrefs = new UserPreferences(userId, Currency.CAD, false, false, "MM/DD/YYYY");
+      UserPreferences existingPrefs = new UserPreferences(userId, Currency.CAD, false, false, "MM/DD/YYYY", "America/Toronto");
       when(repository.findById(userId)).thenReturn(Optional.of(existingPrefs));
 
       UpdateUserPreferencesCommand command = new UpdateUserPreferencesCommand(
@@ -141,7 +141,7 @@ class UserPreferencesServiceTest {
     @DisplayName("Should return existing settings without creating a new default copy if they already exist")
     void shouldReturnExistingIfAlreadyPresent() {
       // Arrange
-      UserPreferences existingPrefs = new UserPreferences(userId, Currency.USD, false, false, "DD-MM-YYYY");
+      UserPreferences existingPrefs = new UserPreferences(userId, Currency.USD, false, false, "DD-MM-YYYY", "America/Toronto");
       when(repository.existsById(userId)).thenReturn(true);
       when(repository.findById(userId)).thenReturn(Optional.of(existingPrefs));
 

@@ -14,8 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -55,8 +55,8 @@ public class ValuationHistoryController {
   public ResponseEntity<List<ValuationSnapshotResponse>> getHistory(@AuthenticatedUser UserId userId,
       @RequestParam(defaultValue = "90") @Min(1) @Max(1825) int days) {
 
-    Instant since = Instant.now().minus(days, ChronoUnit.DAYS);
-
+    LocalDate since = LocalDate.now(ZoneOffset.UTC).minusDays(days);
+    
     List<ValuationSnapshotResponse> result = snapshotRepository.findByUserIdSince(userId, since)
         .stream().map(ValuationSnapshotResponse::from).toList();
 
@@ -83,7 +83,7 @@ public class ValuationHistoryController {
 
       @Schema(description = "True if stale pricing data was used") boolean hasStaleData,
 
-      @Schema(description = "UTC timestamp when snapshot was recorded") Instant snapshotDate
+      @Schema(description = "UTC timestamp when snapshot was recorded") LocalDate snapshotDay
 
   ) {
 

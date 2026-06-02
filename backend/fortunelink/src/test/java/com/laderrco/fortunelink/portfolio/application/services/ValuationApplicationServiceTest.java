@@ -81,7 +81,7 @@ class ValuationApplicationServiceTest {
   @DisplayName("Returns empty ValuationView when summary requested for user with no portfolios")
   void summaryReturnsEmptyViewWhenEmpty() {
     Currency mockBaseCurrency = Currency.of("CAD");
-    UserPreferences mockPrefs = new UserPreferences(userId, mockBaseCurrency, false, false, null);
+    UserPreferences mockPrefs = new UserPreferences(userId, mockBaseCurrency, false, false, null, "America/Toronto");
     when(portfolioLoader.loadAllUserPortfolios(userId)).thenReturn(List.of());
     when(userPreferencesService.get(userId)).thenReturn(mockPrefs);
 

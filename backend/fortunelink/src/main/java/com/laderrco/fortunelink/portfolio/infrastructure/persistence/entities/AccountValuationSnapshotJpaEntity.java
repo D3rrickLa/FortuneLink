@@ -23,9 +23,6 @@ public class AccountValuationSnapshotJpaEntity {
   @Column(name = "account_id", nullable = false, updatable = false)
   private UUID accountId;
 
-  @Column(name = "snapshot_date", nullable = false)
-  private LocalDate snapshotDate;
-
   @Column(name = "snapshot_day", nullable = false)
   private LocalDate snapshotDay;
 

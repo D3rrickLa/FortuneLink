@@ -130,7 +130,7 @@ function mapHistoryToPoints(
   return data
     .map((snapshot) => {
       const rawDate =
-        (snapshot as any).snapshotDate ?? "";
+        (snapshot as any).snapshotDay ?? "";
 
       const parsed = rawDate
         ? new Date(rawDate)

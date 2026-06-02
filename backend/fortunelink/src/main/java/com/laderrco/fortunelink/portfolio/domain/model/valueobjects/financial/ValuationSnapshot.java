@@ -3,7 +3,7 @@ package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record ValuationSnapshot(
@@ -17,7 +17,7 @@ public record ValuationSnapshot(
     Money totalInvestedValue,
     String displayCurrency,
     boolean hasStaleData,
-    Instant snapshotDay) {
+    LocalDate snapshotDay) {
 
   public static ValuationSnapshot fromView(UserId userId, ValuationView view) {
 

@@ -27,7 +27,7 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotR
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,7 +82,7 @@ class UserSnapshotWorkerTest {
         Money.zero(USD),
         USD,
         false,
-        Instant.now());
+        LocalDate.now());
 
     when(portfolioRepository.findAllActiveByUserId(USER_ID))
         .thenReturn(List.of(p));
@@ -157,7 +157,7 @@ class UserSnapshotWorkerTest {
         Money.zero(USD),
         USD,
         true,
-        Instant.now());
+        LocalDate.now());
 
     when(portfolioRepository.findAllActiveByUserId(USER_ID))
         .thenReturn(List.of(p));
@@ -168,11 +168,9 @@ class UserSnapshotWorkerTest {
     when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap()))
         .thenReturn(viewUSD);
 
-    when(snapshotRepository.findByUserIdAndSnapshotDate(any(), any()))
+    when(snapshotRepository.findByUserIdAndSnapshotDay(any(), any()))
         .thenReturn(Optional.empty());
 
-    // when(accountSnapshotRepository.findByAccountIdAndSnapshotDate(any(), any()))
-    //     .thenReturn(Optional.empty());
 
     boolean result = snapshotWorker.snapshotForUser(USER_ID);
 
@@ -201,7 +199,7 @@ class UserSnapshotWorkerTest {
         Money.zero(USD),
         USD,
         false,
-        Instant.now());
+        LocalDate.now());
 
     when(portfolioRepository.findAllActiveByUserId(USER_ID))
         .thenReturn(List.of(p));
@@ -211,12 +209,9 @@ class UserSnapshotWorkerTest {
     when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap()))
         .thenReturn(viewUSD);
 
-    when(snapshotRepository.findByUserIdAndSnapshotDate(any(), any()))
+    when(snapshotRepository.findByUserIdAndSnapshotDay(any(), any()))
         .thenReturn(Optional.empty());
-
-    // when(accountSnapshotRepository.findByAccountIdAndSnapshotDate(any(), any()))
-    //     .thenReturn(Optional.empty());
-
+        
     snapshotWorker.snapshotForUser(USER_ID);
 
     verify(marketDataService, never()).getBatchQuotes(any());

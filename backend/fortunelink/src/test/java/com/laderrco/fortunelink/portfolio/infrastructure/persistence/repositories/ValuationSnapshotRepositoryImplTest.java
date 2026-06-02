@@ -10,7 +10,7 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +36,7 @@ class ValuationSnapshotRepositoryImplTest {
   private ValuationSnapshotJpaEntity createMockEntity() {
     ValuationSnapshot snapshot = new ValuationSnapshot(UUID.randomUUID(), USER_ID,
         Money.of(100, CAD), Money.of(0, CAD), Money.of(100, CAD), java.math.BigDecimal.ZERO,
-        Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, Instant.now());
+        Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, LocalDate.now());
 
     return ValuationSnapshotJpaEntity.from(snapshot);
   }
@@ -49,7 +49,7 @@ class ValuationSnapshotRepositoryImplTest {
     void saveShouldDelegateToJpaRepository() {
       ValuationSnapshot snapshot = new ValuationSnapshot(UUID.randomUUID(), USER_ID,
           Money.of(100, CAD), Money.of(0, CAD), Money.of(100, CAD), java.math.BigDecimal.ZERO,
-          Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, Instant.now());
+          Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, LocalDate.now());
 
       repository.save(snapshot);
 
@@ -59,7 +59,7 @@ class ValuationSnapshotRepositoryImplTest {
     @Test
     @DisplayName("findByUserIdSince should return mapped domain objects")
     void findByUserIdSinceShouldReturnMappedDomainObjects() {
-      Instant since = Instant.now().minus(7, ChronoUnit.DAYS);
+      LocalDate since = LocalDate.now().minus(7, ChronoUnit.DAYS);
       ValuationSnapshotJpaEntity entity = createMockEntity();
       when(jpaRepository.findByUserIdSince(USER_UUID, since)).thenReturn(List.of(entity));
 

@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Objects;
 
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
@@ -9,7 +8,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 
 public record AccountValuationSnapshot(
     AccountId accountId,
-    LocalDate snapshotDay, // what day does this snapshot belongs to
+    // business day in user timezone (NOT UTC)
+    LocalDate snapshotDay,
     Money totalValue,
     Money totalCostBasis,
     Money unrealizedGainLoss,
@@ -52,10 +52,10 @@ public record AccountValuationSnapshot(
     );
   }
 
-  public static AccountValuationSnapshot fromView(AccountId accountId, ValuationView view) {
+  public static AccountValuationSnapshot fromView(AccountId accountId, LocalDate snapshoDay, ValuationView view) {
     return new AccountValuationSnapshot(
         accountId,
-        LocalDate.ofInstant(view.asOfDate(), ZoneOffset.UTC),
+        snapshoDay,
         view.totalValue(),
         view.totalCostBasis(),
         view.unrealizedGainLoss(),

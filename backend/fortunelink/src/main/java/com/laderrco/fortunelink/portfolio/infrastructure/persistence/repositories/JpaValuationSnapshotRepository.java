@@ -26,11 +26,11 @@ public interface JpaValuationSnapshotRepository extends
   @Query("""
       SELECT s FROM ValuationSnapshotJpaEntity s
       WHERE s.userId = :userId
-        AND s.snapshotDate >= :since
-      ORDER BY s.snapshotDate ASC
+        AND s.snapshotDay >= :since
+      ORDER BY s.snapshotDay ASC
       """)
   List<ValuationSnapshotJpaEntity> findByUserIdSince(@Param("userId") UUID userId,
-      @Param("since") Instant since);
+      @Param("since") LocalDate since);
 
   /**
    * Day-boundary check. NEVER use DATE() in JPQL against a TIMESTAMPTZ column ,
@@ -48,22 +48,13 @@ public interface JpaValuationSnapshotRepository extends
       SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END
       FROM ValuationSnapshotJpaEntity s
       WHERE s.userId = :userId
-        AND s.snapshotDate >= :startOfDay
-        AND s.snapshotDate < :endOfDay
+        AND s.snapshotDay >= :startOfDay
+        AND s.snapshotDay < :endOfDay
       """)
-  boolean existsBetween(@Param("userId") UUID userId, @Param("startOfDay") Instant startOfDay,
-      @Param("endOfDay") Instant endOfDay);
+  boolean existsBetween(@Param("userId") UUID userId, @Param("startOfDay") LocalDate startOfDay,
+      @Param("endOfDay") LocalDate endOfDay);
 
-  @Query("""
-      SELECT s FROM ValuationSnapshotJpaEntity s
-      WHERE s.userId = :userId
-        AND s.snapshotDate >= :startOfDay
-        AND s.snapshotDate < :endOfDay
-      """)
-  Optional<ValuationSnapshotJpaEntity> findByUserIdAndSnapshotDate(
-      @Param("userId") UUID userId,
-      @Param("startOfDay") Instant startOfDay,
-      @Param("endOfDay") Instant endOfDay);
+  Optional<ValuationSnapshotJpaEntity> findByUserIdAndSnapshotDay(UUID userId, LocalDate snapshotDay);
 
   @Modifying
   @Query(value = """
@@ -83,7 +74,6 @@ public interface JpaValuationSnapshotRepository extends
           total_invested_value_currency,
           display_currency_code,
           has_stale_data,
-          snapshot_date,
           snapshot_day,
           created_at
       ) VALUES (
@@ -102,7 +92,6 @@ public interface JpaValuationSnapshotRepository extends
           :totalInvestedValueCurrency,
           :displayCurrencyCode,
           :hasStaleData,
-          :snapshotDate,
           :snapshotDay,
           :createdAt
       )
@@ -120,8 +109,7 @@ public interface JpaValuationSnapshotRepository extends
           total_invested_value_amount = EXCLUDED.total_invested_value_amount,
           total_invested_value_currency = EXCLUDED.total_invested_value_currency,
           display_currency_code = EXCLUDED.display_currency_code,
-          has_stale_data = EXCLUDED.has_stale_data,
-          snapshot_date = EXCLUDED.snapshot_date
+          has_stale_data = EXCLUDED.has_stale_data
       """, nativeQuery = true)
   void upsertSnapshot(
       UUID id,
@@ -139,7 +127,6 @@ public interface JpaValuationSnapshotRepository extends
       String totalInvestedValueCurrency,
       String displayCurrencyCode,
       boolean hasStaleData,
-      Instant snapshotDate,
       LocalDate snapshotDay,
       Instant createdAt);
 }

@@ -15,7 +15,7 @@ import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationServ
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +34,8 @@ public class UserSnapshotWorker {
   private final AccountValuationSnapshotRepository accountSnapshotRepository;
   private final MarketDataService marketDataService;
   private final PortfolioValuationService portfolioValuationService;
+  private final TimeZoneService timeZoneService;
+  private final UserPreferencesService userPreferencesService;
 
   /**
    * Creates or refreshes today's valuation snapshots for a user.
@@ -43,7 +45,8 @@ public class UserSnapshotWorker {
    */
   @Transactional
   public boolean snapshotForUser(UserId userId) {
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+    ZoneId zone = timeZoneService.resolve(userId, userPreferencesService.get(userId));
+    LocalDate snapshotDay = LocalDate.now(zone);
 
     List<Portfolio> portfolios = portfolioRepository.findAllActiveByUserId(userId);
 
@@ -67,29 +70,25 @@ public class UserSnapshotWorker {
         displayCurrency,
         quoteCache);
 
-    upsertUserSnapshot(userId, today, userValuation);
-
-    upsertAccountSnapshots(
-        portfolios,
-        quoteCache,
-        today);
+    upsertUserSnapshot(userId, userValuation, snapshotDay);
+    upsertAccountSnapshots(portfolios, quoteCache, snapshotDay);
 
     return true;
   }
 
-  private void upsertUserSnapshot(UserId userId, LocalDate today, ValuationView valuation) {
+  private void upsertUserSnapshot(UserId userId, ValuationView valuation, LocalDate snapshotDay) {
 
     ValuationSnapshot snapshot = ValuationSnapshot.fromView(userId, valuation);
 
     snapshotRepository.save(snapshot); // repository handles upsert
 
-    log.debug("Upserted user snapshot for userId={} date={}", userId, today);
+    log.debug("Upserted user snapshot for userId={} date={}", userId, snapshotDay);
   }
 
   private void upsertAccountSnapshots(
       List<Portfolio> portfolios,
       Map<AssetSymbol, MarketAssetQuote> quoteCache,
-      LocalDate today) {
+      LocalDate snapshotDay) {
 
     for (Portfolio portfolio : portfolios) {
 
@@ -103,7 +102,8 @@ public class UserSnapshotWorker {
 
           ValuationView view = portfolioValuationService.calculateAccountValuation(account, quoteCache);
 
-          AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(account.getAccountId(), view);
+          AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(account.getAccountId(), snapshotDay,
+              view);
 
           accountSnapshotRepository.save(snapshot); // dempotent now
 

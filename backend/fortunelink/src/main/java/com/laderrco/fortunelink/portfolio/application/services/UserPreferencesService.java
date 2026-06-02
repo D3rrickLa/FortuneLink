@@ -37,7 +37,7 @@ public class UserPreferencesService {
     }
 
     UserPreferences defaultPrefs = new UserPreferences(userId, Currency.CAD, true, true,
-        "MM/DD/YYYY");
+        "MM/DD/YYYY", "America/Toronto");
 
     return repository.save(defaultPrefs);
   }

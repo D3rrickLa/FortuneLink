@@ -21,6 +21,8 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotR
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +77,7 @@ class ValuationHistoryControllerTest {
         zeroMoney, // totalInvestedValue
         cad.getCode(), // displayCurrency
         false, // hasStaleData
-        Instant.now() // snapshotDate
+        LocalDate.now() // snapshotDay
     );
   }
 
@@ -87,7 +89,7 @@ class ValuationHistoryControllerTest {
         new Money(new BigDecimal("450.00"), Currency.CAD),
         new Money(new BigDecimal("50.00"), Currency.CAD), BigDecimal.valueOf(11.11),
         new Money(new BigDecimal("1000.00"), Currency.CAD),
-        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, Instant.now());
+        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, LocalDate.now());
 
     when(valuationApplicationService.computePortfolioValuation(any(), any())).thenReturn(view);
 
@@ -102,7 +104,7 @@ class ValuationHistoryControllerTest {
         new Money(new BigDecimal("450.00"), Currency.CAD),
         new Money(new BigDecimal("50.00"), Currency.CAD), BigDecimal.valueOf(11.11),
         new Money(new BigDecimal("1000.00"), Currency.CAD),
-        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, Instant.now());
+        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, LocalDate.now());
 
     when(valuationApplicationService.computeSummaryValuation(any())).thenReturn(view);
 
@@ -132,8 +134,8 @@ class ValuationHistoryControllerTest {
     when(snapshot.displayCurrency()).thenReturn("USD");
     when(snapshot.hasStaleData()).thenReturn(false);
 
-    Instant snapshotDate = Instant.parse("2025-01-01T00:00:00Z");
-    when(snapshot.snapshotDay()).thenReturn(snapshotDate);
+    LocalDate snapshotDay = LocalDate.ofInstant(Instant.parse("2025-01-01T00:00:00Z"), ZoneId.of("UTC"));
+    when(snapshot.snapshotDay()).thenReturn(snapshotDay);
 
     var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
 
@@ -144,10 +146,9 @@ class ValuationHistoryControllerTest {
     assertThat(response.totalInvestedValue()).isEqualByComparingTo(BigDecimal.ZERO);
 
     assertThat(response.gainLossPercent()).isEqualByComparingTo("12.50");
-
     assertThat(response.currency()).isEqualTo("USD");
     assertThat(response.hasStaleData()).isFalse();
-    assertThat(response.snapshotDate()).isEqualTo(snapshotDate);
+    assertThat(response.snapshotDay()).isEqualTo(snapshotDay);
   }
 
   @Test
@@ -175,8 +176,8 @@ class ValuationHistoryControllerTest {
     when(snapshot.displayCurrency()).thenReturn("USD");
     when(snapshot.hasStaleData()).thenReturn(false);
 
-    Instant snapshotDate = Instant.parse("2025-01-01T00:00:00Z");
-    when(snapshot.snapshotDay()).thenReturn(snapshotDate);
+    LocalDate snapshotDay = LocalDate.ofInstant(Instant.parse("2025-01-01T00:00:00Z"), ZoneId.of("UTC"));
+    when(snapshot.snapshotDay()).thenReturn(snapshotDay);
 
     var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
 
@@ -198,7 +199,7 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("200 with list of snapshots using default days=90")
     void returns200WithDefaultDays() throws Exception {
-      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
           List.of(buildSnapshot()));
 
       mockMvc.perform(get(BASE_URL + "/history")).andExpect(status().isOk())
@@ -211,7 +212,7 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("200 with snapshots filtered by custom days parameter")
     void returns200WithCustomDays() throws Exception {
-      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
           List.of());
 
       mockMvc.perform(get(BASE_URL + "/history").param("days", "365")).andExpect(status().isOk())
@@ -221,7 +222,7 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("200 with empty list when user has no historical snapshots")
     void returns200WithEmptyList() throws Exception {
-      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
           List.of());
 
       mockMvc.perform(get(BASE_URL + "/history")).andExpect(status().isOk())
@@ -249,7 +250,7 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("200 at boundary: days=1825 is valid")
     void returns200AtMaxDaysBoundary() throws Exception {
-      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
           List.of());
 
       mockMvc.perform(get(BASE_URL + "/history").param("days", "1825")).andExpect(status().isOk());
@@ -258,7 +259,7 @@ class ValuationHistoryControllerTest {
     @Test
     @DisplayName("200 at boundary: days=1 is valid")
     void returns200AtMinDaysBoundary() throws Exception {
-      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(Instant.class))).thenReturn(
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
           List.of());
 
       mockMvc.perform(get(BASE_URL + "/history").param("days", "1")).andExpect(status().isOk());

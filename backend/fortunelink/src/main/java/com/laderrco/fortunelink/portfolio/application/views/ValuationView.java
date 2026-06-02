@@ -5,7 +5,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Mo
 import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
+
 import lombok.Builder;
 
 @Builder
@@ -18,10 +19,10 @@ public record ValuationView(
     Money totalInvestedValue,
     Currency displayCurrency,
     boolean hasStaleData,
-    Instant asOfDate) {
+    LocalDate asOfDate) {
 
   public static ValuationView of(Money totalValue, Money totalCostBasis, Money totalCashBalance,
-      Money totalInvestedValue, Currency displayCurrency, boolean hasStaleData, Instant asOfDate) {
+      Money totalInvestedValue, Currency displayCurrency, boolean hasStaleData, LocalDate asOfDate) {
     Money unrealizedGainLoss = totalValue.subtract(totalCostBasis);
     BigDecimal gainLossPercent = computePercent(unrealizedGainLoss, totalCostBasis);
 
@@ -49,6 +50,6 @@ public record ValuationView(
         Money.zero(reportingCurrency),
         reportingCurrency,
         false,
-        Instant.now());
+        LocalDate.now());
   }
 }

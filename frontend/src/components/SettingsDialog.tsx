@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   Dialog,
@@ -41,10 +41,31 @@ import {
   useUserPreferences,
   useUpdateUserPreferences,
 } from "@/features/user/api/useUserPreferences";
+import { Input } from "./ui/input";
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+// Lazily built once. Intl.supportedValuesOf is available in all modern browsers.
+// We group by region prefix (America, Europe, Asia, etc.) for usability.
+function useTimezoneOptions(filter: string) {
+  const all = useMemo(() => {
+    try {
+      return Intl.supportedValuesOf("timeZone") as string[];
+    } catch {
+      // Fallback for environments that don't support it (e.g. old Node in SSR)
+      return ["America/Toronto", "America/New_York", "America/Los_Angeles",
+        "Europe/London", "Europe/Paris", "Asia/Tokyo", "UTC"];
+    }
+  }, []);
+
+  return useMemo(() => {
+    const q = filter.toLowerCase();
+    if (!q) return all;
+    return all.filter((tz) => tz.toLowerCase().includes(q));
+  }, [all, filter]);
 }
 
 export function SettingsDialog({
@@ -85,6 +106,15 @@ export function SettingsDialog({
   const [dateFormat, setDateFormat] =
     useState("MM/DD/YYYY");
 
+  const [timeZone, setTimeZone] =
+    useState(
+      // Default to the browser's current timezone — sensible first-run default
+      () => Intl.DateTimeFormat().resolvedOptions().timeZone
+    );
+
+  const [tzFilter, setTzFilter] = useState("");
+  const timezones = useTimezoneOptions(tzFilter);
+
   /**
    * Sync backend data into form
    */
@@ -108,6 +138,10 @@ export function SettingsDialog({
     setDateFormat(
       preferences.dateFormat
     );
+
+    setTimeZone(
+      preferences.timezone
+    );
   }, [preferences]);
 
   /**
@@ -120,14 +154,11 @@ export function SettingsDialog({
          * Persist backend preferences
          */
         await updatePreferences.mutateAsync({
-          baseCurrency:
-            selectedCurrency,
-
+          baseCurrency: selectedCurrency,
           emailNotifications,
-
           priceAlerts,
-
           dateFormat,
+          timezone: ""
         });
 
         onOpenChange(false);
@@ -319,6 +350,38 @@ export function SettingsDialog({
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              {/* TIMEZONE */}
+              <div className="space-y-2">
+                <Label>Timezone</Label>
+                <p className="text-sm text-muted-foreground">
+                  Used for date display on charts and reports
+                </p>
+                {/* Filter input sits outside the Select so it doesn't close on type */}
+                <Input
+                  placeholder="Filter timezones…"
+                  value={tzFilter}
+                  onChange={(e) => setTzFilter(e.target.value)}
+                  className="mb-1"
+                />
+                <Select value={timeZone} onValueChange={(v) => {
+                  setTimeZone(v);
+                  setTzFilter(""); // clear filter after selection
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {timezones.map((tz) => (
+                      <SelectItem key={tz} value={tz}>
+                        {tz.replace(/_/g, " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Current: {timeZone}
+                </p>
               </div>
             </div>
           </TabsContent>

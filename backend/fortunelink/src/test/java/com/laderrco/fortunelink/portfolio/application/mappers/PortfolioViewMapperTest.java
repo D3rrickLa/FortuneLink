@@ -33,6 +33,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,7 +87,7 @@ class PortfolioViewMapperTest {
       Money totalVal = new Money(new BigDecimal("1500.00"), CAD);
       ValuationView view = new ValuationView(Money.of("1500.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
       when(portfolio.getPortfolioId()).thenReturn(PORTFOLIOID);
       when(portfolio.getName()).thenReturn("Retirement");
 
@@ -303,7 +304,7 @@ class PortfolioViewMapperTest {
       Money totalValue = Money.of(5000, CAD);
       ValuationView valuationView = new ValuationView(totalValue, Money.of(1000d, "CAD"),
           Money.of(1000d, "CAD"), BigDecimal.valueOf(10), Money.of(1000d, "CAD"),
-          Money.of(1000d, "CAD"), Currency.of("CAD"), false, Instant.now());
+          Money.of(1000d, "CAD"), Currency.of("CAD"), false, LocalDate.now());
       boolean hasStaleData = true;
 
       when(portfolio.getPortfolioId()).thenReturn(PORTFOLIOID);

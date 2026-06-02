@@ -23,4 +23,5 @@ public class UserPreferencesEntity {
   private boolean priceAlerts;
 
   private String dateFormat;
+  private String timeZone;
 }

@@ -41,7 +41,9 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -167,7 +169,7 @@ public class PortfolioQueryServiceTest {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, Collections.emptyList());
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
       ValuationView view = new ValuationView(Money.zero(CAD), Money.zero(CAD), Money.zero(CAD),
-          BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false, Instant.now());
+          BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false, LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(portfolioValuationService.calculatePortfolioValuation(eq(portfolio), eq(CAD),
@@ -200,7 +202,7 @@ public class PortfolioQueryServiceTest {
       AccountView view2 = buildAccountView(account2.getAccountId());
       ValuationView valuationView = new ValuationView(Money.of("50000.00", CAD), Money.zero(CAD),
           Money.of("50000.00", CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl, googl))).thenReturn(quotes);
@@ -226,7 +228,7 @@ public class PortfolioQueryServiceTest {
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
       ValuationView valuationView = new ValuationView(Money.of("10000.00", CAD), Money.zero(CAD),
           Money.of("50000.00", CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, true,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(Set.of(aapl))).thenReturn(quotes);
@@ -259,7 +261,7 @@ public class PortfolioQueryServiceTest {
       AccountView accountView = buildAccountView(accountId);
       PortfolioView expected = buildPortfolioView(portfolioId, userId);
       ValuationView view = new ValuationView(Money.zero(CAD), Money.zero(CAD), Money.zero(CAD),
-          BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false, Instant.now());
+          BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false, LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(quotes);
@@ -282,7 +284,7 @@ public class PortfolioQueryServiceTest {
       Account account = buildAccount(accountId, Set.of(aapl));
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(account));
       ValuationView view = new ValuationView(Money.zero(CAD), Money.zero(CAD), Money.zero(CAD),
-          BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false, Instant.now());
+          BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false, LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(marketDataService.getBatchQuotes(any())).thenReturn(Map.of());
@@ -341,10 +343,10 @@ public class PortfolioQueryServiceTest {
           buildQuote(tsla));
       ValuationView view1 = new ValuationView(Money.of("20000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
       ValuationView view2 = new ValuationView(Money.of("15000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
       PortfolioSummaryView sv1 = new PortfolioSummaryView(pid1, "P1", view1.totalValue(),
           Instant.now());
       PortfolioSummaryView sv2 = new PortfolioSummaryView(pid2, "P2", view2.totalValue(),
@@ -377,7 +379,7 @@ public class PortfolioQueryServiceTest {
           Instant.now());
       ValuationView view = new ValuationView(Money.of("20000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadAllUserPortfolios(userId)).thenReturn(List.of(p1, p2));
       when(portfolioValuationService.calculatePortfolioValuation(any(), any(),
@@ -398,7 +400,7 @@ public class PortfolioQueryServiceTest {
       Portfolio usdPortfolio = buildPortfolioWithCurrency(userId, PortfolioId.newId(), usd);
       ValuationView view = new ValuationView(Money.of("20000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadAllUserPortfolios(eq(userId))).thenReturn(
           List.of(cadPortfolio, usdPortfolio));
@@ -436,7 +438,7 @@ public class PortfolioQueryServiceTest {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of());
       ValuationView view = new ValuationView(Money.of("75000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(portfolioValuationService.calculatePortfolioValuation(eq(portfolio), eq(CAD),
@@ -458,7 +460,7 @@ public class PortfolioQueryServiceTest {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(staleAccount));
       ValuationView view = new ValuationView(Money.of("75000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, true,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(
@@ -477,7 +479,7 @@ public class PortfolioQueryServiceTest {
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of(healthyAccount));
       ValuationView view = new ValuationView(Money.of("75000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(
@@ -492,12 +494,12 @@ public class PortfolioQueryServiceTest {
     @Test
     @DisplayName("asOfDate is set and recent")
     void asOfDate_isSetAndRecent() {
-      Instant before = Instant.now().minusSeconds(1);
+      LocalDate before = LocalDate.now().minus(Duration.ofSeconds(1));
 
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of());
       ValuationView view = new ValuationView(Money.of("75000.00", CAD), Money.zero(CAD),
           Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
-          Instant.now());
+          LocalDate.now());
 
       when(portfolioLoader.loadUserPortfolio(portfolioId, userId)).thenReturn(portfolio);
       when(portfolioValuationService.calculatePortfolioValuation(any(), any(), any())).thenReturn(

@@ -15,6 +15,7 @@ export interface UserPreferences {
   emailNotifications: boolean;
   priceAlerts: boolean;
   dateFormat: string;
+  timeZone: string;
 }
 
 export function useUserPreferences() {

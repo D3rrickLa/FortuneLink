@@ -30,6 +30,7 @@ import {
   useValuation,
   useValuationChart,
 } from "@/features/portfolio/hooks/useValuations";
+import { useUserPreferences } from "@/features/user/api/useUserPreferences";
 
 // ─────────────────────────────────────────────
 
@@ -62,6 +63,18 @@ function getDays(period: TimePeriod) {
 }
 
 // ─────────────────────────────────────────────
+// if timezone provided, use it, else fall back to local interpretation of the date string
+function formatChartDate(iso: string, opts: Intl.DateTimeFormatOptions, timeZone?: string
+): string {
+  const dateStr = iso.split("T")[0];
+  const [year, month, day] = dateStr.split("-").map(Number);
+  // Local Date object — avoids UTC midnight shift
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString("en-CA", {
+    ...opts,
+    ...(timeZone ? { timeZone } : {}),
+  });
+}
 
 function Metric({
   label,
@@ -112,6 +125,9 @@ export function PerformanceChart({
 
   const current = useValuation(scope, true);
   const history = useValuationChart(getDays(period), scope);
+
+  const { data: prefs } = useUserPreferences();
+  const userTimeZone = prefs?.timeZone; // may be undefined on first load, that's fine
 
   const resolvedCurrency =
     current.currency ?? currency;
@@ -315,25 +331,33 @@ export function PerformanceChart({
 
               <XAxis
                 dataKey="date"
-                tickFormatter={(d) =>
-                  new Date(d).toLocaleDateString("en-CA", {
+                tickFormatter={(iso: string) => {
+                  // If the backend returns "2026-06-01" (date-only), split it.
+                  // If it returns a full ISO timestamp, strip the time part first.
+                  const [year, month, day] = iso.split("T")[0].split("-").map(Number);
+                  return new Date(year, month - 1, day).toLocaleDateString("en-CA", {
                     month: "short",
                     day: "numeric",
-                  })
-                }
+                  });
+                }}
               />
-
+              <Tooltip
+                labelFormatter={(label: any) =>
+                  formatChartDate(
+                    String(label),
+                    { year: "numeric", month: "short", day: "numeric" },
+                    userTimeZone
+                  )
+                }
+                formatter={(value: any) => {
+                  const num = typeof value === "number" ? value : Number(value);
+                  return [Number.isFinite(num) ? fmt.format(num) : "", "Net Worth"];
+                }}
+              />
               <YAxis
                 tickFormatter={(v) =>
                   fmtCompact.format(Number(v))
                 }
-              />
-
-              <Tooltip
-                formatter={(v: any) => [
-                  fmt.format(Number(v)),
-                  "Value",
-                ]}
               />
 
               <Line

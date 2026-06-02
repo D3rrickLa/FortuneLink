@@ -16,13 +16,15 @@ public class UserPreferences {
   private boolean emailNotifications;
   private boolean priceAlerts;
   private String dateFormat;
+  private String timeZone; // e.g. "America/Toronto"
 
   public UserPreferences(UserId userId, Currency baseCurrency, boolean emailNotifications,
-      boolean priceAlerts, String dateFormat) {
+      boolean priceAlerts, String dateFormat, String timeZone) {
     this.userId = userId;
     this.baseCurrency = baseCurrency;
     this.emailNotifications = emailNotifications;
     this.priceAlerts = priceAlerts;
     this.dateFormat = dateFormat;
+    this.timeZone = timeZone;
   }
 }

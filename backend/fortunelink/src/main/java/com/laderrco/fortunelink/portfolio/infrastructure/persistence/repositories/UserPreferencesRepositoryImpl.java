@@ -35,7 +35,7 @@ public class UserPreferencesRepositoryImpl implements UserPreferencesRepository 
 
   private UserPreferences toDomain(UserPreferencesEntity e) {
     return new UserPreferences(new UserId(e.getUserId()), Currency.of(e.getBaseCurrency()),
-        e.isEmailNotifications(), e.isPriceAlerts(), e.getDateFormat());
+        e.isEmailNotifications(), e.isPriceAlerts(), e.getDateFormat(), e.getTimeZone());
   }
 
   private UserPreferencesEntity toEntity(UserPreferences d) {

@@ -89,7 +89,7 @@ class AccountValuationSnapshotRepositoryImplTest {
   }
 
   @Test
-  @DisplayName("findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc: unwraps domain ID and maps returned stream")
+  @DisplayName("findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc: unwraps domain ID and maps returned stream")
   void findByAccountAndDateAfterDelegatesAndMapsList() {
     // Arrange
     AccountValuationSnapshotJpaEntity entity1 = new AccountValuationSnapshotJpaEntity();
@@ -119,23 +119,23 @@ class AccountValuationSnapshotRepositoryImplTest {
     entity2.setCurrency("USD");
     entity2.setHasStaleData(false);
 
-    when(jpaRepo.findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId.id(), targetDate))
+    when(jpaRepo.findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(accountId.id(), targetDate))
         .thenReturn(List.of(entity1, entity2));
 
     // Act
     List<AccountValuationSnapshot> result = repository
-        .findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId, targetDate);
+        .findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(accountId, targetDate);
 
     // Assert
     assertThat(result)
         .isNotNull()
         .hasSize(2);
 
-    verify(jpaRepo).findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId.id(), targetDate);
+    verify(jpaRepo).findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(accountId.id(), targetDate);
   }
 
   @Test
-  void findByAccountIdAndSnapshotDate_mapsCorrectly() {
+  void findByAccountIdAndSnapshotDay_mapsCorrectly() {
     AccountValuationSnapshotJpaEntity entity = new AccountValuationSnapshotJpaEntity();
     entity.setId(UUID.randomUUID());
     entity.setAccountId(accountId.id());
@@ -149,12 +149,12 @@ class AccountValuationSnapshotRepositoryImplTest {
     entity.setCurrency("USD");
     entity.setHasStaleData(false);
 
-    when(jpaRepo.findByAccountIdAndSnapshotDate(accountId.id(), targetDate))
+    when(jpaRepo.findByAccountIdAndSnapshotDayEquals(accountId.id(), targetDate))
         .thenReturn(Optional.of(entity));
 
-    Optional<AccountValuationSnapshot> result = repository.findByAccountIdAndSnapshotDate(accountId, targetDate);
+    Optional<AccountValuationSnapshot> result = repository.findByAccountIdAndSnapshotDay(accountId, targetDate);
 
     assertThat(result).isPresent();
-    verify(jpaRepo).findByAccountIdAndSnapshotDate(accountId.id(), targetDate);
+    verify(jpaRepo).findByAccountIdAndSnapshotDayEquals(accountId.id(), targetDate);
   }
 }

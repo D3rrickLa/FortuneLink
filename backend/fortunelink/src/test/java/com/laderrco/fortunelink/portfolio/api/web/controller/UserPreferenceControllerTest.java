@@ -86,7 +86,7 @@ class UserPreferenceControllerTest {
   void updatePreferences_updatesUserPreferences() throws Exception {
 
     var request = new UserPreferenceController.UpdateUserPreferencesRequest("USD", true, false,
-        "YYYY-MM-DD");
+        "YYYY-MM-DD", "America/Toronto");
 
     mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(request))).andExpect(status().isNoContent());
@@ -99,7 +99,7 @@ class UserPreferenceControllerTest {
   void updatePreferences_returnsBadRequest_whenCurrencyIsBlank() throws Exception {
 
     var request = new UserPreferenceController.UpdateUserPreferencesRequest("", true, true,
-        "YYYY-MM-DD");
+        "YYYY-MM-DD", "America/Toronto");
 
     mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest());
@@ -109,7 +109,7 @@ class UserPreferenceControllerTest {
   void updatePreferences_returnsBadRequest_whenCurrencyInvalid() throws Exception {
 
     var request = new UserPreferenceController.UpdateUserPreferencesRequest("usd", true, true,
-        "YYYY-MM-DD");
+        "YYYY-MM-DD", "America/Toronto");
 
     mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest());
@@ -119,7 +119,7 @@ class UserPreferenceControllerTest {
   void updatePreferences_returnsBadRequest_whenCurrencyTooLong() throws Exception {
 
     var request = new UserPreferenceController.UpdateUserPreferencesRequest("USDD", true, true,
-        "YYYY-MM-DD");
+        "YYYY-MM-DD", "America/Toronto");
 
     mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest());
@@ -128,7 +128,7 @@ class UserPreferenceControllerTest {
   @Test
   void updatePreferences_returnsBadRequest_whenDateFormatBlank() throws Exception {
 
-    var request = new UserPreferenceController.UpdateUserPreferencesRequest("USD", true, true, "");
+    var request = new UserPreferenceController.UpdateUserPreferencesRequest("USD", true, true, "", "");
 
     mockMvc.perform(put(BASE_URL).contentType(APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(request))).andExpect(status().isBadRequest());

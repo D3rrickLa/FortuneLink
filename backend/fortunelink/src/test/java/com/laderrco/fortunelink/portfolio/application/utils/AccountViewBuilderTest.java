@@ -34,6 +34,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections
 import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -91,7 +92,7 @@ class AccountViewBuilderTest {
     Map<AssetSymbol, Money> fees = Map.of(appleSymbol, fee);
     ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
         Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
-        Instant.now());
+        LocalDate.now());
 
     PositionView mockPosView = mock(PositionView.class);
     AccountView expectedView = mock(AccountView.class);
@@ -114,7 +115,7 @@ class AccountViewBuilderTest {
     Map<AssetSymbol, Money> emptyFees = Collections.emptyMap();
     ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
         Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
-        Instant.now());
+        LocalDate.now());
 
     lenient().when(transactionRepository.countExcludedPositionAffecting(any())).thenReturn(2);
     when(valuationService.calculateAccountValuation(any(), any())).thenReturn(viewUSD);
@@ -133,7 +134,7 @@ class AccountViewBuilderTest {
     AccountView expectedView = mock(AccountView.class);
     ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
         Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
-        Instant.now());
+        LocalDate.now());
 
     when(viewMapper.toPositionView(any(), eq(appleQuote))).thenReturn(mockPosView);
     when(valuationService.calculateAccountValuation(account, quotes)).thenReturn(viewUSD);

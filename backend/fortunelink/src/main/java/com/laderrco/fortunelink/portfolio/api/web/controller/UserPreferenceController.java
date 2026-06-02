@@ -82,6 +82,7 @@ public class UserPreferenceController {
 
       @Schema(example = "true", description = "Whether price alerts are enabled") boolean priceAlerts,
 
-      @NotBlank @Schema(example = "YYYY-MM-DD", description = "Preferred date format") String dateFormat) {
+      @NotBlank @Schema(example = "YYYY-MM-DD", description = "Preferred date format") String dateFormat,
+      @NotBlank @Schema(example = "America/Toronto", description = "IANA timezone identifier") String timeZone) {
   }
 }

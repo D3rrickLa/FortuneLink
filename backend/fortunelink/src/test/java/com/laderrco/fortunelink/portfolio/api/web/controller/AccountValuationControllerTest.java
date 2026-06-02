@@ -26,7 +26,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLim
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +77,7 @@ class AccountValuationControllerTest {
         Money.of(13000, "CAD"),
         Currency.of("CAD"),
         false,
-        Instant.now());
+        LocalDate.now());
 
     when(valuationService.computeAccountValuation(any())).thenReturn(view);
 
@@ -118,7 +118,7 @@ class AccountValuationControllerTest {
         Money.of(900, "CAD"),
         Currency.of("CAD"),
         false,
-        Instant.now());
+        LocalDate.now());
     when(valuationService.computeAccountValuation(any())).thenReturn(view);
 
     mockMvc.perform(

@@ -14,7 +14,7 @@ public interface AccountValuationSnapshotRepository {
       AccountId accountId,
       LocalDate date);
 
-  List<AccountValuationSnapshot> findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(
+  List<AccountValuationSnapshot> findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(
       AccountId accountId,
       LocalDate after);
 }

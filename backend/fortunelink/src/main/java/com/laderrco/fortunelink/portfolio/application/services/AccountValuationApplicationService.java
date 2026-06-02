@@ -16,7 +16,6 @@ import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -101,14 +100,14 @@ public class AccountValuationApplicationService {
         totalMarketValue,
         currency,
         false,
-        Instant.now());
+        LocalDate.now());
   }
 
   public List<ValuationView> getAccountValuationHistory(AccountId accountId, int days) {
     LocalDate after = LocalDate.now(ZoneOffset.UTC).minusDays(days);
 
     return accountSnapshotRepository
-        .findByAccountIdAndSnapshotDateAfterOrderBySnapshotDateAsc(accountId, after)
+        .findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(accountId, after)
         .stream()
         .map(snapshot -> new ValuationView(
             snapshot.totalValue(),
@@ -119,7 +118,7 @@ public class AccountValuationApplicationService {
             snapshot.investedValue(),
             snapshot.totalValue().currency(),
             snapshot.hasStaleData(),
-            snapshot.snapshotDay().atStartOfDay(ZoneOffset.UTC).toInstant()))
+            snapshot.snapshotDay()))
         .toList();
   }
 

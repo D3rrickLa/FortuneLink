@@ -10,7 +10,6 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -89,9 +88,6 @@ public class ValuationSnapshotJpaEntity {
   @Column(name = "has_stale_data", nullable = false)
   private boolean hasStaleData;
 
-  @Column(name = "snapshot_date", nullable = false, updatable = false)
-  private Instant snapshotDate;
-
   @Column(name = "snapshot_day", nullable = false)
   private LocalDate snapshotDay;
 
@@ -130,13 +126,9 @@ public class ValuationSnapshotJpaEntity {
     e.hasStaleData = domain.hasStaleData();
 
     // BUSINESS IDENTITY (correct)
-    e.snapshotDay = LocalDate.ofInstant(domain.snapshotDay(), ZoneId.of("UTC"));
-
-    // AUDIT TIMESTAMP (correct)
-    e.snapshotDate = Instant.now();
+    e.snapshotDay = domain.snapshotDay();
 
     e.createdAt = Instant.now();
-
     return e;
   }
 
@@ -152,7 +144,7 @@ public class ValuationSnapshotJpaEntity {
         Money.of(unrealizedGainLossAmount, unrealizedGainLossCurrency), gainLossPercent,
         Money.of(totalCashBalanceAmount, totalCashBalanceCurrency),
         Money.of(totalInvestedValueAmount, totalInvestedValueCurrency), displayCurrencyCode,
-        hasStaleData, snapshotDay.atStartOfDay(ZoneId.of("UTC")).toInstant());
+        hasStaleData, snapshotDay);
   }
 
 }

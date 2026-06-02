@@ -96,7 +96,8 @@ class UserPreferencesRepositoryImplTest {
           Currency.of("EUR"),
           false,
           true,
-          "DD/MM/YYYY");
+          "DD/MM/YYYY",
+        "America/Toronto");
 
       UserPreferencesEntity savedEntity = new UserPreferencesEntity();
       savedEntity.setUserId(userId.id());
