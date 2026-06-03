@@ -17,6 +17,7 @@ import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserPreferences;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
@@ -28,6 +29,7 @@ import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +60,10 @@ class UserSnapshotWorkerTest {
   private ValuationSnapshotRepository snapshotRepository;
   @Mock
   private PortfolioValuationService valuationService;
+  @Mock
+  private TimeZoneService timeZoneService;
+  @Mock
+  private UserPreferencesService userPreferencesService;
 
   @InjectMocks
   private UserSnapshotWorker snapshotWorker;
@@ -83,7 +89,7 @@ class UserSnapshotWorkerTest {
         USD,
         false,
         LocalDate.now());
-
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, null, "America/Toronto");
     when(portfolioRepository.findAllActiveByUserId(USER_ID))
         .thenReturn(List.of(p));
 
@@ -91,6 +97,9 @@ class UserSnapshotWorkerTest {
 
     when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap()))
         .thenReturn(viewUSD);
+
+    when(userPreferencesService.get(any())).thenReturn(preferences);
+    when(timeZoneService.resolve(USER_ID, any())).thenReturn(ZoneId.of("America/Toronto"));
 
     try (MockedStatic<PortfolioAccessUtils> utils = Mockito.mockStatic(PortfolioAccessUtils.class)) {
 
@@ -171,7 +180,6 @@ class UserSnapshotWorkerTest {
     when(snapshotRepository.findByUserIdAndSnapshotDay(any(), any()))
         .thenReturn(Optional.empty());
 
-
     boolean result = snapshotWorker.snapshotForUser(USER_ID);
 
     assertThat(result).isTrue();
@@ -211,7 +219,7 @@ class UserSnapshotWorkerTest {
 
     when(snapshotRepository.findByUserIdAndSnapshotDay(any(), any()))
         .thenReturn(Optional.empty());
-        
+
     snapshotWorker.snapshotForUser(USER_ID);
 
     verify(marketDataService, never()).getBatchQuotes(any());

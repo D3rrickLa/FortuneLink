@@ -107,7 +107,7 @@ class AccountValuationSnapshotTest {
       );
 
       // Act
-      AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(accountId, LocalDate.now(), view);
+      AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(accountId, LocalDate.of(2026, 05, 28), view);
 
       // Assert
       assertThat(snapshot.accountId()).isEqualTo(accountId);

@@ -44,6 +44,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -494,7 +495,7 @@ public class PortfolioQueryServiceTest {
     @Test
     @DisplayName("asOfDate is set and recent")
     void asOfDate_isSetAndRecent() {
-      LocalDate before = LocalDate.now().minus(Duration.ofSeconds(1));
+      LocalDate before = LocalDate.now().minus(1, ChronoUnit.HOURS);
 
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of());
       ValuationView view = new ValuationView(Money.of("75000.00", CAD), Money.zero(CAD),
