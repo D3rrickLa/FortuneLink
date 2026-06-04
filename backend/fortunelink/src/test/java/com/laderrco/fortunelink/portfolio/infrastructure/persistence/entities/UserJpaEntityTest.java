@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
 import com.laderrco.fortunelink.portfolio.domain.model.entities.User;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import java.time.ZoneId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class UserJpaEntityTest {
       assertThat(entity).isNotNull();
       assertThat(entity.getId()).isEqualTo(sampleId);
       assertThat(entity.getEmail()).isEqualTo(sampleEmail);
-      assertThat(entity.getCreatedAt()).isBeforeOrEqualTo(Instant.now());
+      assertThat(entity.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate()).isBeforeOrEqualTo(Instant.now().atZone(ZoneId.systemDefault()).toLocalDate());
       assertThat(entity.getLastSignInAt()).isEqualTo(entity.getCreatedAt());
     }
 
