@@ -76,7 +76,8 @@ TransactionService-> TransactionRecordingService (create transaction) -> Positio
 @Service
 @Transactional
 @RequiredArgsConstructor
-@Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
+@Retryable(retryFor = {ObjectOptimisticLockingFailureException.class,
+    DataIntegrityViolationException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100))
 public class TransactionService {
   private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
   private static final String BUY_FEE_CACHE = "fees:buy";
@@ -93,6 +94,13 @@ public class TransactionService {
   private final TransactionRecordingService transactionRecordingService;
   private final CacheManager cacheManager;
   private final IdempotencyCache idempotencyCache; // Inject the Caffeine bean
+
+  @Recover
+  public TransactionView recover(DataIntegrityViolationException ex, RecordPurchaseCommand cmd) {
+    log.warn("Recovering from DataIntegrityViolationException");
+    // maybe reload + retry logic
+    throw ex; // or handle gracefully
+  }
 
   @Recover
   public TransactionView recover(ObjectOptimisticLockingFailureException ex,

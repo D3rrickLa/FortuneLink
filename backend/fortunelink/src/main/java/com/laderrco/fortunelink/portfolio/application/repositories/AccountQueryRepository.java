@@ -7,7 +7,6 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections.AccountSummaryProjection;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +31,8 @@ public interface AccountQueryRepository {
    * Paginated account list for a portfolio, without positions loaded. Performs a single SELECT on
    * the accounts table , no aggregate hydration.
    */
-  Page<@NotNull AccountSummaryProjection> findByPortfolioId(PortfolioId portfolioId, Pageable pageable);
+  Page<@NotNull AccountSummaryProjection> findByPortfolioId(PortfolioId portfolioId,
+      Pageable pageable);
 
   /**
    * Batch fetch of all open symbols (from positions table) for a given set of accounts.

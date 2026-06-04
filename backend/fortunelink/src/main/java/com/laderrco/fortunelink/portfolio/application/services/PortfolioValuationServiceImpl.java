@@ -1,8 +1,8 @@
 package com.laderrco.fortunelink.portfolio.application.services;
 
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AssetType;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
@@ -12,7 +12,8 @@ import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.po
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.services.ExchangeRateService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
-import java.util.HashMap;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -29,104 +30,137 @@ import org.springframework.stereotype.Service;
 public final class PortfolioValuationServiceImpl implements PortfolioValuationService {
   private final ExchangeRateService exchangeRateService;
 
-  /**
-   * Sums all account values, converting each to the target display currency. Each account may trade
-   * in a different base currency (e.g. CAD TFSA + USD brokerage).
-   */
+  // =========================================================
+  // PUBLIC API
+  // =========================================================
+
   @Override
-  public Money calculateTotalValue(Portfolio portfolio, Currency targetCurrency,
+  public ValuationView calculateAccountValuation(Account account,
+      Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+    Objects.requireNonNull(account, "Account cannot be null");
+    Objects.requireNonNull(quoteCache, "Quote cache cannot be null");
+
+    Currency currency = account.getAccountCurrency();
+
+    Money positions = calculatePositionsValueInternal(account, currency, quoteCache);
+    Money costBasis = calculatePositionsCostBasisInternal(account, currency);
+    Money cash = account.isActive() ? account.getCashBalance() : Money.zero(currency);
+    Money total = positions.add(cash);
+    boolean isStale = account.isStale();
+
+    return buildValuation(total, costBasis, cash, positions, currency, isStale);
+  }
+
+  @Override
+  public ValuationView calculatePortfolioValuation(Portfolio portfolio, Currency targetCurrency,
       Map<AssetSymbol, MarketAssetQuote> quoteCache) {
     Objects.requireNonNull(portfolio, "Portfolio cannot be null");
     Objects.requireNonNull(targetCurrency, "Target currency cannot be null");
     Objects.requireNonNull(quoteCache, "Quote cache cannot be null");
 
-    if (portfolio.getAccounts().isEmpty()) {
-      return Money.zero(targetCurrency);
-    }
+    List<Account> activeAccounts = portfolio.getAccounts().stream().filter(Account::isActive)
+        .toList();
 
-    Map<Currency, Money> totalsByCurrency = new HashMap<>();
-
-    // We are merging all the same 'different' currencies together and then doing
-    // the exchange all
-    // at once on like the few different currencies. this is more efficient than
-    // looping through
-    // each account and converting
-    portfolio.getAccounts().stream()
-        .filter(account -> account.getState() == AccountLifecycleState.ACTIVE).forEach(account -> {
-          Money value = calculateAccountValue(account, quoteCache);
-          if (value != null) {
-            totalsByCurrency.merge(account.getAccountCurrency(), value, Money::add);
-          }
-        });
-
-    return totalsByCurrency.values().stream()
-        .map(value -> exchangeRateService.convert(value, targetCurrency))
+    Money positions = activeAccounts.stream()
+        .map(acc -> calculatePositionsValueInternal(acc, acc.getAccountCurrency(), quoteCache))
+        .map(m -> exchangeRateService.convert(m, targetCurrency)).filter(Objects::nonNull)
         .reduce(Money.zero(targetCurrency), Money::add);
+
+    Money costBasis = activeAccounts.stream()
+        .map(acc -> calculatePositionsCostBasisInternal(acc, targetCurrency))
+        .reduce(Money.zero(targetCurrency), Money::add);
+
+    Money cash = activeAccounts.stream().map(Account::getCashBalance)
+        .map(m -> exchangeRateService.convert(m, targetCurrency))
+        .reduce(Money.zero(targetCurrency), Money::add);
+
+    Money total = positions.add(cash);
+    boolean isStale = activeAccounts.stream().anyMatch(Account::isStale);
+
+    return buildValuation(total, costBasis, cash, positions, targetCurrency, isStale);
   }
 
-  /**
-   * Calculates total account value in the account's own base currency. = positions market value +
-   * cash balance
-   * <p>
-   * Falls back to cost basis when no quote is available for a position. This is intentional:
-   * stale/unavailable data shows cost basis rather than zero, which is less misleading for the
-   * user.
-   */
   @Override
-  public Money calculateAccountValue(Account account,
+  public ValuationView calculateUserValuation(List<Portfolio> portfolios, Currency targetCurrency,
       Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-    Objects.requireNonNull(account, "Account cannot be null");
+    Objects.requireNonNull(portfolios, "Portfolios cannot be null");
+    Objects.requireNonNull(targetCurrency, "Target currency cannot be null");
     Objects.requireNonNull(quoteCache, "Quote cache cannot be null");
 
-    if (!account.isActive()) {
-      return Money.zero(account.getAccountCurrency());
-    }
+    List<Account> activeAccounts = portfolios.stream().flatMap(p -> p.getAccounts().stream())
+        .filter(Account::isActive).toList();
 
-    Money positionsValue = calculatePositionsValue(account, quoteCache);
-    Money cashBalance = account.getCashBalance();
+    Money positions = activeAccounts.stream()
+        .map(acc -> calculatePositionsValueInternal(acc, acc.getAccountCurrency(), quoteCache))
+        .map(m -> exchangeRateService.convert(m, targetCurrency))
+        .reduce(Money.zero(targetCurrency), Money::add);
 
-    return positionsValue.add(cashBalance);
+    Money costBasis = activeAccounts.stream()
+        .map(acc -> calculatePositionsCostBasisInternal(acc, targetCurrency))
+        .reduce(Money.zero(targetCurrency), Money::add);
+
+    Money cash = activeAccounts.stream().map(Account::getCashBalance)
+        .map(m -> exchangeRateService.convert(m, targetCurrency))
+        .reduce(Money.zero(targetCurrency), Money::add);
+
+    Money total = positions.add(cash);
+    boolean isStale = activeAccounts.stream().anyMatch(Account::isStale);
+
+    return buildValuation(total, costBasis, cash, positions, targetCurrency, isStale);
   }
 
-  /**
-   * Calculates the market value of all non-cash positions in an account. Cash positions
-   * (AssetType.CASH) are excluded, they're captured via account.getCashBalance() in
-   * calculateAccountValue().
-   */
-  @Override
-  public Money calculatePositionsValue(Account account,
+  // =========================================================
+  // INTERNAL CORE LOGIC
+  // =========================================================
+
+  private Money calculatePositionsCostBasisInternal(Account account, Currency targetCurrency) {
+    return account.getPositionEntries().stream().filter(e -> e.getValue().type() != AssetType.CASH)
+        .map(e -> {
+          Money costBasis = e.getValue().totalCostBasis();
+          return costBasis.currency().equals(targetCurrency) ? costBasis
+              : exchangeRateService.convert(costBasis, targetCurrency);
+        }).filter(Objects::nonNull).reduce(Money::add).orElse(Money.zero(targetCurrency));
+  }
+
+  private Money calculatePositionsValueInternal(Account account, Currency targetCurrency,
+      // Add targetCurrency down to the collector
       Map<AssetSymbol, MarketAssetQuote> quoteCache) {
-    Objects.requireNonNull(account, "Account cannot be null");
-    Objects.requireNonNull(quoteCache, "Quote cache cannot be null");
 
-    Currency accountCurrency = account.getAccountCurrency();
-
-    return account.getPositionEntries().stream()
-        .filter(entry -> entry.getValue().type() != AssetType.CASH) // cash tracked separately
-        .map(pos -> resolvePositionValue(pos.getValue(), quoteCache.get(pos.getKey()),
-            accountCurrency)).reduce(Money::add).orElse(Money.zero(accountCurrency));
+    return account.getPositionEntries().stream().filter(e -> e.getValue().type() != AssetType.CASH)
+        .map(e -> {
+          // 1. Resolve position value in whatever its current native price structure dictates
+          Money posValue = resolvePositionValue(e.getValue(), quoteCache.get(e.getKey()),
+              account.getAccountCurrency());
+          // 2. Normalize immediately to target calculation currency before reducing
+          return posValue.currency().equals(targetCurrency) ? posValue
+              : exchangeRateService.convert(posValue, targetCurrency);
+        }).filter(Objects::nonNull).reduce(Money::add).orElse(Money.zero(targetCurrency));
   }
 
-  /**
-   * Resolves the current market value of a single position.
-   * <p>
-   * If no quote is available (symbol not in cache, API was down, etc.), falls back to cost basis.
-   * This is a deliberate trade-off: cost basis is a known real number, whereas showing $0 would be
-   * actively wrong.
-   */
   private Money resolvePositionValue(Position position, MarketAssetQuote quote,
       Currency accountCurrency) {
     if (quote == null || quote.currentPrice() == null || quote.currentPrice().pricePerUnit()
         .isZero()) {
-      return position.totalCostBasis();
+      return position.totalCostBasis(); // stale fallback — intentional
     }
 
     Price currentPrice = quote.currentPrice();
+
     if (!currentPrice.currency().equals(accountCurrency)) {
       Money converted = exchangeRateService.convert(currentPrice.pricePerUnit(), accountCurrency);
       currentPrice = new Price(converted);
     }
 
     return position.currentValue(currentPrice);
+  }
+
+  // =========================================================
+  // VALUE ASSEMBLY
+  // =========================================================
+
+  private ValuationView buildValuation(Money total, Money costBasis, Money cash, Money positions,
+      Currency currency, boolean hasStaleData) {
+    return ValuationView.of(total, costBasis, cash, positions, currency, hasStaleData,
+        LocalDate.now());
   }
 }

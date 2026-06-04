@@ -38,10 +38,12 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class AccountJpaEntity implements Persistable<UUID> {
 
-  @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "account", cascade = {CascadeType.MERGE,
+      CascadeType.PERSIST}, orphanRemoval = true, fetch = FetchType.LAZY)
   private final Set<PositionJpaEntity> positions = new LinkedHashSet<>();
   // if a single portfolio loads 3 years of active trading, that's 100+
-  // records, each time they open the portfolio page, each one is 'loaded', LAZY to solve this
+  // records, each time they open the portfolio page, each one is 'loaded', LAZY
+  // to solve this
   @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST,
       CascadeType.MERGE}, orphanRemoval = false, fetch = FetchType.LAZY)
   private final Set<RealizedGainJpaEntity> realizedGains = new LinkedHashSet<>();
@@ -123,30 +125,53 @@ public class AccountJpaEntity implements Persistable<UUID> {
     this.cashBalanceCurrency = source.cashBalanceCurrency;
     this.closedDate = source.closedDate;
     this.lastUpdatedOn = source.lastUpdatedOn;
-    replacePositions(source.positions);
-    // NOTE: realized gains are NOT replaced here, use addNewRealizedGains instead.
-    // Calling replacePositions is safe because positions are fully rebuilt by
-    // PositionRecalculationService. Gains are append-only and must never be
-    // cleared.
+    // Positions are managed exclusively by PortfolioDomainMapper.accountToEntity()
+    // after this method returns. Calling replacePositions() here clears the
+    // managed collection before the mapper can diff it, which causes INSERT
+    // attempts on already-persisted symbols. Same reasoning as realized gains.
+    // replacePositions(source.positions); <-- REMOVED
+  }
+
+  /**
+   * Updates only scalar columns. Positions and realized gains are intentionally excluded — they
+   * have their own diff/append logic in PortfolioDomainMapper. Calling this is safe at any point in
+   * the mapping cycle because it never clears any collection.
+   */
+  public void applyScalarFields(String name, String accountType, String positionStrategy,
+      String healthStatus, String lifecycleState, BigDecimal cashBalanceAmount,
+      String cashBalanceCurrency, Instant closedDate, Instant lastUpdatedOn) {
+    this.name = name;
+    this.accountType = accountType;
+    this.positionStrategy = positionStrategy;
+    this.healthStatus = healthStatus;
+    this.lifecycleState = lifecycleState;
+    this.cashBalanceAmount = cashBalanceAmount;
+    this.cashBalanceCurrency = cashBalanceCurrency;
+    this.closedDate = closedDate;
+    this.lastUpdatedOn = lastUpdatedOn;
   }
 
   public void replacePositions(Set<PositionJpaEntity> incoming) {
-    Map<UUID, PositionJpaEntity> existing = new HashMap<>();
+    Map<String, PositionJpaEntity> existingBySymbol = new HashMap<>();
+
     for (PositionJpaEntity p : this.positions) {
-      existing.put(p.getId(), p);
+      existingBySymbol.put(p.getSymbol(), p);
     }
 
     this.positions.clear();
-    for (PositionJpaEntity p : incoming) {
-      PositionJpaEntity cur = existing.get(p.getId());
-      if (cur != null && cur != p) {
-        cur.applyFrom(p);
-        this.positions.add(cur);
-      } else if (cur == p) {
-        this.positions.add(cur); // already the managed instance
+
+    for (PositionJpaEntity incomingPos : incoming) {
+
+      PositionJpaEntity existing = existingBySymbol.get(incomingPos.getSymbol());
+
+      if (existing != null) {
+        // UPDATE managed entity instead of inserting new one
+        existing.applyFrom(incomingPos);
+        this.positions.add(existing);
+
       } else {
-        p.setAccount(this);
-        this.positions.add(p);
+        incomingPos.setAccount(this);
+        this.positions.add(incomingPos);
       }
     }
   }

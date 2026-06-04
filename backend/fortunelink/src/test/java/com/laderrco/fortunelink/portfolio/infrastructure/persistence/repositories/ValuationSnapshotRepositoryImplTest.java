@@ -1,0 +1,81 @@
+package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("NetWorthSnapshotRepositoryImpl Unit Tests")
+class ValuationSnapshotRepositoryImplTest {
+  private static final UUID USER_UUID = UUID.randomUUID();
+  private static final UserId USER_ID = UserId.fromString(USER_UUID.toString());
+  private static final Currency CAD = Currency.CAD;
+  @Mock
+  private JpaValuationSnapshotRepository jpaRepository;
+  @InjectMocks
+  private ValuationSnapshotRepositoryImpl repository;
+
+  private ValuationSnapshotJpaEntity createMockEntity() {
+    ValuationSnapshot snapshot = new ValuationSnapshot(UUID.randomUUID(), USER_ID,
+        Money.of(100, CAD), Money.of(0, CAD), Money.of(100, CAD), java.math.BigDecimal.ZERO,
+        Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, LocalDate.now());
+
+    return ValuationSnapshotJpaEntity.from(snapshot);
+  }
+
+  @Nested
+  @DisplayName("Persistence Operations")
+  class PersistenceOperations {
+    @Test
+    @DisplayName("save should delegate to jpaRepository after mapping")
+    void saveShouldDelegateToJpaRepository() {
+      ValuationSnapshot snapshot = new ValuationSnapshot(UUID.randomUUID(), USER_ID,
+          Money.of(100, CAD), Money.of(0, CAD), Money.of(100, CAD), java.math.BigDecimal.ZERO,
+          Money.zero(CAD), Money.of(100, CAD), CAD.getCode(), false, LocalDate.now());
+
+      repository.save(snapshot);
+
+      // Match the actual upsertSnapshot call with lenient argument matchers
+      verify(jpaRepository).upsertSnapshot(any(UUID.class),      // id
+          any(UUID.class),      // userId
+          any(), any(),         // Money fields/strings broken down by mapper
+          any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+          anyBoolean(),         // false
+          any(),                // LocalDate
+          any()                 // LocalDateTime / Instant timestamp
+      );
+    }
+
+    @Test
+    @DisplayName("findByUserIdSince should return mapped domain objects")
+    void findByUserIdSinceShouldReturnMappedDomainObjects() {
+      LocalDate since = LocalDate.now().minus(7, ChronoUnit.DAYS);
+      ValuationSnapshotJpaEntity entity = createMockEntity();
+      when(jpaRepository.findByUserIdSince(USER_UUID, since)).thenReturn(List.of(entity));
+
+      List<ValuationSnapshot> results = repository.findByUserIdSince(USER_ID, since);
+
+      assertThat(results).hasSize(1);
+      verify(jpaRepository).findByUserIdSince(USER_UUID, since);
+    }
+  }
+}

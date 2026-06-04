@@ -1,13 +1,12 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
-
-import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * Request body for recording a cash withdrawal.
@@ -26,4 +25,5 @@ public record RecordWithdrawalRequest(
     @Schema(example = "100.00") @NotNull @DecimalMin("0.01") BigDecimal amount,
     @Schema(example = "USD") @NotBlank @Size(min = 3, max = 3) String currency,
     Instant transactionDate,
-    String notes) {}
+    String notes) {
+}

@@ -1,0 +1,38 @@
+package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
+
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record ValuationSnapshot(
+    UUID id,
+    UserId userId,
+    Money totalValue,
+    Money totalCostBasis,
+    Money unrealizedGainLoss,
+    BigDecimal gainLossPercent,
+    Money totalCashBalance,
+    Money totalInvestedValue,
+    String displayCurrency,
+    boolean hasStaleData,
+    LocalDate snapshotDay) {
+
+  public static ValuationSnapshot fromView(UserId userId, ValuationView view) {
+
+    return new ValuationSnapshot(UUID.randomUUID(), userId, view.totalValue(),
+        view.totalCostBasis(), view.unrealizedGainLoss(), view.gainLossPercent(),
+        view.totalCashBalance(), view.totalInvestedValue(), view.displayCurrency().getCode(),
+        view.hasStaleData(), view.asOfDate());
+  }
+
+  public static ValuationSnapshot fromExisting(ValuationSnapshot existing, ValuationView view) {
+
+    return new ValuationSnapshot(existing.id(), // preserve PK
+        existing.userId(), // preserve ownership
+        view.totalValue(), view.totalCostBasis(), view.unrealizedGainLoss(), view.gainLossPercent(),
+        view.totalCashBalance(), view.totalInvestedValue(), view.displayCurrency().getCode(),
+        view.hasStaleData(), view.asOfDate());
+  }
+}

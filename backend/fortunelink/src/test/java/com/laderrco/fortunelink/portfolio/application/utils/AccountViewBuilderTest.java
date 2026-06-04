@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.laderrco.fortunelink.portfolio.application.mappers.PortfolioViewMapper;
 import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountLifecycleState;
 import com.laderrco.fortunelink.portfolio.domain.model.enums.AccountType;
@@ -33,6 +34,7 @@ import com.laderrco.fortunelink.portfolio.infrastructure.persistence.projections
 import com.laderrco.fortunelink.shared.enums.Precision;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -84,16 +86,19 @@ class AccountViewBuilderTest {
 
   @Test
   @DisplayName("build: should include fees in position views when fee data is provided")
-  void buildshouldIncludeFeesInPositionViews() {
+  void buildShouldIncludeFeesInPositionViews() {
     Money fee = Money.of(10, USD);
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     Map<AssetSymbol, Money> fees = Map.of(appleSymbol, fee);
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
+        LocalDate.now());
 
     PositionView mockPosView = mock(PositionView.class);
     AccountView expectedView = mock(AccountView.class);
 
     when(viewMapper.toPositionView(any(), eq(appleQuote), eq(fee))).thenReturn(mockPosView);
-    when(valuationService.calculateAccountValue(account, quotes)).thenReturn(zeroMoney);
+    when(valuationService.calculateAccountValuation(account, quotes)).thenReturn(viewUSD);
     when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(),
         anyInt())).thenReturn(expectedView);
 
@@ -105,10 +110,15 @@ class AccountViewBuilderTest {
 
   @Test
   @DisplayName("build: should use zero fees when symbol is missing in the fee map")
-  void buildshouldUseZeroFeesWhenSymbolMissingInFeeMap() {
+  void buildShouldUseZeroFeesWhenSymbolMissingInFeeMap() {
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     Map<AssetSymbol, Money> emptyFees = Collections.emptyMap();
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
+        LocalDate.now());
+
     lenient().when(transactionRepository.countExcludedPositionAffecting(any())).thenReturn(2);
+    when(valuationService.calculateAccountValuation(any(), any())).thenReturn(viewUSD);
 
     accountViewBuilder.build(account, quotes, emptyFees);
 
@@ -118,13 +128,16 @@ class AccountViewBuilderTest {
 
   @Test
   @DisplayName("buildSummary: should map positions without requesting fee data")
-  void buildSummaryshouldNotRequestFees() {
+  void buildSummaryShouldNotRequestFees() {
     Map<AssetSymbol, MarketAssetQuote> quotes = Map.of(appleSymbol, appleQuote);
     PositionView mockPosView = mock(PositionView.class);
     AccountView expectedView = mock(AccountView.class);
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
+        LocalDate.now());
 
     when(viewMapper.toPositionView(any(), eq(appleQuote))).thenReturn(mockPosView);
-    when(valuationService.calculateAccountValue(account, quotes)).thenReturn(zeroMoney);
+    when(valuationService.calculateAccountValuation(account, quotes)).thenReturn(viewUSD);
     when(viewMapper.toAccountView(eq(account), any(), any(), any(), anyBoolean(),
         anyInt())).thenReturn(expectedView);
 
@@ -138,8 +151,6 @@ class AccountViewBuilderTest {
   @DisplayName("buildFromProjection")
   class BuildFromProjectionTests {
     private final UUID accountUuid = UUID.randomUUID();
-    private final String accountName = "TFSA Trading";
-    private final String currencyCode = "USD";
     private final BigDecimal cashBalance = new BigDecimal("1500.50");
     private final Instant createdDate = Instant.now();
 
@@ -149,8 +160,10 @@ class AccountViewBuilderTest {
 
       AccountSummaryProjection projection = mock(AccountSummaryProjection.class);
       when(projection.getId()).thenReturn(accountUuid);
+      String accountName = "TFSA Trading";
       when(projection.getName()).thenReturn(accountName);
       when(projection.getAccountType()).thenReturn("CHEQUING");
+      String currencyCode = "USD";
       when(projection.getBaseCurrencyCode()).thenReturn(currencyCode);
       when(projection.getCashBalanceAmount()).thenReturn(cashBalance);
       when(projection.getLifecycleState()).thenReturn(AccountLifecycleState.ACTIVE.name());

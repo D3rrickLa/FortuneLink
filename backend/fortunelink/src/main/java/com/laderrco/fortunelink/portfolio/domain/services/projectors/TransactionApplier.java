@@ -27,7 +27,7 @@ public final class TransactionApplier {
   private static ApplyResult<? extends Position> applyBuy(Position p, Transaction tx) {
     return p.buy(tx.execution().quantity(), tx.cashDelta().abs(), tx.occurredAt());
   }
-  
+
   private static ApplyResult<? extends Position> applySell(Position p, Transaction tx) {
     return p.sell(tx.execution().quantity(), tx.cashDelta(), tx.occurredAt());
   }

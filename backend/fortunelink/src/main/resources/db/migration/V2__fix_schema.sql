@@ -4,7 +4,8 @@ ALTER TABLE portfolios DROP CONSTRAINT IF EXISTS portfolios_user_id_key;
 
 
 -- Concurrent check as creating an account with the same name can happen technically
-ALTER TABLE accounts ADD CONSTRAINT uq_account_name_portfolio 
-    UNIQUE (portfolio_id, name);
+ALTER TABLE accounts
+    ADD CONSTRAINT uq_account_name_portfolio
+        UNIQUE (portfolio_id, name);
 
     

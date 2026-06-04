@@ -22,15 +22,15 @@ import com.laderrco.fortunelink.portfolio.application.commands.DeletePortfolioCo
 import com.laderrco.fortunelink.portfolio.application.commands.UpdatePortfolioCommand;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioLimitReachedException;
 import com.laderrco.fortunelink.portfolio.application.exceptions.PortfolioNotFoundException;
-import com.laderrco.fortunelink.portfolio.application.queries.GetNetWorthQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfolioByIdQuery;
 import com.laderrco.fortunelink.portfolio.application.queries.GetPortfoliosByUserIdQuery;
+import com.laderrco.fortunelink.portfolio.application.queries.GetValuationQuery;
 import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioLifecycleService;
 import com.laderrco.fortunelink.portfolio.application.services.PortfolioQueryService;
-import com.laderrco.fortunelink.portfolio.application.views.NetWorthView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
@@ -39,7 +39,9 @@ import com.laderrco.fortunelink.portfolio.infrastructure.config.authentication.A
 import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -121,10 +123,11 @@ class PortfolioControllerTest {
         Money.zero(cad), Instant.now());
   }
 
-  private NetWorthView buildNetWorthView() {
+  private ValuationView buildNetWorthView() {
     Currency cad = Currency.of("CAD");
     Money zero = Money.zero(cad);
-    return new NetWorthView(zero, zero, zero, cad, false, false, Instant.now());
+    return new ValuationView(zero, zero, zero, BigDecimal.ZERO, zero, zero, cad, false,
+        LocalDate.now());
   }
 
   @Nested
@@ -389,7 +392,7 @@ class PortfolioControllerTest {
     @Test
     @DisplayName("200 with net worth breakdown")
     void returns200OnSuccess() throws Exception {
-      when(queryService.getNetWorth(any(GetNetWorthQuery.class))).thenReturn(buildNetWorthView());
+      when(queryService.getValuation(any(GetValuationQuery.class))).thenReturn(buildNetWorthView());
 
       mockMvc.perform(get(PORTFOLIO_URL + "/net-worth")).andExpect(status().isOk())
           .andExpect(jsonPath("$.currency").value("CAD"));
@@ -398,13 +401,13 @@ class PortfolioControllerTest {
     @Test
     @DisplayName("GetNetWorthQuery carries the correct IDs")
     void queryCarriesCorrectIds() throws Exception {
-      when(queryService.getNetWorth(any(GetNetWorthQuery.class))).thenReturn(buildNetWorthView());
+      when(queryService.getValuation(any(GetValuationQuery.class))).thenReturn(buildNetWorthView());
 
-      var captor = ArgumentCaptor.forClass(GetNetWorthQuery.class);
+      var captor = ArgumentCaptor.forClass(GetValuationQuery.class);
 
       mockMvc.perform(get(PORTFOLIO_URL + "/net-worth")).andExpect(status().isOk());
 
-      verify(queryService).getNetWorth(captor.capture());
+      verify(queryService).getValuation(captor.capture());
       assertThat(captor.getValue().portfolioId()).isEqualTo(PortfolioId.fromString(PORTFOLIO_ID));
       assertThat(captor.getValue().userId().id()).isEqualTo(USER_UUID);
     }
@@ -412,7 +415,7 @@ class PortfolioControllerTest {
     @Test
     @DisplayName("404 when portfolio not found")
     void returns404WhenNotFound() throws Exception {
-      when(queryService.getNetWorth(any(GetNetWorthQuery.class))).thenThrow(
+      when(queryService.getValuation(any(GetValuationQuery.class))).thenThrow(
           new PortfolioNotFoundException(PortfolioId.fromString(PORTFOLIO_ID)));
 
       mockMvc.perform(get(PORTFOLIO_URL + "/net-worth")).andExpect(status().isNotFound());

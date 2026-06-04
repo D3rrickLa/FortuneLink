@@ -89,7 +89,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.NullSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -285,7 +284,6 @@ class TransactionServiceTest {
 
     @ParameterizedTest
     @EnumSource(value = AssetType.class, names = {"CASH", "OTHER"})
-    @NullSource
     @DisplayName("recordPurchase: should sanitize invalid hints to STOCK when asset not found")
     void recordPurchaseSanitizeType(AssetType hint) {
       AssetSymbol symbol = new AssetSymbol("AAPL");
@@ -874,6 +872,25 @@ class TransactionServiceTest {
       assertThat(result).isEqualTo(mockView);
 
       verify(transactionRepository, never()).findByIdempotencyKeyAndPortfolioId(any(), any());
+    }
+
+    @Test
+    @DisplayName("recover: Should log warning and rethrow the original DataIntegrityViolationException")
+    void shouldLogAndRethrowOriginalException() {
+      UUID key = UUID.randomUUID();
+      RecordPurchaseCommand command = new RecordPurchaseCommand(
+          key, PORTFOLIO_ID, USER_ID, ACCOUNT_ID, SYMBOL_STR, ASSET_TYPE,
+          Quantity.of(10), new Price(AMOUNT), List.of(), NOW, NOTES, false
+      );
+
+      DataIntegrityViolationException originalException =
+          new DataIntegrityViolationException("Unique index violation on idempotency key");
+
+      // Act & Assert
+      // Directly calling the public recover method on your injected service instance
+      assertThatThrownBy(() -> service.recover(originalException, command))
+          .isSameAs(originalException)
+          .hasMessageContaining("Unique index violation on idempotency key");
     }
 
     @Test

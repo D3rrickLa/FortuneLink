@@ -2,27 +2,36 @@ package com.laderrco.fortunelink.portfolio.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.UserPreferences;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
-import com.laderrco.fortunelink.portfolio.domain.repositories.NetWorthSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.AccountValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.repositories.PortfolioRepository;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,35 +51,67 @@ class UserSnapshotWorkerTest {
 
   @Mock
   private MarketDataService marketDataService;
-
   @Mock
   private PortfolioRepository portfolioRepository;
-
   @Mock
-  private NetWorthSnapshotRepository snapshotRepository;
-
+  private AccountValuationSnapshotRepository accountSnapshotRepository;
+  @Mock
+  private ValuationSnapshotRepository snapshotRepository;
   @Mock
   private PortfolioValuationService valuationService;
+  @Mock
+  private TimeZoneService timeZoneService;
+  @Mock
+  private UserPreferencesService userPreferencesService;
 
   @InjectMocks
   private UserSnapshotWorker snapshotWorker;
 
+  // =====================================================
+  // 1. Quote branching test
+  // =====================================================
+
   @Test
-  @DisplayName("snapshotForUser: tests quote fetch branching (empty symbols vs symbols present)")
+  @DisplayName("snapshotForUser: tests quote fetch branching (empty vs non-empty symbols)")
   void snapshotForUserQuoteFetchingBranching() {
 
     Portfolio p = mock(Portfolio.class);
-    when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
-    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
-    when(p.getDisplayCurrency()).thenReturn(USD);
-    when(valuationService.calculateTotalValue(any(), any(), any())).thenReturn(Money.zero(USD));
-
-    snapshotWorker.snapshotForUser(USER_ID);
-    verify(marketDataService, never()).getBatchQuotes(any());
-
     AssetSymbol apple = new AssetSymbol("AAPL");
-    try (MockedStatic<PortfolioAccessUtils> utils = mockStatic(PortfolioAccessUtils.class)) {
+
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
+        LocalDate.now());
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, null,
+        "America/Toronto");
+    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
+
+    when(p.getDisplayCurrency()).thenReturn(USD);
+
+    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
+
+    when(userPreferencesService.get(any())).thenReturn(preferences);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
+
+    try (MockedStatic<PortfolioAccessUtils> utils = Mockito.mockStatic(
+        PortfolioAccessUtils.class)) {
+
+      // -------------------------
+      // CASE 1: EMPTY SYMBOLS
+      // -------------------------
+      utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of());
+
+      snapshotWorker.snapshotForUser(USER_ID);
+
+      verify(marketDataService, never()).getBatchQuotes(any());
+
+      clearInvocations(marketDataService);
+
+      // -------------------------
+      // CASE 2: SYMBOLS PRESENT
+      // -------------------------
       utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of(apple));
+
+      when(marketDataService.getBatchQuotes(Set.of(apple))).thenReturn(Map.of());
 
       snapshotWorker.snapshotForUser(USER_ID);
 
@@ -77,32 +119,46 @@ class UserSnapshotWorkerTest {
     }
   }
 
+  // =====================================================
+  // 2. No-op cases
+  // =====================================================
+
   @Test
-  @DisplayName("snapshotForUser: returns false when no work needed")
-  void returnsFalseWhenNoWork() {
+  @DisplayName("snapshotForUser: returns false when no portfolios exist")
+  void returnsFalseWhenNoPortfolios() {
 
-    when(snapshotRepository.existsForToday(USER_ID)).thenReturn(true);
-    assertThat(snapshotWorker.snapshotForUser(USER_ID)).isFalse();
-
-    when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of());
+    when(userPreferencesService.get(any())).thenReturn(null);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
+
     assertThat(snapshotWorker.snapshotForUser(USER_ID)).isFalse();
   }
 
+  // =====================================================
+  // 3. Success path
+  // =====================================================
+
   @Test
-  @DisplayName("snapshotForUser: full success path with stale data")
+  @DisplayName("snapshotForUser: full success path")
   void createsSnapshotSuccessfully() {
     Portfolio p = mock(Portfolio.class);
     Account a = mock(Account.class);
 
-    when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
+    ValuationView viewUSD = new ValuationView(Money.of("100.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, true,
+        LocalDate.now());
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, "YYY/MM/DD",
+        "America/Toronto");
+
     when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
+
     when(p.getDisplayCurrency()).thenReturn(USD);
     when(p.getAccounts()).thenReturn(List.of(a));
-    when(a.isStale()).thenReturn(true);
 
-    when(valuationService.calculateTotalValue(eq(p), eq(USD), any())).thenReturn(
-        Money.of(100, USD));
+    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
+
+    when(userPreferencesService.get(any())).thenReturn(preferences);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
 
     boolean result = snapshotWorker.snapshotForUser(USER_ID);
 
@@ -111,15 +167,29 @@ class UserSnapshotWorkerTest {
     verify(snapshotRepository).save(argThat(s -> s.userId().equals(USER_ID) && s.hasStaleData()));
   }
 
+  // =====================================================
+  // 4. Empty symbols + save still happens
+  // =====================================================
+
   @Test
   @DisplayName("snapshotForUser: handles empty symbols list")
   void handlesEmptySymbols() {
     Portfolio p = mock(Portfolio.class);
-    when(snapshotRepository.existsForToday(USER_ID)).thenReturn(false);
-    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
-    when(p.getDisplayCurrency()).thenReturn(USD);
 
-    when(valuationService.calculateTotalValue(any(), any(), any())).thenReturn(Money.zero(USD));
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, "YYY/MM/DD",
+        "America/Toronto");
+    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
+
+    when(p.getDisplayCurrency()).thenReturn(USD);
+    when(p.getAccounts()).thenReturn(List.of());
+
+    when(userPreferencesService.get(any())).thenReturn(preferences);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
+
+    // Also stub this service to prevent ValuationSnapshot.fromView from throwing an NPE if it reads fields
+    when(valuationService.calculateUserValuation(any(), any(), any())).thenReturn(
+        new ValuationView(Money.of("100.00", USD), Money.zero(USD), Money.zero(USD),
+            BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, true, LocalDate.now()));
 
     snapshotWorker.snapshotForUser(USER_ID);
 

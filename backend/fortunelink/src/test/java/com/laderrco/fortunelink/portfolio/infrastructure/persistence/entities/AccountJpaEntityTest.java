@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @DisplayName("AccountJpaEntity Unit Tests")
 class AccountJpaEntityTest {
@@ -18,7 +19,6 @@ class AccountJpaEntityTest {
   @Test
   @DisplayName("replacePositions should update existing, add new, and remove missing positions")
   void replacePositionsShouldSyncCollections() {
-
     AccountJpaEntity account = new AccountJpaEntity();
     UUID existingId = UUID.randomUUID();
     UUID newId = UUID.randomUUID();
@@ -47,7 +47,6 @@ class AccountJpaEntityTest {
         .orElseThrow();
     assertThat(msftResult.getAccount()).isEqualTo(account);
 
-
   }
 
   @Test
@@ -71,5 +70,79 @@ class AccountJpaEntityTest {
 
     account.markNotNew();
     assertThat(account.isNew()).isFalse();
+  }
+
+  @Test
+  @DisplayName("applyFrom: copies all scalar properties but does not touch collection associations")
+  void applyFromCopiesScalarsAndSafeguardsCollections() {
+    // Arrange - Target instance to be modified
+    AccountJpaEntity target = new AccountJpaEntity();
+    ReflectionTestUtils.setField(target, "name", "Old Checking Name");
+    ReflectionTestUtils.setField(target, "accountType", "CHECKING");
+    ReflectionTestUtils.setField(target, "positionStrategy", "STATIC");
+    ReflectionTestUtils.setField(target, "healthStatus", "HEALTHY");
+    ReflectionTestUtils.setField(target, "lifecycleState", "ACTIVE");
+    ReflectionTestUtils.setField(target, "cashBalanceAmount", new BigDecimal("100.00"));
+    ReflectionTestUtils.setField(target, "cashBalanceCurrency", "USD");
+    ReflectionTestUtils.setField(target, "closedDate", null);
+    ReflectionTestUtils.setField(target, "lastUpdatedOn", Instant.parse("2026-01-01T00:00:00Z"));
+
+    // 1. Create standard mutable collections for the target
+    Set<PositionJpaEntity> targetPositionsField = new java.util.LinkedHashSet<>();
+    Set<RealizedGainJpaEntity> targetGainsField = new java.util.LinkedHashSet<>();
+
+    PositionJpaEntity targetPosition = new PositionJpaEntity();
+    RealizedGainJpaEntity targetGain = new RealizedGainJpaEntity();
+    targetPositionsField.add(targetPosition);
+    targetGainsField.add(targetGain);
+
+    // 2. Inject them directly into the private fields, bypassing the defensive
+    // getters
+    ReflectionTestUtils.setField(target, "positions", targetPositionsField);
+    ReflectionTestUtils.setField(target, "realizedGains", targetGainsField);
+
+    // Arrange - Source data carrier
+    AccountJpaEntity source = new AccountJpaEntity();
+    ReflectionTestUtils.setField(source, "name", "New Investment Name");
+    ReflectionTestUtils.setField(source, "accountType", "BROKERAGE");
+    ReflectionTestUtils.setField(source, "positionStrategy", "DYNAMIC");
+    ReflectionTestUtils.setField(source, "healthStatus", "CRITICAL");
+    ReflectionTestUtils.setField(source, "lifecycleState", "SUSPENDED");
+    ReflectionTestUtils.setField(source, "cashBalanceAmount", new BigDecimal("42000.50"));
+    ReflectionTestUtils.setField(source, "cashBalanceCurrency", "CAD");
+    ReflectionTestUtils.setField(source, "closedDate", Instant.parse("2026-05-28T12:00:00Z"));
+    ReflectionTestUtils.setField(source, "lastUpdatedOn", Instant.parse("2026-05-28T18:00:00Z"));
+
+    // 3. Do the same for the source's positions so source.getPositions() doesn't
+    // blow up if it's read by anything
+    Set<PositionJpaEntity> sourcePositionsField = new java.util.LinkedHashSet<>();
+    PositionJpaEntity sourcePosition = new PositionJpaEntity();
+    sourcePositionsField.add(sourcePosition);
+    ReflectionTestUtils.setField(source, "positions", sourcePositionsField);
+
+    // Act
+    target.applyFrom(source);
+
+    // Assert - Verify State Mutations
+    assertThat(target.getName()).isEqualTo("New Investment Name");
+    assertThat(target.getAccountType()).isEqualTo("BROKERAGE");
+    assertThat(target.getPositionStrategy()).isEqualTo("DYNAMIC");
+    assertThat(target.getHealthStatus()).isEqualTo("CRITICAL");
+    assertThat(target.getLifecycleState()).isEqualTo("SUSPENDED");
+    assertThat(target.getCashBalanceAmount()).isEqualByComparingTo("42000.50");
+    assertThat(target.getCashBalanceCurrency()).isEqualTo("CAD");
+    assertThat(target.getClosedDate()).isEqualTo("2026-05-28T12:00:00Z");
+    assertThat(target.getLastUpdatedOn()).isEqualTo("2026-05-28T18:00:00Z");
+
+    // Assert - Critical Regression Invariant Check (Collections left
+    // uncopied/unmutated)
+    assertThat(target.getPositions())
+        .as("Positions must remain untouched so Hibernate can manage lifecycle tracking state")
+        .containsExactly(targetPosition)
+        .doesNotContain(sourcePosition);
+
+    assertThat(target.getRealizedGains())
+        .as("Realized gains collection must not be side-effected by applyFrom")
+        .containsExactly(targetGain);
   }
 }

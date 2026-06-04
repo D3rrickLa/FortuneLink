@@ -30,6 +30,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -172,6 +174,15 @@ class AccountQueryRepositoryImplTest {
 
       assertThat(result).containsKey(ACCOUNT_ID);
       assertThat(result.get(ACCOUNT_ID)).contains(new AssetSymbol("AAPL"));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("findSymbolsForAccounts returns empty map when ids is null or empty")
+    void findSymbolsForAccountsReturnsEmptyMapWhenIdsIsNullOrFields(List<AccountId> invalidIds) {
+      Map<AccountId, Set<AssetSymbol>> result = repository.findSymbolsForAccounts(invalidIds);
+      assertThat(result).isNotNull().isEmpty();
+      verifyNoInteractions(jpaAccountRepository);
     }
   }
 }

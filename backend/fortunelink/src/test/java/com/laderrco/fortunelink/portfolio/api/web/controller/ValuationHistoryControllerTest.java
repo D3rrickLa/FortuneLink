@@ -1,0 +1,268 @@
+package com.laderrco.fortunelink.portfolio.api.web.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.laderrco.fortunelink.portfolio.application.services.AuthenticationUserService;
+import com.laderrco.fortunelink.portfolio.application.services.ValuationApplicationService;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Money;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.PortfolioId;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
+import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotRepository;
+import com.laderrco.fortunelink.portfolio.infrastructure.config.limiting.RateLimitInterceptor;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+
+@WebMvcTest(controllers = ValuationHistoryController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class ValuationHistoryControllerTest {
+
+  private static final UUID USER_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+  private static final String BASE_URL = "/api/v1/valuations";
+
+  @Autowired
+  private MockMvc mockMvc;
+
+  @MockitoBean
+  private ValuationSnapshotRepository snapshotRepository;
+
+  @MockitoBean
+  private ValuationApplicationService valuationApplicationService;
+
+  @MockitoBean
+  private AuthenticationUserService authenticationUserService;
+  @MockitoBean
+  private RateLimitInterceptor rateLimitInterceptor;
+
+  @BeforeEach
+  void setUp() throws Exception {
+    when(authenticationUserService.getCurrentUser()).thenReturn(USER_UUID);
+    when(rateLimitInterceptor.preHandle(any(), any(), any())).thenReturn(true);
+  }
+
+  private ValuationSnapshot buildSnapshot() {
+    Currency cad = Currency.of("CAD");
+    Money fifty = new Money(new BigDecimal("50000"), cad);
+    Money zeroMoney = Money.zero(cad);
+
+    return new ValuationSnapshot(UUID.randomUUID(), UserId.fromString(USER_UUID.toString()),
+        fifty, // totalValue
+        zeroMoney, // totalCostBasis
+        fifty, // unrealizedGainLoss
+        BigDecimal.ZERO, // gainLossPercent
+        zeroMoney, // totalCashBalance
+        zeroMoney, // totalInvestedValue
+        cad.getCode(), // displayCurrency
+        false, // hasStaleData
+        LocalDate.now() // snapshotDay
+    );
+  }
+
+  @Test
+  @DisplayName("GET /{id} — 200 and delegates to Application Service")
+  void getPortfolioValuation_Returns200() throws Exception {
+    PortfolioId pid = PortfolioId.fromString(UUID.randomUUID().toString());
+    ValuationView view = new ValuationView(new Money(new BigDecimal("500.00"), Currency.CAD),
+        new Money(new BigDecimal("450.00"), Currency.CAD),
+        new Money(new BigDecimal("50.00"), Currency.CAD), BigDecimal.valueOf(11.11),
+        new Money(new BigDecimal("1000.00"), Currency.CAD),
+        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, LocalDate.now());
+
+    when(valuationApplicationService.computePortfolioValuation(any(), any())).thenReturn(view);
+
+    mockMvc.perform(get(BASE_URL + "/" + pid.toString())).andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalValue.amount").value(500.00));
+  }
+
+  @Test
+  @DisplayName("GET /summary, 200 and delegates to Application Service")
+  void getSummary_Returns200() throws Exception {
+    ValuationView view = new ValuationView(new Money(new BigDecimal("500.00"), Currency.CAD),
+        new Money(new BigDecimal("450.00"), Currency.CAD),
+        new Money(new BigDecimal("50.00"), Currency.CAD), BigDecimal.valueOf(11.11),
+        new Money(new BigDecimal("1000.00"), Currency.CAD),
+        new Money(new BigDecimal("10000.00"), Currency.CAD), Currency.CAD, false, LocalDate.now());
+
+    when(valuationApplicationService.computeSummaryValuation(any())).thenReturn(view);
+
+    mockMvc.perform(get(BASE_URL + "/summary")).andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalValue.amount").value(500.00))
+        .andExpect(jsonPath("$.currency").value("CAD"));
+  }
+
+  @Test
+  void from_returnsNull_whenSnapshotIsNull() {
+    ValuationHistoryController.ValuationSnapshotResponse.from(null);
+    assertThat((ValuationHistoryController.ValuationSnapshotResponse) null).isNull();
+  }
+
+  @Test
+  void from_mapsNullMoneyFields_toBigDecimalZero() {
+
+    ValuationSnapshot snapshot = mock(ValuationSnapshot.class);
+
+    when(snapshot.totalValue()).thenReturn(null);
+    when(snapshot.totalCostBasis()).thenReturn(null);
+    when(snapshot.unrealizedGainLoss()).thenReturn(null);
+    when(snapshot.totalCashBalance()).thenReturn(null);
+    when(snapshot.totalInvestedValue()).thenReturn(null);
+
+    when(snapshot.gainLossPercent()).thenReturn(new BigDecimal("12.50"));
+    when(snapshot.displayCurrency()).thenReturn("USD");
+    when(snapshot.hasStaleData()).thenReturn(false);
+
+    LocalDate snapshotDay = LocalDate.ofInstant(Instant.parse("2025-01-01T00:00:00Z"), ZoneId.of("UTC"));
+    when(snapshot.snapshotDay()).thenReturn(snapshotDay);
+
+    var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
+
+    assertThat(response.totalValue()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.totalCostBasis()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.unrealizedGainLoss()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.totalCashBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+    assertThat(response.totalInvestedValue()).isEqualByComparingTo(BigDecimal.ZERO);
+
+    assertThat(response.gainLossPercent()).isEqualByComparingTo("12.50");
+    assertThat(response.currency()).isEqualTo("USD");
+    assertThat(response.hasStaleData()).isFalse();
+    assertThat(response.snapshotDay()).isEqualTo(snapshotDay);
+  }
+
+  @Test
+  void from_mapsMoneyAmountsCorrectly() {
+
+    ValuationSnapshot snapshot = mock(ValuationSnapshot.class);
+
+    when(snapshot.totalValue()).thenReturn(
+        new Money(new BigDecimal("125000.50"), Currency.of("USD")));
+
+    when(snapshot.totalCostBasis()).thenReturn(
+        new Money(new BigDecimal("100000.00"), Currency.of("USD")));
+
+    when(snapshot.unrealizedGainLoss()).thenReturn(
+        new Money(new BigDecimal("25000.50"), Currency.of("USD")));
+
+    when(snapshot.totalCashBalance()).thenReturn(
+        new Money(new BigDecimal("15000.00"), Currency.of("USD")));
+
+    when(snapshot.totalInvestedValue()).thenReturn(
+        new Money(new BigDecimal("110000.50"), Currency.of("USD")));
+
+    when(snapshot.gainLossPercent()).thenReturn(new BigDecimal("25.00"));
+
+    when(snapshot.displayCurrency()).thenReturn("USD");
+    when(snapshot.hasStaleData()).thenReturn(false);
+
+    LocalDate snapshotDay = LocalDate.ofInstant(Instant.parse("2025-01-01T00:00:00Z"), ZoneId.of("UTC"));
+    when(snapshot.snapshotDay()).thenReturn(snapshotDay);
+
+    var response = ValuationHistoryController.ValuationSnapshotResponse.from(snapshot);
+
+    assertThat(response.totalValue()).isEqualByComparingTo("125000.50");
+
+    assertThat(response.totalCostBasis()).isEqualByComparingTo("100000.00");
+
+    assertThat(response.unrealizedGainLoss()).isEqualByComparingTo("25000.50");
+
+    assertThat(response.totalCashBalance()).isEqualByComparingTo("15000.00");
+
+    assertThat(response.totalInvestedValue()).isEqualByComparingTo("110000.50");
+  }
+
+  @Nested
+  @DisplayName("GET / getHistory")
+  class GetHistory {
+
+    @Test
+    @DisplayName("200 with list of snapshots using default days=90")
+    void returns200WithDefaultDays() throws Exception {
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
+          List.of(buildSnapshot()));
+
+      mockMvc.perform(get(BASE_URL + "/history")).andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(1))
+          .andExpect(jsonPath("$[0].totalValue").value(50000.0))
+          .andExpect(jsonPath("$[0].currency").value("CAD"))
+          .andExpect(jsonPath("$[0].hasStaleData").value(false));
+    }
+
+    @Test
+    @DisplayName("200 with snapshots filtered by custom days parameter")
+    void returns200WithCustomDays() throws Exception {
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
+          List.of());
+
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "365")).andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("200 with empty list when user has no historical snapshots")
+    void returns200WithEmptyList() throws Exception {
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
+          List.of());
+
+      mockMvc.perform(get(BASE_URL + "/history")).andExpect(status().isOk())
+          .andExpect(jsonPath("$").isArray()).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("400 when days=0 (below minimum of 1)")
+    void returns400ForZeroDays() throws Exception {
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "0"))
+          .andExpect(status().isBadRequest());
+
+      verifyNoInteractions(snapshotRepository);
+    }
+
+    @Test
+    @DisplayName("400 when days=1826 (above maximum of 1825)")
+    void returns400ForExcessiveDays() throws Exception {
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "1826"))
+          .andExpect(status().isBadRequest());
+
+      verifyNoInteractions(snapshotRepository);
+    }
+
+    @Test
+    @DisplayName("200 at boundary: days=1825 is valid")
+    void returns200AtMaxDaysBoundary() throws Exception {
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
+          List.of());
+
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "1825")).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("200 at boundary: days=1 is valid")
+    void returns200AtMinDaysBoundary() throws Exception {
+      when(snapshotRepository.findByUserIdSince(any(UserId.class), any(LocalDate.class))).thenReturn(
+          List.of());
+
+      mockMvc.perform(get(BASE_URL + "/history").param("days", "1")).andExpect(status().isOk());
+    }
+  }
+}

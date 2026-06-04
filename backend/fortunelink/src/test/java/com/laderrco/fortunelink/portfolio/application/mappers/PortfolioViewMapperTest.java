@@ -12,6 +12,7 @@ import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -32,6 +33,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,10 +85,13 @@ class PortfolioViewMapperTest {
     void toPortfolioSummaryViewShouldMapCorrectly() {
       Portfolio portfolio = mock(Portfolio.class);
       Money totalVal = new Money(new BigDecimal("1500.00"), CAD);
+      ValuationView view = new ValuationView(Money.of("1500.00", CAD), Money.zero(CAD),
+          Money.zero(CAD), BigDecimal.ZERO, Money.zero(CAD), Money.zero(CAD), CAD, false,
+          LocalDate.now());
       when(portfolio.getPortfolioId()).thenReturn(PORTFOLIOID);
       when(portfolio.getName()).thenReturn("Retirement");
 
-      PortfolioSummaryView result = mapper.toPortfolioSummaryView(portfolio, totalVal);
+      PortfolioSummaryView result = mapper.toPortfolioSummaryView(portfolio, view);
 
       assertThat(result.id()).isEqualTo(PORTFOLIOID);
       assertThat(result.totalValue()).isEqualTo(totalVal);
@@ -297,6 +302,9 @@ class PortfolioViewMapperTest {
       Portfolio portfolio = mock(Portfolio.class);
       List<AccountView> accountViews = Collections.emptyList();
       Money totalValue = Money.of(5000, CAD);
+      ValuationView valuationView = new ValuationView(totalValue, Money.of(1000d, "CAD"),
+          Money.of(1000d, "CAD"), BigDecimal.valueOf(10), Money.of(1000d, "CAD"),
+          Money.of(1000d, "CAD"), Currency.of("CAD"), false, LocalDate.now());
       boolean hasStaleData = true;
 
       when(portfolio.getPortfolioId()).thenReturn(PORTFOLIOID);
@@ -304,7 +312,7 @@ class PortfolioViewMapperTest {
       when(portfolio.getName()).thenReturn("Main");
       when(portfolio.getCreatedAt()).thenReturn(NOW);
 
-      PortfolioView result = mapper.toPortfolioView(portfolio, accountViews, totalValue,
+      PortfolioView result = mapper.toPortfolioView(portfolio, accountViews, valuationView,
           hasStaleData);
 
       assertThat(result.totalValue()).isEqualTo(totalValue);

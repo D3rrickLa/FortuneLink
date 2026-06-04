@@ -1,10 +1,9 @@
 package com.laderrco.fortunelink.portfolio.api.web.dto.requests.transactions;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
-
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Request to record a manual cash deposit")
 public record RecordDepositRequest(

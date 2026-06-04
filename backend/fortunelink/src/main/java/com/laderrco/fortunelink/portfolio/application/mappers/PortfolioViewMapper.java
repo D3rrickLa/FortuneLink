@@ -4,6 +4,7 @@ import com.laderrco.fortunelink.portfolio.application.views.AccountView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioSummaryView;
 import com.laderrco.fortunelink.portfolio.application.views.PortfolioView;
 import com.laderrco.fortunelink.portfolio.application.views.PositionView;
+import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
@@ -99,20 +100,20 @@ public class PortfolioViewMapper {
   }
 
   public PortfolioView toPortfolioView(Portfolio portfolio, List<AccountView> accountViews,
-      Money totalValue, boolean hasStaleData) {
+      ValuationView valuation, boolean hasStaleData) {
     Objects.requireNonNull(portfolio, "Portfolio cannot be null");
-
+    Objects.requireNonNull(valuation, "Valuation cannot be null");
     return new PortfolioView(portfolio.getPortfolioId(), portfolio.getUserId(), portfolio.getName(),
-        portfolio.getDescription(), accountViews, totalValue, hasStaleData,
+        portfolio.getDescription(), accountViews, valuation.totalValue(), hasStaleData,
         portfolio.getCreatedAt(), portfolio.getLastUpdatedAt());
   }
 
-  public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, Money totalValue) {
+  public PortfolioSummaryView toPortfolioSummaryView(Portfolio portfolio, ValuationView valuation) {
     Objects.requireNonNull(portfolio, "Portfolio cannot be null");
-    Objects.requireNonNull(totalValue, "Total value cannot be null");
+    Objects.requireNonNull(valuation, "Valuation cannot be null");
 
-    return new PortfolioSummaryView(portfolio.getPortfolioId(), portfolio.getName(), totalValue,
-        portfolio.getLastUpdatedAt());
+    return new PortfolioSummaryView(portfolio.getPortfolioId(), portfolio.getName(),
+        valuation.totalValue(), portfolio.getLastUpdatedAt());
   }
 
   public AccountView toNewAccountView(Account account) {
