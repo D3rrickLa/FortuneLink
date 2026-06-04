@@ -6,7 +6,6 @@ import com.laderrco.fortunelink.shared.enums.Precision;
 import com.laderrco.fortunelink.shared.enums.Rounding;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
 import lombok.Builder;
 
 @Builder
@@ -22,7 +21,8 @@ public record ValuationView(
     LocalDate asOfDate) {
 
   public static ValuationView of(Money totalValue, Money totalCostBasis, Money totalCashBalance,
-      Money totalInvestedValue, Currency displayCurrency, boolean hasStaleData, LocalDate asOfDate) {
+      Money totalInvestedValue, Currency displayCurrency, boolean hasStaleData,
+      LocalDate asOfDate) {
     Money unrealizedGainLoss = totalValue.subtract(totalCostBasis);
     BigDecimal gainLossPercent = computePercent(unrealizedGainLoss, totalCostBasis);
 
@@ -36,20 +36,13 @@ public record ValuationView(
     }
 
     return numerator.amount().divide(denominator.amount(), Precision.DIVISION.getDecimalPlaces(),
-        Rounding.DIVISION.getMode()).multiply(BigDecimal.valueOf(100))
+            Rounding.DIVISION.getMode()).multiply(BigDecimal.valueOf(100))
         .setScale(Precision.DIVISION.getDecimalPlaces(), Rounding.DIVISION.getMode());
   }
 
   public static ValuationView empty(Currency reportingCurrency) {
-    return new ValuationView(
-        Money.zero(reportingCurrency),
-        Money.zero(reportingCurrency),
-        Money.zero(reportingCurrency),
-        BigDecimal.ZERO,
-        Money.zero(reportingCurrency),
-        Money.zero(reportingCurrency),
-        reportingCurrency,
-        false,
-        LocalDate.now());
+    return new ValuationView(Money.zero(reportingCurrency), Money.zero(reportingCurrency),
+        Money.zero(reportingCurrency), BigDecimal.ZERO, Money.zero(reportingCurrency),
+        Money.zero(reportingCurrency), reportingCurrency, false, LocalDate.now());
   }
 }

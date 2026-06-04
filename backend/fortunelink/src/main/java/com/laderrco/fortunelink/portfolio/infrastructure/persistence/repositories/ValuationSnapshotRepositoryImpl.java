@@ -20,23 +20,13 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
   public ValuationSnapshot save(ValuationSnapshot snapshot) {
     ValuationSnapshotJpaEntity entity = ValuationSnapshotJpaEntity.from(snapshot);
 
-    jpaRepository.upsertSnapshot(
-        entity.getId(),
-        entity.getUserId(),
-        entity.getTotalValueAmount(),
-        entity.getTotalValueCurrency(),
-        entity.getTotalCostBasisAmount(),
-        entity.getTotalCostBasisCurrency(),
-        entity.getUnrealizedGainLossAmount(),
-        entity.getUnrealizedGainLossCurrency(),
-        entity.getGainLossPercent(),
-        entity.getTotalCashBalanceAmount(),
-        entity.getTotalCashBalanceCurrency(),
-        entity.getTotalInvestedValueAmount(),
-        entity.getTotalInvestedValueCurrency(),
-        entity.getDisplayCurrencyCode(),
-        entity.isHasStaleData(),
-        entity.getSnapshotDay(),
+    jpaRepository.upsertSnapshot(entity.getId(), entity.getUserId(), entity.getTotalValueAmount(),
+        entity.getTotalValueCurrency(), entity.getTotalCostBasisAmount(),
+        entity.getTotalCostBasisCurrency(), entity.getUnrealizedGainLossAmount(),
+        entity.getUnrealizedGainLossCurrency(), entity.getGainLossPercent(),
+        entity.getTotalCashBalanceAmount(), entity.getTotalCashBalanceCurrency(),
+        entity.getTotalInvestedValueAmount(), entity.getTotalInvestedValueCurrency(),
+        entity.getDisplayCurrencyCode(), entity.isHasStaleData(), entity.getSnapshotDay(),
         entity.getCreatedAt());
 
     return snapshot;
@@ -50,8 +40,7 @@ public class ValuationSnapshotRepositoryImpl implements ValuationSnapshotReposit
 
   @Override
   public Optional<ValuationSnapshot> findByUserIdAndSnapshotDay(UserId userId, LocalDate date) {
-    return jpaRepository
-        .findByUserIdAndSnapshotDay(UUID.fromString(userId.toString()), date)
+    return jpaRepository.findByUserIdAndSnapshotDay(UUID.fromString(userId.toString()), date)
         .map(ValuationSnapshotJpaEntity::toDomain);
   }
 }

@@ -52,11 +52,12 @@ public class ValuationHistoryController {
   }
 
   @GetMapping("/history")
-  public ResponseEntity<List<ValuationSnapshotResponse>> getHistory(@AuthenticatedUser UserId userId,
+  public ResponseEntity<List<ValuationSnapshotResponse>> getHistory(
+      @AuthenticatedUser UserId userId,
       @RequestParam(defaultValue = "90") @Min(1) @Max(1825) int days) {
 
     LocalDate since = LocalDate.now(ZoneOffset.UTC).minusDays(days);
-    
+
     List<ValuationSnapshotResponse> result = snapshotRepository.findByUserIdSince(userId, since)
         .stream().map(ValuationSnapshotResponse::from).toList();
 

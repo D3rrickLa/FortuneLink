@@ -1,4 +1,3 @@
-
 package com.laderrco.fortunelink.portfolio.api.web.controller;
 
 import com.laderrco.fortunelink.portfolio.api.web.dto.responses.MoneyResponse;
@@ -17,12 +16,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
@@ -40,7 +42,7 @@ public class AccountValuationController {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Account valuation retrieved successfully"),
       @ApiResponse(responseCode = "404", description = "Account not found"),
-      @ApiResponse(responseCode = "403", description = "Forbidden") })
+      @ApiResponse(responseCode = "403", description = "Forbidden")})
   @GetMapping(value = "/{accountId}/valuation", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<AccountValuationResponse> getAccountValuation(
       @AuthenticatedUser UserId userId, @PathVariable String portfolioId,
@@ -58,31 +60,21 @@ public class AccountValuationController {
       """)
   @GetMapping(value = "/{accountId}/valuation/history", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<AccountHistorySnapshotResponse>> getAccountValuationHistory(
-      @AuthenticatedUser UserId userId,
-      @PathVariable String portfolioId,
-      @PathVariable String accountId,
-      @RequestParam(defaultValue = "90") int days) {
+      @AuthenticatedUser UserId userId, @PathVariable String portfolioId,
+      @PathVariable String accountId, @RequestParam(defaultValue = "90") int days) {
 
     List<ValuationView> historyViews = accountValuationService.getAccountValuationHistory(
         AccountId.fromString(accountId), days);
 
-    List<AccountHistorySnapshotResponse> historyResponse = historyViews.stream()
-        .map(v -> {
-          // Convert Instant to LocalDate, defaulting to today's date in UTC if null
-          LocalDate snapshotDay = v.asOfDate() != null
-              ? v.asOfDate()
-              : LocalDate.now(ZoneOffset.UTC);
+    List<AccountHistorySnapshotResponse> historyResponse = historyViews.stream().map(v -> {
+      // Convert Instant to LocalDate, defaulting to today's date in UTC if null
+      LocalDate snapshotDay = v.asOfDate() != null ? v.asOfDate() : LocalDate.now(ZoneOffset.UTC);
 
-          return new AccountHistorySnapshotResponse(
-              snapshotDay,
-              MoneyResponse.from(v.totalValue()),
-              MoneyResponse.from(v.totalCostBasis()),
-              MoneyResponse.from(v.unrealizedGainLoss()),
-              v.gainLossPercent(),
-              MoneyResponse.from(v.totalCashBalance()),
-              MoneyResponse.from(v.totalInvestedValue()));
-        })
-        .toList();
+      return new AccountHistorySnapshotResponse(snapshotDay, MoneyResponse.from(v.totalValue()),
+          MoneyResponse.from(v.totalCostBasis()), MoneyResponse.from(v.unrealizedGainLoss()),
+          v.gainLossPercent(), MoneyResponse.from(v.totalCashBalance()),
+          MoneyResponse.from(v.totalInvestedValue()));
+    }).toList();
 
     return ResponseEntity.ok(historyResponse);
   }

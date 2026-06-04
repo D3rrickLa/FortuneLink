@@ -2,6 +2,7 @@ package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositori
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +54,15 @@ class ValuationSnapshotRepositoryImplTest {
 
       repository.save(snapshot);
 
-      verify(jpaRepository).save(any(ValuationSnapshotJpaEntity.class));
+      // Match the actual upsertSnapshot call with lenient argument matchers
+      verify(jpaRepository).upsertSnapshot(any(UUID.class),      // id
+          any(UUID.class),      // userId
+          any(), any(),         // Money fields/strings broken down by mapper
+          any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+          anyBoolean(),         // false
+          any(),                // LocalDate
+          any()                 // LocalDateTime / Instant timestamp
+      );
     }
 
     @Test

@@ -38,7 +38,7 @@ public class AccountValuationApplicationService {
   public ValuationView computeAccountValuation(GetAccountSummaryQuery query) {
 
     Account account = accountQueryRepository.findByIdWithDetails(query.accountId(),
-        query.portfolioId(), query.userId())
+            query.portfolioId(), query.userId())
         .orElseThrow(() -> new EntityNotFoundException("Account not found: " + query.accountId()));
 
     Currency currency = account.getAccountCurrency();
@@ -53,15 +53,13 @@ public class AccountValuationApplicationService {
 
     Map<AssetSymbol, MarketAssetQuote> quotes = marketDataService.getBatchQuotes(symbols);
 
-    Money totalCostBasis = positions.stream()
-        .map(entry -> {
-          Money costBasis = nullSafe(entry.getValue().totalCostBasis(), currency);
-          if (!costBasis.currency().equals(currency)) {
-            return exchangeRateService.convert(costBasis, currency);
-          }
-          return costBasis;
-        })
-        .reduce(Money.zero(currency), Money::add);
+    Money totalCostBasis = positions.stream().map(entry -> {
+      Money costBasis = nullSafe(entry.getValue().totalCostBasis(), currency);
+      if (!costBasis.currency().equals(currency)) {
+        return exchangeRateService.convert(costBasis, currency);
+      }
+      return costBasis;
+    }).reduce(Money.zero(currency), Money::add);
 
     Money totalMarketValue = positions.stream().map(entry -> {
       var position = entry.getValue();
@@ -80,10 +78,10 @@ public class AccountValuationApplicationService {
 
     Money unrealizedGainLoss = totalMarketValue.subtract(totalCostBasis);
 
-    BigDecimal gainLossPercent = totalCostBasis.amount().compareTo(BigDecimal.ZERO) > 0 ? unrealizedGainLoss.amount()
-        .divide(totalCostBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(),
-            Rounding.PERCENTAGE.getMode())
-        .multiply(BigDecimal.valueOf(100)) : BigDecimal.ZERO;
+    BigDecimal gainLossPercent =
+        totalCostBasis.amount().compareTo(BigDecimal.ZERO) > 0 ? unrealizedGainLoss.amount()
+            .divide(totalCostBasis.amount(), Precision.PERCENTAGE.getDecimalPlaces(),
+                Rounding.PERCENTAGE.getMode()).multiply(BigDecimal.valueOf(100)) : BigDecimal.ZERO;
 
     Money cashBalance = nullSafe(account.getCashBalance(), currency);
     if (!cashBalance.currency().equals(currency)) {
@@ -91,35 +89,19 @@ public class AccountValuationApplicationService {
     }
     Money totalAccountValue = totalMarketValue.add(cashBalance);
 
-    return new ValuationView(
-        totalAccountValue,
-        totalCostBasis,
-        unrealizedGainLoss,
-        gainLossPercent,
-        cashBalance,
-        totalMarketValue,
-        currency,
-        false,
-        LocalDate.now());
+    return new ValuationView(totalAccountValue, totalCostBasis, unrealizedGainLoss, gainLossPercent,
+        cashBalance, totalMarketValue, currency, false, LocalDate.now());
   }
 
   public List<ValuationView> getAccountValuationHistory(AccountId accountId, int days) {
     LocalDate after = LocalDate.now(ZoneOffset.UTC).minusDays(days);
 
-    return accountSnapshotRepository
-        .findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(accountId, after)
-        .stream()
-        .map(snapshot -> new ValuationView(
-            snapshot.totalValue(),
-            snapshot.totalCostBasis(),
-            snapshot.unrealizedGainLoss(),
-            snapshot.gainLossPercent().change(),
-            snapshot.cashBalance(),
-            snapshot.investedValue(),
-            snapshot.totalValue().currency(),
-            snapshot.hasStaleData(),
-            snapshot.snapshotDay()))
-        .toList();
+    return accountSnapshotRepository.findByAccountIdAndSnapshotDayAfterOrderBySnapshotDayAsc(
+        accountId, after).stream().map(
+        snapshot -> new ValuationView(snapshot.totalValue(), snapshot.totalCostBasis(),
+            snapshot.unrealizedGainLoss(), snapshot.gainLossPercent().change(),
+            snapshot.cashBalance(), snapshot.investedValue(), snapshot.totalValue().currency(),
+            snapshot.hasStaleData(), snapshot.snapshotDay())).toList();
   }
 
   private Money nullSafe(Money money, Currency currency) {

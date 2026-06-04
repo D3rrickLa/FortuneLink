@@ -8,14 +8,12 @@ import java.util.Optional;
 
 /**
  * Domain port for valuation snapshot persistence.
- *
+ * <p>
  * A snapshot represents the latest known valuation for a user on a given UTC day.
- *
- * At most one snapshot exists per user per day.
- * Implementations should support upsert semantics:
- *
- * - create a snapshot if none exists
- * - update the snapshot if one already exists
+ * <p>
+ * At most one snapshot exists per user per day. Implementations should support upsert semantics:
+ * <p>
+ * - create a snapshot if none exists - update the snapshot if one already exists
  */
 public interface ValuationSnapshotRepository {
 

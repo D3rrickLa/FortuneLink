@@ -32,7 +32,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -79,35 +78,27 @@ class UserSnapshotWorkerTest {
     Portfolio p = mock(Portfolio.class);
     AssetSymbol apple = new AssetSymbol("AAPL");
 
-    ValuationView viewUSD = new ValuationView(
-        Money.of("0.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
+    ValuationView viewUSD = new ValuationView(Money.of("0.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, false,
         LocalDate.now());
-    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, null, "America/Toronto");
-    when(portfolioRepository.findAllActiveByUserId(USER_ID))
-        .thenReturn(List.of(p));
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, null,
+        "America/Toronto");
+    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
 
     when(p.getDisplayCurrency()).thenReturn(USD);
 
-    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap()))
-        .thenReturn(viewUSD);
+    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
 
     when(userPreferencesService.get(any())).thenReturn(preferences);
-    when(timeZoneService.resolve(USER_ID, any())).thenReturn(ZoneId.of("America/Toronto"));
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
 
-    try (MockedStatic<PortfolioAccessUtils> utils = Mockito.mockStatic(PortfolioAccessUtils.class)) {
+    try (MockedStatic<PortfolioAccessUtils> utils = Mockito.mockStatic(
+        PortfolioAccessUtils.class)) {
 
       // -------------------------
       // CASE 1: EMPTY SYMBOLS
       // -------------------------
-      utils.when(() -> PortfolioAccessUtils.extractSymbols(p))
-          .thenReturn(Set.of());
+      utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of());
 
       snapshotWorker.snapshotForUser(USER_ID);
 
@@ -118,16 +109,13 @@ class UserSnapshotWorkerTest {
       // -------------------------
       // CASE 2: SYMBOLS PRESENT
       // -------------------------
-      utils.when(() -> PortfolioAccessUtils.extractSymbols(p))
-          .thenReturn(Set.of(apple));
+      utils.when(() -> PortfolioAccessUtils.extractSymbols(p)).thenReturn(Set.of(apple));
 
-      when(marketDataService.getBatchQuotes(Set.of(apple)))
-          .thenReturn(Map.of());
+      when(marketDataService.getBatchQuotes(Set.of(apple))).thenReturn(Map.of());
 
       snapshotWorker.snapshotForUser(USER_ID);
 
-      verify(marketDataService, times(1))
-          .getBatchQuotes(Set.of(apple));
+      verify(marketDataService, times(1)).getBatchQuotes(Set.of(apple));
     }
   }
 
@@ -139,11 +127,11 @@ class UserSnapshotWorkerTest {
   @DisplayName("snapshotForUser: returns false when no portfolios exist")
   void returnsFalseWhenNoPortfolios() {
 
-    when(portfolioRepository.findAllActiveByUserId(USER_ID))
-        .thenReturn(List.of());
+    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of());
+    when(userPreferencesService.get(any())).thenReturn(null);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
 
-    assertThat(snapshotWorker.snapshotForUser(USER_ID))
-        .isFalse();
+    assertThat(snapshotWorker.snapshotForUser(USER_ID)).isFalse();
   }
 
   // =====================================================
@@ -153,39 +141,30 @@ class UserSnapshotWorkerTest {
   @Test
   @DisplayName("snapshotForUser: full success path")
   void createsSnapshotSuccessfully() {
-
     Portfolio p = mock(Portfolio.class);
     Account a = mock(Account.class);
 
-    ValuationView viewUSD = new ValuationView(
-        Money.of("100.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        true,
+    ValuationView viewUSD = new ValuationView(Money.of("100.00", USD), Money.zero(USD),
+        Money.zero(USD), BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, true,
         LocalDate.now());
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, "YYY/MM/DD",
+        "America/Toronto");
 
-    when(portfolioRepository.findAllActiveByUserId(USER_ID))
-        .thenReturn(List.of(p));
+    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
 
     when(p.getDisplayCurrency()).thenReturn(USD);
     when(p.getAccounts()).thenReturn(List.of(a));
 
-    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap()))
-        .thenReturn(viewUSD);
+    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap())).thenReturn(viewUSD);
 
-    when(snapshotRepository.findByUserIdAndSnapshotDay(any(), any()))
-        .thenReturn(Optional.empty());
+    when(userPreferencesService.get(any())).thenReturn(preferences);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
 
     boolean result = snapshotWorker.snapshotForUser(USER_ID);
 
     assertThat(result).isTrue();
 
-    verify(snapshotRepository).save(argThat(s -> s.userId().equals(USER_ID) &&
-        s.hasStaleData()));
+    verify(snapshotRepository).save(argThat(s -> s.userId().equals(USER_ID) && s.hasStaleData()));
   }
 
   // =====================================================
@@ -195,30 +174,22 @@ class UserSnapshotWorkerTest {
   @Test
   @DisplayName("snapshotForUser: handles empty symbols list")
   void handlesEmptySymbols() {
-
     Portfolio p = mock(Portfolio.class);
 
-    ValuationView viewUSD = new ValuationView(
-        Money.of("0.00", USD),
-        Money.zero(USD),
-        Money.zero(USD),
-        BigDecimal.ZERO,
-        Money.zero(USD),
-        Money.zero(USD),
-        USD,
-        false,
-        LocalDate.now());
-
-    when(portfolioRepository.findAllActiveByUserId(USER_ID))
-        .thenReturn(List.of(p));
+    UserPreferences preferences = new UserPreferences(USER_ID, USD, false, false, "YYY/MM/DD",
+        "America/Toronto");
+    when(portfolioRepository.findAllActiveByUserId(USER_ID)).thenReturn(List.of(p));
 
     when(p.getDisplayCurrency()).thenReturn(USD);
+    when(p.getAccounts()).thenReturn(List.of());
 
-    when(valuationService.calculateUserValuation(anyList(), eq(USD), anyMap()))
-        .thenReturn(viewUSD);
+    when(userPreferencesService.get(any())).thenReturn(preferences);
+    when(timeZoneService.resolve(eq(USER_ID), any())).thenReturn(ZoneId.of("America/Toronto"));
 
-    when(snapshotRepository.findByUserIdAndSnapshotDay(any(), any()))
-        .thenReturn(Optional.empty());
+    // Also stub this service to prevent ValuationSnapshot.fromView from throwing an NPE if it reads fields
+    when(valuationService.calculateUserValuation(any(), any(), any())).thenReturn(
+        new ValuationView(Money.of("100.00", USD), Money.zero(USD), Money.zero(USD),
+            BigDecimal.ZERO, Money.zero(USD), Money.zero(USD), USD, true, LocalDate.now()));
 
     snapshotWorker.snapshotForUser(USER_ID);
 

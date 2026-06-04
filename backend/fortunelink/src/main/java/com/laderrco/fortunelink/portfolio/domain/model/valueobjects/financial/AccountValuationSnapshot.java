@@ -1,10 +1,9 @@
 package com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial;
 
-import java.time.LocalDate;
-import java.util.Objects;
-
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AccountId;
+import java.time.LocalDate;
+import java.util.Objects;
 
 public record AccountValuationSnapshot(
     AccountId accountId,
@@ -39,30 +38,17 @@ public record AccountValuationSnapshot(
     Money unrealizedGL = totalValue.subtract(totalCostBasis);
     PercentageChange glPercent = PercentageChange.calculate(totalValue, totalCostBasis);
 
-    return new AccountValuationSnapshot(
-        accountId,
-        LocalDate.now(),
-        totalValue,
-        totalCostBasis,
-        unrealizedGL,
-        glPercent,
-        cashBalance,
-        investedValue,
-        false // initially fresh data
+    return new AccountValuationSnapshot(accountId, LocalDate.now(), totalValue, totalCostBasis,
+        unrealizedGL, glPercent, cashBalance, investedValue, false // initially fresh data
     );
   }
 
-  public static AccountValuationSnapshot fromView(AccountId accountId, LocalDate snapshoDay, ValuationView view) {
-    return new AccountValuationSnapshot(
-        accountId,
-        snapshoDay,
-        view.totalValue(),
-        view.totalCostBasis(),
-        view.unrealizedGainLoss(),
-        new PercentageChange(view.gainLossPercent()),
-        view.totalCashBalance(),
-        view.totalInvestedValue(),
-        view.hasStaleData());
+  public static AccountValuationSnapshot fromView(AccountId accountId, LocalDate snapshoDay,
+      ValuationView view) {
+    return new AccountValuationSnapshot(accountId, snapshoDay, view.totalValue(),
+        view.totalCostBasis(), view.unrealizedGainLoss(),
+        new PercentageChange(view.gainLossPercent()), view.totalCashBalance(),
+        view.totalInvestedValue(), view.hasStaleData());
   }
 
   public boolean isStale() {

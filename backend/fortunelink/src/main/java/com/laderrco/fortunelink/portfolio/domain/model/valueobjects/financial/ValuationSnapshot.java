@@ -21,33 +21,18 @@ public record ValuationSnapshot(
 
   public static ValuationSnapshot fromView(UserId userId, ValuationView view) {
 
-    return new ValuationSnapshot(
-        UUID.randomUUID(),
-        userId,
-        view.totalValue(),
-        view.totalCostBasis(),
-        view.unrealizedGainLoss(),
-        view.gainLossPercent(),
-        view.totalCashBalance(),
-        view.totalInvestedValue(),
-        view.displayCurrency().getCode(),
-        view.hasStaleData(),
-        view.asOfDate());
+    return new ValuationSnapshot(UUID.randomUUID(), userId, view.totalValue(),
+        view.totalCostBasis(), view.unrealizedGainLoss(), view.gainLossPercent(),
+        view.totalCashBalance(), view.totalInvestedValue(), view.displayCurrency().getCode(),
+        view.hasStaleData(), view.asOfDate());
   }
 
   public static ValuationSnapshot fromExisting(ValuationSnapshot existing, ValuationView view) {
 
-    return new ValuationSnapshot(
-        existing.id(), // preserve PK
+    return new ValuationSnapshot(existing.id(), // preserve PK
         existing.userId(), // preserve ownership
-        view.totalValue(),
-        view.totalCostBasis(),
-        view.unrealizedGainLoss(),
-        view.gainLossPercent(),
-        view.totalCashBalance(),
-        view.totalInvestedValue(),
-        view.displayCurrency().getCode(),
-        view.hasStaleData(),
-        view.asOfDate());
+        view.totalValue(), view.totalCostBasis(), view.unrealizedGainLoss(), view.gainLossPercent(),
+        view.totalCashBalance(), view.totalInvestedValue(), view.displayCurrency().getCode(),
+        view.hasStaleData(), view.asOfDate());
   }
 }

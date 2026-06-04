@@ -1,10 +1,13 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
-
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,7 +17,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "account_valuation_snapshots", uniqueConstraints = @UniqueConstraint(name = "uq_account_day", columnNames = {
-    "account_id", "snapshot_day" }))
+    "account_id", "snapshot_day"}))
 public class AccountValuationSnapshotJpaEntity {
   @Id
   @Column(name = "id", updatable = false, nullable = false)

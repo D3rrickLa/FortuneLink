@@ -136,9 +136,7 @@ public class ValuationSnapshotJpaEntity {
   // toDomain
   // ─────────────────────────────────────────────────────────────
   public ValuationSnapshot toDomain() {
-    return new ValuationSnapshot(
-        id,
-        new UserId(userId),
+    return new ValuationSnapshot(id, new UserId(userId),
         Money.of(totalValueAmount, totalValueCurrency),
         Money.of(totalCostBasisAmount, totalCostBasisCurrency),
         Money.of(unrealizedGainLossAmount, unrealizedGainLossCurrency), gainLossPercent,

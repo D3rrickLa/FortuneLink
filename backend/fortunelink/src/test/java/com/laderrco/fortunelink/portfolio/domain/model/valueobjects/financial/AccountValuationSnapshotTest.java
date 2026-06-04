@@ -38,7 +38,7 @@ class AccountValuationSnapshotTest {
       assertThatThrownBy(() -> new AccountValuationSnapshot(accountId, null, validMoney, validMoney, validMoney,
           new PercentageChange(BigDecimal.ZERO), validMoney, validMoney, false))
           .isInstanceOf(NullPointerException.class)
-          .hasMessageContaining("Snapshot date cannot be null");
+          .hasMessageContaining("Snapshot day cannot be null");
     }
 
     @Test

@@ -1,7 +1,6 @@
 package com.laderrco.fortunelink.portfolio.infrastructure.persistence.repositories;
 
 import com.laderrco.fortunelink.portfolio.infrastructure.persistence.entities.ValuationSnapshotJpaEntity;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,8 +18,7 @@ public interface JpaValuationSnapshotRepository extends
     JpaRepository<ValuationSnapshotJpaEntity, UUID> {
 
   /**
-   * Snapshots in ascending date order for chart rendering (oldest → newest).
-   * Caller determines the
+   * Snapshots in ascending date order for chart rendering (oldest → newest). Caller determines the
    * window , typically 90 or 365 days.
    */
   @Query("""
@@ -33,15 +31,12 @@ public interface JpaValuationSnapshotRepository extends
       @Param("since") LocalDate since);
 
   /**
-   * Day-boundary check. NEVER use DATE() in JPQL against a TIMESTAMPTZ column ,
-   * the cast behavior
-   * is JVM-timezone-dependent. Instead, pass explicit UTC bounds computed by the
-   * caller (start of
+   * Day-boundary check. NEVER use DATE() in JPQL against a TIMESTAMPTZ column , the cast behavior
+   * is JVM-timezone-dependent. Instead, pass explicit UTC bounds computed by the caller (start of
    * today UTC, start of tomorrow UTC).
    *
    * <p>
-   * The caller in {@code NetWorthSnapshotRepositoryImpl.existsForToday()}
-   * computes these bounds and
+   * The caller in {@code NetWorthSnapshotRepositoryImpl.existsForToday()} computes these bounds and
    * passes them here.
    */
   @Query("""
@@ -54,7 +49,8 @@ public interface JpaValuationSnapshotRepository extends
   boolean existsBetween(@Param("userId") UUID userId, @Param("startOfDay") LocalDate startOfDay,
       @Param("endOfDay") LocalDate endOfDay);
 
-  Optional<ValuationSnapshotJpaEntity> findByUserIdAndSnapshotDay(UUID userId, LocalDate snapshotDay);
+  Optional<ValuationSnapshotJpaEntity> findByUserIdAndSnapshotDay(UUID userId,
+      LocalDate snapshotDay);
 
   @Modifying
   @Query(value = """
@@ -111,22 +107,11 @@ public interface JpaValuationSnapshotRepository extends
           display_currency_code = EXCLUDED.display_currency_code,
           has_stale_data = EXCLUDED.has_stale_data
       """, nativeQuery = true)
-  void upsertSnapshot(
-      UUID id,
-      UUID userId,
-      BigDecimal totalValueAmount,
-      String totalValueCurrency,
-      BigDecimal totalCostBasisAmount,
-      String totalCostBasisCurrency,
-      BigDecimal unrealizedGainLossAmount,
-      String unrealizedGainLossCurrency,
-      BigDecimal gainLossPercent,
-      BigDecimal totalCashBalanceAmount,
-      String totalCashBalanceCurrency,
-      BigDecimal totalInvestedValueAmount,
-      String totalInvestedValueCurrency,
-      String displayCurrencyCode,
-      boolean hasStaleData,
-      LocalDate snapshotDay,
-      Instant createdAt);
+  void upsertSnapshot(UUID id, UUID userId, BigDecimal totalValueAmount, String totalValueCurrency,
+      BigDecimal totalCostBasisAmount, String totalCostBasisCurrency,
+      BigDecimal unrealizedGainLossAmount, String unrealizedGainLossCurrency,
+      BigDecimal gainLossPercent, BigDecimal totalCashBalanceAmount,
+      String totalCashBalanceCurrency, BigDecimal totalInvestedValueAmount,
+      String totalInvestedValueCurrency, String displayCurrencyCode, boolean hasStaleData,
+      LocalDate snapshotDay, Instant createdAt);
 }

@@ -4,7 +4,10 @@ import com.laderrco.fortunelink.portfolio.application.utils.PortfolioAccessUtils
 import com.laderrco.fortunelink.portfolio.application.views.ValuationView;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Account;
 import com.laderrco.fortunelink.portfolio.domain.model.entities.Portfolio;
-import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.*;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.AccountValuationSnapshot;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.Currency;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.MarketAssetQuote;
+import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.financial.ValuationSnapshot;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.AssetSymbol;
 import com.laderrco.fortunelink.portfolio.domain.model.valueobjects.identifiers.UserId;
 import com.laderrco.fortunelink.portfolio.domain.repositories.AccountValuationSnapshotRepository;
@@ -13,7 +16,6 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.ValuationSnapshotR
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import jakarta.transaction.Transactional;
-
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -39,9 +41,8 @@ public class UserSnapshotWorker {
 
   /**
    * Creates or refreshes today's valuation snapshots for a user.
-   *
-   * If a snapshot already exists for today it is replaced with the latest
-   * calculated valuation.
+   * <p>
+   * If a snapshot already exists for today it is replaced with the latest calculated valuation.
    */
   @Transactional
   public boolean snapshotForUser(UserId userId) {
@@ -56,19 +57,15 @@ public class UserSnapshotWorker {
     }
 
     Set<AssetSymbol> symbols = portfolios.stream()
-        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream())
-        .collect(Collectors.toSet());
+        .flatMap(p -> PortfolioAccessUtils.extractSymbols(p).stream()).collect(Collectors.toSet());
 
-    Map<AssetSymbol, MarketAssetQuote> quoteCache = symbols.isEmpty()
-        ? Map.of()
-        : marketDataService.getBatchQuotes(symbols);
+    Map<AssetSymbol, MarketAssetQuote> quoteCache =
+        symbols.isEmpty() ? Map.of() : marketDataService.getBatchQuotes(symbols);
 
     Currency displayCurrency = portfolios.getFirst().getDisplayCurrency();
 
-    ValuationView userValuation = portfolioValuationService.calculateUserValuation(
-        portfolios,
-        displayCurrency,
-        quoteCache);
+    ValuationView userValuation = portfolioValuationService.calculateUserValuation(portfolios,
+        displayCurrency, quoteCache);
 
     upsertUserSnapshot(userId, userValuation, snapshotDay);
     upsertAccountSnapshots(portfolios, quoteCache, snapshotDay);
@@ -85,10 +82,8 @@ public class UserSnapshotWorker {
     log.debug("Upserted user snapshot for userId={} date={}", userId, snapshotDay);
   }
 
-  private void upsertAccountSnapshots(
-      List<Portfolio> portfolios,
-      Map<AssetSymbol, MarketAssetQuote> quoteCache,
-      LocalDate snapshotDay) {
+  private void upsertAccountSnapshots(List<Portfolio> portfolios,
+      Map<AssetSymbol, MarketAssetQuote> quoteCache, LocalDate snapshotDay) {
 
     for (Portfolio portfolio : portfolios) {
 
@@ -100,19 +95,17 @@ public class UserSnapshotWorker {
 
         try {
 
-          ValuationView view = portfolioValuationService.calculateAccountValuation(account, quoteCache);
+          ValuationView view = portfolioValuationService.calculateAccountValuation(account,
+              quoteCache);
 
-          AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(account.getAccountId(), snapshotDay,
-              view);
+          AccountValuationSnapshot snapshot = AccountValuationSnapshot.fromView(
+              account.getAccountId(), snapshotDay, view);
 
           accountSnapshotRepository.save(snapshot); // dempotent now
 
         } catch (Exception e) {
-          log.warn(
-              "Failed account snapshot accountId={}: {}",
-              account.getAccountId(),
-              e.getMessage(),
-              e);
+          log.warn("Failed account snapshot accountId={}: {}", account.getAccountId(),
+              e.getMessage(), e);
         }
       }
     }

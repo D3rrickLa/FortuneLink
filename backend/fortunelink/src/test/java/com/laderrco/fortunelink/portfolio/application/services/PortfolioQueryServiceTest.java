@@ -41,7 +41,6 @@ import com.laderrco.fortunelink.portfolio.domain.repositories.TransactionReposit
 import com.laderrco.fortunelink.portfolio.domain.services.MarketDataService;
 import com.laderrco.fortunelink.portfolio.domain.services.PortfolioValuationService;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -495,7 +494,7 @@ public class PortfolioQueryServiceTest {
     @Test
     @DisplayName("asOfDate is set and recent")
     void asOfDate_isSetAndRecent() {
-      LocalDate before = LocalDate.now().minus(1, ChronoUnit.HOURS);
+      LocalDate before = LocalDate.now().minus(1, ChronoUnit.DAYS);
 
       Portfolio portfolio = buildPortfolio(userId, portfolioId, List.of());
       ValuationView view = new ValuationView(Money.of("75000.00", CAD), Money.zero(CAD),

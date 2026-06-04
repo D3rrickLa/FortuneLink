@@ -122,23 +122,20 @@ public final class PortfolioValuationServiceImpl implements PortfolioValuationSe
         }).filter(Objects::nonNull).reduce(Money::add).orElse(Money.zero(targetCurrency));
   }
 
-private Money calculatePositionsValueInternal(Account account, 
-    Currency targetCurrency, // Add targetCurrency down to the collector
-    Map<AssetSymbol, MarketAssetQuote> quoteCache) {
+  private Money calculatePositionsValueInternal(Account account, Currency targetCurrency,
+      // Add targetCurrency down to the collector
+      Map<AssetSymbol, MarketAssetQuote> quoteCache) {
 
-  return account.getPositionEntries().stream()
-      .filter(e -> e.getValue().type() != AssetType.CASH)
-      .map(e -> {
+    return account.getPositionEntries().stream().filter(e -> e.getValue().type() != AssetType.CASH)
+        .map(e -> {
           // 1. Resolve position value in whatever its current native price structure dictates
-          Money posValue = resolvePositionValue(e.getValue(), quoteCache.get(e.getKey()), account.getAccountCurrency());
+          Money posValue = resolvePositionValue(e.getValue(), quoteCache.get(e.getKey()),
+              account.getAccountCurrency());
           // 2. Normalize immediately to target calculation currency before reducing
-          return posValue.currency().equals(targetCurrency) ? posValue 
+          return posValue.currency().equals(targetCurrency) ? posValue
               : exchangeRateService.convert(posValue, targetCurrency);
-      })
-      .filter(Objects::nonNull)
-      .reduce(Money::add)
-      .orElse(Money.zero(targetCurrency));
-}
+        }).filter(Objects::nonNull).reduce(Money::add).orElse(Money.zero(targetCurrency));
+  }
 
   private Money resolvePositionValue(Position position, MarketAssetQuote quote,
       Currency accountCurrency) {
