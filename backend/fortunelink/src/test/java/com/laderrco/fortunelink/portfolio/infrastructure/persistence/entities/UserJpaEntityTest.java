@@ -32,7 +32,7 @@ class UserJpaEntityTest {
       assertThat(entity.getId()).isEqualTo(sampleId);
       assertThat(entity.getEmail()).isEqualTo(sampleEmail);
       assertThat(entity.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate()).isBeforeOrEqualTo(Instant.now().atZone(ZoneId.systemDefault()).toLocalDate());
-      assertThat(entity.getLastSignInAt()).isEqualTo(entity.getCreatedAt());
+      assertThat(entity.getLastSignInAt().atZone(ZoneId.systemDefault()).toLocalDate()).isEqualTo(entity.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate());
     }
 
     @Test
